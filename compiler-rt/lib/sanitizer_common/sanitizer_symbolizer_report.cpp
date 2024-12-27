@@ -34,10 +34,16 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
     return true;
   const char *file = frame->info.file;
   const char *module = frame->info.module;
+  // On Gentoo, the path is g++-*, so there's *not* a missing /.
   if (file && (internal_strstr(file, "/compiler-rt/lib/") ||
-               internal_strstr(file, "/include/c++/")))
+               internal_strstr(file, "/include/c++/") ||
+               internal_strstr(file, "/include/g++")))
+    return true;
+  if (file && internal_strstr(file, "\\compiler-rt\\lib\\"))
     return true;
   if (module && (internal_strstr(module, "libclang_rt.")))
+    return true;
+  if (module && (internal_strstr(module, "clang_rt.")))
     return true;
   return false;
 }
@@ -221,12 +227,15 @@ static void ReportStackOverflowImpl(const SignalContext &sig, u32 tid,
          SanitizerToolName, kDescription, (void *)sig.addr, (void *)sig.pc,
          (void *)sig.bp, (void *)sig.sp, tid);
   Printf("%s", d.Default());
-  InternalMmapVector<BufferedStackTrace> stack_buffer(1);
-  BufferedStackTrace *stack = stack_buffer.data();
-  stack->Reset();
-  unwind(sig, unwind_context, stack);
-  stack->Print();
-  ReportErrorSummary(kDescription, stack);
+  // Avoid SEGVs in the unwinder when bp couldn't be determined.
+  if (sig.bp) {
+    InternalMmapVector<BufferedStackTrace> stack_buffer(1);
+    BufferedStackTrace *stack = stack_buffer.data();
+    stack->Reset();
+    unwind(sig, unwind_context, stack);
+    stack->Print();
+    ReportErrorSummary(kDescription, stack);
+  }
 }
 
 static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,

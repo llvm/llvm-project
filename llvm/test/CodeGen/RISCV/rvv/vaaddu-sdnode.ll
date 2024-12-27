@@ -5,16 +5,14 @@
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i16> %add, %splat
+  %div = lshr <vscale x 8 x i16> %add, splat (i16 1)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -22,8 +20,8 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor(<vscale x 8 x i8> %x, <vscale x
 define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_floor(<vscale x 8 x i8> %x, i8 %y) {
 ; CHECK-LABEL: vaaddu_vx_nxv8i8_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
@@ -31,9 +29,7 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_floor(<vscale x 8 x i8> %x, i8 %y) {
   %ysplat = shufflevector <vscale x 8 x i8> %yhead, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i8> %ysplat to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i16> %add, %splat
+  %div = lshr <vscale x 8 x i16> %add, splat (i16 1)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -41,16 +37,14 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_floor(<vscale x 8 x i8> %x, i8 %y) {
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_floor_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 2
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i16> %add, %splat
+  %div = lshr <vscale x 8 x i16> %add, splat (i16 1)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -58,16 +52,14 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_sexti16(<vscale x 8 x i8> %x, <
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_zexti32(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_floor_zexti32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i32>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i32>
   %add = add nuw nsw <vscale x 8 x i32> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %one, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i32> %add, %splat
+  %div = lshr <vscale x 8 x i32> %add, splat (i32 1)
   %ret = trunc <vscale x 8 x i32> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -82,9 +74,7 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_lshr2(<vscale x 8 x i8> %x, <vs
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i16> %add, %splat
+  %div = lshr <vscale x 8 x i16> %add, splat (i16 2)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -92,16 +82,14 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_lshr2(<vscale x 8 x i8> %x, <vs
 define <vscale x 8 x i16> @vaaddu_vv_nxv8i16_floor(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i16_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i16> %x to <vscale x 8 x i32>
   %yzv = zext <vscale x 8 x i16> %y to <vscale x 8 x i32>
   %add = add nuw nsw <vscale x 8 x i32> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %one, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i32> %add, %splat
+  %div = lshr <vscale x 8 x i32> %add, splat (i32 1)
   %ret = trunc <vscale x 8 x i32> %div to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ret
 }
@@ -109,8 +97,8 @@ define <vscale x 8 x i16> @vaaddu_vv_nxv8i16_floor(<vscale x 8 x i16> %x, <vscal
 define <vscale x 8 x i16> @vaaddu_vx_nxv8i16_floor(<vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: vaaddu_vx_nxv8i16_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i16> %x to <vscale x 8 x i32>
@@ -118,9 +106,7 @@ define <vscale x 8 x i16> @vaaddu_vx_nxv8i16_floor(<vscale x 8 x i16> %x, i16 %y
   %ysplat = shufflevector <vscale x 8 x i16> %yhead, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i16> %ysplat to <vscale x 8 x i32>
   %add = add nuw nsw <vscale x 8 x i32> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %one, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i32> %add, %splat
+  %div = lshr <vscale x 8 x i32> %add, splat (i32 1)
   %ret = trunc <vscale x 8 x i32> %div to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ret
 }
@@ -128,16 +114,14 @@ define <vscale x 8 x i16> @vaaddu_vx_nxv8i16_floor(<vscale x 8 x i16> %x, i16 %y
 define <vscale x 8 x i32> @vaaddu_vv_nxv8i32_floor(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i32_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i32> %x to <vscale x 8 x i64>
   %yzv = zext <vscale x 8 x i32> %y to <vscale x 8 x i64>
   %add = add nuw nsw <vscale x 8 x i64> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i64> poison, i64 1, i64 0
-  %splat = shufflevector <vscale x 8 x i64> %one, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i64> %add, %splat
+  %div = lshr <vscale x 8 x i64> %add, splat (i64 1)
   %ret = trunc <vscale x 8 x i64> %div to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %ret
 }
@@ -145,8 +129,8 @@ define <vscale x 8 x i32> @vaaddu_vv_nxv8i32_floor(<vscale x 8 x i32> %x, <vscal
 define <vscale x 8 x i32> @vaaddu_vx_nxv8i32_floor(<vscale x 8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: vaaddu_vx_nxv8i32_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i32> %x to <vscale x 8 x i64>
@@ -154,9 +138,7 @@ define <vscale x 8 x i32> @vaaddu_vx_nxv8i32_floor(<vscale x 8 x i32> %x, i32 %y
   %ysplat = shufflevector <vscale x 8 x i32> %yhead, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i32> %ysplat to <vscale x 8 x i64>
   %add = add nuw nsw <vscale x 8 x i64> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i64> poison, i64 1, i64 0
-  %splat = shufflevector <vscale x 8 x i64> %one, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i64> %add, %splat
+  %div = lshr <vscale x 8 x i64> %add, splat (i64 1)
   %ret = trunc <vscale x 8 x i64> %div to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %ret
 }
@@ -164,16 +146,14 @@ define <vscale x 8 x i32> @vaaddu_vx_nxv8i32_floor(<vscale x 8 x i32> %x, i32 %y
 define <vscale x 8 x i64> @vaaddu_vv_nxv8i64_floor(<vscale x 8 x i64> %x, <vscale x 8 x i64> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i64_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i64> %x to <vscale x 8 x i128>
   %yzv = zext <vscale x 8 x i64> %y to <vscale x 8 x i128>
   %add = add nuw nsw <vscale x 8 x i128> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i128> poison, i128 1, i128 0
-  %splat = shufflevector <vscale x 8 x i128> %one, <vscale x 8 x i128> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i128> %add, %splat
+  %div = lshr <vscale x 8 x i128> %add, splat (i128 1)
   %ret = trunc <vscale x 8 x i128> %div to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %ret
 }
@@ -183,20 +163,21 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_floor(<vscale x 8 x i64> %x, i64 %y
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    csrwi vxrm, 2
 ; RV32-NEXT:    vaaddu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_nxv8i64_floor:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 2
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vaaddu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %xzv = zext <vscale x 8 x i64> %x to <vscale x 8 x i128>
@@ -204,9 +185,7 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_floor(<vscale x 8 x i64> %x, i64 %y
   %ysplat = shufflevector <vscale x 8 x i64> %yhead, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i64> %ysplat to <vscale x 8 x i128>
   %add = add nuw nsw <vscale x 8 x i128> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i128> poison, i128 1, i128 0
-  %splat = shufflevector <vscale x 8 x i128> %one, <vscale x 8 x i128> poison, <vscale x 8 x i32> zeroinitializer
-  %div = lshr <vscale x 8 x i128> %add, %splat
+  %div = lshr <vscale x 8 x i128> %add, splat (i128 1)
   %ret = trunc <vscale x 8 x i128> %div to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %ret
 }
@@ -214,17 +193,15 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_floor(<vscale x 8 x i64> %x, i64 %y
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i16> %add, %splat
-  %div = lshr <vscale x 8 x i16> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 1)
+  %div = lshr <vscale x 8 x i16> %add1, splat (i16 1)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -232,8 +209,8 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil(<vscale x 8 x i8> %x, <vscale x 
 define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_ceil(<vscale x 8 x i8> %x, i8 %y) {
 ; CHECK-LABEL: vaaddu_vx_nxv8i8_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
@@ -241,10 +218,8 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_ceil(<vscale x 8 x i8> %x, i8 %y) {
   %ysplat = shufflevector <vscale x 8 x i8> %yhead, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i8> %ysplat to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i16> %add, %splat
-  %div = lshr <vscale x 8 x i16> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 1)
+  %div = lshr <vscale x 8 x i16> %add1, splat (i16 1)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -252,20 +227,15 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_ceil(<vscale x 8 x i8> %x, i8 %y) {
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_ceil_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vadd.vi v10, v10, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i16> %add, %splat
-  %div = lshr <vscale x 8 x i16> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 1)
+  %div = lshr <vscale x 8 x i16> %add1, splat (i16 1)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -273,17 +243,15 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_sexti16(<vscale x 8 x i8> %x, <v
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_zexti32(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_ceil_zexti32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i32>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i32>
   %add = add nuw nsw <vscale x 8 x i32> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %one, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i32> %add, %splat
-  %div = lshr <vscale x 8 x i32> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i32> %add, splat (i32 1)
+  %div = lshr <vscale x 8 x i32> %add1, splat (i32 1)
   %ret = trunc <vscale x 8 x i32> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -301,10 +269,8 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_lshr2(<vscale x 8 x i8> %x, <vsc
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i16> %add, %splat
-  %div = lshr <vscale x 8 x i16> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 2)
+  %div = lshr <vscale x 8 x i16> %add1, splat (i16 2)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -322,12 +288,8 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_add2(<vscale x 8 x i8> %x, <vsca
   %xzv = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat1 = shufflevector <vscale x 8 x i16> %one, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %two = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat2 = shufflevector <vscale x 8 x i16> %two, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %add2 = add nuw nsw <vscale x 8 x i16> %add, %splat2
-  %div = lshr <vscale x 8 x i16> %add2, %splat1
+  %add2 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 2)
+  %div = lshr <vscale x 8 x i16> %add2, splat (i16 2)
   %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %ret
 }
@@ -335,17 +297,15 @@ define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_add2(<vscale x 8 x i8> %x, <vsca
 define <vscale x 8 x i16> @vaaddu_vv_nxv8i16_ceil(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i16_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i16> %x to <vscale x 8 x i32>
   %yzv = zext <vscale x 8 x i16> %y to <vscale x 8 x i32>
   %add = add nuw nsw <vscale x 8 x i32> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %one, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i32> %add, %splat
-  %div = lshr <vscale x 8 x i32> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i32> %add, splat (i32 1)
+  %div = lshr <vscale x 8 x i32> %add1, splat (i32 1)
   %ret = trunc <vscale x 8 x i32> %div to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ret
 }
@@ -353,8 +313,8 @@ define <vscale x 8 x i16> @vaaddu_vv_nxv8i16_ceil(<vscale x 8 x i16> %x, <vscale
 define <vscale x 8 x i16> @vaaddu_vx_nxv8i16_ceil(<vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: vaaddu_vx_nxv8i16_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i16> %x to <vscale x 8 x i32>
@@ -362,10 +322,8 @@ define <vscale x 8 x i16> @vaaddu_vx_nxv8i16_ceil(<vscale x 8 x i16> %x, i16 %y)
   %ysplat = shufflevector <vscale x 8 x i16> %yhead, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i16> %ysplat to <vscale x 8 x i32>
   %add = add nuw nsw <vscale x 8 x i32> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %one, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i32> %add, %splat
-  %div = lshr <vscale x 8 x i32> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i32> %add, splat (i32 1)
+  %div = lshr <vscale x 8 x i32> %add1, splat (i32 1)
   %ret = trunc <vscale x 8 x i32> %div to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ret
 }
@@ -373,17 +331,15 @@ define <vscale x 8 x i16> @vaaddu_vx_nxv8i16_ceil(<vscale x 8 x i16> %x, i16 %y)
 define <vscale x 8 x i32> @vaaddu_vv_nxv8i32_ceil(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i32_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i32> %x to <vscale x 8 x i64>
   %yzv = zext <vscale x 8 x i32> %y to <vscale x 8 x i64>
   %add = add nuw nsw <vscale x 8 x i64> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i64> poison, i64 1, i64 0
-  %splat = shufflevector <vscale x 8 x i64> %one, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i64> %add, %splat
-  %div = lshr <vscale x 8 x i64> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i64> %add, splat (i64 1)
+  %div = lshr <vscale x 8 x i64> %add1, splat (i64 1)
   %ret = trunc <vscale x 8 x i64> %div to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %ret
 }
@@ -391,8 +347,8 @@ define <vscale x 8 x i32> @vaaddu_vv_nxv8i32_ceil(<vscale x 8 x i32> %x, <vscale
 define <vscale x 8 x i32> @vaaddu_vx_nxv8i32_ceil(<vscale x 8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: vaaddu_vx_nxv8i32_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i32> %x to <vscale x 8 x i64>
@@ -400,10 +356,8 @@ define <vscale x 8 x i32> @vaaddu_vx_nxv8i32_ceil(<vscale x 8 x i32> %x, i32 %y)
   %ysplat = shufflevector <vscale x 8 x i32> %yhead, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i32> %ysplat to <vscale x 8 x i64>
   %add = add nuw nsw <vscale x 8 x i64> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i64> poison, i64 1, i64 0
-  %splat = shufflevector <vscale x 8 x i64> %one, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i64> %add, %splat
-  %div = lshr <vscale x 8 x i64> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i64> %add, splat (i64 1)
+  %div = lshr <vscale x 8 x i64> %add1, splat (i64 1)
   %ret = trunc <vscale x 8 x i64> %div to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %ret
 }
@@ -411,17 +365,15 @@ define <vscale x 8 x i32> @vaaddu_vx_nxv8i32_ceil(<vscale x 8 x i32> %x, i32 %y)
 define <vscale x 8 x i64> @vaaddu_vv_nxv8i64_ceil(<vscale x 8 x i64> %x, <vscale x 8 x i64> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i64_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %xzv = zext <vscale x 8 x i64> %x to <vscale x 8 x i128>
   %yzv = zext <vscale x 8 x i64> %y to <vscale x 8 x i128>
   %add = add nuw nsw <vscale x 8 x i128> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i128> poison, i128 1, i128 0
-  %splat = shufflevector <vscale x 8 x i128> %one, <vscale x 8 x i128> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i128> %add, %splat
-  %div = lshr <vscale x 8 x i128> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i128> %add, splat (i128 1)
+  %div = lshr <vscale x 8 x i128> %add1, splat (i128 1)
   %ret = trunc <vscale x 8 x i128> %div to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %ret
 }
@@ -431,20 +383,21 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_ceil(<vscale x 8 x i64> %x, i64 %y)
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    vaaddu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vaaddu_vx_nxv8i64_ceil:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 0
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vaaddu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %xzv = zext <vscale x 8 x i64> %x to <vscale x 8 x i128>
@@ -452,10 +405,8 @@ define <vscale x 8 x i64> @vaaddu_vx_nxv8i64_ceil(<vscale x 8 x i64> %x, i64 %y)
   %ysplat = shufflevector <vscale x 8 x i64> %yhead, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i64> %ysplat to <vscale x 8 x i128>
   %add = add nuw nsw <vscale x 8 x i128> %xzv, %yzv
-  %one = insertelement <vscale x 8 x i128> poison, i128 1, i128 0
-  %splat = shufflevector <vscale x 8 x i128> %one, <vscale x 8 x i128> poison, <vscale x 8 x i32> zeroinitializer
-  %add1 = add nuw nsw <vscale x 8 x i128> %add, %splat
-  %div = lshr <vscale x 8 x i128> %add1, %splat
+  %add1 = add nuw nsw <vscale x 8 x i128> %add, splat (i128 1)
+  %div = lshr <vscale x 8 x i128> %add1, splat (i128 1)
   %ret = trunc <vscale x 8 x i128> %div to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %ret
 }

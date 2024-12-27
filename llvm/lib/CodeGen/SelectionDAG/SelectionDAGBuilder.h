@@ -21,11 +21,11 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/BranchProbability.h"
@@ -385,6 +385,11 @@ public:
     N = NewN;
   }
 
+  bool shouldKeepJumpConditionsTogether(
+      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
+      TargetLoweringBase::CondMergingParams Params) const;
+
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
@@ -401,7 +406,8 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
-                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr);
+                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
+                   const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
@@ -433,8 +439,8 @@ public:
     /// The set of gc.relocate calls associated with this gc.statepoint.
     SmallVector<const GCRelocateInst *, 16> GCRelocates;
 
-    /// The full list of gc arguments to the gc.statepoint being lowered.
-    ArrayRef<const Use> GCArgs;
+    /// The full list of gc-live arguments to the gc.statepoint being lowered.
+    ArrayRef<const Use> GCLives;
 
     /// The gc.statepoint instruction.
     const Instruction *StatepointInstr = nullptr;
@@ -444,7 +450,7 @@ public:
     ArrayRef<const Use> GCTransitionArgs;
 
     /// The ID that the resulting STATEPOINT instruction has to report.
-    unsigned ID = -1;
+    uint64_t ID = -1;
 
     /// Information regarding the underlying call instruction.
     TargetLowering::CallLoweringInfo CLI;
@@ -485,6 +491,9 @@ public:
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
 
+  void LowerCallSiteWithPtrAuthBundle(const CallBase &CB,
+                                      const BasicBlock *EHPadBB);
+
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.
   MVT getFrameIndexTy() {
     return DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout());
@@ -517,7 +526,7 @@ public:
   void visitBitTestHeader(SwitchCG::BitTestBlock &B,
                           MachineBasicBlock *SwitchBB);
   void visitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
-                        BranchProbability BranchProbToNext, unsigned Reg,
+                        BranchProbability BranchProbToNext, Register Reg,
                         SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
   void visitJumpTable(SwitchCG::JumpTable &JT);
   void visitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -554,8 +563,8 @@ private:
   void visitShl (const User &I) { visitShift(I, ISD::SHL); }
   void visitLShr(const User &I) { visitShift(I, ISD::SRL); }
   void visitAShr(const User &I) { visitShift(I, ISD::SRA); }
-  void visitICmp(const User &I);
-  void visitFCmp(const User &I);
+  void visitICmp(const ICmpInst &I);
+  void visitFCmp(const FCmpInst &I);
   // Visit the conversion instructions
   void visitTrunc(const User &I);
   void visitZExt(const User &I);
@@ -618,6 +627,9 @@ private:
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
+  void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
+  void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
+  void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
@@ -729,7 +741,7 @@ struct RegsForValue {
   /// This list holds the registers assigned to the values.
   /// Each legal or promoted value requires one register, and each
   /// expanded value requires multiple registers.
-  SmallVector<unsigned, 4> Regs;
+  SmallVector<Register, 4> Regs;
 
   /// This list holds the number of registers for each value.
   SmallVector<unsigned, 4> RegCount;
@@ -739,10 +751,10 @@ struct RegsForValue {
   std::optional<CallingConv::ID> CallConv;
 
   RegsForValue() = default;
-  RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt, EVT valuevt,
+  RegsForValue(const SmallVector<Register, 4> &regs, MVT regvt, EVT valuevt,
                std::optional<CallingConv::ID> CC = std::nullopt);
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
-               const DataLayout &DL, unsigned Reg, Type *Ty,
+               const DataLayout &DL, Register Reg, Type *Ty,
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
@@ -785,7 +797,7 @@ struct RegsForValue {
   }
 
   /// Return a list of registers and their sizes.
-  SmallVector<std::pair<unsigned, TypeSize>, 4> getRegsAndSizes() const;
+  SmallVector<std::pair<Register, TypeSize>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm

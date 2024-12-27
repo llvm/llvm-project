@@ -101,9 +101,10 @@ class SparseConstantPropagation
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
-  void visitOperation(Operation *op,
-                      ArrayRef<const Lattice<ConstantValue> *> operands,
-                      ArrayRef<Lattice<ConstantValue> *> results) override;
+  LogicalResult
+  visitOperation(Operation *op,
+                 ArrayRef<const Lattice<ConstantValue> *> operands,
+                 ArrayRef<Lattice<ConstantValue> *> results) override;
 
   void setToEntryState(Lattice<ConstantValue> *lattice) override;
 };

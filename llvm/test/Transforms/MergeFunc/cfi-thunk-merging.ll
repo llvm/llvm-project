@@ -98,7 +98,7 @@ attributes #3 = { noreturn nounwind }
 !4 = !{i64 0, !"_ZTSFiiE.generalized"}
 !5 = !{}
 ; CHECK-LABEL: define dso_local i32 @f
-; CHECK-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0:[0-9]+]] !type !2 !type !3 {
+; CHECK-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0:[0-9]+]] !type [[META2:![0-9]+]] !type [[META3:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -119,7 +119,7 @@ attributes #3 = { noreturn nounwind }
 ;
 ;
 ; CHECK-LABEL: define dso_local i32 @g
-; CHECK-SAME: (i32 noundef [[B:%.*]]) #[[ATTR0]] !type !2 !type !3 {
+; CHECK-SAME: (i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META2]] !type [[META3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -130,11 +130,11 @@ attributes #3 = { noreturn nounwind }
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr @f, ptr @f_thunk
 ; CHECK-NEXT:    store ptr [[COND]], ptr [[FP]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[TMP2]], metadata !"_ZTSFiiE"), !nosanitize !4
-; CHECK-NEXT:    br i1 [[TMP3]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize !4
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[TMP2]], metadata !"_ZTSFiiE"), !nosanitize [[META4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize [[META4]]
 ; CHECK:       trap:
-; CHECK-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize !4
-; CHECK-NEXT:    unreachable, !nosanitize !4
+; CHECK-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META4]]
+; CHECK-NEXT:    unreachable, !nosanitize [[META4]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[B_ADDR]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 [[TMP2]](i32 noundef [[TMP4]])
@@ -142,13 +142,13 @@ attributes #3 = { noreturn nounwind }
 ;
 ;
 ; CHECK-LABEL: define dso_local i32 @f_thunk
-; CHECK-SAME: (i32 noundef [[TMP0:%.*]]) #[[ATTR0]] !type !2 {
+; CHECK-SAME: (i32 noundef [[TMP0:%.*]]) #[[ATTR0]] !type [[META2]] !type [[META3]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @f(i32 noundef [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 ;
 ; LOWERTYPETESTS-LABEL: define dso_local i32 @f
-; LOWERTYPETESTS-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0:[0-9]+]] !type !2 !type !3 {
+; LOWERTYPETESTS-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0:[0-9]+]] !type [[META2:![0-9]+]] !type [[META3:![0-9]+]] {
 ; LOWERTYPETESTS-NEXT:  entry:
 ; LOWERTYPETESTS-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 ; LOWERTYPETESTS-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -169,7 +169,7 @@ attributes #3 = { noreturn nounwind }
 ;
 ;
 ; LOWERTYPETESTS-LABEL: define dso_local i32 @g
-; LOWERTYPETESTS-SAME: (i32 noundef [[B:%.*]]) #[[ATTR0]] !type !2 !type !3 {
+; LOWERTYPETESTS-SAME: (i32 noundef [[B:%.*]]) #[[ATTR0]] !type [[META2]] !type [[META3]] {
 ; LOWERTYPETESTS-NEXT:  entry:
 ; LOWERTYPETESTS-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 ; LOWERTYPETESTS-NEXT:    [[FP:%.*]] = alloca ptr, align 8
@@ -186,10 +186,10 @@ attributes #3 = { noreturn nounwind }
 ; LOWERTYPETESTS-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP4]], 61
 ; LOWERTYPETESTS-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
 ; LOWERTYPETESTS-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], 1
-; LOWERTYPETESTS-NEXT:    br i1 [[TMP8]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize !4
+; LOWERTYPETESTS-NEXT:    br i1 [[TMP8]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize [[META4:![0-9]+]]
 ; LOWERTYPETESTS:       trap:
-; LOWERTYPETESTS-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize !4
-; LOWERTYPETESTS-NEXT:    unreachable, !nosanitize !4
+; LOWERTYPETESTS-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META4]]
+; LOWERTYPETESTS-NEXT:    unreachable, !nosanitize [[META4]]
 ; LOWERTYPETESTS:       cont:
 ; LOWERTYPETESTS-NEXT:    [[TMP9:%.*]] = load i32, ptr [[B_ADDR]], align 4
 ; LOWERTYPETESTS-NEXT:    [[CALL:%.*]] = call i32 [[TMP2]](i32 noundef [[TMP9]])
@@ -197,7 +197,7 @@ attributes #3 = { noreturn nounwind }
 ;
 ;
 ; LOWERTYPETESTS-LABEL: define dso_local i32 @f_thunk
-; LOWERTYPETESTS-SAME: (i32 noundef [[TMP0:%.*]]) #[[ATTR0]] !type !2 {
+; LOWERTYPETESTS-SAME: (i32 noundef [[TMP0:%.*]]) #[[ATTR0]] !type [[META2]] !type [[META3]] {
 ; LOWERTYPETESTS-NEXT:    [[TMP2:%.*]] = tail call i32 @f(i32 noundef [[TMP0]]) #[[ATTR0]]
 ; LOWERTYPETESTS-NEXT:    ret i32 [[TMP2]]
 ;

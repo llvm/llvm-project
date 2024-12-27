@@ -16,11 +16,11 @@
 // fixed form character literals on truncated card images, file
 // inclusion, and driving the Fortran source preprocessor.
 
-#include "token-sequence.h"
 #include "flang/Common/Fortran-features.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Parser/token-sequence.h"
 #include <bitset>
 #include <optional>
 #include <string>
@@ -35,7 +35,10 @@ class Prescanner {
 public:
   Prescanner(Messages &, CookedSource &, Preprocessor &,
       common::LanguageFeatureControl);
-  Prescanner(const Prescanner &);
+  Prescanner(
+      const Prescanner &, Preprocessor &, bool isNestedInIncludeDirective);
+  Prescanner(const Prescanner &) = delete;
+  Prescanner(Prescanner &&) = delete;
 
   const AllSources &allSources() const { return allSources_; }
   AllSources &allSources() { return allSources_; }
@@ -43,7 +46,16 @@ public:
   Messages &messages() { return messages_; }
   const Preprocessor &preprocessor() const { return preprocessor_; }
   Preprocessor &preprocessor() { return preprocessor_; }
+  common::LanguageFeatureControl &features() { return features_; }
 
+  Prescanner &set_preprocessingOnly(bool yes) {
+    preprocessingOnly_ = yes;
+    return *this;
+  }
+  Prescanner &set_expandIncludeLines(bool yes) {
+    expandIncludeLines_ = yes;
+    return *this;
+  }
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;
     return *this;
@@ -71,6 +83,9 @@ public:
 
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
+  // 'first' is the sentinel, 'second' is beginning of payload
+  std::optional<std::pair<const char *, const char *>>
+  IsCompilerDirectiveSentinel(const char *p) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
@@ -91,6 +106,7 @@ private:
     LineClassification(Kind k, std::size_t po = 0, const char *s = nullptr)
         : kind{k}, payloadOffset{po}, sentinel{s} {}
     LineClassification(LineClassification &&) = default;
+    LineClassification &operator=(LineClassification &&) = default;
     Kind kind;
     std::size_t payloadOffset; // byte offset of content
     const char *sentinel; // if it's a compiler directive
@@ -114,6 +130,7 @@ private:
     parenthesisNesting_ = 0;
     continuationLines_ = 0;
     isPossibleMacroCall_ = false;
+    disableSourceContinuation_ = false;
   }
 
   Provenance GetProvenance(const char *sourceChar) const {
@@ -154,12 +171,14 @@ private:
                     common::LanguageFeature::ClassicCComments)));
   }
 
+  void CheckAndEmitLine(TokenSequence &, Provenance newlineProvenance);
   void LabelField(TokenSequence &);
   void EnforceStupidEndStatementRules(const TokenSequence &);
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();
-  void SkipToNextSignificantCharacter();
+  // True when input flowed to a continuation line
+  bool SkipToNextSignificantCharacter();
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
@@ -187,6 +206,8 @@ private:
   std::optional<LineClassification> IsFreeFormCompilerDirectiveLine(
       const char *) const;
   LineClassification ClassifyLine(const char *) const;
+  LineClassification ClassifyLine(
+      TokenSequence &, Provenance newlineProvenance) const;
   void SourceFormChange(std::string &&);
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
@@ -196,6 +217,10 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool preprocessingOnly_{false};
+  bool expandIncludeLines_{true};
+  bool isNestedInIncludeDirective_{false};
+  bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};
@@ -203,6 +228,8 @@ private:
   int prescannerNesting_{0};
   int continuationLines_{0};
   bool isPossibleMacroCall_{false};
+  bool afterPreprocessingDirective_{false};
+  bool disableSourceContinuation_{false};
 
   Provenance startProvenance_;
   const char *start_{nullptr}; // beginning of current source file content
@@ -233,6 +260,8 @@ private:
   // line in an include file.
   bool omitNewline_{false};
   bool skipLeadingAmpersand_{false};
+
+  const std::size_t firstCookedCharacterOffset_{cooked_.BufferedBytes()};
 
   const Provenance spaceProvenance_{
       allSources_.CompilerInsertionProvenance(' ')};

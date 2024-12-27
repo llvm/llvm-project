@@ -47,6 +47,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -400,8 +403,8 @@ template <class _Range, class _Pattern>
 lazy_split_view(_Range&&, _Pattern&&) -> lazy_split_view<views::all_t<_Range>, views::all_t<_Pattern>>;
 
 template <input_range _Range>
-lazy_split_view(_Range&&, range_value_t<_Range>)
-    -> lazy_split_view<views::all_t<_Range>, single_view<range_value_t<_Range>>>;
+lazy_split_view(_Range&&,
+                range_value_t<_Range>) -> lazy_split_view<views::all_t<_Range>, single_view<range_value_t<_Range>>>;
 
 namespace views {
 namespace __lazy_split_view {
@@ -417,7 +420,7 @@ struct __fn {
     requires constructible_from<decay_t<_Pattern>, _Pattern>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pattern&& __pattern) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pattern>, _Pattern>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
   }
 };
 } // namespace __lazy_split_view
@@ -432,5 +435,7 @@ inline constexpr auto lazy_split = __lazy_split_view::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_LAZY_SPLIT_VIEW_H

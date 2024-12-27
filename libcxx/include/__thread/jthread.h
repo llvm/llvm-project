@@ -10,25 +10,29 @@
 #ifndef _LIBCPP___THREAD_JTHREAD_H
 #define _LIBCPP___THREAD_JTHREAD_H
 
-#include <__availability>
 #include <__config>
-#include <__functional/invoke.h>
 #include <__stop_token/stop_source.h>
 #include <__stop_token/stop_token.h>
+#include <__thread/id.h>
+#include <__thread/support.h>
 #include <__thread/thread.h>
-#include <__threading_support>
 #include <__type_traits/decay.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -125,6 +129,8 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___THREAD_JTHREAD_H

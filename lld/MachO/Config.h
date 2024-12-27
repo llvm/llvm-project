@@ -12,7 +12,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -68,6 +68,7 @@ enum class ICFLevel {
   unknown,
   none,
   safe,
+  safe_thunks,
   all,
 };
 
@@ -92,7 +93,7 @@ class SymbolPatterns {
 public:
   // GlobPattern can also match literals,
   // but we prefer the O(1) lookup of DenseSet.
-  llvm::DenseSet<llvm::CachedHashStringRef> literals;
+  llvm::SetVector<llvm::CachedHashStringRef> literals;
   std::vector<llvm::GlobPattern> globs;
 
   bool empty() const { return literals.empty() && globs.empty(); }
@@ -135,6 +136,7 @@ struct Configuration {
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
   bool emitChainedFixups = false;
+  bool emitRelativeMethodLists = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;
   bool thinLTOIndexOnly;
@@ -162,7 +164,9 @@ struct Configuration {
   llvm::StringRef finalOutput;
 
   llvm::StringRef installName;
+  llvm::StringRef clientName;
   llvm::StringRef mapFile;
+  llvm::StringRef ltoNewPmPasses;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
@@ -192,12 +196,15 @@ struct Configuration {
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
   ICFLevel icfLevel = ICFLevel::none;
+  bool keepICFStabs = false;
   ObjCStubsMode objcStubsMode = ObjCStubsMode::fast;
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> systemLibraryRoots;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
+  bool warnDuplicateRpath = true;
   llvm::SmallVector<llvm::StringRef, 0> runtimePaths;
+  llvm::SmallVector<llvm::StringRef, 0> allowableClients;
   std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
   llvm::StringSet<> explicitDynamicLookups;
@@ -206,12 +213,21 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
   bool ltoDebugPassManager = false;
+  llvm::StringRef codegenDataGeneratePath;
   bool csProfileGenerate = false;
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
+  bool warnThinArchiveMissingMembers;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
+
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;
@@ -226,6 +242,7 @@ struct Configuration {
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
 
   bool zeroModTime = true;
   bool generateUuid = true;

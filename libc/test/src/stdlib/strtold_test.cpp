@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/UInt128.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h"
 #include "src/stdlib/strtold.h"
 
@@ -15,17 +15,19 @@
 
 #include <stddef.h>
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
-#else
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 #define SELECT_CONST(_, __, val) val
+#else
+#error "Unknown long double type"
 #endif
 
 class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
 public:
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint64_t expectedRawData, const int expectedErrno = 0)
 #else
@@ -73,11 +75,12 @@ public:
     //         +-- 15 Exponent Bits
     char *str_end = nullptr;
 
-    LIBC_NAMESPACE::fputil::FPBits<long double> expected_fp =
-        LIBC_NAMESPACE::fputil::FPBits<long double>(expectedRawData);
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
+    FPBits expected_fp =
+        FPBits(static_cast<FPBits::StorageType>(expectedRawData));
     const int expected_errno = expectedErrno;
 
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 
     LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =
@@ -90,7 +93,7 @@ public:
     EXPECT_EQ(actual_fp.is_neg(), expected_fp.is_neg());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(libc_errno, expected_errno);
+    ASSERT_ERRNO_EQ(expected_errno);
   }
 };
 

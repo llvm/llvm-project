@@ -38,8 +38,9 @@
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:	-stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  -memprof-report-hinted-sizes \
 ; RUN:	%s -S 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR \
-; RUN:	--check-prefix=STATS --check-prefix=REMARKS
+; RUN:	--check-prefix=STATS --check-prefix=REMARKS --check-prefix=SIZES
 
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
@@ -105,13 +106,16 @@ attributes #6 = { builtin }
 !0 = !{i64 8632435727821051414}
 !1 = !{i64 -3421689549917153178}
 !2 = !{!3, !5}
-!3 = !{!4, !"notcold"}
+!3 = !{!4, !"notcold", !10}
 !4 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 8632435727821051414}
-!5 = !{!6, !"cold"}
+!5 = !{!6, !"cold", !11, !12}
 !6 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 -3421689549917153178}
 !7 = !{i64 9086428284934609951}
 !8 = !{i64 -5964873800580613432}
 !9 = !{i64 2732490490862098848}
+!10 = !{i64 123, i64 100}
+!11 = !{i64 456, i64 200}
+!12 = !{i64 789, i64 300}
 
 
 ; DUMP: CCG before cloning:
@@ -248,6 +252,9 @@ attributes #6 = { builtin }
 ; REMARKS: call in clone _Z3bazv assigned to call function clone _Z3barv
 ; REMARKS: call in clone _Z3barv marked with memprof allocation attribute notcold
 
+; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning
+; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning
+; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning
 
 ; IR: define {{.*}} @main
 ;; The first call to foo does not allocate cold memory. It should call the

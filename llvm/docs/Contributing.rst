@@ -6,7 +6,7 @@ Contributing to LLVM
 Thank you for your interest in contributing to LLVM! There are multiple ways to
 contribute, and we appreciate all contributions. In case you have questions,
 you can either use the `Forum`_ or, for a more interactive chat, go to our
-`Discord server`_ or the IRC #llvm channel on `irc.oftc.net`_.
+`Discord server`_.
 
 If you want to contribute code, please familiarize yourself with the :doc:`DeveloperPolicy`.
 
@@ -58,7 +58,7 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the :doc:`CodingStandards`. You can use the `clang-format-diff.py`_ or `git-clang-format`_ tools to automatically format your patch properly.
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* have a single commit (unless stacked on another Differential), up-to-date with the upstream ``origin/main`` branch, and don't have merges.
+* have a single commit, up-to-date with the upstream ``origin/main`` branch, and don't have merges.
 
 .. _format patches:
 
@@ -89,35 +89,28 @@ in order to update the last commit with all pending changes.
   ``clang/tools/clang-format/git-clang-format``.
 
 The LLVM project has migrated to GitHub Pull Requests as its review process.
-We still have an active :ref:`Phabricator <phabricator-reviews>`
-instance for the duration of the migration. If you want to contribute to LLVM
-now, please use GitHub. For more information about the workflow of using GitHub
-Pull Requests see our :ref:`GitHub <github-reviews>` documentation.
+For more information about the workflow of using GitHub Pull Requests see our
+:ref:`GitHub <github-reviews>` documentation. We still have an read-only
+`LLVM's Phabricator <https://reviews.llvm.org>`_ instance.
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
-code owner (see CODE_OWNERS.txt) and other people doing work in the area your
+maintainers (see ``Maintainers.rst``) and other people doing work in the area your
 patch touches. Github will normally suggest some reviewers based on rules or
 people that have worked on the code before. If you are a new contributor, you
 will not be able to select reviewers in such a way, in which case you can still
 get the attention of potential reviewers by CC'ing them in a comment -- just
 @name them.
 
-A reviewer may request changes or ask questions during the review. If you are
-uncertain on how to provide test cases, documentation, etc., feel free to ask
-for guidance during the review. Please address the feedback and re-post an
-updated version of your patch. This cycle continues until all requests and comments
-have been addressed and a reviewer accepts the patch with a `Looks good to me` or `LGTM`.
-Once that is done the change can be committed. If you do not have commit
-access, please let people know during the review and someone should commit it
-on your behalf.
-
 If you have received no comments on your patch for a week, you can request a
 review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
-is once a week. Please remember that you are asking for valuable time from other
-professional developers.
+is once a week. Please remember that you are asking for valuable time from
+other professional developers. Finally, if you do not have commit access,
+please let people know during the review and someone should commit it on your
+behalf once it has been accepted.
 
-For more information on LLVM's code-review process, please see :doc:`CodeReview`.
+For more information on LLVM's code-review process, please see
+:doc:`CodeReview`.
 
 .. _commit_from_git:
 
@@ -125,12 +118,24 @@ For developers to commit changes from Git
 -----------------------------------------
 
 Once a patch is reviewed, you can select the "Squash and merge" button in the
-GitHub web interface. You might need to rebase your change before pushing
-it to the repo.
+GitHub web interface.
 
-LLVM currently has a linear-history policy, which means that merge commits are
-not allowed. The `llvm-project` repo on github is configured to reject pushes
-that include merges, so the `git rebase` step above is required.
+When pushing directly from the command-line to the ``main`` branch, you will need
+to rebase your change. LLVM has a linear-history policy, which means
+that merge commits are not allowed and the ``main`` branch is configured to reject
+pushes that include merges.
+
+GitHub will display a message that looks like this:
+
+.. code-block:: console
+
+  remote: Bypassed rule violations for refs/heads/main:
+  remote:
+  remote: - Required status check “buildkite/github-pull-requests” is expected.
+
+This can seem scary, but this is just an artifact of the GitHub setup: it is
+intended as a warning for people merging pull-requests with failing CI. We can't
+disable it for people pushing on the command-line.
 
 Please ask for help if you're having trouble with your particular git workflow.
 
@@ -182,8 +187,8 @@ of LLVM's high-level design, as well as its internals:
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _good first issue: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
-.. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
-.. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
+.. _clang-format-diff.py: https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/clang-format-diff.py
+.. _git-clang-format: https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's GitHub: https://github.com/llvm/llvm-project
-.. _LLVM's Phabricator (deprecated): https://reviews.llvm.org/
+.. _LLVM's Phabricator (read-only): https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what

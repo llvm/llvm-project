@@ -41,6 +41,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -374,8 +377,8 @@ template <class _JoinViewIterator>
            __has_random_access_iterator_category<typename _JoinViewIterator::_Outer>::value &&
            __has_random_access_iterator_category<typename _JoinViewIterator::_Inner>::value)
 struct __segmented_iterator_traits<_JoinViewIterator> {
-  using __segment_iterator =
-      _LIBCPP_NODEBUG __iterator_with_data<typename _JoinViewIterator::_Outer, typename _JoinViewIterator::_Parent*>;
+  using __segment_iterator _LIBCPP_NODEBUG =
+      __iterator_with_data<typename _JoinViewIterator::_Outer, typename _JoinViewIterator::_Parent*>;
   using __local_iterator = typename _JoinViewIterator::_Inner;
 
   // TODO: Would it make sense to enable the optimization for other iterator types?
@@ -414,5 +417,7 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
 #endif // #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_JOIN_VIEW_H

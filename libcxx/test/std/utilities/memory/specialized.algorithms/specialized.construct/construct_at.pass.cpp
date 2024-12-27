@@ -13,8 +13,9 @@
 // template <class T, class ...Args>
 // constexpr T* construct_at(T* location, Args&& ...args);
 
-#include <memory>
 #include <cassert>
+#include <cstddef>
+#include <memory>
 #include <utility>
 
 #include "test_iterators.h"
@@ -80,44 +81,27 @@ constexpr bool test()
         a.deallocate(p, 2);
     }
 
-    {
-        std::allocator<Counted const> a;
-        Counted const* p = a.allocate(2);
-        int count = 0;
-        std::construct_at(p, count);
-        assert(count == 1);
-        std::construct_at(p+1, count);
-        assert(count == 2);
-        (p+1)->~Counted();
-        assert(count == 1);
-        p->~Counted();
-        assert(count == 0);
-        a.deallocate(p, 2);
-    }
-
     return true;
 }
 
-template <class ...Args, class = decltype(std::construct_at(std::declval<Args>()...))>
-constexpr bool can_construct_at(Args&&...) { return true; }
-
 template <class ...Args>
-constexpr bool can_construct_at(...) { return false; }
+constexpr bool can_construct_at = requires {
+    std::construct_at(std::declval<Args>()...);
+};
 
 // Check that SFINAE works.
-static_assert( can_construct_at((int*)nullptr, 42));
-static_assert( can_construct_at((Foo*)nullptr, 1, '2', 3.0));
-static_assert(!can_construct_at((Foo*)nullptr, 1, '2'));
-static_assert(!can_construct_at((Foo*)nullptr, 1, '2', 3.0, 4));
-static_assert(!can_construct_at(nullptr, 1, '2', 3.0));
-static_assert(!can_construct_at((int*)nullptr, 1, '2', 3.0));
-static_assert(!can_construct_at(contiguous_iterator<Foo*>(), 1, '2', 3.0));
+static_assert( can_construct_at<int*, int>);
+static_assert( can_construct_at<Foo*, int, char, double>);
+static_assert(!can_construct_at<Foo*, int, char>);
+static_assert(!can_construct_at<Foo*, int, char, double, int>);
+static_assert(!can_construct_at<std::nullptr_t, int, char, double>);
+static_assert(!can_construct_at<int*, int, char, double>);
+static_assert(!can_construct_at<contiguous_iterator<Foo*>, int, char, double>);
 // Can't construct function pointers.
-static_assert(!can_construct_at((int(*)())nullptr));
-static_assert(!can_construct_at((int(*)())nullptr, nullptr));
+static_assert(!can_construct_at<int(*)()>);
+static_assert(!can_construct_at<int(*)(), std::nullptr_t>);
 
-int main(int, char**)
-{
+int main(int, char**) {
     test();
     static_assert(test());
     return 0;

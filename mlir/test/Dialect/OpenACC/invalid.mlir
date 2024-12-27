@@ -3,7 +3,7 @@
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
@@ -13,7 +13,7 @@ acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
@@ -23,7 +23,7 @@ acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
@@ -33,7 +33,7 @@ acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
@@ -43,7 +43,7 @@ acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
@@ -53,7 +53,7 @@ acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
@@ -100,7 +100,7 @@ acc.loop {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   acc.yield
 } attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 
@@ -129,16 +129,8 @@ acc.update
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
-// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.update wait_devnum(%cst: index) dataOperands(%0: memref<f32>)
-
-// -----
-
-%cst = arith.constant 1 : index
-%value = memref.alloc() : memref<f32>
-%0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async = [#acc.device_type<none>]} 
 
 // -----
 
@@ -146,7 +138,7 @@ acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.update wait(%cst: index) dataOperands(%0: memref<f32>) attributes {wait}
+acc.update wait({%cst: index}) dataOperands(%0: memref<f32>) attributes {waitOnly = [#acc.device_type<none>]} 
 
 // -----
 
@@ -172,7 +164,7 @@ acc.parallel {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
   acc.yield
@@ -190,7 +182,7 @@ acc.parallel {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
   acc.shutdown
   acc.yield
@@ -200,7 +192,7 @@ acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() ({
     // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
     acc.shutdown
@@ -413,7 +405,7 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{expected ')'}}
-acc.loop gang({static=%i64Value: i64, num=%i64Value: i64} (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop gang({static=%i64Value: i64, num=%i64Value: i64} control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -484,7 +476,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{new value expected after comma}}
-acc.loop gang({static=%i64Value: i64, ) (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -512,6 +504,13 @@ acc.loop gang({}) {
 // expected-error@+1 {{num_gangs expects a maximum of 3 values per segment}}
 acc.parallel num_gangs({%i64value: i64, %i64value : i64, %i64value : i64, %i64value : i64}) {
 }
+
+// -----
+
+%0 = "arith.constant"() <{value = 1 : i64}> : () -> i64
+// expected-error@+1 {{num_gangs operand count does not match count in segments}}
+"acc.parallel"(%0) <{numGangsSegments = array<i32: 1>, operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0>}> ({
+}) : (i64) -> ()
 
 // -----
 
@@ -612,7 +611,7 @@ func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
 func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{expected three operations in atomic.capture region}}
   acc.atomic.capture {
-    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.terminator
   }
   return
@@ -623,56 +622,8 @@ func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.read %v = %x : memref<i32>, i32
-    acc.atomic.read %v = %x : memref<i32>, i32
-    acc.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  acc.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      acc.yield %newval : i32
-    }
-    acc.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      acc.yield %newval : i32
-    }
-    acc.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  acc.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  acc.atomic.capture {
-    // expected-error @below {{invalid sequence of operations in the capture region}}
-    acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.atomic.update %x : memref<i32> {
-    ^bb0(%xval: i32):
-      %newval = llvm.add %xval, %expr : i32
-      acc.yield %newval : i32
-    }
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.terminator
   }
   return
@@ -688,6 +639,22 @@ func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
       %newval = llvm.add %xval, %expr : i32
       acc.yield %newval : i32
     }
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
     acc.atomic.write %x = %expr : memref<i32>, i32
     acc.terminator
   }
@@ -700,7 +667,39 @@ func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
     acc.atomic.write %x = %expr : memref<i32>, i32
-    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.terminator
   }
   return
@@ -716,7 +715,7 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
       %newval = llvm.add %xval, %expr : i32
       acc.yield %newval : i32
     }
-    acc.atomic.read %v = %y : memref<i32>, i32
+    acc.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     acc.terminator
   }
 }
@@ -726,7 +725,7 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
-    acc.atomic.read %v = %y : memref<i32>, i32
+    acc.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     acc.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -741,8 +740,48 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   acc.atomic.capture {
     // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
-    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.atomic.write %y = %expr : memref<i32>, i32
     acc.terminator
   }
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected 'loop'}}
+  acc.parallel combined() {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected compute construct name}}
+  acc.loop combined(loop) {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected 'loop'}}
+  acc.parallel combined(parallel loop) {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected ')'}}
+  acc.loop combined(parallel loop) {
+  }
+
+  return
 }

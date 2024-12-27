@@ -25,12 +25,12 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -197,8 +196,13 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
   setOperationAction(ISD::UDIVREM, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Custom);
-  setOperationAction(ISD::LOAD,               MVT::i32, Custom);
-  setOperationAction(ISD::STORE,              MVT::i32, Custom);
+  if (Subtarget.hasMips32r6()) {
+    setOperationAction(ISD::LOAD,               MVT::i32, Legal);
+    setOperationAction(ISD::STORE,              MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::LOAD,               MVT::i32, Custom);
+    setOperationAction(ISD::STORE,              MVT::i32, Custom);
+  }
 
   setTargetDAGCombine(ISD::MUL);
 
@@ -425,6 +429,8 @@ bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     if (Fast)
       *Fast = 1;
     return true;
+  } else if (Subtarget.hasMips32r6()) {
+    return false;
   }
 
   switch (SVT) {
@@ -1237,6 +1243,11 @@ SDValue MipsSETargetLowering::lowerBITCAST(SDValue Op,
 
   // Bitcast double to i64.
   if (Src == MVT::f64 && Dest == MVT::i64) {
+    // Skip lower bitcast when operand0 has converted float results to integer
+    // which was done by function SoftenFloatResult.
+    if (getTypeAction(*DAG.getContext(), Op.getOperand(0).getValueType()) ==
+        TargetLowering::TypeSoftenFloat)
+      return SDValue();
     SDValue Lo =
         DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
                     DAG.getConstant(0, DL, MVT::i32));

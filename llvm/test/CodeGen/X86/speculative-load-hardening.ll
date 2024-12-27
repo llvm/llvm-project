@@ -217,7 +217,7 @@ define void @test_basic_loop(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) nounwind spec
 ; X64-NEXT:    movl %esi, %ebp
 ; X64-NEXT:    cmovneq %r15, %rax
 ; X64-NEXT:    xorl %r12d, %r12d
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB2_3: # %l.header
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movslq (%r14), %rcx
@@ -267,7 +267,7 @@ define void @test_basic_loop(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) nounwind spec
 ; X64-LFENCE-NEXT:    movl %esi, %ebp
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    xorl %r15d, %r15d
-; X64-LFENCE-NEXT:    .p2align 4, 0x90
+; X64-LFENCE-NEXT:    .p2align 4
 ; X64-LFENCE-NEXT:  .LBB2_2: # %l.header
 ; X64-LFENCE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-LFENCE-NEXT:    lfence
@@ -331,11 +331,11 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2
 ; X64-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    testl %r15d, %r15d
 ; X64-NEXT:    jle .LBB3_4
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_5: # %l2.header.preheader
 ; X64-NEXT:    cmovleq %r12, %rax
 ; X64-NEXT:    xorl %r15d, %r15d
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_6: # %l2.header
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movslq (%r14), %rcx
@@ -358,12 +358,12 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2
 ; X64-NEXT:  # %bb.11: # in Loop: Header=BB3_6 Depth=1
 ; X64-NEXT:    cmovgeq %r12, %rax
 ; X64-NEXT:    jmp .LBB3_6
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_7:
 ; X64-NEXT:    cmovlq %r12, %rax
 ; X64-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 4-byte Reload
 ; X64-NEXT:    jmp .LBB3_8
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_4:
 ; X64-NEXT:    cmovgq %r12, %rax
 ; X64-NEXT:  .LBB3_8: # %l1.latch
@@ -432,7 +432,7 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    xorl %r12d, %r12d
 ; X64-LFENCE-NEXT:    jmp .LBB3_2
-; X64-LFENCE-NEXT:    .p2align 4, 0x90
+; X64-LFENCE-NEXT:    .p2align 4
 ; X64-LFENCE-NEXT:  .LBB3_5: # %l1.latch
 ; X64-LFENCE-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; X64-LFENCE-NEXT:    lfence
@@ -452,7 +452,7 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2
 ; X64-LFENCE-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    xorl %r13d, %r13d
-; X64-LFENCE-NEXT:    .p2align 4, 0x90
+; X64-LFENCE-NEXT:    .p2align 4
 ; X64-LFENCE-NEXT:  .LBB3_4: # %l2.header
 ; X64-LFENCE-NEXT:    # Parent Loop BB3_2 Depth=1
 ; X64-LFENCE-NEXT:    # => This Inner Loop Header: Depth=2

@@ -5,6 +5,7 @@
 
 import collections
 import re
+import os
 
 try:
     from urllib.request import urlopen
@@ -18,7 +19,11 @@ except Exception as e:
     CLASS_INDEX_PAGE = None
     print("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
 
-MATCHERS_FILE = "../../include/clang/ASTMatchers/ASTMatchers.h"
+CURRENT_DIR = os.path.dirname(__file__)
+MATCHERS_FILE = os.path.join(
+    CURRENT_DIR, "../../include/clang/ASTMatchers/ASTMatchers.h"
+)
+HTML_FILE = os.path.join(CURRENT_DIR, "../LibASTMatchersReference.html")
 
 # Each matcher is documented in one row of the form:
 #   result | name | argA
@@ -116,6 +121,8 @@ def strip_doxygen(comment):
 
 def unify_arguments(args):
     """Gets rid of anything the user doesn't care about in the argument list."""
+    args = re.sub(r"clang::ast_matchers::internal::", r"", args)
+    args = re.sub(r"ast_matchers::internal::", r"", args)
     args = re.sub(r"internal::", r"", args)
     args = re.sub(r"extern const\s+(.*)&", r"\1 ", args)
     args = re.sub(r"&", r" ", args)
@@ -588,7 +595,7 @@ node_matcher_table = sort_table("DECL", node_matchers)
 narrowing_matcher_table = sort_table("NARROWING", narrowing_matchers)
 traversal_matcher_table = sort_table("TRAVERSAL", traversal_matchers)
 
-reference = open("../LibASTMatchersReference.html").read()
+reference = open(HTML_FILE).read()
 reference = re.sub(
     r"<!-- START_DECL_MATCHERS.*END_DECL_MATCHERS -->",
     node_matcher_table,

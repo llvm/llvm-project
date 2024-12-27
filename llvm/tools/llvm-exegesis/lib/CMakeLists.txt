@@ -12,6 +12,9 @@ endif()
 if (LLVM_TARGETS_TO_BUILD MATCHES "Mips")
   list(APPEND LLVM_EXEGESIS_TARGETS "Mips")
 endif()
+if(LLVM_TARGETS_TO_BUILD MATCHES "RISCV")
+  list(APPEND LLVM_EXEGESIS_TARGETS "RISCV")
+endif()
 
 set(LLVM_EXEGESIS_TARGETS ${LLVM_EXEGESIS_TARGETS} PARENT_SCOPE)
 
@@ -64,6 +67,7 @@ add_llvm_library(LLVMExegesis
   PerfHelper.cpp
   RegisterAliasing.cpp
   RegisterValue.cpp
+  ResultAggregator.cpp
   SchedClassResolution.cpp
   SerialSnippetGenerator.cpp
   SnippetFile.cpp
@@ -72,6 +76,7 @@ add_llvm_library(LLVMExegesis
   SubprocessMemory.cpp
   Target.cpp
   UopsBenchmarkRunner.cpp
+  ValidationEvent.cpp
 
   LINK_LIBS ${libs}
 

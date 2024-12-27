@@ -18,6 +18,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -195,21 +196,34 @@ static bool castMismatchedIntegerTypes(const CallExpr *Call, bool StrictMode) {
   return false;
 }
 
-FormatStringConverter::FormatStringConverter(ASTContext *ContextIn,
-                                             const CallExpr *Call,
-                                             unsigned FormatArgOffset,
-                                             bool StrictMode,
-                                             const LangOptions &LO)
-    : Context(ContextIn),
-      CastMismatchedIntegerTypes(castMismatchedIntegerTypes(Call, StrictMode)),
+FormatStringConverter::FormatStringConverter(
+    ASTContext *ContextIn, const CallExpr *Call, unsigned FormatArgOffset,
+    const Configuration ConfigIn, const LangOptions &LO, SourceManager &SM,
+    Preprocessor &PP)
+    : Context(ContextIn), Config(ConfigIn),
+      CastMismatchedIntegerTypes(
+          castMismatchedIntegerTypes(Call, ConfigIn.StrictMode)),
       Args(Call->getArgs()), NumArgs(Call->getNumArgs()),
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
       Args[FormatArgOffset]->IgnoreImplicitAsWritten());
-  assert(FormatExpr);
-  if (!FormatExpr->isOrdinary())
-    return; // No wide string support yet
+
+  if (!FormatExpr || !FormatExpr->isOrdinary()) {
+    // Function must have a narrow string literal as its first argument.
+    conversionNotPossible("first argument is not a narrow string literal");
+    return;
+  }
+
+  if (const std::optional<StringRef> MaybeMacroName =
+          formatStringContainsUnreplaceableMacro(Call, FormatExpr, SM, PP);
+      MaybeMacroName) {
+    conversionNotPossible(
+        ("format string contains unreplaceable macro '" + *MaybeMacroName + "'")
+            .str());
+    return;
+  }
+
   PrintfFormatString = FormatExpr->getString();
 
   // Assume that the output will be approximately the same size as the input,
@@ -225,6 +239,50 @@ FormatStringConverter::FormatStringConverter(ASTContext *ContextIn,
                     PrintfFormatString.data() + PrintfFormatString.size(),
                     LangOpts, Context->getTargetInfo(), IsFreeBsdkPrintf);
   finalizeFormatText();
+}
+
+std::optional<StringRef>
+FormatStringConverter::formatStringContainsUnreplaceableMacro(
+    const CallExpr *Call, const StringLiteral *FormatExpr, SourceManager &SM,
+    Preprocessor &PP) {
+  // If a macro invocation surrounds the entire call then we don't want that to
+  // inhibit conversion. The whole format string will appear to come from that
+  // macro, as will the function call.
+  std::optional<StringRef> MaybeSurroundingMacroName;
+  if (SourceLocation BeginCallLoc = Call->getBeginLoc();
+      BeginCallLoc.isMacroID())
+    MaybeSurroundingMacroName =
+        Lexer::getImmediateMacroName(BeginCallLoc, SM, PP.getLangOpts());
+
+  for (auto I = FormatExpr->tokloc_begin(), E = FormatExpr->tokloc_end();
+       I != E; ++I) {
+    const SourceLocation &TokenLoc = *I;
+    if (TokenLoc.isMacroID()) {
+      const StringRef MacroName =
+          Lexer::getImmediateMacroName(TokenLoc, SM, PP.getLangOpts());
+
+      if (MaybeSurroundingMacroName != MacroName) {
+        // glibc uses __PRI64_PREFIX and __PRIPTR_PREFIX to define the prefixes
+        // for types that change size so we must look for multiple prefixes.
+        if (!MacroName.starts_with("PRI") && !MacroName.starts_with("__PRI"))
+          return MacroName;
+
+        const SourceLocation TokenSpellingLoc = SM.getSpellingLoc(TokenLoc);
+        const OptionalFileEntryRef MaybeFileEntry =
+            SM.getFileEntryRefForID(SM.getFileID(TokenSpellingLoc));
+        if (!MaybeFileEntry)
+          return MacroName;
+
+        HeaderSearch &HS = PP.getHeaderSearchInfo();
+        // Check if the file is a system header
+        if (!isSystem(HS.getFileDirFlavor(*MaybeFileEntry)) ||
+            llvm::sys::path::filename(MaybeFileEntry->getName()) !=
+                "inttypes.h")
+          return MacroName;
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 void FormatStringConverter::emitAlignment(const PrintfSpecifier &FS,
@@ -627,9 +685,12 @@ void FormatStringConverter::finalizeFormatText() {
 
   // It's clearer to convert printf("Hello\r\n"); to std::print("Hello\r\n")
   // than to std::println("Hello\r");
-  if (StringRef(StandardFormatString).ends_with("\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\r\\n")) {
+  // Use StringRef until C++20 std::string::ends_with() is available.
+  const auto StandardFormatStringRef = StringRef(StandardFormatString);
+  if (Config.AllowTrailingNewlineRemoval &&
+      StandardFormatStringRef.ends_with("\\n") &&
+      !StandardFormatStringRef.ends_with("\\\\n") &&
+      !StandardFormatStringRef.ends_with("\\r\\n")) {
     UsePrintNewlineFunction = true;
     FormatStringNeededRewriting = true;
     StandardFormatString.erase(StandardFormatString.end() - 2,

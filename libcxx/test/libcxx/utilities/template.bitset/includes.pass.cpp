@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test that <bitset> includes <cstddef>, <string>, <stdexcept> and <iosfwd>
+// test that <bitset> includes <string>, <stdexcept> and <iosfwd>
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <bitset>
 
 #include "test_macros.h"
-
-#ifndef _LIBCPP_CSTDDEF
-#error <cstddef> has not been included
-#endif
 
 #ifndef _LIBCPP_STRING
 #error <string> has not been included

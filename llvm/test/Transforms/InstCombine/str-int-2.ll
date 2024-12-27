@@ -44,7 +44,7 @@ define i64 @strtol_hex() #0 {
 
 define i64 @strtol_endptr_not_null(ptr nonnull %pend) {
 ; CHECK-LABEL: @strtol_endptr_not_null(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([3 x i8], ptr @.str, i64 0, i64 2), ptr [[PEND:%.*]], align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @.str, i64 2), ptr [[PEND:%.*]], align 8
 ; CHECK-NEXT:    ret i64 12
 ;
   %call = call i64 @strtol(ptr @.str, ptr %pend, i32 10)

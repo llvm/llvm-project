@@ -16,9 +16,9 @@
 // RUN: %clang --target=arm64-apple-macos -mcpu=apple-m1 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-M1 %s
 
 // CHECK: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-m1"
-// CHECK-SAME: "-target-feature" "+v8.5a"
+// CHECK-SAME: "-target-feature" "+v8.4a"
 
 // EXPLICIT-A11: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a11"
 // EXPLICIT-A7: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
 // EXPLICIT-A14: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"
-// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-m1"
+// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"

@@ -28,13 +28,13 @@
 #include "llvm/TextAPI/Utils.h"
 #include <cstdlib>
 
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+#include <unistd.h>
+#endif
+
 using namespace llvm;
 using namespace MachO;
 using namespace object;
-
-#if !defined(PATH_MAX)
-#define PATH_MAX 1024
-#endif
 
 namespace {
 using namespace llvm::opt;
@@ -45,12 +45,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "TapiOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "TapiOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -60,20 +61,28 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class TAPIOptTable : public opt::GenericOptTable {
 public:
-  TAPIOptTable() : opt::GenericOptTable(InfoTable) {
+  TAPIOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
 
 struct StubOptions {
   bool DeleteInput = false;
+  bool DeletePrivate = false;
+  bool TraceLibs = false;
+};
+
+struct CompareOptions {
+  ArchitectureSet ArchsToIgnore;
 };
 
 struct Context {
   std::vector<std::string> Inputs;
+  StubOptions StubOpt;
+  CompareOptions CmpOpt;
   std::unique_ptr<llvm::raw_fd_stream> OutStream;
   FileType WriteFT = FileType::TBD_V5;
-  StubOptions StubOpt;
   bool Compact = false;
   Architecture Arch = AK_unknown;
 };
@@ -93,11 +102,37 @@ static void reportError(Twine Message, int ExitCode = EXIT_FAILURE) {
   exit(ExitCode);
 }
 
+// Handle warnings.
+static void reportWarning(Twine Message) {
+  errs() << TOOLNAME << ": warning: " << Message << "\n";
+}
+
+/// Get what the symlink points to.
+/// This is a no-op on windows as it references POSIX level apis.
+static void read_link(const Twine &Path, SmallVectorImpl<char> &Output) {
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+  Output.clear();
+  if (Path.isTriviallyEmpty())
+    return;
+
+  SmallString<PATH_MAX> Storage;
+  auto P = Path.toNullTerminatedStringRef(Storage);
+  SmallString<PATH_MAX> Result;
+  ssize_t Len;
+  if ((Len = ::readlink(P.data(), Result.data(), PATH_MAX)) == -1)
+    reportError("unable to read symlink: " + Path);
+  Result.resize_for_overwrite(Len);
+  Output.swap(Result);
+#else
+  reportError("unable to read symlink on windows: " + Path);
+#endif
+}
+
 static std::unique_ptr<InterfaceFile>
 getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   ExitOnErr.setBanner(TOOLNAME + ": error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Filename);
+      MemoryBuffer::getFile(Filename, /*IsText=*/true);
   if (BufferOrErr.getError())
     ExitOnErr(errorCodeToError(BufferOrErr.getError()));
   auto Buffer = std::move(*BufferOrErr);
@@ -105,9 +140,7 @@ getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_universal_binary:
     IF = ExitOnErr(DylibReader::get(Buffer->getMemBufferRef()));
     break;
@@ -133,6 +166,28 @@ static bool handleCompareAction(const Context &Ctx) {
                           /*DefaultErrorExitCode=*/NON_TAPI_EXIT_CODE);
   auto LeftIF = getInterfaceFile(Ctx.Inputs.front());
   auto RightIF = getInterfaceFile(Ctx.Inputs.at(1));
+
+  // Remove all architectures to ignore before running comparison.
+  auto removeArchFromIF = [](auto &IF, const ArchitectureSet &ArchSet,
+                             const Architecture ArchToRemove) {
+    if (!ArchSet.has(ArchToRemove))
+      return;
+    if (ArchSet.count() == 1)
+      return;
+    auto OutIF = IF->remove(ArchToRemove);
+    if (!OutIF)
+      ExitOnErr(OutIF.takeError());
+    IF = std::move(*OutIF);
+  };
+
+  if (!Ctx.CmpOpt.ArchsToIgnore.empty()) {
+    const ArchitectureSet LeftArchs = LeftIF->getArchitectures();
+    const ArchitectureSet RightArchs = RightIF->getArchitectures();
+    for (const auto Arch : Ctx.CmpOpt.ArchsToIgnore) {
+      removeArchFromIF(LeftIF, LeftArchs, Arch);
+      removeArchFromIF(RightIF, RightArchs, Arch);
+    }
+  }
 
   raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
   return DiffEngine(LeftIF.get(), RightIF.get()).compareFiles(OS);
@@ -167,6 +222,217 @@ static bool handleMergeAction(const Context &Ctx) {
   return handleWriteAction(Ctx, std::move(Out));
 }
 
+static void stubifyImpl(std::unique_ptr<InterfaceFile> IF, Context &Ctx) {
+  // TODO: Add inlining and magic merge support.
+  if (Ctx.OutStream == nullptr) {
+    std::error_code EC;
+    assert(!IF->getPath().empty() && "Unknown output location");
+    SmallString<PATH_MAX> OutputLoc = IF->getPath();
+    replace_extension(OutputLoc, ".tbd");
+    Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);
+    if (EC)
+      reportError("opening file '" + OutputLoc + ": " + EC.message());
+  }
+
+  handleWriteAction(Ctx, std::move(IF));
+  // Clear out output stream after file has been written incase more files are
+  // stubifed.
+  Ctx.OutStream = nullptr;
+}
+
+static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
+  assert(InputPath.back() != '/' && "Unexpected / at end of input path.");
+  StringMap<std::vector<SymLink>> SymLinks;
+  StringMap<std::unique_ptr<InterfaceFile>> Dylibs;
+  StringMap<std::string> OriginalNames;
+  std::set<std::pair<std::string, bool>> LibsToDelete;
+
+  std::error_code EC;
+  for (sys::fs::recursive_directory_iterator IT(InputPath, EC), IE; IT != IE;
+       IT.increment(EC)) {
+    if (EC == std::errc::no_such_file_or_directory) {
+      reportWarning(IT->path() + ": " + EC.message());
+      continue;
+    }
+    if (EC)
+      reportError(IT->path() + ": " + EC.message());
+
+    // Skip header directories (include/Headers/PrivateHeaders).
+    StringRef Path = IT->path();
+    if (sys::fs::is_directory(Path)) {
+      const StringRef Stem = sys::path::stem(Path);
+      if ((Stem == "include") || (Stem == "Headers") ||
+          (Stem == "PrivateHeaders") || (Stem == "Modules")) {
+        IT.no_push();
+        continue;
+      }
+    }
+
+    // Skip module files too.
+    if (Path.ends_with(".map") || Path.ends_with(".modulemap"))
+      continue;
+
+    // Check if the entry is a symlink. We don't follow symlinks but we record
+    // their content.
+    bool IsSymLink;
+    if (auto EC = sys::fs::is_symlink_file(Path, IsSymLink))
+      reportError(Path + ": " + EC.message());
+
+    if (IsSymLink) {
+      IT.no_push();
+
+      bool ShouldSkip;
+      auto SymLinkEC = shouldSkipSymLink(Path, ShouldSkip);
+
+      // If symlink is broken, for some reason, we should continue
+      // trying to repair it before quitting.
+      if (!SymLinkEC && ShouldSkip)
+        continue;
+
+      if (Ctx.StubOpt.DeletePrivate &&
+          isPrivateLibrary(Path.drop_front(InputPath.size()), true)) {
+        LibsToDelete.emplace(Path, false);
+        continue;
+      }
+
+      SmallString<PATH_MAX> SymPath;
+      read_link(Path, SymPath);
+      // Sometimes there are broken symlinks that are absolute paths, which are
+      // invalid during build time, but would be correct during runtime. In the
+      // case of an absolute path we should check first if the path exists with
+      // the known locations as prefix.
+      SmallString<PATH_MAX> LinkSrc = Path;
+      SmallString<PATH_MAX> LinkTarget;
+      if (sys::path::is_absolute(SymPath)) {
+        LinkTarget = InputPath;
+        sys::path::append(LinkTarget, SymPath);
+
+        // TODO: Investigate supporting a file manager for file system accesses.
+        if (sys::fs::exists(LinkTarget)) {
+          // Convert the absolute path to an relative path.
+          if (auto ec = MachO::make_relative(LinkSrc, LinkTarget, SymPath))
+            reportError(LinkTarget + ": " + EC.message());
+        } else if (!sys::fs::exists(SymPath)) {
+          reportWarning("ignoring broken symlink: " + Path);
+          continue;
+        } else {
+          LinkTarget = SymPath;
+        }
+      } else {
+        LinkTarget = LinkSrc;
+        sys::path::remove_filename(LinkTarget);
+        sys::path::append(LinkTarget, SymPath);
+      }
+
+      // For Apple SDKs, the symlink src is guaranteed to be a canonical path
+      // because we don't follow symlinks when scanning. The symlink target is
+      // constructed from the symlink path and needs to be canonicalized.
+      if (auto ec = sys::fs::real_path(Twine(LinkTarget), LinkTarget)) {
+        reportWarning(LinkTarget + ": " + ec.message());
+        continue;
+      }
+
+      SymLinks[LinkTarget.c_str()].emplace_back(LinkSrc.str(),
+                                                std::string(SymPath.str()));
+
+      continue;
+    }
+
+    bool IsDirectory = false;
+    if (auto EC = sys::fs::is_directory(Path, IsDirectory))
+      reportError(Path + ": " + EC.message());
+    if (IsDirectory)
+      continue;
+
+    if (Ctx.StubOpt.DeletePrivate &&
+        isPrivateLibrary(Path.drop_front(InputPath.size()))) {
+      IT.no_push();
+      LibsToDelete.emplace(Path, false);
+      continue;
+    }
+    auto IF = getInterfaceFile(Path);
+    if (Ctx.StubOpt.TraceLibs)
+      errs() << Path << "\n";
+
+    // Normalize path for map lookup by removing the extension.
+    SmallString<PATH_MAX> NormalizedPath(Path);
+    replace_extension(NormalizedPath, "");
+
+    if ((IF->getFileType() == FileType::MachO_DynamicLibrary) ||
+        (IF->getFileType() == FileType::MachO_DynamicLibrary_Stub)) {
+      OriginalNames[NormalizedPath.c_str()] = IF->getPath();
+
+      // Don't add this MachO dynamic library because we already have a
+      // text-based stub recorded for this path.
+      if (Dylibs.count(NormalizedPath.c_str()))
+        continue;
+    }
+
+    Dylibs[NormalizedPath.c_str()] = std::move(IF);
+  }
+
+  for (auto &Lib : Dylibs) {
+    auto &Dylib = Lib.second;
+    // Get the original file name.
+    SmallString<PATH_MAX> NormalizedPath(Dylib->getPath());
+    stubifyImpl(std::move(Dylib), Ctx);
+
+    replace_extension(NormalizedPath, "");
+    auto Found = OriginalNames.find(NormalizedPath.c_str());
+    if (Found == OriginalNames.end())
+      continue;
+
+    if (Ctx.StubOpt.DeleteInput)
+      LibsToDelete.emplace(Found->second, true);
+
+    // Don't allow for more than 20 levels of symlinks when searching for
+    // libraries to stubify.
+    StringRef LibToCheck = Found->second;
+    for (int i = 0; i < 20; ++i) {
+      auto LinkIt = SymLinks.find(LibToCheck);
+      if (LinkIt != SymLinks.end()) {
+        for (auto &SymInfo : LinkIt->second) {
+          SmallString<PATH_MAX> LinkSrc(SymInfo.SrcPath);
+          SmallString<PATH_MAX> LinkTarget(SymInfo.LinkContent);
+          replace_extension(LinkSrc, "tbd");
+          replace_extension(LinkTarget, "tbd");
+
+          if (auto EC = sys::fs::remove(LinkSrc))
+            reportError(LinkSrc + " : " + EC.message());
+
+          if (auto EC = sys::fs::create_link(LinkTarget, LinkSrc))
+            reportError(LinkTarget + " : " + EC.message());
+
+          if (Ctx.StubOpt.DeleteInput)
+            LibsToDelete.emplace(SymInfo.SrcPath, true);
+
+          LibToCheck = SymInfo.SrcPath;
+        }
+      } else
+        break;
+    }
+  }
+
+  // Recursively delete the directories. This will abort when they are not empty
+  // or we reach the root of the SDK.
+  for (const auto &[LibPath, IsInput] : LibsToDelete) {
+    if (!IsInput && SymLinks.count(LibPath))
+      continue;
+
+    if (auto EC = sys::fs::remove(LibPath))
+      reportError(LibPath + " : " + EC.message());
+
+    std::error_code EC;
+    auto Dir = sys::path::parent_path(LibPath);
+    do {
+      EC = sys::fs::remove(Dir);
+      Dir = sys::path::parent_path(Dir);
+      if (!Dir.starts_with(InputPath))
+        break;
+    } while (!EC);
+  }
+}
+
 static bool handleStubifyAction(Context &Ctx) {
   if (Ctx.Inputs.empty())
     reportError("stubify requires at least one input file");
@@ -174,19 +440,23 @@ static bool handleStubifyAction(Context &Ctx) {
   if ((Ctx.Inputs.size() > 1) && (Ctx.OutStream != nullptr))
     reportError("cannot write multiple inputs into single output file");
 
-  for (StringRef FileName : Ctx.Inputs) {
-    auto IF = getInterfaceFile(FileName);
-    if (Ctx.StubOpt.DeleteInput) {
-      std::error_code EC;
-      SmallString<PATH_MAX> OutputLoc = FileName;
-      MachO::replace_extension(OutputLoc, ".tbd");
-      Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);
-      if (EC)
-        reportError("opening file '" + OutputLoc + ": " + EC.message());
-      if (auto Err = sys::fs::remove(FileName))
-        reportError("deleting file '" + FileName + ": " + EC.message());
+  for (StringRef PathName : Ctx.Inputs) {
+    bool IsDirectory = false;
+    if (auto EC = sys::fs::is_directory(PathName, IsDirectory))
+      reportError(PathName + ": " + EC.message());
+
+    if (IsDirectory) {
+      if (Ctx.OutStream != nullptr)
+        reportError("cannot stubify directory'" + PathName +
+                    "' into single output file");
+      stubifyDirectory(PathName, Ctx);
+      continue;
     }
-    handleWriteAction(Ctx, std::move(IF));
+
+    stubifyImpl(getInterfaceFile(PathName), Ctx);
+    if (Ctx.StubOpt.DeleteInput)
+      if (auto ec = sys::fs::remove(PathName))
+        reportError("deleting file '" + PathName + ": " + ec.message());
   }
   return EXIT_SUCCESS;
 }
@@ -211,6 +481,8 @@ static bool handleSingleFileAction(const Context &Ctx, const StringRef Action,
 
 static void setStubOptions(opt::InputArgList &Args, StubOptions &Opt) {
   Opt.DeleteInput = Args.hasArg(OPT_delete_input);
+  Opt.DeletePrivate = Args.hasArg(OPT_delete_private_libraries);
+  Opt.TraceLibs = Args.hasArg(OPT_t);
 }
 
 int main(int Argc, char **Argv) {
@@ -236,7 +508,6 @@ int main(int Argc, char **Argv) {
     return EXIT_SUCCESS;
   }
 
-  // TODO: Add support for picking up libraries from directory input.
   for (opt::Arg *A : Args.filtered(OPT_INPUT))
     Ctx.Inputs.push_back(A->getValue());
 
@@ -260,12 +531,20 @@ int main(int Argc, char **Argv) {
       reportError("unsupported filetype '" + FT + "'");
   }
 
-  if (opt::Arg *A = Args.getLastArg(OPT_arch_EQ)) {
-    StringRef Arch = A->getValue();
-    Ctx.Arch = getArchitectureFromName(Arch);
-    if (Ctx.Arch == AK_unknown)
-      reportError("unsupported architecture '" + Arch);
-  }
+  auto SanitizeArch = [&](opt::Arg *A) {
+    StringRef ArchStr = A->getValue();
+    auto Arch = getArchitectureFromName(ArchStr);
+    if (Arch == AK_unknown)
+      reportError("unsupported architecture '" + ArchStr);
+    return Arch;
+  };
+
+  if (opt::Arg *A = Args.getLastArg(OPT_arch_EQ))
+    Ctx.Arch = SanitizeArch(A);
+
+  for (opt::Arg *A : Args.filtered(OPT_ignore_arch_EQ))
+    Ctx.CmpOpt.ArchsToIgnore.set(SanitizeArch(A));
+
   // Handle top level and exclusive operation.
   SmallVector<opt::Arg *, 1> ActionArgs(Args.filtered(OPT_action_group));
 

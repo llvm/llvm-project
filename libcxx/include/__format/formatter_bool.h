@@ -12,7 +12,6 @@
 
 #include <__algorithm/copy.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>
@@ -21,8 +20,8 @@
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <locale>
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <__locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -70,7 +69,11 @@ public:
   __format_spec::__parser<_CharT> __parser_;
 };
 
-#endif //_LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<bool> = true;
+#  endif // _LIBCPP_STD_VER >= 23
+#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -16,9 +16,16 @@ add_mlir_dialect_library(MLIRSPIRVConversion
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
+  MLIRDialectUtils
   MLIRFuncDialect
+  MLIRIR
+  MLIRPass
   MLIRSPIRVDialect
+  MLIRSupport
   MLIRTransformUtils
+  MLIRVectorDialect
+  MLIRVectorTransforms
 )
 
 add_mlir_dialect_library(MLIRSPIRVTransforms

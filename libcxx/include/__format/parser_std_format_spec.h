@@ -52,13 +52,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __format_spec {
 
-_LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void
+[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void
 __throw_invalid_option_format_error(const char* __id, const char* __option) {
   std::__throw_format_error(
       (string("The format specifier for ") + __id + " does not allow the " + __option + " option").c_str());
 }
 
-_LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __throw_invalid_type_format_error(const char* __id) {
+[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void __throw_invalid_type_format_error(const char* __id) {
   std::__throw_format_error(
       (string("The type option contains an invalid value for ") + __id + " formatting argument").c_str());
 }
@@ -129,8 +129,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_C
 ///
 /// They default to false so when a new field is added it needs to be opted in
 /// explicitly.
-// TODO FMT Use an ABI tag for this struct.
-struct __fields {
+struct _LIBCPP_HIDE_FROM_ABI __fields {
   uint16_t __sign_                 : 1 {false};
   uint16_t __alternate_form_       : 1 {false};
   uint16_t __zero_padding_         : 1 {false};
@@ -269,7 +268,7 @@ struct __code_point<char> {
   char __data[4] = {' '};
 };
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct __code_point<wchar_t> {
   wchar_t __data[4 / sizeof(wchar_t)] = {L' '};
@@ -322,7 +321,7 @@ struct __parsed_specifications {
 // value in formatting functions.
 static_assert(sizeof(__parsed_specifications<char>) == 16);
 static_assert(is_trivially_copyable_v<__parsed_specifications<char>>);
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 static_assert(sizeof(__parsed_specifications<wchar_t>) == 16);
 static_assert(is_trivially_copyable_v<__parsed_specifications<wchar_t>>);
 #  endif
@@ -355,10 +354,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
     auto __begin = __ctx.begin();
     auto __end   = __ctx.end();
-    if (__begin == __end)
+    if (__begin == __end || *__begin == _CharT('}') || (__fields.__use_range_fill_ && *__begin == _CharT(':')))
       return __begin;
 
-    if (__parse_fill_align(__begin, __end, __fields.__use_range_fill_) && __begin == __end)
+    if (__parse_fill_align(__begin, __end) && __begin == __end)
       return __begin;
 
     if (__fields.__sign_) {
@@ -574,23 +573,21 @@ private:
     return false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill) {
     // The forbidden fill characters all code points formed from a single code unit, thus the
     // check can be omitted when more code units are used.
-    if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT('}') || __fill == _CharT(':')))
-      std::__throw_format_error("The fill option contains an invalid value");
-    else if (__fill == _CharT('{') || __fill == _CharT('}'))
+    if (__fill == _CharT('{'))
       std::__throw_format_error("The fill option contains an invalid value");
   }
 
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+#  if _LIBCPP_HAS_UNICODE
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
     requires same_as<_CharT, char>
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
           || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
 #    endif
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -606,7 +603,7 @@ private:
         // The forbidden fill characters all are code points encoded
         // in one code unit, thus the check can be omitted when more
         // code units are used.
-        __validate_fill_character(*__begin, __use_range_fill);
+        __validate_fill_character(*__begin);
 
       std::copy_n(__begin, __code_units, std::addressof(__fill_.__data[0]));
       __begin += __code_units + 1;
@@ -620,10 +617,10 @@ private:
     return true;
   }
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
   template <contiguous_iterator _Iterator>
     requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -632,7 +629,7 @@ private:
       if (!__unicode::__is_scalar_value(*__begin))
         std::__throw_format_error("The fill option contains an invalid value");
 
-      __validate_fill_character(*__begin, __use_range_fill);
+      __validate_fill_character(*__begin);
 
       __fill_.__data[0] = *__begin;
       __begin += 2;
@@ -646,19 +643,19 @@ private:
     return true;
   }
 
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#  else // _LIBCPP_HAS_NO_UNICODE
+#  else // _LIBCPP_HAS_UNICODE
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
         "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
-        __validate_fill_character(*__begin, __use_range_fill);
+        __validate_fill_character(*__begin);
 
         __fill_.__data[0] = *__begin;
         __begin += 2;
@@ -673,7 +670,7 @@ private:
     return true;
   }
 
-#  endif // _LIBCPP_HAS_NO_UNICODE
+#  endif // _LIBCPP_HAS_UNICODE
 
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_sign(_Iterator& __begin) {
@@ -877,7 +874,7 @@ private:
 
 // Validates whether the reserved bitfields don't change the size.
 static_assert(sizeof(__parser<char>) == 16);
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 static_assert(sizeof(__parser<wchar_t>) == 16);
 #  endif
 
@@ -1029,7 +1026,7 @@ __column_width_result(size_t, _Iterator) -> __column_width_result<_Iterator>;
 ///   "rounded up".
 enum class __column_width_rounding { __down, __up };
 
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+#  if _LIBCPP_HAS_UNICODE
 
 namespace __detail {
 template <contiguous_iterator _Iterator>
@@ -1151,22 +1148,22 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_colu
   __result.__width_ += __ascii_size;
   return __result;
 }
-#  else // !defined(_LIBCPP_HAS_NO_UNICODE)
+#  else // _LIBCPP_HAS_UNICODE
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<typename basic_string_view<_CharT>::const_iterator>
 __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __column_width_rounding) noexcept {
   // When Unicode isn't supported assume ASCII and every code unit is one code
   // point. In ASCII the estimated column width is always one. Thus there's no
   // need for rounding.
-  size_t __width_ = std::min(__str.size(), __maximum);
-  return {__width_, __str.begin() + __width_};
+  size_t __width = std::min(__str.size(), __maximum);
+  return {__width, __str.begin() + __width};
 }
 
-#  endif // !defined(_LIBCPP_HAS_NO_UNICODE)
+#  endif // _LIBCPP_HAS_UNICODE
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

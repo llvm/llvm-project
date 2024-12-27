@@ -139,12 +139,11 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
     -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_ENABLE_ZLIB=ON \
     -DLLVM_ENABLE_ZSTD=OFF \
-    -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_THREADS=OFF \
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser LLVMCore
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -182,6 +181,7 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMMC.a \
       $LLVM_BUILD/lib/libLLVMTextAPI.a \
       $LLVM_BUILD/lib/libLLVMTargetParser.a \
+      $LLVM_BUILD/lib/libLLVMCore.a \
       $ZLIB_BUILD/libz.a \
       symbolizer.a \
       -ignore-non-bitcode -o all.bc
@@ -191,8 +191,10 @@ $OPT -passes=internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all
 $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o
 
 echo "Checking undefined symbols..."
-nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefined.new
-(diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
+export LC_ALL=C
+nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | sort -u > undefined.new
+grep -Ev "^#|^$" $SCRIPT_DIR/global_symbols.txt | sort -u > expected.new
+(diff -u expected.new undefined.new | grep -E "^\+[^+]") && \
   (echo "Failed: unexpected symbols"; exit 1)
 
 cp -f symbolizer.o $OUTPUT

@@ -12,26 +12,20 @@ using namespace clang;
 
 namespace {
 
-class CXXCtorInitializerVisitor
-    : public ExpectedLocationVisitor<CXXCtorInitializerVisitor> {
+class CXXCtorInitializerVisitor : public ExpectedLocationVisitor {
 public:
-  CXXCtorInitializerVisitor(bool VisitImplicitCode)
-      : VisitImplicitCode(VisitImplicitCode) {}
+  CXXCtorInitializerVisitor(bool VisitImplicitCode) {
+    ShouldVisitImplicitCode = VisitImplicitCode;
+  }
 
-  bool shouldVisitImplicitCode() const { return VisitImplicitCode; }
-
-  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
     if (!Init->isWritten())
       VisitedImplicitInitializer = true;
     Match("initializer", Init->getSourceLocation());
-    return ExpectedLocationVisitor<
-        CXXCtorInitializerVisitor>::TraverseConstructorInitializer(Init);
+    return ExpectedLocationVisitor::TraverseConstructorInitializer(Init);
   }
 
   bool VisitedImplicitInitializer = false;
-
-private:
-  bool VisitImplicitCode;
 };
 
 // Check to ensure that CXXCtorInitializer is not visited when implicit code

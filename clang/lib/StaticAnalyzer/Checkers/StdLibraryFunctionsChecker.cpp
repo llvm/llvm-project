@@ -30,7 +30,7 @@
 // was not consciously intended, and therefore it might have been unreachable.
 //
 // This checker uses eval::Call for modeling pure functions (functions without
-// side effets), for which their `Summary' is a precise model. This avoids
+// side effects), for which their `Summary' is a precise model. This avoids
 // unnecessary invalidation passes. Conflicts with other checkers are unlikely
 // because if the function has no other effects, other checkers would probably
 // never want to improve upon the modeling done by this checker.
@@ -672,7 +672,7 @@ class StdLibraryFunctionsChecker
     StringRef getNote() const { return Note; }
   };
 
-  using ArgTypes = std::vector<std::optional<QualType>>;
+  using ArgTypes = ArrayRef<std::optional<QualType>>;
   using RetType = std::optional<QualType>;
 
   // A placeholder type, we use it whenever we do not care about the concrete
@@ -1401,7 +1401,10 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
         ErrnoNote =
             llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
     } else {
-      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
+      // Disable formatv() validation as the case note may not always have the
+      // {0} placeholder for function name.
+      CaseNote =
+          llvm::formatv(false, Case.getNote().str().c_str(), FunctionName);
     }
     const SVal RV = Call.getReturnValue();
 
@@ -1640,7 +1643,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   public:
     GetMaxValue(BasicValueFactory &BVF) : BVF(BVF) {}
     std::optional<RangeInt> operator()(QualType Ty) {
-      return BVF.getMaxValue(Ty).getLimitedValue();
+      return BVF.getMaxValue(Ty)->getLimitedValue();
     }
     std::optional<RangeInt> operator()(std::optional<QualType> Ty) {
       if (Ty) {
@@ -1684,11 +1687,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType SizePtrTy = getPointerTy(SizeTy);
   const QualType SizePtrRestrictTy = getRestrictTy(SizePtrTy);
 
-  const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
+  const RangeInt IntMax = BVF.getMaxValue(IntTy)->getLimitedValue();
   const RangeInt UnsignedIntMax =
-      BVF.getMaxValue(UnsignedIntTy).getLimitedValue();
-  const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
-  const RangeInt SizeMax = BVF.getMaxValue(SizeTy).getLimitedValue();
+      BVF.getMaxValue(UnsignedIntTy)->getLimitedValue();
+  const RangeInt LongMax = BVF.getMaxValue(LongTy)->getLimitedValue();
+  const RangeInt SizeMax = BVF.getMaxValue(SizeTy)->getLimitedValue();
 
   // Set UCharRangeMax to min of int or uchar maximum value.
   // The C standard states that the arguments of functions like isalpha must
@@ -1697,7 +1700,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // to be true for commonly used and well tested instruction set
   // architectures, but not for others.
   const RangeInt UCharRangeMax =
-      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue(), IntMax);
+      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy)->getLimitedValue(), IntMax);
 
   // Get platform dependent values of some macros.
   // Try our best to parse this from the Preprocessor, otherwise fallback to a
@@ -1746,7 +1749,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     }
     // Add the same summary for different names with the Signature explicitly
     // given.
-    void operator()(std::vector<StringRef> Names, Signature Sign, Summary Sum) {
+    void operator()(ArrayRef<StringRef> Names, Signature Sign, Summary Sum) {
       for (StringRef Name : Names)
         operator()(Name, Sign, Sum);
     }
@@ -2023,13 +2026,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                            {{EOFv, EOFv}, {0, UCharRangeMax}},
                                            "an unsigned char value or EOF")));
 
-  // The getc() family of functions that returns either a char or an EOF.
-  addToFunctionSummaryMap(
-      {"getc", "fgetc"}, Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
-      Summary(NoEvalCall)
-          .Case({ReturnValueCondition(WithinRange,
-                                      {{EOFv, EOFv}, {0, UCharRangeMax}})},
-                ErrnoIrrelevant));
   addToFunctionSummaryMap(
       "getchar", Signature(ArgTypes{}, RetType{IntTy}),
       Summary(NoEvalCall)
@@ -2139,7 +2135,17 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         std::move(GetenvSummary));
   }
 
-  if (ModelPOSIX) {
+  if (!ModelPOSIX) {
+    // Without POSIX use of 'errno' is not specified (in these cases).
+    // Add these functions without 'errno' checks.
+    addToFunctionSummaryMap(
+        {"getc", "fgetc"}, Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange,
+                                        {{EOFv, EOFv}, {0, UCharRangeMax}})},
+                  ErrnoIrrelevant)
+            .ArgConstraint(NotNull(ArgNo(0))));
+  } else {
     const auto ReturnsZeroOrMinusOne =
         ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, 0))};
     const auto ReturnsZero =
@@ -2204,6 +2210,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
+    // FILE *popen(const char *command, const char *type);
+    addToFunctionSummaryMap(
+        "popen",
+        Signature(ArgTypes{ConstCharPtrTy, ConstCharPtrTy}, RetType{FilePtrTy}),
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
     // int fclose(FILE *stream);
     addToFunctionSummaryMap(
         "fclose", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
@@ -2211,6 +2227,72 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsEOF, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int pclose(FILE *stream);
+    addToFunctionSummaryMap(
+        "pclose", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange, {{0, IntMax}})},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
+
+    std::optional<QualType> Off_tTy = lookupTy("off_t");
+    std::optional<RangeInt> Off_tMax = getMaxValue(Off_tTy);
+
+    // int fgetc(FILE *stream);
+    // 'getc' is the same as 'fgetc' but may be a macro
+    addToFunctionSummaryMap(
+        {"getc", "fgetc"}, Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange, {{0, UCharRangeMax}})},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
+                  ErrnoIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int fputc(int c, FILE *stream);
+    // 'putc' is the same as 'fputc' but may be a macro
+    addToFunctionSummaryMap(
+        {"putc", "fputc"},
+        Signature(ArgTypes{IntTy, FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case({ArgumentCondition(0, WithinRange, Range(0, UCharRangeMax)),
+                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(0, OutOfRange, Range(0, UCharRangeMax)),
+                   ReturnValueCondition(WithinRange, Range(0, UCharRangeMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(1))));
+
+    // char *fgets(char *restrict s, int n, FILE *restrict stream);
+    addToFunctionSummaryMap(
+        "fgets",
+        Signature(ArgTypes{CharPtrRestrictTy, IntTy, FilePtrRestrictTy},
+                  RetType{CharPtrTy}),
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(ArgumentCondition(1, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(
+                BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1)))
+            .ArgConstraint(NotNull(ArgNo(2))));
+
+    // int fputs(const char *restrict s, FILE *restrict stream);
+    addToFunctionSummaryMap(
+        "fputs",
+        Signature(ArgTypes{ConstCharPtrRestrictTy, FilePtrRestrictTy},
+                  RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsNonnegative, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(NotNull(ArgNo(1))));
 
     // int ungetc(int c, FILE *stream);
     addToFunctionSummaryMap(
@@ -2230,9 +2312,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(ArgumentCondition(
                 0, WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}}))
             .ArgConstraint(NotNull(ArgNo(1))));
-
-    std::optional<QualType> Off_tTy = lookupTy("off_t");
-    std::optional<RangeInt> Off_tMax = getMaxValue(Off_tTy);
 
     // int fseek(FILE *stream, long offset, int whence);
     // FIXME: It can be possible to get the 'SEEK_' values (like EOFv) and use
@@ -2312,12 +2391,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fileno(FILE *stream);
+    // According to POSIX 'fileno' may fail and set 'errno'.
+    // But in Linux it may fail only if the specified file pointer is invalid.
+    // At many places 'fileno' is used without check for failure and a failure
+    // case here would produce a large amount of likely false positive warnings.
+    // To avoid this, we assume here that it does not fail.
     addToFunctionSummaryMap(
         "fileno", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
-                  GenericSuccessMsg)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .Case(ReturnsValidFileDescriptor, ErrnoUnchanged, GenericSuccessMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // void rewind(FILE *stream);
@@ -2827,21 +2909,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(
                 ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
-    // FILE *popen(const char *command, const char *type);
-    // FIXME: Improve for errno modeling.
-    addToFunctionSummaryMap(
-        "popen",
-        Signature(ArgTypes{ConstCharPtrTy, ConstCharPtrTy}, RetType{FilePtrTy}),
-        Summary(NoEvalCall)
-            .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(NotNull(ArgNo(1))));
-
-    // int pclose(FILE *stream);
-    // FIXME: Improve for errno modeling.
-    addToFunctionSummaryMap(
-        "pclose", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
-
     // int close(int fildes);
     addToFunctionSummaryMap(
         "close", Signature(ArgTypes{IntTy}, RetType{IntTy}),
@@ -2988,12 +3055,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // char *realpath(const char *restrict file_name,
     //                char *restrict resolved_name);
-    // FIXME: Improve for errno modeling.
+    // FIXME: If the argument 'resolved_name' is not NULL, macro 'PATH_MAX'
+    //        should be defined in "limits.h" to guarrantee a success.
     addToFunctionSummaryMap(
         "realpath",
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy},
                   RetType{CharPtrTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     QualType CharPtrConstPtr = getPointerTy(getConstTy(CharPtrTy));
 
@@ -3633,7 +3704,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
   // Functions for testing.
   if (AddTestFunctions) {
-    const RangeInt IntMin = BVF.getMinValue(IntTy).getLimitedValue();
+    const RangeInt IntMin = BVF.getMinValue(IntTy)->getLimitedValue();
 
     addToFunctionSummaryMap(
         "__not_null", Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),

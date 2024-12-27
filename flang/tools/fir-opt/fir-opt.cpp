@@ -14,6 +14,7 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
@@ -34,12 +35,16 @@ int main(int argc, char **argv) {
   fir::registerOptCodeGenPasses();
   fir::registerOptTransformPasses();
   hlfir::registerHLFIRPasses();
+  flangomp::registerFlangOpenMPPasses();
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
   mlir::registerSideEffectTestPasses();
 #endif
   DialectRegistry registry;
   fir::support::registerDialects(registry);
+  registry.insert<mlir::gpu::GPUDialect>();
+  registry.insert<mlir::NVVM::NVVMDialect>();
+  fir::support::addFIRExtensions(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
       registry));
 }

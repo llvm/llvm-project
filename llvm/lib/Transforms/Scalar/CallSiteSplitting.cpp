@@ -132,7 +132,7 @@ static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
   if (!BI || !BI->isConditional())
     return;
 
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *Cond = BI->getCondition();
   if (!match(Cond, m_ICmp(Pred, m_Value(), m_Constant())))
     return;
@@ -142,7 +142,7 @@ static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
     if (isCondRelevantToAnyCallArgument(Cmp, CB))
       Conditions.push_back({Cmp, From->getTerminator()->getSuccessor(0) == To
                                      ? Pred
-                                     : Cmp->getInversePredicate()});
+                                     : Cmp->getInverseCmpPredicate()});
 }
 
 /// Record ICmp conditions relevant to any argument in CB following Pred's
@@ -403,7 +403,7 @@ static void splitCallSite(CallBase &CB,
       NewPN->insertBefore(*TailBB, TailBB->begin());
       CurrentI->replaceAllUsesWith(NewPN);
     }
-    CurrentI->dropDbgValues();
+    CurrentI->dropDbgRecords();
     CurrentI->eraseFromParent();
     // We are done once we handled the first original instruction in TailBB.
     if (CurrentI == OriginalBeginInst)

@@ -25,13 +25,13 @@
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/ValueObject/ValueObjectUpdater.h"
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -42,8 +42,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -56,6 +54,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #endif
 
 #include "llvm/ADT/StringRef.h"
@@ -4519,7 +4519,7 @@ struct Row {
       calculated_children = true;
       ValueObjectSP valobj = value.GetSP();
       if (valobj) {
-        const size_t num_children = valobj->GetNumChildren();
+        const uint32_t num_children = valobj->GetNumChildrenIgnoringErrors();
         for (size_t i = 0; i < num_children; ++i) {
           children.push_back(Row(valobj->GetChildAtIndex(i), this));
         }
@@ -6894,7 +6894,8 @@ public:
           if (context_changed)
             m_selected_line = m_pc_line;
 
-          if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
+          if (m_file_sp && m_file_sp->GetSupportFile()->GetSpecOnly() ==
+                               m_sc.line_entry.GetFile()) {
             // Same file, nothing to do, we should either have the lines or
             // not (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
@@ -6910,7 +6911,7 @@ public:
             // File changed, set selected line to the line with the PC
             m_selected_line = m_pc_line;
             m_file_sp =
-                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file);
+                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file_sp);
             if (m_file_sp) {
               const size_t num_lines = m_file_sp->GetNumLines();
               m_line_width = 1;
@@ -7000,7 +7001,8 @@ public:
             LineEntry bp_loc_line_entry;
             if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                     bp_loc_line_entry)) {
-              if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file) {
+              if (m_file_sp->GetSupportFile()->GetSpecOnly() ==
+                  bp_loc_line_entry.GetFile()) {
                 bp_lines.insert(bp_loc_line_entry.line);
               }
             }
@@ -7331,7 +7333,7 @@ public:
         if (exe_ctx.HasProcessScope() && exe_ctx.GetProcessRef().IsAlive()) {
           BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
               nullptr, // Don't limit the breakpoint to certain modules
-              m_file_sp->GetFileSpec(), // Source file
+              m_file_sp->GetSupportFile()->GetSpecOnly(), // Source file
               m_selected_line +
                   1, // Source line number (m_selected_line is zero based)
               0,     // Unspecified column.
@@ -7477,7 +7479,8 @@ public:
           LineEntry bp_loc_line_entry;
           if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                   bp_loc_line_entry)) {
-            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file &&
+            if (m_file_sp->GetSupportFile()->GetSpecOnly() ==
+                    bp_loc_line_entry.GetFile() &&
                 m_selected_line + 1 == bp_loc_line_entry.line) {
               bool removed =
                   exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
@@ -7491,7 +7494,7 @@ public:
       // No breakpoint found on the location, add it.
       BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
           nullptr, // Don't limit the breakpoint to certain modules
-          m_file_sp->GetFileSpec(), // Source file
+          m_file_sp->GetSupportFile()->GetSpecOnly(), // Source file
           m_selected_line +
               1, // Source line number (m_selected_line is zero based)
           0,     // No column specified.

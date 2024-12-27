@@ -42,8 +42,21 @@ IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
                                DominatorTree &DT, LoopInfo &LI,
                                BasicBlock *StartBlock)
     : S(S), Builder(Builder), IDToValue(IDToValue), GlobalMap(GlobalMap),
-      DL(DL), SE(SE), DT(DT), LI(LI), StartBlock(StartBlock) {
+      DL(DL), SE(SE), StartBlock(StartBlock), GenDT(&DT), GenLI(&LI),
+      GenSE(&SE) {
   OverflowState = (OTMode == OT_ALWAYS) ? Builder.getFalse() : nullptr;
+}
+
+void IslExprBuilder::switchGeneratedFunc(llvm::Function *GenFn,
+                                         llvm::DominatorTree *GenDT,
+                                         llvm::LoopInfo *GenLI,
+                                         llvm::ScalarEvolution *GenSE) {
+  assert(GenFn == GenDT->getRoot()->getParent());
+  assert(GenLI->getTopLevelLoops().empty() ||
+         GenFn == GenLI->getTopLevelLoops().front()->getHeader()->getParent());
+  this->GenDT = GenDT;
+  this->GenLI = GenLI;
+  this->GenSE = GenSE;
 }
 
 void IslExprBuilder::setTrackOverflow(bool Enable) {
@@ -116,16 +129,16 @@ Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
   Module *M = Builder.GetInsertBlock()->getModule();
   switch (Opc) {
   case Instruction::Add:
-    F = Intrinsic::getDeclaration(M, Intrinsic::sadd_with_overflow,
-                                  {LHS->getType()});
+    F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::sadd_with_overflow,
+                                          {LHS->getType()});
     break;
   case Instruction::Sub:
-    F = Intrinsic::getDeclaration(M, Intrinsic::ssub_with_overflow,
-                                  {LHS->getType()});
+    F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::ssub_with_overflow,
+                                          {LHS->getType()});
     break;
   case Instruction::Mul:
-    F = Intrinsic::getDeclaration(M, Intrinsic::smul_with_overflow,
-                                  {LHS->getType()});
+    F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::smul_with_overflow,
+                                          {LHS->getType()});
     break;
   default:
     llvm_unreachable("No overflow intrinsic for binary operator found!");
@@ -307,14 +320,12 @@ IslExprBuilder::createAccessAddress(__isl_take isl_ast_expr *Expr) {
 
     const SCEV *DimSCEV = SAI->getDimensionSize(u);
 
-    llvm::ValueToSCEVMapTy Map;
-    for (auto &KV : GlobalMap)
-      Map[KV.first] = SE.getSCEV(KV.second);
-    DimSCEV = SCEVParameterRewriter::rewrite(DimSCEV, SE, Map);
-    Value *DimSize =
-        expandCodeFor(S, SE, DL, "polly", DimSCEV, DimSCEV->getType(),
-                      &*Builder.GetInsertPoint(), nullptr,
-                      StartBlock->getSinglePredecessor());
+    // DimSize should be invariant to the SCoP, so no BBMap nor LoopToScev
+    // needed. But GlobalMap may contain SCoP-invariant vars.
+    Value *DimSize = expandCodeFor(
+        S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL, "polly",
+        DimSCEV, DimSCEV->getType(), &*Builder.GetInsertPoint(), &GlobalMap,
+        /*LoopMap*/ nullptr, StartBlock->getSinglePredecessor());
 
     Type *Ty = getWidestType(DimSize->getType(), IndexOp->getType());
 
@@ -602,10 +613,10 @@ IslExprBuilder::createOpBooleanConditional(__isl_take isl_ast_expr *Expr) {
 
   auto InsertBB = Builder.GetInsertBlock();
   auto InsertPoint = Builder.GetInsertPoint();
-  auto NextBB = SplitBlock(InsertBB, &*InsertPoint, &DT, &LI);
+  auto NextBB = SplitBlock(InsertBB, &*InsertPoint, GenDT, GenLI);
   BasicBlock *CondBB = BasicBlock::Create(Context, "polly.cond", F);
-  LI.changeLoopFor(CondBB, LI.getLoopFor(InsertBB));
-  DT.addNewBlock(CondBB, InsertBB);
+  GenLI->changeLoopFor(CondBB, GenLI->getLoopFor(InsertBB));
+  GenDT->addNewBlock(CondBB, InsertBB);
 
   InsertBB->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(InsertBB);

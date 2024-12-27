@@ -16,7 +16,7 @@ define void @test() {
 ; DBG-LABEL: define void @test() {
 ; DBG-NEXT:  entry:
 ; DBG-NEXT:    [[L1:%.*]] = load i32, ptr @e, align 1
-; DBG-NEXT:    call void @llvm.dbg.value(metadata i32 undef, metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
+; DBG-NEXT:      #dbg_value(i32 undef, [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
 ; DBG-NEXT:    store i32 [[L1]], ptr @l, align 1
 ; DBG-NEXT:    ret void
 ;

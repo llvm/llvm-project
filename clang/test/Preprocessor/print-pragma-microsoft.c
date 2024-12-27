@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -fms-extensions -E -o - | FileCheck %s
+// RUN: %clang_cc1 %s -fms-extensions -E -o - | FileCheck %s
 
 #define BAR "2"
 #pragma comment(linker, "bar=" BAR)

@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
+#include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -55,7 +56,10 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
     return 0;
   const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
-  uint32_t Dir = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
+  uint32_t Dir =
+      SrcFE.Dir == 0
+          ? 0
+          : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
   uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
   FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
@@ -185,7 +189,56 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
-llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  // Use the loader to load call site information from the YAML file.
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
+}
+
+void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
+  // Nothing to do if we have less than 2 functions.
+  if (Funcs.size() < 2)
+    return;
+
+  // Sort the function infos by address range first, preserving input order
+  llvm::stable_sort(Funcs);
+  std::vector<FunctionInfo> TopLevelFuncs;
+
+  // Add the first function info to the top level functions
+  TopLevelFuncs.emplace_back(std::move(Funcs.front()));
+
+  // Now if the next function info has the same address range as the top level,
+  // then merge it into the top level function, otherwise add it to the top
+  // level.
+  for (size_t Idx = 1; Idx < Funcs.size(); ++Idx) {
+    FunctionInfo &TopFunc = TopLevelFuncs.back();
+    FunctionInfo &MatchFunc = Funcs[Idx];
+    if (TopFunc.Range == MatchFunc.Range) {
+      // Both have the same range - add the 2nd func as a child of the 1st func
+      if (!TopFunc.MergedFunctions)
+        TopFunc.MergedFunctions = MergedFunctionsInfo();
+      // Avoid adding duplicate functions to MergedFunctions. Since functions
+      // are already ordered within the Funcs array, we can just check equality
+      // against the last function in the merged array.
+      else if (TopFunc.MergedFunctions->MergedFunctions.back() == MatchFunc)
+        continue;
+      TopFunc.MergedFunctions->MergedFunctions.emplace_back(
+          std::move(MatchFunc));
+    } else
+      // No match, add the function as a top-level function
+      TopLevelFuncs.emplace_back(std::move(MatchFunc));
+  }
+
+  uint32_t mergedCount = Funcs.size() - TopLevelFuncs.size();
+  // If any functions were merged, print a message about it.
+  if (mergedCount != 0)
+    Out << "Have " << mergedCount
+        << " merged functions as children of other functions\n";
+
+  std::swap(Funcs, TopLevelFuncs);
+}
+
+llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
@@ -244,26 +297,29 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
             // address ranges that have debug info are last in
             // the sort.
             if (!(Prev == Curr)) {
-              if (Prev.hasRichInfo() && Curr.hasRichInfo()) {
-                if (!Quiet) {
-                  OS << "warning: same address range contains "
-                        "different debug "
-                    << "info. Removing:\n"
-                    << Prev << "\nIn favor of this one:\n"
-                    << Curr << "\n";
-                }
-              }
+              if (Prev.hasRichInfo() && Curr.hasRichInfo())
+                Out.Report(
+                    "Duplicate address ranges with different debug info.",
+                    [&](raw_ostream &OS) {
+                      OS << "warning: same address range contains "
+                            "different debug "
+                         << "info. Removing:\n"
+                         << Prev << "\nIn favor of this one:\n"
+                         << Curr << "\n";
+                    });
+
               // We want to swap the current entry with the previous since
               // later entries with the same range always have more debug info
               // or different debug info.
               std::swap(Prev, Curr);
             }
           } else {
-            if (!Quiet) { // print warnings about overlaps
+            Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
+              // print warnings about overlaps
               OS << "warning: function ranges overlap:\n"
                 << Prev << "\n"
                 << Curr << "\n";
-            }
+            });
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {
@@ -290,8 +346,8 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
         Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
       }
     }
-    OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
-      << Funcs.size() << " total\n";
+    Out << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
+        << Funcs.size() << " total\n";
   }
   return Error::success();
 }
@@ -325,9 +381,15 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   // Save a mapping of string offsets to the cached string reference in case
   // we need to segment the GSYM file and copy string from one string table to
   // another.
-  if (StringOffsetMap.count(StrOff) == 0)
-    StringOffsetMap.insert(std::make_pair(StrOff, CHStr));
+  StringOffsetMap.try_emplace(StrOff, CHStr);
   return StrOff;
+}
+
+StringRef GsymCreator::getString(uint32_t Offset) {
+  auto I = StringOffsetMap.find(Offset);
+  assert(I != StringOffsetMap.end() &&
+         "GsymCreator::getString expects a valid offset as parameter.");
+  return I->second.val();
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
@@ -491,8 +553,9 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       GsymCreator *GC = ExpectedGC->get();
       if (GC == NULL)
         break; // We had not more functions to encode.
-      raw_null_ostream ErrorStrm;
-      llvm::Error Err = GC->finalize(ErrorStrm);
+      // Don't collect any messages at all
+      OutputAggregator Out(nullptr);
+      llvm::Error Err = GC->finalize(Out);
       if (Err)
         return Err;
       std::string SegmentedGsymPath;

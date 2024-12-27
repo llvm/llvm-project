@@ -1,6 +1,6 @@
-#include <clc/clc.h>
 #include "math.h"
-#include "../clcmacro.h"
+#include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF float logb(float x) {
     int ax = as_int(x) & EXSIGNBIT_SP32;
@@ -29,3 +29,5 @@ _CLC_OVERLOAD _CLC_DEF double logb(double x) {
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, logb, double)
 #endif
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(logb)

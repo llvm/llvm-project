@@ -1,4 +1,4 @@
-//===- OpenACCOpsTest.cpp - OpenACC ops extra functiosn Tests -------------===//
+//===- OpenACCOpsTest.cpp - Unit tests for OpenACC ops --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
@@ -23,7 +24,8 @@ using namespace mlir::acc;
 class OpenACCOpsTest : public ::testing::Test {
 protected:
   OpenACCOpsTest() : b(&context), loc(UnknownLoc::get(&context)) {
-    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect>();
+    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
+                        memref::MemRefDialect>();
   }
 
   MLIRContext context;
@@ -86,13 +88,13 @@ void testAsyncValue(OpBuilder &b, MLIRContext &context, Location loc,
   OwningOpRef<arith::ConstantIndexOp> val =
       b.create<arith::ConstantIndexOp>(loc, 1);
   auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);
-  op->setAsyncDeviceTypeAttr(b.getArrayAttr({dtypeNvidia}));
-  op->getAsyncMutable().assign(val->getResult());
+  op->setAsyncOperandsDeviceTypeAttr(b.getArrayAttr({dtypeNvidia}));
+  op->getAsyncOperandsMutable().assign(val->getResult());
   EXPECT_EQ(op->getAsyncValue(), empty);
   EXPECT_EQ(op->getAsyncValue(DeviceType::Nvidia), val->getResult());
 
-  op->getAsyncMutable().clear();
-  op->removeAsyncDeviceTypeAttr();
+  op->getAsyncOperandsMutable().clear();
+  op->removeAsyncOperandsDeviceTypeAttr();
 }
 
 TEST_F(OpenACCOpsTest, asyncValueTest) {
@@ -232,6 +234,8 @@ TEST_F(OpenACCOpsTest, waitOnlyTest) {
   testWaitOnly<ParallelOp>(b, context, loc, dtypes, dtypesWithoutNone);
   testWaitOnly<KernelsOp>(b, context, loc, dtypes, dtypesWithoutNone);
   testWaitOnly<SerialOp>(b, context, loc, dtypes, dtypesWithoutNone);
+  testWaitOnly<UpdateOp>(b, context, loc, dtypes, dtypesWithoutNone);
+  testWaitOnly<DataOp>(b, context, loc, dtypes, dtypesWithoutNone);
 }
 
 template <typename Op>
@@ -245,19 +249,23 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
       b.create<arith::ConstantIndexOp>(loc, 1);
   OwningOpRef<arith::ConstantIndexOp> val2 =
       b.create<arith::ConstantIndexOp>(loc, 4);
+  OwningOpRef<arith::ConstantIndexOp> val3 =
+      b.create<arith::ConstantIndexOp>(loc, 5);
   auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
   op->getWaitOperandsMutable().assign(val1->getResult());
   op->setWaitOperandsDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
   op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({1}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({false}));
   EXPECT_EQ(op->getWaitValues().front(), val1->getResult());
   for (auto d : dtypesWithoutNone)
-    EXPECT_EQ(op->getWaitValues(d).begin(), op->getWaitValues(d).end());
+    EXPECT_TRUE(op->getWaitValues(d).empty());
 
   op->getWaitOperandsMutable().clear();
   op->removeWaitOperandsDeviceTypeAttr();
   op->removeWaitOperandsSegmentsAttr();
+  op->removeHasWaitDevnumAttr();
   for (auto d : dtypes)
-    EXPECT_EQ(op->getWaitValues(d).begin(), op->getWaitValues(d).end());
+    EXPECT_TRUE(op->getWaitValues(d).empty());
 
   op->getWaitOperandsMutable().append(val1->getResult());
   op->getWaitOperandsMutable().append(val2->getResult());
@@ -265,6 +273,7 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
       b.getArrayAttr({DeviceTypeAttr::get(&context, DeviceType::Host),
                       DeviceTypeAttr::get(&context, DeviceType::Star)}));
   op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({1, 1}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({false, false}));
   EXPECT_EQ(op->getWaitValues(DeviceType::None).begin(),
             op->getWaitValues(DeviceType::None).end());
   EXPECT_EQ(op->getWaitValues(DeviceType::Host).front(), val1->getResult());
@@ -273,8 +282,9 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
   op->getWaitOperandsMutable().clear();
   op->removeWaitOperandsDeviceTypeAttr();
   op->removeWaitOperandsSegmentsAttr();
+  op->removeHasWaitDevnumAttr();
   for (auto d : dtypes)
-    EXPECT_EQ(op->getWaitValues(d).begin(), op->getWaitValues(d).end());
+    EXPECT_TRUE(op->getWaitValues(d).empty());
 
   op->getWaitOperandsMutable().append(val1->getResult());
   op->getWaitOperandsMutable().append(val2->getResult());
@@ -283,6 +293,7 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
       b.getArrayAttr({DeviceTypeAttr::get(&context, DeviceType::Default),
                       DeviceTypeAttr::get(&context, DeviceType::Multicore)}));
   op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({2, 1}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({false, false}));
   EXPECT_EQ(op->getWaitValues(DeviceType::None).begin(),
             op->getWaitValues(DeviceType::None).end());
   EXPECT_EQ(op->getWaitValues(DeviceType::Default).front(), val1->getResult());
@@ -294,6 +305,28 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
   op->getWaitOperandsMutable().clear();
   op->removeWaitOperandsDeviceTypeAttr();
   op->removeWaitOperandsSegmentsAttr();
+
+  op->getWaitOperandsMutable().append(val3->getResult());
+  op->getWaitOperandsMutable().append(val2->getResult());
+  op->getWaitOperandsMutable().append(val1->getResult());
+  op->setWaitOperandsDeviceTypeAttr(
+      b.getArrayAttr({DeviceTypeAttr::get(&context, DeviceType::Multicore)}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({true}));
+  op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({3}));
+  EXPECT_EQ(op->getWaitValues(DeviceType::None).begin(),
+            op->getWaitValues(DeviceType::None).end());
+  EXPECT_FALSE(op->getWaitDevnum());
+
+  EXPECT_EQ(op->getWaitDevnum(DeviceType::Multicore), val3->getResult());
+  EXPECT_EQ(op->getWaitValues(DeviceType::Multicore).front(),
+            val2->getResult());
+  EXPECT_EQ(op->getWaitValues(DeviceType::Multicore).drop_front().front(),
+            val1->getResult());
+
+  op->getWaitOperandsMutable().clear();
+  op->removeWaitOperandsDeviceTypeAttr();
+  op->removeWaitOperandsSegmentsAttr();
+  op->removeHasWaitDevnumAttr();
 }
 
 TEST_F(OpenACCOpsTest, waitValuesTest) {
@@ -404,4 +437,170 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
     EXPECT_FALSE(op->getBindNameValue(d).has_value());
   op->removeBindNameDeviceTypeAttr();
   op->removeBindNameAttr();
+}
+
+template <typename Op>
+void testShortDataEntryOpBuilders(OpBuilder &b, MLIRContext &context,
+                                  Location loc, DataClause dataClause) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+
+  OwningOpRef<Op> op = b.create<Op>(loc, varPtrOp->getResult(),
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getVarPtr(), varPtrOp->getResult());
+  EXPECT_EQ(op->getType(), memrefTy);
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+  EXPECT_FALSE(op->getVarPtrPtr());
+
+  OwningOpRef<Op> op2 = b.create<Op>(loc, varPtrOp->getResult(),
+                                     /*structured=*/false, /*implicit=*/false);
+  EXPECT_FALSE(op2->getImplicit());
+  EXPECT_FALSE(op2->getStructured());
+
+  OwningOpRef<arith::ConstantIndexOp> extent =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  OwningOpRef<DataBoundsOp> bounds =
+      b.create<DataBoundsOp>(loc, extent->getResult());
+  OwningOpRef<Op> opWithBounds =
+      b.create<Op>(loc, varPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true, bounds->getResult());
+  EXPECT_FALSE(opWithBounds->getBounds().empty());
+  EXPECT_EQ(opWithBounds->getBounds().back(), bounds->getResult());
+
+  OwningOpRef<Op> opWithName =
+      b.create<Op>(loc, varPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true, "varName");
+  EXPECT_EQ(opWithName->getNameAttr().str(), "varName");
+}
+
+TEST_F(OpenACCOpsTest, shortDataEntryOpBuilder) {
+  testShortDataEntryOpBuilders<PrivateOp>(b, context, loc,
+                                          DataClause::acc_private);
+  testShortDataEntryOpBuilders<FirstprivateOp>(b, context, loc,
+                                               DataClause::acc_firstprivate);
+  testShortDataEntryOpBuilders<ReductionOp>(b, context, loc,
+                                            DataClause::acc_reduction);
+  testShortDataEntryOpBuilders<DevicePtrOp>(b, context, loc,
+                                            DataClause::acc_deviceptr);
+  testShortDataEntryOpBuilders<PresentOp>(b, context, loc,
+                                          DataClause::acc_present);
+  testShortDataEntryOpBuilders<CopyinOp>(b, context, loc,
+                                         DataClause::acc_copyin);
+  testShortDataEntryOpBuilders<CreateOp>(b, context, loc,
+                                         DataClause::acc_create);
+  testShortDataEntryOpBuilders<NoCreateOp>(b, context, loc,
+                                           DataClause::acc_no_create);
+  testShortDataEntryOpBuilders<AttachOp>(b, context, loc,
+                                         DataClause::acc_attach);
+  testShortDataEntryOpBuilders<GetDevicePtrOp>(b, context, loc,
+                                               DataClause::acc_getdeviceptr);
+  testShortDataEntryOpBuilders<UpdateDeviceOp>(b, context, loc,
+                                               DataClause::acc_update_device);
+  testShortDataEntryOpBuilders<UseDeviceOp>(b, context, loc,
+                                            DataClause::acc_use_device);
+  testShortDataEntryOpBuilders<DeclareDeviceResidentOp>(
+      b, context, loc, DataClause::acc_declare_device_resident);
+  testShortDataEntryOpBuilders<DeclareLinkOp>(b, context, loc,
+                                              DataClause::acc_declare_link);
+  testShortDataEntryOpBuilders<CacheOp>(b, context, loc, DataClause::acc_cache);
+}
+
+template <typename Op>
+void testShortDataExitOpBuilders(OpBuilder &b, MLIRContext &context,
+                                 Location loc, DataClause dataClause) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+  OwningOpRef<GetDevicePtrOp> accPtrOp = b.create<GetDevicePtrOp>(
+      loc, varPtrOp->getResult(), /*structured=*/true, /*implicit=*/true);
+
+  OwningOpRef<Op> op =
+      b.create<Op>(loc, accPtrOp->getResult(), varPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getVarPtr(), varPtrOp->getResult());
+  EXPECT_EQ(op->getAccPtr(), accPtrOp->getResult());
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+
+  OwningOpRef<Op> op2 =
+      b.create<Op>(loc, accPtrOp->getResult(), varPtrOp->getResult(),
+                   /*structured=*/false, /*implicit=*/false);
+  EXPECT_FALSE(op2->getImplicit());
+  EXPECT_FALSE(op2->getStructured());
+
+  OwningOpRef<arith::ConstantIndexOp> extent =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  OwningOpRef<DataBoundsOp> bounds =
+      b.create<DataBoundsOp>(loc, extent->getResult());
+  OwningOpRef<Op> opWithBounds =
+      b.create<Op>(loc, accPtrOp->getResult(), varPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true, bounds->getResult());
+  EXPECT_FALSE(opWithBounds->getBounds().empty());
+  EXPECT_EQ(opWithBounds->getBounds().back(), bounds->getResult());
+
+  OwningOpRef<Op> opWithName =
+      b.create<Op>(loc, accPtrOp->getResult(), varPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true, "varName");
+  EXPECT_EQ(opWithName->getNameAttr().str(), "varName");
+}
+
+TEST_F(OpenACCOpsTest, shortDataExitOpBuilder) {
+  testShortDataExitOpBuilders<CopyoutOp>(b, context, loc,
+                                         DataClause::acc_copyout);
+  testShortDataExitOpBuilders<UpdateHostOp>(b, context, loc,
+                                            DataClause::acc_update_host);
+}
+
+template <typename Op>
+void testShortDataExitNoVarPtrOpBuilders(OpBuilder &b, MLIRContext &context,
+                                         Location loc, DataClause dataClause) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+  OwningOpRef<GetDevicePtrOp> accPtrOp = b.create<GetDevicePtrOp>(
+      loc, varPtrOp->getResult(), /*structured=*/true, /*implicit=*/true);
+
+  OwningOpRef<Op> op = b.create<Op>(loc, accPtrOp->getResult(),
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getAccPtr(), accPtrOp->getResult());
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+
+  OwningOpRef<Op> op2 = b.create<Op>(loc, accPtrOp->getResult(),
+                                     /*structured=*/false, /*implicit=*/false);
+  EXPECT_FALSE(op2->getImplicit());
+  EXPECT_FALSE(op2->getStructured());
+
+  OwningOpRef<arith::ConstantIndexOp> extent =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  OwningOpRef<DataBoundsOp> bounds =
+      b.create<DataBoundsOp>(loc, extent->getResult());
+  OwningOpRef<Op> opWithBounds =
+      b.create<Op>(loc, accPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true, bounds->getResult());
+  EXPECT_FALSE(opWithBounds->getBounds().empty());
+  EXPECT_EQ(opWithBounds->getBounds().back(), bounds->getResult());
+
+  OwningOpRef<Op> opWithName =
+      b.create<Op>(loc, accPtrOp->getResult(),
+                   /*structured=*/true, /*implicit=*/true, "varName");
+  EXPECT_EQ(opWithName->getNameAttr().str(), "varName");
+}
+
+TEST_F(OpenACCOpsTest, shortDataExitOpNoVarPtrBuilder) {
+  testShortDataExitNoVarPtrOpBuilders<DeleteOp>(b, context, loc,
+                                                DataClause::acc_delete);
+  testShortDataExitNoVarPtrOpBuilders<DetachOp>(b, context, loc,
+                                                DataClause::acc_detach);
 }

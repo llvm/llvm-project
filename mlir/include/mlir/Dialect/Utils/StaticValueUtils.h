@@ -15,6 +15,7 @@
 #ifndef MLIR_DIALECT_UTILS_STATICVALUEUTILS_H
 #define MLIR_DIALECT_UTILS_STATICVALUEUTILS_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LLVM.h"
@@ -59,6 +60,25 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec);
 
+/// Given OpFoldResult representing dim size value (*), generates a pair of
+/// sizes:
+///   * 1st result, static value, contains an int64_t dim size that can be used
+///   to build ShapedType (ShapedType::kDynamic is used for truly dynamic dims),
+///   * 2nd result, dynamic value, contains OpFoldResult encapsulating the
+///   actual dim size (either original or updated input value).
+/// For input sizes for which it is possible to extract a constant Attribute,
+/// replaces the original size value with an integer attribute (unless it's
+/// already a constant Attribute). The 1st return value also becomes the actual
+/// integer size (as opposed ShapedType::kDynamic).
+///
+/// (*) This hook is usually used when, given input sizes as OpFoldResult,
+/// it's required to generate two vectors:
+///   * sizes as int64_t to generate a shape,
+///   * sizes as OpFoldResult for sizes-like attribute.
+/// Please update this comment if you identify other use cases.
+std::pair<int64_t, OpFoldResult>
+getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
+
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
 SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
@@ -91,6 +111,12 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs);
 
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value);
+/// Return true if all of `ofrs` are constant integers equal to `value`.
+bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value);
+/// Return true if all of `ofrs` are constant integers equal to the
+/// corresponding value in `values`.
+bool areConstantIntValues(ArrayRef<OpFoldResult> ofrs,
+                          ArrayRef<int64_t> values);
 
 /// Return true if ofr1 and ofr2 are the same integer constant attribute
 /// values or the same SSA value. Ignore integer bitwitdh and type mismatch
@@ -124,9 +150,8 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 /// Decompose a vector of mixed static or dynamic values into the
 /// corresponding pair of arrays. This is the inverse function of
 /// `getMixedValues`.
-std::pair<ArrayAttr, SmallVector<Value>>
-decomposeMixedValues(Builder &b,
-                     const SmallVectorImpl<OpFoldResult> &mixedValues);
+std::pair<SmallVector<int64_t>, SmallVector<Value>>
+decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues);
 
 /// Helper to sort `values` according to matching `keys`.
 SmallVector<Value>
@@ -200,6 +225,12 @@ struct SaturatedInteger {
     return SaturatedInteger{false, other.v + v};
   }
   SaturatedInteger operator*(SaturatedInteger other) {
+    // Multiplication with 0 is always 0.
+    if (!other.saturated && other.v == 0)
+      return SaturatedInteger{false, 0};
+    if (!saturated && v == 0)
+      return SaturatedInteger{false, 0};
+    // Otherwise, if this or the other integer is dynamic, so is the result.
     if (saturated || other.saturated)
       return SaturatedInteger{true, 0};
     return SaturatedInteger{false, other.v * v};

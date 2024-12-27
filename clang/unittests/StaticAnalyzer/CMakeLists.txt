@@ -10,15 +10,20 @@ add_clang_unittest(StaticAnalysisTests
   CallDescriptionTest.cpp
   CallEventTest.cpp
   ConflictingEvalCallsTest.cpp
+  ExprEngineVisitTest.cpp
   FalsePositiveRefutationBRVisitorTest.cpp
+  IsCLibraryFunctionTest.cpp
+  MemRegionDescriptiveNameTest.cpp
   NoStateChangeFuncVisitorTest.cpp
   ParamRegionTest.cpp
   RangeSetTest.cpp
   RegisterCustomCheckersTest.cpp
   StoreTest.cpp
   SymbolReaperTest.cpp
+  SValSimplifyerTest.cpp
   SValTest.cpp
   TestReturnValueUnderConstruction.cpp
+  Z3CrosscheckOracleTest.cpp
   )
 
 clang_target_link_libraries(StaticAnalysisTests

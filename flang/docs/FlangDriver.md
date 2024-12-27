@@ -15,17 +15,13 @@ local:
 ```
 
 There are two main drivers in Flang:
-* the compiler driver, `flang-new`
-* the frontend driver, `flang-new -fc1`
-
-> **_NOTE:_** The diagrams in this document refer to `flang` as opposed to
-> `flang-new`. Eventually, `flang-new` will be renamed as `flang` and the
-> diagrams reflect the final design that we are still working towards.
+* the compiler driver, `flang`
+* the frontend driver, `flang -fc1`
 
 The **compiler driver** will allow you to control all compilation phases (e.g.
 preprocessing, semantic checks, code-generation, code-optimisation, lowering
 and linking). For frontend specific tasks, the compiler driver creates a
-Fortran compilation job and delegates it to `flang-new -fc1`, the frontend
+Fortran compilation job and delegates it to `flang -fc1`, the frontend
 driver. For linking, it creates a linker job and calls an external linker (e.g.
 LLVM's [`lld`](https://lld.llvm.org/)). It can also call other tools such as
 external assemblers (e.g. [`as`](https://www.gnu.org/software/binutils/)). In
@@ -47,7 +43,7 @@ frontend. It uses MLIR and LLVM for code-generation and can be viewed as a
 driver for Flang, LLVM and MLIR libraries. Contrary to the compiler driver, it
 is not capable of calling any external tools (including linkers).  It is aware
 of all the frontend internals that are "hidden" from the compiler driver. It
-accepts many frontend-specific options not available in `flang-new` and as such
+accepts many frontend-specific options not available in `flang` and as such
 it provides a finer control over the frontend. Note that this tool is mostly
 intended for Flang developers. In particular, there are no guarantees about the
 stability of its interface and compiler developers can use it to experiment
@@ -62,30 +58,30 @@ frontend specific flag from the _compiler_ directly to the _frontend_ driver,
 e.g.:
 
 ```bash
-flang-new -Xflang -fdebug-dump-parse-tree input.f95
+flang -Xflang -fdebug-dump-parse-tree input.f95
 ```
 
-In the invocation above, `-fdebug-dump-parse-tree` is forwarded to `flang-new
+In the invocation above, `-fdebug-dump-parse-tree` is forwarded to `flang
 -fc1`. Without the forwarding flag, `-Xflang`, you would see the following
 warning:
 
 ```bash
-flang-new: warning: argument unused during compilation:
+flang: warning: argument unused during compilation:
 ```
 
-As `-fdebug-dump-parse-tree` is only supported by `flang-new -fc1`, `flang-new`
+As `-fdebug-dump-parse-tree` is only supported by `flang -fc1`, `flang`
 will ignore it when used without `Xflang`.
 
 ## Why Do We Need Two Drivers?
-As hinted above, `flang-new` and `flang-new -fc1` are two separate tools. The
-fact that these tools are accessed through one binary, `flang-new`, is just an
+As hinted above, `flang` and `flang -fc1` are two separate tools. The
+fact that these tools are accessed through one binary, `flang`, is just an
 implementation detail. Each tool has a separate list of options, albeit defined
 in the same file: `clang/include/clang/Driver/Options.td`.
 
 The separation helps us split various tasks and allows us to implement more
-specialised tools. In particular, `flang-new` is not aware of various
+specialised tools. In particular, `flang` is not aware of various
 compilation phases within the frontend (e.g. scanning, parsing or semantic
-checks). It does not have to be. Conversely, the frontend driver, `flang-new
+checks). It does not have to be. Conversely, the frontend driver, `flang
 -fc1`, needs not to be concerned with linkers or other external tools like
 assemblers. Nor does it need to know where to look for various systems
 libraries, which is usually OS and platform specific.
@@ -104,7 +100,7 @@ GCC](https://en.wikibooks.org/wiki/GNU_C_Compiler_Internals/GNU_C_Compiler_Archi
 In fact, Flang needs to adhere to this model in order to be able to re-use
 Clang's driver library. If you are more familiar with the [architecture of
 GFortran](https://gcc.gnu.org/onlinedocs/gcc-4.7.4/gfortran/About-GNU-Fortran.html)
-than Clang, then `flang-new` corresponds to `gfortran` and `flang-new -fc1` to
+than Clang, then `flang` corresponds to `gfortran` and `flang -fc1` to
 `f951`.
 
 ## Compiler Driver
@@ -135,7 +131,7 @@ output from one action is the input for the subsequent one. You can use the
 `-ccc-print-phases` flag to see the sequence of actions that the driver will
 create for your compiler invocation:
 ```bash
-flang-new -ccc-print-phases -E file.f
+flang -ccc-print-phases -E file.f
 +- 0: input, "file.f", f95-cpp-input
 1: preprocessor, {0}, f95
 ```
@@ -143,7 +139,7 @@ As you can see, for `-E` the driver creates only two jobs and stops immediately
 after preprocessing. The first job simply prepares the input. For `-c`, the
 pipeline of the created jobs is more complex:
 ```bash
-flang-new -ccc-print-phases -c file.f
+flang -ccc-print-phases -c file.f
          +- 0: input, "file.f", f95-cpp-input
       +- 1: preprocessor, {0}, f95
    +- 2: compiler, {1}, ir
@@ -158,7 +154,7 @@ command to call the frontend driver is generated (more specifically, an
 instance of `clang::driver::Command`). Every command is bound to an instance of
 `clang::driver::Tool`. For Flang we introduced a specialisation of this class:
 `clang::driver::Flang`. This class implements the logic to either translate or
-forward compiler options to the frontend driver, `flang-new -fc1`.
+forward compiler options to the frontend driver, `flang -fc1`.
 
 You can read more on the design of `clangDriver` in Clang's [Driver Design &
 Internals](https://clang.llvm.org/docs/DriverInternals.html).
@@ -179,46 +175,20 @@ like this:
 
 ```
 $ flang -v -o example example.o
-"/usr/bin/ld" [...] example.o [...] "--whole-archive" "-lFortran_main"
-"--no-whole-archive" "-lFortranRuntime" "-lFortranDecimal" [...]
+"/usr/bin/ld" [...] example.o [...] "-lFortranRuntime" "-lFortranDecimal" [...]
 ```
 
 The automatically added libraries are:
 
-* `Fortran_main`: Provides the main entry point `main` that then invokes
-  `_QQmain` with the Fortran program unit.  This library has a dependency to
-  the `FortranRuntime` library.
 * `FortranRuntime`: Provides most of the Flang runtime library.
 * `FortranDecimal`: Provides operations for decimal numbers.
-
-The default is that, when using Flang as the linker, one of the Fortran
-translation units provides the program unit and therefore it is assumed that
-Fortran is the main code part (calling into C/C++ routines via `BIND (C)`
-interfaces).  When composing the linker commandline, Flang uses
-`--whole-archive` and `--no-whole-archive` (Windows: `/WHOLEARCHIVE:`,
-Darwin & AIX: *not implemented yet*) to make sure that all for `Fortran_main`
-is processed by the linker.  This is done to issue a proper error message when
-multiple definitions of `main` occur.  This happens, for instance, when linking
-a code that has a Fortran program unit with a C/C++ code that also defines a
-`main` function.  A user may be required to explicitly provide the C++ runtime
-libraries at link time (e.g., via `-lstdc++` for STL)
 
 If the code is C/C++ based and invokes Fortran routines, one can either use Clang
 or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
 In this case, one has to explicitly provide the Fortran runtime libraries
-`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link
-and use the `-fno-fortran-main` flag.  This flag removes
-`Fortran_main` from the linker stage and hence requires one of the C/C++
-translation units to provide a definition of the `main` function. In this case,
-it may be required to explicitly supply C++ runtime libraries as mentioned above.
-
-When creating shared or static libraries using Flang with `-shared` or `-static`
-flag, Fortran_main is automatically removed from the linker stage (i.e.,
-`-fno-fortran-main` is on by default).  It is assumed that when creating a
-static or shared library, the generated library does not need a `main`
-function, as a final link stage will occur that will provide the `Fortran_main`
-library when creating the final executable.
+`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link.
+In this case, it may be required to explicitly supply C++ runtime libraries.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
 must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`
@@ -258,33 +228,13 @@ driver, `clang -cc1` and consists of the following classes:
 This list is not exhaustive and only covers the main classes that implement the
 driver. The main entry point for the frontend driver, `fc1_main`, is
 implemented in `flang/tools/flang-driver/driver.cpp`. It can be accessed by
-invoking the compiler driver, `flang-new`, with the `-fc1` flag.
+invoking the compiler driver, `flang`, with the `-fc1` flag.
 
 The frontend driver will only run one action at a time. If you specify multiple
 action flags, only the last one will be taken into account. The default action
 is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
-words, `flang-new -fc1 <input-file>` is equivalent to `flang-new -fc1 -fsyntax-only
+words, `flang -fc1 <input-file>` is equivalent to `flang -fc1 -fsyntax-only
 <input-file>`.
-
-## The `flang-to-external-fc` script
-The `flang-to-external-fc` wrapper script for `flang-new` was introduced as a
-development tool and to facilitate testing. The `flang-to-external-fc` wrapper
-script will:
-* use `flang-new` to unparse the input source file (i.e. it will run `flang-new
-  -fc1 -fdebug-unparse <input-file>`), and then
-* call a host Fortran compiler, e.g. `gfortran`, to compile the unparsed file.
-
-Here's a basic breakdown of what happens inside `flang-to-external-fc` when you
-run `flang-to-external-fc file.f90`:
-```bash
-flang-new -fc1 -fdebug-unparse file.f90 -o file-unparsed.f90
-gfortran file-unparsed.f90
-```
-This is a simplified version for illustration purposes only. In practice,
-`flang-to-external-fc` adds a few more frontend options and it also supports
-various other use cases (e.g. compiling C files, linking existing object
-files). `gfortran` is the default host compiler used by `flang-to-external-fc`.
-You can change it by setting the `FLANG_FC` environment variable.
 
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
@@ -308,8 +258,8 @@ similar semantics to your new option and start by copying that.
 For every new option, you will also have to define the visibility of the new
 option. This is controlled through the `Visibility` field. You can use the
 following Flang specific visibility flags to control this:
-  * `FlangOption` - this option will be available in the `flang-new` compiler driver,
-  * `FC1Option` - this option will be available in the `flang-new -fc1` frontend driver,
+  * `FlangOption` - this option will be available in the `flang` compiler driver,
+  * `FC1Option` - this option will be available in the `flang -fc1` frontend driver,
 
 Options that are supported by clang should explicitly specify `ClangOption` in
 `Visibility`, and options that are only supported in Flang should not specify
@@ -336,10 +286,10 @@ The parsing will depend on the semantics encoded in the TableGen definition.
 
 When adding a compiler driver option (i.e. an option that contains
 `FlangOption` among in it's `Visibility`) that you also intend to be understood
-by the frontend, make sure that it is either forwarded to `flang-new -fc1` or
+by the frontend, make sure that it is either forwarded to `flang -fc1` or
 translated into some other option that is accepted by the frontend driver. In
 the case of options that contain both `FlangOption` and `FC1Option` among its
-flags, we usually just forward from `flang-new` to `flang-new -fc1`. This is
+flags, we usually just forward from `flang` to `flang -fc1`. This is
 then tested in `flang/test/Driver/frontend-forward.F90`.
 
 What follows is usually very dependant on the meaning of the corresponding
@@ -383,13 +333,13 @@ At this point you should be able to trigger that frontend action that you have
 just added using your new frontend option.
 
 
-# CMake Support
+## CMake Support
 As of [#7246](https://gitlab.kitware.com/cmake/cmake/-/merge_requests/7246)
-(and soon to be released CMake 3.24.0), `cmake` can detect `flang-new` as a
+(CMake 3.28.0), `cmake` can detect `flang` as a
 supported Fortran compiler. You can configure your CMake projects to use
-`flang-new` as follows:
+`flang` as follows:
 ```bash
-cmake -DCMAKE_Fortran_COMPILER=<path/to/flang-new> <src/dir>
+cmake -DCMAKE_Fortran_COMPILER=<path/to/flang> <src/dir>
 ```
 You should see the following in the output:
 ```
@@ -397,16 +347,16 @@ You should see the following in the output:
 ```
 where `<version>` corresponds to the LLVM Flang version.
 
-# Testing
+## Testing
 In LIT, we define two variables that you can use to invoke Flang's drivers:
-* `%flang` is expanded as `flang-new` (i.e. the compiler driver)
-* `%flang_fc1` is expanded as `flang-new -fc1` (i.e. the frontend driver)
+* `%flang` is expanded as `flang` (i.e. the compiler driver)
+* `%flang_fc1` is expanded as `flang -fc1` (i.e. the frontend driver)
 
 For most regression tests for the frontend, you will want to use `%flang_fc1`.
 In some cases, the observable behaviour will be identical regardless of whether
 `%flang` or `%flang_fc1` is used. However, when you are using `%flang` instead
 of `%flang_fc1`, the compiler driver will add extra flags to the frontend
-driver invocation (i.e. `flang-new -fc1 -<extra-flags>`). In some cases that might
+driver invocation (i.e. `flang -fc1 -<extra-flags>`). In some cases that might
 be exactly what you want to test.  In fact, you can check these additional
 flags by using the `-###` compiler driver command line option.
 
@@ -416,7 +366,7 @@ test as only available on Unix-like systems (i.e. systems that contain a Unix
 shell). In practice this means that the corresponding test is skipped on
 Windows.
 
-# Frontend Driver Plugins
+## Frontend Driver Plugins
 Plugins are an extension to the frontend driver that make it possible to run
 extra user defined frontend actions, in the form of a specialization of a
 `PluginParseTreeAction`. These actions are run during compilation, after
@@ -426,10 +376,10 @@ plugins. The process for using plugins includes:
 * [Creating a plugin](#creating-a-plugin)
 * [Loading and running a plugin](#loading-and-running-a-plugin)
 
-Flang plugins are limited to `flang-new -fc1` and are currently only available /
+Flang plugins are limited to `flang -fc1` and are currently only available /
 been tested on Linux.
 
-## Creating a Plugin
+### Creating a Plugin
 There are three parts required for plugins to work:
 1. [`PluginParseTreeAction` subclass](#a-pluginparsetreeaction-subclass)
 1. [Implementation of `ExecuteAction`](#implementation-of-executeaction)
@@ -439,7 +389,7 @@ There is an example plugin located in `flang/example/PrintFlangFunctionNames`
 that demonstrates these points by using the `ParseTree` API to print out
 function and subroutine names declared in the input file.
 
-### A `PluginParseTreeAction` Subclass
+#### A `PluginParseTreeAction` Subclass
 This subclass will wrap everything together and represent the `FrontendAction`
 corresponding to your plugin. It will need to inherit from
 `PluginParseTreeAction` (defined in `flang/include/flang/FrontendActions.h`), in
@@ -449,7 +399,7 @@ can be registered, e.g.
 class PrintFunctionNamesAction : public PluginParseTreeAction
 ```
 
-### Implementation of `ExecuteAction`
+#### Implementation of `ExecuteAction`
 Like in other frontend actions, the driver looks for an `ExecuteAction` function
 to run, so in order for your plugin to do something, you will need to implement
 the `ExecuteAction` method in your plugin class. This method will contain the
@@ -494,7 +444,7 @@ defined in `flang/include/flang/Parser/parse-tree.h`. In the example, there is a
 the `FunctionStmt` struct and prints it. This function will be run after every
 `FunctionStmt` node is visited in the parse tree.
 
-### Plugin Registration
+#### Plugin Registration
 A plugin registry is used to store names and descriptions of a collection of
 plugins. The Flang plugin registry, defined in
 `flang/include/flang/Frontend/FrontendPluginRegistry.h`, is an alias of
@@ -509,37 +459,37 @@ static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
     "print-fns", "Print Function names");
 ```
 
-## Loading and Running a Plugin
+### Loading and Running a Plugin
 In order to use plugins, there are 2 command line options made available to the
-frontend driver, `flang-new -fc1`:
+frontend driver, `flang -fc1`:
 * [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
   object of the plugin
 * [`-plugin <name>`](#the--plugin-name-option) for calling the registered plugin
 
 Invocation of the example plugin is done through:
 ```bash
-flang-new -fc1 -load flangPrintFunctionNames.so -plugin print-fns file.f90
+flang -fc1 -load flangPrintFunctionNames.so -plugin print-fns file.f90
 ```
 
 Both these options are parsed in `flang/lib/Frontend/CompilerInvocation.cpp` and
 fulfil their actions in
 `flang/lib/FrontendTool/ExecuteCompilerInvocation.cpp`
 
-### The `-load <dsopath>` option
+#### The `-load <dsopath>` option
 This loads the plugin shared object library, with the path given at `<dsopath>`,
 using `LoadLibraryPermantly` from LLVM's `llvm::sys::DynamicLibrary`, which
 itself uses `dlopen`. During this stage, the plugin is registered with the
 registration line from the plugin, storing the name and description.
 
-### The `-plugin <name>` option
+#### The `-plugin <name>` option
 This sets `frontend::ActionKind programAction` in `FrontendOptions` to
 `PluginAction`, through which it searches the plugin registry for the plugin
 name from `<name>`. If found, it returns the instantiated plugin, otherwise it
 reports an error diagnostic and returns `nullptr`.
 
-## Enabling In-Tree Plugins
+### Enabling In-Tree Plugins
 For in-tree plugins, there is the CMake flag `FLANG_PLUGIN_SUPPORT`, enabled by
-default, that controls the exporting of executable symbols from `flang-new`,
+default, that controls the exporting of executable symbols from `flang`,
 which plugins need access to. Additionally, there is the CMake flag
 `LLVM_BUILD_EXAMPLES`, turned off by default, that is used to control if the
 example programs are built. This includes plugins that are in the
@@ -547,7 +497,7 @@ example programs are built. This includes plugins that are in the
 `flang/examples/CMakeLists.txt`, for example, the `PrintFlangFunctionNames`
 plugin. It is also possible to develop plugins out-of-tree.
 
-## Limitations
+### Limitations
 Note that the traversal API presented here is under active development and
 might change in the future. We expect it to evolve as support for new
 language features are added. This document and the examples will be updated
@@ -564,7 +514,17 @@ to re-analyze expressions and modify scope or symbols. You can check
 [Semantics.md](Semantics.md) for more details on how `ParseTree` is edited
 e.g. during the semantic checks.
 
-# LLVM Pass Plugins
+## FIR Optimizer Pass Pipeline Extension Points
+
+The default FIR optimizer pass pipeline `createDefaultFIROptimizerPassPipeline`
+in `flang/lib/Optimizer/Passes/Pipelines.cpp` contains extension point callback
+invocations `invokeFIROptEarlyEPCallbacks`, `invokeFIRInlinerCallback`, and
+`invokeFIROptLastEPCallbacks` for Flang drivers to be able to insert additonal
+passes at different points of the default pass pipeline. An example use of these
+extension point callbacks is shown in `registerDefaultInlinerPass` to invoke the
+default inliner pass in `flang`.
+
+## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
 passes. The `-fpass-plugin` option enables these passes to be passed to the
@@ -575,7 +535,7 @@ documentation for
 [`llvm::PassBuilder`](https://llvm.org/doxygen/classllvm_1_1PassBuilder.html)
 for details.
 
-The framework to enable pass plugins in `flang-new` uses the exact same
+The framework to enable pass plugins in `flang` uses the exact same
 machinery as that used by `clang` and thus has the same capabilities and
 limitations.
 
@@ -583,7 +543,7 @@ In order to use a pass plugin, the pass(es) must be compiled into a dynamic
 shared object which is then loaded using the `-fpass-plugin` option.
 
 ```
-flang-new -fpass-plugin=/path/to/plugin.so <file.f90>
+flang -fpass-plugin=/path/to/plugin.so <file.f90>
 ```
 
 This option is available in both the compiler driver and the frontend driver.
@@ -595,7 +555,7 @@ Pass extensions are similar to plugins, except that they can also be linked
 statically. Setting `-DLLVM_${NAME}_LINK_INTO_TOOLS` to `ON` in the cmake
 command turns the project into a statically linked extension. An example would
 be Polly, e.g., using `-DLLVM_POLLY_LINK_INTO_TOOLS=ON` would link Polly passes
-into `flang-new` as built-in middle-end passes.
+into `flang` as built-in middle-end passes.
 
 See the
 [`WritingAnLLVMNewPMPass`](https://llvm.org/docs/WritingAnLLVMNewPMPass.html#id9)

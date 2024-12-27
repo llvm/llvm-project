@@ -1,4 +1,4 @@
-//=- ClangBuiltinsEmitter.cpp - Generate Clang builtins tables -*- C++ -*-====//
+//===-- ClangBuiltinsEmitter.cpp - Generate Clang builtins tables ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,9 +47,48 @@ private:
     if (!Prototype.ends_with(")"))
       PrintFatalError(Loc, "Expected closing brace at end of prototype");
     Prototype = Prototype.drop_back();
-    for (auto T = Prototype.split(','); !T.first.empty();
-         Prototype = T.second, T = Prototype.split(','))
-      ParseType(T.first);
+
+    // Look through the input parameters.
+    const size_t end = Prototype.size();
+    for (size_t I = 0; I != end;) {
+      const StringRef Current = Prototype.substr(I, end);
+      // Skip any leading space or commas
+      if (Current.starts_with(" ") || Current.starts_with(",")) {
+        ++I;
+        continue;
+      }
+
+      // Check if we are in _ExtVector. We do this first because
+      // extended vectors are written in template form with the syntax
+      // _ExtVector< ..., ...>, so we need to make sure we are not
+      // detecting the comma of the template class as a separator for
+      // the parameters of the prototype. Note: the assumption is that
+      // we cannot have nested _ExtVector.
+      if (Current.starts_with("_ExtVector<") ||
+          Current.starts_with("_Vector<")) {
+        const size_t EndTemplate = Current.find('>', 0);
+        ParseType(Current.substr(0, EndTemplate + 1));
+        // Move the prototype beyond _ExtVector<...>
+        I += EndTemplate + 1;
+        continue;
+      }
+
+      // We know that we are past _ExtVector, therefore the first seen
+      // comma is the boundary of a parameter in the prototype.
+      if (size_t CommaPos = Current.find(',', 0)) {
+        if (CommaPos != StringRef::npos) {
+          StringRef T = Current.substr(0, CommaPos);
+          ParseType(T);
+          // Move the prototype beyond the comma.
+          I += CommaPos + 1;
+          continue;
+        }
+      }
+
+      // No more commas, parse final parameter.
+      ParseType(Current);
+      I = end;
+    }
   }
 
   void ParseType(StringRef T) {
@@ -85,6 +124,29 @@ private:
       if (Substitution.empty())
         PrintFatalError(Loc, "Not a template");
       ParseType(Substitution);
+    } else if (auto IsExt = T.consume_front("_ExtVector");
+               IsExt || T.consume_front("_Vector")) {
+      // Clang extended vector types are mangled as follows:
+      //
+      // '_ExtVector<' <lanes> ',' <scalar type> '>'
+
+      // Before parsing T(=<scalar type>), make sure the syntax of
+      // `_ExtVector<N, T>` is correct...
+      if (!T.consume_front("<"))
+        PrintFatalError(Loc, "Expected '<' after '_ExtVector'");
+      unsigned long long Lanes;
+      if (consumeUnsignedInteger(T, 10, Lanes))
+        PrintFatalError(Loc, "Expected number of lanes after '_ExtVector<'");
+      Type += (IsExt ? "E" : "V") + std::to_string(Lanes);
+      if (!T.consume_front(","))
+        PrintFatalError(Loc,
+                        "Expected ',' after number of lanes in '_ExtVector<'");
+      if (!T.consume_back(">"))
+        PrintFatalError(
+            Loc, "Expected '>' after scalar type in '_ExtVector<N, type>'");
+
+      // ...all good, we can check if we have a valid `<scalar type>`.
+      ParseType(T);
     } else {
       auto ReturnTypeVal = StringSwitch<std::string>(T)
                                .Case("__builtin_va_list_ref", "A")
@@ -127,7 +189,7 @@ private:
   }
 
 public:
-  void Print(llvm::raw_ostream &OS) const { OS << ", \"" << Type << '\"'; }
+  void Print(raw_ostream &OS) const { OS << ", \"" << Type << '\"'; }
 
 private:
   SMLoc Loc;
@@ -148,14 +210,13 @@ public:
     }
   }
 
-  void Print(llvm::raw_ostream &OS) const { OS << HeaderName; }
+  void Print(raw_ostream &OS) const { OS << HeaderName; }
 
 private:
   std::string HeaderName;
 };
 
-void PrintAttributes(const Record *Builtin, BuiltinType BT,
-                     llvm::raw_ostream &OS) {
+void PrintAttributes(const Record *Builtin, BuiltinType BT, raw_ostream &OS) {
   OS << '\"';
   if (Builtin->isSubClassOf("LibBuiltin")) {
     if (BT == BuiltinType::LibBuiltin) {
@@ -181,7 +242,7 @@ void PrintAttributes(const Record *Builtin, BuiltinType BT,
   OS << '\"';
 }
 
-void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
+void EmitBuiltinDef(raw_ostream &OS, StringRef Substitution,
                     const Record *Builtin, Twine Spelling, BuiltinType BT) {
   if (Builtin->getValueAsBit("RequiresUndef"))
     OS << "#undef " << Spelling << '\n';
@@ -219,7 +280,7 @@ void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
     break;
   }
   case BuiltinType::TargetBuiltin:
-    OS << ", \"\"";
+    OS << ", \"" << Builtin->getValueAsString("Features") << "\"";
     break;
   case BuiltinType::AtomicBuiltin:
   case BuiltinType::Builtin:
@@ -244,14 +305,14 @@ TemplateInsts getTemplateInsts(const Record *R) {
     PrintFatalError(R->getLoc(), "Substitutions and affixes "
                                  "don't have the same lengths");
 
-  for (auto [Affix, Substitution] : llvm::zip(Affixes, Substitutions)) {
+  for (auto [Affix, Substitution] : zip(Affixes, Substitutions)) {
     temp.Substitution.emplace_back(Substitution);
     temp.Affix.emplace_back(Affix);
   }
   return temp;
 }
 
-void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
+void EmitBuiltin(raw_ostream &OS, const Record *Builtin) {
   TemplateInsts Templates = {};
   if (Builtin->isSubClassOf("Template")) {
     Templates = getTemplateInsts(Builtin);
@@ -261,7 +322,7 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
   }
 
   for (auto [Substitution, Affix] :
-       llvm::zip(Templates.Substitution, Templates.Affix)) {
+       zip(Templates.Substitution, Templates.Affix)) {
     for (StringRef Spelling : Builtin->getValueAsListOfStrings("Spellings")) {
       auto FullSpelling =
           (Templates.IsPrefix ? Affix + Spelling : Spelling + Affix).str();
@@ -285,8 +346,7 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
 }
 } // namespace
 
-void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
-                              llvm::raw_ostream &OS) {
+void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("List of builtins that Clang recognizes", OS);
 
   OS << R"c++(

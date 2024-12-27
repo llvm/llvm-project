@@ -1,5 +1,5 @@
 ! Test lowering of derived type array constructors to HLFIR.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module types
   type simple
@@ -28,7 +28,7 @@ contains
 ! CHECK:  %[[VAL_11:.*]] = arith.constant false
 ! CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  %[[VAL_18:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_12]], %[[VAL_16]], %[[VAL_11]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
+! CHECK:  %[[VAL_18:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_12]], %[[VAL_16]], %[[VAL_11]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> none
 ! CHECK:  %[[VAL_19:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.type<_QMtypesTsimple{i:i32,j:i32}>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_20:.*]] = fir.call @_FortranAPushArrayConstructorSimpleScalar(%[[VAL_12]], %[[VAL_19]]) {{.*}}: (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>) -> none
 ! CHECK:  %[[VAL_21:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.type<_QMtypesTsimple{i:i32,j:i32}>>) -> !fir.llvm_ptr<i8>
@@ -56,7 +56,7 @@ contains
 ! CHECK:  %[[VAL_11:.*]] = arith.constant false
 ! CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  %[[VAL_18:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_12]], %[[VAL_16]], %[[VAL_11]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
+! CHECK:  %[[VAL_18:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_12]], %[[VAL_16]], %[[VAL_11]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> none
 ! CHECK:  %[[VAL_19A:.*]] = fir.box_addr %[[VAL_4]]#1 : (!fir.class<!fir.type<_QMtypesTsimple{i:i32,j:i32}>>) -> !fir.ref<!fir.type<_QMtypesTsimple{i:i32,j:i32}>>
 ! CHECK:  %[[VAL_19:.*]] = fir.convert %[[VAL_19A]] : (!fir.ref<!fir.type<_QMtypesTsimple{i:i32,j:i32}>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_20:.*]] = fir.call @_FortranAPushArrayConstructorSimpleScalar(%[[VAL_12]], %[[VAL_19]]) {{.*}}: (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>) -> none

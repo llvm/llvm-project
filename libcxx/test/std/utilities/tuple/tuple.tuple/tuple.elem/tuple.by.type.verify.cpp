@@ -18,13 +18,13 @@ struct UserType {};
 
 void test_bad_index() {
     std::tuple<long, long, char, std::string, char, UserType, char> t1;
-    TEST_IGNORE_NODISCARD std::get<int>(t1); // expected-error@tuple:* {{type not found}}
+    TEST_IGNORE_NODISCARD std::get<int>(t1); // expected-error@*:* {{type not found}}
     TEST_IGNORE_NODISCARD std::get<long>(t1); // expected-note {{requested here}}
     TEST_IGNORE_NODISCARD std::get<char>(t1); // expected-note {{requested here}}
-        // expected-error@tuple:* 2 {{type occurs more than once}}
+        // expected-error@*:* 2 {{type occurs more than once}}
     std::tuple<> t0;
     TEST_IGNORE_NODISCARD std::get<char*>(t0); // expected-node {{requested here}}
-        // expected-error@tuple:* 1 {{type not in empty type list}}
+        // expected-error@*:* {{type not in empty type list}}
 }
 
 void test_bad_return_type() {

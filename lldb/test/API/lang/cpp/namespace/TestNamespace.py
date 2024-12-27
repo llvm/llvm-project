@@ -32,8 +32,9 @@ class NamespaceBreakpointTestCase(TestBase):
         )
         for bp_loc in bp:
             name = bp_loc.GetAddress().GetFunction().GetName()
-            self.assertTrue(
-                name in names,
+            self.assertIn(
+                name,
+                names,
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeAuto",
             )
 
@@ -61,8 +62,9 @@ class NamespaceBreakpointTestCase(TestBase):
         )
         for bp_loc in bp:
             name = bp_loc.GetAddress().GetFunction().GetName()
-            self.assertTrue(
-                name in names,
+            self.assertIn(
+                name,
+                names,
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeFull",
             )
 
@@ -88,8 +90,9 @@ class NamespaceBreakpointTestCase(TestBase):
         )
         for bp_loc in bp:
             name = bp_loc.GetAddress().GetFunction().GetName()
-            self.assertTrue(
-                name in names,
+            self.assertIn(
+                name,
+                names,
                 "make sure breakpoint locations are correct for 'A::func' with eFunctionNameTypeFull",
             )
 
@@ -158,7 +161,7 @@ class NamespaceTestCase(TestBase):
         # On Mac OS X, gcc 4.2 emits the wrong debug info with respect to
         # types.
         slist = ["(int) a = 12", "anon_uint", "a_uint", "b_uint", "y_uint"]
-        if self.platformIsDarwin() and self.getCompiler() in ["clang", "llvm-gcc"]:
+        if self.platformIsDarwin() and self.getCompiler() in ["clang"]:
             slist = [
                 "(int) a = 12",
                 "::my_uint_t",
@@ -205,6 +208,12 @@ class NamespaceTestCase(TestBase):
             patterns=[" = 3"],
         )
 
+        # Search for a type in an anonymous namespace, both with and without the
+        # namespace prefix.
+        self.expect("type lookup -- my_uint_t", substrs=["unsigned int"])
+        self.expect("type lookup -- (anonymous namespace)::my_uint_t",
+                    substrs=["unsigned int"])
+
         # rdar://problem/8660275
         # test/namespace: 'expression -- i+j' not working
         # This has been fixed.
@@ -249,4 +258,17 @@ class NamespaceTestCase(TestBase):
         )
         self.expect_expr(
             "((::B::Bar*)&::B::bar)->x()", result_type="int", result_value="42"
+        )
+
+        self.expect_expr("InAnon1::var_in_anon", result_type="int", result_value="10")
+        self.expect_expr(
+            "InAnon1::InAnon2::var_in_anon", result_type="int", result_value="5"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::var_in_anon", result_type="int", result_value="15"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::InAnon2::var_in_anon",
+            result_type="int",
+            result_value="5",
         )

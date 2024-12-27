@@ -47,10 +47,10 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
-  VPInstruction *tryInsertInstruction(VPInstruction *VPI) {
+  template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
-      BB->insert(VPI, InsertPt);
-    return VPI;
+      BB->insert(R, InsertPt);
+    return R;
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
@@ -68,6 +68,10 @@ class VPBuilder {
 public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
+  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
+  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    setInsertPoint(TheBB, IP);
+  }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -78,6 +82,13 @@ public:
 
   VPBasicBlock *getInsertBlock() const { return BB; }
   VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
+
+  /// Create a VPBuilder to insert after \p R.
+  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
+    VPBuilder B;
+    B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
+    return B;
+  }
 
   /// InsertPoint - A saved insertion point.
   class VPInsertPoint {
@@ -131,8 +142,9 @@ public:
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
-  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Instruction *Inst = nullptr, const Twine &Name = "") {
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              Instruction *Inst = nullptr,
+                              const Twine &Name = "") {
     DebugLoc DL;
     if (Inst)
       DL = Inst->getDebugLoc();
@@ -140,8 +152,17 @@ public:
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
-  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        DebugLoc DL, const Twine &Name = "") {
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(Opcode, Operands, DL, Name);
+  }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(
+          new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
     return createInstruction(Opcode, Operands, DL, Name);
   }
 
@@ -152,6 +173,7 @@ public:
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
+
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
@@ -164,7 +186,16 @@ public:
 
   VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
-    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
+
+    return tryInsertInstruction(new VPInstruction(
+        Instruction::BinaryOps::Or, {LHS, RHS},
+        VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
+  }
+
+  VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
+                            const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
@@ -182,7 +213,49 @@ public:
   /// and \p B.
   /// TODO: add createFCmp when needed.
   VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                      DebugLoc DL = {}, const Twine &Name = "");
+                      DebugLoc DL = {}, const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
+           Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+  }
+
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                              const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
+  }
+  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                                const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
+  }
+
+  VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     VPCanonicalIVPHIRecipe *CanonicalIV,
+                                     VPValue *Step, const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step, Name));
+  }
+
+  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                       Type *ResultTy) {
+    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                                     Type *ResultTy) {
+    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPScalarIVStepsRecipe *
+  createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+    return tryInsertInstruction(new VPScalarIVStepsRecipe(
+        IV, Step, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+  }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
@@ -208,7 +281,7 @@ public:
 
 /// TODO: The following VectorizationFactor was pulled out of
 /// LoopVectorizationCostModel class. LV also deals with
-/// VectorizerParams::VectorizationFactor and VectorizationCostTy.
+/// VectorizerParams::VectorizationFactor.
 /// We need to streamline them.
 
 /// Information about vectorization costs.
@@ -243,16 +316,6 @@ struct VectorizationFactor {
     return !(*this == rhs);
   }
 };
-
-/// ElementCountComparator creates a total ordering for ElementCount
-/// for the purposes of using it in a set structure.
-struct ElementCountComparator {
-  bool operator()(const ElementCount &LHS, const ElementCount &RHS) const {
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
-  }
-};
-using ElementCountSet = SmallSet<ElementCount, 16, ElementCountComparator>;
 
 /// A class that represents two vectorization factors (initialized with 0 by
 /// default). One for fixed-width vectorization and one for scalable
@@ -326,6 +389,22 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
+  /// Computes the cost of \p Plan for vectorization factor \p VF.
+  ///
+  /// The current implementation requires access to the
+  /// LoopVectorizationLegality to handle inductions and reductions, which is
+  /// why it is kept separate from the VPlan-only cost infrastructure.
+  ///
+  /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
+  /// been retired.
+  InstructionCost cost(VPlan &Plan, ElementCount VF) const;
+
+  /// Precompute costs for certain instructions using the legacy cost model. The
+  /// function is used to bring up the VPlan-based cost model to initially avoid
+  /// taking different decisions due to inaccuracies in the legacy cost model.
+  InstructionCost precomputeCosts(VPlan &Plan, ElementCount VF,
+                                  VPCostContext &CostCtx) const;
+
 public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
@@ -336,34 +415,39 @@ public:
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
         IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
 
-  /// Plan how to best vectorize, return the best VF and its cost, or
-  /// std::nullopt if vectorization and interleaving should be avoided up front.
-  std::optional<VectorizationFactor> plan(ElementCount UserVF, unsigned UserIC);
+  /// Build VPlans for the specified \p UserVF and \p UserIC if they are
+  /// non-zero or all applicable candidate VFs otherwise. If vectorization and
+  /// interleaving should be avoided up-front, no plans are generated.
+  void plan(ElementCount UserVF, unsigned UserIC);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.
   VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
-  /// Return the best VPlan for \p VF.
-  VPlan &getBestPlanFor(ElementCount VF) const;
+  /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
+  /// for each VF.
+  VPlan &getPlanFor(ElementCount VF) const;
+
+  /// Compute and return the most profitable vectorization factor. Also collect
+  /// all profitable VFs in ProfitableVFs.
+  VectorizationFactor computeBestVF();
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
-  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
-  /// vectorization re-using plans for both the main and epilogue vector loops.
-  /// It should be removed once the re-use issue has been fixed.
+  /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
+  /// epilogue vector loop. It should be removed once the re-use issue has been
+  /// fixed.
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution.
   ///
-  /// Returns a mapping of SCEVs to their expanded IR values and a mapping for
-  /// the reduction resume values. Note that this is a temporary workaround
-  /// needed due to the current epilogue handling.
-  std::pair<DenseMap<const SCEV *, Value *>,
-            DenseMap<const RecurrenceDescriptor *, Value *>>
+  /// Returns a mapping of SCEVs to their expanded IR values.
+  /// Note that this is a temporary workaround needed due to the current
+  /// epilogue handling.
+  DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool IsEpilogueVectorization,
+              bool VectorizingEpilogue,
               const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -389,6 +473,9 @@ public:
   /// epilogue vectorization is not supported for the loop.
   VectorizationFactor
   selectEpilogueVectorizationFactor(const ElementCount MaxVF, unsigned IC);
+
+  /// Emit remarks for recipes with invalid costs in the available VPlans.
+  void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
@@ -419,20 +506,30 @@ private:
   // instructions leading from the loop exit instr to the phi need to be
   // converted to reductions, with one operand being vector and the other being
   // the scalar reduction chain. For other reductions, a select is introduced
-  // between the phi and live-out recipes when folding the tail.
-  void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
+  // between the phi and users outside the vector region when folding the tail.
+  void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 
-  /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every VF in \p CandidateVFs.
-  VectorizationFactor
-  selectVectorizationFactor(const ElementCountSet &CandidateVFs);
+#ifndef NDEBUG
+  /// \return The most profitable vectorization factor for the available VPlans
+  /// and the cost of that VF.
+  /// This is now only used to verify the decisions by the new VPlan-based
+  /// cost-model and will be retired once the VPlan-based cost-model is
+  /// stabilized.
+  VectorizationFactor selectVectorizationFactor();
+#endif
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B) const;
+
+  /// Returns true if the per-lane cost of VectorizationFactor A is lower than
+  /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
+  bool isMoreProfitable(const VectorizationFactor &A,
+                        const VectorizationFactor &B,
+                        const unsigned MaxTripCount) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

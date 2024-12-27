@@ -14,6 +14,7 @@
 
 include "XtensaInstrFormats.td"
 include "XtensaOperands.td"
+include "XtensaOperators.td"
 
 //===----------------------------------------------------------------------===//
 // Arithmetic & Logical instructions
@@ -137,7 +138,8 @@ let Defs = [SAR] in {
 }
 
 def EXTUI : RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
-                    "extui\t$r, $t, $imm1, $imm2", []> {
+                    "extui\t$r, $t, $imm1, $imm2",
+                    [(set AR:$r, (Xtensa_extui AR:$t, uimm5:$imm1, imm1_16:$imm2))]> {
   bits<5> imm1;
   bits<4> imm2;
 
@@ -193,7 +195,7 @@ def SSAI : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins uimm5:$imm),
 //===----------------------------------------------------------------------===//
 
 // Load instructions
-let mayLoad = 1 in {
+let mayLoad = 1, usesCustomInserter = 1 in {
 
   class Load_RRI8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
         ComplexPattern addrOp, Operand memOp>
@@ -214,7 +216,7 @@ def L16UI : Load_RRI8<0x01, "l16ui", zextloadi16, addr_ish2, mem16>;
 def L32I  : Load_RRI8<0x02, "l32i", load, addr_ish4, mem32>;
 
 // Store instructions
-let mayStore = 1 in {
+let mayStore = 1, usesCustomInserter = 1 in {
   class Store_II8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
         ComplexPattern addrOp, Operand memOp>
 	  : RRI8_Inst<0x02, (outs), (ins AR:$t, memOp:$addr),
@@ -237,6 +239,34 @@ def L32R : RI16_Inst<0x01, (outs AR:$t), (ins L32Rtarget:$label),
   bits<16> label;
   let imm16 = label;
 }
+
+// pcrel addr loading using L32R
+def : Pat<(Xtensa_pcrel_wrapper tconstpool : $in), (L32R tconstpool : $in)>;
+
+// FrameIndexes are legalized when they are operands from load/store
+// instructions. The same not happens for stack address copies, so an
+// add op with mem ComplexPattern is used and the stack address copy
+// can be matched.
+// Setting of attribute mayLoad is trick to process instruction operands
+// in function XtensaRegisterInfo::eliminateFI
+
+let isCodeGenOnly = 1, mayLoad = 1 in {
+
+  def LEA_ADD : RRI8_Inst<0x02, (outs AR:$t), (ins mem32:$addr),
+       "addi\t$t, $addr",
+       [(set AR:$t, addr_ish4:$addr)]> {
+    bits<12> addr;
+
+    let r = 0x0C;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//extending loads
+def : Pat<(i32 (extloadi1  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (extloadi8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (extloadi16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // Conditional branch instructions
@@ -387,6 +417,8 @@ def BBSI : RRI8_Inst<0x07, (outs),
   let imm8 = target;
 }
 
+def : Pat<(brcond AR:$s, bb:$target), (BNEZ AR:$s, bb:$target)>;
+
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -426,12 +458,26 @@ let isReturn = 1, isTerminator = 1,
     isBarrier = 1, Uses = [A0] in {
 
   def RET : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
-                      "ret", []> {
+                      "ret", [(Xtensa_ret)]> {
     let m = 0x2;
     let n = 0x0;
     let s = 0;
     let r = 0;
   }
+}
+
+// Call patterns
+def : Pat<(Xtensa_call (i32 tglobaladdr:$dst)),
+          (CALL0 tglobaladdr:$dst)>;
+def : Pat<(Xtensa_call (i32 texternalsym:$dst)),
+          (CALL0 texternalsym:$dst)>;
+def : Pat<(Xtensa_call AR:$dst),
+          (CALLX0 AR:$dst)>;
+
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Size = 3 in {
+  def BR_JT: Pseudo<(outs), (ins AR:$s, i32imm:$jt),
+                    "!br_jt_p, $s, $jt",
+                    [(Xtensa_brjt AR:$s, tjumptable:$jt)]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -505,4 +551,130 @@ def RSR : RSR_Inst<0x00, 0x03, 0x00, (outs AR:$t), (ins SR:$sr),
 def XSR : RSR_Inst<0x00, 0x01, 0x06, (outs AR:$ard, SR:$srd), (ins AR:$t, SR:$sr),
                   "xsr\t$t, $sr", []> {
   let Constraints = "$ard = $t, $srd = $sr";
+}
+
+//===----------------------------------------------------------------------===//
+// Stack allocation
+//===----------------------------------------------------------------------===//
+
+// ADJCALLSTACKDOWN/UP implicitly use/def SP because they may be expanded into
+// a stack adjustment and the codegen must know that they may modify the stack
+// pointer before prolog-epilog rewriting occurs.
+let Defs = [SP], Uses = [SP] in {
+  def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                               "#ADJCALLSTACKDOWN",
+                               [(Xtensa_callseq_start timm:$amt1, timm:$amt2)]>;
+  def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                               "#ADJCALLSTACKUP",
+                               [(Xtensa_callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Generic select instruction
+//===----------------------------------------------------------------------===//
+let usesCustomInserter = 1 in {
+  def SELECT : Pseudo<(outs AR:$dst), (ins AR:$lhs, AR:$rhs, AR:$t, AR:$f, i32imm:$cond),
+                     "!select $dst, $lhs, $rhs, $t, $f, $cond",
+                     [(set i32:$dst, (Xtensa_select_cc i32:$lhs, i32:$rhs, i32:$t, i32:$f, imm:$cond))]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Code Density instructions
+//===----------------------------------------------------------------------===//
+
+class ArithLogic_RRRN<bits<4> oper0, string instrAsm,
+      SDPatternOperator opNode, bit isComm = 0>
+  : RRRN_Inst<oper0, (outs AR:$r), (ins AR:$s, AR:$t),
+              instrAsm#"\t$r, $s, $t",
+             [(set AR:$r, (opNode AR:$s, AR:$t))]>, Requires<[HasDensity]> {
+  let isCommutable = isComm;
+  let isReMaterializable = 0;
+}
+
+def ADD_N : ArithLogic_RRRN<0x0a, "add.n", add, 1>;
+
+def ADDI_N : RRRN_Inst<0x0B, (outs AR:$r), (ins AR:$s, imm1n_15:$imm),
+                      "addi.n\t$r, $s, $imm",
+                      [(set AR:$r, (add AR:$s, imm1n_15:$imm))]>, Requires<[HasDensity]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+// Conditional branch instructions.
+let isBranch = 1, isTerminator = 1 in {
+  def BEQZ_N : RI6_Inst<0xC, 0x1, 0x0, (outs), (ins AR:$s, brtarget:$target),
+                       "beqz.n\t$s, $target", []>, Requires<[HasDensity]> {
+    bits<6> target;
+
+    let imm6 = target;
+  }
+
+  def BNEZ_N : RI6_Inst<0xC, 0x1, 0x1, (outs), (ins AR:$s, brtarget:$target),
+                       "bnez.n\t$s, $target", []>, Requires<[HasDensity]> {
+    bits<6> target;
+
+    let imm6 = target;
+  }
+}
+
+def ILL_N : RRRN_Inst<0x0D, (outs), (ins),
+                     "ill.n", []>, Requires<[HasDensity]> {
+  let r = 0xF;
+  let s = 0x0;
+  let t = 0x6;
+}
+
+def MOV_N : RRRN_Inst<0x0D, (outs AR:$t), (ins AR:$s),
+                     "mov.n\t$t, $s", []>, Requires<[HasDensity]> {
+  let r = 0;
+}
+
+def : InstAlias<"mov\t $t, $s", (OR AR:$t, AR:$s, AR:$s)>;
+
+def MOVI_N : RI7_Inst<0xc, 0x0, (outs AR:$s), (ins imm32n_95:$imm7),
+                     "movi.n\t$s, $imm7",
+                     [(set AR:$s, imm32n_95:$imm7)]>, Requires<[HasDensity]>;
+
+def : InstAlias<"_movi.n\t$s, $imm7", (MOVI_N AR:$s, imm32n_95:$imm7)>;
+
+def NOP_N : RRRN_Inst<0x0D, (outs), (ins),
+                     "nop.n", []>, Requires<[HasDensity]> {
+  let r = 0xF;
+  let s = 0x0;
+  let t = 0x3;
+}
+
+// Load instruction
+let mayLoad = 1, usesCustomInserter = 1 in {
+  def L32I_N : RRRN_Inst<0x8, (outs AR:$t), (ins mem32n:$addr),
+                        "l32i.n\t$t, $addr", []>, Requires<[HasDensity]> {
+    bits<8> addr;
+
+    let r{3-0} = addr{7-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+// Store instruction
+let mayStore = 1, usesCustomInserter = 1 in {
+  def S32I_N : RRRN_Inst<0x9, (outs), (ins  AR:$t, mem32n:$addr),
+                        "s32i.n\t$t, $addr", []>, Requires<[HasDensity]> {
+    bits<8> addr;
+
+    let r{3-0} = addr{7-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//Return instruction
+let isReturn = 1, isTerminator = 1,
+    isBarrier = 1, Uses = [A0] in {
+  def RET_N : RRRN_Inst<0x0D, (outs), (ins),
+                       "ret.n", [(Xtensa_ret)]>,
+                       Requires<[HasDensity]> {
+    let r = 0x0F;
+    let s = 0;
+    let t = 0;
+  }
 }

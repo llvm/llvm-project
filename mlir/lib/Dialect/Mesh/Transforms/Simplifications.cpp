@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Mesh/Transforms/Simplifications.h"
+#include "TransformsDetail.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include <iterator>
 #include <numeric>
 #include <utility>
 
@@ -26,23 +25,23 @@ namespace mesh {
 void populateSimplificationPatterns(
     RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection) {
   populateAllReduceEndomorphismSimplificationPatterns<arith::AddFOp>(
-      patterns, Partial::Sum);
+      patterns, ReductionKind::Sum);
   populateAllReduceEndomorphismSimplificationPatterns<arith::AddIOp>(
-      patterns, Partial::Sum);
+      patterns, ReductionKind::Sum);
 
   populateAllReduceEndomorphismSimplificationPatterns<arith::MinimumFOp>(
-      patterns, Partial::Min);
+      patterns, ReductionKind::Min);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MinSIOp>(
-      patterns, Partial::Min);
+      patterns, ReductionKind::Min);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MinUIOp>(
-      patterns, Partial::Min);
+      patterns, ReductionKind::Min);
 
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaximumFOp>(
-      patterns, Partial::Max);
+      patterns, ReductionKind::Max);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaxSIOp>(
-      patterns, Partial::Max);
+      patterns, ReductionKind::Max);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaxUIOp>(
-      patterns, Partial::Max);
+      patterns, ReductionKind::Max);
 
   // TODO: add simplifications for all-gather and other collectives.
 
@@ -55,20 +54,16 @@ namespace {
 // DialectFoldInterface, because it needs a SymbolTableCollection to cache the
 // symbol tables.
 // We can't use DialectFoldInterface since the cache may be invalidated by some
-// pass changing the referenced ClusterOp ops.
-struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
-  template <typename... OpRewritePatternArgs>
-  ClusterShapeFolder(SymbolTableCollection &symbolTableCollection,
-                     OpRewritePatternArgs &&...opRewritePatternArgs)
-      : OpRewritePattern(
-            std::forward<OpRewritePatternArgs...>(opRewritePatternArgs)...),
-        symbolTableCollection(symbolTableCollection) {}
-  LogicalResult matchAndRewrite(ClusterShapeOp op,
+// pass changing the referenced MeshOp ops.
+struct MeshShapeFolder
+    : OpRewritePatternWithSymbolTableCollection<MeshShapeOp> {
+  using OpRewritePatternWithSymbolTableCollection::
+      OpRewritePatternWithSymbolTableCollection;
+  LogicalResult matchAndRewrite(MeshShapeOp op,
                                 PatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
-    ClusterOp mesh =
-        symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
-            op.getOperation(), op.getMeshAttr());
+    MeshOp mesh = symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
+        op.getOperation(), op.getMeshAttr());
     if (!mesh) {
       return failure();
     }
@@ -104,8 +99,8 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
 
     // Leave only the dynamic mesh axes to be queried.
     if (!newShapeOpMeshAxes.empty()) {
-      ClusterShapeOp newShapeOp =
-          builder.create<ClusterShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
+      MeshShapeOp newShapeOp =
+          builder.create<MeshShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
       for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
         newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
       }
@@ -114,17 +109,13 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
 
     return success();
   }
-
-private:
-  SymbolTableCollection &symbolTableCollection;
 };
 
 } // namespace
 
 void populateFoldingPatterns(RewritePatternSet &patterns,
                              SymbolTableCollection &symbolTableCollection) {
-  patterns.add<ClusterShapeFolder>(symbolTableCollection,
-                                   patterns.getContext());
+  patterns.add<MeshShapeFolder>(symbolTableCollection, patterns.getContext());
 }
 
 } // namespace mesh

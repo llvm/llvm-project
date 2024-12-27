@@ -15,7 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CallGraph.h"
@@ -68,7 +68,7 @@ STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 namespace {
 
 class AnalysisConsumer : public AnalysisASTConsumer,
-                         public RecursiveASTVisitor<AnalysisConsumer> {
+                         public DynamicRecursiveASTVisitor {
   enum {
     AM_None = 0,
     AM_Syntax = 0x1,
@@ -147,6 +147,9 @@ public:
 
     if (Opts.ShouldDisplayMacroExpansions)
       MacroExpansions.registerForPreprocessor(PP);
+
+    // Visitor options.
+    ShouldWalkTypesOfTypeLocs = false;
   }
 
   ~AnalysisConsumer() override {
@@ -261,11 +264,8 @@ public:
                               ExprEngine::InliningModes IMode,
                               SetOfConstDecls *VisitedCallees);
 
-  /// Visitors for the RecursiveASTVisitor.
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
   /// Handle callbacks for arbitrary Decls.
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     AnalysisMode Mode = getModeForDecl(D, RecVisitorMode);
     if (Mode & AM_Syntax) {
       if (SyntaxCheckTimer)
@@ -277,7 +277,7 @@ public:
     return true;
   }
 
-  bool VisitVarDecl(VarDecl *VD) {
+  bool VisitVarDecl(VarDecl *VD) override {
     if (!Opts.IsNaiveCTUEnabled)
       return true;
 
@@ -306,7 +306,7 @@ public:
     return true;
   }
 
-  bool VisitFunctionDecl(FunctionDecl *FD) {
+  bool VisitFunctionDecl(FunctionDecl *FD) override {
     IdentifierInfo *II = FD->getIdentifier();
     if (II && II->getName().starts_with("__inline"))
       return true;
@@ -321,7 +321,7 @@ public:
     return true;
   }
 
-  bool VisitObjCMethodDecl(ObjCMethodDecl *MD) {
+  bool VisitObjCMethodDecl(ObjCMethodDecl *MD) override {
     if (MD->isThisDeclarationADefinition()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
       HandleCode(MD, RecVisitorMode);
@@ -329,7 +329,7 @@ public:
     return true;
   }
 
-  bool VisitBlockDecl(BlockDecl *BD) {
+  bool VisitBlockDecl(BlockDecl *BD) override {
     if (BD->hasBody()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
       // Since we skip function template definitions, we should skip blocks
@@ -527,7 +527,8 @@ static void reportAnalyzerFunctionMisuse(const AnalyzerOptions &Opts,
 
 void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   BugReporter BR(*Mgr);
-  TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  const TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  BR.setAnalysisEntryPoint(TU);
   if (SyntaxCheckTimer)
     SyntaxCheckTimer->startTimer();
   checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
@@ -675,6 +676,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   DisplayFunction(D, Mode, IMode);
   BugReporter BR(*Mgr);
+  BR.setAnalysisEntryPoint(D);
 
   if (Mode & AM_Syntax) {
     llvm::TimeRecord CheckerStartTime;

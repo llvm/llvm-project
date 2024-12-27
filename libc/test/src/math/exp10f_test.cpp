@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/exp10f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <stdint.h>
 
@@ -21,7 +21,7 @@ using LlvmLibcExp10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp10f(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -40,7 +40,7 @@ TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp10fTest, Overflow) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::exp10f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -55,7 +55,7 @@ TEST_F(LlvmLibcExp10fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExp10fTest, Underflow) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       0.0f, LIBC_NAMESPACE::exp10f(FPBits(0xff7fffffU).get_val()),
       FE_UNDERFLOW);
@@ -97,7 +97,7 @@ TEST_F(LlvmLibcExp10fTest, TrickyInputs) {
       0x41200000, // x = 10.0f
   };
   for (int i = 0; i < N; ++i) {
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                    LIBC_NAMESPACE::exp10f(x), 0.5);
@@ -111,16 +111,17 @@ TEST_F(LlvmLibcExp10fTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::exp10f(x);
 
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (isnan(result) || isinf(result) || libc_errno != 0)
+    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
+        LIBC_NAMESPACE::libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                    LIBC_NAMESPACE::exp10f(x), 0.5);

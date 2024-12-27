@@ -21,12 +21,19 @@ def LLVM_Dialect : Dialect {
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
 
+  let discardableAttrs = (ins
+    /// Attribute encoding size and type of GPU workgroup attributions.
+    "WorkgroupAttributionAttr":$workgroup_attribution
+  );
+
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
+    static StringRef getIdentAttrName() { return "llvm.ident"; }
+    static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }
@@ -45,6 +52,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
+    static StringRef getRangeAttrName() { return "llvm.range"; }
     static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getReturnedAttrName() { return "llvm.returned"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }
@@ -52,6 +60,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
     static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
+    static StringRef getOpBundleSizesAttrName() { return "op_bundle_sizes"; }
+    static StringRef getOpBundleTagsAttrName() { return "op_bundle_tags"; }
     // TODO Restrict the usage of this to parameter attributes once there is an
     // alternative way of modeling memory effects on FunctionOpInterface.
     /// Name of the attribute that will cause the creation of a readnone memory

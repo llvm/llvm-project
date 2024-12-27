@@ -1,5 +1,10 @@
 # Linalg OpDSL
 
+**_Warning: Linalg's OpDSL is currently being [deprecated](https://discourse.llvm.org/t/how-to-add-custom-linalg-named-ops-using-opdsl/83200/2),
+with its operations slowly [being moved](https://github.com/llvm/llvm-project/pull/115319) into TableGen's ODS format.
+Please refer to the [MLIR Restructuring discussion](https://discourse.llvm.org/t/rfc-mlir-project-charter-and-restructuring/82896)
+for more in-depth information._**
+
 Python based DSL for authoring Linalg op definitions and generating
 `linalg.generic` IR based on them for samples.
 
@@ -23,8 +28,8 @@ python -m mlir.dialects.linalg.opdsl.dump_oplib .ops.core_named_ops
 ```
 
 Alternatively, run the `$PWD/build/bin/update_core_linalg_named_ops.sh` script,
-which is available after building the `mlir-linalg-ods-gen` target. The tool is
-meant for use during both development and runtime, but not as a build tool of
+which is available after building the `mlir-linalg-ods-yaml-gen` target. The tool
+is meant for use during both development and runtime, but not as a build tool of
 the core compiler: in order to export static named op definitions to be built as
 part of the compiler, the corresponding Linalg dialect YAML file must be updated
 and reviewed. TODO: Develop a script to automate op updates to these files.
@@ -291,7 +296,7 @@ The following examples illustrate the lowering of signed and unsigned functions:
 *   cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
 *   cast_unsigned(F32 -> I32) -> `arith.FPToUIOp`
 *   max_signed -> `arith.MaxSIOp`
-*   max_unsinged -> `arith.MaxUIOp`
+*   max_unsigned -> `arith.MaxUIOp`
 
 Not all functions are applicable for all numeric types, and on mismatch, op
 verification will fail.

@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Tooling/FixIt.h"
 #include <optional>
 
@@ -71,15 +72,17 @@ static std::optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
 
 // Build a string that can be emitted as FixIt with either a space in before
 // or after the qualifier, either ' const' or 'const '.
-static std::string buildQualifier(DeclSpec::TQ Qualifier,
+static std::string buildQualifier(Qualifiers::TQ Qualifier,
                                   bool WhitespaceBefore = false) {
   if (WhitespaceBefore)
-    return (llvm::Twine(' ') + DeclSpec::getSpecifierName(Qualifier)).str();
-  return (llvm::Twine(DeclSpec::getSpecifierName(Qualifier)) + " ").str();
+    return (llvm::Twine(' ') + Qualifiers::fromCVRMask(Qualifier).getAsString())
+        .str();
+  return (llvm::Twine(Qualifiers::fromCVRMask(Qualifier).getAsString()) + " ")
+      .str();
 }
 
 static std::optional<FixItHint> changeValue(const VarDecl &Var,
-                                            DeclSpec::TQ Qualifier,
+                                            Qualifiers::TQ Qualifier,
                                             QualifierTarget QualTarget,
                                             QualifierPolicy QualPolicy,
                                             const ASTContext &Context) {
@@ -99,7 +102,7 @@ static std::optional<FixItHint> changeValue(const VarDecl &Var,
 }
 
 static std::optional<FixItHint> changePointerItself(const VarDecl &Var,
-                                                    DeclSpec::TQ Qualifier,
+                                                    Qualifiers::TQ Qualifier,
                                                     const ASTContext &Context) {
   if (locDangerous(Var.getLocation()))
     return std::nullopt;
@@ -112,7 +115,7 @@ static std::optional<FixItHint> changePointerItself(const VarDecl &Var,
 }
 
 static std::optional<FixItHint>
-changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
+changePointer(const VarDecl &Var, Qualifiers::TQ Qualifier, const Type *Pointee,
               QualifierTarget QualTarget, QualifierPolicy QualPolicy,
               const ASTContext &Context) {
   // The pointer itself shall be marked as `const`. This is always to the right
@@ -163,7 +166,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
 }
 
 static std::optional<FixItHint>
-changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
+changeReferencee(const VarDecl &Var, Qualifiers::TQ Qualifier, QualType Pointee,
                  QualifierTarget QualTarget, QualifierPolicy QualPolicy,
                  const ASTContext &Context) {
   if (QualPolicy == QualifierPolicy::Left && isValueType(Pointee))
@@ -183,7 +186,7 @@ changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
 
 std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
                                                const ASTContext &Context,
-                                               DeclSpec::TQ Qualifier,
+                                               Qualifiers::TQ Qualifier,
                                                QualifierTarget QualTarget,
                                                QualifierPolicy QualPolicy) {
   assert((QualPolicy == QualifierPolicy::Left ||

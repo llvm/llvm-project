@@ -12,9 +12,9 @@
 
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
@@ -191,22 +191,46 @@ LogicalResult transform::detail::assembleTransformLibraryFromPaths(
 LogicalResult transform::applyTransformNamedSequence(
     Operation *payload, Operation *transformRoot, ModuleOp transformModule,
     const TransformOptions &options) {
+  RaggedArray<MappedValue> bindings;
+  bindings.push_back(ArrayRef<Operation *>{payload});
+  return applyTransformNamedSequence(bindings,
+                                     cast<TransformOpInterface>(transformRoot),
+                                     transformModule, options);
+}
+
+LogicalResult transform::applyTransformNamedSequence(
+    RaggedArray<MappedValue> bindings, TransformOpInterface transformRoot,
+    ModuleOp transformModule, const TransformOptions &options) {
+  if (bindings.empty()) {
+    return transformRoot.emitError()
+           << "expected at least one binding for the root";
+  }
+  if (bindings.at(0).size() != 1) {
+    return transformRoot.emitError()
+           << "expected one payload to be bound to the first argument, got "
+           << bindings.at(0).size();
+  }
+  auto *payloadRoot = bindings.at(0).front().dyn_cast<Operation *>();
+  if (!payloadRoot) {
+    return transformRoot->emitError() << "expected the object bound to the "
+                                         "first argument to be an operation";
+  }
+
+  bindings.removeFront();
+
   // `transformModule` may not be modified.
   if (transformModule && !transformModule->isAncestor(transformRoot)) {
     OwningOpRef<Operation *> clonedTransformModule(transformModule->clone());
     if (failed(detail::mergeSymbolsInto(
             SymbolTable::getNearestSymbolTable(transformRoot),
             std::move(clonedTransformModule)))) {
-      return payload->emitError() << "failed to merge symbols";
+      return payloadRoot->emitError() << "failed to merge symbols";
     }
   }
 
   LLVM_DEBUG(DBGS() << "Apply\n" << *transformRoot << "\n");
-  LLVM_DEBUG(DBGS() << "To\n" << *payload << "\n");
+  LLVM_DEBUG(DBGS() << "To\n" << *payloadRoot << "\n");
 
-  // Apply the transform to the IR, do not enforce top-level constraints.
-  RaggedArray<MappedValue> noExtraMappings;
-  return applyTransforms(payload, cast<TransformOpInterface>(transformRoot),
-                         noExtraMappings, options,
+  return applyTransforms(payloadRoot, transformRoot, bindings, options,
                          /*enforceToplevelTransformOp=*/false);
 }

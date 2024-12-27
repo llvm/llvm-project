@@ -3,6 +3,7 @@
 ! Check OpenACC reduction validity.
 
 program openacc_reduction_validity
+  implicit none
 
   integer :: i
   real :: r
@@ -167,6 +168,10 @@ program openacc_reduction_validity
   !ERROR: reduction operator not supported for logical type
   !$acc parallel reduction(ieor:l)
   !$acc end parallel
+
+  !ERROR: No explicit type declared for 'xyz'
+  !$acc parallel reduction(+:xyz)
+  !$acc end parallel  
 
 
 end program

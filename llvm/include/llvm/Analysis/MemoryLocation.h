@@ -37,7 +37,6 @@ class AnyMemTransferInst;
 class AnyMemIntrinsic;
 class TargetLibraryInfo;
 class VAArgInst;
-class Value;
 
 // Represents the size of a MemoryLocation. Logically, it's an
 // std::optional<uint63_t> that also carries a bit to represent whether the
@@ -191,7 +190,13 @@ public:
     return Value == Other.Value;
   }
 
+  bool operator==(const TypeSize &Other) const {
+    return hasValue() && getValue() == Other;
+  }
+
   bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
+
+  bool operator!=(const TypeSize &Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
@@ -289,12 +294,6 @@ public:
   static MemoryLocation
   getBeforeOrAfter(const Value *Ptr, const AAMDNodes &AATags = AAMDNodes()) {
     return MemoryLocation(Ptr, LocationSize::beforeOrAfterPointer(), AATags);
-  }
-
-  // Return the exact size if the exact size is known at compiletime,
-  // otherwise return MemoryLocation::UnknownSize.
-  static uint64_t getSizeOrUnknown(const TypeSize &T) {
-    return T.isScalable() ? UnknownSize : T.getFixedValue();
   }
 
   MemoryLocation() : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()) {}

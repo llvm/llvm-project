@@ -17,10 +17,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -54,7 +54,7 @@ public:
     BaseArgInfo(Type *Ty,
                 ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
                 bool IsFixed = true)
-        : Ty(Ty), Flags(Flags.begin(), Flags.end()), IsFixed(IsFixed) {}
+        : Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
 
     BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
   };
@@ -81,8 +81,8 @@ public:
     ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
             bool IsFixed = true, const Value *OrigValue = nullptr)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()),
-          OrigValue(OrigValue), OrigArgIndex(OrigIndex) {
+        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs), OrigValue(OrigValue),
+          OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
@@ -97,6 +97,11 @@ public:
       : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
 
     ArgInfo() = default;
+  };
+
+  struct PtrAuthInfo {
+    uint64_t Key;
+    Register Discriminator;
   };
 
   struct CallLoweringInfo {
@@ -117,10 +122,16 @@ public:
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
 
+    /// Valid if the call is a controlled convergent operation.
+    Register ConvergenceCtrlToken;
+
     /// Original IR callsite corresponding to this call, if available.
     const CallBase *CB = nullptr;
 
     MDNode *KnownCallees = nullptr;
+
+    /// The auth-call information in the "ptrauth" bundle, if present.
+    std::optional<PtrAuthInfo> PAI;
 
     /// True if the call must be tail call optimized.
     bool IsMustTailCall = false;
@@ -398,20 +409,21 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool determineAndHandleAssignments(
-      ValueHandler &Handler, ValueAssigner &Assigner,
-      SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
-      CallingConv::ID CallConv, bool IsVarArg,
-      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+  bool
+  determineAndHandleAssignments(ValueHandler &Handler, ValueAssigner &Assigner,
+                                SmallVectorImpl<ArgInfo> &Args,
+                                MachineIRBuilder &MIRBuilder,
+                                CallingConv::ID CallConv, bool IsVarArg,
+                                ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
   /// processed these arguments to populate \p CCState and \p ArgLocs.
-  bool
-  handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
-                    CCState &CCState, SmallVectorImpl<CCValAssign> &ArgLocs,
-                    MachineIRBuilder &MIRBuilder,
-                    ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+  bool handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
+                         CCState &CCState,
+                         SmallVectorImpl<CCValAssign> &ArgLocs,
+                         MachineIRBuilder &MIRBuilder,
+                         ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
@@ -584,6 +596,7 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 std::optional<PtrAuthInfo> PAI, Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with

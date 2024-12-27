@@ -1,5 +1,5 @@
-; RUN: llc --mtriple=loongarch32 < %s
-; RUN: llc --mtriple=loongarch64 < %s
+; RUN: llc --mtriple=loongarch32 -mattr=+d < %s
+; RUN: llc --mtriple=loongarch64 -mattr=+d < %s
 
 ;; This should not crash the code generator.
 

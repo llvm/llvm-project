@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
@@ -69,7 +70,7 @@ public:
     // aext(trunc x) - > aext/copy/trunc x
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       if (MRI.getType(DstReg) == MRI.getType(TruncSrc))
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);
@@ -99,6 +100,11 @@ public:
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
+        auto *MergedLocation = DILocation::getMergedLocation(
+            MI.getDebugLoc().get(), SrcMI->getDebugLoc().get());
+        // Set the debug location to the merged location of the SrcMI and the MI
+        // if the aext fold is successful.
+        Builder.setDebugLoc(MergedLocation);
         Builder.buildConstant(
             DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);
@@ -106,7 +112,7 @@ public:
         return true;
       }
     }
-    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
+    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs, Observer);
   }
 
   bool tryCombineZExt(MachineInstr &MI,
@@ -130,7 +136,7 @@ public:
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
           isConstantUnsupported(DstTy))
         return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       APInt MaskVal = APInt::getAllOnes(SrcTy.getScalarSizeInBits());
       if (SextSrc && (DstTy != MRI.getType(SextSrc)))
@@ -181,12 +187,13 @@ public:
         return true;
       }
     }
-    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
+    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs, Observer);
   }
 
   bool tryCombineSExt(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &DeadInsts,
-                      SmallVectorImpl<Register> &UpdatedDefs) {
+                      SmallVectorImpl<Register> &UpdatedDefs,
+                      GISelObserverWrapper &Observer) {
     using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_SEXT);
 
@@ -200,12 +207,19 @@ public:
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_SEXT_INREG, {DstTy}}))
         return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
-      Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
+      // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
+      // tryCombineZExt. Refer to the comment in tryCombineZExt for rationale.
+      if (KB && KB->computeNumSignBits(TruncSrc) >
+                    DstTy.getScalarSizeInBits() - SizeInBits)
+        replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
+                              Observer);
+      else
+        Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -238,7 +252,7 @@ public:
       }
     }
 
-    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
+    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs, Observer);
   }
 
   bool tryCombineTrunc(MachineInstr &MI,
@@ -346,7 +360,7 @@ public:
       LLT FoundRegTy = MRI.getType(FoundReg);
       if (DstTy == FoundRegTy) {
         LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_[S,Z,ANY]EXT/G_TRUNC...): "
-                          << MI;);
+                          << MI);
 
         replaceRegOrBuildCopy(DstReg, FoundReg, MRI, Builder, UpdatedDefs,
                               Observer);
@@ -362,7 +376,8 @@ public:
   /// Try to fold G_[ASZ]EXT (G_IMPLICIT_DEF).
   bool tryFoldImplicitDef(MachineInstr &MI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts,
-                          SmallVectorImpl<Register> &UpdatedDefs) {
+                          SmallVectorImpl<Register> &UpdatedDefs,
+                          GISelObserverWrapper &Observer) {
     unsigned Opcode = MI.getOpcode();
     assert(Opcode == TargetOpcode::G_ANYEXT || Opcode == TargetOpcode::G_ZEXT ||
            Opcode == TargetOpcode::G_SEXT);
@@ -377,16 +392,20 @@ public:
         // G_ANYEXT (G_IMPLICIT_DEF) -> G_IMPLICIT_DEF
         if (!isInstLegal({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
           return false;
-        LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI;);
-        Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, {DstReg}, {});
+        LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI);
+        auto Impl = Builder.buildUndef(DstTy);
+        replaceRegOrBuildCopy(DstReg, Impl.getReg(0), MRI, Builder, UpdatedDefs,
+                              Observer);
         UpdatedDefs.push_back(DstReg);
       } else {
         // G_[SZ]EXT (G_IMPLICIT_DEF) -> G_CONSTANT 0 because the top
         // bits will be 0 for G_ZEXT and 0/1 for the G_SEXT.
         if (isConstantUnsupported(DstTy))
           return false;
-        LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI;);
-        Builder.buildConstant(DstReg, 0);
+        LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI);
+        auto Cnst = Builder.buildConstant(DstTy, 0);
+        replaceRegOrBuildCopy(DstReg, Cnst.getReg(0), MRI, Builder, UpdatedDefs,
+                              Observer);
         UpdatedDefs.push_back(DstReg);
       }
 
@@ -432,9 +451,13 @@ public:
             DestTy.isVector() ? CastSrcTy.getNumElements() / NumDefs : 1;
         LLT UnmergeTy = CastSrcTy.changeElementCount(
             ElementCount::getFixed(UnmergeNumElts));
+        LLT SrcWideTy =
+            SrcTy.changeElementCount(ElementCount::getFixed(UnmergeNumElts));
 
         if (isInstUnsupported(
-                {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}))
+                {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}) ||
+            LI.getAction({TargetOpcode::G_TRUNC, {SrcWideTy, UnmergeTy}})
+                    .Action == LegalizeActions::MoreElements)
           return false;
 
         Builder.setInstr(MI);
@@ -902,7 +925,8 @@ public:
                                         unsigned &DefOperandIdx) {
       if (Register Def = findValueFromDefImpl(Reg, 0, Size)) {
         if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(Def))) {
-          DefOperandIdx = Unmerge->findRegisterDefOperandIdx(Def);
+          DefOperandIdx =
+              Unmerge->findRegisterDefOperandIdx(Def, /*TRI=*/nullptr);
           return Unmerge;
         }
       }
@@ -1071,6 +1095,11 @@ public:
       LegalizeActionStep ActionStep = LI.getAction(
           {TargetOpcode::G_UNMERGE_VALUES, {OpTy, SrcUnmergeSrcTy}});
       switch (ActionStep.Action) {
+      case LegalizeActions::Legal:
+        if (!OpTy.isVector() || !LI.isLegal({TargetOpcode::G_UNMERGE_VALUES,
+                                             {DestTy, SrcUnmergeSrcTy}}))
+          return false;
+        break;
       case LegalizeActions::Lower:
       case LegalizeActions::Unsupported:
         break;
@@ -1194,8 +1223,14 @@ public:
     } else {
       LLT MergeSrcTy = MRI.getType(MergeI->getOperand(1).getReg());
 
-      if (!ConvertOp && DestTy != MergeSrcTy)
-        ConvertOp = TargetOpcode::G_BITCAST;
+      if (!ConvertOp && DestTy != MergeSrcTy) {
+        if (DestTy.isPointer())
+          ConvertOp = TargetOpcode::G_INTTOPTR;
+        else if (MergeSrcTy.isPointer())
+          ConvertOp = TargetOpcode::G_PTRTOINT;
+        else
+          ConvertOp = TargetOpcode::G_BITCAST;
+      }
 
       if (ConvertOp) {
         Builder.setInstr(MI);
@@ -1311,7 +1346,7 @@ public:
       Changed = tryCombineZExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_SEXT:
-      Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs);
+      Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_UNMERGE_VALUES:
       Changed = tryCombineUnmergeValues(cast<GUnmerge>(MI), DeadInsts,

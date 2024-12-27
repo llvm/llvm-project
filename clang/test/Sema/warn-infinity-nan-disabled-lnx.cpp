@@ -1,13 +1,32 @@
-// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs -menable-no-nans
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
+// RUN: -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -menable-no-nans -std=c++23
 
-// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown %s
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
+// RUN: -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -menable-no-nans -funsafe-math-optimizations \
+// RUN: -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs
+// RUN: -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -funsafe-math-optimizations -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-nans
+// RUN: -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
+// RUN: -funsafe-math-optimizations -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-nans -std=c++23
 
 // no-fast-no-diagnostics
 
@@ -69,11 +88,15 @@ public:
 
 int compareit(float a, float b) {
   volatile int i, j, k, l, m, n, o, p;
-// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   i = a == INFINITY;
 
-// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = INFINITY == a;
 
@@ -89,11 +112,15 @@ int compareit(float a, float b) {
 // no-nan-warning@+1 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = NAN == a;
 
-// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = INFINITY <= a;
 
-// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = INFINITY < a;
 
@@ -133,12 +160,40 @@ int compareit(float a, float b) {
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   p = __builtin_isfinite(a);
 
-  // These should NOT warn, since they are not using NaN or infinity.
+// These should NOT warn, since they are not using NaN or infinity.
   j = a > 1.1;
   j = b < 1.1;
   j = a >= 1.1;
   j = b <= 1.1;
   j = isunorderedf(a, b);
+
+#ifndef INFINITY
+  j = a;
+#endif
+#ifndef NAN
+  j = b;
+#endif
+#ifdef INFINITY
+  j = a;
+#endif
+#ifdef NAN
+  j = b;
+#endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(NAN)
+  j = b;
+#endif
+#if defined(NAN)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
 
 // no-inf-no-nan-warning@+4 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-no-nan-warning@+3 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
@@ -146,7 +201,9 @@ int compareit(float a, float b) {
 // no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   j = isunorderedf(a, NAN);
 
-// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = isunorderedf(a, INFINITY);
 
@@ -158,9 +215,11 @@ int compareit(float a, float b) {
 // no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   i = std::isunordered(a, NAN);
 
-// no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
-// no-inf-no-nan-warning@+3 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
-// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+6 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+5 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   i = std::isunordered(a, INFINITY);
 
@@ -173,4 +232,4 @@ int compareit(float a, float b) {
   j = numeric_limits<float>::infinity();
   return 0;
 
-}  
+}

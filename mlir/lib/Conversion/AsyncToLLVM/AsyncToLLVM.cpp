@@ -259,7 +259,7 @@ static void addResumeFunction(ModuleOp module) {
       kResume, LLVM::LLVMFunctionType::get(voidTy, {ptrType}));
   resumeOp.setPrivate();
 
-  auto *block = resumeOp.addEntryBlock();
+  auto *block = resumeOp.addEntryBlock(moduleBuilder);
   auto blockBuilder = ImplicitLocOpBuilder::atBlockEnd(loc, block);
 
   blockBuilder.create<LLVM::CoroResumeOp>(resumeOp.getArgument(0));
@@ -282,9 +282,9 @@ public:
     // Use UnrealizedConversionCast as the bridge so that we don't need to pull
     // in patterns for other dialects.
     auto addUnrealizedCast = [](OpBuilder &builder, Type type,
-                                ValueRange inputs, Location loc) {
+                                ValueRange inputs, Location loc) -> Value {
       auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-      return std::optional<Value>(cast.getResult(0));
+      return cast.getResult(0);
     };
 
     addSourceMaterialization(addUnrealizedCast);

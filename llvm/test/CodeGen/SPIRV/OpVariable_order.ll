@@ -1,10 +1,14 @@
-; REQUIRES: spirv-tools
-; RUN: llc -O0 -mtriple=spirv-unknown-linux %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s
+; All OpVariable instructions in a function must be the first instructions in the first block
 
-; TODO(#66261): The SPIR-V backend should reorder OpVariable instructions so this doesn't fail,
-;     but in the meantime it's a good example of the spirv-val tool working as intended.
+; RUN: llc -O0 -mtriple=spirv32-unknown-linux %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-linux %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: All OpVariable instructions in a function must be the first instructions in the first block.
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: OpVariable
+; CHECK-SPIRV-NEXT: OpVariable
+; CHECK-SPIRV: OpReturn
+; CHECK-SPIRV: OpFunctionEnd
 
 define void @main() #1 {
 entry:

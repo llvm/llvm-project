@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements mlir::applyPatternsAndFoldGreedily.
+// This file implements mlir::applyPatternsGreedily.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +60,9 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
   void computeFingerPrints(Operation *topLevel) {
     this->topLevel = topLevel;
     this->topLevelFingerPrint.emplace(topLevel);
-    topLevel->walk([&](Operation *op) { fingerprints.try_emplace(op, op); });
+    topLevel->walk([&](Operation *op) {
+      fingerprints.try_emplace(op, op, /*includeNested=*/false);
+    });
   }
 
   /// Clear all finger prints.
@@ -95,7 +97,8 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
       // API.) Finger print computation does may not crash if a new op was
       // created at the same memory location. (But then the finger print should
       // have changed.)
-      if (it.second != OperationFingerPrint(it.first)) {
+      if (it.second !=
+          OperationFingerPrint(it.first, /*includeNested=*/false)) {
         // Note: Run "mlir-opt -debug" to see which pattern is broken.
         llvm::report_fatal_error("operation finger print changed");
       }
@@ -125,24 +128,23 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
 
 protected:
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
-  void invalidateFingerPrint(Operation *op) {
-    // Invalidate all finger prints until the top level.
-    while (op && op != topLevel) {
-      fingerprints.erase(op);
-      op = op->getParentOp();
-    }
+  void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
+
+  void notifyBlockErased(Block *block) override {
+    RewriterBase::ForwardingListener::notifyBlockErased(block);
+
+    // The block structure (number of blocks, types of block arguments, etc.)
+    // is part of the fingerprint of the parent op.
+    // TODO: The parent op fingerprint should also be invalidated when modifying
+    // the block arguments of a block, but we do not have a
+    // `notifyBlockModified` callback yet.
+    invalidateFingerPrint(block->getParentOp());
   }
 
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
     RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
-    // Invalidate the finger print of the op that owns the block into which the
-    // op was inserted into.
     invalidateFingerPrint(op->getParentOp());
-
-    // Also invalidate the finger print of the op that owns the block from which
-    // the op was moved from. (Only applicable if the op was moved.)
-    if (previous.isSet())
-      invalidateFingerPrint(previous.getBlock()->getParentOp());
   }
 
   void notifyOperationModified(Operation *op) override {
@@ -150,8 +152,8 @@ protected:
     invalidateFingerPrint(op);
   }
 
-  void notifyOperationRemoved(Operation *op) override {
-    RewriterBase::ForwardingListener::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    RewriterBase::ForwardingListener::notifyOperationErased(op);
     op->walk([this](Operation *op) { invalidateFingerPrint(op); });
   }
 
@@ -241,9 +243,8 @@ bool Worklist::empty() const {
 void Worklist::push(Operation *op) {
   assert(op && "cannot push nullptr to worklist");
   // Check to see if the worklist already contains this op.
-  if (map.count(op))
+  if (!map.insert({op, list.size()}).second)
     return;
-  map[op] = list.size();
   list.push_back(op);
 }
 
@@ -318,8 +319,7 @@ private:
 /// This abstract class manages the worklist and contains helper methods for
 /// rewriting ops on the worklist. Derived classes specify how ops are added
 /// to the worklist in the beginning.
-class GreedyPatternRewriteDriver : public PatternRewriter,
-                                   public RewriterBase::Listener {
+class GreedyPatternRewriteDriver : public RewriterBase::Listener {
 protected:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
                                       const FrozenRewritePatternSet &patterns,
@@ -338,12 +338,13 @@ protected:
   /// Notify the driver that the specified operation was inserted. Update the
   /// worklist as needed: The operation is enqueued depending on scope and
   /// strict mode.
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override;
 
   /// Notify the driver that the specified operation was removed. Update the
   /// worklist as needed: The operation and its children are removed from the
   /// worklist.
-  void notifyOperationRemoved(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
 
   /// Notify the driver that the specified operation was replaced. Update the
   /// worklist as needed: New users are added enqueued.
@@ -352,6 +353,10 @@ protected:
   /// Process ops until the worklist is empty or `config.maxNumRewrites` is
   /// reached. Return `true` if any IR was changed.
   bool processWorklist();
+
+  /// The pattern rewriter that is used for making IR modifications and is
+  /// passed to rewrite patterns.
+  PatternRewriter rewriter;
 
   /// The worklist for this transformation keeps track of the operations that
   /// need to be (re)visited.
@@ -375,16 +380,17 @@ private:
   /// be re-added to the worklist. This function should be called when an
   /// operation is modified or removed, as it may trigger further
   /// simplifications.
-  void addOperandsToWorklist(ValueRange operands);
+  void addOperandsToWorklist(Operation *op);
 
-  /// Notify the driver that the given block was created.
-  void notifyBlockCreated(Block *block) override;
+  /// Notify the driver that the given block was inserted.
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// Notify the driver that the given block is about to be removed.
-  void notifyBlockRemoved(Block *block) override;
+  void notifyBlockErased(Block *block) override;
 
   /// For debugging only: Notify the driver of a pattern match failure.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -405,7 +411,7 @@ private:
 GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
-    : PatternRewriter(ctx), config(config), matcher(patterns)
+    : rewriter(ctx), config(config), matcher(patterns)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , expensiveChecks(
@@ -421,9 +427,9 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // Send IR notifications to the debug handler. This handler will then forward
   // all notifications to this GreedyPatternRewriteDriver.
-  setListener(&expensiveChecks);
+  rewriter.setListener(&expensiveChecks);
 #else
-  setListener(this);
+  rewriter.setListener(this);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 }
 
@@ -471,7 +477,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {
-      eraseOp(op);
+      rewriter.eraseOp(op);
       changed = true;
 
       LLVM_DEBUG(logResultWithLine("success", "operation is trivially dead"));
@@ -482,7 +488,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // infinite folding loop, as every constant op would be folded to an
     // Attribute and then immediately be rematerialized as a constant op, which
     // is then put on the worklist.
-    if (!op->hasTrait<OpTrait::ConstantLike>()) {
+    if (config.fold && !op->hasTrait<OpTrait::ConstantLike>()) {
       SmallVector<OpFoldResult> foldResults;
       if (succeeded(op->fold(foldResults))) {
         LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
@@ -503,8 +509,8 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         // Op results can be replaced with `foldResults`.
         assert(foldResults.size() == op->getNumResults() &&
                "folder produced incorrect number of results");
-        OpBuilder::InsertionGuard g(*this);
-        setInsertionPoint(op);
+        OpBuilder::InsertionGuard g(rewriter);
+        rewriter.setInsertionPoint(op);
         SmallVector<Value> replacements;
         bool materializationSucceeded = true;
         for (auto [ofr, resultType] :
@@ -517,7 +523,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           }
           // Materialize Attributes as SSA values.
           Operation *constOp = op->getDialect()->materializeConstant(
-              *this, ofr.get<Attribute>(), resultType, op->getLoc());
+              rewriter, ofr.get<Attribute>(), resultType, op->getLoc());
 
           if (!constOp) {
             // If materialization fails, cleanup any operations generated for
@@ -530,7 +536,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
               replacementOps.insert(replacement.getDefiningOp());
             }
             for (Operation *op : replacementOps) {
-              eraseOp(op);
+              rewriter.eraseOp(op);
             }
 
             materializationSucceeded = false;
@@ -545,7 +551,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         }
 
         if (materializationSucceeded) {
-          replaceOp(op, replacements);
+          rewriter.replaceOp(op, replacements);
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -559,8 +565,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // Try to match one of the patterns. The rewriter is automatically
     // notified of any necessary changes, so there is nothing else to do
     // here.
-#ifndef NDEBUG
-    auto canApply = [&](const Pattern &pattern) {
+    auto canApplyCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG({
         logger.getOStream() << "\n";
         logger.startLine() << "* Pattern " << pattern.getDebugName() << " : '"
@@ -569,20 +574,34 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         logger.getOStream() << ")' {\n";
         logger.indent();
       });
+      if (config.listener)
+        config.listener->notifyPatternBegin(pattern, op);
       return true;
     };
-    auto onFailure = [&](const Pattern &pattern) {
+    function_ref<bool(const Pattern &)> canApply = canApplyCallback;
+    auto onFailureCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG(logResult("failure", "pattern failed to match"));
+      if (config.listener)
+        config.listener->notifyPatternEnd(pattern, failure());
     };
-    auto onSuccess = [&](const Pattern &pattern) {
+    function_ref<void(const Pattern &)> onFailure = onFailureCallback;
+    auto onSuccessCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG(logResult("success", "pattern applied successfully"));
+      if (config.listener)
+        config.listener->notifyPatternEnd(pattern, success());
       return success();
     };
-#else
-    function_ref<bool(const Pattern &)> canApply = {};
-    function_ref<void(const Pattern &)> onFailure = {};
-    function_ref<LogicalResult(const Pattern &)> onSuccess = {};
-#endif
+    function_ref<LogicalResult(const Pattern &)> onSuccess = onSuccessCallback;
+
+#ifdef NDEBUG
+    // Optimization: PatternApplicator callbacks are not needed when running in
+    // optimized mode and without a listener.
+    if (!config.listener) {
+      canApply = nullptr;
+      onFailure = nullptr;
+      onSuccess = nullptr;
+    }
+#endif // NDEBUG
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     if (config.scope) {
@@ -593,7 +612,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     LogicalResult matchResult =
-        matcher.matchAndRewrite(op, *this, canApply, onFailure, onSuccess);
+        matcher.matchAndRewrite(op, rewriter, canApply, onFailure, onSuccess);
 
     if (succeeded(matchResult)) {
       LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
@@ -638,18 +657,19 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
     worklist.push(op);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockInserted(
+    Block *block, Region *previous, Region::iterator previousIt) {
   if (config.listener)
-    config.listener->notifyBlockCreated(block);
+    config.listener->notifyBlockInserted(block, previous, previousIt);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockErased(Block *block) {
   if (config.listener)
-    config.listener->notifyBlockRemoved(block);
+    config.listener->notifyBlockErased(block);
 }
 
-void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op,
-                                                         InsertPoint previous) {
+void GreedyPatternRewriteDriver::notifyOperationInserted(
+    Operation *op, OpBuilder::InsertPoint previous) {
   LLVM_DEBUG({
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
                        << ")\n";
@@ -671,21 +691,40 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
   addToWorklist(op);
 }
 
-void GreedyPatternRewriteDriver::addOperandsToWorklist(ValueRange operands) {
-  for (Value operand : operands) {
-    // If the use count of this operand is now < 2, we re-add the defining
-    // operation to the worklist.
-    // TODO: This is based on the fact that zero use operations
-    // may be deleted, and that single use values often have more
-    // canonicalization opportunities.
-    if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
+void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
+  for (Value operand : op->getOperands()) {
+    // If this operand currently has at most 2 users, add its defining op to the
+    // worklist. Indeed, after the op is deleted, then the operand will have at
+    // most 1 user left. If it has 0 users left, it can be deleted too,
+    // and if it has 1 user left, there may be further canonicalization
+    // opportunities.
+    if (!operand)
       continue;
-    if (auto *defOp = operand.getDefiningOp())
-      addToWorklist(defOp);
+
+    auto *defOp = operand.getDefiningOp();
+    if (!defOp)
+      continue;
+
+    Operation *otherUser = nullptr;
+    bool hasMoreThanTwoUses = false;
+    for (auto user : operand.getUsers()) {
+      if (user == op || user == otherUser)
+        continue;
+      if (!otherUser) {
+        otherUser = user;
+        continue;
+      }
+      hasMoreThanTwoUses = true;
+      break;
+    }
+    if (hasMoreThanTwoUses)
+      continue;
+
+    addToWorklist(defOp);
   }
 }
 
-void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
+void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
   LLVM_DEBUG({
     logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
                        << ")\n";
@@ -703,9 +742,9 @@ void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
 #endif // NDEBUG
 
   if (config.listener)
-    config.listener->notifyOperationRemoved(op);
+    config.listener->notifyOperationErased(op);
 
-  addOperandsToWorklist(op->getOperands());
+  addOperandsToWorklist(op);
   worklist.remove(op);
 
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
@@ -722,16 +761,15 @@ void GreedyPatternRewriteDriver::notifyOperationReplaced(
     config.listener->notifyOperationReplaced(op, replacement);
 }
 
-LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
+void GreedyPatternRewriteDriver::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
-    logger.startLine() << "** Failure : " << diag.str() << "\n";
+    logger.startLine() << "** Match Failure : " << diag.str() << "\n";
   });
   if (config.listener)
-    return config.listener->notifyMatchFailure(loc, reasonCallback);
-  return failure();
+    config.listener->notifyMatchFailure(loc, reasonCallback);
 }
 
 //===----------------------------------------------------------------------===//
@@ -788,7 +826,7 @@ private:
 LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
   bool continueRewrites = false;
   int64_t iteration = 0;
-  MLIRContext *ctx = getContext();
+  MLIRContext *ctx = rewriter.getContext();
   do {
     // Check if the iteration limit was reached.
     if (++iteration > config.maxIterations &&
@@ -800,7 +838,7 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
     // `OperationFolder` CSE's constant ops (and may move them into parents
     // regions to enable more aggressive CSE'ing).
-    OperationFolder folder(getContext(), this);
+    OperationFolder folder(ctx, this);
     auto insertKnownConstant = [&](Operation *op) {
       // Check for existing constants when populating the worklist. This avoids
       // accidentally reversing the constant order during processing.
@@ -814,13 +852,13 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
       region.walk([&](Operation *op) {
-        if (!insertKnownConstant(op))
+        if (!config.cseConstants || !insertKnownConstant(op))
           addToWorklist(op);
       });
     } else {
       // Add all nested operations to the worklist in preorder.
       region.walk<WalkOrder::PreOrder>([&](Operation *op) {
-        if (!insertKnownConstant(op)) {
+        if (!config.cseConstants || !insertKnownConstant(op)) {
           addToWorklist(op);
           return WalkResult::advance();
         }
@@ -837,8 +875,13 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
           // After applying patterns, make sure that the CFG of each of the
           // regions is kept up to date.
-          if (config.enableRegionSimplification)
-            continueRewrites |= succeeded(simplifyRegions(*this, region));
+          if (config.enableRegionSimplification !=
+              GreedySimplifyRegionLevel::Disabled) {
+            continueRewrites |= succeeded(simplifyRegions(
+                rewriter, region,
+                /*mergeBlocks=*/config.enableRegionSimplification ==
+                    GreedySimplifyRegionLevel::Aggressive));
+          }
         },
         {&region}, iteration);
   } while (continueRewrites);
@@ -851,9 +894,9 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 }
 
 LogicalResult
-mlir::applyPatternsAndFoldGreedily(Region &region,
-                                   const FrozenRewritePatternSet &patterns,
-                                   GreedyRewriteConfig config, bool *changed) {
+mlir::applyPatternsGreedily(Region &region,
+                            const FrozenRewritePatternSet &patterns,
+                            GreedyRewriteConfig config, bool *changed) {
   // The top-level operation must be known to be isolated from above to
   // prevent performing canonicalizations on operations defined at or above
   // the region containing 'op'.
@@ -898,8 +941,8 @@ public:
   LogicalResult simplify(ArrayRef<Operation *> ops, bool *changed = nullptr) &&;
 
 private:
-  void notifyOperationRemoved(Operation *op) override {
-    GreedyPatternRewriteDriver::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    GreedyPatternRewriteDriver::notifyOperationErased(op);
     if (survivingOps)
       survivingOps->erase(op);
   }
@@ -969,7 +1012,7 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
   return region;
 }
 
-LogicalResult mlir::applyOpPatternsAndFold(
+LogicalResult mlir::applyOpPatternsGreedily(
     ArrayRef<Operation *> ops, const FrozenRewritePatternSet &patterns,
     GreedyRewriteConfig config, bool *changed, bool *allErased) {
   if (ops.empty()) {

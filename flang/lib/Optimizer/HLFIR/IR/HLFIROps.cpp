@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -23,10 +24,15 @@
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include <iterator>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <optional>
 #include <tuple>
+
+static llvm::cl::opt<bool> useStrictIntrinsicVerifier(
+    "strict-intrinsic-verifier", llvm::cl::init(false),
+    llvm::cl::desc("use stricter verifier for HLFIR intrinsic operations"));
 
 /// generic implementation of the memory side effects interface for hlfir
 /// transformational intrinsic operations
@@ -39,7 +45,7 @@ getIntrinsicEffects(mlir::Operation *self,
          "hlfir intrinsic ops only produce 1 result");
   if (mlir::isa<hlfir::ExprType>(self->getResult(0).getType()))
     effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
-                         self->getResult(0),
+                         self->getOpResult(0),
                          mlir::SideEffects::DefaultResource::get());
 
   // read effect if we read from a pointer or refference type
@@ -53,10 +59,10 @@ getIntrinsicEffects(mlir::Operation *self,
   // } to {
   //   hlfir.yield %0#0 : !fir.box<!fir.array<?x?xf32>>
   // }
-  for (mlir::Value operand : self->getOperands()) {
-    mlir::Type opTy = operand.getType();
+  for (mlir::OpOperand &operand : self->getOpOperands()) {
+    mlir::Type opTy = operand.get().getType();
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
-      effects.emplace_back(mlir::MemoryEffects::Read::get(), operand,
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
   }
 }
@@ -68,20 +74,76 @@ getIntrinsicEffects(mlir::Operation *self,
 /// Is this a fir.[ref/ptr/heap]<fir.[box/class]<fir.heap<T>>> type?
 static bool isAllocatableBoxRef(mlir::Type type) {
   fir::BaseBoxType boxType =
-      fir::dyn_cast_ptrEleTy(type).dyn_cast_or_null<fir::BaseBoxType>();
-  return boxType && boxType.getEleTy().isa<fir::HeapType>();
+      mlir::dyn_cast_or_null<fir::BaseBoxType>(fir::dyn_cast_ptrEleTy(type));
+  return boxType && mlir::isa<fir::HeapType>(boxType.getEleTy());
 }
 
-mlir::LogicalResult hlfir::AssignOp::verify() {
+llvm::LogicalResult hlfir::AssignOp::verify() {
   mlir::Type lhsType = getLhs().getType();
   if (isAllocatableAssignment() && !isAllocatableBoxRef(lhsType))
     return emitOpError("lhs must be an allocatable when `realloc` is set");
   if (mustKeepLhsLengthInAllocatableAssignment() &&
       !(isAllocatableAssignment() &&
-        hlfir::getFortranElementType(lhsType).isa<fir::CharacterType>()))
+        mlir::isa<fir::CharacterType>(hlfir::getFortranElementType(lhsType))))
     return emitOpError("`realloc` must be set and lhs must be a character "
                        "allocatable when `keep_lhs_length_if_realloc` is set");
   return mlir::success();
+}
+
+void hlfir::AssignOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::OpOperand &rhs = getRhsMutable();
+  mlir::OpOperand &lhs = getLhsMutable();
+  mlir::Type rhsType = getRhs().getType();
+  mlir::Type lhsType = getLhs().getType();
+  if (mlir::isa<fir::RecordType>(hlfir::getFortranElementType(lhsType))) {
+    // For derived type assignments, set unknown read/write effects since it
+    // is not known here if user defined finalization is needed, and also
+    // because allocatable components may lead to "deeper" read/write effects
+    // that cannot be described with this API.
+    effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                         mlir::SideEffects::DefaultResource::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                         mlir::SideEffects::DefaultResource::get());
+  } else {
+    // Read effect when RHS is a variable.
+    if (hlfir::isFortranVariableType(rhsType)) {
+      if (hlfir::isBoxAddressType(rhsType)) {
+        // Unknown read effect if the RHS is a descriptor since the read effect
+        // on the data cannot be described.
+        effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                             mlir::SideEffects::DefaultResource::get());
+      } else {
+        effects.emplace_back(mlir::MemoryEffects::Read::get(), &rhs,
+                             mlir::SideEffects::DefaultResource::get());
+      }
+    }
+
+    // Write effects on LHS.
+    if (hlfir::isBoxAddressType(lhsType)) {
+      //  If the LHS is a descriptor, the descriptor will be read and the data
+      //  write cannot be described in this API (and the descriptor may be
+      //  written to in case of realloc, which is covered by the unknown write
+      //  effect.
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), &lhs,
+                           mlir::SideEffects::DefaultResource::get());
+      effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                           mlir::SideEffects::DefaultResource::get());
+    } else {
+      effects.emplace_back(mlir::MemoryEffects::Write::get(), &lhs,
+                           mlir::SideEffects::DefaultResource::get());
+    }
+  }
+
+  if (getRealloc()) {
+    // Reallocation of the data cannot be precisely described by this API.
+    effects.emplace_back(mlir::MemoryEffects::Free::get(),
+                         mlir::SideEffects::DefaultResource::get());
+    effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
+                         mlir::SideEffects::DefaultResource::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -93,13 +155,13 @@ mlir::LogicalResult hlfir::AssignOp::verify() {
 mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
                                                   bool hasExplicitLowerBounds) {
   mlir::Type type = fir::unwrapRefType(inputType);
-  if (type.isa<fir::BaseBoxType>())
+  if (mlir::isa<fir::BaseBoxType>(type))
     return inputType;
-  if (auto charType = type.dyn_cast<fir::CharacterType>())
+  if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))
     if (charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
 
-  auto seqType = type.dyn_cast<fir::SequenceType>();
+  auto seqType = mlir::dyn_cast<fir::SequenceType>(type);
   bool hasDynamicExtents =
       seqType && fir::sequenceWithNonConstantShape(seqType);
   mlir::Type eleType = seqType ? seqType.getEleTy() : type;
@@ -111,24 +173,27 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
 }
 
 static bool hasExplicitLowerBounds(mlir::Value shape) {
-  return shape && shape.getType().isa<fir::ShapeShiftType, fir::ShiftType>();
+  return shape &&
+         mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
 }
 
 void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
                              mlir::ValueRange typeparams,
-                             fir::FortranVariableFlagsAttr fortran_attrs) {
+                             mlir::Value dummy_scope,
+                             fir::FortranVariableFlagsAttr fortran_attrs,
+                             cuf::DataAttributeAttr data_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
-        typeparams, nameAttr, fortran_attrs);
+        typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
 }
 
-mlir::LogicalResult hlfir::DeclareOp::verify() {
+llvm::LogicalResult hlfir::DeclareOp::verify() {
   if (getMemref().getType() != getResult(1).getType())
     return emitOpError("second result type must match input memref type");
   mlir::Type hlfirVariableType = getHLFIRVariableType(
@@ -268,8 +333,27 @@ static void printDesignatorComplexPart(mlir::OpAsmPrinter &p,
       p << "real";
   }
 }
+template <typename Op>
+static llvm::LogicalResult verifyTypeparams(Op &op, mlir::Type elementType,
+                                            unsigned numLenParam) {
+  if (mlir::isa<fir::CharacterType>(elementType)) {
+    if (numLenParam != 1)
+      return op.emitOpError("must be provided one length parameter when the "
+                            "result is a character");
+  } else if (fir::isRecordWithTypeParameters(elementType)) {
+    if (numLenParam !=
+        mlir::cast<fir::RecordType>(elementType).getNumLenParams())
+      return op.emitOpError("must be provided the same number of length "
+                            "parameters as in the result derived type");
+  } else if (numLenParam != 0) {
+    return op.emitOpError(
+        "must not be provided length parameters if the result "
+        "type does not have length parameters");
+  }
+  return mlir::success();
+}
 
-mlir::LogicalResult hlfir::DesignateOp::verify() {
+llvm::LogicalResult hlfir::DesignateOp::verify() {
   mlir::Type memrefType = getMemref().getType();
   mlir::Type baseType = getFortranElementOrSequenceType(memrefType);
   mlir::Type baseElementType = fir::unwrapSequenceType(baseType);
@@ -281,7 +365,7 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
   bool hasBoxComponent;
   if (getComponent()) {
     auto component = getComponent().value();
-    auto recType = baseElementType.dyn_cast<fir::RecordType>();
+    auto recType = mlir::dyn_cast<fir::RecordType>(baseElementType);
     if (!recType)
       return emitOpError(
           "component must be provided only when the memref is a derived type");
@@ -293,14 +377,14 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
     }
     mlir::Type fieldType = recType.getType(fieldIdx);
     mlir::Type componentBaseType = getFortranElementOrSequenceType(fieldType);
-    hasBoxComponent = fieldType.isa<fir::BaseBoxType>();
-    if (componentBaseType.isa<fir::SequenceType>() &&
-        baseType.isa<fir::SequenceType>() &&
+    hasBoxComponent = mlir::isa<fir::BaseBoxType>(fieldType);
+    if (mlir::isa<fir::SequenceType>(componentBaseType) &&
+        mlir::isa<fir::SequenceType>(baseType) &&
         (numSubscripts == 0 || subscriptsRank > 0))
       return emitOpError("indices must be provided and must not contain "
                          "triplets when both memref and component are arrays");
     if (numSubscripts != 0) {
-      if (!componentBaseType.isa<fir::SequenceType>())
+      if (!mlir::isa<fir::SequenceType>(componentBaseType))
         return emitOpError("indices must not be provided if component appears "
                            "and is not an array component");
       if (!getComponentShape())
@@ -308,9 +392,9 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
             "component_shape must be provided when indexing a component");
       mlir::Type compShapeType = getComponentShape().getType();
       unsigned componentRank =
-          componentBaseType.cast<fir::SequenceType>().getDimension();
-      auto shapeType = compShapeType.dyn_cast<fir::ShapeType>();
-      auto shapeShiftType = compShapeType.dyn_cast<fir::ShapeShiftType>();
+          mlir::cast<fir::SequenceType>(componentBaseType).getDimension();
+      auto shapeType = mlir::dyn_cast<fir::ShapeType>(compShapeType);
+      auto shapeShiftType = mlir::dyn_cast<fir::ShapeShiftType>(compShapeType);
       if (!((shapeType && shapeType.getRank() == componentRank) ||
             (shapeShiftType && shapeShiftType.getRank() == componentRank)))
         return emitOpError("component_shape must be a fir.shape or "
@@ -318,52 +402,49 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
       if (numSubscripts > componentRank)
         return emitOpError("indices number must match array component rank");
     }
-    if (auto baseSeqType = baseType.dyn_cast<fir::SequenceType>())
+    if (auto baseSeqType = mlir::dyn_cast<fir::SequenceType>(baseType))
       // This case must come first to cover "array%array_comp(i, j)" that has
       // subscripts for the component but whose rank come from the base.
       outputRank = baseSeqType.getDimension();
     else if (numSubscripts != 0)
       outputRank = subscriptsRank;
     else if (auto componentSeqType =
-                 componentBaseType.dyn_cast<fir::SequenceType>())
+                 mlir::dyn_cast<fir::SequenceType>(componentBaseType))
       outputRank = componentSeqType.getDimension();
     outputElementType = fir::unwrapSequenceType(componentBaseType);
   } else {
     outputElementType = baseElementType;
     unsigned baseTypeRank =
-        baseType.isa<fir::SequenceType>()
-            ? baseType.cast<fir::SequenceType>().getDimension()
+        mlir::isa<fir::SequenceType>(baseType)
+            ? mlir::cast<fir::SequenceType>(baseType).getDimension()
             : 0;
     if (numSubscripts != 0) {
       if (baseTypeRank != numSubscripts)
         return emitOpError("indices number must match memref rank");
       outputRank = subscriptsRank;
-    } else if (auto baseSeqType = baseType.dyn_cast<fir::SequenceType>()) {
+    } else if (auto baseSeqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
       outputRank = baseSeqType.getDimension();
     }
   }
 
   if (!getSubstring().empty()) {
-    if (!outputElementType.isa<fir::CharacterType>())
+    if (!mlir::isa<fir::CharacterType>(outputElementType))
       return emitOpError("memref or component must have character type if "
                          "substring indices are provided");
     if (getSubstring().size() != 2)
       return emitOpError("substring must contain 2 indices when provided");
   }
   if (getComplexPart()) {
-    if (!fir::isa_complex(outputElementType))
+    if (auto cplx = mlir::dyn_cast<mlir::ComplexType>(outputElementType))
+      outputElementType = cplx.getElementType();
+    else
       return emitOpError("memref or component must have complex type if "
                          "complex_part is provided");
-    if (auto firCplx = outputElementType.dyn_cast<fir::ComplexType>())
-      outputElementType = firCplx.getElementType();
-    else
-      outputElementType =
-          outputElementType.cast<mlir::ComplexType>().getElementType();
   }
   mlir::Type resultBaseType =
       getFortranElementOrSequenceType(getResult().getType());
   unsigned resultRank = 0;
-  if (auto resultSeqType = resultBaseType.dyn_cast<fir::SequenceType>())
+  if (auto resultSeqType = mlir::dyn_cast<fir::SequenceType>(resultBaseType))
     resultRank = resultSeqType.getDimension();
   if (resultRank != outputRank)
     return emitOpError("result type rank is not consistent with operands, "
@@ -373,10 +454,8 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
   // result type must match the one that was inferred here, except the character
   // length may differ because of substrings.
   if (resultElementType != outputElementType &&
-      !(resultElementType.isa<fir::CharacterType>() &&
-        outputElementType.isa<fir::CharacterType>()) &&
-      !(resultElementType.isa<mlir::FloatType>() &&
-        outputElementType.isa<fir::RealType>()))
+      !(mlir::isa<fir::CharacterType>(resultElementType) &&
+        mlir::isa<fir::CharacterType>(outputElementType)))
     return emitOpError(
                "result element type is not consistent with operands, expected ")
            << outputElementType;
@@ -394,28 +473,18 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
       return emitOpError("shape must be provided if and only if the result is "
                          "an array that is not a box address");
     if (resultRank != 0) {
-      auto shapeType = getShape().getType().dyn_cast<fir::ShapeType>();
+      auto shapeType = mlir::dyn_cast<fir::ShapeType>(getShape().getType());
       auto shapeShiftType =
-          getShape().getType().dyn_cast<fir::ShapeShiftType>();
+          mlir::dyn_cast<fir::ShapeShiftType>(getShape().getType());
       if (!((shapeType && shapeType.getRank() == resultRank) ||
             (shapeShiftType && shapeShiftType.getRank() == resultRank)))
         return emitOpError("shape must be a fir.shape or fir.shapeshift with "
                            "the rank of the result");
     }
-    auto numLenParam = getTypeparams().size();
-    if (outputElementType.isa<fir::CharacterType>()) {
-      if (numLenParam != 1)
-        return emitOpError("must be provided one length parameter when the "
-                           "result is a character");
-    } else if (fir::isRecordWithTypeParameters(outputElementType)) {
-      if (numLenParam !=
-          outputElementType.cast<fir::RecordType>().getNumLenParams())
-        return emitOpError("must be provided the same number of length "
-                           "parameters as in the result derived type");
-    } else if (numLenParam != 0) {
-      return emitOpError("must not be provided length parameters if the result "
-                         "type does not have length parameters");
-    }
+    if (auto res =
+            verifyTypeparams(*this, outputElementType, getTypeparams().size());
+        failed(res))
+      return res;
   }
   return mlir::success();
 }
@@ -424,21 +493,21 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
 // ParentComponentOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::ParentComponentOp::verify() {
+llvm::LogicalResult hlfir::ParentComponentOp::verify() {
   mlir::Type baseType =
       hlfir::getFortranElementOrSequenceType(getMemref().getType());
-  auto maybeInputSeqType = baseType.dyn_cast<fir::SequenceType>();
+  auto maybeInputSeqType = mlir::dyn_cast<fir::SequenceType>(baseType);
   unsigned inputTypeRank =
       maybeInputSeqType ? maybeInputSeqType.getDimension() : 0;
   unsigned shapeRank = 0;
   if (mlir::Value shape = getShape())
-    if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>())
+    if (auto shapeType = mlir::dyn_cast<fir::ShapeType>(shape.getType()))
       shapeRank = shapeType.getRank();
   if (inputTypeRank != shapeRank)
     return emitOpError(
         "must be provided a shape if and only if the base is an array");
   mlir::Type outputBaseType = hlfir::getFortranElementOrSequenceType(getType());
-  auto maybeOutputSeqType = outputBaseType.dyn_cast<fir::SequenceType>();
+  auto maybeOutputSeqType = mlir::dyn_cast<fir::SequenceType>(outputBaseType);
   unsigned outputTypeRank =
       maybeOutputSeqType ? maybeOutputSeqType.getDimension() : 0;
   if (inputTypeRank != outputTypeRank)
@@ -452,23 +521,23 @@ mlir::LogicalResult hlfir::ParentComponentOp::verify() {
           return emitOpError(
               "result type extents are inconsistent with memref type");
   fir::RecordType baseRecType =
-      hlfir::getFortranElementType(baseType).dyn_cast<fir::RecordType>();
-  fir::RecordType outRecType =
-      hlfir::getFortranElementType(outputBaseType).dyn_cast<fir::RecordType>();
+      mlir::dyn_cast<fir::RecordType>(hlfir::getFortranElementType(baseType));
+  fir::RecordType outRecType = mlir::dyn_cast<fir::RecordType>(
+      hlfir::getFortranElementType(outputBaseType));
   if (!baseRecType || !outRecType)
     return emitOpError("result type and input type must be derived types");
 
   // Note: result should not be a fir.class: its dynamic type is being set to
   // the parent type and allowing fir.class would break the operation codegen:
   // it would keep the input dynamic type.
-  if (getType().isa<fir::ClassType>())
+  if (mlir::isa<fir::ClassType>(getType()))
     return emitOpError("result type must not be polymorphic");
 
   // The array results are known to not be dis-contiguous in most cases (the
   // exception being if the parent type was extended by a type without any
   // components): require a fir.box to be used for the result to carry the
   // strides.
-  if (!getType().isa<fir::BoxType>() &&
+  if (!mlir::isa<fir::BoxType>(getType()) &&
       (outputTypeRank != 0 || fir::isRecordWithTypeParameters(outRecType)))
     return emitOpError("result type must be a fir.box if the result is an "
                        "array or has length parameters");
@@ -479,7 +548,7 @@ mlir::LogicalResult hlfir::ParentComponentOp::verify() {
 // LogicalReductionOp
 //===----------------------------------------------------------------------===//
 template <typename LogicalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
 
@@ -489,16 +558,15 @@ verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
   mlir::Value mask = reductionOp->getMask();
   mlir::Value dim = reductionOp->getDim();
 
-  fir::SequenceType maskTy =
-      hlfir::getFortranElementOrSequenceType(mask.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType maskTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(mask.getType()));
   mlir::Type logicalTy = maskTy.getEleTy();
   llvm::ArrayRef<int64_t> maskShape = maskTy.getShape();
 
   mlir::Type resultType = results[0];
   if (mlir::isa<fir::LogicalType>(resultType)) {
     // Result is of the same type as MASK
-    if (resultType != logicalTy)
+    if ((resultType != logicalTy) && useStrictIntrinsicVerifier)
       return reductionOp->emitOpError(
           "result must have the same element type as MASK argument");
 
@@ -509,7 +577,7 @@ verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
       if (!resultExpr.isArray())
         return reductionOp->emitOpError("result must be an array");
 
-      if (resultExpr.getEleTy() != logicalTy)
+      if ((resultExpr.getEleTy() != logicalTy) && useStrictIntrinsicVerifier)
         return reductionOp->emitOpError(
             "result must have the same element type as MASK argument");
 
@@ -531,7 +599,7 @@ verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
 // AllOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::AllOp::verify() {
+llvm::LogicalResult hlfir::AllOp::verify() {
   return verifyLogicalReductionOp<hlfir::AllOp *>(this);
 }
 
@@ -546,7 +614,7 @@ void hlfir::AllOp::getEffects(
 // AnyOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::AnyOp::verify() {
+llvm::LogicalResult hlfir::AnyOp::verify() {
   return verifyLogicalReductionOp<hlfir::AnyOp *>(this);
 }
 
@@ -561,7 +629,7 @@ void hlfir::AnyOp::getEffects(
 // CountOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::CountOp::verify() {
+llvm::LogicalResult hlfir::CountOp::verify() {
   mlir::Operation *op = getOperation();
 
   auto results = op->getResultTypes();
@@ -569,9 +637,8 @@ mlir::LogicalResult hlfir::CountOp::verify() {
   mlir::Value mask = getMask();
   mlir::Value dim = getDim();
 
-  fir::SequenceType maskTy =
-      hlfir::getFortranElementOrSequenceType(mask.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType maskTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(mask.getType()));
   llvm::ArrayRef<int64_t> maskShape = maskTy.getShape();
 
   mlir::Type resultType = results[0];
@@ -585,7 +652,7 @@ mlir::LogicalResult hlfir::CountOp::verify() {
       if (resultShape.size() != (maskShape.size() - 1))
         return emitOpError("result rank must be one less than MASK");
     } else {
-      return emitOpError("result must be of numerical scalar type");
+      return emitOpError("result must be of numerical array type");
     }
   } else if (!hlfir::isFortranScalarNumericalType(resultType)) {
     return emitOpError("result must be of numerical scalar type");
@@ -606,19 +673,20 @@ void hlfir::CountOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 static unsigned getCharacterKind(mlir::Type t) {
-  return hlfir::getFortranElementType(t).cast<fir::CharacterType>().getFKind();
+  return mlir::cast<fir::CharacterType>(hlfir::getFortranElementType(t))
+      .getFKind();
 }
 
 static std::optional<fir::CharacterType::LenType>
 getCharacterLengthIfStatic(mlir::Type t) {
   if (auto charType =
-          hlfir::getFortranElementType(t).dyn_cast<fir::CharacterType>())
+          mlir::dyn_cast<fir::CharacterType>(hlfir::getFortranElementType(t)))
     if (charType.hasConstantLen())
       return charType.getLen();
   return std::nullopt;
 }
 
-mlir::LogicalResult hlfir::ConcatOp::verify() {
+llvm::LogicalResult hlfir::ConcatOp::verify() {
   if (getStrings().size() < 2)
     return emitOpError("must be provided at least two string operands");
   unsigned kind = getCharacterKind(getResult().getType());
@@ -660,20 +728,18 @@ void hlfir::ConcatOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 template <typename NumericalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
   mlir::Value array = reductionOp->getArray();
   mlir::Value mask = reductionOp->getMask();
 
-  fir::SequenceType arrayTy =
-      hlfir::getFortranElementOrSequenceType(array.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
 
   if (mask) {
-    fir::SequenceType maskSeq =
-        hlfir::getFortranElementOrSequenceType(mask.getType())
-            .dyn_cast<fir::SequenceType>();
+    fir::SequenceType maskSeq = mlir::dyn_cast<fir::SequenceType>(
+        hlfir::getFortranElementOrSequenceType(mask.getType()));
     llvm::ArrayRef<int64_t> maskShape;
 
     if (maskSeq)
@@ -682,15 +748,18 @@ verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
     if (!maskShape.empty()) {
       if (maskShape.size() != arrayShape.size())
         return reductionOp->emitWarning("MASK must be conformable to ARRAY");
-      static_assert(fir::SequenceType::getUnknownExtent() ==
-                    hlfir::ExprType::getUnknownExtent());
-      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
-      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
-        int64_t arrayExtent = arrayShape[i];
-        int64_t maskExtent = maskShape[i];
-        if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
-            (maskExtent != unknownExtent))
-          return reductionOp->emitWarning("MASK must be conformable to ARRAY");
+      if (useStrictIntrinsicVerifier) {
+        static_assert(fir::SequenceType::getUnknownExtent() ==
+                      hlfir::ExprType::getUnknownExtent());
+        constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+        for (std::size_t i = 0; i < arrayShape.size(); ++i) {
+          int64_t arrayExtent = arrayShape[i];
+          int64_t maskExtent = maskShape[i];
+          if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
+              (maskExtent != unknownExtent))
+            return reductionOp->emitWarning(
+                "MASK must be conformable to ARRAY");
+        }
       }
     }
   }
@@ -698,7 +767,7 @@ verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
 }
 
 template <typename NumericalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
   auto results = op->getResultTypes();
@@ -710,16 +779,15 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
 
   mlir::Value array = reductionOp->getArray();
   mlir::Value dim = reductionOp->getDim();
-  fir::SequenceType arrayTy =
-      hlfir::getFortranElementOrSequenceType(array.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
   mlir::Type numTy = arrayTy.getEleTy();
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
 
   mlir::Type resultType = results[0];
   if (hlfir::isFortranScalarNumericalType(resultType)) {
     // Result is of the same type as ARRAY
-    if (resultType != numTy)
+    if ((resultType != numTy) && useStrictIntrinsicVerifier)
       return reductionOp->emitOpError(
           "result must have the same element type as ARRAY argument");
 
@@ -729,7 +797,7 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
       if (!resultExpr.isArray())
         return reductionOp->emitOpError("result must be an array");
 
-      if (resultExpr.getEleTy() != numTy)
+      if ((resultExpr.getEleTy() != numTy) && useStrictIntrinsicVerifier)
         return reductionOp->emitOpError(
             "result must have the same element type as ARRAY argument");
 
@@ -752,7 +820,7 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
 // ProductOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::ProductOp::verify() {
+llvm::LogicalResult hlfir::ProductOp::verify() {
   return verifyNumericalReductionOp<hlfir::ProductOp *>(this);
 }
 
@@ -768,7 +836,7 @@ void hlfir::ProductOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 template <typename CharacterReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
   auto results = op->getResultTypes();
@@ -780,19 +848,18 @@ verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
 
   mlir::Value array = reductionOp->getArray();
   mlir::Value dim = reductionOp->getDim();
-  fir::SequenceType arrayTy =
-      hlfir::getFortranElementOrSequenceType(array.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
   mlir::Type numTy = arrayTy.getEleTy();
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
 
-  auto resultExpr = results[0].cast<hlfir::ExprType>();
+  auto resultExpr = mlir::cast<hlfir::ExprType>(results[0]);
   mlir::Type resultType = resultExpr.getEleTy();
   assert(mlir::isa<fir::CharacterType>(resultType) &&
          "result must be character");
 
   // Result is of the same type as ARRAY
-  if (resultType != numTy)
+  if ((resultType != numTy) && useStrictIntrinsicVerifier)
     return reductionOp->emitOpError(
         "result must have the same element type as ARRAY argument");
 
@@ -814,7 +881,7 @@ verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
 // MaxvalOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MaxvalOp::verify() {
+llvm::LogicalResult hlfir::MaxvalOp::verify() {
   mlir::Operation *op = getOperation();
 
   auto results = op->getResultTypes();
@@ -823,9 +890,8 @@ mlir::LogicalResult hlfir::MaxvalOp::verify() {
   auto resultExpr = mlir::dyn_cast<hlfir::ExprType>(results[0]);
   if (resultExpr && mlir::isa<fir::CharacterType>(resultExpr.getEleTy())) {
     return verifyCharacterReductionOp<hlfir::MaxvalOp *>(this);
-  } else {
-    return verifyNumericalReductionOp<hlfir::MaxvalOp *>(this);
   }
+  return verifyNumericalReductionOp<hlfir::MaxvalOp *>(this);
 }
 
 void hlfir::MaxvalOp::getEffects(
@@ -839,7 +905,7 @@ void hlfir::MaxvalOp::getEffects(
 // MinvalOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MinvalOp::verify() {
+llvm::LogicalResult hlfir::MinvalOp::verify() {
   mlir::Operation *op = getOperation();
 
   auto results = op->getResultTypes();
@@ -848,9 +914,8 @@ mlir::LogicalResult hlfir::MinvalOp::verify() {
   auto resultExpr = mlir::dyn_cast<hlfir::ExprType>(results[0]);
   if (resultExpr && mlir::isa<fir::CharacterType>(resultExpr.getEleTy())) {
     return verifyCharacterReductionOp<hlfir::MinvalOp *>(this);
-  } else {
-    return verifyNumericalReductionOp<hlfir::MinvalOp *>(this);
   }
+  return verifyNumericalReductionOp<hlfir::MinvalOp *>(this);
 }
 
 void hlfir::MinvalOp::getEffects(
@@ -865,7 +930,7 @@ void hlfir::MinvalOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 template <typename NumericalReductionOp>
-static mlir::LogicalResult
+static llvm::LogicalResult
 verifyResultForMinMaxLoc(NumericalReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
   auto results = op->getResultTypes();
@@ -873,9 +938,8 @@ verifyResultForMinMaxLoc(NumericalReductionOp reductionOp) {
 
   mlir::Value array = reductionOp->getArray();
   mlir::Value dim = reductionOp->getDim();
-  fir::SequenceType arrayTy =
-      hlfir::getFortranElementOrSequenceType(array.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
 
   mlir::Type resultType = results[0];
@@ -904,7 +968,7 @@ verifyResultForMinMaxLoc(NumericalReductionOp reductionOp) {
   return mlir::success();
 }
 
-mlir::LogicalResult hlfir::MinlocOp::verify() {
+llvm::LogicalResult hlfir::MinlocOp::verify() {
   auto res = verifyArrayAndMaskForReductionOp(this);
   if (failed(res))
     return res;
@@ -923,7 +987,7 @@ void hlfir::MinlocOp::getEffects(
 // MaxlocOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MaxlocOp::verify() {
+llvm::LogicalResult hlfir::MaxlocOp::verify() {
   auto res = verifyArrayAndMaskForReductionOp(this);
   if (failed(res))
     return res;
@@ -967,7 +1031,7 @@ void hlfir::SetLengthOp::getEffects(
 // SumOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::SumOp::verify() {
+llvm::LogicalResult hlfir::SumOp::verify() {
   return verifyNumericalReductionOp<hlfir::SumOp *>(this);
 }
 
@@ -982,15 +1046,13 @@ void hlfir::SumOp::getEffects(
 // DotProductOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::DotProductOp::verify() {
+llvm::LogicalResult hlfir::DotProductOp::verify() {
   mlir::Value lhs = getLhs();
   mlir::Value rhs = getRhs();
-  fir::SequenceType lhsTy =
-      hlfir::getFortranElementOrSequenceType(lhs.getType())
-          .cast<fir::SequenceType>();
-  fir::SequenceType rhsTy =
-      hlfir::getFortranElementOrSequenceType(rhs.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType lhsTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(lhs.getType()));
+  fir::SequenceType rhsTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(rhs.getType()));
   llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
   llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
   std::size_t lhsRank = lhsShape.size();
@@ -1007,17 +1069,19 @@ mlir::LogicalResult hlfir::DotProductOp::verify() {
 
   constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
   if ((lhsSize != unknownExtent) && (rhsSize != unknownExtent) &&
-      (lhsSize != rhsSize))
+      (lhsSize != rhsSize) && useStrictIntrinsicVerifier)
     return emitOpError("both arrays must have the same size");
 
-  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
-      mlir::isa<fir::LogicalType>(rhsEleTy))
-    return emitOpError("if one array is logical, so should the other be");
+  if (useStrictIntrinsicVerifier) {
+    if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+        mlir::isa<fir::LogicalType>(rhsEleTy))
+      return emitOpError("if one array is logical, so should the other be");
 
-  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
-      mlir::isa<fir::LogicalType>(resultTy))
-    return emitOpError("the result type should be a logical only if the "
-                       "argument types are logical");
+    if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+        mlir::isa<fir::LogicalType>(resultTy))
+      return emitOpError("the result type should be a logical only if the "
+                         "argument types are logical");
+  }
 
   if (!hlfir::isFortranScalarNumericalType(resultTy) &&
       !mlir::isa<fir::LogicalType>(resultTy))
@@ -1038,22 +1102,20 @@ void hlfir::DotProductOp::getEffects(
 // MatmulOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MatmulOp::verify() {
+llvm::LogicalResult hlfir::MatmulOp::verify() {
   mlir::Value lhs = getLhs();
   mlir::Value rhs = getRhs();
-  fir::SequenceType lhsTy =
-      hlfir::getFortranElementOrSequenceType(lhs.getType())
-          .cast<fir::SequenceType>();
-  fir::SequenceType rhsTy =
-      hlfir::getFortranElementOrSequenceType(rhs.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType lhsTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(lhs.getType()));
+  fir::SequenceType rhsTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(rhs.getType()));
   llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
   llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
   std::size_t lhsRank = lhsShape.size();
   std::size_t rhsRank = rhsShape.size();
   mlir::Type lhsEleTy = lhsTy.getEleTy();
   mlir::Type rhsEleTy = rhsTy.getEleTy();
-  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  hlfir::ExprType resultTy = mlir::cast<hlfir::ExprType>(getResult().getType());
   llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
   mlir::Type resultEleTy = resultTy.getEleTy();
 
@@ -1066,6 +1128,9 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
   if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
       mlir::isa<fir::LogicalType>(rhsEleTy))
     return emitOpError("if one array is logical, so should the other be");
+
+  if (!useStrictIntrinsicVerifier)
+    return mlir::success();
 
   int64_t lastLhsDim = lhsShape[lhsRank - 1];
   int64_t firstRhsDim = rhsShape[0];
@@ -1106,11 +1171,11 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
   return mlir::success();
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
                               mlir::PatternRewriter &rewriter) {
   // the only two uses of the transposed matrix should be for the hlfir.matmul
-  // and hlfir.destory
+  // and hlfir.destroy
   auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
     std::size_t numUses = 0;
     for (mlir::Operation *user : transposeOp.getResult().getUsers()) {
@@ -1140,7 +1205,9 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
 
       // but we do need to get rid of the hlfir.destroy for the hlfir.transpose
       // result (which is entirely removed)
-      for (mlir::Operation *user : transposeOp->getResult(0).getUsers())
+      llvm::SmallVector<mlir::Operation *> users(
+          transposeOp->getResult(0).getUsers());
+      for (mlir::Operation *user : users)
         if (auto destroyOp = mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
           rewriter.eraseOp(destroyOp);
       rewriter.eraseOp(transposeOp);
@@ -1163,21 +1230,23 @@ void hlfir::MatmulOp::getEffects(
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::TransposeOp::verify() {
+llvm::LogicalResult hlfir::TransposeOp::verify() {
   mlir::Value array = getArray();
-  fir::SequenceType arrayTy =
-      hlfir::getFortranElementOrSequenceType(array.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
   llvm::ArrayRef<int64_t> inShape = arrayTy.getShape();
   std::size_t rank = inShape.size();
   mlir::Type eleTy = arrayTy.getEleTy();
-  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  hlfir::ExprType resultTy = mlir::cast<hlfir::ExprType>(getResult().getType());
   llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
   std::size_t resultRank = resultShape.size();
   mlir::Type resultEleTy = resultTy.getEleTy();
 
   if (rank != 2 || resultRank != 2)
     return emitOpError("input and output arrays should have rank 2");
+
+  if (!useStrictIntrinsicVerifier)
+    return mlir::success();
 
   constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
   if ((inShape[0] != resultShape[1]) && (inShape[0] != unknownExtent))
@@ -1203,28 +1272,29 @@ void hlfir::TransposeOp::getEffects(
 // MatmulTransposeOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
+llvm::LogicalResult hlfir::MatmulTransposeOp::verify() {
   mlir::Value lhs = getLhs();
   mlir::Value rhs = getRhs();
-  fir::SequenceType lhsTy =
-      hlfir::getFortranElementOrSequenceType(lhs.getType())
-          .cast<fir::SequenceType>();
-  fir::SequenceType rhsTy =
-      hlfir::getFortranElementOrSequenceType(rhs.getType())
-          .cast<fir::SequenceType>();
+  fir::SequenceType lhsTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(lhs.getType()));
+  fir::SequenceType rhsTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(rhs.getType()));
   llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
   llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
   std::size_t lhsRank = lhsShape.size();
   std::size_t rhsRank = rhsShape.size();
   mlir::Type lhsEleTy = lhsTy.getEleTy();
   mlir::Type rhsEleTy = rhsTy.getEleTy();
-  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  hlfir::ExprType resultTy = mlir::cast<hlfir::ExprType>(getResult().getType());
   llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
   mlir::Type resultEleTy = resultTy.getEleTy();
 
   // lhs must have rank 2 for the transpose to be valid
   if ((lhsRank != 2) || ((rhsRank != 1) && (rhsRank != 2)))
     return emitOpError("array must have either rank 1 or rank 2");
+
+  if (!useStrictIntrinsicVerifier)
+    return mlir::success();
 
   if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
       mlir::isa<fir::LogicalType>(rhsEleTy))
@@ -1265,6 +1335,108 @@ mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
 }
 
 void hlfir::MatmulTransposeOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// CShiftOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::CShiftOp::verify() {
+  mlir::Value array = getArray();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
+  llvm::ArrayRef<int64_t> inShape = arrayTy.getShape();
+  std::size_t arrayRank = inShape.size();
+  mlir::Type eleTy = arrayTy.getEleTy();
+  hlfir::ExprType resultTy = mlir::cast<hlfir::ExprType>(getResult().getType());
+  llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  std::size_t resultRank = resultShape.size();
+  mlir::Type resultEleTy = resultTy.getEleTy();
+  mlir::Value shift = getShift();
+  mlir::Type shiftTy = hlfir::getFortranElementOrSequenceType(shift.getType());
+
+  if (eleTy != resultEleTy) {
+    if (mlir::isa<fir::CharacterType>(eleTy) &&
+        mlir::isa<fir::CharacterType>(resultEleTy)) {
+      auto eleCharTy = mlir::cast<fir::CharacterType>(eleTy);
+      auto resultCharTy = mlir::cast<fir::CharacterType>(resultEleTy);
+      if (eleCharTy.getFKind() != resultCharTy.getFKind())
+        return emitOpError("kind mismatch between input and output arrays");
+      if (eleCharTy.getLen() != fir::CharacterType::unknownLen() &&
+          resultCharTy.getLen() != fir::CharacterType::unknownLen() &&
+          eleCharTy.getLen() != resultCharTy.getLen())
+        return emitOpError(
+            "character LEN mismatch between input and output arrays");
+    } else {
+      return emitOpError(
+          "input and output arrays should have the same element type");
+    }
+  }
+
+  if (arrayRank != resultRank)
+    return emitOpError("input and output arrays should have the same rank");
+
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  for (auto [inDim, resultDim] : llvm::zip(inShape, resultShape))
+    if (inDim != unknownExtent && resultDim != unknownExtent &&
+        inDim != resultDim)
+      return emitOpError(
+          "output array's shape conflicts with the input array's shape");
+
+  int64_t dimVal = -1;
+  if (!getDim())
+    dimVal = 1;
+  else if (auto dim = fir::getIntIfConstant(getDim()))
+    dimVal = *dim;
+
+  // The DIM argument may be statically invalid (e.g. exceed the
+  // input array rank) in dead code after constant propagation,
+  // so avoid some checks unless useStrictIntrinsicVerifier is true.
+  if (useStrictIntrinsicVerifier && dimVal != -1) {
+    if (dimVal < 1)
+      return emitOpError("DIM must be >= 1");
+    if (dimVal > static_cast<int64_t>(arrayRank))
+      return emitOpError("DIM must be <= input array's rank");
+  }
+
+  if (auto shiftSeqTy = mlir::dyn_cast<fir::SequenceType>(shiftTy)) {
+    // SHIFT is an array. Verify the rank and the shape (if DIM is constant).
+    llvm::ArrayRef<int64_t> shiftShape = shiftSeqTy.getShape();
+    std::size_t shiftRank = shiftShape.size();
+    if (shiftRank != arrayRank - 1)
+      return emitOpError(
+          "SHIFT's rank must be 1 less than the input array's rank");
+
+    if (useStrictIntrinsicVerifier && dimVal != -1) {
+      // SHIFT's shape must be [d(1), d(2), ..., d(DIM-1), d(DIM+1), ..., d(n)],
+      // where [d(1), d(2), ..., d(n)] is the shape of the ARRAY.
+      int64_t arrayDimIdx = 0;
+      int64_t shiftDimIdx = 0;
+      for (auto shiftDim : shiftShape) {
+        if (arrayDimIdx == dimVal - 1)
+          ++arrayDimIdx;
+
+        if (inShape[arrayDimIdx] != unknownExtent &&
+            shiftDim != unknownExtent && inShape[arrayDimIdx] != shiftDim)
+          return emitOpError("SHAPE(ARRAY)(" + llvm::Twine(arrayDimIdx + 1) +
+                             ") must be equal to SHAPE(SHIFT)(" +
+                             llvm::Twine(shiftDimIdx + 1) +
+                             "): " + llvm::Twine(inShape[arrayDimIdx]) +
+                             " != " + llvm::Twine(shiftDim));
+        ++arrayDimIdx;
+        ++shiftDimIdx;
+      }
+    }
+  }
+
+  return mlir::success();
+}
+
+void hlfir::CShiftOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
@@ -1340,7 +1512,7 @@ void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
                associate.getMustFreeStrorageFlag());
 }
 
-mlir::LogicalResult hlfir::EndAssociateOp::verify() {
+llvm::LogicalResult hlfir::EndAssociateOp::verify() {
   mlir::Value var = getVar();
   if (hlfir::mayHaveAllocatableComponent(var.getType()) &&
       !hlfir::isFortranEntity(var))
@@ -1357,16 +1529,7 @@ mlir::LogicalResult hlfir::EndAssociateOp::verify() {
 void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &result, mlir::Value var,
                             mlir::Value mustFree) {
-  hlfir::ExprType::Shape typeShape;
-  bool isPolymorphic = fir::isPolymorphicType(var.getType());
-  mlir::Type type = getFortranElementOrSequenceType(var.getType());
-  if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
-    typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
-    type = seqType.getEleTy();
-  }
-
-  auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
-                                         isPolymorphic);
+  mlir::Type resultType = hlfir::getExprType(var.getType());
   return build(builder, result, resultType, var, mustFree);
 }
 
@@ -1385,38 +1548,50 @@ void hlfir::AsExprOp::getEffects(
 // ElementalOp
 //===----------------------------------------------------------------------===//
 
-void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
-                               mlir::OperationState &odsState,
-                               mlir::Type resultType, mlir::Value shape,
-                               mlir::Value mold, mlir::ValueRange typeparams,
-                               bool isUnordered) {
+/// Common builder for ElementalOp and ElementalAddrOp to add the arguments and
+/// create the elemental body. Result and clean-up body must be handled in
+/// specific builders.
+template <typename Op>
+static void buildElemental(mlir::OpBuilder &builder,
+                           mlir::OperationState &odsState, mlir::Value shape,
+                           mlir::Value mold, mlir::ValueRange typeparams,
+                           bool isUnordered) {
   odsState.addOperands(shape);
   if (mold)
     odsState.addOperands(mold);
   odsState.addOperands(typeparams);
-  odsState.addTypes(resultType);
   odsState.addAttribute(
-      getOperandSegmentSizesAttrName(odsState.name),
+      Op::getOperandSegmentSizesAttrName(odsState.name),
       builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
                                     static_cast<int32_t>(typeparams.size())}));
   if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
+    odsState.addAttribute(Op::getUnorderedAttrName(odsState.name),
                           isUnordered ? builder.getUnitAttr() : nullptr);
   mlir::Region *bodyRegion = odsState.addRegion();
   bodyRegion->push_back(new mlir::Block{});
-  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
-    unsigned dim = exprType.getRank();
+  if (auto shapeType = mlir::dyn_cast<fir::ShapeType>(shape.getType())) {
+    unsigned dim = shapeType.getRank();
     mlir::Type indexType = builder.getIndexType();
     for (unsigned d = 0; d < dim; ++d)
       bodyRegion->front().addArgument(indexType, odsState.location);
   }
 }
 
+void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &odsState,
+                               mlir::Type resultType, mlir::Value shape,
+                               mlir::Value mold, mlir::ValueRange typeparams,
+                               bool isUnordered) {
+  odsState.addTypes(resultType);
+  buildElemental<hlfir::ElementalOp>(builder, odsState, shape, mold, typeparams,
+                                     isUnordered);
+}
+
 mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
-mlir::LogicalResult hlfir::ElementalOp::verify() {
+llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
   if (!!mold != resultType.isPolymorphic())
@@ -1435,7 +1610,7 @@ void hlfir::ApplyOp::build(mlir::OpBuilder &builder,
                            mlir::ValueRange indices,
                            mlir::ValueRange typeparams) {
   mlir::Type resultType = expr.getType();
-  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>())
+  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(resultType))
     resultType = exprType.getElementExprType();
   build(builder, odsState, resultType, expr, indices, typeparams);
 }
@@ -1454,7 +1629,7 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
 // DestroyOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::DestroyOp::verify() {
+llvm::LogicalResult hlfir::DestroyOp::verify() {
   if (mustFinalizeExpr()) {
     mlir::Value expr = getExpr();
     hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
@@ -1473,9 +1648,9 @@ mlir::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value var_is_present) {
+                            mlir::Value tempBox, mlir::Value var_is_present) {
   return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               var_is_present);
+               tempBox, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1484,20 +1659,20 @@ void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
 
 void hlfir::ShapeOfOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value expr) {
-  hlfir::ExprType exprTy = expr.getType().cast<hlfir::ExprType>();
+  hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
   mlir::Type type = fir::ShapeType::get(builder.getContext(), exprTy.getRank());
   build(builder, result, type, expr);
 }
 
 std::size_t hlfir::ShapeOfOp::getRank() {
   mlir::Type resTy = getResult().getType();
-  fir::ShapeType shape = resTy.cast<fir::ShapeType>();
+  fir::ShapeType shape = mlir::cast<fir::ShapeType>(resTy);
   return shape.getRank();
 }
 
-mlir::LogicalResult hlfir::ShapeOfOp::verify() {
+llvm::LogicalResult hlfir::ShapeOfOp::verify() {
   mlir::Value expr = getExpr();
-  hlfir::ExprType exprTy = expr.getType().cast<hlfir::ExprType>();
+  hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
   std::size_t exprRank = exprTy.getShape().size();
 
   if (exprRank == 0)
@@ -1510,22 +1685,32 @@ mlir::LogicalResult hlfir::ShapeOfOp::verify() {
   return mlir::success();
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
                                mlir::PatternRewriter &rewriter) {
   // if extent information is available at compile time, immediately fold the
   // hlfir.shape_of into a fir.shape
   mlir::Location loc = shapeOf.getLoc();
-  hlfir::ExprType expr = shapeOf.getExpr().getType().cast<hlfir::ExprType>();
+  hlfir::ExprType expr =
+      mlir::cast<hlfir::ExprType>(shapeOf.getExpr().getType());
 
   mlir::Value shape = hlfir::genExprShape(rewriter, loc, expr);
   if (!shape)
     // shape information is not available at compile time
-    return mlir::LogicalResult::failure();
+    return llvm::LogicalResult::failure();
 
   rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
   rewriter.eraseOp(shapeOf);
-  return mlir::LogicalResult::success();
+  return llvm::LogicalResult::success();
+}
+
+mlir::OpFoldResult hlfir::ShapeOfOp::fold(FoldAdaptor adaptor) {
+  if (matchPattern(getExpr(), mlir::m_Op<hlfir::ElementalOp>())) {
+    auto elementalOp =
+        mlir::cast<hlfir::ElementalOp>(getExpr().getDefiningOp());
+    return elementalOp.getShape();
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1540,8 +1725,8 @@ void hlfir::GetExtentOp::build(mlir::OpBuilder &builder,
   build(builder, result, indexTy, shape, dimAttr);
 }
 
-mlir::LogicalResult hlfir::GetExtentOp::verify() {
-  fir::ShapeType shapeTy = getShape().getType().cast<fir::ShapeType>();
+llvm::LogicalResult hlfir::GetExtentOp::verify() {
+  fir::ShapeType shapeTy = mlir::cast<fir::ShapeType>(getShape().getType());
   std::uint64_t rank = shapeTy.getRank();
   llvm::APInt dim = getDim();
   if (dim.sge(rank))
@@ -1617,7 +1802,7 @@ static mlir::Operation *getTerminator(mlir::Region &region) {
   return &region.back().back();
 }
 
-mlir::LogicalResult hlfir::RegionAssignOp::verify() {
+llvm::LogicalResult hlfir::RegionAssignOp::verify() {
   if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(getRhsRegion())))
     return emitOpError(
         "right-hand side region must be terminated by an hlfir.yield");
@@ -1660,34 +1845,27 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
 
 void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
                                    mlir::OperationState &odsState,
-                                   mlir::Value shape, bool isUnordered) {
-  odsState.addOperands(shape);
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
-    unsigned dim = shapeType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+                                   mlir::Value shape, mlir::Value mold,
+                                   mlir::ValueRange typeparams,
+                                   bool isUnordered) {
+  buildElemental<hlfir::ElementalAddrOp>(builder, odsState, shape, mold,
+                                         typeparams, isUnordered);
   // Push cleanUp region.
   odsState.addRegion();
 }
 
-mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
+llvm::LogicalResult hlfir::ElementalAddrOp::verify() {
   hlfir::YieldOp yieldOp =
       mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
   if (!yieldOp)
     return emitOpError("body region must be terminated by an hlfir.yield");
   mlir::Type elementAddrType = yieldOp.getEntity().getType();
   if (!hlfir::isFortranVariableType(elementAddrType) ||
-      hlfir::getFortranElementOrSequenceType(elementAddrType)
-          .isa<fir::SequenceType>())
+      mlir::isa<fir::SequenceType>(
+          hlfir::getFortranElementOrSequenceType(elementAddrType)))
     return emitOpError("body must compute the address of a scalar entity");
-  unsigned shapeRank = getShape().getType().cast<fir::ShapeType>().getRank();
+  unsigned shapeRank =
+      mlir::cast<fir::ShapeType>(getShape().getType()).getRank();
   if (shapeRank != getIndices().size())
     return emitOpError("body number of indices must match shape rank");
   return mlir::success();
@@ -1713,7 +1891,7 @@ mlir::Region *hlfir::ElementalAddrOp::getElementCleanup() {
 // OrderedAssignmentTreeOpInterface
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::OrderedAssignmentTreeOpInterface::verifyImpl() {
+llvm::LogicalResult hlfir::OrderedAssignmentTreeOpInterface::verifyImpl() {
   if (mlir::Region *body = getSubTreeRegion())
     if (!body->empty())
       for (mlir::Operation &op : body->front())
@@ -1792,11 +1970,11 @@ static bool yieldsLogical(mlir::Region &region, bool mustBeScalarI1) {
   if (mustBeScalarI1)
     return hlfir::isI1Type(yieldType);
   return hlfir::isMaskArgument(yieldType) &&
-         hlfir::getFortranElementOrSequenceType(yieldType)
-             .isa<fir::SequenceType>();
+         mlir::isa<fir::SequenceType>(
+             hlfir::getFortranElementOrSequenceType(yieldType));
 }
 
-mlir::LogicalResult hlfir::ForallMaskOp::verify() {
+llvm::LogicalResult hlfir::ForallMaskOp::verify() {
   if (!yieldsLogical(getMaskRegion(), /*mustBeScalarI1=*/true))
     return emitOpError("mask region must yield a scalar i1");
   mlir::Operation *op = getOperation();
@@ -1812,7 +1990,7 @@ mlir::LogicalResult hlfir::ForallMaskOp::verify() {
 //===----------------------------------------------------------------------===//
 
 template <typename ConcreteOp>
-static mlir::LogicalResult verifyWhereAndElseWhereBody(ConcreteOp &concreteOp) {
+static llvm::LogicalResult verifyWhereAndElseWhereBody(ConcreteOp &concreteOp) {
   for (mlir::Operation &op : concreteOp.getBody().front())
     if (mlir::isa<hlfir::ForallOp>(op))
       return concreteOp.emitOpError(
@@ -1820,13 +1998,13 @@ static mlir::LogicalResult verifyWhereAndElseWhereBody(ConcreteOp &concreteOp) {
   return mlir::success();
 }
 
-mlir::LogicalResult hlfir::WhereOp::verify() {
+llvm::LogicalResult hlfir::WhereOp::verify() {
   if (!yieldsLogical(getMaskRegion(), /*mustBeScalarI1=*/false))
     return emitOpError("mask region must yield a logical array");
   return verifyWhereAndElseWhereBody(*this);
 }
 
-mlir::LogicalResult hlfir::ElseWhereOp::verify() {
+llvm::LogicalResult hlfir::ElseWhereOp::verify() {
   if (!getMaskRegion().empty())
     if (!yieldsLogical(getMaskRegion(), /*mustBeScalarI1=*/false))
       return emitOpError(
@@ -1838,7 +2016,7 @@ mlir::LogicalResult hlfir::ElseWhereOp::verify() {
 // ForallIndexOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
                                    mlir::PatternRewriter &rewriter) {
   for (mlir::Operation *user : indexOp->getResult(0).getUsers())
@@ -1846,7 +2024,8 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
       return mlir::failure();
 
   auto insertPt = rewriter.saveInsertionPoint();
-  for (mlir::Operation *user : indexOp->getResult(0).getUsers())
+  llvm::SmallVector<mlir::Operation *> users(indexOp->getResult(0).getUsers());
+  for (mlir::Operation *user : users)
     if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(user)) {
       rewriter.setInsertionPoint(loadOp);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(
@@ -1861,7 +2040,7 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
 // CharExtremumOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult hlfir::CharExtremumOp::verify() {
+llvm::LogicalResult hlfir::CharExtremumOp::verify() {
   if (getStrings().size() < 2)
     return emitOpError("must be provided at least two string operands");
   unsigned kind = getCharacterKind(getResult().getType());
@@ -1905,7 +2084,7 @@ void hlfir::CharExtremumOp::getEffects(
 // GetLength
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
+llvm::LogicalResult
 hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
                                  mlir::PatternRewriter &rewriter) {
   mlir::Location loc = getLength.getLoc();
@@ -1918,6 +2097,45 @@ hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
   auto cstLen = rewriter.create<mlir::arith::ConstantOp>(
       loc, indexTy, mlir::IntegerAttr::get(indexTy, charTy.getLen()));
   rewriter.replaceOp(getLength, cstLen);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// EvaluateInMemoryOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::EvaluateInMemoryOp::build(mlir::OpBuilder &builder,
+                                      mlir::OperationState &odsState,
+                                      mlir::Type resultType, mlir::Value shape,
+                                      mlir::ValueRange typeparams) {
+  odsState.addTypes(resultType);
+  if (shape)
+    odsState.addOperands(shape);
+  odsState.addOperands(typeparams);
+  odsState.addAttribute(
+      getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr(
+          {shape ? 1 : 0, static_cast<int32_t>(typeparams.size())}));
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  mlir::Type memType = fir::ReferenceType::get(
+      hlfir::getFortranElementOrSequenceType(resultType));
+  bodyRegion->front().addArgument(memType, odsState.location);
+  EvaluateInMemoryOp::ensureTerminator(*bodyRegion, builder, odsState.location);
+}
+
+llvm::LogicalResult hlfir::EvaluateInMemoryOp::verify() {
+  unsigned shapeRank = 0;
+  if (mlir::Value shape = getShape())
+    if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(shape.getType()))
+      shapeRank = shapeTy.getRank();
+  auto exprType = mlir::cast<hlfir::ExprType>(getResult().getType());
+  if (shapeRank != exprType.getRank())
+    return emitOpError("`shape` rank must match the result rank");
+  mlir::Type elementType = exprType.getElementType();
+  if (auto res = verifyTypeparams(*this, elementType, getTypeparams().size());
+      failed(res))
+    return res;
   return mlir::success();
 }
 

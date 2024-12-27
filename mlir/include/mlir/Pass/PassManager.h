@@ -11,15 +11,14 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <functional>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace mlir {
 class AnalysisManager;
@@ -385,6 +384,43 @@ public:
           [](Pass *, Operation *) { return true; },
       bool printModuleScope = true, bool printAfterOnlyOnChange = true,
       bool printAfterOnlyOnFailure = false, raw_ostream &out = llvm::errs(),
+      OpPrintingFlags opPrintingFlags = OpPrintingFlags());
+
+  /// Similar to `enableIRPrinting` above, except that instead of printing
+  /// the IR to a single output stream, the instrumentation will print the
+  /// output of each pass to a separate file. The files will be organized into a
+  /// directory tree rooted at `printTreeDir`. The directories mirror the
+  /// nesting structure of the IR. For example, if the IR is congruent to the
+  /// pass-pipeline "builtin.module(passA,passB,func.func(passC,passD),passE)",
+  /// and `printTreeDir=/tmp/pipeline_output`, then then the tree file tree
+  /// created will look like:
+  ///
+  /// ```
+  /// /tmp/pass_output
+  /// ├── builtin_module_the_symbol_name
+  /// │   ├── 0_passA.mlir
+  /// │   ├── 1_passB.mlir
+  /// │   ├── 2_passE.mlir
+  /// │   ├── func_func_my_func_name
+  /// │   │   ├── 1_0_passC.mlir
+  /// │   │   ├── 1_1__passD.mlir
+  /// │   ├── func_func_my_other_func_name
+  /// │   │   ├── 1_0_passC.mlir
+  /// │   │   ├── 1_1_passD.mlir
+  /// ```
+  ///
+  /// The subdirectories are given names that reflect the parent operation name
+  /// and symbol name (if present). The output MLIR files are prefixed using an
+  /// atomic counter to indicate the order the passes were printed in and to
+  /// prevent any potential name collisions.
+  void enableIRPrintingToFileTree(
+      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass =
+          [](Pass *, Operation *) { return true; },
+      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
+          [](Pass *, Operation *) { return true; },
+      bool printModuleScope = true, bool printAfterOnlyOnChange = true,
+      bool printAfterOnlyOnFailure = false,
+      llvm::StringRef printTreeDir = ".pass_manager_output",
       OpPrintingFlags opPrintingFlags = OpPrintingFlags());
 
   //===--------------------------------------------------------------------===//

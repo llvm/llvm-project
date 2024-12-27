@@ -68,9 +68,6 @@ static cl::opt<bool>
 ForceFastISel("arm-force-fast-isel",
                cl::init(false), cl::Hidden);
 
-static cl::opt<bool> EnableSubRegLiveness("arm-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
-
 /// initializeSubtargetDependencies - Initializes using a CPU and feature string
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -114,8 +111,7 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
   // FIXME: At this point, we can't rely on Subtarget having RBI.
   // It's awkward to mix passing RBI and the Subtarget; should we pass
   // TII/TRI as well?
-  InstSelector.reset(createARMInstructionSelector(
-      *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createARMInstructionSelector(TM, *this, *RBI));
 
   RegBankInfo.reset(RBI);
 }
@@ -289,16 +285,19 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
+  case CortexA510:
   case CortexA710:
   case CortexR4:
-  case CortexR4F:
   case CortexR5:
   case CortexR7:
   case CortexM3:
+  case CortexM55:
   case CortexM7:
+  case CortexM85:
   case CortexR52:
-  case CortexM52:
+  case CortexR52plus:
   case CortexX1:
   case CortexX1C:
     break;
@@ -306,15 +305,13 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     LdStMultipleTiming = SingleIssuePlusExtras;
     MaxInterleaveFactor = 4;
     if (!isThumb())
-      PrefLoopLogAlignment = 3;
+      PreferBranchLogAlignment = 3;
     break;
   case Kryo:
     break;
   case Krait:
     PreISelOperandLatencyAdjustment = 1;
     break;
-  case NeoverseN1:
-  case NeoverseN2:
   case NeoverseV1:
     break;
   case Swift:
@@ -352,7 +349,7 @@ bool ARMSubtarget::isRWPI() const {
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(GV))
     return true;
 
   // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
@@ -366,8 +363,7 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() &&
-         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {
@@ -388,8 +384,6 @@ bool ARMSubtarget::enableMachineScheduler() const {
 }
 
 bool ARMSubtarget::enableSubRegLiveness() const {
-  if (EnableSubRegLiveness.getNumOccurrences())
-    return EnableSubRegLiveness;
   // Enable SubRegLiveness for MVE to better optimize s subregs for mqpr regs
   // and q subregs for qqqqpr regs.
   return hasMVEIntegerOps();
@@ -494,11 +488,41 @@ bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
          ARM::GPRRegClass.contains(PhysReg);
 }
 
-bool ARMSubtarget::splitFramePointerPush(const MachineFunction &MF) const {
+ARMSubtarget::PushPopSplitVariation
+ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI() ||
-      !F.needsUnwindTableEntry())
-    return false;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF);
+  const std::vector<CalleeSavedInfo> CSI =
+      MF.getFrameInfo().getCalleeSavedInfo();
+
+  // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
+  // cannot use high registers except for lr.
+  if (isThumb1Only())
+    return SplitR7;
+
+  // If R7 is the frame pointer, we must split at R7 to ensure that the
+  // previous frame pointer (R7) and return address (LR) are adjacent on the
+  // stack, to form a valid frame record.
+  if (getFramePointerReg() == ARM::R7 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
+    return SplitR7;
+
+  // Returns SplitR11WindowsSEH when the stack pointer needs to be
+  // restored from the frame pointer r11 + an offset and Windows CFI is enabled.
+  // This stack unwinding cannot be expressed with SEH unwind opcodes when done
+  // with a single push, making it necessary to split the push into r4-r10, and
+  // another containing r11+lr.
+  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+      F.needsUnwindTableEntry() &&
+      (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
+    return SplitR11WindowsSEH;
+
+  // Returns SplitR11AAPCSSignRA when the frame pointer is R11, requiring R11
+  // and LR to be adjacent on the stack, and branch signing is enabled,
+  // requiring R12 to be on the stack.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
+    return SplitR11AAPCSSignRA;
+  return NoSplit;
 }

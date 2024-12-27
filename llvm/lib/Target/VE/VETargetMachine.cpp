@@ -30,7 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeVEDAGToDAGISelPass(PR);
+  initializeVEDAGToDAGISelLegacyPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &T) {
@@ -89,9 +89,9 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  std::optional<Reloc::Model> RM,
                                  std::optional<CodeModel::Model> CM,
                                  CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
@@ -134,7 +134,7 @@ TargetPassConfig *VETargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void VEPassConfig::addIRPasses() {
   // VE requires atomic expand pass.
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   TargetPassConfig::addIRPasses();
 }
 

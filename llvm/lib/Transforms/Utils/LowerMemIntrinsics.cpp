@@ -13,6 +13,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <optional>
 
@@ -33,7 +34,7 @@ void llvm::createMemCpyLoopKnownSize(
   BasicBlock *PostLoopBB = nullptr;
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
   StringRef Name = "MemCopyAliasScope";
@@ -44,16 +45,16 @@ void llvm::createMemCpyLoopKnownSize(
 
   Type *TypeOfCopyLen = CopyLen->getType();
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value(),
-      AtomicElementSize);
+      Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
 
+  Type *Int8Type = Type::getInt8Ty(Ctx);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   assert((!AtomicElementSize || LoopOpSize % *AtomicElementSize == 0) &&
-      "Atomic memcpy lowering is not supported for selected operand size");
+         "Atomic memcpy lowering is not supported for selected operand size");
 
-  uint64_t LoopEndCount = CopyLen->getZExtValue() / LoopOpSize;
+  uint64_t LoopEndCount = alignDown(CopyLen->getZExtValue(), LoopOpSize);
 
   if (LoopEndCount != 0) {
     // Split
@@ -71,8 +72,12 @@ void llvm::createMemCpyLoopKnownSize(
     PHINode *LoopIndex = LoopBuilder.CreatePHI(TypeOfCopyLen, 2, "loop-index");
     LoopIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0U), PreLoopBB);
     // Loop Body
-    Value *SrcGEP =
-        LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
+
+    // If we used LoopOpType as GEP element type, we would iterate over the
+    // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,
+    // we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore, use
+    // byte offsets computed from the TypeStoreSize.
+    Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopIndex);
     LoadInst *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
                                                    PartSrcAlign, SrcIsVolatile);
     if (!CanOverlap) {
@@ -80,8 +85,7 @@ void llvm::createMemCpyLoopKnownSize(
       Load->setMetadata(LLVMContext::MD_alias_scope,
                         MDNode::get(Ctx, NewScope));
     }
-    Value *DstGEP =
-        LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
+    Value *DstGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LoopIndex);
     StoreInst *Store = LoopBuilder.CreateAlignedStore(
         Load, DstGEP, PartDstAlign, DstIsVolatile);
     if (!CanOverlap) {
@@ -92,8 +96,8 @@ void llvm::createMemCpyLoopKnownSize(
       Load->setAtomic(AtomicOrdering::Unordered);
       Store->setAtomic(AtomicOrdering::Unordered);
     }
-    Value *NewIndex =
-        LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1U));
+    Value *NewIndex = LoopBuilder.CreateAdd(
+        LoopIndex, ConstantInt::get(TypeOfCopyLen, LoopOpSize));
     LoopIndex->addIncoming(NewIndex, LoopBB);
 
     // Create the loop branch condition.
@@ -102,7 +106,7 @@ void llvm::createMemCpyLoopKnownSize(
                              LoopBB, PostLoopBB);
   }
 
-  uint64_t BytesCopied = LoopEndCount * LoopOpSize;
+  uint64_t BytesCopied = LoopEndCount;
   uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopied;
   if (RemainingBytes) {
     IRBuilder<> RBuilder(PostLoopBB ? PostLoopBB->getFirstNonPHI()
@@ -110,25 +114,20 @@ void llvm::createMemCpyLoopKnownSize(
 
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, SrcAlign.value(),
-                                          DstAlign.value(), AtomicElementSize);
+                                          SrcAS, DstAS, SrcAlign, DstAlign,
+                                          AtomicElementSize);
 
     for (auto *OpTy : RemainingOps) {
       Align PartSrcAlign(commonAlignment(SrcAlign, BytesCopied));
       Align PartDstAlign(commonAlignment(DstAlign, BytesCopied));
 
-      // Calculate the new index
       unsigned OperandSize = DL.getTypeStoreSize(OpTy);
       assert(
           (!AtomicElementSize || OperandSize % *AtomicElementSize == 0) &&
           "Atomic memcpy lowering is not supported for selected operand size");
 
-      uint64_t GepIndex = BytesCopied / OperandSize;
-      assert(GepIndex * OperandSize == BytesCopied &&
-             "Division should have no Remainder!");
-
       Value *SrcGEP = RBuilder.CreateInBoundsGEP(
-          OpTy, SrcAddr, ConstantInt::get(TypeOfCopyLen, GepIndex));
+          Int8Type, SrcAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
       LoadInst *Load =
           RBuilder.CreateAlignedLoad(OpTy, SrcGEP, PartSrcAlign, SrcIsVolatile);
       if (!CanOverlap) {
@@ -137,7 +136,7 @@ void llvm::createMemCpyLoopKnownSize(
                           MDNode::get(Ctx, NewScope));
       }
       Value *DstGEP = RBuilder.CreateInBoundsGEP(
-          OpTy, DstAddr, ConstantInt::get(TypeOfCopyLen, GepIndex));
+          Int8Type, DstAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
       StoreInst *Store = RBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
                                                      DstIsVolatile);
       if (!CanOverlap) {
@@ -155,6 +154,28 @@ void llvm::createMemCpyLoopKnownSize(
          "Bytes copied should match size in the call!");
 }
 
+// \returns \p Len urem \p OpSize, checking for optimization opportunities.
+static Value *getRuntimeLoopRemainder(const DataLayout &DL, IRBuilderBase &B,
+                                      Value *Len, Value *OpSize,
+                                      unsigned OpSizeVal) {
+  // For powers of 2, we can and by (OpSizeVal - 1) instead of using urem.
+  if (isPowerOf2_32(OpSizeVal))
+    return B.CreateAnd(Len, OpSizeVal - 1);
+  return B.CreateURem(Len, OpSize);
+}
+
+// \returns (\p Len udiv \p OpSize) mul \p OpSize, checking for optimization
+// opportunities.
+// If RTLoopRemainder is provided, it must be the result of
+// getRuntimeLoopRemainder() with the same arguments.
+static Value *getRuntimeLoopBytes(const DataLayout &DL, IRBuilderBase &B,
+                                  Value *Len, Value *OpSize, unsigned OpSizeVal,
+                                  Value *RTLoopRemainder = nullptr) {
+  if (!RTLoopRemainder)
+    RTLoopRemainder = getRuntimeLoopRemainder(DL, B, Len, OpSize, OpSizeVal);
+  return B.CreateSub(Len, RTLoopRemainder);
+}
+
 void llvm::createMemCpyLoopUnknownSize(
     Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr, Value *CopyLen,
     Align SrcAlign, Align DstAlign, bool SrcIsVolatile, bool DstIsVolatile,
@@ -165,7 +186,7 @@ void llvm::createMemCpyLoopUnknownSize(
       PreLoopBB->splitBasicBlock(InsertBefore, "post-loop-memcpy-expansion");
 
   Function *ParentFunc = PreLoopBB->getParent();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   LLVMContext &Ctx = PreLoopBB->getContext();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
@@ -176,8 +197,7 @@ void llvm::createMemCpyLoopUnknownSize(
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value(),
-      AtomicElementSize);
+      Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
@@ -194,9 +214,16 @@ void llvm::createMemCpyLoopUnknownSize(
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
-  Value *RuntimeLoopCount = LoopOpIsInt8 ?
-                            CopyLen :
-                            PLBuilder.CreateUDiv(CopyLen, CILoopOpSize);
+
+  Value *RuntimeLoopBytes = CopyLen;
+  Value *RuntimeResidualBytes = nullptr;
+  if (!LoopOpIsInt8) {
+    RuntimeResidualBytes = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
+                                                   CILoopOpSize, LoopOpSize);
+    RuntimeLoopBytes = getRuntimeLoopBytes(DL, PLBuilder, CopyLen, CILoopOpSize,
+                                           LoopOpSize, RuntimeResidualBytes);
+  }
+
   BasicBlock *LoopBB =
       BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, PostLoopBB);
   IRBuilder<> LoopBuilder(LoopBB);
@@ -207,14 +234,18 @@ void llvm::createMemCpyLoopUnknownSize(
   PHINode *LoopIndex = LoopBuilder.CreatePHI(CopyLenType, 2, "loop-index");
   LoopIndex->addIncoming(ConstantInt::get(CopyLenType, 0U), PreLoopBB);
 
-  Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
+  // If we used LoopOpType as GEP element type, we would iterate over the
+  // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,
+  // we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore, use byte
+  // offsets computed from the TypeStoreSize.
+  Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopIndex);
   LoadInst *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
                                                  PartSrcAlign, SrcIsVolatile);
   if (!CanOverlap) {
     // Set alias scope for loads.
     Load->setMetadata(LLVMContext::MD_alias_scope, MDNode::get(Ctx, NewScope));
   }
-  Value *DstGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
+  Value *DstGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LoopIndex);
   StoreInst *Store =
       LoopBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
   if (!CanOverlap) {
@@ -225,13 +256,13 @@ void llvm::createMemCpyLoopUnknownSize(
     Load->setAtomic(AtomicOrdering::Unordered);
     Store->setAtomic(AtomicOrdering::Unordered);
   }
-  Value *NewIndex =
-      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(CopyLenType, 1U));
+  Value *NewIndex = LoopBuilder.CreateAdd(
+      LoopIndex, ConstantInt::get(CopyLenType, LoopOpSize));
   LoopIndex->addIncoming(NewIndex, LoopBB);
 
-  bool requiresResidual =
+  bool RequiresResidual =
       !LoopOpIsInt8 && !(AtomicElementSize && LoopOpSize == AtomicElementSize);
-  if (requiresResidual) {
+  if (RequiresResidual) {
     Type *ResLoopOpType = AtomicElementSize
                               ? Type::getIntNTy(Ctx, *AtomicElementSize * 8)
                               : Int8Type;
@@ -239,14 +270,12 @@ void llvm::createMemCpyLoopUnknownSize(
     assert((ResLoopOpSize == AtomicElementSize ? *AtomicElementSize : 1) &&
            "Store size is expected to match type size");
 
-    // Add in the
-    Value *RuntimeResidual = PLBuilder.CreateURem(CopyLen, CILoopOpSize);
-    Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
+    Align ResSrcAlign(commonAlignment(PartSrcAlign, ResLoopOpSize));
+    Align ResDstAlign(commonAlignment(PartDstAlign, ResLoopOpSize));
 
     // Loop body for the residual copy.
-    BasicBlock *ResLoopBB = BasicBlock::Create(Ctx, "loop-memcpy-residual",
-                                               PreLoopBB->getParent(),
-                                               PostLoopBB);
+    BasicBlock *ResLoopBB = BasicBlock::Create(
+        Ctx, "loop-memcpy-residual", PreLoopBB->getParent(), PostLoopBB);
     // Residual loop header.
     BasicBlock *ResHeaderBB = BasicBlock::Create(
         Ctx, "loop-memcpy-residual-header", PreLoopBB->getParent(), nullptr);
@@ -257,17 +286,17 @@ void llvm::createMemCpyLoopUnknownSize(
     // non-zero and finally branch to after the residual loop if the memcpy
     //  size is zero.
     ConstantInt *Zero = ConstantInt::get(ILengthType, 0U);
-    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopCount, Zero),
+    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopBytes, Zero),
                            LoopBB, ResHeaderBB);
     PreLoopBB->getTerminator()->eraseFromParent();
 
     LoopBuilder.CreateCondBr(
-        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopCount), LoopBB,
+        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopBytes), LoopBB,
         ResHeaderBB);
 
     // Determine if we need to branch to the residual loop or bypass it.
     IRBuilder<> RHBuilder(ResHeaderBB);
-    RHBuilder.CreateCondBr(RHBuilder.CreateICmpNE(RuntimeResidual, Zero),
+    RHBuilder.CreateCondBr(RHBuilder.CreateICmpNE(RuntimeResidualBytes, Zero),
                            ResLoopBB, PostLoopBB);
 
     // Copy the residual with single byte load/store loop.
@@ -276,20 +305,18 @@ void llvm::createMemCpyLoopUnknownSize(
         ResBuilder.CreatePHI(CopyLenType, 2, "residual-loop-index");
     ResidualIndex->addIncoming(Zero, ResHeaderBB);
 
-    Value *FullOffset = ResBuilder.CreateAdd(RuntimeBytesCopied, ResidualIndex);
-    Value *SrcGEP =
-        ResBuilder.CreateInBoundsGEP(ResLoopOpType, SrcAddr, FullOffset);
+    Value *FullOffset = ResBuilder.CreateAdd(RuntimeLoopBytes, ResidualIndex);
+    Value *SrcGEP = ResBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, FullOffset);
     LoadInst *Load = ResBuilder.CreateAlignedLoad(ResLoopOpType, SrcGEP,
-                                                  PartSrcAlign, SrcIsVolatile);
+                                                  ResSrcAlign, SrcIsVolatile);
     if (!CanOverlap) {
       // Set alias scope for loads.
       Load->setMetadata(LLVMContext::MD_alias_scope,
                         MDNode::get(Ctx, NewScope));
     }
-    Value *DstGEP =
-        ResBuilder.CreateInBoundsGEP(ResLoopOpType, DstAddr, FullOffset);
-    StoreInst *Store = ResBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
-                                                     DstIsVolatile);
+    Value *DstGEP = ResBuilder.CreateInBoundsGEP(Int8Type, DstAddr, FullOffset);
+    StoreInst *Store =
+        ResBuilder.CreateAlignedStore(Load, DstGEP, ResDstAlign, DstIsVolatile);
     if (!CanOverlap) {
       // Indicate that stores don't overlap loads.
       Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));
@@ -304,7 +331,7 @@ void llvm::createMemCpyLoopUnknownSize(
 
     // Create the loop branch condition.
     ResBuilder.CreateCondBr(
-        ResBuilder.CreateICmpULT(ResNewIndex, RuntimeResidual), ResLoopBB,
+        ResBuilder.CreateICmpULT(ResNewIndex, RuntimeResidualBytes), ResLoopBB,
         PostLoopBB);
   } else {
     // In this case the loop operand type was a byte, and there is no need for a
@@ -312,13 +339,37 @@ void llvm::createMemCpyLoopUnknownSize(
     // We do however need to patch up the control flow by creating the
     // terminators for the preloop block and the memcpy loop.
     ConstantInt *Zero = ConstantInt::get(ILengthType, 0U);
-    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopCount, Zero),
+    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopBytes, Zero),
                            LoopBB, PostLoopBB);
     PreLoopBB->getTerminator()->eraseFromParent();
     LoopBuilder.CreateCondBr(
-        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopCount), LoopBB,
+        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopBytes), LoopBB,
         PostLoopBB);
   }
+}
+
+// If \p Addr1 and \p Addr2 are pointers to different address spaces, create an
+// addresspacecast to obtain a pair of pointers in the same addressspace. The
+// caller needs to ensure that addrspacecasting is possible.
+// No-op if the pointers are in the same address space.
+static std::pair<Value *, Value *>
+tryInsertCastToCommonAddrSpace(IRBuilderBase &B, Value *Addr1, Value *Addr2,
+                               const TargetTransformInfo &TTI) {
+  Value *ResAddr1 = Addr1;
+  Value *ResAddr2 = Addr2;
+
+  unsigned AS1 = cast<PointerType>(Addr1->getType())->getAddressSpace();
+  unsigned AS2 = cast<PointerType>(Addr2->getType())->getAddressSpace();
+  if (AS1 != AS2) {
+    if (TTI.isValidAddrSpaceCast(AS2, AS1))
+      ResAddr2 = B.CreateAddrSpaceCast(Addr2, Addr1->getType());
+    else if (TTI.isValidAddrSpaceCast(AS1, AS2))
+      ResAddr1 = B.CreateAddrSpaceCast(Addr1, Addr2->getType());
+    else
+      llvm_unreachable("Can only lower memmove between address spaces if they "
+                       "support addrspacecast");
+  }
+  return {ResAddr1, ResAddr2};
 }
 
 // Lower memmove to IR. memmove is required to correctly copy overlapping memory
@@ -343,17 +394,59 @@ void llvm::createMemCpyLoopUnknownSize(
 //   }
 //   return dst;
 // }
-static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
-                              Value *DstAddr, Value *CopyLen, Align SrcAlign,
-                              Align DstAlign, bool SrcIsVolatile,
-                              bool DstIsVolatile,
-                              const TargetTransformInfo &TTI) {
+//
+// If the TargetTransformInfo specifies a wider MemcpyLoopLoweringType, it is
+// used for the memory accesses in the loops. Then, additional loops with
+// byte-wise accesses are added for the remaining bytes.
+static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
+                                         Value *SrcAddr, Value *DstAddr,
+                                         Value *CopyLen, Align SrcAlign,
+                                         Align DstAlign, bool SrcIsVolatile,
+                                         bool DstIsVolatile,
+                                         const TargetTransformInfo &TTI) {
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
-  // TODO: Use different element type if possible?
-  Type *EltTy = Type::getInt8Ty(F->getContext());
+  const DataLayout &DL = F->getDataLayout();
+  LLVMContext &Ctx = OrigBB->getContext();
+  unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
+
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
+                                                   SrcAlign, DstAlign);
+  unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  Type *Int8Type = Type::getInt8Ty(Ctx);
+  bool LoopOpIsInt8 = LoopOpType == Int8Type;
+
+  // If the memory accesses are wider than one byte, residual loops with
+  // i8-accesses are required to move remaining bytes.
+  bool RequiresResidual = !LoopOpIsInt8;
+
+  Type *ResidualLoopOpType = Int8Type;
+  unsigned ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
+
+  // Calculate the loop trip count and remaining bytes to copy after the loop.
+  IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
+  ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
+  ConstantInt *CIResidualLoopOpSize =
+      ConstantInt::get(ILengthType, ResidualLoopOpSize);
+  ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
+
+  IRBuilder<> PLBuilder(InsertBefore);
+
+  Value *RuntimeLoopBytes = CopyLen;
+  Value *RuntimeLoopRemainder = nullptr;
+  Value *SkipResidualCondition = nullptr;
+  if (RequiresResidual) {
+    RuntimeLoopRemainder = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
+                                                   CILoopOpSize, LoopOpSize);
+    RuntimeLoopBytes = getRuntimeLoopBytes(DL, PLBuilder, CopyLen, CILoopOpSize,
+                                           LoopOpSize, RuntimeLoopRemainder);
+    SkipResidualCondition =
+        PLBuilder.CreateICmpEQ(RuntimeLoopRemainder, Zero, "skip_residual");
+  }
+  Value *SkipMainCondition =
+      PLBuilder.CreateICmpEQ(RuntimeLoopBytes, Zero, "skip_main");
 
   // Create the a comparison of src and dst, based on which we jump to either
   // the forward-copy part of the function (if src >= dst) or the backwards-copy
@@ -361,75 +454,374 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // SplitBlockAndInsertIfThenElse conveniently creates the basic if-then-else
   // structure. Its block terminators (unconditional branches) are replaced by
   // the appropriate conditional branches when the loop is built.
-  ICmpInst *PtrCompare = new ICmpInst(InsertBefore, ICmpInst::ICMP_ULT,
-                                      SrcAddr, DstAddr, "compare_src_dst");
+  // If the pointers are in different address spaces, they need to be converted
+  // to a compatible one. Cases where memory ranges in the different address
+  // spaces cannot overlap are lowered as memcpy and not handled here.
+  auto [CmpSrcAddr, CmpDstAddr] =
+      tryInsertCastToCommonAddrSpace(PLBuilder, SrcAddr, DstAddr, TTI);
+  Value *PtrCompare =
+      PLBuilder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
-  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore, &ThenTerm,
-                                &ElseTerm);
+  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(),
+                                &ThenTerm, &ElseTerm);
 
-  // Each part of the function consists of two blocks:
-  //   copy_backwards:        used to skip the loop when n == 0
-  //   copy_backwards_loop:   the actual backwards loop BB
-  //   copy_forward:          used to skip the loop when n == 0
-  //   copy_forward_loop:     the actual forward loop BB
+  // If the LoopOpSize is greater than 1, each part of the function consists of
+  // four blocks:
+  //   memmove_copy_backwards:
+  //       skip the residual loop when 0 iterations are required
+  //   memmove_bwd_residual_loop:
+  //       copy the last few bytes individually so that the remaining length is
+  //       a multiple of the LoopOpSize
+  //   memmove_bwd_middle: skip the main loop when 0 iterations are required
+  //   memmove_bwd_main_loop: the actual backwards loop BB with wide accesses
+  //   memmove_copy_forward: skip the main loop when 0 iterations are required
+  //   memmove_fwd_main_loop: the actual forward loop BB with wide accesses
+  //   memmove_fwd_middle: skip the residual loop when 0 iterations are required
+  //   memmove_fwd_residual_loop: copy the last few bytes individually
+  //
+  // The main and residual loop are switched between copying forward and
+  // backward so that the residual loop always operates on the end of the moved
+  // range. This is based on the assumption that buffers whose start is aligned
+  // with the LoopOpSize are more common than buffers whose end is.
+  //
+  // If the LoopOpSize is 1, each part of the function consists of two blocks:
+  //   memmove_copy_backwards: skip the loop when 0 iterations are required
+  //   memmove_bwd_main_loop: the actual backwards loop BB
+  //   memmove_copy_forward: skip the loop when 0 iterations are required
+  //   memmove_fwd_main_loop: the actual forward loop BB
   BasicBlock *CopyBackwardsBB = ThenTerm->getParent();
-  CopyBackwardsBB->setName("copy_backwards");
+  CopyBackwardsBB->setName("memmove_copy_backwards");
   BasicBlock *CopyForwardBB = ElseTerm->getParent();
-  CopyForwardBB->setName("copy_forward");
+  CopyForwardBB->setName("memmove_copy_forward");
   BasicBlock *ExitBB = InsertBefore->getParent();
   ExitBB->setName("memmove_done");
 
-  unsigned PartSize = DL.getTypeStoreSize(EltTy);
-  Align PartSrcAlign(commonAlignment(SrcAlign, PartSize));
-  Align PartDstAlign(commonAlignment(DstAlign, PartSize));
+  Align PartSrcAlign(commonAlignment(SrcAlign, LoopOpSize));
+  Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
 
-  // Initial comparison of n == 0 that lets us skip the loops altogether. Shared
-  // between both backwards and forward copy clauses.
-  ICmpInst *CompareN =
-      new ICmpInst(OrigBB->getTerminator(), ICmpInst::ICMP_EQ, CopyLen,
-                   ConstantInt::get(TypeOfCopyLen, 0), "compare_n_to_0");
+  // Accesses in the residual loops do not share the same alignment as those in
+  // the main loops.
+  Align ResidualSrcAlign(commonAlignment(PartSrcAlign, ResidualLoopOpSize));
+  Align ResidualDstAlign(commonAlignment(PartDstAlign, ResidualLoopOpSize));
 
   // Copying backwards.
-  BasicBlock *LoopBB =
-    BasicBlock::Create(F->getContext(), "copy_backwards_loop", F, CopyForwardBB);
-  IRBuilder<> LoopBuilder(LoopBB);
+  {
+    BasicBlock *MainLoopBB = BasicBlock::Create(
+        F->getContext(), "memmove_bwd_main_loop", F, CopyForwardBB);
 
-  PHINode *LoopPhi = LoopBuilder.CreatePHI(TypeOfCopyLen, 0);
-  Value *IndexPtr = LoopBuilder.CreateSub(
-      LoopPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_ptr");
-  Value *Element = LoopBuilder.CreateAlignedLoad(
-      EltTy, LoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, IndexPtr),
-      PartSrcAlign, "element");
-  LoopBuilder.CreateAlignedStore(
-      Element, LoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, IndexPtr),
-      PartDstAlign);
-  LoopBuilder.CreateCondBr(
-      LoopBuilder.CreateICmpEQ(IndexPtr, ConstantInt::get(TypeOfCopyLen, 0)),
-      ExitBB, LoopBB);
-  LoopPhi->addIncoming(IndexPtr, LoopBB);
-  LoopPhi->addIncoming(CopyLen, CopyBackwardsBB);
-  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm);
-  ThenTerm->eraseFromParent();
+    // The predecessor of the memmove_bwd_main_loop. Updated in the
+    // following if a residual loop is emitted first.
+    BasicBlock *PredBB = CopyBackwardsBB;
+
+    if (RequiresResidual) {
+      // backwards residual loop
+      BasicBlock *ResidualLoopBB = BasicBlock::Create(
+          F->getContext(), "memmove_bwd_residual_loop", F, MainLoopBB);
+      IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
+      PHINode *ResidualLoopPhi = ResidualLoopBuilder.CreatePHI(ILengthType, 0);
+      Value *ResidualIndex = ResidualLoopBuilder.CreateSub(
+          ResidualLoopPhi, CIResidualLoopOpSize, "bwd_residual_index");
+      // If we used LoopOpType as GEP element type, we would iterate over the
+      // buffers in TypeStoreSize strides while copying TypeAllocSize bytes,
+      // i.e., we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore,
+      // use byte offsets computed from the TypeStoreSize.
+      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
+                                                             ResidualIndex);
+      Value *Element = ResidualLoopBuilder.CreateAlignedLoad(
+          ResidualLoopOpType, LoadGEP, ResidualSrcAlign, SrcIsVolatile,
+          "element");
+      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
+                                                              ResidualIndex);
+      ResidualLoopBuilder.CreateAlignedStore(Element, StoreGEP,
+                                             ResidualDstAlign, DstIsVolatile);
+
+      // After the residual loop, go to an intermediate block.
+      BasicBlock *IntermediateBB = BasicBlock::Create(
+          F->getContext(), "memmove_bwd_middle", F, MainLoopBB);
+      // Later code expects a terminator in the PredBB.
+      IRBuilder<> IntermediateBuilder(IntermediateBB);
+      IntermediateBuilder.CreateUnreachable();
+      ResidualLoopBuilder.CreateCondBr(
+          ResidualLoopBuilder.CreateICmpEQ(ResidualIndex, RuntimeLoopBytes),
+          IntermediateBB, ResidualLoopBB);
+
+      ResidualLoopPhi->addIncoming(ResidualIndex, ResidualLoopBB);
+      ResidualLoopPhi->addIncoming(CopyLen, CopyBackwardsBB);
+
+      // How to get to the residual:
+      BranchInst::Create(IntermediateBB, ResidualLoopBB, SkipResidualCondition,
+                         ThenTerm->getIterator());
+      ThenTerm->eraseFromParent();
+
+      PredBB = IntermediateBB;
+    }
+
+    // main loop
+    IRBuilder<> MainLoopBuilder(MainLoopBB);
+    PHINode *MainLoopPhi = MainLoopBuilder.CreatePHI(ILengthType, 0);
+    Value *MainIndex =
+        MainLoopBuilder.CreateSub(MainLoopPhi, CILoopOpSize, "bwd_main_index");
+    Value *LoadGEP =
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, MainIndex);
+    Value *Element = MainLoopBuilder.CreateAlignedLoad(
+        LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
+    Value *StoreGEP =
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, MainIndex);
+    MainLoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
+                                       DstIsVolatile);
+    MainLoopBuilder.CreateCondBr(MainLoopBuilder.CreateICmpEQ(MainIndex, Zero),
+                                 ExitBB, MainLoopBB);
+    MainLoopPhi->addIncoming(MainIndex, MainLoopBB);
+    MainLoopPhi->addIncoming(RuntimeLoopBytes, PredBB);
+
+    // How to get to the main loop:
+    Instruction *PredBBTerm = PredBB->getTerminator();
+    BranchInst::Create(ExitBB, MainLoopBB, SkipMainCondition,
+                       PredBBTerm->getIterator());
+    PredBBTerm->eraseFromParent();
+  }
 
   // Copying forward.
-  BasicBlock *FwdLoopBB =
-    BasicBlock::Create(F->getContext(), "copy_forward_loop", F, ExitBB);
-  IRBuilder<> FwdLoopBuilder(FwdLoopBB);
-  PHINode *FwdCopyPhi = FwdLoopBuilder.CreatePHI(TypeOfCopyLen, 0, "index_ptr");
-  Value *SrcGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, FwdCopyPhi);
-  Value *FwdElement =
-      FwdLoopBuilder.CreateAlignedLoad(EltTy, SrcGEP, PartSrcAlign, "element");
-  Value *DstGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, FwdCopyPhi);
-  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign);
-  Value *FwdIndexPtr = FwdLoopBuilder.CreateAdd(
-      FwdCopyPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_increment");
-  FwdLoopBuilder.CreateCondBr(FwdLoopBuilder.CreateICmpEQ(FwdIndexPtr, CopyLen),
-                              ExitBB, FwdLoopBB);
-  FwdCopyPhi->addIncoming(FwdIndexPtr, FwdLoopBB);
-  FwdCopyPhi->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), CopyForwardBB);
+  // main loop
+  {
+    BasicBlock *MainLoopBB =
+        BasicBlock::Create(F->getContext(), "memmove_fwd_main_loop", F, ExitBB);
+    IRBuilder<> MainLoopBuilder(MainLoopBB);
+    PHINode *MainLoopPhi =
+        MainLoopBuilder.CreatePHI(ILengthType, 0, "fwd_main_index");
+    Value *LoadGEP =
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, MainLoopPhi);
+    Value *Element = MainLoopBuilder.CreateAlignedLoad(
+        LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
+    Value *StoreGEP =
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, MainLoopPhi);
+    MainLoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
+                                       DstIsVolatile);
+    Value *MainIndex = MainLoopBuilder.CreateAdd(MainLoopPhi, CILoopOpSize);
+    MainLoopPhi->addIncoming(MainIndex, MainLoopBB);
+    MainLoopPhi->addIncoming(Zero, CopyForwardBB);
 
-  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm);
-  ElseTerm->eraseFromParent();
+    Instruction *CopyFwdBBTerm = CopyForwardBB->getTerminator();
+    BasicBlock *SuccessorBB = ExitBB;
+    if (RequiresResidual)
+      SuccessorBB =
+          BasicBlock::Create(F->getContext(), "memmove_fwd_middle", F, ExitBB);
+
+    // leaving or staying in the main loop
+    MainLoopBuilder.CreateCondBr(
+        MainLoopBuilder.CreateICmpEQ(MainIndex, RuntimeLoopBytes), SuccessorBB,
+        MainLoopBB);
+
+    // getting in or skipping the main loop
+    BranchInst::Create(SuccessorBB, MainLoopBB, SkipMainCondition,
+                       CopyFwdBBTerm->getIterator());
+    CopyFwdBBTerm->eraseFromParent();
+
+    if (RequiresResidual) {
+      BasicBlock *IntermediateBB = SuccessorBB;
+      IRBuilder<> IntermediateBuilder(IntermediateBB);
+      BasicBlock *ResidualLoopBB = BasicBlock::Create(
+          F->getContext(), "memmove_fwd_residual_loop", F, ExitBB);
+      IntermediateBuilder.CreateCondBr(SkipResidualCondition, ExitBB,
+                                       ResidualLoopBB);
+
+      // Residual loop
+      IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
+      PHINode *ResidualLoopPhi =
+          ResidualLoopBuilder.CreatePHI(ILengthType, 0, "fwd_residual_index");
+      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
+                                                             ResidualLoopPhi);
+      Value *Element = ResidualLoopBuilder.CreateAlignedLoad(
+          ResidualLoopOpType, LoadGEP, ResidualSrcAlign, SrcIsVolatile,
+          "element");
+      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
+                                                              ResidualLoopPhi);
+      ResidualLoopBuilder.CreateAlignedStore(Element, StoreGEP,
+                                             ResidualDstAlign, DstIsVolatile);
+      Value *ResidualIndex =
+          ResidualLoopBuilder.CreateAdd(ResidualLoopPhi, CIResidualLoopOpSize);
+      ResidualLoopBuilder.CreateCondBr(
+          ResidualLoopBuilder.CreateICmpEQ(ResidualIndex, CopyLen), ExitBB,
+          ResidualLoopBB);
+      ResidualLoopPhi->addIncoming(ResidualIndex, ResidualLoopBB);
+      ResidualLoopPhi->addIncoming(RuntimeLoopBytes, IntermediateBB);
+    }
+  }
+}
+
+// Similar to createMemMoveLoopUnknownSize, only the trip counts are computed at
+// compile time, obsolete loops and branches are omitted, and the residual code
+// is straight-line code instead of a loop.
+static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
+                                       Value *SrcAddr, Value *DstAddr,
+                                       ConstantInt *CopyLen, Align SrcAlign,
+                                       Align DstAlign, bool SrcIsVolatile,
+                                       bool DstIsVolatile,
+                                       const TargetTransformInfo &TTI) {
+  // No need to expand zero length moves.
+  if (CopyLen->isZero())
+    return;
+
+  Type *TypeOfCopyLen = CopyLen->getType();
+  BasicBlock *OrigBB = InsertBefore->getParent();
+  Function *F = OrigBB->getParent();
+  const DataLayout &DL = F->getDataLayout();
+  LLVMContext &Ctx = OrigBB->getContext();
+  unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
+
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
+                                                   SrcAlign, DstAlign);
+  unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  Type *Int8Type = Type::getInt8Ty(Ctx);
+
+  // Calculate the loop trip count and remaining bytes to copy after the loop.
+  uint64_t BytesCopiedInLoop = alignDown(CopyLen->getZExtValue(), LoopOpSize);
+  uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopiedInLoop;
+
+  IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
+  ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
+  ConstantInt *LoopBound = ConstantInt::get(ILengthType, BytesCopiedInLoop);
+  ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
+
+  IRBuilder<> PLBuilder(InsertBefore);
+
+  auto [CmpSrcAddr, CmpDstAddr] =
+      tryInsertCastToCommonAddrSpace(PLBuilder, SrcAddr, DstAddr, TTI);
+  Value *PtrCompare =
+      PLBuilder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_src_dst");
+  Instruction *ThenTerm, *ElseTerm;
+  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(),
+                                &ThenTerm, &ElseTerm);
+
+  BasicBlock *CopyBackwardsBB = ThenTerm->getParent();
+  BasicBlock *CopyForwardBB = ElseTerm->getParent();
+  BasicBlock *ExitBB = InsertBefore->getParent();
+  ExitBB->setName("memmove_done");
+
+  Align PartSrcAlign(commonAlignment(SrcAlign, LoopOpSize));
+  Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
+
+  // Helper function to generate a load/store pair of a given type in the
+  // residual. Used in the forward and backward branches.
+  auto GenerateResidualLdStPair = [&](Type *OpTy, IRBuilderBase &Builder,
+                                      uint64_t &BytesCopied) {
+    Align ResSrcAlign(commonAlignment(SrcAlign, BytesCopied));
+    Align ResDstAlign(commonAlignment(DstAlign, BytesCopied));
+
+    unsigned OperandSize = DL.getTypeStoreSize(OpTy);
+
+    // If we used LoopOpType as GEP element type, we would iterate over the
+    // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,
+    // we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore, use
+    // byte offsets computed from the TypeStoreSize.
+    Value *SrcGEP = Builder.CreateInBoundsGEP(
+        Int8Type, SrcAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
+    LoadInst *Load =
+        Builder.CreateAlignedLoad(OpTy, SrcGEP, ResSrcAlign, SrcIsVolatile);
+    Value *DstGEP = Builder.CreateInBoundsGEP(
+        Int8Type, DstAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
+    Builder.CreateAlignedStore(Load, DstGEP, ResDstAlign, DstIsVolatile);
+    BytesCopied += OperandSize;
+  };
+
+  // Copying backwards.
+  if (RemainingBytes != 0) {
+    CopyBackwardsBB->setName("memmove_bwd_residual");
+    uint64_t BytesCopied = BytesCopiedInLoop;
+
+    // Residual code is required to move the remaining bytes. We need the same
+    // instructions as in the forward case, only in reverse. So we generate code
+    // the same way, except that we change the IRBuilder insert point for each
+    // load/store pair so that each one is inserted before the previous one
+    // instead of after it.
+    IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHI());
+    SmallVector<Type *, 5> RemainingOps;
+    TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
+                                          SrcAS, DstAS, PartSrcAlign,
+                                          PartDstAlign);
+    for (auto *OpTy : RemainingOps) {
+      // reverse the order of the emitted operations
+      BwdResBuilder.SetInsertPoint(CopyBackwardsBB->getFirstNonPHI());
+      GenerateResidualLdStPair(OpTy, BwdResBuilder, BytesCopied);
+    }
+  }
+  if (BytesCopiedInLoop != 0) {
+    BasicBlock *LoopBB = CopyBackwardsBB;
+    BasicBlock *PredBB = OrigBB;
+    if (RemainingBytes != 0) {
+      // if we introduce residual code, it needs its separate BB
+      LoopBB = CopyBackwardsBB->splitBasicBlock(
+          CopyBackwardsBB->getTerminator(), "memmove_bwd_loop");
+      PredBB = CopyBackwardsBB;
+    } else {
+      CopyBackwardsBB->setName("memmove_bwd_loop");
+    }
+    IRBuilder<> LoopBuilder(LoopBB->getTerminator());
+    PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0);
+    Value *Index = LoopBuilder.CreateSub(LoopPhi, CILoopOpSize, "bwd_index");
+    Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, Index);
+    Value *Element = LoopBuilder.CreateAlignedLoad(
+        LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
+    Value *StoreGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, Index);
+    LoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
+                                   DstIsVolatile);
+
+    // Replace the unconditional branch introduced by
+    // SplitBlockAndInsertIfThenElse to turn LoopBB into a loop.
+    Instruction *UncondTerm = LoopBB->getTerminator();
+    LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpEQ(Index, Zero), ExitBB,
+                             LoopBB);
+    UncondTerm->eraseFromParent();
+
+    LoopPhi->addIncoming(Index, LoopBB);
+    LoopPhi->addIncoming(LoopBound, PredBB);
+  }
+
+  // Copying forward.
+  BasicBlock *FwdResidualBB = CopyForwardBB;
+  if (BytesCopiedInLoop != 0) {
+    CopyForwardBB->setName("memmove_fwd_loop");
+    BasicBlock *LoopBB = CopyForwardBB;
+    BasicBlock *SuccBB = ExitBB;
+    if (RemainingBytes != 0) {
+      // if we introduce residual code, it needs its separate BB
+      SuccBB = CopyForwardBB->splitBasicBlock(CopyForwardBB->getTerminator(),
+                                              "memmove_fwd_residual");
+      FwdResidualBB = SuccBB;
+    }
+    IRBuilder<> LoopBuilder(LoopBB->getTerminator());
+    PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0, "fwd_index");
+    Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopPhi);
+    Value *Element = LoopBuilder.CreateAlignedLoad(
+        LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
+    Value *StoreGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LoopPhi);
+    LoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
+                                   DstIsVolatile);
+    Value *Index = LoopBuilder.CreateAdd(LoopPhi, CILoopOpSize);
+    LoopPhi->addIncoming(Index, LoopBB);
+    LoopPhi->addIncoming(Zero, OrigBB);
+
+    // Replace the unconditional branch to turn LoopBB into a loop.
+    Instruction *UncondTerm = LoopBB->getTerminator();
+    LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpEQ(Index, LoopBound), SuccBB,
+                             LoopBB);
+    UncondTerm->eraseFromParent();
+  }
+
+  if (RemainingBytes != 0) {
+    uint64_t BytesCopied = BytesCopiedInLoop;
+
+    // Residual code is required to move the remaining bytes. In the forward
+    // case, we emit it in the normal order.
+    IRBuilder<> FwdResBuilder(FwdResidualBB->getTerminator());
+    SmallVector<Type *, 5> RemainingOps;
+    TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
+                                          SrcAS, DstAS, PartSrcAlign,
+                                          PartDstAlign);
+    for (auto *OpTy : RemainingOps)
+      GenerateResidualLdStPair(OpTy, FwdResBuilder, BytesCopied);
+  }
 }
 
 static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
@@ -438,7 +830,7 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   BasicBlock *NewBB =
       OrigBB->splitBasicBlock(InsertBefore, "split");
   BasicBlock *LoopBB
@@ -474,8 +866,8 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
 template <typename T>
 static bool canOverlap(MemTransferBase<T> *Memcpy, ScalarEvolution *SE) {
   if (SE) {
-    auto *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
-    auto *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
+    const SCEV *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
+    const SCEV *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
     if (SE->isKnownPredicateAt(CmpInst::ICMP_NE, SrcSCEV, DestSCEV, Memcpy))
       return false;
   }
@@ -545,11 +937,8 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
       return true;
     }
 
-    if (TTI.isValidAddrSpaceCast(DstAS, SrcAS))
-      DstAddr = CastBuilder.CreateAddrSpaceCast(DstAddr, SrcAddr->getType());
-    else if (TTI.isValidAddrSpaceCast(SrcAS, DstAS))
-      SrcAddr = CastBuilder.CreateAddrSpaceCast(SrcAddr, DstAddr->getType());
-    else {
+    if (!(TTI.isValidAddrSpaceCast(DstAS, SrcAS) ||
+          TTI.isValidAddrSpaceCast(SrcAS, DstAS))) {
       // We don't know generically if it's legal to introduce an
       // addrspacecast. We need to know either if it's legal to insert an
       // addrspacecast, or if the address spaces cannot alias.
@@ -560,9 +949,15 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
     }
   }
 
-  createMemMoveLoop(
-      /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CopyLen, SrcAlign, DstAlign,
-      SrcIsVolatile, DstIsVolatile, TTI);
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(CopyLen)) {
+    createMemMoveLoopKnownSize(
+        /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CI, SrcAlign, DstAlign,
+        SrcIsVolatile, DstIsVolatile, TTI);
+  } else {
+    createMemMoveLoopUnknownSize(
+        /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CopyLen, SrcAlign, DstAlign,
+        SrcIsVolatile, DstIsVolatile, TTI);
+  }
   return true;
 }
 
@@ -572,6 +967,15 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
                    /* CopyLen */ Memset->getLength(),
                    /* SetValue */ Memset->getValue(),
                    /* Alignment */ Memset->getDestAlign().valueOrOne(),
+                   Memset->isVolatile());
+}
+
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
+  createMemSetLoop(/* InsertBefore=*/Memset,
+                   /* DstAddr=*/Memset->getRawDest(),
+                   /* CopyLen=*/Memset->getLength(),
+                   /* SetValue=*/Memset->getValue(),
+                   /* Alignment=*/Memset->getDestAlign().valueOrOne(),
                    Memset->isVolatile());
 }
 

@@ -43,7 +43,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -621,32 +620,46 @@ struct FragmentCompiler {
 #else
     static llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags;
 #endif
-    auto Filters = std::make_shared<std::vector<llvm::Regex>>();
-    for (auto &HeaderPattern : F.IgnoreHeader) {
-      // Anchor on the right.
-      std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
-      llvm::Regex CompiledRegex(AnchoredPattern, Flags);
-      std::string RegexError;
-      if (!CompiledRegex.isValid(RegexError)) {
-        diag(Warning,
-             llvm::formatv("Invalid regular expression '{0}': {1}",
-                           *HeaderPattern, RegexError)
-                 .str(),
-             HeaderPattern.Range);
-        continue;
+    std::shared_ptr<std::vector<llvm::Regex>> Filters;
+    if (!F.IgnoreHeader.empty()) {
+      Filters = std::make_shared<std::vector<llvm::Regex>>();
+      for (auto &HeaderPattern : F.IgnoreHeader) {
+        // Anchor on the right.
+        std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
+        llvm::Regex CompiledRegex(AnchoredPattern, Flags);
+        std::string RegexError;
+        if (!CompiledRegex.isValid(RegexError)) {
+          diag(Warning,
+               llvm::formatv("Invalid regular expression '{0}': {1}",
+                             *HeaderPattern, RegexError)
+                   .str(),
+               HeaderPattern.Range);
+          continue;
+        }
+        Filters->push_back(std::move(CompiledRegex));
       }
-      Filters->push_back(std::move(CompiledRegex));
     }
-    if (Filters->empty())
+    // Optional to override the resulting AnalyzeAngledIncludes
+    // only if it's explicitly set in the current fragment.
+    // Otherwise it's inherited from parent fragment.
+    std::optional<bool> AnalyzeAngledIncludes;
+    if (F.AnalyzeAngledIncludes.has_value())
+      AnalyzeAngledIncludes = **F.AnalyzeAngledIncludes;
+    if (!Filters && !AnalyzeAngledIncludes.has_value())
       return;
-    auto Filter = [Filters](llvm::StringRef Path) {
-      for (auto &Regex : *Filters)
-        if (Regex.match(Path))
-          return true;
-      return false;
-    };
-    Out.Apply.push_back([Filter](const Params &, Config &C) {
-      C.Diagnostics.Includes.IgnoreHeader.emplace_back(Filter);
+    Out.Apply.push_back([Filters = std::move(Filters),
+                         AnalyzeAngledIncludes](const Params &, Config &C) {
+      if (Filters) {
+        auto Filter = [Filters](llvm::StringRef Path) {
+          for (auto &Regex : *Filters)
+            if (Regex.match(Path))
+              return true;
+          return false;
+        };
+        C.Diagnostics.Includes.IgnoreHeader.emplace_back(std::move(Filter));
+      }
+      if (AnalyzeAngledIncludes.has_value())
+        C.Diagnostics.Includes.AnalyzeAngledIncludes = *AnalyzeAngledIncludes;
     });
   }
 
@@ -656,6 +669,21 @@ struct FragmentCompiler {
           [AllScopes(**F.AllScopes)](const Params &, Config &C) {
             C.Completion.AllScopes = AllScopes;
           });
+    }
+    if (F.ArgumentLists) {
+      if (auto Val =
+              compileEnum<Config::ArgumentListsPolicy>("ArgumentLists",
+                                                       *F.ArgumentLists)
+                  .map("None", Config::ArgumentListsPolicy::None)
+                  .map("OpenDelimiter",
+                       Config::ArgumentListsPolicy::OpenDelimiter)
+                  .map("Delimiters", Config::ArgumentListsPolicy::Delimiters)
+                  .map("FullPlaceholders",
+                       Config::ArgumentListsPolicy::FullPlaceholders)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.ArgumentLists = *Val;
+        });
     }
   }
 
@@ -689,6 +717,11 @@ struct FragmentCompiler {
       Out.Apply.push_back([Value(**F.BlockEnd)](const Params &, Config &C) {
         C.InlayHints.BlockEnd = Value;
       });
+    if (F.DefaultArguments)
+      Out.Apply.push_back(
+          [Value(**F.DefaultArguments)](const Params &, Config &C) {
+            C.InlayHints.DefaultArguments = Value;
+          });
     if (F.TypeNameLimit)
       Out.Apply.push_back(
           [Value(**F.TypeNameLimit)](const Params &, Config &C) {

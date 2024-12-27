@@ -11,7 +11,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 
@@ -71,6 +70,8 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TOCL, SignAndSizeForHalf16};
     case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForHalf16};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
+      return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForHalf16};
     }
   } break;
   case PPC::fixup_ppc_half16ds:
@@ -86,6 +87,8 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TOCL, 15};
     case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, 15};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
+      return {XCOFF::RelocationType::R_TLS_LD, 15};
     }
   } break;
   case PPC::fixup_ppc_br24:
@@ -116,6 +119,10 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TLS_IE, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForFKData};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
+      return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForFKData};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSML:
+      return {XCOFF::RelocationType::R_TLSML, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_None:
       return {XCOFF::RelocationType::R_POS, SignAndSizeForFKData};
     }

@@ -3,13 +3,13 @@
 ; RUN:   | FileCheck -check-prefix=NOCMOV %s
 ; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-NOZICOND %s
-; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+experimental-zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-ZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+experimental-zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-ZICOND %s
 
 ; The conditional move optimization in sifive-p450 requires that only a
@@ -87,8 +87,8 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; NOCMOV-NEXT:    seqz a4, a4
 ; NOCMOV-NEXT:    addi a4, a4, -1
 ; NOCMOV-NEXT:    and a1, a1, a4
-; NOCMOV-NEXT:    xor a0, a0, a1
 ; NOCMOV-NEXT:    and a3, a3, a4
+; NOCMOV-NEXT:    xor a0, a0, a1
 ; NOCMOV-NEXT:    xor a2, a2, a3
 ; NOCMOV-NEXT:    addw a0, a0, a2
 ; NOCMOV-NEXT:    ret
@@ -96,16 +96,16 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; CMOV-LABEL: test3:
 ; CMOV:       # %bb.0:
 ; CMOV-NEXT:    xor a1, a1, a0
+; CMOV-NEXT:    xor a3, a3, a2
 ; CMOV-NEXT:    bnez a4, .LBB2_2
 ; CMOV-NEXT:  # %bb.1:
 ; CMOV-NEXT:    mv a1, a0
 ; CMOV-NEXT:  .LBB2_2:
-; CMOV-NEXT:    xor a0, a2, a3
 ; CMOV-NEXT:    bnez a4, .LBB2_4
 ; CMOV-NEXT:  # %bb.3:
-; CMOV-NEXT:    mv a0, a2
+; CMOV-NEXT:    mv a3, a2
 ; CMOV-NEXT:  .LBB2_4:
-; CMOV-NEXT:    addw a0, a0, a1
+; CMOV-NEXT:    addw a0, a1, a3
 ; CMOV-NEXT:    ret
 ;
 ; SHORT_FORWARD-LABEL: test3:

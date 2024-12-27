@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-gnu -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-gnu -verify %s -fexperimental-new-constant-interpreter
 
 #if !__has_extension(datasizeof)
 #  error "Expected datasizeof extension"
@@ -51,3 +52,11 @@ struct S {
 };
 
 static_assert(S{}.i == 9);
+
+namespace GH80284 {
+struct Bar; // expected-note{{forward declaration}}
+struct Foo {
+  Bar x; // expected-error{{field has incomplete type}}
+};
+constexpr int a = __datasizeof(Foo);
+}

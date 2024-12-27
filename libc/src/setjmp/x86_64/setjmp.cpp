@@ -6,51 +6,66 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/offsetof-macro.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid file include"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
-  register __UINT64_TYPE__ rbx __asm__("rbx");
-  register __UINT64_TYPE__ r12 __asm__("r12");
-  register __UINT64_TYPE__ r13 __asm__("r13");
-  register __UINT64_TYPE__ r14 __asm__("r14");
-  register __UINT64_TYPE__ r15 __asm__("r15");
+#ifdef __i386__
+[[gnu::naked]]
+LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
+  asm(R"(
+      mov 4(%%esp), %%eax
 
-  // We want to store the register values as is. So, we will suppress the
-  // compiler warnings about the uninitialized variables declared above.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuninitialized"
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->rbx) : "r"(rbx) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r12) : "r"(r12) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r13) : "r"(r13) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r14) : "r"(r14) :);
-  LIBC_INLINE_ASM("mov %1, %0\n\t" : "=m"(buf->r15) : "r"(r15) :);
-#pragma GCC diagnostic pop
+      mov %%ebx, %c[ebx](%%eax)
+      mov %%esi, %c[esi](%%eax)
+      mov %%edi, %c[edi](%%eax)
+      mov %%ebp, %c[ebp](%%eax)
 
-  // We want the rbp of the caller, which is what __builtin_frame_address(1)
-  // should return. But, compilers generate a warning that calling
-  // __builtin_frame_address with non-zero argument is unsafe. So, we use
-  // the knowledge of the x86_64 ABI to fetch the callers rbp. As per the ABI,
-  // the rbp of the caller is pushed on to the stack and then new top is saved
-  // in this function's rbp. So, we fetch it from location at which this
-  // functions's rbp is pointing.
-  buf->rbp = *reinterpret_cast<__UINTPTR_TYPE__ *>(__builtin_frame_address(0));
+      lea 4(%%esp), %%ecx
+      mov %%ecx, %c[esp](%%eax)
 
-  // The callers stack address is exactly 2 pointer widths ahead of the current
-  // frame pointer - between the current frame pointer and the rsp of the caller
-  // are the return address (pushed by the x86_64 call instruction) and the
-  // previous stack pointer as required by the x86_64 ABI.
-  // The stack pointer is ahead because the stack grows down on x86_64.
-  buf->rsp = reinterpret_cast<__UINTPTR_TYPE__>(__builtin_frame_address(0)) +
-             sizeof(__UINTPTR_TYPE__) * 2;
-  buf->rip = reinterpret_cast<__UINTPTR_TYPE__>(__builtin_return_address(0));
-  return 0;
+      mov (%%esp), %%ecx
+      mov %%ecx, %c[eip](%%eax)
+
+      xorl %%eax, %%eax
+      retl)" ::[ebx] "i"(offsetof(__jmp_buf, ebx)),
+      [esi] "i"(offsetof(__jmp_buf, esi)), [edi] "i"(offsetof(__jmp_buf, edi)),
+      [ebp] "i"(offsetof(__jmp_buf, ebp)), [esp] "i"(offsetof(__jmp_buf, esp)),
+      [eip] "i"(offsetof(__jmp_buf, eip))
+      : "eax", "ecx");
 }
+#else
+[[gnu::naked]]
+LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
+  asm(R"(
+      mov %%rbx, %c[rbx](%%rdi)
+      mov %%rbp, %c[rbp](%%rdi)
+      mov %%r12, %c[r12](%%rdi)
+      mov %%r13, %c[r13](%%rdi)
+      mov %%r14, %c[r14](%%rdi)
+      mov %%r15, %c[r15](%%rdi)
 
-} // namespace LIBC_NAMESPACE
+      lea 8(%%rsp), %%rax
+      mov %%rax, %c[rsp](%%rdi)
+
+      mov (%%rsp), %%rax
+      mov %%rax, %c[rip](%%rdi)
+
+      xorl %%eax, %%eax
+      retq)" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
+      [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
+      [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
+      [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
+      [rip] "i"(offsetof(__jmp_buf, rip))
+      : "rax");
+}
+#endif
+
+} // namespace LIBC_NAMESPACE_DECL

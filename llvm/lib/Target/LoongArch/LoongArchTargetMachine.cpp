@@ -34,9 +34,19 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
+  initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchMergeBaseOffsetOptPass(*PR);
+  initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
-  initializeLoongArchDAGToDAGISelPass(*PR);
+  initializeLoongArchDAGToDAGISelLegacyPass(*PR);
 }
+
+static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
+    "loongarch-enable-dead-defs", cl::Hidden,
+    cl::desc("Enable the pass that removes dead"
+             " definitons and replaces stores to"
+             " them with stores to r0"),
+    cl::init(true));
 
 static cl::opt<bool>
     EnableLoopDataPrefetch("loongarch-enable-loop-data-prefetch", cl::Hidden,
@@ -45,7 +55,7 @@ static cl::opt<bool>
 
 static std::string computeDataLayout(const Triple &TT) {
   if (TT.isArch64Bit())
-    return "e-m:e-p:64:64-i64:64-i128:128-n64-S128";
+    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
   assert(TT.isArch32Bit() && "only LA32 and LA64 are currently supported");
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
@@ -79,9 +89,9 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectiveLoongArchCodeModel(TT, CM), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveLoongArchCodeModel(TT, CM), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }
@@ -142,10 +152,14 @@ public:
   }
 
   void addIRPasses() override;
+  void addCodeGenPrepare() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
+  void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool addRegAssignAndRewriteFast() override;
+  bool addRegAssignAndRewriteOptimized() override;
 };
 } // end namespace
 
@@ -161,9 +175,15 @@ void LoongArchPassConfig::addIRPasses() {
   // pointer values N iterations ahead.
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableLoopDataPrefetch)
     addPass(createLoopDataPrefetchPass());
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
+}
+
+void LoongArchPassConfig::addCodeGenPrepare() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createTypePromotionLegacyPass());
+  TargetPassConfig::addCodeGenPrepare();
 }
 
 bool LoongArchPassConfig::addInstSelector() {
@@ -187,6 +207,30 @@ void LoongArchPassConfig::addPreEmitPass2() {
   addPass(createLoongArchExpandAtomicPseudoPass());
 }
 
+void LoongArchPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  if (TM->getTargetTriple().isLoongArch64()) {
+    addPass(createLoongArchOptWInstrsPass());
+  }
+}
+
 void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchMergeBaseOffsetOptPass());
+}
+
+bool LoongArchPassConfig::addRegAssignAndRewriteFast() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableLoongArchDeadRegisterElimination)
+    addPass(createLoongArchDeadRegisterDefinitionsPass());
+  return TargetPassConfig::addRegAssignAndRewriteFast();
+}
+
+bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableLoongArchDeadRegisterElimination)
+    addPass(createLoongArchDeadRegisterDefinitionsPass());
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }

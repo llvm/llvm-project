@@ -51,27 +51,51 @@ private:
   SmallVector<TemporalProfTraceTy> TemporalProfTraces;
   std::mt19937 RNG;
 
-  // A map to hold memprof data per function. The lower 64 bits obtained from
-  // the md5 hash of the function name is used to index into the map.
-  llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
-      MemProfRecordData;
-  // A map to hold frame id to frame mappings. The mappings are used to
-  // convert IndexedMemProfRecord to MemProfRecords with frame information
-  // inline.
-  llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
+  // The MemProf data.
+  memprof::IndexedMemProfData MemProfData;
 
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
+
+  // Read the vtable names from raw instr profile reader.
+  StringSet<> VTableNames;
 
   // An enum describing the attributes of the profile.
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
+  // Temporary support for writing the previous version of the format, to enable
+  // some forward compatibility. Currently this suppresses the writing of the
+  // new vtable names section and header fields.
+  // TODO: Consider enabling this with future version changes as well, to ease
+  // deployment of newer versions of llvm-profdata.
+  bool WritePrevVersion = false;
+
+  // The MemProf version we should write.
+  memprof::IndexedVersion MemProfVersionRequested;
+
+  // Whether to serialize the full schema.
+  bool MemProfFullSchema;
+
+  // Whether to generated random memprof hotness for testing.
+  bool MemprofGenerateRandomHotness;
+
 public:
+  // For memprof testing, random hotness can be assigned to the contexts if
+  // MemprofGenerateRandomHotness is enabled. The random seed can be either
+  // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
+  // generated in the writer using the current time.
   InstrProfWriter(bool Sparse = false,
                   uint64_t TemporalProfTraceReservoirSize = 0,
-                  uint64_t MaxTemporalProfTraceLength = 0);
+                  uint64_t MaxTemporalProfTraceLength = 0,
+                  bool WritePrevVersion = false,
+                  memprof::IndexedVersion MemProfVersionRequested =
+                      static_cast<memprof::IndexedVersion>(
+                          memprof::MinimumSupportedVersion),
+                  bool MemProfFullSchema = false,
+                  bool MemprofGenerateRandomHotness = false,
+                  unsigned MemprofGenerateRandomHotnessSeed = 0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -84,20 +108,16 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+  void addVTableName(StringRef VTableName) { VTableNames.insert(VTableName); }
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.
   void addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
                                 uint64_t SrcStreamSize);
 
-  /// Add a memprof record for a function identified by its \p Id.
-  void addMemProfRecord(const GlobalValue::GUID Id,
-                        const memprof::IndexedMemProfRecord &Record);
-
-  /// Add a memprof frame identified by the hash of the contents of the frame in
-  /// \p FrameId.
-  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
-                       function_ref<void(Error)> Warn);
+  /// Add the entire MemProfData \p Incoming to the writer context.
+  bool addMemProfData(memprof::IndexedMemProfData Incoming,
+                      function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
@@ -155,7 +175,9 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation) ||
+        testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::LoopEntriesInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
@@ -168,9 +190,17 @@ public:
 
   InstrProfKind getProfileKind() const { return ProfileKind; }
 
-  // Internal interface for testing purpose only.
+  bool hasSingleByteCoverage() const {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
+
+  // Internal interfaces for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);
   void setOutputSparse(bool Sparse);
+  void setMemProfVersionRequested(memprof::IndexedVersion Version) {
+    MemProfVersionRequested = Version;
+  }
+  void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,
@@ -184,7 +214,34 @@ private:
   /// Add \p Trace using reservoir sampling.
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
+  /// Add a memprof record for a function identified by its \p Id.
+  void addMemProfRecord(const GlobalValue::GUID Id,
+                        const memprof::IndexedMemProfRecord &Record);
+
+  /// Add a memprof frame identified by the hash of the contents of the frame in
+  /// \p FrameId.
+  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
+                       function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
+
   Error writeImpl(ProfOStream &OS);
+
+  // Writes known header fields and reserves space for fields whose value are
+  // known only after payloads are written. Returns the start byte offset for
+  // back patching.
+  uint64_t writeHeader(const IndexedInstrProf::Header &header,
+                       const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes binary IDs.
+  Error writeBinaryIds(ProfOStream &OS);
+
+  // Writes compressed vtable names to profiles.
+  Error writeVTableNames(ProfOStream &OS);
 };
 
 } // end namespace llvm

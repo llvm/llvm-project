@@ -58,11 +58,9 @@ define <vscale x 8 x i16> @index_ii_range_combine(i16 %a) {
 ; CHECK-NEXT:    index z0.h, #0, #8
 ; CHECK-NEXT:    orr z0.h, z0.h, #0x2
 ; CHECK-NEXT:    ret
-  %val = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %val1 = shufflevector <vscale x 8 x i16> %val, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %val2 = call <vscale x 8 x i16> @llvm.aarch64.sve.index.nxv8i16(i16 0, i16 2)
-  %val3 = shl <vscale x 8 x i16> %val2, %val1
-  %out = add <vscale x 8 x i16> %val3, %val1
+  %val3 = shl <vscale x 8 x i16> %val2, splat(i16 2)
+  %out = add <vscale x 8 x i16> %val3, splat(i16 2) 
   ret <vscale x 8 x i16> %out
 }
 
@@ -121,10 +119,8 @@ define <vscale x 4 x i32> @index_ir_range_combine(i32 %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.s, #0, w0
 ; CHECK-NEXT:    ret
-  %val = insertelement <vscale x 4 x i32> poison, i32 2, i32 0
-  %val1 = shufflevector <vscale x 4 x i32> %val, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %tmp = call <vscale x 4 x i32> @llvm.aarch64.sve.index.nxv4i32(i32 2, i32 1)
-  %tmp1 = sub <vscale x 4 x i32> %tmp, %val1
+  %tmp1 = sub <vscale x 4 x i32> %tmp, splat(i32 2) 
   %val2 = insertelement <vscale x 4 x i32> poison, i32 %a, i32 0
   %val3 = shufflevector <vscale x 4 x i32> %val2, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %out = mul <vscale x 4 x i32> %tmp1, %val3
@@ -239,10 +235,10 @@ define <vscale x 4 x i32> @index_rr_i32_combine(i32 %a, i32 %b) {
 define <vscale x 4 x i32> @index_rr_i32_not_combine(i32 %a, i32 %b) {
 ; CHECK-LABEL: index_rr_i32_not_combine:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    index z0.s, #0, #1
 ; CHECK-NEXT:    mov z1.s, w0
 ; CHECK-NEXT:    mov z2.s, w1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mla z1.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret

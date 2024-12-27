@@ -16,7 +16,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
@@ -59,6 +59,8 @@ private:
   // Get the libcall(s) corresponding to \p Predicate for operands of \p Size
   // bits.
   FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate, unsigned Size) const;
+
+  const ARMSubtarget &ST;
 };
 } // End llvm namespace.
 #endif

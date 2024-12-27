@@ -13,22 +13,24 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-NEXT:    s_mov_b32 s33, s32
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[18:19], -1
-; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v39, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, -1
-; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword a32, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword a32, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX90A-NEXT:    v_writelane_b32 v40, s16, 2
-; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v40, s16, 4
+; GFX90A-NEXT:    v_writelane_b32 v40, s28, 2
+; GFX90A-NEXT:    v_writelane_b32 v40, s29, 3
 ; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s20
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_writelane_b32 v0, s20, 0
+; GFX90A-NEXT:    v_writelane_b32 v39, s20, 0
 ; GFX90A-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GFX90A-NEXT:    v_accvgpr_write_b32 a32, v0
+; GFX90A-NEXT:    v_accvgpr_write_b32 a32, v39
 ; GFX90A-NEXT:    s_mov_b64 exec, s[28:29]
 ; GFX90A-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-NEXT:    s_add_u32 s16, s16, foo@gotpcrel32@lo+4
@@ -37,21 +39,22 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX90A-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a32
+; GFX90A-NEXT:    v_accvgpr_read_b32 v39, a32
 ; GFX90A-NEXT:    s_mov_b64 exec, s[28:29]
-; GFX90A-NEXT:    v_readlane_b32 s20, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s20, v39, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s20
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX90A-NEXT:    ; kill: killed $vgpr0
-; GFX90A-NEXT:    v_readlane_b32 s4, v40, 2
+; GFX90A-NEXT:    v_readlane_b32 s4, v40, 4
+; GFX90A-NEXT:    v_readlane_b32 s28, v40, 2
+; GFX90A-NEXT:    v_readlane_b32 s29, v40, 3
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
-; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, -1
-; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword a32, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword a32, off, s[0:3], s33 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX90A-NEXT:    s_mov_b32 s33, s4

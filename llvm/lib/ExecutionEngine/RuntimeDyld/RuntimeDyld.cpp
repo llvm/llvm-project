@@ -690,9 +690,12 @@ unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
     if (!(RelSecI == Section))
       continue;
 
-    for (const RelocationRef &Reloc : SI->relocations())
+    for (const RelocationRef &Reloc : SI->relocations()) {
       if (relocationNeedsStub(Reloc))
         StubBufSize += StubSize;
+      if (relocationNeedsDLLImportStub(Reloc))
+        StubBufSize = sizeAfterAddingDLLImportStub(StubBufSize);
+    }
   }
 
   // Get section data size and alignment
@@ -987,6 +990,18 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     // and stubs for branches Thumb - ARM and ARM - Thumb.
     writeBytesUnaligned(0xe51ff004, Addr, 4); // ldr pc, [pc, #-4]
     return Addr + 4;
+  } else if (Arch == Triple::loongarch64) {
+    // lu12i.w  $t0, %abs_hi20(addr)
+    // ori      $t0, $t0, %abs_lo12(addr)
+    // lu32i.d  $t0, %abs64_lo20(addr)
+    // lu52i.d  $t0, $t0, %abs64_lo12(addr)
+    // jr       $t0
+    writeBytesUnaligned(0x1400000c, Addr, 4);
+    writeBytesUnaligned(0x0380018c, Addr + 4, 4);
+    writeBytesUnaligned(0x1600000c, Addr + 8, 4);
+    writeBytesUnaligned(0x0300018c, Addr + 12, 4);
+    writeBytesUnaligned(0x4c000180, Addr + 16, 4);
+    return Addr;
   } else if (IsMipsO32ABI || IsMipsN32ABI) {
     // 0:   3c190000        lui     t9,%hi(addr).
     // 4:   27390000        addiu   t9,t9,%lo(addr).
@@ -1097,8 +1112,7 @@ void RuntimeDyldImpl::reassignSectionAddress(unsigned SectionID,
 
 void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
                                             uint64_t Value) {
-  for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
-    const RelocationEntry &RE = Relocs[i];
+  for (const RelocationEntry &RE : Relocs) {
     // Ignore relocations for sections that were not loaded
     if (RE.SectionID != AbsoluteSymbolSection &&
         Sections[RE.SectionID].getAddress() == nullptr)
@@ -1466,8 +1480,10 @@ void jitLinkForORC(
     return;
   }
 
-  if (auto Err = OnLoaded(*O.getBinary(), *Info, RTDyld.getSymbolTable()))
+  if (auto Err = OnLoaded(*O.getBinary(), *Info, RTDyld.getSymbolTable())) {
     OnEmitted(std::move(O), std::move(Info), std::move(Err));
+    return;
+  }
 
   RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
                                  std::move(O), std::move(Info));

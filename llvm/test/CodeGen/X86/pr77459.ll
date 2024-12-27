@@ -98,7 +98,7 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %ymm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
 ; AVX512-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vpmovd2m %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
@@ -157,7 +157,7 @@ define i16 @reverse_cmp_v16i1(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    vpmovm2w %k0, %ymm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; AVX512-NEXT:    vpermw %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax

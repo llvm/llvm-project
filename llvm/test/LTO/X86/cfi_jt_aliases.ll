@@ -22,9 +22,9 @@
 ; CHECK-FULL-RE-NEXT: FUNC LOCAL DEFAULT {{[0-9]+}} b.cfi_jt
 ; CHECK-FULL-RE-NEXT: FUNC LOCAL DEFAULT {{[0-9]+}} c.cfi_jt
 
-; CHECK-THIN-RE:      FUNC GLOBAL HIDDEN {{[0-9]+}} b.cfi_jt
+; CHECK-THIN-RE:      FUNC GLOBAL HIDDEN {{[0-9]+}} a.cfi_jt
+; CHECK-THIN-RE-NEXT: FUNC GLOBAL HIDDEN {{[0-9]+}} b.cfi_jt
 ; CHECK-THIN-RE-NEXT: FUNC GLOBAL HIDDEN {{[0-9]+}} c.cfi_jt
-; CHECK-THIN-RE-NEXT: FUNC GLOBAL HIDDEN {{[0-9]+}} a.cfi_jt
 
 ; CHECK-FULL-OD:      a.cfi_jt>:
 ; CHECK-FULL-OD:      jmp {{.*}} <a.cfi_jt
@@ -36,15 +36,15 @@
 ; CHECK-FULL-OD:      jmp {{.*}} <c.cfi_jt
 ; CHECK-FULL-OD-NEXT: R_X86_64_PLT32 .Lc$local
 
+; CHECK-THIN-OD:      a.cfi_jt>:
+; CHECK-THIN-OD:      jmp {{.*}} <a.cfi_jt
+; CHECK-THIN-OD-NEXT: R_X86_64_PLT32 a
 ; CHECK-THIN-OD:      b.cfi_jt>:
 ; CHECK-THIN-OD:      jmp {{.*}} <b.cfi_jt
 ; CHECK-THIN-OD-NEXT: R_X86_64_PLT32 b
 ; CHECK-THIN-OD:      c.cfi_jt>:
 ; CHECK-THIN-OD:      jmp {{.*}} <c.cfi_jt
 ; CHECK-THIN-OD-NEXT: R_X86_64_PLT32 c
-; CHECK-THIN-OD:      a.cfi_jt>:
-; CHECK-THIN-OD:      jmp {{.*}} <a.cfi_jt
-; CHECK-THIN-OD-NEXT: R_X86_64_PLT32 a
 
 ; CHECK-USED: @llvm.used = appending global [3 x ptr] [ptr @a.cfi_jt, ptr @b.cfi_jt, ptr @c.cfi_jt], section "llvm.metadata"
 

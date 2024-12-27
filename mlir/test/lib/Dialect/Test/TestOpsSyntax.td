@@ -86,6 +86,17 @@ def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
   }];
 }
 
+// Ops related to OIList primitive
+def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
+  let arguments = (ins UnitProp:$keyword, UnitProp:$otherKeyword,
+                       UnitProp:$diffNameUnitPropKeyword);
+  let assemblyFormat = [{
+    oilist( `keyword` $keyword
+          | `otherKeyword` $otherKeyword
+          | `thirdKeyword` $diffNameUnitPropKeyword) attr-dict
+  }];
+}
+
 def OIListSimple : TEST_Op<"oilist_with_simple_args", [AttrSizedOperandSegments]> {
   let arguments = (ins Optional<AnyType>:$arg0,
                        Optional<AnyType>:$arg1,
@@ -392,6 +403,17 @@ def FormatOptionalUnitAttrNoElide
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
+def FormatOptionalUnitProperty : TEST_Op<"format_optional_unit_property"> {
+  let arguments = (ins UnitProp:$is_optional);
+  let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
+}
+
+def FormatOptionalUnitPropertyNoElide
+    : TEST_Op<"format_optional_unit_property_no_elide"> {
+  let arguments = (ins UnitProp:$is_optional);
+  let assemblyFormat = "($is_optional^)? attr-dict";
+}
+
 def FormatOptionalEnumAttr : TEST_Op<"format_optional_enum_attr"> {
   let arguments = (ins OptionalAttr<SomeI64Enum>:$attr);
   let assemblyFormat = "($attr^)? attr-dict";
@@ -407,6 +429,13 @@ def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
+}
+
+def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
+  let arguments = (ins
+    OptionalProp<StringProp>:$a,
+    DefaultValuedProp<I32Prop, "1">:$b);
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
@@ -632,7 +661,7 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let assemblyFormat = "attr-dict";
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -655,7 +684,7 @@ class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs Variadic<AnyType>:$outs);
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -702,7 +731,7 @@ def FormatInferTypeRegionsOp
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "$region attr-dict";
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
@@ -723,7 +752,7 @@ def FormatInferTypeVariadicOperandsOp
   let results = (outs Variadic<AnyType>:$outs);
   let assemblyFormat = "`(` $a `:` type($a) `)` `(` $b `:` type($b) `)` attr-dict";
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
+    static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {

@@ -173,8 +173,7 @@ bool ARMTargetInfo::supportsThumb() const {
 }
 
 bool ARMTargetInfo::supportsThumb2() const {
-  return CPUAttr.equals("6T2") ||
-         (ArchVersion >= 7 && !CPUAttr.equals("8M_BASE"));
+  return CPUAttr == "6T2" || (ArchVersion >= 7 && CPUAttr != "8M_BASE");
 }
 
 StringRef ARMTargetInfo::getCPUAttr() const {
@@ -229,6 +228,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_4A";
   case llvm::ARM::ArchKind::ARMV9_5A:
     return "9_5A";
+  case llvm::ARM::ArchKind::ARMV9_6A:
+    return "9_6A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -312,7 +313,9 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     switch (Triple.getEnvironment()) {
     case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::OpenHOS:
@@ -509,7 +512,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SHA2 = 0;
   AES = 0;
   DSP = 0;
-  Unaligned = 1;
+  HasUnalignedAccess = true;
   SoftFloat = false;
   // Note that SoftFloatABI is initialized in our constructor.
   HWDiv = 0;
@@ -576,7 +579,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
         return false;
       }
     } else if (Feature == "+strict-align") {
-      Unaligned = 0;
+      HasUnalignedAccess = false;
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
@@ -785,7 +788,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_ARCH_PROFILE", "'" + CPUProfile + "'");
 
   // ACLE 6.4.3 Unaligned access supported in hardware
-  if (Unaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   // ACLE 6.4.4 LDREX/STREX
@@ -892,6 +895,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
+  case llvm::ARM::ArchKind::ARMV9_6A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1061,6 +1065,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
+  case llvm::ARM::ArchKind::ARMV9_6A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
@@ -1162,7 +1167,7 @@ bool ARMTargetInfo::validateAsmConstraint(
     return true;
   case 'j': // An immediate integer between 0 and 65535 (valid for MOVW)
     // only available in ARMv6T2 and above
-    if (CPUAttr.equals("6T2") || ArchVersion >= 7) {
+    if (CPUAttr == "6T2" || ArchVersion >= 7) {
       Info.setRequiresImmediate(0, 65535);
       return true;
     }
@@ -1492,20 +1497,4 @@ void DarwinARMTargetInfo::getOSDefines(const LangOptions &Opts,
                                        const llvm::Triple &Triple,
                                        MacroBuilder &Builder) const {
   getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
-}
-
-RenderScript32TargetInfo::RenderScript32TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
-    : ARMleTargetInfo(llvm::Triple("armv7", Triple.getVendorName(),
-                                   Triple.getOSName(),
-                                   Triple.getEnvironmentName()),
-                      Opts) {
-  IsRenderScriptTarget = true;
-  LongWidth = LongAlign = 64;
-}
-
-void RenderScript32TargetInfo::getTargetDefines(const LangOptions &Opts,
-                                                MacroBuilder &Builder) const {
-  Builder.defineMacro("__RENDERSCRIPT__");
-  ARMleTargetInfo::getTargetDefines(Opts, Builder);
 }

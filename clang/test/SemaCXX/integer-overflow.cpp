@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu
 
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
+
+
 typedef unsigned long long uint64_t;
 typedef unsigned int uint32_t;
 
@@ -13,157 +17,157 @@ uint64_t f0(uint64_t);
 uint64_t f1(uint64_t, uint32_t);
 uint64_t f2(uint64_t, ...);
 
-static const uint64_t overflow = 1 * 4608 * 1024 * 1024; // expected-warning {{overflow in expression; result is 536870912 with type 'int'}}
+static const uint64_t overflow = 1 * 4608 * 1024 * 1024; // expected-warning {{overflow in expression; result is 536'870'912 with type 'int'}}
 
 uint64_t check_integer_overflows(int i) { //expected-note 0+{{declared here}}
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   uint64_t overflow = 4608 * 1024 * 1024,
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
            overflow2 = (uint64_t)(4608 * 1024 * 1024),
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
            overflow3 = (uint64_t)(4608 * 1024 * 1024 * i),
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
            overflow4 =  (1ULL * ((4608) * ((1024) * (1024))) + 2ULL),
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
            overflow5 = static_cast<uint64_t>(4608 * 1024 * 1024),
-// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 2{{overflow in expression; result is 536'870'912 with type 'int'}}
            multi_overflow = (uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   overflow += overflow2 = overflow3 = (uint64_t)(4608 * 1024 * 1024);
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   overflow += overflow2 = overflow3 = 4608 * 1024 * 1024;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   overflow += overflow2 = overflow3 = static_cast<uint64_t>(4608 * 1024 * 1024);
 
   uint64_t not_overflow = 4608 * 1024 * 1024ULL;
   uint64_t not_overflow2 = (1ULL * ((uint64_t)(4608) * (1024 * 1024)) + 2ULL);
 
-// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 2{{overflow in expression; result is 536'870'912 with type 'int'}}
   overflow = 4608 * 1024 * 1024 ?  4608 * 1024 * 1024 : 0;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   overflow =  0 ? 0 : 4608 * 1024 * 1024;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   if (4608 * 1024 * 1024)
     return 0;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   if ((uint64_t)(4608 * 1024 * 1024))
     return 1;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   if (static_cast<uint64_t>(4608 * 1024 * 1024))
     return 1;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   if ((uint64_t)(4608 * 1024 * 1024))
     return 2;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   if ((uint64_t)(4608 * 1024 * 1024 * i))
     return 3;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   if ((1ULL * ((4608) * ((1024) * (1024))) + 2ULL))
     return 4;
 
-// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 2{{overflow in expression; result is 536'870'912 with type 'int'}}
   if ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024)))
     return 5;
 
 #if __cplusplus < 201103L
   switch (i) {
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   case 4608 * 1024 * 1024:
     return 6;
-// expected-warning@+1 {{overflow in expression; result is 537919488 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 537'919'488 with type 'int'}}
   case (uint64_t)(4609 * 1024 * 1024):
     return 7;
-// expected-warning@+1 {{overflow in expression; result is 537919488 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 537'919'488 with type 'int'}}
   case 1 + static_cast<uint64_t>(4609 * 1024 * 1024):
     return 7;
 // expected-error@+1 {{expression is not an integral constant expression}}
   case ((uint64_t)(4608 * 1024 * 1024 * i)):
     return 8;
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   case ((1ULL * ((4608) * ((1024) * (1024))) + 2ULL)):
     return 9;
-// expected-warning@+2 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+2 2{{overflow in expression; result is 536'870'912 with type 'int'}}
 // expected-warning@+1 {{overflow converting case value to switch condition type (288230376151711744 to 0)}}
   case ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024))):
     return 10;
   }
 #endif
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   while (4608 * 1024 * 1024);
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   while ((uint64_t)(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   while (static_cast<uint64_t>(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   while ((uint64_t)(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   while ((uint64_t)(4608 * 1024 * 1024 * i));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   while ((1ULL * ((4608) * ((1024) * (1024))) + 2ULL));
 
-// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 2{{overflow in expression; result is 536'870'912 with type 'int'}}
   while ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024)));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while (4608 * 1024 * 1024);
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while ((uint64_t)(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while (static_cast<uint64_t>(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while ((uint64_t)(4608 * 1024 * 1024));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while ((uint64_t)(4608 * 1024 * 1024 * i));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while ((1ULL * ((4608) * ((1024) * (1024))) + 2ULL));
 
-// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 2{{overflow in expression; result is 536'870'912 with type 'int'}}
   do { } while ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024)));
 
-// expected-warning@+3 {{overflow in expression; result is 536870912 with type 'int'}}
-// expected-warning@+3 {{overflow in expression; result is 536870912 with type 'int'}}
-// expected-warning@+3 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+3 {{overflow in expression; result is 536'870'912 with type 'int'}}
+// expected-warning@+3 {{overflow in expression; result is 536'870'912 with type 'int'}}
+// expected-warning@+3 {{overflow in expression; result is 536'870'912 with type 'int'}}
   for (uint64_t i = 4608 * 1024 * 1024;
        (uint64_t)(4608 * 1024 * 1024);
        i += (uint64_t)(4608 * 1024 * 1024 * i));
 
-// expected-warning@+3 {{overflow in expression; result is 536870912 with type 'int'}}
-// expected-warning@+3 2{{overflow in expression; result is 536870912 with type 'int'}}
-// expected-warning@+3 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+3 {{overflow in expression; result is 536'870'912 with type 'int'}}
+// expected-warning@+3 2{{overflow in expression; result is 536'870'912 with type 'int'}}
+// expected-warning@+3 2{{overflow in expression; result is 536'870'912 with type 'int'}}
   for (uint64_t i = (1ULL * ((4608) * ((1024) * (1024))) + 2ULL);
        ((uint64_t)((uint64_t)(4608 * 1024 * 1024) * (uint64_t)(4608 * 1024 * 1024)));
        i = ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024))));
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   _Complex long long x = 4608 * 1024 * 1024;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   (__real__ x) = 4608 * 1024 * 1024;
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   (__imag__ x) = 4608 * 1024 * 1024;
 
-// expected-warning@+2 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+2 {{overflow in expression; result is 536'870'912 with type 'int'}}
   uint64_t a[10];
   a[4608 * 1024 * 1024] = 1;
 #if __cplusplus < 201103L
@@ -171,22 +175,22 @@ uint64_t check_integer_overflows(int i) { //expected-note 0+{{declared here}}
 // expected-note@-4 {{array 'a' declared here}}
 #endif
 
-// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 2{{overflow in expression; result is 536'870'912 with type 'int'}}
   return ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024)));
 }
 
 void check_integer_overflows_in_function_calls() {
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   (void)f0(4608 * 1024 * 1024);
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   uint64_t x = f0(4608 * 1024 * 1024);
 
-// expected-warning@+2 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+2 {{overflow in expression; result is 536'870'912 with type 'int'}}
   uint64_t (*f0_ptr)(uint64_t) = &f0;
   (void)(*f0_ptr)(4608 * 1024 * 1024);
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   (void)f2(0, f0(4608 * 1024 * 1024));
 }
 
@@ -211,7 +215,7 @@ namespace EvaluationCrashes {
 
 namespace GH31643 {
 void f() {
-  int a = -(1<<31); // expected-warning {{overflow in expression; result is -2147483648 with type 'int'}}
+  int a = -(1<<31); // expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}}
 }
 }
 
@@ -237,9 +241,15 @@ u_ptr<bool> Wrap(int64_t x) {
 int64_t Pass(int64_t x) { return x; }
 
 int m() {
-    int64_t x = Pass(30 * 24 * 60 * 59 * 1000);  // expected-warning {{overflow in expression; result is -1746167296 with type 'int'}}
-    auto r = Wrap(Pass(30 * 24 * 60 * 59 * 1000));  // expected-warning {{overflow in expression; result is -1746167296 with type 'int'}}
+    int64_t x = Pass(30 * 24 * 60 * 59 * 1000);  // expected-warning {{overflow in expression; result is -1'746'167'296 with type 'int'}}
+    auto r = Wrap(Pass(30 * 24 * 60 * 59 * 1000));  // expected-warning {{overflow in expression; result is -1'746'167'296 with type 'int'}}
     return 0;
+}
+}
+
+namespace GH46755 {
+void f() {
+    struct { int v; } &&r = {512 * 1024 * 1024 * 1024}; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
 }
 }
 #endif

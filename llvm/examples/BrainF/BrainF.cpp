@@ -37,7 +37,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Casting.h"
 #include <cstdlib>
 #include <iostream>
 
@@ -68,8 +67,8 @@ void BrainF::header(LLVMContext& C) {
 
   //declare void @llvm.memset.p0i8.i32(i8 *, i8, i32, i1)
   Type *Tys[] = {PointerType::getUnqual(C), Type::getInt32Ty(C)};
-  Function *memset_func = Intrinsic::getDeclaration(module, Intrinsic::memset,
-                                                    Tys);
+  Function *memset_func =
+      Intrinsic::getOrInsertDeclaration(module, Intrinsic::memset, Tys);
 
   //declare i32 @getchar()
   getchar_func =
@@ -440,7 +439,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
       LoadInst *tape_0 = new LoadInst(Int8Ty, head_0, tapereg, testbb);
 
       //%test.%d = icmp eq i8 %tape.%d, 0
-      ICmpInst *test_0 = new ICmpInst(*testbb, ICmpInst::ICMP_EQ, tape_0,
+      ICmpInst *test_0 = new ICmpInst(testbb, ICmpInst::ICMP_EQ, tape_0,
                                     ConstantInt::get(C, APInt(8, 0)), testreg);
 
       //br i1 %test.%d, label %main.%d, label %main.%d

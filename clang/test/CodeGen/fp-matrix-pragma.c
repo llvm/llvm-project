@@ -1,4 +1,5 @@
 // RUN: %clang -emit-llvm -S -fenable-matrix -mllvm -disable-llvm-optzns %s -o - | FileCheck %s
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 typedef float fx2x2_t __attribute__((matrix_type(2, 2)));
 typedef int ix2x2_t __attribute__((matrix_type(2, 2)));

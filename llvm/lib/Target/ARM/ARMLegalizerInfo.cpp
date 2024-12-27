@@ -25,47 +25,11 @@
 using namespace llvm;
 using namespace LegalizeActions;
 
-/// FIXME: The following static functions are SizeChangeStrategy functions
-/// that are meant to temporarily mimic the behaviour of the old legalization
-/// based on doubling/halving non-legal types as closely as possible. This is
-/// not entirly possible as only legalizing the types that are exactly a power
-/// of 2 times the size of the legal types would require specifying all those
-/// sizes explicitly.
-/// In practice, not specifying those isn't a problem, and the below functions
-/// should disappear quickly as we add support for legalizing non-power-of-2
-/// sized types further.
-static void addAndInterleaveWithUnsupported(
-    LegacyLegalizerInfo::SizeAndActionsVec &result,
-    const LegacyLegalizerInfo::SizeAndActionsVec &v) {
-  for (unsigned i = 0; i < v.size(); ++i) {
-    result.push_back(v[i]);
-    if (i + 1 < v[i].first && i + 1 < v.size() &&
-        v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, LegacyLegalizeActions::Unsupported});
-  }
-}
-
-static LegacyLegalizerInfo::SizeAndActionsVec
-widen_8_16(const LegacyLegalizerInfo::SizeAndActionsVec &v) {
-  assert(v.size() >= 1);
-  assert(v[0].first > 17);
-  LegacyLegalizerInfo::SizeAndActionsVec result = {
-      {1, LegacyLegalizeActions::Unsupported},
-      {8, LegacyLegalizeActions::WidenScalar},
-      {9, LegacyLegalizeActions::Unsupported},
-      {16, LegacyLegalizeActions::WidenScalar},
-      {17, LegacyLegalizeActions::Unsupported}};
-  addAndInterleaveWithUnsupported(result, v);
-  auto Largest = result.back().first;
-  result.push_back({Largest + 1, LegacyLegalizeActions::Unsupported});
-  return result;
-}
-
 static bool AEABI(const ARMSubtarget &ST) {
   return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
 }
 
-ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
+ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   using namespace TargetOpcode;
 
   const LLT p0 = LLT::pointer(0, 32);
@@ -118,15 +82,14 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallFor({s32})
         .clampScalar(0, s32, s32);
 
-  for (unsigned Op : {G_SREM, G_UREM}) {
-    LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
-    if (HasHWDivide)
-      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Lower);
-    else if (AEABI(ST))
-      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Custom);
-    else
-      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Libcall);
-  }
+  auto &REMBuilder =
+      getActionDefinitionsBuilder({G_SREM, G_UREM}).minScalar(0, s32);
+  if (HasHWDivide)
+    REMBuilder.lowerFor({s32});
+  else if (AEABI(ST))
+    REMBuilder.customFor({s32});
+  else
+    REMBuilder.libcallFor({s32});
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{p0, s32}})
@@ -136,8 +99,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({s32, p0})
+      .customFor({s32, p0})
       .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s1}, {s32, p0})
@@ -193,14 +158,19 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .legalForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .legalForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_GET_FPMODE})
+        .legalFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
+    getActionDefinitionsBuilder(G_SET_FPMODE).customFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPMODE).custom();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
 
     LoadStoreBuilder.maxScalar(0, s32);
 
-    for (auto Ty : {s32, s64})
-      LegacyInfo.setAction({G_FNEG, Ty}, LegacyLegalizeActions::Lower);
+    getActionDefinitionsBuilder(G_FNEG).lowerFor({s32, s64});
 
     getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
 
@@ -219,6 +189,11 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .libcallForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV})
+        .libcall();
+    getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
+        .libcall();
   }
 
   // Just expand whatever loads and stores are left.
@@ -463,12 +438,45 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     }
     break;
   }
+  case G_CONSTANT: {
+    const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
+    uint64_t ImmVal = ConstVal->getZExtValue();
+    if (ConstantMaterializationCost(ImmVal, &ST) > 2 && !ST.genExecuteOnly())
+      return Helper.lowerConstant(MI) == LegalizerHelper::Legalized;
+    return true;
+  }
   case G_FCONSTANT: {
     // Convert to integer constants, while preserving the binary representation.
     auto AsInteger =
         MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
     MIRBuilder.buildConstant(MI.getOperand(0),
                              *ConstantInt::get(Ctx, AsInteger));
+    break;
+  }
+  case G_SET_FPMODE: {
+    // New FPSCR = (FPSCR & FPStatusBits) | (Modes & ~FPStatusBits)
+    LLT FPEnvTy = LLT::scalar(32);
+    auto FPEnv = MRI.createGenericVirtualRegister(FPEnvTy);
+    Register Modes = MI.getOperand(0).getReg();
+    MIRBuilder.buildGetFPEnv(FPEnv);
+    auto StatusBitMask = MIRBuilder.buildConstant(FPEnvTy, ARM::FPStatusBits);
+    auto StatusBits = MIRBuilder.buildAnd(FPEnvTy, FPEnv, StatusBitMask);
+    auto NotStatusBitMask =
+        MIRBuilder.buildConstant(FPEnvTy, ~ARM::FPStatusBits);
+    auto FPModeBits = MIRBuilder.buildAnd(FPEnvTy, Modes, NotStatusBitMask);
+    auto NewFPSCR = MIRBuilder.buildOr(FPEnvTy, StatusBits, FPModeBits);
+    MIRBuilder.buildSetFPEnv(NewFPSCR);
+    break;
+  }
+  case G_RESET_FPMODE: {
+    // To get the default FP mode all control bits are cleared:
+    // FPSCR = FPSCR & (FPStatusBits | FPReservedBits)
+    LLT FPEnvTy = LLT::scalar(32);
+    auto FPEnv = MIRBuilder.buildGetFPEnv(FPEnvTy);
+    auto NotModeBitMask = MIRBuilder.buildConstant(
+        FPEnvTy, ARM::FPStatusBits | ARM::FPReservedBits);
+    auto NewFPSCR = MIRBuilder.buildAnd(FPEnvTy, FPEnv, NotModeBitMask);
+    MIRBuilder.buildSetFPEnv(NewFPSCR);
     break;
   }
   }

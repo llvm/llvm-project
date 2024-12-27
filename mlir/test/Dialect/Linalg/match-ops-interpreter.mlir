@@ -181,6 +181,63 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
+  transform.named_sequence @print_elementwise(%arg0: !transform.any_op {transform.readonly}) {
+    transform.debug.emit_remark_at %arg0, "elementwise" : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @match_structured_body_elementwise(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
+    ^bb0(%arg1: !transform.any_op):
+      transform.match.structured.body %arg1 { elementwise } : !transform.any_op
+      transform.match.structured.yield %arg1 : !transform.any_op
+    }
+    transform.yield %0 : !transform.any_op
+  }
+
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.consumed}) {
+    transform.foreach_match in %arg0
+        @match_structured_body_elementwise -> @print_elementwise
+        : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  func.func @payload(%in1: tensor<2xf32>, %in2: tensor<2xf32>, %in3: tensor<2x3xf32>, %out: tensor<2xf32>, %out2: tensor<2x3xf32>) -> (tensor<2xf32>, tensor<2x3xf32>, tensor<2x3xf32>) attributes { transform.target_tag = "start_here" } {
+    %cst0 = arith.constant 0.0 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    // expected-remark @below {{elementwise}}
+    %fill = linalg.fill ins(%cst0: f32) outs(%out: tensor<2xf32>) -> tensor<2xf32>
+    // expected-remark @below {{elementwise}}
+    %add = linalg.map {arith.addf} ins(%in1, %in2: tensor<2xf32>, tensor<2xf32>) outs(%fill: tensor<2xf32>)
+    %non_elementwise = linalg.generic
+      {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+       iterator_types = ["parallel", "parallel"]}
+      ins(%in1, %in3: tensor<2xf32>, tensor<2x3xf32>) outs(%out2: tensor<2x3xf32>) {
+        ^bb0(%arg0: f32, %arg1: f32, %arg3: f32):
+          %0 = arith.addf %arg0, %arg1 : f32
+          %1 = tensor.dim %add, %c0 : tensor<2xf32>
+          %2 = arith.subi %1, %c1 : index
+          %3 = tensor.extract %add[%2] : tensor<2xf32>
+          %4 = arith.mulf %0, %3 : f32
+          linalg.yield %4 : f32
+      } -> tensor<2x3xf32>
+    // expected-remark @below {{elementwise}}
+    %add_bcast = linalg.generic
+      {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+       iterator_types = ["parallel", "parallel"]}
+      ins(%in1, %in3: tensor<2xf32>, tensor<2x3xf32>) outs(%out2: tensor<2x3xf32>) {
+        ^bb0(%arg0: f32, %arg1: f32, %arg3: f32):
+          %0 = arith.addf %arg0, %arg1 : f32
+          linalg.yield %0 : f32
+      } -> tensor<2x3xf32>
+    return %add, %add_bcast, %non_elementwise : tensor<2xf32>, tensor<2x3xf32>, tensor<2x3xf32>
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
   transform.named_sequence @print_reduction(%arg0: !transform.any_op {transform.readonly}) {
     transform.debug.emit_remark_at %arg0, "reduction" : !transform.any_op
     transform.yield
@@ -939,6 +996,21 @@ module attributes { transform.target_tag = "start_here" } {
     } -> tensor<40x10x50x15xf32>
     return %result : tensor<40x10x50x15xf32>
   }
+
+  func.func @generic_min(%arg0: tensor<1x7x4xf32>, %arg1: tensor<4xf32>, %arg2: tensor<1x1x4xf32>) {
+    linalg.generic {
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1 * 2 + d3 * 2, d2)>, 
+      affine_map<(d0, d1, d2, d3) -> (d3)>, 
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], 
+      iterator_types = ["parallel", "parallel", "parallel", "reduction"]} 
+      ins(%arg0, %arg1 : tensor<1x7x4xf32>, tensor<4xf32>) 
+      outs(%arg2 : tensor<1x1x4xf32>) {
+    ^bb0(%in: f32, %in_1: f32, %out: f32):
+      %5 = arith.minimumf %out, %in : f32
+      linalg.yield %5 : f32
+    } -> tensor<1x1x4xf32>
+    return
+  }
 }
 
 // -----
@@ -1003,6 +1075,28 @@ module attributes { transform.target_tag = "start_here" } {
                                       strides = dense<1> : tensor<1xi64>}
        ins(%input, %filter: tensor<10x20x30xf32>, tensor<3x30x15xf32>) outs(%fill: tensor<10x18x15xf64>) -> tensor<10x18x15xf64>
     return %result : tensor<10x18x15xf64>
+  }
+
+  func.func @convolution_depthwise(%input: tensor<1x10x196x48xf32>, %filter: tensor<1x4x48xf32>) -> tensor<1x10x191x48xf32> {
+    %cst = arith.constant 0.0 : f32 
+    %empty = tensor.empty() : tensor<1x10x191x48xf32>
+    %fill = linalg.fill ins(%cst : f32) outs(%empty : tensor<1x10x191x48xf32>) -> tensor<1x10x191x48xf32>
+    // expected-remark @below {{convolution}}
+    // expected-remark @below {{batch dims 0}}
+    // expected-remark @below {{output image dims 1 : i64, 2 : i64}}
+    // expected-remark @below {{output channel dims}}
+    // expected-remark @below {{filter loop dims 4 : i64, 5 : i64}}
+    // expected-remark @below {{input channel dims}}
+    // expected-remark @below {{depth dims 3}}
+    // expected-remark @below {{strides 1 : i64, 1 : i64}}
+    // expected-remark @below {{dilations 1 : i64, 1 : i64}}
+    %result = linalg.depthwise_conv_2d_nhwc_hwc {
+      dilations = dense<1> : tensor<2xi64>,
+      strides = dense<1> : tensor<2xi64>}
+      ins(%input, %filter : tensor<1x10x196x48xf32>, tensor<1x4x48xf32>)
+      outs(%fill : tensor<1x10x191x48xf32>) -> tensor<1x10x191x48xf32>
+
+    return %result : tensor<1x10x191x48xf32>
   }
 
   func.func @convolution_multi_channel(%input: tensor<2x34x68x16xf32>, %filter: tensor<8x2x3x5x16x16xf32>) -> tensor<8x32x32x16xf32> {

@@ -111,6 +111,19 @@ public:
     return getPointerWidthV(AddrSpace);
   }
 
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The flat address space AS(0) is a superset of all the other address
+    // spaces used by the backend target.
+    return A == B ||
+           ((A == LangAS::Default ||
+             (isTargetAddressSpace(A) &&
+              toTargetAddressSpace(A) == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
+            isTargetAddressSpace(B) &&
+            toTargetAddressSpace(B) >= llvm::AMDGPUAS::FLAT_ADDRESS &&
+            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS &&
+            toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
+  }
+
   uint64_t getMaxPointerWidth() const override {
     return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
@@ -122,7 +135,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   /// Accepted register names: (n, m is unsigned integer, n < m)
@@ -168,9 +181,7 @@ public:
       return true;
     }
 
-    bool HasLeftParen = false;
-    if (S.consume_front("{"))
-      HasLeftParen = true;
+    bool HasLeftParen = S.consume_front("{");
     if (S.empty())
       return false;
     if (S.front() != 'v' && S.front() != 's' && S.front() != 'a') {
@@ -196,9 +207,7 @@ public:
       Name = S.data() - 1;
       return true;
     }
-    bool HasLeftBracket = false;
-    if (S.consume_front("["))
-      HasLeftBracket = true;
+    bool HasLeftBracket = S.consume_front("[");
     unsigned long long N;
     if (S.empty() || consumeUnsignedInteger(S, 10, N))
       return false;
@@ -418,8 +427,10 @@ public:
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
     // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private)
-      ? ~0 : 0;
+    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+               ? ~0
+               : 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
@@ -464,6 +475,14 @@ public:
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // This is imprecise as the value can vary between 64, 128 (even 256!) bytes
+    // depending on the level of cache and the target architecture. We select
+    // the size that corresponds to the largest L1 cache line for all
+    // architectures.
+    return std::make_pair(128, 128);
+  }
 };
 
 } // namespace targets

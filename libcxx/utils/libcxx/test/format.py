@@ -29,7 +29,7 @@ def _getTempPaths(test):
 
 def _checkBaseSubstitutions(substitutions):
     substitutions = [s for (s, _) in substitutions]
-    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
+    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
 def _executeScriptInternal(test, litConfig, commands):
@@ -172,7 +172,7 @@ def parseScript(test, preamble):
                 f"{compileFlags} "
                 "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
                 "-fmodule-file=std=%T/std.pcm " # The std.compat module imports std.
-                "--precompile -o %T/std.compat.pcm -c %{module}/std.compat.cppm",
+                "--precompile -o %T/std.compat.pcm -c %{module-dir}/std.compat.cppm",
             )
             moduleCompileFlags.extend(
                 ["-fmodule-file=std.compat=%T/std.compat.pcm", "%T/std.compat.pcm"]
@@ -188,7 +188,7 @@ def parseScript(test, preamble):
             "%dbg(MODULE std) %{cxx} %{flags} "
             f"{compileFlags} "
             "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
-            "--precompile -o %T/std.pcm -c %{module}/std.cppm",
+            "--precompile -o %T/std.pcm -c %{module-dir}/std.cppm",
         )
         moduleCompileFlags.extend(["-fmodule-file=std=%T/std.pcm", "%T/std.pcm"])
 
@@ -220,11 +220,15 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     The test format operates by assuming that each test's configuration provides
     the following substitutions, which it will reuse in the shell scripts it
     constructs:
-        %{cxx}           - A command that can be used to invoke the compiler
-        %{compile_flags} - Flags to use when compiling a test case
-        %{link_flags}    - Flags to use when linking a test case
-        %{flags}         - Flags to use either when compiling or linking a test case
-        %{exec}          - A command to prefix the execution of executables
+        %{cxx}             - A command that can be used to invoke the compiler
+        %{compile_flags}   - Flags to use when compiling a test case
+        %{link_flags}      - Flags to use when linking a test case
+        %{flags}           - Flags to use either when compiling or linking a test case
+        %{benchmark_flags} - Flags to use when compiling benchmarks. These flags should provide access to
+                             GoogleBenchmark but shouldn't hardcode any optimization level or other settings,
+                             since the benchmarks should be run under the same configuration as the rest of
+                             the test suite.
+        %{exec}            - A command to prefix the execution of executables
 
     Note that when building an executable (as opposed to only compiling a source
     file), all three of %{flags}, %{compile_flags} and %{link_flags} will be used
@@ -254,6 +258,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
 
     def getTestsForPath(self, testSuite, pathInSuite, litConfig, localConfig):
         SUPPORTED_SUFFIXES = [
+            "[.]bench[.]cpp$",
             "[.]pass[.]cpp$",
             "[.]pass[.]mm$",
             "[.]compile[.]pass[.]cpp$",
@@ -265,7 +270,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             "[.]sh[.][^.]+$",
             "[.]gen[.][^.]+$",
             "[.]verify[.]cpp$",
-            "[.]fail[.]cpp$",
         ]
 
         sourcePath = testSuite.getSourcePath(pathInSuite)
@@ -331,6 +335,20 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} %t.exe",
             ]
+            return self._executeShTest(test, litConfig, steps)
+        elif filename.endswith(".bench.cpp"):
+            if "enable-benchmarks=no" in test.config.available_features:
+                return lit.Test.Result(
+                    lit.Test.UNSUPPORTED,
+                    "Test {} requires support for benchmarks, which isn't supported by this configuration".format(
+                        test.getFullName()
+                    ),
+                )
+            steps = [
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
+            ]
+            if "enable-benchmarks=run" in test.config.available_features:
+                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%T/benchmark-result.json --benchmark_out_format=json"]
             return self._executeShTest(test, litConfig, steps)
         else:
             return lit.Test.Result(

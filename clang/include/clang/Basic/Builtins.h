@@ -103,9 +103,7 @@ public:
   llvm::StringRef getName(unsigned ID) const { return getRecord(ID).Name; }
 
   /// Get the type descriptor string for the specified builtin.
-  const char *getTypeString(unsigned ID) const {
-    return getRecord(ID).Type;
-  }
+  const char *getTypeString(unsigned ID) const { return getRecord(ID).Type; }
 
   /// Return true if this function is a target-specific builtin.
   bool isTSBuiltin(unsigned ID) const {
@@ -280,6 +278,11 @@ public:
     return strchr(getRecord(ID).Attributes, 'E') != nullptr;
   }
 
+  /// Returns true if this is an immediate (consteval) function
+  bool isImmediate(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'G') != nullptr;
+  }
+
 private:
   const Info &getRecord(unsigned ID) const;
 
@@ -304,7 +307,10 @@ enum BuiltinTemplateKind : int {
   BTK__make_integer_seq,
 
   /// This names the __type_pack_element BuiltinTemplateDecl.
-  BTK__type_pack_element
+  BTK__type_pack_element,
+
+  /// This names the __builtin_common_type BuiltinTemplateDecl.
+  BTK__builtin_common_type,
 };
 
 } // end namespace clang

@@ -15,6 +15,8 @@
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -139,10 +142,6 @@ public:
 
     return MCPlusBuilder::equals(*AArch64ExprA.getSubExpr(),
                                  *AArch64ExprB.getSubExpr(), Comp);
-  }
-
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    return false;
   }
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
@@ -270,32 +269,38 @@ public:
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
   }
 
-  bool isAArch64Exclusive(const MCInst &Inst) const override {
+  bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::LDXPX ||
             Inst.getOpcode() == AArch64::LDXPW ||
             Inst.getOpcode() == AArch64::LDXRX ||
             Inst.getOpcode() == AArch64::LDXRW ||
             Inst.getOpcode() == AArch64::LDXRH ||
             Inst.getOpcode() == AArch64::LDXRB ||
-            Inst.getOpcode() == AArch64::STXPX ||
-            Inst.getOpcode() == AArch64::STXPW ||
-            Inst.getOpcode() == AArch64::STXRX ||
-            Inst.getOpcode() == AArch64::STXRW ||
-            Inst.getOpcode() == AArch64::STXRH ||
-            Inst.getOpcode() == AArch64::STXRB ||
             Inst.getOpcode() == AArch64::LDAXPX ||
             Inst.getOpcode() == AArch64::LDAXPW ||
             Inst.getOpcode() == AArch64::LDAXRX ||
             Inst.getOpcode() == AArch64::LDAXRW ||
             Inst.getOpcode() == AArch64::LDAXRH ||
-            Inst.getOpcode() == AArch64::LDAXRB ||
+            Inst.getOpcode() == AArch64::LDAXRB);
+  }
+
+  bool isAArch64ExclusiveStore(const MCInst &Inst) const override {
+    return (Inst.getOpcode() == AArch64::STXPX ||
+            Inst.getOpcode() == AArch64::STXPW ||
+            Inst.getOpcode() == AArch64::STXRX ||
+            Inst.getOpcode() == AArch64::STXRW ||
+            Inst.getOpcode() == AArch64::STXRH ||
+            Inst.getOpcode() == AArch64::STXRB ||
             Inst.getOpcode() == AArch64::STLXPX ||
             Inst.getOpcode() == AArch64::STLXPW ||
             Inst.getOpcode() == AArch64::STLXRX ||
             Inst.getOpcode() == AArch64::STLXRW ||
             Inst.getOpcode() == AArch64::STLXRH ||
-            Inst.getOpcode() == AArch64::STLXRB ||
-            Inst.getOpcode() == AArch64::CLREX);
+            Inst.getOpcode() == AArch64::STLXRB);
+  }
+
+  bool isAArch64ExclusiveClear(const MCInst &Inst) const override {
+    return (Inst.getOpcode() == AArch64::CLREX);
   }
 
   bool isLoadFromStack(const MCInst &Inst) const {
@@ -610,7 +615,7 @@ public:
     return getTargetAddend(Op.getExpr());
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -632,7 +637,6 @@ public:
 
     *OI = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -701,8 +705,20 @@ public:
     unsigned ShiftVal = AArch64_AM::getArithShiftValue(OperandExtension);
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
-    if (ShiftVal != 2)
-      llvm_unreachable("Failed to match indirect branch! (fragment 2)");
+    if (ShiftVal != 2) {
+      // TODO: Handle the patten where ShiftVal != 2.
+      // The following code sequence below has no shift amount,
+      // the range could be 0 to 4.
+      // The pattern comes from libc, it occurs when the binary is static.
+      //   adr     x6, 0x219fb0 <sigall_set+0x88>
+      //   add     x6, x6, x14, lsl #2
+      //   ldr     w7, [x6]
+      //   add     x6, x6, w7, sxtw => no shift amount
+      //   br      x6
+      errs() << "BOLT-WARNING: "
+                "Failed to match indirect branch: ShiftVAL != 2 \n";
+      return false;
+    }
 
     if (ExtendType == AArch64_AM::SXTB)
       ScaleValue = 1LL;
@@ -745,6 +761,19 @@ public:
       // (hoisted). Return with no jump table info.
       JumpTable = nullptr;
       return true;
+    }
+
+    if (DefJTBaseAdd->getOpcode() == AArch64::ADR) {
+      // TODO: Handle the pattern where there is no adrp/add pair.
+      // It also occurs when the binary is static.
+      //  adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
+      //  ldrh    w13, [x13, w12, uxtw #1]
+      //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
+      //  add     x13, x12, w13, sxth #2
+      //  br      x13
+      errs() << "BOLT-WARNING: Failed to match indirect branch: "
+                "nop/adr instead of adrp/add \n";
+      return false;
     }
 
     assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
@@ -826,16 +855,19 @@ public:
     return Uses;
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInstr) const override {
     MemLocInstrOut = nullptr;
     BaseRegNumOut = AArch64::NoRegister;
     IndexRegNumOut = AArch64::NoRegister;
     DispValueOut = 0;
     DispExprOut = nullptr;
+    FixedEntryLoadInstr = nullptr;
 
     // An instruction referencing memory used by jump instruction (directly or
     // via register). This location could be an array of function pointers
@@ -963,7 +995,7 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     if (isTB(Inst) || isCB(Inst)) {
       Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
@@ -978,7 +1010,7 @@ public:
       LLVM_DEBUG(Inst.dump());
       llvm_unreachable("Unrecognized branch instruction");
     }
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {
@@ -1020,7 +1052,7 @@ public:
     return Code;
   }
 
-  bool createTailCall(MCInst &Inst, const MCSymbol *Target,
+  void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createDirectCall(Inst, Target, Ctx, /*IsTailCall*/ true);
   }
@@ -1030,11 +1062,10 @@ public:
     createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
   }
 
-  bool createTrap(MCInst &Inst) const override {
+  void createTrap(MCInst &Inst) const override {
     Inst.clear();
     Inst.setOpcode(AArch64::BRK);
     Inst.addOperand(MCOperand::createImm(1));
-    return true;
   }
 
   bool convertJmpToTailCall(MCInst &Inst) override {
@@ -1050,6 +1081,47 @@ public:
     return true;
   }
 
+  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(DirectCall);
+    assert((DirectCall.getOpcode() == AArch64::BL ||
+            (DirectCall.getOpcode() == AArch64::B && IsTailCall)) &&
+           "64-bit direct (tail) call instruction expected");
+
+    InstructionListType Code;
+    // Code sequence for indirect plt call:
+    // adrp	x16 <symbol>
+    // ldr	x17, [x16, #<offset>]
+    // blr	x17  ; or 'br' for tail calls
+
+    MCInst InstAdrp;
+    InstAdrp.setOpcode(AArch64::ADRP);
+    InstAdrp.addOperand(MCOperand::createReg(AArch64::X16));
+    InstAdrp.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstAdrp, /* OpNum */ 1, TargetLocation,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_ADR_GOT_PAGE);
+    Code.emplace_back(InstAdrp);
+
+    MCInst InstLoad;
+    InstLoad.setOpcode(AArch64::LDRXui);
+    InstLoad.addOperand(MCOperand::createReg(AArch64::X17));
+    InstLoad.addOperand(MCOperand::createReg(AArch64::X16));
+    InstLoad.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstLoad, /* OpNum */ 2, TargetLocation,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_LD64_GOT_LO12_NC);
+    Code.emplace_back(InstLoad);
+
+    MCInst InstCall;
+    InstCall.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
+    InstCall.addOperand(MCOperand::createReg(AArch64::X17));
+    if (IsTailCall)
+      setTailCall(InstCall);
+    Code.emplace_back(InstCall);
+
+    return Code;
+  }
+
   bool lowerTailCall(MCInst &Inst) override {
     removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
     if (getConditionalTailCall(Inst))
@@ -1062,16 +1134,15 @@ public:
            Inst.getOperand(0).getImm() == 0;
   }
 
-  bool createNoop(MCInst &Inst) const override {
+  void createNoop(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::HINT);
     Inst.clear();
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
   bool mayStore(const MCInst &Inst) const override { return false; }
 
-  bool createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
+  void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
@@ -1080,7 +1151,6 @@ public:
         *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
-    return true;
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -1253,6 +1323,67 @@ public:
     return 3;
   }
 
+  /// Match the following pattern:
+  ///
+  ///   LDR x16, .L1
+  ///   BR  x16
+  /// L1:
+  ///   .quad Target
+  ///
+  /// Populate \p TargetAddress with the Target value on successful match.
+  bool matchAbsLongVeneer(const BinaryFunction &BF,
+                          uint64_t &TargetAddress) const override {
+    if (BF.size() != 1 || BF.getMaxSize() < 16)
+      return false;
+
+    if (!BF.hasConstantIsland())
+      return false;
+
+    const BinaryBasicBlock &BB = BF.front();
+    if (BB.size() != 2)
+      return false;
+
+    const MCInst &LDRInst = BB.getInstructionAtIndex(0);
+    if (LDRInst.getOpcode() != AArch64::LDRXl)
+      return false;
+
+    if (!LDRInst.getOperand(0).isReg() ||
+        LDRInst.getOperand(0).getReg() != AArch64::X16)
+      return false;
+
+    const MCSymbol *TargetSym = getTargetSymbol(LDRInst, 1);
+    if (!TargetSym)
+      return false;
+
+    const MCInst &BRInst = BB.getInstructionAtIndex(1);
+    if (BRInst.getOpcode() != AArch64::BR)
+      return false;
+    if (!BRInst.getOperand(0).isReg() ||
+        BRInst.getOperand(0).getReg() != AArch64::X16)
+      return false;
+
+    const BinaryFunction::IslandInfo &IInfo = BF.getIslandInfo();
+    if (IInfo.HasDynamicRelocations)
+      return false;
+
+    auto Iter = IInfo.Offsets.find(8);
+    if (Iter == IInfo.Offsets.end() || Iter->second != TargetSym)
+      return false;
+
+    // Extract the absolute value stored inside the island.
+    StringRef SectionContents = BF.getOriginSection()->getContents();
+    StringRef FunctionContents = SectionContents.substr(
+        BF.getAddress() - BF.getOriginSection()->getAddress(), BF.getMaxSize());
+
+    const BinaryContext &BC = BF.getBinaryContext();
+    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian(),
+                     BC.AsmInfo->getCodePointerSize());
+    uint64_t Offset = 8;
+    TargetAddress = DE.getAddress(&Offset);
+
+    return true;
+  }
+
   bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const override {
     if (!isADRP(Adrp) || !isAddXri(Add))
       return false;
@@ -1287,14 +1418,13 @@ public:
     return true;
   }
 
-  bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+  void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
         Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
         *Ctx, 0)));
-    return true;
   }
 
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
@@ -1319,6 +1449,8 @@ public:
     case ELF::R_AARCH64_TLSDESC_LD64_LO12:
     case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+    case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
     case ELF::R_AARCH64_MOVW_UABS_G0:
     case ELF::R_AARCH64_MOVW_UABS_G0_NC:
     case ELF::R_AARCH64_MOVW_UABS_G1:
@@ -1347,14 +1479,13 @@ public:
     return StringRef("\0\0\0\0", 4);
   }
 
-  bool createReturn(MCInst &Inst) const override {
+  void createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(AArch64::LR));
-    return true;
   }
 
-  bool createStackPointerIncrement(
+  void createStackPointerIncrement(
       MCInst &Inst, int Size,
       bool NoFlagsClobber = false /*unused for AArch64*/) const override {
     Inst.setOpcode(AArch64::SUBXri);
@@ -1363,10 +1494,9 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::SP));
     Inst.addOperand(MCOperand::createImm(Size));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
-  bool createStackPointerDecrement(
+  void createStackPointerDecrement(
       MCInst &Inst, int Size,
       bool NoFlagsClobber = false /*unused for AArch64*/) const override {
     Inst.setOpcode(AArch64::ADDXri);
@@ -1375,12 +1505,12 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::SP));
     Inst.addOperand(MCOperand::createImm(Size));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
   void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(AArch64::BR);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(MemBaseReg));
   }
 
@@ -1623,6 +1753,9 @@ public:
     uint64_t RelType;
     if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
+    else if (Fixup.getKind() ==
+             MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
+      RelType = ELF::R_AARCH64_JUMP26;
     else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
       switch (FKI.TargetSize) {
       default:

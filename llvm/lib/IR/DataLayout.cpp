@@ -17,12 +17,12 @@
 
 #include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -118,53 +118,60 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   return SI - MemberOffsets.begin();
 }
 
-//===----------------------------------------------------------------------===//
-// LayoutAlignElem, LayoutAlign support
-//===----------------------------------------------------------------------===//
+namespace {
 
-LayoutAlignElem LayoutAlignElem::get(Align ABIAlign, Align PrefAlign,
-                                     uint32_t BitWidth) {
-  assert(ABIAlign <= PrefAlign && "Preferred alignment worse than ABI!");
-  LayoutAlignElem retval;
-  retval.ABIAlign = ABIAlign;
-  retval.PrefAlign = PrefAlign;
-  retval.TypeBitWidth = BitWidth;
-  return retval;
-}
+class StructLayoutMap {
+  using LayoutInfoTy = DenseMap<StructType *, StructLayout *>;
+  LayoutInfoTy LayoutInfo;
 
-bool LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
-  return ABIAlign == rhs.ABIAlign && PrefAlign == rhs.PrefAlign &&
-         TypeBitWidth == rhs.TypeBitWidth;
-}
+public:
+  ~StructLayoutMap() {
+    // Remove any layouts.
+    for (const auto &I : LayoutInfo) {
+      StructLayout *Value = I.second;
+      Value->~StructLayout();
+      free(Value);
+    }
+  }
 
-//===----------------------------------------------------------------------===//
-// PointerAlignElem, PointerAlign support
-//===----------------------------------------------------------------------===//
+  StructLayout *&operator[](StructType *STy) { return LayoutInfo[STy]; }
+};
 
-PointerAlignElem PointerAlignElem::getInBits(uint32_t AddressSpace,
-                                             Align ABIAlign, Align PrefAlign,
-                                             uint32_t TypeBitWidth,
-                                             uint32_t IndexBitWidth) {
-  assert(ABIAlign <= PrefAlign && "Preferred alignment worse than ABI!");
-  PointerAlignElem retval;
-  retval.AddressSpace = AddressSpace;
-  retval.ABIAlign = ABIAlign;
-  retval.PrefAlign = PrefAlign;
-  retval.TypeBitWidth = TypeBitWidth;
-  retval.IndexBitWidth = IndexBitWidth;
-  return retval;
-}
-
-bool
-PointerAlignElem::operator==(const PointerAlignElem &rhs) const {
-  return (ABIAlign == rhs.ABIAlign && AddressSpace == rhs.AddressSpace &&
-          PrefAlign == rhs.PrefAlign && TypeBitWidth == rhs.TypeBitWidth &&
-          IndexBitWidth == rhs.IndexBitWidth);
-}
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 //                       DataLayout Class Implementation
 //===----------------------------------------------------------------------===//
+
+bool DataLayout::PrimitiveSpec::operator==(const PrimitiveSpec &Other) const {
+  return BitWidth == Other.BitWidth && ABIAlign == Other.ABIAlign &&
+         PrefAlign == Other.PrefAlign;
+}
+
+bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
+  return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
+         ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
+         IndexBitWidth == Other.IndexBitWidth &&
+         IsNonIntegral == Other.IsNonIntegral;
+}
+
+namespace {
+/// Predicate to sort primitive specs by bit width.
+struct LessPrimitiveBitWidth {
+  bool operator()(const DataLayout::PrimitiveSpec &LHS,
+                  unsigned RHSBitWidth) const {
+    return LHS.BitWidth < RHSBitWidth;
+  }
+};
+
+/// Predicate to sort pointer specs by address space number.
+struct LessPointerAddrSpace {
+  bool operator()(const DataLayout::PointerSpec &LHS,
+                  unsigned RHSAddrSpace) const {
+    return LHS.AddrSpace < RHSAddrSpace;
+  }
+};
+} // namespace
 
 const char *DataLayout::getManglingComponent(const Triple &T) {
   if (T.isOSBinFormatGOFF())
@@ -178,544 +185,526 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
   return "-m:e";
 }
 
-static const std::pair<AlignTypeEnum, LayoutAlignElem> DefaultAlignments[] = {
-    {INTEGER_ALIGN, {1, Align(1), Align(1)}},    // i1
-    {INTEGER_ALIGN, {8, Align(1), Align(1)}},    // i8
-    {INTEGER_ALIGN, {16, Align(2), Align(2)}},   // i16
-    {INTEGER_ALIGN, {32, Align(4), Align(4)}},   // i32
-    {INTEGER_ALIGN, {64, Align(4), Align(8)}},   // i64
-    {FLOAT_ALIGN, {16, Align(2), Align(2)}},     // half, bfloat
-    {FLOAT_ALIGN, {32, Align(4), Align(4)}},     // float
-    {FLOAT_ALIGN, {64, Align(8), Align(8)}},     // double
-    {FLOAT_ALIGN, {128, Align(16), Align(16)}},  // ppcf128, quad, ...
-    {VECTOR_ALIGN, {64, Align(8), Align(8)}},    // v2i32, v1i64, ...
-    {VECTOR_ALIGN, {128, Align(16), Align(16)}}, // v16i8, v8i16, v4i32, ...
+// Default primitive type specifications.
+// NOTE: These arrays must be sorted by type bit width.
+constexpr DataLayout::PrimitiveSpec DefaultIntSpecs[] = {
+    {1, Align::Constant<1>(), Align::Constant<1>()},  // i1:8:8
+    {8, Align::Constant<1>(), Align::Constant<1>()},  // i8:8:8
+    {16, Align::Constant<2>(), Align::Constant<2>()}, // i16:16:16
+    {32, Align::Constant<4>(), Align::Constant<4>()}, // i32:32:32
+    {64, Align::Constant<4>(), Align::Constant<8>()}, // i64:32:64
+};
+constexpr DataLayout::PrimitiveSpec DefaultFloatSpecs[] = {
+    {16, Align::Constant<2>(), Align::Constant<2>()},    // f16:16:16
+    {32, Align::Constant<4>(), Align::Constant<4>()},    // f32:32:32
+    {64, Align::Constant<8>(), Align::Constant<8>()},    // f64:64:64
+    {128, Align::Constant<16>(), Align::Constant<16>()}, // f128:128:128
+};
+constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
+    {64, Align::Constant<8>(), Align::Constant<8>()},    // v64:64:64
+    {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
 };
 
-void DataLayout::reset(StringRef Desc) {
-  clear();
+// Default pointer type specifications.
+constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
+    // p0:64:64:64:64
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
+};
 
-  LayoutMap = nullptr;
-  BigEndian = false;
-  AllocaAddrSpace = 0;
-  StackNaturalAlign.reset();
-  ProgramAddrSpace = 0;
-  DefaultGlobalsAddrSpace = 0;
-  FunctionPtrAlign.reset();
-  TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
-  ManglingMode = MM_None;
-  NonIntegralAddressSpaces.clear();
-  StructAlignment = LayoutAlignElem::get(Align(1), Align(8), 0);
+DataLayout::DataLayout()
+    : IntSpecs(ArrayRef(DefaultIntSpecs)),
+      FloatSpecs(ArrayRef(DefaultFloatSpecs)),
+      VectorSpecs(ArrayRef(DefaultVectorSpecs)),
+      PointerSpecs(ArrayRef(DefaultPointerSpecs)) {}
 
-  // Default alignments
-  for (const auto &[Kind, Layout] : DefaultAlignments) {
-    if (Error Err = setAlignment(Kind, Layout.ABIAlign, Layout.PrefAlign,
-                                 Layout.TypeBitWidth))
-      return report_fatal_error(std::move(Err));
-  }
-  if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
-    return report_fatal_error(std::move(Err));
-
-  if (Error Err = parseSpecifier(Desc))
-    return report_fatal_error(std::move(Err));
+DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
+  if (Error Err = parseLayoutString(LayoutString))
+    report_fatal_error(std::move(Err));
 }
 
-Expected<DataLayout> DataLayout::parse(StringRef LayoutDescription) {
-  DataLayout Layout("");
-  if (Error Err = Layout.parseSpecifier(LayoutDescription))
+DataLayout &DataLayout::operator=(const DataLayout &Other) {
+  delete static_cast<StructLayoutMap *>(LayoutMap);
+  LayoutMap = nullptr;
+  StringRepresentation = Other.StringRepresentation;
+  BigEndian = Other.BigEndian;
+  AllocaAddrSpace = Other.AllocaAddrSpace;
+  ProgramAddrSpace = Other.ProgramAddrSpace;
+  DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
+  StackNaturalAlign = Other.StackNaturalAlign;
+  FunctionPtrAlign = Other.FunctionPtrAlign;
+  TheFunctionPtrAlignType = Other.TheFunctionPtrAlignType;
+  ManglingMode = Other.ManglingMode;
+  LegalIntWidths = Other.LegalIntWidths;
+  IntSpecs = Other.IntSpecs;
+  FloatSpecs = Other.FloatSpecs;
+  VectorSpecs = Other.VectorSpecs;
+  PointerSpecs = Other.PointerSpecs;
+  StructABIAlignment = Other.StructABIAlignment;
+  StructPrefAlignment = Other.StructPrefAlignment;
+  return *this;
+}
+
+bool DataLayout::operator==(const DataLayout &Other) const {
+  // NOTE: StringRepresentation might differ, it is not canonicalized.
+  return BigEndian == Other.BigEndian &&
+         AllocaAddrSpace == Other.AllocaAddrSpace &&
+         ProgramAddrSpace == Other.ProgramAddrSpace &&
+         DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
+         StackNaturalAlign == Other.StackNaturalAlign &&
+         FunctionPtrAlign == Other.FunctionPtrAlign &&
+         TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
+         ManglingMode == Other.ManglingMode &&
+         LegalIntWidths == Other.LegalIntWidths && IntSpecs == Other.IntSpecs &&
+         FloatSpecs == Other.FloatSpecs && VectorSpecs == Other.VectorSpecs &&
+         PointerSpecs == Other.PointerSpecs &&
+         StructABIAlignment == Other.StructABIAlignment &&
+         StructPrefAlignment == Other.StructPrefAlignment;
+}
+
+Expected<DataLayout> DataLayout::parse(StringRef LayoutString) {
+  DataLayout Layout;
+  if (Error Err = Layout.parseLayoutString(LayoutString))
     return std::move(Err);
   return Layout;
 }
 
-static Error reportError(const Twine &Message) {
-  return createStringError(inconvertibleErrorCode(), Message);
+static Error createSpecFormatError(Twine Format) {
+  return createStringError("malformed specification, must be of the form \"" +
+                           Format + "\"");
 }
 
-/// Checked version of split, to ensure mandatory subparts.
-static Error split(StringRef Str, char Separator,
-                   std::pair<StringRef, StringRef> &Split) {
-  assert(!Str.empty() && "parse error, string can't be empty here");
-  Split = Str.split(Separator);
-  if (Split.second.empty() && Split.first != Str)
-    return reportError("Trailing separator in datalayout string");
-  if (!Split.second.empty() && Split.first.empty())
-    return reportError("Expected token before separator in datalayout string");
+/// Attempts to parse an address space component of a specification.
+static Error parseAddrSpace(StringRef Str, unsigned &AddrSpace) {
+  if (Str.empty())
+    return createStringError("address space component cannot be empty");
+
+  if (!to_integer(Str, AddrSpace, 10) || !isUInt<24>(AddrSpace))
+    return createStringError("address space must be a 24-bit integer");
+
   return Error::success();
 }
 
-/// Get an unsigned integer, including error checks.
-template <typename IntTy> static Error getInt(StringRef R, IntTy &Result) {
-  bool error = R.getAsInteger(10, Result); (void)error;
-  if (error)
-    return reportError("not a number, or does not fit in an unsigned int");
+/// Attempts to parse a size component of a specification.
+static Error parseSize(StringRef Str, unsigned &BitWidth,
+                       StringRef Name = "size") {
+  if (Str.empty())
+    return createStringError(Name + " component cannot be empty");
+
+  if (!to_integer(Str, BitWidth, 10) || BitWidth == 0 || !isUInt<24>(BitWidth))
+    return createStringError(Name + " must be a non-zero 24-bit integer");
+
   return Error::success();
 }
 
-/// Get an unsigned integer representing the number of bits and convert it into
-/// bytes. Error out of not a byte width multiple.
-template <typename IntTy>
-static Error getIntInBytes(StringRef R, IntTy &Result) {
-  if (Error Err = getInt<IntTy>(R, Result))
+/// Attempts to parse an alignment component of a specification.
+///
+/// On success, returns the value converted to byte amount in \p Alignment.
+/// If the value is zero and \p AllowZero is true, \p Alignment is set to one.
+///
+/// Return an error in a number of cases:
+/// - \p Str is empty or contains characters other than decimal digits;
+/// - the value is zero and \p AllowZero is false;
+/// - the value is too large;
+/// - the value is not a multiple of the byte width;
+/// - the value converted to byte amount is not not a power of two.
+static Error parseAlignment(StringRef Str, Align &Alignment, StringRef Name,
+                            bool AllowZero = false) {
+  if (Str.empty())
+    return createStringError(Name + " alignment component cannot be empty");
+
+  unsigned Value;
+  if (!to_integer(Str, Value, 10) || !isUInt<16>(Value))
+    return createStringError(Name + " alignment must be a 16-bit integer");
+
+  if (Value == 0) {
+    if (!AllowZero)
+      return createStringError(Name + " alignment must be non-zero");
+    Alignment = Align(1);
+    return Error::success();
+  }
+
+  constexpr unsigned ByteWidth = 8;
+  if (Value % ByteWidth || !isPowerOf2_32(Value / ByteWidth))
+    return createStringError(
+        Name + " alignment must be a power of two times the byte width");
+
+  Alignment = Align(Value / ByteWidth);
+  return Error::success();
+}
+
+Error DataLayout::parsePrimitiveSpec(StringRef Spec) {
+  // [ifv]<size>:<abi>[:<pref>]
+  SmallVector<StringRef, 3> Components;
+  char Specifier = Spec.front();
+  assert(Specifier == 'i' || Specifier == 'f' || Specifier == 'v');
+  Spec.drop_front().split(Components, ':');
+
+  if (Components.size() < 2 || Components.size() > 3)
+    return createSpecFormatError(Twine(Specifier) + "<size>:<abi>[:<pref>]");
+
+  // Size. Required, cannot be zero.
+  unsigned BitWidth;
+  if (Error Err = parseSize(Components[0], BitWidth))
     return Err;
-  if (Result % 8)
-    return reportError("number of bits must be a byte width multiple");
-  Result /= 8;
-  return Error::success();
-}
 
-static Error getAddrSpace(StringRef R, unsigned &AddrSpace) {
-  if (Error Err = getInt(R, AddrSpace))
+  // ABI alignment.
+  Align ABIAlign;
+  if (Error Err = parseAlignment(Components[1], ABIAlign, "ABI"))
     return Err;
-  if (!isUInt<24>(AddrSpace))
-    return reportError("Invalid address space, must be a 24-bit integer");
+
+  if (Specifier == 'i' && BitWidth == 8 && ABIAlign != 1)
+    return createStringError("i8 must be 8-bit aligned");
+
+  // Preferred alignment. Optional, defaults to the ABI alignment.
+  Align PrefAlign = ABIAlign;
+  if (Components.size() > 2)
+    if (Error Err = parseAlignment(Components[2], PrefAlign, "preferred"))
+      return Err;
+
+  if (PrefAlign < ABIAlign)
+    return createStringError(
+        "preferred alignment cannot be less than the ABI alignment");
+
+  setPrimitiveSpec(Specifier, BitWidth, ABIAlign, PrefAlign);
   return Error::success();
 }
 
-Error DataLayout::parseSpecifier(StringRef Desc) {
-  StringRepresentation = std::string(Desc);
-  while (!Desc.empty()) {
-    // Split at '-'.
-    std::pair<StringRef, StringRef> Split;
-    if (Error Err = ::split(Desc, '-', Split))
+Error DataLayout::parseAggregateSpec(StringRef Spec) {
+  // a<size>:<abi>[:<pref>]
+  SmallVector<StringRef, 3> Components;
+  assert(Spec.front() == 'a');
+  Spec.drop_front().split(Components, ':');
+
+  if (Components.size() < 2 || Components.size() > 3)
+    return createSpecFormatError("a:<abi>[:<pref>]");
+
+  // According to LangRef, <size> component must be absent altogether.
+  // For backward compatibility, allow it to be specified, but require
+  // it to be zero.
+  if (!Components[0].empty()) {
+    unsigned BitWidth;
+    if (!to_integer(Components[0], BitWidth, 10) || BitWidth != 0)
+      return createStringError("size must be zero");
+  }
+
+  // ABI alignment. Required. Can be zero, meaning use one byte alignment.
+  Align ABIAlign;
+  if (Error Err =
+          parseAlignment(Components[1], ABIAlign, "ABI", /*AllowZero=*/true))
+    return Err;
+
+  // Preferred alignment. Optional, defaults to the ABI alignment.
+  Align PrefAlign = ABIAlign;
+  if (Components.size() > 2)
+    if (Error Err = parseAlignment(Components[2], PrefAlign, "preferred"))
       return Err;
-    Desc = Split.second;
 
-    // Split at ':'.
-    if (Error Err = ::split(Split.first, ':', Split))
+  if (PrefAlign < ABIAlign)
+    return createStringError(
+        "preferred alignment cannot be less than the ABI alignment");
+
+  StructABIAlignment = ABIAlign;
+  StructPrefAlignment = PrefAlign;
+  return Error::success();
+}
+
+Error DataLayout::parsePointerSpec(StringRef Spec) {
+  // p[<n>]:<size>:<abi>[:<pref>[:<idx>]]
+  SmallVector<StringRef, 5> Components;
+  assert(Spec.front() == 'p');
+  Spec.drop_front().split(Components, ':');
+
+  if (Components.size() < 3 || Components.size() > 5)
+    return createSpecFormatError("p[<n>]:<size>:<abi>[:<pref>[:<idx>]]");
+
+  // Address space. Optional, defaults to 0.
+  unsigned AddrSpace = 0;
+  if (!Components[0].empty())
+    if (Error Err = parseAddrSpace(Components[0], AddrSpace))
       return Err;
 
-    // Aliases used below.
-    StringRef &Tok  = Split.first;  // Current token.
-    StringRef &Rest = Split.second; // The rest of the string.
+  // Size. Required, cannot be zero.
+  unsigned BitWidth;
+  if (Error Err = parseSize(Components[1], BitWidth, "pointer size"))
+    return Err;
 
-    if (Tok == "ni") {
-      do {
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-        Rest = Split.second;
-        unsigned AS;
-        if (Error Err = getInt(Split.first, AS))
-          return Err;
-        if (AS == 0)
-          return reportError("Address space 0 can never be non-integral");
-        NonIntegralAddressSpaces.push_back(AS);
-      } while (!Rest.empty());
+  // ABI alignment. Required, cannot be zero.
+  Align ABIAlign;
+  if (Error Err = parseAlignment(Components[2], ABIAlign, "ABI"))
+    return Err;
 
-      continue;
+  // Preferred alignment. Optional, defaults to the ABI alignment.
+  // Cannot be zero.
+  Align PrefAlign = ABIAlign;
+  if (Components.size() > 3)
+    if (Error Err = parseAlignment(Components[3], PrefAlign, "preferred"))
+      return Err;
+
+  if (PrefAlign < ABIAlign)
+    return createStringError(
+        "preferred alignment cannot be less than the ABI alignment");
+
+  // Index size. Optional, defaults to pointer size. Cannot be zero.
+  unsigned IndexBitWidth = BitWidth;
+  if (Components.size() > 4)
+    if (Error Err = parseSize(Components[4], IndexBitWidth, "index size"))
+      return Err;
+
+  if (IndexBitWidth > BitWidth)
+    return createStringError(
+        "index size cannot be larger than the pointer size");
+
+  setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
+                 false);
+  return Error::success();
+}
+
+Error DataLayout::parseSpecification(
+    StringRef Spec, SmallVectorImpl<unsigned> &NonIntegralAddressSpaces) {
+  // The "ni" specifier is the only two-character specifier. Handle it first.
+  if (Spec.starts_with("ni")) {
+    // ni:<address space>[:<address space>]...
+    StringRef Rest = Spec.drop_front(2);
+
+    // Drop the first ':', then split the rest of the string the usual way.
+    if (!Rest.consume_front(":"))
+      return createSpecFormatError("ni:<address space>[:<address space>]...");
+
+    for (StringRef Str : split(Rest, ':')) {
+      unsigned AddrSpace;
+      if (Error Err = parseAddrSpace(Str, AddrSpace))
+        return Err;
+      if (AddrSpace == 0)
+        return createStringError("address space 0 cannot be non-integral");
+      NonIntegralAddressSpaces.push_back(AddrSpace);
     }
+    return Error::success();
+  }
 
-    char Specifier = Tok.front();
-    Tok = Tok.substr(1);
+  // The rest of the specifiers are single-character.
+  assert(!Spec.empty() && "Empty specification is handled by the caller");
+  char Specifier = Spec.front();
 
-    switch (Specifier) {
-    case 's':
-      // Deprecated, but ignoring here to preserve loading older textual llvm
-      // ASM file
-      break;
-    case 'E':
-      BigEndian = true;
-      break;
-    case 'e':
-      BigEndian = false;
-      break;
-    case 'p': {
-      // Address space.
-      unsigned AddrSpace = 0;
-      if (!Tok.empty())
-        if (Error Err = getInt(Tok, AddrSpace))
-          return Err;
-      if (!isUInt<24>(AddrSpace))
-        return reportError("Invalid address space, must be a 24-bit integer");
+  if (Specifier == 'i' || Specifier == 'f' || Specifier == 'v')
+    return parsePrimitiveSpec(Spec);
 
-      // Size.
-      if (Rest.empty())
-        return reportError(
-            "Missing size specification for pointer in datalayout string");
-      if (Error Err = ::split(Rest, ':', Split))
+  if (Specifier == 'a')
+    return parseAggregateSpec(Spec);
+
+  if (Specifier == 'p')
+    return parsePointerSpec(Spec);
+
+  StringRef Rest = Spec.drop_front();
+  switch (Specifier) {
+  case 's':
+    // Deprecated, but ignoring here to preserve loading older textual llvm
+    // ASM file
+    break;
+  case 'e':
+  case 'E':
+    if (!Rest.empty())
+      return createStringError(
+          "malformed specification, must be just 'e' or 'E'");
+    BigEndian = Specifier == 'E';
+    break;
+  case 'n': // Native integer types.
+    // n<size>[:<size>]...
+    for (StringRef Str : split(Rest, ':')) {
+      unsigned BitWidth;
+      if (Error Err = parseSize(Str, BitWidth))
         return Err;
-      unsigned PointerMemSize;
-      if (Error Err = getInt(Tok, PointerMemSize))
-        return Err;
-      if (!PointerMemSize)
-        return reportError("Invalid pointer size of 0 bytes");
-
-      // ABI alignment.
-      if (Rest.empty())
-        return reportError(
-            "Missing alignment specification for pointer in datalayout string");
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
-      unsigned PointerABIAlign;
-      if (Error Err = getIntInBytes(Tok, PointerABIAlign))
-        return Err;
-      if (!isPowerOf2_64(PointerABIAlign))
-        return reportError("Pointer ABI alignment must be a power of 2");
-
-      // Size of index used in GEP for address calculation.
-      // The parameter is optional. By default it is equal to size of pointer.
-      unsigned IndexSize = PointerMemSize;
-
-      // Preferred alignment.
-      unsigned PointerPrefAlign = PointerABIAlign;
-      if (!Rest.empty()) {
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-        if (Error Err = getIntInBytes(Tok, PointerPrefAlign))
-          return Err;
-        if (!isPowerOf2_64(PointerPrefAlign))
-          return reportError(
-              "Pointer preferred alignment must be a power of 2");
-
-        // Now read the index. It is the second optional parameter here.
-        if (!Rest.empty()) {
-          if (Error Err = ::split(Rest, ':', Split))
-            return Err;
-          if (Error Err = getInt(Tok, IndexSize))
-            return Err;
-          if (!IndexSize)
-            return reportError("Invalid index size of 0 bytes");
-        }
-      }
-      if (Error Err = setPointerAlignmentInBits(
-              AddrSpace, assumeAligned(PointerABIAlign),
-              assumeAligned(PointerPrefAlign), PointerMemSize, IndexSize))
-        return Err;
-      break;
+      LegalIntWidths.push_back(BitWidth);
     }
+    break;
+  case 'S': { // Stack natural alignment.
+    // S<size>
+    if (Rest.empty())
+      return createSpecFormatError("S<size>");
+    Align Alignment;
+    if (Error Err = parseAlignment(Rest, Alignment, "stack natural"))
+      return Err;
+    StackNaturalAlign = Alignment;
+    break;
+  }
+  case 'F': {
+    // F<type><abi>
+    if (Rest.empty())
+      return createSpecFormatError("F<type><abi>");
+    char Type = Rest.front();
+    Rest = Rest.drop_front();
+    switch (Type) {
     case 'i':
-    case 'v':
-    case 'f':
-    case 'a': {
-      AlignTypeEnum AlignType;
-      switch (Specifier) {
-      default: llvm_unreachable("Unexpected specifier!");
-      case 'i': AlignType = INTEGER_ALIGN; break;
-      case 'v': AlignType = VECTOR_ALIGN; break;
-      case 'f': AlignType = FLOAT_ALIGN; break;
-      case 'a': AlignType = AGGREGATE_ALIGN; break;
-      }
-
-      // Bit size.
-      unsigned Size = 0;
-      if (!Tok.empty())
-        if (Error Err = getInt(Tok, Size))
-          return Err;
-
-      if (AlignType == AGGREGATE_ALIGN && Size != 0)
-        return reportError(
-            "Sized aggregate specification in datalayout string");
-
-      // ABI alignment.
-      if (Rest.empty())
-        return reportError(
-            "Missing alignment specification in datalayout string");
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
-      unsigned ABIAlign;
-      if (Error Err = getIntInBytes(Tok, ABIAlign))
-        return Err;
-      if (AlignType != AGGREGATE_ALIGN && !ABIAlign)
-        return reportError(
-            "ABI alignment specification must be >0 for non-aggregate types");
-
-      if (!isUInt<16>(ABIAlign))
-        return reportError("Invalid ABI alignment, must be a 16bit integer");
-      if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
-        return reportError("Invalid ABI alignment, must be a power of 2");
-      if (AlignType == INTEGER_ALIGN && Size == 8 && ABIAlign != 1)
-        return reportError(
-            "Invalid ABI alignment, i8 must be naturally aligned");
-
-      // Preferred alignment.
-      unsigned PrefAlign = ABIAlign;
-      if (!Rest.empty()) {
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-        if (Error Err = getIntInBytes(Tok, PrefAlign))
-          return Err;
-      }
-
-      if (!isUInt<16>(PrefAlign))
-        return reportError(
-            "Invalid preferred alignment, must be a 16bit integer");
-      if (PrefAlign != 0 && !isPowerOf2_64(PrefAlign))
-        return reportError("Invalid preferred alignment, must be a power of 2");
-
-      if (Error Err = setAlignment(AlignType, assumeAligned(ABIAlign),
-                                   assumeAligned(PrefAlign), Size))
-        return Err;
-
+      TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
       break;
-    }
-    case 'n':  // Native integer types.
-      while (true) {
-        unsigned Width;
-        if (Error Err = getInt(Tok, Width))
-          return Err;
-        if (Width == 0)
-          return reportError(
-              "Zero width native integer type in datalayout string");
-        LegalIntWidths.push_back(Width);
-        if (Rest.empty())
-          break;
-        if (Error Err = ::split(Rest, ':', Split))
-          return Err;
-      }
-      break;
-    case 'S': { // Stack natural alignment.
-      uint64_t Alignment;
-      if (Error Err = getIntInBytes(Tok, Alignment))
-        return Err;
-      if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
-        return reportError("Alignment is neither 0 nor a power of 2");
-      StackNaturalAlign = MaybeAlign(Alignment);
-      break;
-    }
-    case 'F': {
-      switch (Tok.front()) {
-      case 'i':
-        TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
-        break;
-      case 'n':
-        TheFunctionPtrAlignType = FunctionPtrAlignType::MultipleOfFunctionAlign;
-        break;
-      default:
-        return reportError("Unknown function pointer alignment type in "
-                           "datalayout string");
-      }
-      Tok = Tok.substr(1);
-      uint64_t Alignment;
-      if (Error Err = getIntInBytes(Tok, Alignment))
-        return Err;
-      if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
-        return reportError("Alignment is neither 0 nor a power of 2");
-      FunctionPtrAlign = MaybeAlign(Alignment);
-      break;
-    }
-    case 'P': { // Function address space.
-      if (Error Err = getAddrSpace(Tok, ProgramAddrSpace))
-        return Err;
-      break;
-    }
-    case 'A': { // Default stack/alloca address space.
-      if (Error Err = getAddrSpace(Tok, AllocaAddrSpace))
-        return Err;
-      break;
-    }
-    case 'G': { // Default address space for global variables.
-      if (Error Err = getAddrSpace(Tok, DefaultGlobalsAddrSpace))
-        return Err;
-      break;
-    }
-    case 'm':
-      if (!Tok.empty())
-        return reportError("Unexpected trailing characters after mangling "
-                           "specifier in datalayout string");
-      if (Rest.empty())
-        return reportError("Expected mangling specifier in datalayout string");
-      if (Rest.size() > 1)
-        return reportError("Unknown mangling specifier in datalayout string");
-      switch(Rest[0]) {
-      default:
-        return reportError("Unknown mangling in datalayout string");
-      case 'e':
-        ManglingMode = MM_ELF;
-        break;
-      case 'l':
-        ManglingMode = MM_GOFF;
-        break;
-      case 'o':
-        ManglingMode = MM_MachO;
-        break;
-      case 'm':
-        ManglingMode = MM_Mips;
-        break;
-      case 'w':
-        ManglingMode = MM_WinCOFF;
-        break;
-      case 'x':
-        ManglingMode = MM_WinCOFFX86;
-        break;
-      case 'a':
-        ManglingMode = MM_XCOFF;
-        break;
-      }
+    case 'n':
+      TheFunctionPtrAlignType = FunctionPtrAlignType::MultipleOfFunctionAlign;
       break;
     default:
-      return reportError("Unknown specifier in datalayout string");
+      return createStringError("unknown function pointer alignment type '" +
+                               Twine(Type) + "'");
+    }
+    Align Alignment;
+    if (Error Err = parseAlignment(Rest, Alignment, "ABI"))
+      return Err;
+    FunctionPtrAlign = Alignment;
+    break;
+  }
+  case 'P': { // Function address space.
+    if (Rest.empty())
+      return createSpecFormatError("P<address space>");
+    if (Error Err = parseAddrSpace(Rest, ProgramAddrSpace))
+      return Err;
+    break;
+  }
+  case 'A': { // Default stack/alloca address space.
+    if (Rest.empty())
+      return createSpecFormatError("A<address space>");
+    if (Error Err = parseAddrSpace(Rest, AllocaAddrSpace))
+      return Err;
+    break;
+  }
+  case 'G': { // Default address space for global variables.
+    if (Rest.empty())
+      return createSpecFormatError("G<address space>");
+    if (Error Err = parseAddrSpace(Rest, DefaultGlobalsAddrSpace))
+      return Err;
+    break;
+  }
+  case 'm':
+    if (!Rest.consume_front(":") || Rest.empty())
+      return createSpecFormatError("m:<mangling>");
+    if (Rest.size() > 1)
+      return createStringError("unknown mangling mode");
+    switch (Rest[0]) {
+    default:
+      return createStringError("unknown mangling mode");
+    case 'e':
+      ManglingMode = MM_ELF;
+      break;
+    case 'l':
+      ManglingMode = MM_GOFF;
+      break;
+    case 'o':
+      ManglingMode = MM_MachO;
+      break;
+    case 'm':
+      ManglingMode = MM_Mips;
+      break;
+    case 'w':
+      ManglingMode = MM_WinCOFF;
+      break;
+    case 'x':
+      ManglingMode = MM_WinCOFFX86;
+      break;
+    case 'a':
+      ManglingMode = MM_XCOFF;
       break;
     }
+    break;
+  default:
+    return createStringError("unknown specifier '" + Twine(Specifier) + "'");
   }
 
   return Error::success();
 }
 
-DataLayout::DataLayout(const Module *M) {
-  init(M);
-}
+Error DataLayout::parseLayoutString(StringRef LayoutString) {
+  StringRepresentation = std::string(LayoutString);
 
-void DataLayout::init(const Module *M) { *this = M->getDataLayout(); }
-
-bool DataLayout::operator==(const DataLayout &Other) const {
-  bool Ret = BigEndian == Other.BigEndian &&
-             AllocaAddrSpace == Other.AllocaAddrSpace &&
-             StackNaturalAlign == Other.StackNaturalAlign &&
-             ProgramAddrSpace == Other.ProgramAddrSpace &&
-             DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
-             FunctionPtrAlign == Other.FunctionPtrAlign &&
-             TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
-             ManglingMode == Other.ManglingMode &&
-             LegalIntWidths == Other.LegalIntWidths &&
-             IntAlignments == Other.IntAlignments &&
-             FloatAlignments == Other.FloatAlignments &&
-             VectorAlignments == Other.VectorAlignments &&
-             StructAlignment == Other.StructAlignment &&
-             Pointers == Other.Pointers;
-  // Note: getStringRepresentation() might differs, it is not canonicalized
-  return Ret;
-}
-
-static SmallVectorImpl<LayoutAlignElem>::const_iterator
-findAlignmentLowerBound(const SmallVectorImpl<LayoutAlignElem> &Alignments,
-                        uint32_t BitWidth) {
-  return partition_point(Alignments, [BitWidth](const LayoutAlignElem &E) {
-    return E.TypeBitWidth < BitWidth;
-  });
-}
-
-Error DataLayout::setAlignment(AlignTypeEnum AlignType, Align ABIAlign,
-                               Align PrefAlign, uint32_t BitWidth) {
-  // AlignmentsTy::ABIAlign and AlignmentsTy::PrefAlign were once stored as
-  // uint16_t, it is unclear if there are requirements for alignment to be less
-  // than 2^16 other than storage. In the meantime we leave the restriction as
-  // an assert. See D67400 for context.
-  assert(Log2(ABIAlign) < 16 && Log2(PrefAlign) < 16 && "Alignment too big");
-  if (!isUInt<24>(BitWidth))
-    return reportError("Invalid bit width, must be a 24-bit integer");
-  if (PrefAlign < ABIAlign)
-    return reportError(
-        "Preferred alignment cannot be less than the ABI alignment");
-
-  SmallVectorImpl<LayoutAlignElem> *Alignments;
-  switch (AlignType) {
-  case AGGREGATE_ALIGN:
-    StructAlignment.ABIAlign = ABIAlign;
-    StructAlignment.PrefAlign = PrefAlign;
+  if (LayoutString.empty())
     return Error::success();
-  case INTEGER_ALIGN:
-    Alignments = &IntAlignments;
+
+  // Split the data layout string into specifications separated by '-' and
+  // parse each specification individually, updating internal data structures.
+  SmallVector<unsigned, 8> NonIntegralAddressSpaces;
+  for (StringRef Spec : split(LayoutString, '-')) {
+    if (Spec.empty())
+      return createStringError("empty specification is not allowed");
+    if (Error Err = parseSpecification(Spec, NonIntegralAddressSpaces))
+      return Err;
+  }
+  // Mark all address spaces that were qualified as non-integral now. This has
+  // to be done later since the non-integral property is not part of the data
+  // layout pointer specification.
+  for (unsigned AS : NonIntegralAddressSpaces) {
+    // If there is no special spec for a given AS, getPointerSpec(AS) returns
+    // the spec for AS0, and we then update that to mark it non-integral.
+    const PointerSpec &PS = getPointerSpec(AS);
+    setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
+                   true);
+  }
+
+  return Error::success();
+}
+
+void DataLayout::setPrimitiveSpec(char Specifier, uint32_t BitWidth,
+                                  Align ABIAlign, Align PrefAlign) {
+  SmallVectorImpl<PrimitiveSpec> *Specs;
+  switch (Specifier) {
+  default:
+    llvm_unreachable("Unexpected specifier");
+  case 'i':
+    Specs = &IntSpecs;
     break;
-  case FLOAT_ALIGN:
-    Alignments = &FloatAlignments;
+  case 'f':
+    Specs = &FloatSpecs;
     break;
-  case VECTOR_ALIGN:
-    Alignments = &VectorAlignments;
+  case 'v':
+    Specs = &VectorSpecs;
     break;
   }
 
-  auto I = partition_point(*Alignments, [BitWidth](const LayoutAlignElem &E) {
-    return E.TypeBitWidth < BitWidth;
-  });
-  if (I != Alignments->end() && I->TypeBitWidth == BitWidth) {
+  auto I = lower_bound(*Specs, BitWidth, LessPrimitiveBitWidth());
+  if (I != Specs->end() && I->BitWidth == BitWidth) {
     // Update the abi, preferred alignments.
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
   } else {
     // Insert before I to keep the vector sorted.
-    Alignments->insert(I, LayoutAlignElem::get(ABIAlign, PrefAlign, BitWidth));
+    Specs->insert(I, PrimitiveSpec{BitWidth, ABIAlign, PrefAlign});
   }
-  return Error::success();
 }
 
-const PointerAlignElem &
-DataLayout::getPointerAlignElem(uint32_t AddressSpace) const {
-  if (AddressSpace != 0) {
-    auto I = lower_bound(Pointers, AddressSpace,
-                         [](const PointerAlignElem &A, uint32_t AddressSpace) {
-      return A.AddressSpace < AddressSpace;
-    });
-    if (I != Pointers.end() && I->AddressSpace == AddressSpace)
+const DataLayout::PointerSpec &
+DataLayout::getPointerSpec(uint32_t AddrSpace) const {
+  if (AddrSpace != 0) {
+    auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
+    if (I != PointerSpecs.end() && I->AddrSpace == AddrSpace)
       return *I;
   }
 
-  assert(Pointers[0].AddressSpace == 0);
-  return Pointers[0];
+  assert(PointerSpecs[0].AddrSpace == 0);
+  return PointerSpecs[0];
 }
 
-Error DataLayout::setPointerAlignmentInBits(uint32_t AddrSpace, Align ABIAlign,
-                                            Align PrefAlign,
-                                            uint32_t TypeBitWidth,
-                                            uint32_t IndexBitWidth) {
-  if (PrefAlign < ABIAlign)
-    return reportError(
-        "Preferred alignment cannot be less than the ABI alignment");
-  if (IndexBitWidth > TypeBitWidth)
-    return reportError("Index width cannot be larger than pointer width");
-
-  auto I = lower_bound(Pointers, AddrSpace,
-                       [](const PointerAlignElem &A, uint32_t AddressSpace) {
-    return A.AddressSpace < AddressSpace;
-  });
-  if (I == Pointers.end() || I->AddressSpace != AddrSpace) {
-    Pointers.insert(I,
-                    PointerAlignElem::getInBits(AddrSpace, ABIAlign, PrefAlign,
-                                                TypeBitWidth, IndexBitWidth));
+void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
+                                Align ABIAlign, Align PrefAlign,
+                                uint32_t IndexBitWidth, bool IsNonIntegral) {
+  auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
+  if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
+    PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
+                                       IndexBitWidth, IsNonIntegral});
   } else {
+    I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
-    I->TypeBitWidth = TypeBitWidth;
     I->IndexBitWidth = IndexBitWidth;
+    I->IsNonIntegral = IsNonIntegral;
   }
-  return Error::success();
 }
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = findAlignmentLowerBound(IntAlignments, BitWidth);
+  auto I = lower_bound(IntSpecs, BitWidth, LessPrimitiveBitWidth());
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
-  if (I == IntAlignments.end())
+  if (I == IntSpecs.end())
     --I;
   return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 }
 
-namespace {
-
-class StructLayoutMap {
-  using LayoutInfoTy = DenseMap<StructType*, StructLayout*>;
-  LayoutInfoTy LayoutInfo;
-
-public:
-  ~StructLayoutMap() {
-    // Remove any layouts.
-    for (const auto &I : LayoutInfo) {
-      StructLayout *Value = I.second;
-      Value->~StructLayout();
-      free(Value);
-    }
-  }
-
-  StructLayout *&operator[](StructType *STy) {
-    return LayoutInfo[STy];
-  }
-};
-
-} // end anonymous namespace
-
-void DataLayout::clear() {
-  LegalIntWidths.clear();
-  IntAlignments.clear();
-  FloatAlignments.clear();
-  VectorAlignments.clear();
-  Pointers.clear();
-  delete static_cast<StructLayoutMap *>(LayoutMap);
-  LayoutMap = nullptr;
-}
-
-DataLayout::~DataLayout() {
-  clear();
-}
+DataLayout::~DataLayout() { delete static_cast<StructLayoutMap *>(LayoutMap); }
 
 const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
   if (!LayoutMap)
@@ -740,24 +729,15 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
 }
 
 Align DataLayout::getPointerABIAlignment(unsigned AS) const {
-  return getPointerAlignElem(AS).ABIAlign;
+  return getPointerSpec(AS).ABIAlign;
 }
 
 Align DataLayout::getPointerPrefAlignment(unsigned AS) const {
-  return getPointerAlignElem(AS).PrefAlign;
+  return getPointerSpec(AS).PrefAlign;
 }
 
 unsigned DataLayout::getPointerSize(unsigned AS) const {
-  return divideCeil(getPointerAlignElem(AS).TypeBitWidth, 8);
-}
-
-unsigned DataLayout::getMaxIndexSize() const {
-  unsigned MaxIndexSize = 0;
-  for (auto &P : Pointers)
-    MaxIndexSize =
-        std::max(MaxIndexSize, (unsigned)divideCeil(P.TypeBitWidth, 8));
-
-  return MaxIndexSize;
+  return divideCeil(getPointerSpec(AS).BitWidth, 8);
 }
 
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {
@@ -768,7 +748,7 @@ unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {
 }
 
 unsigned DataLayout::getIndexSize(unsigned AS) const {
-  return divideCeil(getPointerAlignElem(AS).IndexBitWidth, 8);
+  return divideCeil(getPointerSpec(AS).IndexBitWidth, 8);
 }
 
 unsigned DataLayout::getIndexTypeSizeInBits(Type *Ty) const {
@@ -807,8 +787,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
-    const Align Align =
-        abi_or_pref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
+    const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
   case Type::IntegerTyID:
@@ -823,8 +802,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();
-    auto I = findAlignmentLowerBound(FloatAlignments, BitWidth);
-    if (I != FloatAlignments.end() && I->TypeBitWidth == BitWidth)
+    auto I = lower_bound(FloatSpecs, BitWidth, LessPrimitiveBitWidth());
+    if (I != FloatSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 
     // If we still couldn't find a reasonable default alignment, fall back
@@ -835,12 +814,11 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     // layout.
     return Align(PowerOf2Ceil(BitWidth / 8));
   }
-  case Type::X86_MMXTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinValue();
-    auto I = findAlignmentLowerBound(VectorAlignments, BitWidth);
-    if (I != VectorAlignments.end() && I->TypeBitWidth == BitWidth)
+    auto I = lower_bound(VectorSpecs, BitWidth, LessPrimitiveBitWidth());
+    if (I != VectorSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
 
     // By default, use natural alignment for vector types. This is consistent
@@ -864,11 +842,6 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
-}
-
-/// TODO: Remove this function once the transition to Align is over.
-uint64_t DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getPrefTypeAlign(Ty).value();
 }
 
 Align DataLayout::getPrefTypeAlign(Type *Ty) const {
@@ -898,7 +871,7 @@ Type *DataLayout::getSmallestLegalIntType(LLVMContext &C, unsigned Width) const 
 }
 
 unsigned DataLayout::getLargestLegalIntTypeSizeInBits() const {
-  auto Max = std::max_element(LegalIntWidths.begin(), LegalIntWidths.end());
+  auto Max = llvm::max_element(LegalIntWidths);
   return Max != LegalIntWidths.end() ? *Max : 0;
 }
 

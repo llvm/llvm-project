@@ -46,7 +46,7 @@ public:
           lb_[k++] = shiftDim.LowerBound();
           if (shiftDim.Extent() != source.GetDimension(j).Extent()) {
             terminator_.Crash("%s: on dimension %d, SHIFT= has extent %jd but "
-                              "SOURCE= has extent %jd",
+                              "ARRAY= has extent %jd",
                 which, k, static_cast<std::intmax_t>(shiftDim.Extent()),
                 static_cast<std::intmax_t>(source.GetDimension(j).Extent()));
           }
@@ -342,7 +342,7 @@ void RTDEF(BesselJn_8)(Descriptor &result, int32_t n1, int32_t n2,
       result, n1, n2, x, bn2, bn2_1, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 10> x,
     CppTypeFor<TypeCategory::Real, 10> bn2,
@@ -353,7 +353,7 @@ void RTDEF(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselJn_16)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> bn2,
@@ -375,14 +375,14 @@ void RTDEF(BesselJnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
   DoBesselJnX0<TypeCategory::Real, 8>(result, n1, n2, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselJnX0<TypeCategory::Real, 10>(result, n1, n2, sourceFile, line);
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselJnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselJnX0<TypeCategory::Real, 16>(result, n1, n2, sourceFile, line);
@@ -405,7 +405,7 @@ void RTDEF(BesselYn_8)(Descriptor &result, int32_t n1, int32_t n2,
       result, n1, n2, x, bn1, bn1_1, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 10> x,
     CppTypeFor<TypeCategory::Real, 10> bn1,
@@ -416,7 +416,7 @@ void RTDEF(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselYn_16)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 16> x,
     CppTypeFor<TypeCategory::Real, 16> bn1,
@@ -438,14 +438,14 @@ void RTDEF(BesselYnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
   DoBesselYnX0<TypeCategory::Real, 8>(result, n1, n2, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselYnX0<TypeCategory::Real, 10>(result, n1, n2, sourceFile, line);
 }
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(BesselYnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselYnX0<TypeCategory::Real, 16>(result, n1, n2, sourceFile, line);
@@ -460,7 +460,7 @@ void RTDEF(Cshift)(Descriptor &result, const Descriptor &source,
   RUNTIME_CHECK(terminator, rank > 1);
   if (dim < 1 || dim > rank) {
     terminator.Crash(
-        "CSHIFT: DIM=%d must be >= 1 and <= SOURCE= rank %d", dim, rank);
+        "CSHIFT: DIM=%d must be >= 1 and <= ARRAY= rank %d", dim, rank);
   }
   ShiftControl shiftControl{shift, terminator, dim};
   shiftControl.Init(source, "CSHIFT");
@@ -508,7 +508,8 @@ void RTDEF(CshiftVector)(Descriptor &result, const Descriptor &source,
   SubscriptValue lb{sourceDim.LowerBound()};
   for (SubscriptValue j{0}; j < extent; ++j) {
     SubscriptValue resultAt{1 + j};
-    SubscriptValue sourceAt{lb + (j + shift) % extent};
+    SubscriptValue sourceAt{
+        lb + static_cast<SubscriptValue>(j + shift) % extent};
     if (sourceAt < lb) {
       sourceAt += extent;
     }
@@ -526,7 +527,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
   RUNTIME_CHECK(terminator, rank > 1);
   if (dim < 1 || dim > rank) {
     terminator.Crash(
-        "EOSHIFT: DIM=%d must be >= 1 and <= SOURCE= rank %d", dim, rank);
+        "EOSHIFT: DIM=%d must be >= 1 and <= ARRAY= rank %d", dim, rank);
   }
   std::size_t elementLen{
       AllocateResult(result, source, rank, extent, terminator, "EOSHIFT")};
@@ -537,7 +538,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
     RUNTIME_CHECK(terminator, boundary->type() == source.type());
     if (boundary->ElementBytes() != elementLen) {
       terminator.Crash("EOSHIFT: BOUNDARY= has element byte length %zd, but "
-                       "SOURCE= has length %zd",
+                       "ARRAY= has length %zd",
           boundary->ElementBytes(), elementLen);
     }
     if (boundaryRank > 0) {
@@ -546,7 +547,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
         if (j != dim - 1) {
           if (boundary->GetDimension(k).Extent() != extent[j]) {
             terminator.Crash("EOSHIFT: BOUNDARY= has extent %jd on dimension "
-                             "%d but must conform with extent %jd of SOURCE=",
+                             "%d but must conform with extent %jd of ARRAY=",
                 static_cast<std::intmax_t>(boundary->GetDimension(k).Extent()),
                 k + 1, static_cast<std::intmax_t>(extent[j]));
           }
@@ -610,7 +611,7 @@ void RTDEF(EoshiftVector)(Descriptor &result, const Descriptor &source,
     RUNTIME_CHECK(terminator, boundary->type() == source.type());
     if (boundary->ElementBytes() != elementLen) {
       terminator.Crash("EOSHIFT: BOUNDARY= has element byte length %zd but "
-                       "SOURCE= has length %zd",
+                       "ARRAY= has length %zd",
           boundary->ElementBytes(), elementLen);
     }
   }
@@ -619,7 +620,7 @@ void RTDEF(EoshiftVector)(Descriptor &result, const Descriptor &source,
   }
   SubscriptValue lb{source.GetDimension(0).LowerBound()};
   for (SubscriptValue j{1}; j <= extent; ++j) {
-    SubscriptValue sourceAt{lb + j - 1 + shift};
+    SubscriptValue sourceAt{lb + j - 1 + static_cast<SubscriptValue>(shift)};
     if (sourceAt >= lb && sourceAt < lb + extent) {
       CopyElement(result, &j, source, &sourceAt, terminator);
     } else if (boundary) {
@@ -657,7 +658,7 @@ void RTDEF(Pack)(Descriptor &result, const Descriptor &source,
     RUNTIME_CHECK(terminator, vector->rank() == 1);
     RUNTIME_CHECK(terminator, source.type() == vector->type());
     if (source.ElementBytes() != vector->ElementBytes()) {
-      terminator.Crash("PACK: SOURCE= has element byte length %zd, but VECTOR= "
+      terminator.Crash("PACK: ARRAY= has element byte length %zd, but VECTOR= "
                        "has length %zd",
           source.ElementBytes(), vector->ElementBytes());
     }

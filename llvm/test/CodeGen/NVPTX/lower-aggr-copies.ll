@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
 ; RUN: opt < %s -S -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 -O0 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | %ptxas-verify %}
 
 ; Verify that the NVPTXLowerAggrCopies pass works as expected - calls to
 ; llvm.mem* intrinsics get lowered to loops.
@@ -154,7 +154,7 @@ entry:
 ; IR-LABEL:   @memmove_caller
 ; IR:         icmp ult ptr %src, %dst
 ; IR:         [[PHIVAL:%[0-9a-zA-Z_]+]] = phi i64
-; IR-NEXT:    %index_ptr = sub i64 [[PHIVAL]], 1
+; IR-NEXT:    %bwd_main_index = sub i64 [[PHIVAL]], 1
 ; IR:         [[FWDPHIVAL:%[0-9a-zA-Z_]+]] = phi i64
 ; IR:         {{%[0-9a-zA-Z_]+}} = add i64 [[FWDPHIVAL]], 1
 

@@ -13,10 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -254,7 +257,6 @@ protected:
 
   DataLayout DL;
   Triple TT;
-  std::unique_ptr<ThreadPool> CompileThreads;
 
   std::unique_ptr<ObjectLayer> ObjLinkingLayer;
   std::unique_ptr<ObjectTransformLayer> ObjTransformLayer;
@@ -271,9 +273,8 @@ class LLLazyJIT : public LLJIT {
 public:
 
   /// Sets the partition function.
-  void
-  setPartitionFunction(CompileOnDemandLayer::PartitionFunction Partition) {
-    CODLayer->setPartitionFunction(std::move(Partition));
+  void setPartitionFunction(IRPartitionLayer::PartitionFunction Partition) {
+    IPLayer->setPartitionFunction(std::move(Partition));
   }
 
   /// Returns a reference to the on-demand layer.
@@ -293,6 +294,7 @@ private:
   LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
+  std::unique_ptr<IRPartitionLayer> IPLayer;
   std::unique_ptr<CompileOnDemandLayer> CODLayer;
 };
 
@@ -311,6 +313,8 @@ public:
 
   using PlatformSetupFunction = unique_function<Expected<JITDylibSP>(LLJIT &J)>;
 
+  using NotifyCreatedFunction = std::function<Error(LLJIT &)>;
+
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
   std::optional<JITTargetMachineBuilder> JTMB;
@@ -321,7 +325,9 @@ public:
   CompileFunctionCreator CreateCompileFunction;
   unique_function<Error(LLJIT &)> PrePlatformSetup;
   PlatformSetupFunction SetUpPlatform;
+  NotifyCreatedFunction NotifyCreated;
   unsigned NumCompileThreads = 0;
+  std::optional<bool> SupportConcurrentCompilation;
 
   /// Called prior to JIT class construcion to fix up defaults.
   Error prepareForConstruction();
@@ -330,7 +336,7 @@ public:
 template <typename JITType, typename SetterImpl, typename State>
 class LLJITBuilderSetters {
 public:
-  /// Set a ExecutorProcessControl for this instance.
+  /// Set an ExecutorProcessControl for this instance.
   /// This should not be called if ExecutionSession has already been set.
   SetterImpl &
   setExecutorProcessControl(std::unique_ptr<ExecutorProcessControl> EPC) {
@@ -441,6 +447,16 @@ public:
     return impl();
   }
 
+  /// Set up a callback after successful construction of the JIT.
+  ///
+  /// This is useful to attach generators to JITDylibs or inject initial symbol
+  /// definitions.
+  SetterImpl &
+  setNotifyCreatedCallback(LLJITBuilderState::NotifyCreatedFunction Callback) {
+    impl().NotifyCreated = std::move(Callback);
+    return impl();
+  }
+
   /// Set the number of compile threads to use.
   ///
   /// If set to zero, compilation will be performed on the execution thread when
@@ -449,19 +465,26 @@ public:
   ///
   /// If this method is not called, behavior will be as if it were called with
   /// a zero argument.
+  ///
+  /// This setting should not be used if a custom ExecutionSession or
+  /// ExecutorProcessControl object is set: in those cases a custom
+  /// TaskDispatcher should be used instead.
   SetterImpl &setNumCompileThreads(unsigned NumCompileThreads) {
     impl().NumCompileThreads = NumCompileThreads;
     return impl();
   }
 
-  /// Set an ExecutorProcessControl object.
+  /// If set, this forces LLJIT concurrent compilation support to be either on
+  /// or off. This controls the selection of compile function (concurrent vs
+  /// single threaded) and whether or not sub-modules are cloned to new
+  /// contexts for lazy emission.
   ///
-  /// If the platform uses ObjectLinkingLayer by default and no
-  /// ObjectLinkingLayerCreator has been set then the ExecutorProcessControl
-  /// object will be used to supply the memory manager for the
-  /// ObjectLinkingLayer.
-  SetterImpl &setExecutorProcessControl(ExecutorProcessControl &EPC) {
-    impl().EPC = &EPC;
+  /// If not explicitly set then concurrency support will be turned on if
+  /// NumCompileThreads is set to a non-zero value, or if a custom
+  /// ExecutionSession or ExecutorProcessControl instance is provided.
+  SetterImpl &setSupportConcurrentCompilation(
+      std::optional<bool> SupportConcurrentCompilation) {
+    impl().SupportConcurrentCompilation = SupportConcurrentCompilation;
     return impl();
   }
 
@@ -474,6 +497,11 @@ public:
     std::unique_ptr<JITType> J(new JITType(impl(), Err));
     if (Err)
       return std::move(Err);
+
+    if (impl().NotifyCreated)
+      if (Error Err = impl().NotifyCreated(*J))
+        return std::move(Err);
+
     return std::move(J);
   }
 
@@ -595,6 +623,7 @@ public:
 private:
   orc::LLJIT &J;
   DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+  SmallPtrSet<JITDylib const *, 8> InitializedDylib;
 };
 
 } // End namespace orc

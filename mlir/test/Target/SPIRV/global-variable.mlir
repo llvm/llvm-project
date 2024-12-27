@@ -54,7 +54,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.mlir.addressof @globalInvocationID : !spirv.ptr<vector<3xi32>, Input>
     %1 = spirv.Constant 0: i32
     // CHECK: spirv.AccessChain %[[ADDR]]
-    %2 = spirv.AccessChain %0[%1] : !spirv.ptr<vector<3xi32>, Input>, i32
+    %2 = spirv.AccessChain %0[%1] : !spirv.ptr<vector<3xi32>, Input>, i32 -> !spirv.ptr<i32, Input>
     spirv.Return
   }
 }
@@ -62,7 +62,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
-  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = outSideGlobalVar1, linkage_type = <Import>>
+  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outSideGlobalVar1", linkage_type = <Import>>
   spirv.GlobalVariable @var1 {
     linkage_attributes=#spirv.linkage_attributes<
       linkage_name="outSideGlobalVar1", 

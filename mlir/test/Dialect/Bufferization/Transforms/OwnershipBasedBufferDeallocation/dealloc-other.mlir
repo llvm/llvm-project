@@ -9,7 +9,7 @@
 //  CHECK-NEXT:   %[[clone:.*]] = bufferization.clone %[[m]]
 //  CHECK-NEXT:   return %[[clone]]
 func.func private @no_interface_no_operands(%t : tensor<?x?x?xf16>) -> memref<?x?x?xf16> {
-  %0 = bufferization.to_memref %t : memref<?x?x?xf16>
+  %0 = bufferization.to_memref %t : tensor<?x?x?xf16> to memref<?x?x?xf16>
   return %0 : memref<?x?x?xf16>
 }
 
@@ -36,5 +36,14 @@ func.func @no_side_effects() {
   %0 = memref.alloc() : memref<5xf32>
   // expected-error @below{{ops with unknown memory side effects are not supported}}
   "test.unregistered_op_foo"(%0) : (memref<5xf32>) -> ()
+  return
+}
+
+// -----
+
+// Buffer deallocation should not emit any error here as the operation does not
+// operate on buffers and has known memory effect (write).
+func.func @no_buffer_semantics_with_write_effect(%v0: vector<9x6xf32>) {
+  vector.print %v0 : vector<9x6xf32>
   return
 }

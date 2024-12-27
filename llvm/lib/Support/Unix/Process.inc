@@ -14,6 +14,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include <mutex>
 #include <optional>
 #if HAVE_FCNTL_H
@@ -86,7 +87,7 @@ Expected<unsigned> Process::getPageSize() {
 #error Cannot get the page size on this machine
 #endif
   if (page_size == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   return static_cast<unsigned>(page_size);
 }
@@ -143,7 +144,26 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 void Process::PreventCoreFiles() {
 #if HAVE_SETRLIMIT
   struct rlimit rlim;
-  rlim.rlim_cur = rlim.rlim_max = 0;
+  getrlimit(RLIMIT_CORE, &rlim);
+#ifdef __linux__
+  // On Linux, if the kernel.core_pattern sysctl starts with a '|' (i.e. it
+  // is being piped to a coredump handler such as systemd-coredumpd), the
+  // kernel ignores RLIMIT_CORE (since we aren't creating a file in the file
+  // system) except for the magic value of 1, which disables coredumps when
+  // piping. 1 byte is too small for any kind of valid core dump, so it
+  // also disables coredumps if kernel.core_pattern creates files directly.
+  // While most piped coredump handlers do respect the crashing processes'
+  // RLIMIT_CORE, this is notable not the case for Debian's systemd-coredump
+  // due to a local patch that changes sysctl.d/50-coredump.conf to ignore
+  // the specified limit and instead use RLIM_INFINITY.
+  //
+  // The alternative to using RLIMIT_CORE=1 would be to use prctl() with the
+  // PR_SET_DUMPABLE flag, however that also prevents ptrace(), so makes it
+  // impossible to attach a debugger.
+  rlim.rlim_cur = std::min<rlim_t>(1, rlim.rlim_max);
+#else
+  rlim.rlim_cur = 0;
+#endif
   setrlimit(RLIMIT_CORE, &rlim);
 #endif
 
@@ -216,7 +236,7 @@ std::error_code Process::FixupStandardFileDescriptors() {
       assert(errno && "expected errno to be set if fstat failed!");
       // fstat should return EBADF if the file descriptor is closed.
       if (errno != EBADF)
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
     }
     // if fstat succeeds, move on to the next FD.
     if (!errno)
@@ -228,13 +248,13 @@ std::error_code Process::FixupStandardFileDescriptors() {
       // RetryAfterSignal when open is overloaded, such as in Bionic.
       auto Open = [&]() { return ::open("/dev/null", O_RDWR); };
       if ((NullFD = RetryAfterSignal(-1, Open)) < 0)
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
     }
 
     if (NullFD == StandardFD)
       FDC.keepOpen();
     else if (dup2(NullFD, StandardFD) < 0)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
   }
   return std::error_code();
 }
@@ -243,7 +263,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   // Create a signal set filled with *all* signals.
   sigset_t FullSet, SavedSet;
   if (sigfillset(&FullSet) < 0 || sigfillset(&SavedSet) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
     // Atomically swap our current signal mask with a full mask.
 #if LLVM_ENABLE_THREADS
@@ -251,7 +271,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
     return std::error_code(EC, std::generic_category());
 #else
   if (sigprocmask(SIG_SETMASK, &FullSet, &SavedSet) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 #endif
   // Attempt to close the file descriptor.
   // We need to save the error, if one occurs, because our subsequent call to
@@ -322,17 +342,9 @@ unsigned Process::StandardErrColumns() {
   return getColumns();
 }
 
-#ifdef LLVM_ENABLE_TERMINFO
-// We manually declare these extern functions because finding the correct
-// headers from various terminfo, curses, or other sources is harder than
-// writing their specs down.
-extern "C" int setupterm(char *term, int filedes, int *errret);
-extern "C" struct term *set_curterm(struct term *termp);
-extern "C" int del_curterm(struct term *termp);
-extern "C" int tigetnum(char *capname);
-#endif
-
-bool checkTerminalEnvironmentForColors() {
+static bool terminalHasColors() {
+  // Check if the current terminal is one of terminals that are known to support
+  // ANSI color escape codes.
   if (const char *TermStr = std::getenv("TERM")) {
     return StringSwitch<bool>(TermStr)
         .Case("ansi", true)
@@ -349,54 +361,10 @@ bool checkTerminalEnvironmentForColors() {
   return false;
 }
 
-static bool terminalHasColors(int fd) {
-#ifdef LLVM_ENABLE_TERMINFO
-  // First, acquire a global lock because these C routines are thread hostile.
-  static std::mutex TermColorMutex;
-  std::lock_guard<std::mutex> G(TermColorMutex);
-
-  struct term *previous_term = set_curterm(nullptr);
-  int errret = 0;
-  if (setupterm(nullptr, fd, &errret) != 0)
-    // Regardless of why, if we can't get terminfo, we shouldn't try to print
-    // colors.
-    return false;
-
-  // Test whether the terminal as set up supports color output. How to do this
-  // isn't entirely obvious. We can use the curses routine 'has_colors' but it
-  // would be nice to avoid a dependency on curses proper when we can make do
-  // with a minimal terminfo parsing library. Also, we don't really care whether
-  // the terminal supports the curses-specific color changing routines, merely
-  // if it will interpret ANSI color escape codes in a reasonable way. Thus, the
-  // strategy here is just to query the baseline colors capability and if it
-  // supports colors at all to assume it will translate the escape codes into
-  // whatever range of colors it does support. We can add more detailed tests
-  // here if users report them as necessary.
-  //
-  // The 'tigetnum' routine returns -2 or -1 on errors, and might return 0 if
-  // the terminfo says that no colors are supported.
-  int colors_ti = tigetnum(const_cast<char *>("colors"));
-  bool HasColors =
-      colors_ti >= 0 ? colors_ti : checkTerminalEnvironmentForColors();
-
-  // Now extract the structure allocated by setupterm and free its memory
-  // through a really silly dance.
-  struct term *termp = set_curterm(previous_term);
-  (void)del_curterm(termp); // Drop any errors here.
-
-  // Return true if we found a color capabilities for the current terminal.
-  return HasColors;
-#else
-  // When the terminfo database is not available, check if the current terminal
-  // is one of terminals that are known to support ANSI color escape codes.
-  return checkTerminalEnvironmentForColors();
-#endif
-}
-
 bool Process::FileDescriptorHasColors(int fd) {
   // A file descriptor has colors if it is displayed and the terminal has
   // colors.
-  return FileDescriptorIsDisplayed(fd) && terminalHasColors(fd);
+  return FileDescriptorIsDisplayed(fd) && terminalHasColors();
 }
 
 bool Process::StandardOutHasColors() {
@@ -417,7 +385,7 @@ bool Process::ColorNeedsFlush() {
 }
 
 const char *Process::OutputColor(char code, bool bold, bool bg) {
-  return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 7];
+  return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 15];
 }
 
 const char *Process::OutputBold(bool bg) { return "\033[1m"; }

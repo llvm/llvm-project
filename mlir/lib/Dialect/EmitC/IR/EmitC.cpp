@@ -7,10 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Types.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -50,6 +58,84 @@ void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<emitc::YieldOp>(loc);
 }
 
+bool mlir::emitc::isSupportedEmitCType(Type type) {
+  if (llvm::isa<emitc::OpaqueType>(type))
+    return true;
+  if (auto ptrType = llvm::dyn_cast<emitc::PointerType>(type))
+    return isSupportedEmitCType(ptrType.getPointee());
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(type)) {
+    auto elemType = arrayType.getElementType();
+    return !llvm::isa<emitc::ArrayType>(elemType) &&
+           isSupportedEmitCType(elemType);
+  }
+  if (type.isIndex() || emitc::isPointerWideType(type))
+    return true;
+  if (llvm::isa<IntegerType>(type))
+    return isSupportedIntegerType(type);
+  if (llvm::isa<FloatType>(type))
+    return isSupportedFloatType(type);
+  if (auto tensorType = llvm::dyn_cast<TensorType>(type)) {
+    if (!tensorType.hasStaticShape()) {
+      return false;
+    }
+    auto elemType = tensorType.getElementType();
+    if (llvm::isa<emitc::ArrayType>(elemType)) {
+      return false;
+    }
+    return isSupportedEmitCType(elemType);
+  }
+  if (auto tupleType = llvm::dyn_cast<TupleType>(type)) {
+    return llvm::all_of(tupleType.getTypes(), [](Type type) {
+      return !llvm::isa<emitc::ArrayType>(type) && isSupportedEmitCType(type);
+    });
+  }
+  return false;
+}
+
+bool mlir::emitc::isSupportedIntegerType(Type type) {
+  if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
+    switch (intType.getWidth()) {
+    case 1:
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
+  return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
+         isSupportedIntegerType(type) || isPointerWideType(type);
+}
+
+bool mlir::emitc::isSupportedFloatType(Type type) {
+  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+    switch (floatType.getWidth()) {
+    case 16: {
+      if (llvm::isa<Float16Type, BFloat16Type>(type))
+        return true;
+      return false;
+    }
+    case 32:
+    case 64:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+bool mlir::emitc::isPointerWideType(Type type) {
+  return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
+      type);
+}
+
 /// Check that the type of the initial value is compatible with the operations
 /// result type.
 static LogicalResult verifyInitializationAttribute(Operation *op,
@@ -64,7 +150,12 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
            << "string attributes are not supported, use #emitc.opaque instead";
 
   Type resultType = op->getResult(0).getType();
+  if (auto lType = dyn_cast<LValueType>(resultType))
+    resultType = lType.getValueType();
   Type attrType = cast<TypedAttr>(value).getType();
+
+  if (isPointerWideType(resultType) && attrType.isIndex())
+    return success();
 
   if (resultType != attrType)
     return op->emitOpError()
@@ -84,13 +175,13 @@ LogicalResult AddOp::verify() {
   Type lhsType = getLhs().getType();
   Type rhsType = getRhs().getType();
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType))
     return emitOpError("requires that at most one operand is a pointer");
 
-  if ((lhsType.isa<emitc::PointerType>() &&
-       !rhsType.isa<IntegerType, emitc::OpaqueType>()) ||
-      (rhsType.isa<emitc::PointerType>() &&
-       !lhsType.isa<IntegerType, emitc::OpaqueType>()))
+  if ((isa<emitc::PointerType>(lhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(rhsType)) ||
+      (isa<emitc::PointerType>(rhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(lhsType)))
     return emitOpError("requires that one operand is an integer or of opaque "
                        "type if the other is a pointer");
 
@@ -112,9 +203,17 @@ LogicalResult ApplyOp::verify() {
   if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
     return emitOpError("applicable operator is illegal");
 
-  Operation *op = getOperand().getDefiningOp();
-  if (op && dyn_cast<ConstantOp>(op))
-    return emitOpError("cannot apply to constant");
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  if (applicableOperatorStr == "&") {
+    if (!llvm::isa<emitc::LValueType>(operandType))
+      return emitOpError("operand type must be an lvalue when applying `&`");
+    if (!llvm::isa<emitc::PointerType>(resultType))
+      return emitOpError("result type must be a pointer when applying `&`");
+  } else {
+    if (!llvm::isa<emitc::PointerType>(operandType))
+      return emitOpError("operand type must be a pointer when applying `*`");
+  }
 
   return success();
 }
@@ -126,17 +225,18 @@ LogicalResult ApplyOp::verify() {
 /// The assign op requires that the assigned value's type matches the
 /// assigned-to variable type.
 LogicalResult emitc::AssignOp::verify() {
-  Value variable = getVar();
-  Operation *variableDef = variable.getDefiningOp();
-  if (!variableDef || !llvm::isa<emitc::VariableOp>(variableDef))
-    return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable";
+  TypedValue<emitc::LValueType> variable = getVar();
 
-  Value value = getValue();
-  if (variable.getType() != value.getType())
-    return emitOpError() << "requires value's type (" << value.getType()
-                         << ") to match variable's type (" << variable.getType()
-                         << ")";
+  if (!variable.getDefiningOp())
+    return emitOpError() << "cannot assign to block argument";
+
+  Type valueType = getValue().getType();
+  Type variableType = variable.getType().getValueType();
+  if (variableType != valueType)
+    return emitOpError() << "requires value's type (" << valueType
+                         << ") to match variable's type (" << variableType
+                         << ")\n  variable: " << variable
+                         << "\n  value: " << getValue() << "\n";
   return success();
 }
 
@@ -147,14 +247,15 @@ LogicalResult emitc::AssignOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
-  return ((llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(input)) &&
-          (llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(output)));
+  return (
+      (emitc::isIntegerIndexOrOpaqueType(input) ||
+       emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
+      (emitc::isIntegerIndexOrOpaqueType(output) ||
+       emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOpaqueOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::CallOpaqueOp::verify() {
@@ -186,6 +287,10 @@ LogicalResult emitc::CallOpaqueOp::verify() {
       if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
         return emitOpError("template argument has invalid type");
     }
+  }
+
+  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
+    return emitOpError() << "cannot return array type";
   }
 
   return success();
@@ -241,7 +346,7 @@ LogicalResult ExpressionOp::verify() {
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!isCExpression(op))
+    if (!op.hasTrait<OpTrait::emitc::CExpression>())
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
@@ -258,20 +363,20 @@ LogicalResult ExpressionOp::verify() {
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, BodyBuilderFn bodyBuilder) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands({lb, ub, step});
   Type t = lb.getType();
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(t, result.location);
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+  bodyBlock->addArgument(t, result.location);
 
   // Create the default terminator if the builder is not provided.
   if (!bodyBuilder) {
     ForOp::ensureTerminator(*bodyRegion, builder, result.location);
   } else {
     OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock->getArgument(0));
   }
 }
 
@@ -344,6 +449,144 @@ LogicalResult ForOp::verifyRegions() {
     return emitOpError(
         "expected induction variable to be same type as bounds and step");
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Check that the callee attribute was specified.
+  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  if (!fnAttr)
+    return emitOpError("requires a 'callee' symbol reference attribute");
+  FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
+  if (!fn)
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
+
+  // Verify that the operand and result types match the callee.
+  auto fnType = fn.getFunctionType();
+  if (fnType.getNumInputs() != getNumOperands())
+    return emitOpError("incorrect number of operands for callee");
+
+  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
+    if (getOperand(i).getType() != fnType.getInput(i))
+      return emitOpError("operand type mismatch: expected operand type ")
+             << fnType.getInput(i) << ", but provided "
+             << getOperand(i).getType() << " for operand number " << i;
+
+  if (fnType.getNumResults() != getNumResults())
+    return emitOpError("incorrect number of results for callee");
+
+  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
+    if (getResult(i).getType() != fnType.getResult(i)) {
+      auto diag = emitOpError("result type mismatch at index ") << i;
+      diag.attachNote() << "      op result types: " << getResultTypes();
+      diag.attachNote() << "function result types: " << fnType.getResults();
+      return diag;
+    }
+
+  return success();
+}
+
+FunctionType CallOp::getCalleeType() {
+  return FunctionType::get(getContext(), getOperandTypes(), getResultTypes());
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareFuncOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DeclareFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Check that the sym_name attribute was specified.
+  auto fnAttr = getSymNameAttr();
+  if (!fnAttr)
+    return emitOpError("requires a 'sym_name' symbol reference attribute");
+  FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
+  if (!fn)
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
+                   FunctionType type, ArrayRef<NamedAttribute> attrs,
+                   ArrayRef<DictionaryAttr> argAttrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(name));
+  state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+
+  if (argAttrs.empty())
+    return;
+  assert(type.getNumInputs() == argAttrs.size());
+  function_interface_impl::addArgAndResultAttrs(
+      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
+}
+
+ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+}
+
+void FuncOp::print(OpAsmPrinter &p) {
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
+}
+
+LogicalResult FuncOp::verify() {
+  if (llvm::any_of(getArgumentTypes(), llvm::IsaPred<LValueType>)) {
+    return emitOpError("cannot have lvalue type as argument");
+  }
+
+  if (getNumResults() > 1)
+    return emitOpError("requires zero or exactly one result, but has ")
+           << getNumResults();
+
+  if (getNumResults() == 1 && isa<ArrayType>(getResultTypes()[0]))
+    return emitOpError("cannot return array type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReturnOp::verify() {
+  auto function = cast<FuncOp>((*this)->getParentOp());
+
+  // The operand number and types must match the function signature.
+  if (getNumOperands() != function.getNumResults())
+    return emitOpError("has ")
+           << getNumOperands() << " operands, but enclosing function (@"
+           << function.getName() << ") returns " << function.getNumResults();
+
+  if (function.getNumResults() == 1)
+    if (getOperand().getType() != function.getResultTypes()[0])
+      return emitError() << "type of the return operand ("
+                         << getOperand().getType()
+                         << ") doesn't match function result type ("
+                         << function.getResultTypes()[0] << ")"
+                         << " in function @" << function.getName();
   return success();
 }
 
@@ -561,18 +804,18 @@ LogicalResult SubOp::verify() {
   Type rhsType = getRhs().getType();
   Type resultType = getResult().getType();
 
-  if (rhsType.isa<emitc::PointerType>() && !lhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(rhsType) && !isa<emitc::PointerType>(lhsType))
     return emitOpError("rhs can only be a pointer if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() &&
-      !rhsType.isa<IntegerType, emitc::OpaqueType, emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) &&
+      !isa<IntegerType, emitc::OpaqueType, emitc::PointerType>(rhsType))
     return emitOpError("requires that rhs is an integer, pointer or of opaque "
                        "type if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>() &&
-      !resultType.isa<IntegerType, emitc::OpaqueType>())
-    return emitOpError("requires that the result is an integer or of opaque "
-                       "type if lhs and rhs are pointers");
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
+      !isa<IntegerType, emitc::PtrDiffTType, emitc::OpaqueType>(resultType))
+    return emitOpError("requires that the result is an integer, ptrdiff_t or "
+                       "of opaque type if lhs and rhs are pointers");
   return success();
 }
 
@@ -602,11 +845,69 @@ LogicalResult emitc::YieldOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// TableGen'd op method definitions
+// SubscriptOp
 //===----------------------------------------------------------------------===//
 
-#define GET_OP_CLASSES
-#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
+LogicalResult emitc::SubscriptOp::verify() {
+  // Checks for array operand.
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(getValue().getType())) {
+    // Check number of indices.
+    if (getIndices().size() != (size_t)arrayType.getRank()) {
+      return emitOpError() << "on array operand requires number of indices ("
+                           << getIndices().size()
+                           << ") to match the rank of the array type ("
+                           << arrayType.getRank() << ")";
+    }
+    // Check types of index operands.
+    for (unsigned i = 0, e = getIndices().size(); i != e; ++i) {
+      Type type = getIndices()[i].getType();
+      if (!isIntegerIndexOrOpaqueType(type)) {
+        return emitOpError() << "on array operand requires index operand " << i
+                             << " to be integer-like, but got " << type;
+      }
+    }
+    // Check element type.
+    Type elementType = arrayType.getElementType();
+    Type resultType = getType().getValueType();
+    if (elementType != resultType) {
+      return emitOpError() << "on array operand requires element type ("
+                           << elementType << ") and result type (" << resultType
+                           << ") to match";
+    }
+    return success();
+  }
+
+  // Checks for pointer operand.
+  if (auto pointerType =
+          llvm::dyn_cast<emitc::PointerType>(getValue().getType())) {
+    // Check number of indices.
+    if (getIndices().size() != 1) {
+      return emitOpError()
+             << "on pointer operand requires one index operand, but got "
+             << getIndices().size();
+    }
+    // Check types of index operand.
+    Type type = getIndices()[0].getType();
+    if (!isIntegerIndexOrOpaqueType(type)) {
+      return emitOpError() << "on pointer operand requires index operand to be "
+                              "integer-like, but got "
+                           << type;
+    }
+    // Check pointee type.
+    Type pointeeType = pointerType.getPointee();
+    Type resultType = getType().getValueType();
+    if (pointeeType != resultType) {
+      return emitOpError() << "on pointer operand requires pointee type ("
+                           << pointeeType << ") and result type (" << resultType
+                           << ") to match";
+    }
+    return success();
+  }
+
+  // The operand has opaque type, so we can't assume anything about the number
+  // or types of index operands.
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // EmitC Enums
@@ -629,6 +930,88 @@ LogicalResult emitc::YieldOp::verify() {
 #include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
+Type emitc::ArrayType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  SmallVector<int64_t, 4> dimensions;
+  if (parser.parseDimensionList(dimensions, /*allowDynamic=*/false,
+                                /*withTrailingX=*/true))
+    return Type();
+  // Parse the element type.
+  auto typeLoc = parser.getCurrentLocation();
+  Type elementType;
+  if (parser.parseType(elementType))
+    return Type();
+
+  // Check that array is formed from allowed types.
+  if (!isValidElementType(elementType))
+    return parser.emitError(typeLoc, "invalid array element type"), Type();
+  if (parser.parseGreater())
+    return Type();
+  return parser.getChecked<ArrayType>(dimensions, elementType);
+}
+
+void emitc::ArrayType::print(AsmPrinter &printer) const {
+  printer << "<";
+  for (int64_t dim : getShape()) {
+    printer << dim << 'x';
+  }
+  printer.printType(getElementType());
+  printer << ">";
+}
+
+LogicalResult emitc::ArrayType::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::llvm::ArrayRef<int64_t> shape, Type elementType) {
+  if (shape.empty())
+    return emitError() << "shape must not be empty";
+
+  for (int64_t dim : shape) {
+    if (dim <= 0)
+      return emitError() << "dimensions must have positive size";
+  }
+
+  if (!elementType)
+    return emitError() << "element type must not be none";
+
+  if (!isValidElementType(elementType))
+    return emitError() << "invalid array element type";
+
+  return success();
+}
+
+emitc::ArrayType
+emitc::ArrayType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                            Type elementType) const {
+  if (!shape)
+    return emitc::ArrayType::get(getShape(), elementType);
+  return emitc::ArrayType::get(*shape, elementType);
+}
+
+//===----------------------------------------------------------------------===//
+// LValueType
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::emitc::LValueType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type value) {
+  // Check that the wrapped type is valid. This especially forbids nested lvalue
+  // types.
+  if (!isSupportedEmitCType(value))
+    return emitError()
+           << "!emitc.lvalue must wrap supported emitc type, but got " << value;
+
+  if (llvm::isa<emitc::ArrayType>(value))
+    return emitError() << "!emitc.lvalue cannot wrap !emitc.array type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
@@ -644,3 +1027,271 @@ LogicalResult mlir::emitc::OpaqueType::verify(
   }
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// PointerType
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::emitc::PointerType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, Type value) {
+  if (llvm::isa<emitc::LValueType>(value))
+    return emitError() << "pointers to lvalues are not allowed";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+static void printEmitCGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
+                                                  TypeAttr type,
+                                                  Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForGlobal(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                      Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForGlobal(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
+LogicalResult GlobalOp::verify() {
+  if (!isSupportedEmitCType(getType())) {
+    return emitOpError("expected valid emitc type");
+  }
+  if (getInitialValue().has_value()) {
+    Attribute initValue = getInitialValue().value();
+    // Check that the type of the initial value is compatible with the type of
+    // the global variable.
+    if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
+      auto arrayType = llvm::dyn_cast<ArrayType>(getType());
+      if (!arrayType)
+        return emitOpError("expected array type, but got ") << getType();
+
+      Type initType = elementsAttr.getType();
+      Type tensorType = getInitializerTypeForGlobal(getType());
+      if (initType != tensorType) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << initType;
+      }
+    } else if (auto intAttr = dyn_cast<IntegerAttr>(initValue)) {
+      if (intAttr.getType() != getType()) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << intAttr.getType();
+      }
+    } else if (auto floatAttr = dyn_cast<FloatAttr>(initValue)) {
+      if (floatAttr.getType() != getType()) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << floatAttr.getType();
+      }
+    } else if (!isa<emitc::OpaqueAttr>(initValue)) {
+      return emitOpError("initial value should be a integer, float, elements "
+                         "or opaque attribute, but got ")
+             << initValue;
+    }
+  }
+  if (getStaticSpecifier() && getExternSpecifier()) {
+    return emitOpError("cannot have both static and extern specifiers");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the type matches the type of the global variable.
+  auto global =
+      symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!global)
+    return emitOpError("'")
+           << getName() << "' does not reference a valid emitc.global";
+
+  Type resultType = getResult().getType();
+  Type globalType = global.getType();
+
+  // global has array type
+  if (llvm::isa<ArrayType>(globalType)) {
+    if (globalType != resultType)
+      return emitOpError("on array type expects result type ")
+             << resultType << " to match type " << globalType
+             << " of the global @" << getName();
+    return success();
+  }
+
+  // global has non-array type
+  auto lvalueType = dyn_cast<LValueType>(resultType);
+  if (!lvalueType || lvalueType.getValueType() != globalType)
+    return emitOpError("on non-array type expects result inner type ")
+           << lvalueType.getValueType() << " to match type " << globalType
+           << " of the global @" << getName();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+/// Parse the case regions and values.
+static ParseResult
+parseSwitchCases(OpAsmParser &parser, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions) {
+  SmallVector<int64_t> caseValues;
+  while (succeeded(parser.parseOptionalKeyword("case"))) {
+    int64_t value;
+    Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
+    if (parser.parseInteger(value) ||
+        parser.parseRegion(region, /*arguments=*/{}))
+      return failure();
+    caseValues.push_back(value);
+  }
+  cases = parser.getBuilder().getDenseI64ArrayAttr(caseValues);
+  return success();
+}
+
+/// Print the case regions and values.
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions) {
+  for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
+    p.printNewline();
+    p << "case " << value << ' ';
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+  }
+}
+
+static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
+                                  const Twine &name) {
+  auto yield = dyn_cast<emitc::YieldOp>(region.front().back());
+  if (!yield)
+    return op.emitOpError("expected region to end with emitc.yield, but got ")
+           << region.front().back().getName();
+
+  if (yield.getNumOperands() != 0) {
+    return (op.emitOpError("expected each region to return ")
+            << "0 values, but " << name << " returns "
+            << yield.getNumOperands())
+               .attachNote(yield.getLoc())
+           << "see yield operation here";
+  }
+
+  return success();
+}
+
+LogicalResult emitc::SwitchOp::verify() {
+  if (!isIntegerIndexOrOpaqueType(getArg().getType()))
+    return emitOpError("unsupported type ") << getArg().getType();
+
+  if (getCases().size() != getCaseRegions().size()) {
+    return emitOpError("has ")
+           << getCaseRegions().size() << " case regions but "
+           << getCases().size() << " case values";
+  }
+
+  DenseSet<int64_t> valueSet;
+  for (int64_t value : getCases())
+    if (!valueSet.insert(value).second)
+      return emitOpError("has duplicate case value: ") << value;
+
+  if (failed(verifyRegion(*this, getDefaultRegion(), "default region")))
+    return failure();
+
+  for (auto [idx, caseRegion] : llvm::enumerate(getCaseRegions()))
+    if (failed(verifyRegion(*this, caseRegion, "case region #" + Twine(idx))))
+      return failure();
+
+  return success();
+}
+
+unsigned emitc::SwitchOp::getNumCases() { return getCases().size(); }
+
+Block &emitc::SwitchOp::getDefaultBlock() { return getDefaultRegion().front(); }
+
+Block &emitc::SwitchOp::getCaseBlock(unsigned idx) {
+  assert(idx < getNumCases() && "case index out-of-bounds");
+  return getCaseRegions()[idx].front();
+}
+
+void SwitchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
+  llvm::copy(getRegions(), std::back_inserter(successors));
+}
+
+void SwitchOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &successors) {
+  FoldAdaptor adaptor(operands, *this);
+
+  // If a constant was not provided, all regions are possible successors.
+  auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
+  if (!arg) {
+    llvm::copy(getRegions(), std::back_inserter(successors));
+    return;
+  }
+
+  // Otherwise, try to find a case with a matching value. If not, the
+  // default region is the only successor.
+  for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
+    if (caseValue == arg.getInt()) {
+      successors.emplace_back(&caseRegion);
+      return;
+    }
+  }
+  successors.emplace_back(&getDefaultRegion());
+}
+
+void SwitchOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  auto operandValue = llvm::dyn_cast_or_null<IntegerAttr>(operands.front());
+  if (!operandValue) {
+    // All regions are invoked at most once.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
+  unsigned liveIndex = getNumRegions() - 1;
+  const auto *iteratorToInt = llvm::find(getCases(), operandValue.getInt());
+
+  liveIndex = iteratorToInt != getCases().end()
+                  ? std::distance(getCases().begin(), iteratorToInt)
+                  : liveIndex;
+
+  for (unsigned regIndex = 0, regNum = getNumRegions(); regIndex < regNum;
+       ++regIndex)
+    bounds.emplace_back(/*lb=*/0, /*ub=*/regIndex == liveIndex);
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"

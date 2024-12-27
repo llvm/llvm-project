@@ -11,7 +11,6 @@ macro(add_lld_library name)
     set(ARG_ENABLE_SHARED SHARED)
   endif()
   llvm_add_library(${name} ${ARG_ENABLE_SHARED} ${ARG_UNPARSED_ARGUMENTS})
-  set_target_properties(${name} PROPERTIES FOLDER "lld libraries")
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     get_target_export_arg(${name} LLD export_to_lldtargets)
@@ -33,7 +32,6 @@ endmacro(add_lld_library)
 
 macro(add_lld_executable name)
   add_llvm_executable(${name} ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "lld executables")
 endmacro(add_lld_executable)
 
 macro(add_lld_tool name)

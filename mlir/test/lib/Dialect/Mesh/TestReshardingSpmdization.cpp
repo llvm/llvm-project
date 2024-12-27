@@ -19,7 +19,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -37,15 +36,18 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
     }
 
     SymbolTableCollection symbolTable;
-    mesh::ClusterOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-        op, op.getShard().getCluster());
+    mesh::MeshOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
+        op, cast<ShardingOp>(op.getSharding().getDefiningOp()).getMeshAttr());
 
     bool foundUser = false;
     for (auto user : op->getUsers()) {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
-            mesh == symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-                        targetShardOp, targetShardOp.getShard().getCluster())) {
+            mesh == symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
+                        targetShardOp,
+                        cast<ShardingOp>(
+                            targetShardOp.getSharding().getDefiningOp())
+                            .getMeshAttr())) {
           foundUser = true;
           break;
         }
@@ -59,20 +61,20 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
     for (auto user : op->getUsers()) {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
-          symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-              targetShardOp, targetShardOp.getShard().getCluster()) != mesh) {
+          symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
+              targetShardOp,
+              cast<ShardingOp>(targetShardOp.getSharding().getDefiningOp())
+                  .getMeshAttr()) != mesh) {
         continue;
       }
 
       ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
       ShapedType sourceShardShape =
-          shardShapedType(op.getResult().getType(), mesh, op.getShard());
-      TypedValue<ShapedType> sourceShard =
+          shardShapedType(op.getResult().getType(), mesh, op.getSharding());
+      TypedValue<ShapedType> sourceShard = cast<TypedValue<ShapedType>>(
           builder
-              .create<UnrealizedConversionCastOp>(sourceShardShape,
-                                                  op.getOperand())
-              ->getResult(0)
-              .cast<TypedValue<ShapedType>>();
+              .create<UnrealizedConversionCastOp>(sourceShardShape, op.getSrc())
+              ->getResult(0));
       TypedValue<ShapedType> targetShard =
           reshard(builder, mesh, op, targetShardOp, sourceShard);
       Value newTargetUnsharded =
@@ -95,8 +97,8 @@ struct TestMeshReshardingPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     patterns.insert<TestMeshReshardingRewritePattern>(&getContext());
-    if (failed(applyPatternsAndFoldGreedily(getOperation().getOperation(),
-                                            std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(getOperation().getOperation(),
+                                     std::move(patterns)))) {
       return signalPassFailure();
     }
   }

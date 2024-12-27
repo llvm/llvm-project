@@ -165,7 +165,7 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
 
 Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
                                        Value elem, Type dstTp) {
-  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
+  if (auto rtp = dyn_cast<RankedTensorType>(dstTp)) {
     // Scalars can only be converted to 0-ranked tensors.
     assert(rtp.getRank() == 0);
     elem = sparse_tensor::genCast(builder, loc, elem, rtp.getElementType());
@@ -175,7 +175,7 @@ Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
 }
 
 Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
-                                  Value s) {
+                                  ValueRange s) {
   Value load = builder.create<memref::LoadOp>(loc, mem, s);
   if (!isa<IndexType>(load.getType())) {
     if (load.getType().getIntOrFloatBitWidth() < 64)
@@ -552,46 +552,6 @@ sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
   auto mTp = MemRefType::get(tTp.getShape(), tTp.getElementType());
   return builder.create<bufferization::ToMemrefOp>(loc, mTp, tensor)
       .getResult();
-}
-
-Value sparse_tensor::genToPositions(OpBuilder &builder, Location loc,
-                                    Value tensor, Level lvl) {
-  const auto srcTp = getSparseTensorType(tensor);
-  const Type posTp = srcTp.getPosType();
-  const Type memTp = get1DMemRefType(posTp, /*withLayout=*/false);
-  return builder.create<ToPositionsOp>(loc, memTp, tensor,
-                                       builder.getIndexAttr(lvl));
-}
-
-Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
-                                      Value tensor, Level lvl) {
-  const auto srcTp = getSparseTensorType(tensor);
-  const Type crdTp = srcTp.getCrdType();
-  const Type memTp =
-      get1DMemRefType(crdTp, /*withLayout=*/lvl >= srcTp.getCOOStart());
-  return builder.create<ToCoordinatesOp>(loc, memTp, tensor,
-                                         builder.getIndexAttr(lvl));
-}
-
-Value sparse_tensor::genToCoordinatesBuffer(OpBuilder &builder, Location loc,
-                                            Value tensor) {
-  const auto srcTp = getSparseTensorType(tensor);
-  const Type crdTp = srcTp.getCrdType();
-  const Type memTp = get1DMemRefType(crdTp, /*withLayout=*/false);
-  return builder.create<ToCoordinatesBufferOp>(loc, memTp, tensor);
-}
-
-Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,
-                                 Value tensor) {
-  RankedTensorType srcTp = getRankedTensorType(tensor);
-  Type valTp = get1DMemRefType(srcTp.getElementType(),
-                               /*withLayout=*/false);
-  return builder.create<ToValuesOp>(loc, valTp, tensor);
-}
-
-Value sparse_tensor::genValMemSize(OpBuilder &builder, Location loc,
-                                   Value tensor) {
-  return getDescriptorFromTensorTuple(tensor).getValMemSize(builder, loc);
 }
 
 Value sparse_tensor::createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc,

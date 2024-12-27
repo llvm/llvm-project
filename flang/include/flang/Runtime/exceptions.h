@@ -12,7 +12,6 @@
 #define FORTRAN_RUNTIME_EXCEPTIONS_H_
 
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
 
 namespace Fortran::runtime {
@@ -21,11 +20,17 @@ class Descriptor;
 
 extern "C" {
 
-// Map a (single) IEEE_FLAG_TYPE exception value to a libm fenv.h value.
-// This could be extended to handle sets of exceptions, but there is no
-// current use case for that. This mapping is done at runtime to support
-// cross compilation.
-std::int32_t RTNAME(MapException)(std::int32_t except);
+// Map a set of IEEE_FLAG_TYPE exception values to a libm fenv.h excepts value.
+// This mapping is done at runtime to support cross compilation.
+std::uint32_t RTNAME(MapException)(std::uint32_t excepts);
+
+// Check if the processor has the ability to control whether to halt
+// or continue exeuction when a given exception is raised.
+bool RTNAME(SupportHalting)(uint32_t except);
+
+// Get and set the ieee underflow mode if supported; otherwise nops.
+bool RTNAME(GetUnderflowMode)(void);
+void RTNAME(SetUnderflowMode)(bool flag);
 
 } // extern "C"
 } // namespace Fortran::runtime

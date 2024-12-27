@@ -17,6 +17,8 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
+    MLIRArmNeonTestPasses
+    MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
     MLIRDLTITestPasses
@@ -25,6 +27,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRLinalgTestPasses
     MLIRLoopLikeInterfaceTestPasses
     MLIRMathTestPasses
+    MLIRTestMathToVCIX
     MLIRMemRefTestPasses
     MLIRMeshTest
     MLIRNVGPUTestPasses
@@ -33,6 +36,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRSPIRVTestPasses
     MLIRTensorTestPasses
     MLIRTestAnalysis
+    MLIRTestConvertToSPIRV
     MLIRTestDialect
     MLIRTestDynDialect
     MLIRTestIR
@@ -41,6 +45,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestReducer
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
+    MLIRTosaTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
@@ -62,7 +67,6 @@ set(LIBS
   ${dialect_libs}
   ${conversion_libs}
   ${extension_libs}
-  ${test_libs}
 
   MLIRAffineAnalysis
   MLIRAnalysis
@@ -90,25 +94,17 @@ add_mlir_library(MLIRMlirOptMain
 
   LINK_LIBS PUBLIC
   ${LIBS}
+  ${test_libs}
   )
 
 add_mlir_tool(mlir-opt
   mlir-opt.cpp
 
-  DEPENDS
-  ${LIBS}
   SUPPORT_PLUGINS
   )
-target_link_libraries(mlir-opt PRIVATE ${LIBS})
+mlir_target_link_libraries(mlir-opt PRIVATE ${LIBS})
+target_link_libraries(mlir-opt PRIVATE ${test_libs})
 llvm_update_compile_flags(mlir-opt)
 
 mlir_check_all_link_libraries(mlir-opt)
 export_executable_symbols_for_plugins(mlir-opt)
-
-if(MLIR_ENABLE_DEPRECATED_GPU_SERIALIZATION)
-  # Enable deprecated serialization passes.
-  target_compile_definitions(mlir-opt
-    PRIVATE
-    MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE=1
-  )
-endif()

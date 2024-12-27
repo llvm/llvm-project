@@ -31,7 +31,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(VariantHeldTypeMap, const MemRegion *, QualType)
 
 namespace clang::ento::tagged_union_modeling {
 
-const CXXConstructorDecl *
+static const CXXConstructorDecl *
 getConstructorDeclarationForCall(const CallEvent &Call) {
   const auto *ConstructorCall = dyn_cast<CXXConstructorCall>(&Call);
   if (!ConstructorCall)
@@ -76,7 +76,7 @@ bool isMoveAssignmentCall(const CallEvent &Call) {
   return AsMethodDecl->isMoveAssignmentOperator();
 }
 
-bool isStdType(const Type *Type, llvm::StringRef TypeName) {
+static bool isStdType(const Type *Type, llvm::StringRef TypeName) {
   auto *Decl = Type->getAsRecordDecl();
   if (!Decl)
     return false;
@@ -129,9 +129,11 @@ static llvm::StringRef indefiniteArticleBasedOnVowel(char a) {
 
 class StdVariantChecker : public Checker<eval::Call, check::RegionChanges> {
   // Call descriptors to find relevant calls
-  CallDescription VariantConstructor{{"std", "variant", "variant"}};
-  CallDescription VariantAssignmentOperator{{"std", "variant", "operator="}};
-  CallDescription StdGet{{"std", "get"}, 1, 1};
+  CallDescription VariantConstructor{CDM::CXXMethod,
+                                     {"std", "variant", "variant"}};
+  CallDescription VariantAssignmentOperator{CDM::CXXMethod,
+                                            {"std", "variant", "operator="}};
+  CallDescription StdGet{CDM::SimpleFunc, {"std", "get"}, 1, 1};
 
   BugType BadVariantType{this, "BadVariantType", "BadVariantType"};
 

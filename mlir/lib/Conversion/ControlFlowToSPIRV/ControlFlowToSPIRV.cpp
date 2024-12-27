@@ -19,7 +19,6 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -110,7 +109,7 @@ struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
 //===----------------------------------------------------------------------===//
 
 void mlir::cf::populateControlFlowToSPIRVPatterns(
-    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
   patterns.add<BranchOpPattern, CondBranchOpPattern>(typeConverter, context);

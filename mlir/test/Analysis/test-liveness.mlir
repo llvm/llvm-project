@@ -40,7 +40,7 @@ func.func @func_simpleBranch(%arg0: i32, %arg1 : i32) -> i32 {
   // CHECK-SAME:    arg0@0 arg1@0 val_2
   // CHECK: return
   // CHECK-SAME:    val_2
-  // CHECK-NEXT EndCurrentlyLive
+  // CHECK-NEXT:EndCurrentlyLive
   %result = arith.addi %arg0, %arg1 : i32
   return %result : i32
 }
@@ -197,9 +197,9 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK-NEXT:    %2 = arith.addi
   // CHECK-NEXT:    %3 = arith.muli
   // CHECK-NEXT: val_7
-  // CHECK-NEXT    %2 = arith.addi
-  // CHECK-NEXT    %3 = arith.muli
-  // CHECK-NEXT    %4 = arith.muli
+  // CHECK-NEXT:   %2 = arith.addi
+  // CHECK-NEXT:   %3 = arith.muli
+  // CHECK-NEXT:   %4 = arith.muli
   // CHECK:      val_8
   // CHECK-NEXT:    %3 = arith.muli
   // CHECK-NEXT:    %4 = arith.muli
@@ -492,4 +492,28 @@ func.func @nested_region3(
     memref.store %2, %buffer[] : memref<i32>
   }
   return %1 : i32
+}
+
+// -----
+
+// CHECK-LABEL: Testing : nested_region4
+
+func.func @nested_region4(%arg0: index, %arg1: index, %arg2: index) {
+  // CHECK: Block: 0
+  // CHECK-NEXT: LiveIn:{{ *$}}
+  // CHECK-NEXT: LiveOut:{{ *$}}
+
+  // CHECK: {{^// +}}[[VAL3:[a-z0-9_]+]]{{ *:}}
+  // CHECK: {{^// +}}[[VAL4:[a-z0-9_]+]]{{ *:}}
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %0 = scf.for %arg3 = %arg0 to %arg1 step %arg2 iter_args(%arg4 = %c0_i32) -> (i32) {
+    // CHECK: Block: 1
+    // CHECK-NEXT: LiveIn: [[VAL4]]{{ *$}}
+    // CHECK-NEXT: LiveOut:{{ *$}}
+    %1 = arith.addi %arg4, %c1_i32 : i32
+    scf.yield %1 : i32
+  }
+  return
 }

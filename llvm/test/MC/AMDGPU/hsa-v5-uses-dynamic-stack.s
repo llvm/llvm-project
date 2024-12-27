@@ -3,6 +3,11 @@
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 --amdhsa-code-object-version=6 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 --amdhsa-code-object-version=6 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
+// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
 // READOBJ: .rodata PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        000100 {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
@@ -45,9 +50,6 @@
 // OBJDUMP-NEXT: 00d0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00e0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00f0 0000ac00 80000000 00000000 00000000
-
-.text
-// ASM: .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx904:xnack+"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx904:xnack+"
@@ -195,6 +197,7 @@ disabled_user_sgpr:
 // ASM: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 27
 // ASM-NEXT: .amdhsa_reserve_vcc 0
+// ASM-NEXT: .amdhsa_reserve_flat_scratch 1
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM-NEXT: .amdhsa_dx10_clamp 0

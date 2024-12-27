@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 
 define void @foo(ptr %A, i32 %p, ptr %B) {

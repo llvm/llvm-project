@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
@@ -84,6 +83,13 @@ int FunctionComparator::cmpAPInts(const APInt &L, const APInt &R) const {
   return 0;
 }
 
+int FunctionComparator::cmpConstantRanges(const ConstantRange &L,
+                                          const ConstantRange &R) const {
+  if (int Res = cmpAPInts(L.getLower(), R.getLower()))
+    return Res;
+  return cmpAPInts(L.getUpper(), R.getUpper());
+}
+
 int FunctionComparator::cmpAPFloats(const APFloat &L, const APFloat &R) const {
   // Floats are ordered first by semantics (i.e. float, double, half, etc.),
   // then by value interpreted as a bitstring (aka APInt).
@@ -142,6 +148,28 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         // independent of the value of a real pointer.
         if (int Res = cmpNumbers((uint64_t)TyL, (uint64_t)TyR))
           return Res;
+        continue;
+      } else if (LA.isConstantRangeAttribute() &&
+                 RA.isConstantRangeAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        if (int Res = cmpConstantRanges(LA.getRange(), RA.getRange()))
+          return Res;
+        continue;
+      } else if (LA.isConstantRangeListAttribute() &&
+                 RA.isConstantRangeListAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        ArrayRef<ConstantRange> CRL = LA.getValueAsConstantRangeList();
+        ArrayRef<ConstantRange> CRR = RA.getValueAsConstantRangeList();
+        if (int Res = cmpNumbers(CRL.size(), CRR.size()))
+          return Res;
+
+        for (const auto &[L, R] : zip(CRL, CRR))
+          if (int Res = cmpConstantRanges(L, R))
+            return Res;
         continue;
       }
       if (LA < RA)
@@ -416,19 +444,25 @@ int FunctionComparator::cmpConstants(const Constant *L,
                                  cast<Constant>(RE->getOperand(i))))
         return Res;
     }
-    if (LE->isCompare())
-      if (int Res = cmpNumbers(LE->getPredicate(), RE->getPredicate()))
-        return Res;
     if (auto *GEPL = dyn_cast<GEPOperator>(LE)) {
       auto *GEPR = cast<GEPOperator>(RE);
       if (int Res = cmpTypes(GEPL->getSourceElementType(),
                              GEPR->getSourceElementType()))
         return Res;
-      if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
+      if (int Res = cmpNumbers(GEPL->getNoWrapFlags().getRaw(),
+                               GEPR->getNoWrapFlags().getRaw()))
         return Res;
-      if (int Res = cmpNumbers(GEPL->getInRangeIndex().value_or(unsigned(-1)),
-                               GEPR->getInRangeIndex().value_or(unsigned(-1))))
-        return Res;
+
+      std::optional<ConstantRange> InRangeL = GEPL->getInRange();
+      std::optional<ConstantRange> InRangeR = GEPR->getInRange();
+      if (InRangeL) {
+        if (!InRangeR)
+          return 1;
+        if (int Res = cmpConstantRanges(*InRangeL, *InRangeR))
+          return Res;
+      } else if (InRangeR) {
+        return -1;
+      }
     }
     if (auto *OBOL = dyn_cast<OverflowingBinaryOperator>(LE)) {
       auto *OBOR = cast<OverflowingBinaryOperator>(RE);
@@ -504,7 +538,7 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
   PointerType *PTyL = dyn_cast<PointerType>(TyL);
   PointerType *PTyR = dyn_cast<PointerType>(TyR);
 
-  const DataLayout &DL = FnL->getParent()->getDataLayout();
+  const DataLayout &DL = FnL->getDataLayout();
   if (PTyL && PTyL->getAddressSpace() == 0)
     TyL = DL.getIntPtrType(TyL);
   if (PTyR && PTyR->getAddressSpace() == 0)
@@ -785,7 +819,7 @@ int FunctionComparator::cmpGEPs(const GEPOperator *GEPL,
 
   // When we have target data, we can reduce the GEP down to the value in bytes
   // added to the address.
-  const DataLayout &DL = FnL->getParent()->getDataLayout();
+  const DataLayout &DL = FnL->getDataLayout();
   unsigned OffsetBitWidth = DL.getIndexSizeInBits(ASL);
   APInt OffsetL(OffsetBitWidth, 0), OffsetR(OffsetBitWidth, 0);
   if (GEPL->accumulateConstantOffset(DL, OffsetL) &&

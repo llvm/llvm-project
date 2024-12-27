@@ -71,8 +71,24 @@ public:
 
   virtual void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym,
                                     uint64_t stubsAddr, uint64_t &stubOffset,
-                                    uint64_t selrefsVA, uint64_t selectorIndex,
+                                    uint64_t selrefVA,
                                     Symbol *objcMsgSend) const = 0;
+
+  // Init 'thunk' so that it be a direct jump to 'branchTarget'.
+  virtual void initICFSafeThunkBody(InputSection *thunk,
+                                    InputSection *branchTarget) const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
+
+  // Given a thunk for which `initICFSafeThunkBody` was called, return the
+  // branchTarget it was initialized with.
+  virtual InputSection *getThunkBranchTarget(InputSection *thunk) const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
+
+  virtual uint32_t getICFSafeThunkSize() const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
 
   // Symbols may be referenced via either the GOT or the stubs section,
   // depending on the relocation type. prepareSymbolRelocation() will set up the

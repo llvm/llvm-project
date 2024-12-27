@@ -11,12 +11,11 @@ add_llvm_unittest(JITLinkTests
     AArch32Tests.cpp
     AArch32ErrorTests.cpp
     EHFrameSupportTests.cpp
-    JITLinkMocks.cpp
+    JITLinkTestUtils.cpp
     LinkGraphTests.cpp
+    MachOLinkGraphTests.cpp
     MemoryManagerErrorTests.cpp
     StubsTests.cpp
   )
 
 target_link_libraries(JITLinkTests PRIVATE LLVMTestingSupport)
-
-set_property(TARGET JITLinkTests PROPERTY FOLDER "Tests/UnitTests/ExecutionTests")

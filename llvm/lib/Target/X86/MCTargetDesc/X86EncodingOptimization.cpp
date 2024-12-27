@@ -52,8 +52,8 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   case X86::VCMPPDYrri:
   case X86::VCMPPSrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr: {
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri: {
     switch (MI.getOperand(3).getImm() & 0x7) {
     default:
       return false;
@@ -106,6 +106,12 @@ bool X86::optimizeShiftRotateWithImmediateOne(MCInst &MI) {
 #define TO_IMM1(FROM)                                                          \
   case X86::FROM##i:                                                           \
     NewOpc = X86::FROM##1;                                                     \
+    break;                                                                     \
+  case X86::FROM##i_EVEX:                                                      \
+    NewOpc = X86::FROM##1_EVEX;                                                \
+    break;                                                                     \
+  case X86::FROM##i_ND:                                                        \
+    NewOpc = X86::FROM##1_ND;                                                  \
     break;
   switch (MI.getOpcode()) {
   default:
@@ -118,6 +124,31 @@ bool X86::optimizeShiftRotateWithImmediateOne(MCInst &MI) {
     TO_IMM1(RCL16r)
     TO_IMM1(RCL32r)
     TO_IMM1(RCL64r)
+    TO_IMM1(RCR8m)
+    TO_IMM1(RCR16m)
+    TO_IMM1(RCR32m)
+    TO_IMM1(RCR64m)
+    TO_IMM1(RCL8m)
+    TO_IMM1(RCL16m)
+    TO_IMM1(RCL32m)
+    TO_IMM1(RCL64m)
+#undef TO_IMM1
+#define TO_IMM1(FROM)                                                          \
+  case X86::FROM##i:                                                           \
+    NewOpc = X86::FROM##1;                                                     \
+    break;                                                                     \
+  case X86::FROM##i_EVEX:                                                      \
+    NewOpc = X86::FROM##1_EVEX;                                                \
+    break;                                                                     \
+  case X86::FROM##i_NF:                                                        \
+    NewOpc = X86::FROM##1_NF;                                                  \
+    break;                                                                     \
+  case X86::FROM##i_ND:                                                        \
+    NewOpc = X86::FROM##1_ND;                                                  \
+    break;                                                                     \
+  case X86::FROM##i_NF_ND:                                                     \
+    NewOpc = X86::FROM##1_NF_ND;                                               \
+    break;
     TO_IMM1(ROR8r)
     TO_IMM1(ROR16r)
     TO_IMM1(ROR32r)
@@ -138,14 +169,6 @@ bool X86::optimizeShiftRotateWithImmediateOne(MCInst &MI) {
     TO_IMM1(SHL16r)
     TO_IMM1(SHL32r)
     TO_IMM1(SHL64r)
-    TO_IMM1(RCR8m)
-    TO_IMM1(RCR16m)
-    TO_IMM1(RCR32m)
-    TO_IMM1(RCR64m)
-    TO_IMM1(RCL8m)
-    TO_IMM1(RCL16m)
-    TO_IMM1(RCL32m)
-    TO_IMM1(RCL64m)
     TO_IMM1(ROR8m)
     TO_IMM1(ROR16m)
     TO_IMM1(ROR32m)
@@ -200,38 +223,38 @@ bool X86::optimizeVPCMPWithImmediateOneOrSix(MCInst &MI) {
     FROM_TO(VPCMPBZrri, VPCMPEQBZrr, VPCMPGTBZrr)
     FROM_TO(VPCMPBZrrik, VPCMPEQBZrrk, VPCMPGTBZrrk)
     FROM_TO(VPCMPDZ128rmi, VPCMPEQDZ128rm, VPCMPGTDZ128rm)
-    FROM_TO(VPCMPDZ128rmib, VPCMPEQDZ128rmb, VPCMPGTDZ128rmb)
-    FROM_TO(VPCMPDZ128rmibk, VPCMPEQDZ128rmbk, VPCMPGTDZ128rmbk)
+    FROM_TO(VPCMPDZ128rmbi, VPCMPEQDZ128rmb, VPCMPGTDZ128rmb)
+    FROM_TO(VPCMPDZ128rmbik, VPCMPEQDZ128rmbk, VPCMPGTDZ128rmbk)
     FROM_TO(VPCMPDZ128rmik, VPCMPEQDZ128rmk, VPCMPGTDZ128rmk)
     FROM_TO(VPCMPDZ128rri, VPCMPEQDZ128rr, VPCMPGTDZ128rr)
     FROM_TO(VPCMPDZ128rrik, VPCMPEQDZ128rrk, VPCMPGTDZ128rrk)
     FROM_TO(VPCMPDZ256rmi, VPCMPEQDZ256rm, VPCMPGTDZ256rm)
-    FROM_TO(VPCMPDZ256rmib, VPCMPEQDZ256rmb, VPCMPGTDZ256rmb)
-    FROM_TO(VPCMPDZ256rmibk, VPCMPEQDZ256rmbk, VPCMPGTDZ256rmbk)
+    FROM_TO(VPCMPDZ256rmbi, VPCMPEQDZ256rmb, VPCMPGTDZ256rmb)
+    FROM_TO(VPCMPDZ256rmbik, VPCMPEQDZ256rmbk, VPCMPGTDZ256rmbk)
     FROM_TO(VPCMPDZ256rmik, VPCMPEQDZ256rmk, VPCMPGTDZ256rmk)
     FROM_TO(VPCMPDZ256rri, VPCMPEQDZ256rr, VPCMPGTDZ256rr)
     FROM_TO(VPCMPDZ256rrik, VPCMPEQDZ256rrk, VPCMPGTDZ256rrk)
     FROM_TO(VPCMPDZrmi, VPCMPEQDZrm, VPCMPGTDZrm)
-    FROM_TO(VPCMPDZrmib, VPCMPEQDZrmb, VPCMPGTDZrmb)
-    FROM_TO(VPCMPDZrmibk, VPCMPEQDZrmbk, VPCMPGTDZrmbk)
+    FROM_TO(VPCMPDZrmbi, VPCMPEQDZrmb, VPCMPGTDZrmb)
+    FROM_TO(VPCMPDZrmbik, VPCMPEQDZrmbk, VPCMPGTDZrmbk)
     FROM_TO(VPCMPDZrmik, VPCMPEQDZrmk, VPCMPGTDZrmk)
     FROM_TO(VPCMPDZrri, VPCMPEQDZrr, VPCMPGTDZrr)
     FROM_TO(VPCMPDZrrik, VPCMPEQDZrrk, VPCMPGTDZrrk)
     FROM_TO(VPCMPQZ128rmi, VPCMPEQQZ128rm, VPCMPGTQZ128rm)
-    FROM_TO(VPCMPQZ128rmib, VPCMPEQQZ128rmb, VPCMPGTQZ128rmb)
-    FROM_TO(VPCMPQZ128rmibk, VPCMPEQQZ128rmbk, VPCMPGTQZ128rmbk)
+    FROM_TO(VPCMPQZ128rmbi, VPCMPEQQZ128rmb, VPCMPGTQZ128rmb)
+    FROM_TO(VPCMPQZ128rmbik, VPCMPEQQZ128rmbk, VPCMPGTQZ128rmbk)
     FROM_TO(VPCMPQZ128rmik, VPCMPEQQZ128rmk, VPCMPGTQZ128rmk)
     FROM_TO(VPCMPQZ128rri, VPCMPEQQZ128rr, VPCMPGTQZ128rr)
     FROM_TO(VPCMPQZ128rrik, VPCMPEQQZ128rrk, VPCMPGTQZ128rrk)
     FROM_TO(VPCMPQZ256rmi, VPCMPEQQZ256rm, VPCMPGTQZ256rm)
-    FROM_TO(VPCMPQZ256rmib, VPCMPEQQZ256rmb, VPCMPGTQZ256rmb)
-    FROM_TO(VPCMPQZ256rmibk, VPCMPEQQZ256rmbk, VPCMPGTQZ256rmbk)
+    FROM_TO(VPCMPQZ256rmbi, VPCMPEQQZ256rmb, VPCMPGTQZ256rmb)
+    FROM_TO(VPCMPQZ256rmbik, VPCMPEQQZ256rmbk, VPCMPGTQZ256rmbk)
     FROM_TO(VPCMPQZ256rmik, VPCMPEQQZ256rmk, VPCMPGTQZ256rmk)
     FROM_TO(VPCMPQZ256rri, VPCMPEQQZ256rr, VPCMPGTQZ256rr)
     FROM_TO(VPCMPQZ256rrik, VPCMPEQQZ256rrk, VPCMPGTQZ256rrk)
     FROM_TO(VPCMPQZrmi, VPCMPEQQZrm, VPCMPGTQZrm)
-    FROM_TO(VPCMPQZrmib, VPCMPEQQZrmb, VPCMPGTQZrmb)
-    FROM_TO(VPCMPQZrmibk, VPCMPEQQZrmbk, VPCMPGTQZrmbk)
+    FROM_TO(VPCMPQZrmbi, VPCMPEQQZrmb, VPCMPGTQZrmb)
+    FROM_TO(VPCMPQZrmbik, VPCMPEQQZrmbk, VPCMPGTQZrmbk)
     FROM_TO(VPCMPQZrmik, VPCMPEQQZrmk, VPCMPGTQZrmk)
     FROM_TO(VPCMPQZrri, VPCMPEQQZrr, VPCMPGTQZrr)
     FROM_TO(VPCMPQZrrik, VPCMPEQQZrrk, VPCMPGTQZrrk)
@@ -306,7 +329,7 @@ bool X86::optimizeINCDEC(MCInst &MI, bool In64BitMode) {
   return true;
 }
 
-static bool isARegister(unsigned Reg) {
+static bool isARegister(MCRegister Reg) {
   return Reg == X86::AL || Reg == X86::AX || Reg == X86::EAX || Reg == X86::RAX;
 }
 
@@ -341,7 +364,7 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
   unsigned RegOp = IsStore ? 0 : 5;
   unsigned AddrOp = AddrBase + 3;
   // Check whether the destination register can be fixed.
-  unsigned Reg = MI.getOperand(RegOp).getReg();
+  MCRegister Reg = MI.getOperand(RegOp).getReg();
   if (!isARegister(Reg))
     return false;
   // Check whether this is an absolute address.
@@ -354,9 +377,9 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
       if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
         Absolute = false;
   }
-  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
+  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() ||
                    MI.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
-                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
+                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg()))
     return false;
   // If so, rewrite the instruction.
   MCOperand Saved = MI.getOperand(AddrOp);
@@ -413,7 +436,7 @@ static bool optimizeToFixedRegisterForm(MCInst &MI) {
     FROM_TO(XOR64ri32, XOR64i32)
   }
   // Check whether the destination register can be fixed.
-  unsigned Reg = MI.getOperand(0).getReg();
+  MCRegister Reg = MI.getOperand(0).getReg();
   if (!isARegister(Reg))
     return false;
 
@@ -458,7 +481,8 @@ static bool optimizeToShortImmediateForm(MCInst &MI) {
     return false;
 #include "X86EncodingOptimizationForImmediate.def"
   }
-  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
+  unsigned SkipOperands = X86::isCCMPCC(MI.getOpcode()) ? 2 : 0;
+  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1 - SkipOperands);
   if (LastOp.isExpr()) {
     const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(LastOp.getExpr());
     if (!SRE || SRE->getKind() != MCSymbolRefExpr::VK_X86_ABS8)

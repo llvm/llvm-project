@@ -190,7 +190,14 @@ FileHeader:
 # RUN: llvm-readelf --file-headers %t.osabi.arm | FileCheck %s --match-full-lines --check-prefix=OSABI-ARM-GNU
 
 # OSABI-ARM-LLVM: OS/ABI: ARM (0x61)
-# OSABI-ARM-GNU:  OS/ABI: 61
+# OSABI-ARM-GNU:  OS/ABI: ARM
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_ARM_FDPIC -DMACHINE=EM_ARM -o %t.osabi.arm_fdpic
+# RUN: llvm-readobj --file-headers %t.osabi.arm_fdpic | FileCheck %s --match-full-lines --check-prefix=OSABI-ARMFDPIC-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.arm_fdpic | FileCheck %s --match-full-lines --check-prefix=OSABI-ARMFDPIC-GNU
+
+# OSABI-ARMFDPIC-LLVM: OS/ABI: ARM FDPIC (0x41)
+# OSABI-ARMFDPIC-GNU:  OS/ABI: ARM FDPIC
 
 ## Check all EM_TI_C6000 specific values.
 

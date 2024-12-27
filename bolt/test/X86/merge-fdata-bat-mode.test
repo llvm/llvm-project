@@ -1,5 +1,5 @@
-# Check merge-fdata tool correctly processes fdata files with header strings
-# such as the ones produced by BAT mode (boltedcollection)
+## Check merge-fdata tool correctly processes fdata files with header strings
+## such as the ones produced by BAT mode (boltedcollection)
 RUN: merge-fdata %S/Inputs/bat_profile_1.fdata \
 RUN:             %S/Inputs/bat_profile_2.fdata \
 RUN:   | FileCheck %s --check-prefix=CHECK-FDATA

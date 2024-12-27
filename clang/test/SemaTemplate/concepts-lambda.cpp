@@ -90,6 +90,64 @@ struct Foo {
 
 static_assert(ConstructibleWithN<Foo>);
 
+namespace GH56556 {
+
+template <typename It>
+inline constexpr It declare ();
+
+template <typename It, template <typename> typename Template>
+concept D = requires {
+	{ [] <typename T1> (Template<T1> &) {}(declare<It &>()) };
+};
+
+template <typename T>
+struct B {};
+
+template <typename T>
+struct Adapter;
+
+template <D<B> T>
+struct Adapter<T> {};
+
+template struct Adapter<B<int>>;
+
+} // namespace GH56556
+
+namespace GH82849 {
+
+template <class T>
+concept C = requires(T t) {
+  requires requires (T u) {
+    []<class V>(V) {
+      return requires(V v) {
+        [](V w) {}(v);
+      };
+    }(t);
+  };
+};
+
+template <class From>
+struct Widget;
+
+template <C F>
+struct Widget<F> {
+  static F create(F from) {
+    return from;
+  }
+};
+
+template <class>
+bool foo() {
+  return C<int>;
+}
+
+void bar() {
+  // https://github.com/llvm/llvm-project/issues/49570#issuecomment-1664966972
+  Widget<char>::create(0);
+}
+
+} // namespace GH82849
+
 }
 
 // GH60642 reported an assert being hit, make sure we don't assert.
@@ -149,3 +207,90 @@ void foo() {
   auto caller = make_caller.operator()<&S1::f1>();
 }
 } // namespace ReturnTypeRequirementInLambda
+
+namespace GH73418 {
+void foo() {
+  int x;
+  [&x](auto) {
+    return [](auto y) {
+      return [](auto obj, auto... params)
+        requires requires {
+          sizeof...(params);
+          [](auto... pack) {
+            return sizeof...(pack);
+          }(params...);
+        }
+      { return false; }(y);
+    }(x);
+  }(x);
+}
+} // namespace GH73418
+
+namespace GH93821 {
+
+template <class>
+concept C = true;
+
+template <class...>
+concept D = []<C T = int>() { return true; }();
+
+D auto x = 0;
+
+} // namespace GH93821
+
+namespace dependent_param_concept {
+template <typename... Ts> void sink(Ts...) {}
+void dependent_param() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y) {
+      return [](int z)
+        requires requires { sink(y..., z); }
+      {};
+    };
+  };
+  L(0, 1)(1, 2)(1);
+}
+} // namespace dependent_param_concept
+
+namespace init_captures {
+template <int N> struct V {};
+
+void sink(V<0>, V<1>, V<2>, V<3>, V<4>) {}
+
+void init_capture_pack() {
+  auto L = [](auto... z) {
+    return [=](auto... y) {
+      return [... w = z, y...](auto)
+        requires requires { sink(w..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+
+void dependent_capture_packs() {
+  auto L = [](auto... z) {
+    return [... w = z](auto... y) {
+      return [... c = w](auto)
+        requires requires { sink(c..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+} // namespace init_captures
+
+namespace GH110721 {
+
+template <int N> void connect() {
+  int x = N, y = N;
+  [x, y = y]()
+    requires requires { x; }
+  {}();
+}
+
+void foo() {
+  connect<42>();
+}
+
+} // namespace GH110721

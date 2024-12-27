@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUGlobalISelUtils.h"
-#include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 
 using namespace llvm;
@@ -68,13 +67,4 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   return std::pair(Reg, 0);
-}
-
-bool AMDGPU::hasAtomicFaddRtnForTy(const GCNSubtarget &Subtarget,
-                                   const LLT &Ty) {
-  if (Ty == LLT::scalar(32))
-    return Subtarget.hasAtomicFaddRtnInsts();
-  if (Ty == LLT::fixed_vector(2, 16) || Ty == LLT::scalar(64))
-    return Subtarget.hasGFX90AInsts();
-  return false;
 }

@@ -10,7 +10,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Plugins/Process/Utility/RegisterFlagsLinux_arm64.h"
+#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -64,6 +64,11 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (zt_data.GetByteSize() >= 64)
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
 
+  DataExtractor fpmr_data =
+      getRegset(notes, arch.GetTriple(), AARCH64_FPMR_Desc);
+  if (fpmr_data.GetByteSize() >= sizeof(uint64_t))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -79,17 +84,19 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   ProcessElfCore *process =
       static_cast<ProcessElfCore *>(thread.GetProcess().get());
-  if (process->GetArchitecture().GetTriple().getOS() == llvm::Triple::Linux) {
+  llvm::Triple::OSType os = process->GetArchitecture().GetTriple().getOS();
+  if ((os == llvm::Triple::Linux) || (os == llvm::Triple::FreeBSD)) {
     AuxVector aux_vec(process->GetAuxvData());
-    std::optional<uint64_t> auxv_at_hwcap =
-        aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
+    std::optional<uint64_t> auxv_at_hwcap = aux_vec.GetAuxValue(
+        os == llvm::Triple::FreeBSD ? AuxVector::AUXV_FREEBSD_AT_HWCAP
+                                    : AuxVector::AUXV_AT_HWCAP);
     std::optional<uint64_t> auxv_at_hwcap2 =
         aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
 
-    m_linux_register_flags.DetectFields(auxv_at_hwcap.value_or(0),
-                                        auxv_at_hwcap2.value_or(0));
-    m_linux_register_flags.UpdateRegisterInfo(GetRegisterInfo(),
-                                              GetRegisterCount());
+    m_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
+                                           auxv_at_hwcap2.value_or(0));
+    m_register_flags_detector.UpdateRegisterInfo(GetRegisterInfo(),
+                                                 GetRegisterCount());
   }
 
   m_gpr_data.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
@@ -125,6 +132,9 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsZTPresent())
     m_zt_data = getRegset(notes, target_triple, AARCH64_ZT_Desc);
+
+  if (m_register_info_up->IsFPMRPresent())
+    m_fpmr_data = getRegset(notes, target_triple, AARCH64_FPMR_Desc);
 
   ConfigureRegisterContext();
 }
@@ -368,6 +378,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
           *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
           reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
     }
+  } else if (IsFPMR(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetFPMROffset();
+    assert(offset < m_fpmr_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_fpmr_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else
     return false;
 

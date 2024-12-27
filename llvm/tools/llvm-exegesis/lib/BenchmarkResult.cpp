@@ -9,6 +9,7 @@
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
 #include "Error.h"
+#include "ValidationEvent.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
@@ -33,8 +34,7 @@ namespace {
 struct YamlContext {
   YamlContext(const exegesis::LLVMState &State)
       : State(&State), ErrorStream(LastError),
-        OpcodeNameToOpcodeIdx(State.getOpcodeNameToOpcodeIdxMapping()),
-        RegNameToRegNo(State.getRegNameToRegNoMapping()) {}
+        OpcodeNameToOpcodeIdx(State.getOpcodeNameToOpcodeIdxMapping()) {}
 
   void serializeMCInst(const MCInst &MCInst, raw_ostream &OS) {
     OS << getInstrName(MCInst.getOpcode());
@@ -76,11 +76,11 @@ struct YamlContext {
   }
 
   std::optional<unsigned> getRegNo(StringRef RegName) {
-    auto Iter = RegNameToRegNo.find(RegName);
-    if (Iter != RegNameToRegNo.end())
-      return Iter->second;
-    ErrorStream << "No register with name '" << RegName << "'\n";
-    return std::nullopt;
+    std::optional<MCRegister> RegisterNumber =
+        State->getRegisterNumberFromName(RegName);
+    if (!RegisterNumber.has_value())
+      ErrorStream << "No register with name '" << RegName << "'\n";
+    return RegisterNumber;
   }
 
 private:
@@ -153,7 +153,6 @@ private:
   std::string LastError;
   raw_string_ostream ErrorStream;
   const DenseMap<StringRef, unsigned> &OpcodeNameToOpcodeIdx;
-  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
 };
 } // namespace
 
@@ -193,51 +192,12 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = false;
 };
 
-const char *validationEventToString(exegesis::ValidationEvent VE) {
-  switch (VE) {
-  case exegesis::ValidationEvent::InstructionRetired:
-    return "instructions-retired";
-  case exegesis::ValidationEvent::L1DCacheLoadMiss:
-    return "l1d-cache-load-misses";
-  case exegesis::ValidationEvent::L1DCacheStoreMiss:
-    return "l1d-cache-store-misses";
-  case exegesis::ValidationEvent::L1ICacheLoadMiss:
-    return "l1i-cache-load-misses";
-  case exegesis::ValidationEvent::DataTLBLoadMiss:
-    return "data-tlb-load-misses";
-  case exegesis::ValidationEvent::DataTLBStoreMiss:
-    return "data-tlb-store-misses";
-  case exegesis::ValidationEvent::InstructionTLBLoadMiss:
-    return "instruction-tlb-load-misses";
-  }
-  llvm_unreachable("Unhandled exegesis::ValidationEvent enum");
-}
-
-Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
-  if (Input == "instructions-retired")
-    return exegesis::ValidationEvent::InstructionRetired;
-  else if (Input == "l1d-cache-load-misses")
-    return exegesis::ValidationEvent::L1DCacheLoadMiss;
-  else if (Input == "l1d-cache-store-misses")
-    return exegesis::ValidationEvent::L1DCacheStoreMiss;
-  else if (Input == "l1i-cache-load-misses")
-    return exegesis::ValidationEvent::L1ICacheLoadMiss;
-  else if (Input == "data-tlb-load-misses")
-    return exegesis::ValidationEvent::DataTLBLoadMiss;
-  else if (Input == "data-tlb-store-misses")
-    return exegesis::ValidationEvent::DataTLBStoreMiss;
-  else if (Input == "instruction-tlb-load-misses")
-    return exegesis::ValidationEvent::InstructionTLBLoadMiss;
-  else
-    return make_error<StringError>("Invalid validation event string",
-                                   errc::invalid_argument);
-}
-
 template <>
 struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
   static void inputOne(IO &Io, StringRef KeyStr,
                        std::map<exegesis::ValidationEvent, int64_t> &VI) {
-    Expected<exegesis::ValidationEvent> Key = stringToValidationEvent(KeyStr);
+    Expected<exegesis::ValidationEvent> Key =
+        exegesis::getValidationEventByName(KeyStr);
     if (!Key) {
       Io.setError("Key is not a valid validation event");
       return;
@@ -247,7 +207,7 @@ struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
 
   static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
     for (auto &IndividualVI : VI) {
-      Io.mapRequired(validationEventToString(IndividualVI.first),
+      Io.mapRequired(exegesis::getValidationEventName(IndividualVI.first),
                      IndividualVI.second);
     }
   }
@@ -269,10 +229,8 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = true;
 };
 
-template <>
-struct ScalarEnumerationTraits<exegesis::Benchmark::ModeE> {
-  static void enumeration(IO &Io,
-                          exegesis::Benchmark::ModeE &Value) {
+template <> struct ScalarEnumerationTraits<exegesis::Benchmark::ModeE> {
+  static void enumeration(IO &Io, exegesis::Benchmark::ModeE &Value) {
     Io.enumCase(Value, "", exegesis::Benchmark::Unknown);
     Io.enumCase(Value, "latency", exegesis::Benchmark::Latency);
     Io.enumCase(Value, "uops", exegesis::Benchmark::Uops);
@@ -320,8 +278,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
   static const bool flow = true;
 };
 
-template <>
-struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
+template <> struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   static void mapping(IO &Io, exegesis::BenchmarkKey &Obj,
                       YamlContext &Context) {
     Io.setContext(&Context);
@@ -331,8 +288,7 @@ struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   }
 };
 
-template <>
-struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
+template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
   struct NormalizedBinary {
     NormalizedBinary(IO &io) {}
     NormalizedBinary(IO &, std::vector<uint8_t> &Data) : Binary(Data) {}
@@ -349,13 +305,22 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     BinaryRef Binary;
   };
 
-  static void mapping(IO &Io, exegesis::Benchmark &Obj,
-                      YamlContext &Context) {
+  static void mapping(IO &Io, exegesis::Benchmark &Obj, YamlContext &Context) {
     Io.mapRequired("mode", Obj.Mode);
     Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
-    Io.mapRequired("num_repetitions", Obj.NumRepetitions);
+    // Optionally map num_repetitions and min_instructions to the same
+    // value to preserve backwards compatibility.
+    // TODO(boomanaiden154): Move min_instructions to mapRequired and
+    // remove num_repetitions once num_repetitions is ready to be removed
+    // completely.
+    if (Io.outputting())
+      Io.mapRequired("min_instructions", Obj.MinInstructions);
+    else {
+      Io.mapOptional("num_repetitions", Obj.MinInstructions);
+      Io.mapOptional("min_instructions", Obj.MinInstructions);
+    }
     Io.mapRequired("measurements", Obj.Measurements);
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);
@@ -367,8 +332,7 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
 };
 
 template <> struct MappingTraits<exegesis::Benchmark::TripleAndCpu> {
-  static void mapping(IO &Io,
-                      exegesis::Benchmark::TripleAndCpu &Obj) {
+  static void mapping(IO &Io, exegesis::Benchmark::TripleAndCpu &Obj) {
     assert(!Io.outputting() && "can only read TripleAndCpu");
     // Read triple.
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
@@ -385,8 +349,7 @@ Expected<std::set<Benchmark::TripleAndCpu>>
 Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
   // We're only mapping a field, drop other fields and silence the corresponding
   // warnings.
-  yaml::Input Yin(
-      Buffer, nullptr, +[](const SMDiagnostic &, void *Context) {});
+  yaml::Input Yin(Buffer, nullptr, +[](const SMDiagnostic &, void *Context) {});
   Yin.setAllowUnknownKeys(true);
   std::set<TripleAndCpu> Result;
   yaml::EmptyContext Context;
@@ -401,8 +364,8 @@ Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
   return Result;
 }
 
-Expected<Benchmark>
-Benchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
+Expected<Benchmark> Benchmark::readYaml(const LLVMState &State,
+                                        MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
   Benchmark Benchmark;
@@ -413,9 +376,8 @@ Benchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
   return std::move(Benchmark);
 }
 
-Expected<std::vector<Benchmark>>
-Benchmark::readYamls(const LLVMState &State,
-                                MemoryBufferRef Buffer) {
+Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
+                                                      MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
   std::vector<Benchmark> Benchmarks;
@@ -431,8 +393,7 @@ Benchmark::readYamls(const LLVMState &State,
   return std::move(Benchmarks);
 }
 
-Error Benchmark::writeYamlTo(const LLVMState &State,
-                                        raw_ostream &OS) {
+Error Benchmark::writeYamlTo(const LLVMState &State, raw_ostream &OS) {
   auto Cleanup = make_scope_exit([&] { OS.flush(); });
   yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
@@ -444,8 +405,7 @@ Error Benchmark::writeYamlTo(const LLVMState &State,
   return Error::success();
 }
 
-Error Benchmark::readYamlFrom(const LLVMState &State,
-                                         StringRef InputContent) {
+Error Benchmark::readYamlFrom(const LLVMState &State, StringRef InputContent) {
   yaml::Input Yin(InputContent);
   YamlContext Context(State);
   if (Yin.setCurrentDocument())
@@ -469,7 +429,6 @@ bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
   return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
          std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
 }
-
 
 } // namespace exegesis
 } // namespace llvm

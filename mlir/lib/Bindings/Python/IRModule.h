@@ -15,14 +15,15 @@
 #include <vector>
 
 #include "Globals.h"
-#include "PybindUtils.h"
-
+#include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir-c/Transforms.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
@@ -48,7 +49,7 @@ class PyValue;
 template <typename T>
 class PyObjectRef {
 public:
-  PyObjectRef(T *referrent, pybind11::object object)
+  PyObjectRef(T *referrent, nanobind::object object)
       : referrent(referrent), object(std::move(object)) {
     assert(this->referrent &&
            "cannot construct PyObjectRef with null referrent");
@@ -66,13 +67,13 @@ public:
   int getRefCount() {
     if (!object)
       return 0;
-    return object.ref_count();
+    return Py_REFCNT(object.ptr());
   }
 
   /// Releases the object held by this instance, returning it.
   /// This is the proper thing to return from a function that wants to return
   /// the reference. Note that this does not work from initializers.
-  pybind11::object releaseObject() {
+  nanobind::object releaseObject() {
     assert(referrent && object);
     referrent = nullptr;
     auto stolen = std::move(object);
@@ -84,7 +85,7 @@ public:
     assert(referrent && object);
     return referrent;
   }
-  pybind11::object getObject() {
+  nanobind::object getObject() {
     assert(referrent && object);
     return object;
   }
@@ -92,7 +93,7 @@ public:
 
 private:
   T *referrent;
-  pybind11::object object;
+  nanobind::object object;
 };
 
 /// Tracks an entry in the thread context stack. New entries are pushed onto
@@ -111,9 +112,9 @@ public:
     Location,
   };
 
-  PyThreadContextEntry(FrameKind frameKind, pybind11::object context,
-                       pybind11::object insertionPoint,
-                       pybind11::object location)
+  PyThreadContextEntry(FrameKind frameKind, nanobind::object context,
+                       nanobind::object insertionPoint,
+                       nanobind::object location)
       : context(std::move(context)), insertionPoint(std::move(insertionPoint)),
         location(std::move(location)), frameKind(frameKind) {}
 
@@ -133,26 +134,26 @@ public:
 
   /// Stack management.
   static PyThreadContextEntry *getTopOfStack();
-  static pybind11::object pushContext(PyMlirContext &context);
+  static nanobind::object pushContext(nanobind::object context);
   static void popContext(PyMlirContext &context);
-  static pybind11::object pushInsertionPoint(PyInsertionPoint &insertionPoint);
+  static nanobind::object pushInsertionPoint(nanobind::object insertionPoint);
   static void popInsertionPoint(PyInsertionPoint &insertionPoint);
-  static pybind11::object pushLocation(PyLocation &location);
+  static nanobind::object pushLocation(nanobind::object location);
   static void popLocation(PyLocation &location);
 
   /// Gets the thread local stack.
   static std::vector<PyThreadContextEntry> &getStack();
 
 private:
-  static void push(FrameKind frameKind, pybind11::object context,
-                   pybind11::object insertionPoint, pybind11::object location);
+  static void push(FrameKind frameKind, nanobind::object context,
+                   nanobind::object insertionPoint, nanobind::object location);
 
   /// An object reference to the PyContext.
-  pybind11::object context;
+  nanobind::object context;
   /// An object reference to the current insertion point.
-  pybind11::object insertionPoint;
+  nanobind::object insertionPoint;
   /// An object reference to the current location.
-  pybind11::object location;
+  nanobind::object location;
   // The kind of push that was performed.
   FrameKind frameKind;
 };
@@ -162,14 +163,15 @@ using PyMlirContextRef = PyObjectRef<PyMlirContext>;
 class PyMlirContext {
 public:
   PyMlirContext() = delete;
+  PyMlirContext(MlirContext context);
   PyMlirContext(const PyMlirContext &) = delete;
   PyMlirContext(PyMlirContext &&) = delete;
 
-  /// For the case of a python __init__ (py::init) method, pybind11 is quite
-  /// strict about needing to return a pointer that is not yet associated to
-  /// an py::object. Since the forContext() method acts like a pool, possibly
-  /// returning a recycled context, it does not satisfy this need. The usual
-  /// way in python to accomplish such a thing is to override __new__, but
+  /// For the case of a python __init__ (nanobind::init) method, pybind11 is
+  /// quite strict about needing to return a pointer that is not yet associated
+  /// to an nanobind::object. Since the forContext() method acts like a pool,
+  /// possibly returning a recycled context, it does not satisfy this need. The
+  /// usual way in python to accomplish such a thing is to override __new__, but
   /// that is also not supported by pybind11. Instead, we use this entry
   /// point which always constructs a fresh context (which cannot alias an
   /// existing one because it is fresh).
@@ -186,20 +188,23 @@ public:
   /// Gets a strong reference to this context, which will ensure it is kept
   /// alive for the life of the reference.
   PyMlirContextRef getRef() {
-    return PyMlirContextRef(this, pybind11::cast(this));
+    return PyMlirContextRef(this, nanobind::cast(this));
   }
 
   /// Gets a capsule wrapping the void* within the MlirContext.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
   /// Note that PyMlirContext instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirContext
   /// is taken by calling this function.
-  static pybind11::object createFromCapsule(pybind11::object capsule);
+  static nanobind::object createFromCapsule(nanobind::object capsule);
 
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
+
+  /// Get a list of Python objects which are still in the live context map.
+  std::vector<PyOperation *> getLiveOperationObjects();
 
   /// Gets the count of live operations associated with this context.
   /// Used for testing.
@@ -215,25 +220,32 @@ public:
   /// This is useful for when some non-bindings code destroys the operation and
   /// the bindings need to made aware. For example, in the case when pass
   /// manager is run.
+  ///
+  /// Note that this does *NOT* clear the nested operations.
   void clearOperation(MlirOperation op);
 
   /// Clears all operations nested inside the given op using
   /// `clearOperation(MlirOperation)`.
   void clearOperationsInside(PyOperationBase &op);
+  void clearOperationsInside(MlirOperation op);
+
+  /// Clears the operaiton _and_ all operations inside using
+  /// `clearOperation(MlirOperation)`.
+  void clearOperationAndInside(PyOperationBase &op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
   size_t getLiveModuleCount();
 
   /// Enter and exit the context manager.
-  pybind11::object contextEnter();
-  void contextExit(const pybind11::object &excType,
-                   const pybind11::object &excVal,
-                   const pybind11::object &excTb);
+  static nanobind::object contextEnter(nanobind::object context);
+  void contextExit(const nanobind::object &excType,
+                   const nanobind::object &excVal,
+                   const nanobind::object &excTb);
 
   /// Attaches a Python callback as a diagnostic handler, returning a
   /// registration object (internally a PyDiagnosticHandler).
-  pybind11::object attachDiagnosticHandler(pybind11::object callback);
+  nanobind::object attachDiagnosticHandler(nanobind::object callback);
 
   /// Controls whether error diagnostics should be propagated to diagnostic
   /// handlers, instead of being captured by `ErrorCapture`.
@@ -241,7 +253,6 @@ public:
   struct ErrorCapture;
 
 private:
-  PyMlirContext(MlirContext context);
   // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
   // preserving the relationship that an MlirContext maps to a single
   // PyMlirContext wrapper. This could be replaced in the future with an
@@ -256,7 +267,7 @@ private:
   // from this map, and while it still exists as an instance, any
   // attempt to access it will raise an error.
   using LiveModuleMap =
-      llvm::DenseMap<const void *, std::pair<pybind11::handle, PyModule *>>;
+      llvm::DenseMap<const void *, std::pair<nanobind::handle, PyModule *>>;
   LiveModuleMap liveModules;
 
   // Interns all live operations associated with this context. Operations
@@ -264,7 +275,7 @@ private:
   // removed from this map, and while it still exists as an instance, any
   // attempt to access it will raise an error.
   using LiveOperationMap =
-      llvm::DenseMap<void *, std::pair<pybind11::handle, PyOperation *>>;
+      llvm::DenseMap<void *, std::pair<nanobind::handle, PyOperation *>>;
   LiveOperationMap liveOperations;
 
   bool emitErrorDiagnostics = false;
@@ -312,19 +323,19 @@ public:
   MlirLocation get() const { return loc; }
 
   /// Enter and exit the context manager.
-  pybind11::object contextEnter();
-  void contextExit(const pybind11::object &excType,
-                   const pybind11::object &excVal,
-                   const pybind11::object &excTb);
+  static nanobind::object contextEnter(nanobind::object location);
+  void contextExit(const nanobind::object &excType,
+                   const nanobind::object &excVal,
+                   const nanobind::object &excTb);
 
   /// Gets a capsule wrapping the void* within the MlirLocation.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyLocation from the MlirLocation wrapped by a capsule.
   /// Note that PyLocation instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirLocation
   /// is taken by calling this function.
-  static PyLocation createFromCapsule(pybind11::object capsule);
+  static PyLocation createFromCapsule(nanobind::object capsule);
 
 private:
   MlirLocation loc;
@@ -341,8 +352,8 @@ public:
   bool isValid() { return valid; }
   MlirDiagnosticSeverity getSeverity();
   PyLocation getLocation();
-  pybind11::str getMessage();
-  pybind11::tuple getNotes();
+  nanobind::str getMessage();
+  nanobind::tuple getNotes();
 
   /// Materialized diagnostic information. This is safe to access outside the
   /// diagnostic callback.
@@ -361,7 +372,7 @@ private:
   /// If notes have been materialized from the diagnostic, then this will
   /// be populated with the corresponding objects (all castable to
   /// PyDiagnostic).
-  std::optional<pybind11::tuple> materializedNotes;
+  std::optional<nanobind::tuple> materializedNotes;
   bool valid = true;
 };
 
@@ -386,7 +397,7 @@ private:
 /// is no way to attach an existing handler object).
 class PyDiagnosticHandler {
 public:
-  PyDiagnosticHandler(MlirContext context, pybind11::object callback);
+  PyDiagnosticHandler(MlirContext context, nanobind::object callback);
   ~PyDiagnosticHandler();
 
   bool isAttached() { return registeredID.has_value(); }
@@ -395,16 +406,16 @@ public:
   /// Detaches the handler. Does nothing if not attached.
   void detach();
 
-  pybind11::object contextEnter() { return pybind11::cast(this); }
-  void contextExit(const pybind11::object &excType,
-                   const pybind11::object &excVal,
-                   const pybind11::object &excTb) {
+  nanobind::object contextEnter() { return nanobind::cast(this); }
+  void contextExit(const nanobind::object &excType,
+                   const nanobind::object &excVal,
+                   const nanobind::object &excTb) {
     detach();
   }
 
 private:
   MlirContext context;
-  pybind11::object callback;
+  nanobind::object callback;
   std::optional<MlirDiagnosticHandlerID> registeredID;
   bool hadError = false;
   friend class PyMlirContext;
@@ -465,12 +476,12 @@ public:
 /// objects of this type will be returned directly.
 class PyDialect {
 public:
-  PyDialect(pybind11::object descriptor) : descriptor(std::move(descriptor)) {}
+  PyDialect(nanobind::object descriptor) : descriptor(std::move(descriptor)) {}
 
-  pybind11::object getDescriptor() { return descriptor; }
+  nanobind::object getDescriptor() { return descriptor; }
 
 private:
-  pybind11::object descriptor;
+  nanobind::object descriptor;
 };
 
 /// Wrapper around an MlirDialectRegistry.
@@ -493,8 +504,8 @@ public:
   operator MlirDialectRegistry() const { return registry; }
   MlirDialectRegistry get() const { return registry; }
 
-  pybind11::object getCapsule();
-  static PyDialectRegistry createFromCapsule(pybind11::object capsule);
+  nanobind::object getCapsule();
+  static PyDialectRegistry createFromCapsule(nanobind::object capsule);
 
 private:
   MlirDialectRegistry registry;
@@ -530,26 +541,25 @@ public:
 
   /// Gets a strong reference to this module.
   PyModuleRef getRef() {
-    return PyModuleRef(this,
-                       pybind11::reinterpret_borrow<pybind11::object>(handle));
+    return PyModuleRef(this, nanobind::borrow<nanobind::object>(handle));
   }
 
   /// Gets a capsule wrapping the void* within the MlirModule.
   /// Note that the module does not (yet) provide a corresponding factory for
   /// constructing from a capsule as that would require uniquing PyModule
   /// instances, which is not currently done.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyModule from the MlirModule wrapped by a capsule.
   /// Note that PyModule instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirModule
   /// is taken by calling this function.
-  static pybind11::object createFromCapsule(pybind11::object capsule);
+  static nanobind::object createFromCapsule(nanobind::object capsule);
 
 private:
   PyModule(PyMlirContextRef contextRef, MlirModule module);
   MlirModule module;
-  pybind11::handle handle;
+  nanobind::handle handle;
 };
 
 class PyAsmState;
@@ -562,18 +572,23 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified, py::object fileObject, bool binary);
-  void print(PyAsmState &state, py::object fileObject, bool binary);
+             bool assumeVerified, nanobind::object fileObject, bool binary,
+             bool skipRegions);
+  void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
-  pybind11::object getAsm(bool binary,
+  nanobind::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
-                          bool assumeVerified);
+                          bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
-  void writeBytecode(const pybind11::object &fileObject,
+  void writeBytecode(const nanobind::object &fileObject,
                      std::optional<int64_t> bytecodeVersion);
+
+  // Implement the walk method.
+  void walk(std::function<MlirWalkResult(MlirOperation)> callback,
+            MlirWalkOrder walkOrder);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
@@ -604,13 +619,13 @@ public:
   /// it with a parentKeepAlive.
   static PyOperationRef
   forOperation(PyMlirContextRef contextRef, MlirOperation operation,
-               pybind11::object parentKeepAlive = pybind11::object());
+               nanobind::object parentKeepAlive = nanobind::object());
 
   /// Creates a detached operation. The operation must not be associated with
   /// any existing live operation.
   static PyOperationRef
   createDetached(PyMlirContextRef contextRef, MlirOperation operation,
-                 pybind11::object parentKeepAlive = pybind11::object());
+                 nanobind::object parentKeepAlive = nanobind::object());
 
   /// Parses a source string (either text assembly or bytecode), creating a
   /// detached operation.
@@ -623,7 +638,7 @@ public:
   void detachFromParent() {
     mlirOperationRemoveFromParent(getOperation());
     setDetached();
-    parentKeepAlive = pybind11::object();
+    parentKeepAlive = nanobind::object();
   }
 
   /// Gets the backing operation.
@@ -634,12 +649,11 @@ public:
   }
 
   PyOperationRef getRef() {
-    return PyOperationRef(
-        this, pybind11::reinterpret_borrow<pybind11::object>(handle));
+    return PyOperationRef(this, nanobind::borrow<nanobind::object>(handle));
   }
 
   bool isAttached() { return attached; }
-  void setAttached(const pybind11::object &parent = pybind11::object()) {
+  void setAttached(const nanobind::object &parent = nanobind::object()) {
     assert(!attached && "operation already attached");
     attached = true;
   }
@@ -658,24 +672,24 @@ public:
   std::optional<PyOperationRef> getParentOperation();
 
   /// Gets a capsule wrapping the void* within the MlirOperation.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyOperation from the MlirOperation wrapped by a capsule.
   /// Ownership of the underlying MlirOperation is taken by calling this
   /// function.
-  static pybind11::object createFromCapsule(pybind11::object capsule);
+  static nanobind::object createFromCapsule(nanobind::object capsule);
 
   /// Creates an operation. See corresponding python docstring.
-  static pybind11::object
+  static nanobind::object
   create(const std::string &name, std::optional<std::vector<PyType *>> results,
          std::optional<std::vector<PyValue *>> operands,
-         std::optional<pybind11::dict> attributes,
+         std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
-         DefaultingPyLocation location, const pybind11::object &ip,
+         DefaultingPyLocation location, const nanobind::object &ip,
          bool inferType);
 
   /// Creates an OpView suitable for this operation.
-  pybind11::object createOpView();
+  nanobind::object createOpView();
 
   /// Erases the underlying MlirOperation, removes its pointer from the
   /// parent context's live operations map, and sets the valid bit false.
@@ -685,23 +699,23 @@ public:
   void setInvalid() { valid = false; }
 
   /// Clones this operation.
-  pybind11::object clone(const pybind11::object &ip);
+  nanobind::object clone(const nanobind::object &ip);
 
 private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
                                        MlirOperation operation,
-                                       pybind11::object parentKeepAlive);
+                                       nanobind::object parentKeepAlive);
 
   MlirOperation operation;
-  pybind11::handle handle;
+  nanobind::handle handle;
   // Keeps the parent alive, regardless of whether it is an Operation or
   // Module.
   // TODO: As implemented, this facility is only sufficient for modeling the
   // trivial module parent back-reference. Generalize this to also account for
   // transitions from detached to attached and address TODOs in the
   // ir_operation.py regarding testing corresponding lifetime guarantees.
-  pybind11::object parentKeepAlive;
+  nanobind::object parentKeepAlive;
   bool attached = true;
   bool valid = true;
 
@@ -716,17 +730,17 @@ private:
 /// python types.
 class PyOpView : public PyOperationBase {
 public:
-  PyOpView(const pybind11::object &operationObject);
+  PyOpView(const nanobind::object &operationObject);
   PyOperation &getOperation() override { return operation; }
 
-  pybind11::object getOperationObject() { return operationObject; }
+  nanobind::object getOperationObject() { return operationObject; }
 
-  static pybind11::object buildGeneric(
-      const pybind11::object &cls, std::optional<pybind11::list> resultTypeList,
-      pybind11::list operandList, std::optional<pybind11::dict> attributes,
+  static nanobind::object buildGeneric(
+      const nanobind::object &cls, std::optional<nanobind::list> resultTypeList,
+      nanobind::list operandList, std::optional<nanobind::dict> attributes,
       std::optional<std::vector<PyBlock *>> successors,
       std::optional<int> regions, DefaultingPyLocation location,
-      const pybind11::object &maybeIp);
+      const nanobind::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
   /// `__init__` method. The derived class will typically define a constructor
@@ -735,12 +749,12 @@ public:
   ///
   /// The caller is responsible for verifying that `operation` is a valid
   /// operation to construct `cls` with.
-  static pybind11::object constructDerived(const pybind11::object &cls,
-                                           const PyOperation &operation);
+  static nanobind::object constructDerived(const nanobind::object &cls,
+                                           const nanobind::object &operation);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++
-  pybind11::object operationObject; // Holds the reference.
+  nanobind::object operationObject; // Holds the reference.
 };
 
 /// Wrapper around an MlirRegion.
@@ -813,7 +827,7 @@ public:
   void checkValid() { return parentOperation->checkValid(); }
 
   /// Gets a capsule wrapping the void* within the MlirBlock.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
 private:
   PyOperationRef parentOperation;
@@ -841,10 +855,10 @@ public:
   void insert(PyOperationBase &operationBase);
 
   /// Enter and exit the context manager.
-  pybind11::object contextEnter();
-  void contextExit(const pybind11::object &excType,
-                   const pybind11::object &excVal,
-                   const pybind11::object &excTb);
+  static nanobind::object contextEnter(nanobind::object insertionPoint);
+  void contextExit(const nanobind::object &excType,
+                   const nanobind::object &excVal,
+                   const nanobind::object &excTb);
 
   PyBlock &getBlock() { return block; }
   std::optional<PyOperationRef> &getRefOperation() { return refOperation; }
@@ -869,13 +883,13 @@ public:
   MlirType get() const { return type; }
 
   /// Gets a capsule wrapping the void* within the MlirType.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyType from the MlirType wrapped by a capsule.
   /// Note that PyType instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirType
   /// is taken by calling this function.
-  static PyType createFromCapsule(pybind11::object capsule);
+  static PyType createFromCapsule(nanobind::object capsule);
 
 private:
   MlirType type;
@@ -895,10 +909,10 @@ public:
   MlirTypeID get() { return typeID; }
 
   /// Gets a capsule wrapping the void* within the MlirTypeID.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyTypeID from the MlirTypeID wrapped by a capsule.
-  static PyTypeID createFromCapsule(pybind11::object capsule);
+  static PyTypeID createFromCapsule(nanobind::object capsule);
 
 private:
   MlirTypeID typeID;
@@ -915,7 +929,7 @@ public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
-  using ClassTy = pybind11::class_<DerivedTy, BaseTy>;
+  using ClassTy = nanobind::class_<DerivedTy, BaseTy>;
   using IsAFunctionTy = bool (*)(MlirType);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
@@ -928,34 +942,38 @@ public:
 
   static MlirType castFrom(PyType &orig) {
     if (!DerivedTy::isaFunction(orig)) {
-      auto origRepr = pybind11::repr(pybind11::cast(orig)).cast<std::string>();
-      throw py::value_error((llvm::Twine("Cannot cast type to ") +
-                             DerivedTy::pyClassName + " (from " + origRepr +
-                             ")")
-                                .str());
+      auto origRepr =
+          nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
+      throw nanobind::value_error((llvm::Twine("Cannot cast type to ") +
+                                   DerivedTy::pyClassName + " (from " +
+                                   origRepr + ")")
+                                      .str()
+                                      .c_str());
     }
     return orig;
   }
 
-  static void bind(pybind11::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::module_local());
-    cls.def(pybind11::init<PyType &>(), pybind11::keep_alive<0, 1>(),
-            pybind11::arg("cast_from_type"));
+  static void bind(nanobind::module_ &m) {
+    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
+            nanobind::arg("cast_from_type"));
     cls.def_static(
         "isinstance",
         [](PyType &otherType) -> bool {
           return DerivedTy::isaFunction(otherType);
         },
-        pybind11::arg("other"));
-    cls.def_property_readonly_static(
-        "static_typeid", [](py::object & /*class*/) -> MlirTypeID {
+        nanobind::arg("other"));
+    cls.def_prop_ro_static(
+        "static_typeid", [](nanobind::object & /*class*/) -> MlirTypeID {
           if (DerivedTy::getTypeIdFunction)
             return DerivedTy::getTypeIdFunction();
-          throw py::attribute_error(
-              (DerivedTy::pyClassName + llvm::Twine(" has no typeid.")).str());
+          throw nanobind::attribute_error(
+              (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
+                  .str()
+                  .c_str());
         });
-    cls.def_property_readonly("typeid", [](PyType &self) {
-      return py::cast(self).attr("typeid").cast<MlirTypeID>();
+    cls.def_prop_ro("typeid", [](PyType &self) {
+      return nanobind::cast<MlirTypeID>(nanobind::cast(self).attr("typeid"));
     });
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
@@ -969,8 +987,8 @@ public:
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerTypeCaster(
           DerivedTy::getTypeIdFunction(),
-          pybind11::cpp_function(
-              [](PyType pyType) -> DerivedTy { return pyType; }));
+          nanobind::cast<nanobind::callable>(nanobind::cpp_function(
+              [](PyType pyType) -> DerivedTy { return pyType; })));
     }
 
     DerivedTy::bindDerived(cls);
@@ -991,13 +1009,13 @@ public:
   MlirAttribute get() const { return attr; }
 
   /// Gets a capsule wrapping the void* within the MlirAttribute.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyAttribute from the MlirAttribute wrapped by a capsule.
   /// Note that PyAttribute instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAttribute
   /// is taken by calling this function.
-  static PyAttribute createFromCapsule(pybind11::object capsule);
+  static PyAttribute createFromCapsule(nanobind::object capsule);
 
 private:
   MlirAttribute attr;
@@ -1037,7 +1055,7 @@ public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
-  using ClassTy = pybind11::class_<DerivedTy, BaseTy>;
+  using ClassTy = nanobind::class_<DerivedTy, BaseTy>;
   using IsAFunctionTy = bool (*)(MlirAttribute);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
@@ -1050,37 +1068,45 @@ public:
 
   static MlirAttribute castFrom(PyAttribute &orig) {
     if (!DerivedTy::isaFunction(orig)) {
-      auto origRepr = pybind11::repr(pybind11::cast(orig)).cast<std::string>();
-      throw py::value_error((llvm::Twine("Cannot cast attribute to ") +
-                             DerivedTy::pyClassName + " (from " + origRepr +
-                             ")")
-                                .str());
+      auto origRepr =
+          nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
+      throw nanobind::value_error((llvm::Twine("Cannot cast attribute to ") +
+                                   DerivedTy::pyClassName + " (from " +
+                                   origRepr + ")")
+                                      .str()
+                                      .c_str());
     }
     return orig;
   }
 
-  static void bind(pybind11::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::buffer_protocol(),
-                       pybind11::module_local());
-    cls.def(pybind11::init<PyAttribute &>(), pybind11::keep_alive<0, 1>(),
-            pybind11::arg("cast_from_attr"));
+  static void bind(nanobind::module_ &m, PyType_Slot *slots = nullptr) {
+    ClassTy cls;
+    if (slots) {
+      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::type_slots(slots));
+    } else {
+      cls = ClassTy(m, DerivedTy::pyClassName);
+    }
+    cls.def(nanobind::init<PyAttribute &>(), nanobind::keep_alive<0, 1>(),
+            nanobind::arg("cast_from_attr"));
     cls.def_static(
         "isinstance",
         [](PyAttribute &otherAttr) -> bool {
           return DerivedTy::isaFunction(otherAttr);
         },
-        pybind11::arg("other"));
-    cls.def_property_readonly(
+        nanobind::arg("other"));
+    cls.def_prop_ro(
         "type", [](PyAttribute &attr) { return mlirAttributeGetType(attr); });
-    cls.def_property_readonly_static(
-        "static_typeid", [](py::object & /*class*/) -> MlirTypeID {
+    cls.def_prop_ro_static(
+        "static_typeid", [](nanobind::object & /*class*/) -> MlirTypeID {
           if (DerivedTy::getTypeIdFunction)
             return DerivedTy::getTypeIdFunction();
-          throw py::attribute_error(
-              (DerivedTy::pyClassName + llvm::Twine(" has no typeid.")).str());
+          throw nanobind::attribute_error(
+              (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
+                  .str()
+                  .c_str());
         });
-    cls.def_property_readonly("typeid", [](PyAttribute &self) {
-      return py::cast(self).attr("typeid").cast<MlirTypeID>();
+    cls.def_prop_ro("typeid", [](PyAttribute &self) {
+      return nanobind::cast<MlirTypeID>(nanobind::cast(self).attr("typeid"));
     });
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
@@ -1095,9 +1121,10 @@ public:
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerTypeCaster(
           DerivedTy::getTypeIdFunction(),
-          pybind11::cpp_function([](PyAttribute pyAttribute) -> DerivedTy {
-            return pyAttribute;
-          }));
+          nanobind::cast<nanobind::callable>(
+              nanobind::cpp_function([](PyAttribute pyAttribute) -> DerivedTy {
+                return pyAttribute;
+              })));
     }
 
     DerivedTy::bindDerived(cls);
@@ -1129,13 +1156,13 @@ public:
   void checkValid() { return parentOperation->checkValid(); }
 
   /// Gets a capsule wrapping the void* within the MlirValue.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
-  pybind11::object maybeDownCast();
+  nanobind::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
-  static PyValue createFromCapsule(pybind11::object capsule);
+  static PyValue createFromCapsule(nanobind::object capsule);
 
 private:
   PyOperationRef parentOperation;
@@ -1152,13 +1179,13 @@ public:
   MlirAffineExpr get() const { return affineExpr; }
 
   /// Gets a capsule wrapping the void* within the MlirAffineExpr.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyAffineExpr from the MlirAffineExpr wrapped by a capsule.
   /// Note that PyAffineExpr instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineExpr
   /// is taken by calling this function.
-  static PyAffineExpr createFromCapsule(pybind11::object capsule);
+  static PyAffineExpr createFromCapsule(nanobind::object capsule);
 
   PyAffineExpr add(const PyAffineExpr &other) const;
   PyAffineExpr mul(const PyAffineExpr &other) const;
@@ -1179,13 +1206,13 @@ public:
   MlirAffineMap get() const { return affineMap; }
 
   /// Gets a capsule wrapping the void* within the MlirAffineMap.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyAffineMap from the MlirAffineMap wrapped by a capsule.
   /// Note that PyAffineMap instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineMap
   /// is taken by calling this function.
-  static PyAffineMap createFromCapsule(pybind11::object capsule);
+  static PyAffineMap createFromCapsule(nanobind::object capsule);
 
 private:
   MlirAffineMap affineMap;
@@ -1200,12 +1227,12 @@ public:
   MlirIntegerSet get() const { return integerSet; }
 
   /// Gets a capsule wrapping the void* within the MlirIntegerSet.
-  pybind11::object getCapsule();
+  nanobind::object getCapsule();
 
   /// Creates a PyIntegerSet from the MlirAffineMap wrapped by a capsule.
   /// Note that PyIntegerSet instances may be uniqued, so the returned object
   /// may be a pre-existing object. Integer sets are owned by the context.
-  static PyIntegerSet createFromCapsule(pybind11::object capsule);
+  static PyIntegerSet createFromCapsule(nanobind::object capsule);
 
 private:
   MlirIntegerSet integerSet;
@@ -1222,7 +1249,7 @@ public:
 
   /// Returns the symbol (opview) with the given name, throws if there is no
   /// such symbol in the table.
-  pybind11::object dunderGetItem(const std::string &name);
+  nanobind::object dunderGetItem(const std::string &name);
 
   /// Removes the given operation from the symbol table and erases it.
   void erase(PyOperationBase &symbol);
@@ -1252,7 +1279,7 @@ public:
 
   /// Walks all symbol tables under and including 'from'.
   static void walkSymbolTables(PyOperationBase &from, bool allSymUsesVisible,
-                               pybind11::object callback);
+                               nanobind::object callback);
 
   /// Casts the bindings class into the C API structure.
   operator MlirSymbolTable() { return symbolTable; }
@@ -1272,16 +1299,16 @@ struct MLIRError {
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
 
-void populateIRAffine(pybind11::module &m);
-void populateIRAttributes(pybind11::module &m);
-void populateIRCore(pybind11::module &m);
-void populateIRInterfaces(pybind11::module &m);
-void populateIRTypes(pybind11::module &m);
+void populateIRAffine(nanobind::module_ &m);
+void populateIRAttributes(nanobind::module_ &m);
+void populateIRCore(nanobind::module_ &m);
+void populateIRInterfaces(nanobind::module_ &m);
+void populateIRTypes(nanobind::module_ &m);
 
 } // namespace python
 } // namespace mlir
 
-namespace pybind11 {
+namespace nanobind {
 namespace detail {
 
 template <>
@@ -1292,6 +1319,6 @@ struct type_caster<mlir::python::DefaultingPyLocation>
     : MlirDefaultingCaster<mlir::python::DefaultingPyLocation> {};
 
 } // namespace detail
-} // namespace pybind11
+} // namespace nanobind
 
 #endif // MLIR_BINDINGS_PYTHON_IRMODULES_H

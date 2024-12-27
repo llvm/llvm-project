@@ -172,7 +172,7 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 /// iff it has no memory effects and none of its results are live.
 ///
 /// It is assumed that `op` is simple. Here, a simple op is one which isn't a
-/// symbol op, a symbol-user op, a region branch op, a branch op, a region
+/// function-like op, a call-like op, a region branch op, a branch op, a region
 /// branch terminator op, or return-like.
 static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), la))
@@ -191,10 +191,10 @@ static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
 ///   non-live across all callers),
 ///   (5) Dropping the uses of these return values from its callers, AND
 ///   (6) Erasing these return values
-/// iff it is not public.
+/// iff it is not public or external.
 static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
                         RunLivenessAnalysis &la) {
-  if (funcOp.isPublic())
+  if (funcOp.isPublic() || funcOp.isExternal())
     return;
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
@@ -563,6 +563,51 @@ static void cleanRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   dropUsesAndEraseResults(regionBranchOp.getOperation(), resultsToKeep.flip());
 }
 
+// 1. Iterate over each successor block of the given BranchOpInterface
+//    operation.
+// 2. For each successor block:
+//    a. Retrieve the operands passed to the successor.
+//    b. Use the provided liveness analysis (`RunLivenessAnalysis`) to determine
+//       which operands are live in the successor block.
+//    c. Mark each operand as live or dead based on the analysis.
+// 3. Remove dead operands from the branch operation and arguments accordingly
+
+static void cleanBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la) {
+  unsigned numSuccessors = branchOp->getNumSuccessors();
+
+  // Do (1)
+  for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
+    Block *successorBlock = branchOp->getSuccessor(succIdx);
+
+    // Do (2)
+    SuccessorOperands successorOperands =
+        branchOp.getSuccessorOperands(succIdx);
+    SmallVector<Value> operandValues;
+    for (unsigned operandIdx = 0; operandIdx < successorOperands.size();
+         ++operandIdx) {
+      operandValues.push_back(successorOperands[operandIdx]);
+    }
+
+    BitVector successorLiveOperands = markLives(operandValues, la);
+
+    // Do (3)
+    for (int argIdx = successorLiveOperands.size() - 1; argIdx >= 0; --argIdx) {
+      if (!successorLiveOperands[argIdx]) {
+        if (successorBlock->getNumArguments() < successorOperands.size()) {
+          // if block was cleaned through a different code path
+          // we only need to remove operands from the invokation
+          successorOperands.erase(argIdx);
+          continue;
+        }
+
+        successorBlock->getArgument(argIdx).dropAllUses();
+        successorOperands.erase(argIdx);
+        successorBlock->eraseArgument(argIdx);
+      }
+    }
+  }
+}
+
 struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
   void runOnOperation() override;
 };
@@ -572,35 +617,16 @@ void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
 
-  // The removal of non-live values is performed iff there are no branch ops,
-  // all symbol ops present in the IR are function-like, and all symbol user ops
-  // present in the IR are call-like.
-  WalkResult acceptableIR = module->walk([&](Operation *op) {
-    if (isa<BranchOpInterface>(op) ||
-        (isa<SymbolOpInterface>(op) && !isa<FunctionOpInterface>(op)) ||
-        (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {
-      op->emitError() << "cannot optimize an IR with non-function symbol ops, "
-                         "non-call symbol user ops or branch ops\n";
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-
-  if (acceptableIR.wasInterrupted())
-    return;
-
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       cleanFuncOp(funcOp, module, la);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       cleanRegionBranchOp(regionBranchOp, la);
-    } else if (op->hasTrait<OpTrait::ReturnLike>()) {
-      // Nothing to do because this terminator is associated with either a
-      // function op or a region branch op and gets cleaned when these ops are
-      // cleaned.
-    } else if (isa<RegionBranchTerminatorOpInterface>(op)) {
-      // Nothing to do because this terminator is associated with a region
-      // branch op and gets cleaned when the latter is cleaned.
+    } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
+      cleanBranchOp(branchOp, la);
+    } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
+      // Nothing to do here because this is a terminator op and it should be
+      // honored with respect to its parent
     } else if (isa<CallOpInterface>(op)) {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.

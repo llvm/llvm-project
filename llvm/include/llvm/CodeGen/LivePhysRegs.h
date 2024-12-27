@@ -39,6 +39,8 @@
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+
 class MachineInstr;
 class MachineFunction;
 class MachineOperand;
@@ -193,12 +195,36 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
 
-/// Convenience function for recomputing live-in's for \p MBB.
-static inline void recomputeLiveIns(MachineBasicBlock &MBB) {
+/// Convenience function for recomputing live-in's for a MBB. Returns true if
+/// any changes were made.
+static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
   LivePhysRegs LPR;
-  MBB.clearLiveIns();
+  std::vector<MachineBasicBlock::RegisterMaskPair> OldLiveIns;
+
+  MBB.clearLiveIns(OldLiveIns);
   computeAndAddLiveIns(LPR, MBB);
+  MBB.sortUniqueLiveIns();
+
+  const std::vector<MachineBasicBlock::RegisterMaskPair> &NewLiveIns =
+      MBB.getLiveIns();
+  return OldLiveIns != NewLiveIns;
 }
+
+/// Convenience function for recomputing live-in's for a set of MBBs until the
+/// computation converges.
+inline void fullyRecomputeLiveIns(ArrayRef<MachineBasicBlock *> MBBs) {
+  MachineBasicBlock *const *Data = MBBs.data();
+  const size_t Len = MBBs.size();
+  while (true) {
+    bool AnyChange = false;
+    for (size_t I = 0; I < Len; ++I)
+      if (recomputeLiveIns(*Data[I]))
+        AnyChange = true;
+    if (!AnyChange)
+      return;
+  }
+}
+
 
 } // end namespace llvm
 

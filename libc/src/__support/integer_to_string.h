@@ -67,9 +67,12 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/big_int.h" // make_integral_or_big_int_unsigned_t
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace details {
 
@@ -163,10 +166,10 @@ template <size_t radix> using Custom = details::Fmt<radix>;
 
 // See file header for documentation.
 template <typename T, typename Fmt = radix::Dec> class IntegerToString {
-  static_assert(cpp::is_integral_v<T>);
+  static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
 
   LIBC_INLINE static constexpr size_t compute_buffer_size() {
-    constexpr auto max_digits = []() -> size_t {
+    constexpr auto MAX_DIGITS = []() -> size_t {
       // We size the string buffer for base 10 using an approximation algorithm:
       //
       //   size = ceil(sizeof(T) * 5 / 2)
@@ -188,19 +191,19 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       // For other bases, we approximate by rounding down to the nearest power
       // of two base, since the space needed is easy to calculate and it won't
       // overestimate by too much.
-      constexpr auto floor_log_2 = [](size_t num) -> size_t {
+      constexpr auto FLOOR_LOG_2 = [](size_t num) -> size_t {
         size_t i = 0;
         for (; num > 1; num /= 2)
           ++i;
         return i;
       };
-      constexpr size_t BITS_PER_DIGIT = floor_log_2(Fmt::BASE);
+      constexpr size_t BITS_PER_DIGIT = FLOOR_LOG_2(Fmt::BASE);
       return ((sizeof(T) * 8 + (BITS_PER_DIGIT - 1)) / BITS_PER_DIGIT);
     };
-    constexpr size_t digit_size = cpp::max(max_digits(), Fmt::MIN_DIGITS);
-    constexpr size_t sign_size = Fmt::BASE == 10 ? 1 : 0;
-    constexpr size_t prefix_size = Fmt::PREFIX ? 2 : 0;
-    return digit_size + sign_size + prefix_size;
+    constexpr size_t DIGIT_SIZE = cpp::max(MAX_DIGITS(), Fmt::MIN_DIGITS);
+    constexpr size_t SIGN_SIZE = Fmt::BASE == 10 ? 1 : 0;
+    constexpr size_t PREFIX_SIZE = Fmt::PREFIX ? 2 : 0;
+    return DIGIT_SIZE + SIGN_SIZE + PREFIX_SIZE;
   }
 
   static constexpr size_t BUFFER_SIZE = compute_buffer_size();
@@ -208,13 +211,13 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
 
   // An internal stateless structure that handles the number formatting logic.
   struct IntegerWriter {
-    static_assert(cpp::is_integral_v<T>);
-    using UNSIGNED_T = cpp::make_unsigned_t<T>;
+    static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
+    using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
-      if (digit < 10)
-        return '0' + static_cast<char>(digit);
-      return (Fmt::IS_UPPERCASE ? 'A' : 'a') + static_cast<char>(digit - 10);
+      const int result = internal::int_to_b36_char(digit);
+      return static_cast<char>(Fmt::IS_UPPERCASE ? internal::toupper(result)
+                                                 : result);
     }
 
     LIBC_INLINE static void
@@ -316,6 +319,6 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H

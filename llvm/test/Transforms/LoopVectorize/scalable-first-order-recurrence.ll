@@ -21,14 +21,16 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1: %[[INDEX:.*]] = phi i64 [ 0, %vector.ph ], [ %[[NEXT_IDX:.*]], %vector.body ]
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[LOAD:.*]], %vector.body ]
 ; CHECK-VF4UF1: %[[LOAD]] = load <vscale x 4 x i32>, ptr
-; CHECK-VF4UF1: %[[SPLICE:.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %[[VEC_RECUR]], <vscale x 4 x i32> %[[LOAD]], i32 -1)
+; CHECK-VF4UF1: %[[SPLICE:.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> %[[VEC_RECUR]], <vscale x 4 x i32> %[[LOAD]], i32 -1)
 ; CHECK-VF4UF1: middle.block:
 ; CHECK-VF4UF1: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF1: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
-; CHECK-VF4UF1: %[[SUB2:.*]] = sub i32 %[[MUL2]], 1
-; CHECK-VF4UF1: %[[VEC_RECUR_EXT:.*]] = extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB2]]
 ; CHECK-VF4UF1: %[[SUB3:.*]] = sub i32 %[[MUL2]], 2
 ; CHECK-VF4UF1: %[[VEC_RECUR_FOR_PHI:.*]] =  extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB3]]
+; CHECK-VF4UF1: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
+; CHECK-VF4UF1: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4
+; CHECK-VF4UF1: %[[SUB3:.*]] = sub i32 %[[MUL3]], 1
+; CHECK-VF4UF1: %[[VEC_RECUR_EXT:.*]] = extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB3]]
 entry:
   br label %for.preheader
 
@@ -70,7 +72,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1: vector.body:
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[LOAD:.*]], %vector.body ]
 ; CHECK-VF4UF1: %[[LOAD]] = load <vscale x 4 x i32>, ptr
-; CHECK-VF4UF1: %[[REVERSE:.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %[[VEC_RECUR]], <vscale x 4 x i32> %[[LOAD]], i32 -1)
+; CHECK-VF4UF1: %[[REVERSE:.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> %[[VEC_RECUR]], <vscale x 4 x i32> %[[LOAD]], i32 -1)
 ; CHECK-VF4UF1: middle.block:
 ; CHECK-VF4UF1: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF1: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
@@ -119,7 +121,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF1: vector.body:
 ; CHECK-VF4UF1: %vector.recur = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[L1:.*]], %vector.body ]
 ; CHECK-VF4UF1: %[[L1]] = load <vscale x 4 x i16>, ptr
-; CHECK-VF4UF1: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.experimental.vector.splice.nxv4i16(<vscale x 4 x i16> %vector.recur, <vscale x 4 x i16> %[[L1]], i32 -1)
+; CHECK-VF4UF1: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> %vector.recur, <vscale x 4 x i16> %[[L1]], i32 -1)
 ; Check also that the casts were not moved needlessly.
 ; CHECK-VF4UF1: sitofp <vscale x 4 x i16> %[[L1]] to <vscale x 4 x double>
 ; CHECK-VF4UF1: sitofp <vscale x 4 x i16> %[[SPLICE]] to <vscale x 4 x double>
@@ -168,9 +170,7 @@ for.end:
 define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-LABEL: @constant_folded_previous_value
 ; CHECK-VF4UF2: vector.body
-; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %vector.body ]
-; CHECK-VF4UF2: %[[SPLICE1:.*]] = call <vscale x 4 x i64> @llvm.experimental.vector.splice.nxv4i64(<vscale x 4 x i64> %vector.recur, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), i32 -1)
-; CHECK-VF4UF2: %[[SPLICE2:.*]] = call <vscale x 4 x i64> @llvm.experimental.vector.splice.nxv4i64(<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), i32 -1)
+; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ splat (i64 1), %vector.body ]
 ; CHECK-VF4UF2: br i1 {{.*}}, label %middle.block, label %vector.body
 entry:
   br label %scalar.body
@@ -197,7 +197,6 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2: vector.ph
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
-; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[VSCALE1:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL1:.*]] = mul i32 %[[VSCALE1]], 4
 ; CHECK-VF4UF2: %[[SUB1:.*]] = sub i32 %[[MUL1]], 1
@@ -207,14 +206,15 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[ADD2:.*]], %vector.body ]
 ; CHECK-VF4UF2: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
-; CHECK-VF4UF2: %[[ADD2]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
 ; CHECK-VF4UF2: middle.block
 ; CHECK-VF4UF2: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
-; CHECK-VF4UF2: %[[SUB2:.*]] = sub i32 %[[MUL2]], 1
-; CHECK-VF4UF2: %vector.recur.extract = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB2]]
 ; CHECK-VF4UF2: %[[SUB3:.*]] = sub i32 %[[MUL2]], 2
 ; CHECK-VF4UF2: %vector.recur.extract.for.phi = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB3]]
+; CHECK-VF4UF2: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
+; CHECK-VF4UF2: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4
+; CHECK-VF4UF2: %[[SUB2:.*]] = sub i32 %[[MUL3]], 1
+; CHECK-VF4UF2: %vector.recur.extract = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB2]]
 entry:
   br label %for.body
 
@@ -242,7 +242,7 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF1: vector.body
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[LOAD:.*]], %vector.body ]
 ; CHECK-VF4UF1: %[[LOAD]] = load <vscale x 4 x i16>, ptr
-; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.experimental.vector.splice.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[LOAD]], i32 -1)
+; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[LOAD]], i32 -1)
 ; CHECK-VF4UF1-NEXT: sext <vscale x 4 x i16> %[[SPLICE]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT: sext <vscale x 4 x i16> %[[LOAD]] to <vscale x 4 x i32>
 entry:

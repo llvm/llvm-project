@@ -9,9 +9,12 @@
 #include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
+#include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
-#include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,32 +23,224 @@
 #define DEBUG_TYPE "bolt-prof"
 
 namespace opts {
-extern llvm::cl::opt<bool> ProfileUseDFS;
+using namespace llvm;
+extern cl::opt<bool> ProfileUseDFS;
+cl::opt<bool> ProfileWritePseudoProbes(
+    "profile-write-pseudo-probes",
+    cl::desc("Use pseudo probes in profile generation"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
 namespace bolt {
 
-namespace {
-void convert(const BinaryFunction &BF,
-             yaml::bolt::BinaryFunctionProfile &YamlBF) {
+const BinaryFunction *YAMLProfileWriter::setCSIDestination(
+    const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+    uint32_t Offset) {
+  CSI.DestId = 0; // designated for unknown functions
+  CSI.EntryDiscriminator = 0;
+
+  if (Symbol) {
+    uint64_t EntryID = 0;
+    if (const BinaryFunction *Callee =
+            BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol, Offset);
+      else if (const BinaryBasicBlock *BB =
+                   Callee->getBasicBlockContainingOffset(Offset))
+        BC.getFunctionForSymbol(Callee->getSecondaryEntryPointSymbol(*BB),
+                                &EntryID);
+      CSI.DestId = Callee->getFunctionNumber();
+      CSI.EntryDiscriminator = EntryID;
+      return Callee;
+    }
+  }
+  return nullptr;
+}
+
+std::vector<YAMLProfileWriter::InlineTreeNode>
+YAMLProfileWriter::collectInlineTree(
+    const MCPseudoProbeDecoder &Decoder,
+    const MCDecodedPseudoProbeInlineTree &Root) {
+  auto getHash = [&](const MCDecodedPseudoProbeInlineTree &Node) {
+    return Decoder.getFuncDescForGUID(Node.Guid)->FuncHash;
+  };
+  std::vector<InlineTreeNode> InlineTree(
+      {InlineTreeNode{&Root, Root.Guid, getHash(Root), 0, 0}});
+  uint32_t ParentId = 0;
+  while (ParentId != InlineTree.size()) {
+    const MCDecodedPseudoProbeInlineTree *Cur = InlineTree[ParentId].InlineTree;
+    for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren())
+      InlineTree.emplace_back(
+          InlineTreeNode{&Child, Child.Guid, getHash(Child), ParentId,
+                         std::get<1>(Child.getInlineSite())});
+    ++ParentId;
+  }
+
+  return InlineTree;
+}
+
+std::tuple<yaml::bolt::ProfilePseudoProbeDesc,
+           YAMLProfileWriter::InlineTreeDesc>
+YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
+  yaml::bolt::ProfilePseudoProbeDesc Desc;
+  InlineTreeDesc InlineTree;
+
+  for (const MCDecodedPseudoProbeInlineTree &TopLev :
+       Decoder.getDummyInlineRoot().getChildren())
+    InlineTree.TopLevelGUIDToInlineTree[TopLev.Guid] = &TopLev;
+
+  for (const auto &FuncDesc : Decoder.getGUID2FuncDescMap())
+    ++InlineTree.HashIdxMap[FuncDesc.FuncHash];
+
+  InlineTree.GUIDIdxMap.reserve(Decoder.getGUID2FuncDescMap().size());
+  for (const auto &Node : Decoder.getInlineTreeVec())
+    ++InlineTree.GUIDIdxMap[Node.Guid];
+
+  std::vector<std::pair<uint32_t, uint64_t>> GUIDFreqVec;
+  GUIDFreqVec.reserve(InlineTree.GUIDIdxMap.size());
+  for (const auto [GUID, Cnt] : InlineTree.GUIDIdxMap)
+    GUIDFreqVec.emplace_back(Cnt, GUID);
+  llvm::sort(GUIDFreqVec);
+
+  std::vector<std::pair<uint32_t, uint64_t>> HashFreqVec;
+  HashFreqVec.reserve(InlineTree.HashIdxMap.size());
+  for (const auto [Hash, Cnt] : InlineTree.HashIdxMap)
+    HashFreqVec.emplace_back(Cnt, Hash);
+  llvm::sort(HashFreqVec);
+
+  uint32_t Index = 0;
+  Desc.Hash.reserve(HashFreqVec.size());
+  for (uint64_t Hash : llvm::make_second_range(llvm::reverse(HashFreqVec))) {
+    Desc.Hash.emplace_back(Hash);
+    InlineTree.HashIdxMap[Hash] = Index++;
+  }
+
+  Index = 0;
+  Desc.GUID.reserve(GUIDFreqVec.size());
+  for (uint64_t GUID : llvm::make_second_range(llvm::reverse(GUIDFreqVec))) {
+    Desc.GUID.emplace_back(GUID);
+    InlineTree.GUIDIdxMap[GUID] = Index++;
+    uint64_t Hash = Decoder.getFuncDescForGUID(GUID)->FuncHash;
+    Desc.GUIDHashIdx.emplace_back(InlineTree.HashIdxMap[Hash]);
+  }
+
+  return {Desc, InlineTree};
+}
+
+std::vector<yaml::bolt::PseudoProbeInfo>
+YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
+  struct BlockProbeInfoHasher {
+    size_t operator()(const yaml::bolt::PseudoProbeInfo &BPI) const {
+      auto HashCombine = [](auto &Range) {
+        return llvm::hash_combine_range(Range.begin(), Range.end());
+      };
+      return llvm::hash_combine(HashCombine(BPI.BlockProbes),
+                                HashCombine(BPI.CallProbes),
+                                HashCombine(BPI.IndCallProbes));
+    }
+  };
+
+  // Check identical BlockProbeInfo structs and merge them
+  std::unordered_map<yaml::bolt::PseudoProbeInfo, std::vector<uint32_t>,
+                     BlockProbeInfoHasher>
+      BPIToNodes;
+  for (auto &[NodeId, Probes] : NodeProbes) {
+    yaml::bolt::PseudoProbeInfo BPI;
+    BPI.BlockProbes = std::vector(Probes[0].begin(), Probes[0].end());
+    BPI.IndCallProbes = std::vector(Probes[1].begin(), Probes[1].end());
+    BPI.CallProbes = std::vector(Probes[2].begin(), Probes[2].end());
+    BPIToNodes[BPI].push_back(NodeId);
+  }
+
+  auto handleMask = [](const auto &Ids, auto &Vec, auto &Mask) {
+    for (auto Id : Ids)
+      if (Id > 64)
+        Vec.emplace_back(Id);
+      else
+        Mask |= 1ull << (Id - 1);
+  };
+
+  // Add to YAML with merged nodes/block mask optimizations
+  std::vector<yaml::bolt::PseudoProbeInfo> YamlProbes;
+  YamlProbes.reserve(BPIToNodes.size());
+  for (const auto &[BPI, Nodes] : BPIToNodes) {
+    auto &YamlBPI = YamlProbes.emplace_back(yaml::bolt::PseudoProbeInfo());
+    YamlBPI.CallProbes = BPI.CallProbes;
+    YamlBPI.IndCallProbes = BPI.IndCallProbes;
+    if (Nodes.size() == 1)
+      YamlBPI.InlineTreeIndex = Nodes.front();
+    else
+      YamlBPI.InlineTreeNodes = Nodes;
+    handleMask(BPI.BlockProbes, YamlBPI.BlockProbes, YamlBPI.BlockMask);
+  }
+  return YamlProbes;
+}
+
+std::tuple<std::vector<yaml::bolt::InlineTreeNode>,
+           YAMLProfileWriter::InlineTreeMapTy>
+YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
+                                       const InlineTreeDesc &InlineTree,
+                                       uint64_t GUID) {
+  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
+  std::vector<yaml::bolt::InlineTreeNode> YamlInlineTree;
+  auto It = InlineTree.TopLevelGUIDToInlineTree.find(GUID);
+  if (It == InlineTree.TopLevelGUIDToInlineTree.end())
+    return {YamlInlineTree, InlineTreeNodeId};
+  const MCDecodedPseudoProbeInlineTree *Root = It->second;
+  assert(Root && "Malformed TopLevelGUIDToInlineTree");
+  uint32_t Index = 0;
+  uint32_t PrevParent = 0;
+  uint32_t PrevGUIDIdx = 0;
+  for (const auto &Node : collectInlineTree(Decoder, *Root)) {
+    InlineTreeNodeId[Node.InlineTree] = Index++;
+    auto GUIDIdxIt = InlineTree.GUIDIdxMap.find(Node.GUID);
+    assert(GUIDIdxIt != InlineTree.GUIDIdxMap.end() && "Malformed GUIDIdxMap");
+    uint32_t GUIDIdx = GUIDIdxIt->second;
+    if (GUIDIdx == PrevGUIDIdx)
+      GUIDIdx = UINT32_MAX;
+    else
+      PrevGUIDIdx = GUIDIdx;
+    YamlInlineTree.emplace_back(yaml::bolt::InlineTreeNode{
+        Node.ParentId - PrevParent, Node.InlineSite, GUIDIdx, 0, 0});
+    PrevParent = Node.ParentId;
+  }
+  return {YamlInlineTree, InlineTreeNodeId};
+}
+
+yaml::bolt::BinaryFunctionProfile
+YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
+                           const InlineTreeDesc &InlineTree,
+                           const BoltAddressTranslation *BAT) {
+  yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
+  const MCPseudoProbeDecoder *PseudoProbeDecoder =
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
   // Prepare function and block hashes
-  BF.computeHash(opts::ProfileUseDFS);
+  BF.computeHash(UseDFS);
   BF.computeBlockHashes();
 
-  YamlBF.Name = BF.getPrintName();
+  YamlBF.Name = DataAggregator::getLocationName(BF, BAT);
   YamlBF.Id = BF.getFunctionNumber();
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
+  if (PseudoProbeDecoder && BF.getGUID()) {
+    std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+        convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF.getGUID());
+  }
 
   BinaryFunction::BasicBlockOrderType Order;
-  llvm::copy(opts::ProfileUseDFS ? BF.dfs() : BF.getLayout().blocks(),
+  llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
              std::back_inserter(Order));
+
+  const FunctionLayout Layout = BF.getLayout();
+  Layout.updateLayoutIndices(Order);
 
   for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
@@ -80,46 +275,30 @@ void convert(const BinaryFunction &BF,
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
           StringRef TargetName = "";
-          CSI.DestId = 0; // designated for unknown functions
-          CSI.EntryDiscriminator = 0;
-          if (CSP.Symbol) {
-            const BinaryFunction *Callee = BC.getFunctionForSymbol(CSP.Symbol);
-            if (Callee) {
-              CSI.DestId = Callee->getFunctionNumber();
-              TargetName = Callee->getOneName();
-            }
-          }
+          const BinaryFunction *Callee =
+              setCSIDestination(BC, CSI, CSP.Symbol, BAT);
+          if (Callee)
+            TargetName = Callee->getOneName();
           CSI.Count = CSP.Count;
           CSI.Mispreds = CSP.Mispreds;
           CSTargets.emplace_back(TargetName, CSI);
         }
       } else { // direct call or a tail call
-        uint64_t EntryID = 0;
-        CSI.DestId = 0;
         StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
-            BC.getFunctionForSymbol(CalleeSymbol, &EntryID);
-        if (Callee) {
-          CSI.DestId = Callee->getFunctionNumber();
-          CSI.EntryDiscriminator = EntryID;
+            setCSIDestination(BC, CSI, CalleeSymbol, BAT);
+        if (Callee)
           TargetName = Callee->getOneName();
-        }
 
+        auto getAnnotationWithDefault = [&](const MCInst &Inst, StringRef Ann) {
+          return BC.MIB->getAnnotationWithDefault(Instr, Ann, 0ull);
+        };
         if (BC.MIB->getConditionalTailCall(Instr)) {
-          auto CTCCount =
-              BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "CTCTakenCount");
-          if (CTCCount) {
-            CSI.Count = *CTCCount;
-            auto CTCMispreds =
-                BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "CTCMispredCount");
-            if (CTCMispreds)
-              CSI.Mispreds = *CTCMispreds;
-          }
+          CSI.Count = getAnnotationWithDefault(Instr, "CTCTakenCount");
+          CSI.Mispreds = getAnnotationWithDefault(Instr, "CTCMispredCount");
         } else {
-          auto Count = BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "Count");
-          if (Count)
-            CSI.Count = *Count;
+          CSI.Count = getAnnotationWithDefault(Instr, "Count");
         }
 
         if (CSI.Count)
@@ -163,10 +342,22 @@ void convert(const BinaryFunction &BF,
       ++BranchInfo;
     }
 
+    if (PseudoProbeDecoder) {
+      const AddressProbesMap &ProbeMap =
+          PseudoProbeDecoder->getAddress2ProbesMap();
+      const uint64_t FuncAddr = BF.getAddress();
+      const std::pair<uint64_t, uint64_t> &BlockRange =
+          BB->getInputAddressRange();
+      const std::pair<uint64_t, uint64_t> BlockAddrRange = {
+          FuncAddr + BlockRange.first, FuncAddr + BlockRange.second};
+      auto Probes = ProbeMap.find(BlockAddrRange.first, BlockAddrRange.second);
+      YamlBB.PseudoProbes = writeBlockProbes(Probes, InlineTreeNodeId);
+    }
+
     YamlBF.Blocks.emplace_back(YamlBB);
   }
+  return YamlBF;
 }
-} // end anonymous namespace
 
 std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   const BinaryContext &BC = RI.getBinaryContext();
@@ -215,6 +406,12 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   }
   BP.Header.Flags = ProfileFlags;
 
+  // Add probe inline tree nodes.
+  InlineTreeDesc InlineTree;
+  if (const MCPseudoProbeDecoder *Decoder =
+          opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr)
+    std::tie(BP.PseudoProbeDesc, InlineTree) = convertPseudoProbeDesc(*Decoder);
+
   // Add all function objects.
   for (const auto &BFI : Functions) {
     const BinaryFunction &BF = BFI.second;
@@ -222,9 +419,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
       if (!BF.hasValidProfile() && !RI.getProfileReader()->isTrustedSource())
         continue;
 
-      yaml::bolt::BinaryFunctionProfile YamlBF;
-      convert(BF, YamlBF);
-      BP.Functions.emplace_back(YamlBF);
+      BP.Functions.emplace_back(convert(BF, opts::ProfileUseDFS, InlineTree));
     }
   }
 

@@ -26,7 +26,7 @@
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGGENERALIZATION
+#define GEN_PASS_DEF_LINALGGENERALIZENAMEDOPSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -76,24 +76,23 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
 
 namespace {
 
-struct LinalgGeneralizationPass
-    : public impl::LinalgGeneralizationBase<LinalgGeneralizationPass> {
+struct LinalgGeneralizeNamedOpsPass
+    : public impl::LinalgGeneralizeNamedOpsPassBase<
+          LinalgGeneralizeNamedOpsPass> {
+  using impl::LinalgGeneralizeNamedOpsPassBase<
+      LinalgGeneralizeNamedOpsPass>::LinalgGeneralizeNamedOpsPassBase;
   void runOnOperation() override;
 };
 
 } // namespace
 
-void LinalgGeneralizationPass::runOnOperation() {
+void LinalgGeneralizeNamedOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns) {
   patterns.add<LinalgGeneralizationPattern>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createLinalgGeneralizationPass() {
-  return std::make_unique<LinalgGeneralizationPass>();
 }

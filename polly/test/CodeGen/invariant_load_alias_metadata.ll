@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true \
 ; RUN: -S < %s | FileCheck %s
 ;
 ; This test case checks whether Polly generates alias metadata in case of

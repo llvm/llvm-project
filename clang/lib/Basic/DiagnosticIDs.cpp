@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include <map>
 #include <optional>
 using namespace clang;
@@ -49,6 +50,7 @@ struct StaticDiagInfoDescriptionStringTable {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
   // clang-format on
 #undef DIAG
 };
@@ -70,7 +72,8 @@ const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
-  // clang-format on
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+// clang-format on
 #undef DIAG
 };
 
@@ -95,12 +98,13 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
-  // clang-format on
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+// clang-format on
 #undef DIAG
 };
 
 // Diagnostic classes.
-enum {
+enum DiagnosticClass {
   CLASS_NOTE       = 0x01,
   CLASS_REMARK     = 0x02,
   CLASS_WARNING    = 0x03,
@@ -110,15 +114,22 @@ enum {
 
 struct StaticDiagInfoRec {
   uint16_t DiagID;
+  LLVM_PREFERRED_TYPE(diag::Severity)
   uint8_t DefaultSeverity : 3;
+  LLVM_PREFERRED_TYPE(DiagnosticClass)
   uint8_t Class : 3;
+  LLVM_PREFERRED_TYPE(DiagnosticIDs::SFINAEResponse)
   uint8_t SFINAE : 2;
   uint8_t Category : 6;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t WarnNoWerror : 1;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t WarnShowInSystemHeader : 1;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t WarnShowInSystemMacro : 1;
 
   uint16_t OptionGroupIndex : 15;
+  LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
   uint16_t DescriptionLen;
@@ -166,6 +177,7 @@ VALIDATE_DIAG_SIZE(CROSSTU)
 VALIDATE_DIAG_SIZE(SEMA)
 VALIDATE_DIAG_SIZE(ANALYSIS)
 VALIDATE_DIAG_SIZE(REFACTORING)
+VALIDATE_DIAG_SIZE(INSTALLAPI)
 #undef VALIDATE_DIAG_SIZE
 #undef STRINGIFY_NAME
 
@@ -197,6 +209,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
 // clang-format on
 #undef DIAG
 };
@@ -239,6 +252,7 @@ CATEGORY(CROSSTU, COMMENT)
 CATEGORY(SEMA, CROSSTU)
 CATEGORY(ANALYSIS, SEMA)
 CATEGORY(REFACTORING, ANALYSIS)
+CATEGORY(INSTALLAPI, REFACTORING)
 #undef CATEGORY
 
   // Avoid out of bounds reads.
@@ -559,9 +573,15 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
 
   // If explicitly requested, map fatal errors to errors.
   if (Result == diag::Severity::Fatal &&
-      Diag.CurDiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
+      DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
     Result = diag::Severity::Error;
 
+  // Rest of the mappings are only applicable for diagnostics associated with a
+  // SourceLocation, bail out early for others.
+  if (!Diag.hasSourceManager())
+    return Result;
+
+  const auto &SM = Diag.getSourceManager();
   // Custom diagnostics always are emitted in system headers.
   bool ShowInSystemHeader =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
@@ -570,15 +590,18 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
   if (State->SuppressSystemWarnings && !ShowInSystemHeader && Loc.isValid() &&
-      Diag.getSourceManager().isInSystemHeader(
-          Diag.getSourceManager().getExpansionLoc(Loc)))
+      SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
     return diag::Severity::Ignored;
 
   // We also ignore warnings due to system macros
   bool ShowInSystemMacro =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
   if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
-      Diag.getSourceManager().isInSystemMacro(Loc))
+      SM.isInSystemMacro(Loc))
+    return diag::Severity::Ignored;
+
+  // Clang-diagnostics pragmas always take precedence over suppression mapping.
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
     return diag::Severity::Ignored;
 
   return Result;
@@ -735,8 +758,9 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
 
 /// ProcessDiag - This is the method used to report a diagnostic that is
 /// finally fully formed.
-bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag) const {
-  Diagnostic Info(&Diag);
+bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag,
+                                const DiagnosticBuilder &DiagBuilder) const {
+  Diagnostic Info(&Diag, DiagBuilder);
 
   assert(Diag.getClient() && "DiagnosticClient not set!");
 
@@ -802,22 +826,24 @@ bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag) const {
     // stop a flood of bogus errors.
     if (Diag.ErrorLimit && Diag.NumErrors > Diag.ErrorLimit &&
         DiagLevel == DiagnosticIDs::Error) {
-      Diag.SetDelayedDiagnostic(diag::fatal_too_many_errors);
+      Diag.Report(diag::fatal_too_many_errors);
       return false;
     }
   }
 
   // Make sure we set FatalErrorOccurred to ensure that the notes from the
   // diagnostic that caused `fatal_too_many_errors` won't be emitted.
-  if (Diag.CurDiagID == diag::fatal_too_many_errors)
+  if (Info.getID() == diag::fatal_too_many_errors)
     Diag.FatalErrorOccurred = true;
   // Finally, report it.
-  EmitDiag(Diag, DiagLevel);
+  EmitDiag(Diag, DiagBuilder, DiagLevel);
   return true;
 }
 
-void DiagnosticIDs::EmitDiag(DiagnosticsEngine &Diag, Level DiagLevel) const {
-  Diagnostic Info(&Diag);
+void DiagnosticIDs::EmitDiag(DiagnosticsEngine &Diag,
+                             const DiagnosticBuilder &DiagBuilder,
+                             Level DiagLevel) const {
+  Diagnostic Info(&Diag, DiagBuilder);
   assert(DiagLevel != DiagnosticIDs::Ignored && "Cannot emit ignored diagnostics!");
 
   Diag.Client->HandleDiagnostic((DiagnosticsEngine::Level)DiagLevel, Info);
@@ -825,8 +851,6 @@ void DiagnosticIDs::EmitDiag(DiagnosticsEngine &Diag, Level DiagLevel) const {
     if (DiagLevel == DiagnosticIDs::Warning)
       ++Diag.NumWarnings;
   }
-
-  Diag.CurDiagID = ~0U;
 }
 
 bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
@@ -848,10 +872,18 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
   if (isARCDiagnostic(DiagID))
     return false;
 
+  if (isCodegenABICheckDiagnostic(DiagID))
+    return false;
+
   return true;
 }
 
 bool DiagnosticIDs::isARCDiagnostic(unsigned DiagID) {
   unsigned cat = getCategoryNumberForDiag(DiagID);
   return DiagnosticIDs::getCategoryNameFromID(cat).starts_with("ARC ");
+}
+
+bool DiagnosticIDs::isCodegenABICheckDiagnostic(unsigned DiagID) {
+  unsigned cat = getCategoryNumberForDiag(DiagID);
+  return DiagnosticIDs::getCategoryNameFromID(cat) == "Codegen ABI Check";
 }

@@ -4,12 +4,12 @@
 
 // A single member HFA must be aligned just like a non-HFA register argument.
 double callee(int a, ...) {
-// CHECK: [[REGPP:%.*]] = getelementptr inbounds %struct.__va_list, ptr [[VA:%.*]], i32 0, i32 2
+// CHECK: [[REGPP:%.*]] = getelementptr inbounds nuw %struct.__va_list, ptr [[VA:%.*]], i32 0, i32 2
 // CHECK: [[REGP:%.*]] = load ptr, ptr [[REGPP]], align 8
 // CHECK: [[OFFSET0:%.*]] = getelementptr inbounds i8, ptr [[REGP]], i32 {{.*}}
 // CHECK: [[OFFSET1:%.*]] = getelementptr inbounds i8, ptr [[OFFSET0]], i64 8
 
-// CHECK: [[MEMPP:%.*]] = getelementptr inbounds %struct.__va_list, ptr [[VA:%.*]], i32 0, i32 0
+// CHECK: [[MEMPP:%.*]] = getelementptr inbounds nuw %struct.__va_list, ptr [[VA:%.*]], i32 0, i32 0
 // CHECK: [[MEMP:%.*]] = load ptr, ptr [[MEMPP]], align 8
 // CHECK: [[NEXTP:%.*]] = getelementptr inbounds i8, ptr [[MEMP]], i64 8
 // CHECK: store ptr [[NEXTP]], ptr [[MEMPP]], align 8

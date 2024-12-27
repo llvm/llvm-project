@@ -10,7 +10,7 @@
 #define GPU_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
@@ -168,13 +168,13 @@ def MapNestedForallToThreads :
 
       #### Return modes:
 
-      This operation ignores non-gpu_launch ops and drops them in the return.
+      This operation ignores non-`gpu_launch` ops and drops them in the return.
 
       If any scf.forall with tensors is found, the transform definitely
       fails.
 
-      If all the scf.forall operations with gpu.thread mapping contained
-      within the LaunchOp referred to by the `target` PDLOperation lower to GPU
+      If all the `scf.forall` operations with gpu.thread mapping contained
+      within the `LaunchOp` referred to by the `target` handle lower to GPU
       properly, the transform succeeds. Otherwise the transform definitely
       fails.
 
@@ -277,8 +277,8 @@ def MapForallToBlocks :
     If any scf.forall with tensors is found, the transform definitely
     fails.
 
-    If all the scf.forall operations contained within the LaunchOp
-    referred to by the `target` PDLOperation lower to GPU properly, the
+    If all the `scf.forall` operations contained within the LaunchOp
+    referred to by the `target` handle lower to GPU properly, the
     transform succeeds. Otherwise the transform definitely fails.
 
     The returned handle points to the same LaunchOp operand, consuming it and

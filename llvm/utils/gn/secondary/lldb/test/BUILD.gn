@@ -52,6 +52,7 @@ write_lit_cfg("lit_api_site_cfg") {
   input = "//lldb/test/API/lit.site.cfg.py.in"
   output = lldb_lit_api_site_cfg_file
   extra_values = [
+    "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
     "LIBCXX_GENERATED_INCLUDE_DIR=" +
         rebase_path("$root_build_dir/include/c++/v1"),
@@ -60,25 +61,30 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_TEST_COMMON_ARGS=",
     "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
-    "LLDB_HAS_LIBCXX=0",  # FIXME: support this (?)
+    "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
     "LLDB_TEST_BUILD_DIRECTORY=" + rebase_path("$target_gen_dir/test_build"),
     "LLDB_TEST_DSYMUTIL=" + rebase_path("$root_build_dir/bin/dsymutil"),
     "LLDB_TEST_EXECUTABLE=" + rebase_path("$root_build_dir/bin/lldb"),
+    "LLDB_TEST_MAKE=make",
     "LLDB_TEST_MODULE_CACHE_CLANG=" +
         rebase_path(
             "$target_gen_dir/lldb-test-build.noindex/module-cache-clang"),
     "LLDB_TEST_MODULE_CACHE_LLDB=" +
         rebase_path(
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
+    "LLDB_TEST_PLATFORM_URL=",
+    "LLDB_TEST_PLATFORM_WORKING_DIR=",
+    "LLDB_TEST_SYSROOT=",
     "LLVM_BUILD_MODE=.",
     "LLVM_ENABLE_SHARED_LIBS=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DIR=" + rebase_path("$root_out_dir/include"),
     "LLVM_USE_SANITIZER=",
-    "Lua_EXECUTABLE=",
+    "LUA_EXECUTABLE=",
+    "LLDB_LUA_CPATH=",
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
@@ -98,10 +104,12 @@ write_lit_cfg("lit_shell_site_cfg") {
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
   extra_values = [
-    "CMAKE_SYSROOT=",
+    "DEFAULT_SYSROOT=",
+    "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
+    "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
     "LLDB_IS_64_BITS=1",
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
@@ -113,10 +121,15 @@ write_lit_cfg("lit_shell_site_cfg") {
         rebase_path(
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
     "LLDB_TEST_OBJC_GNUSTEP_DIR=",
+    "LLDB_TEST_PLATFORM_URL=",
+    "LLDB_TEST_PLATFORM_WORKING_DIR=",
+    "LLDB_TEST_SHELL_DISABLE_REMOTE=True",
+    "LLDB_TEST_SYSROOT=",
     "LLDB_TOOL_LLDB_SERVER_BUILD=1",
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
+    "LLVM_USE_SANITIZER=",
   ]
 
   if (llvm_enable_zlib) {
@@ -138,7 +151,10 @@ write_lit_cfg("lit_unit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
   input = "//lldb/test/Unit/lit.site.cfg.py.in"
   output = lldb_lit_unit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "LLVM_USE_SANITIZER=",
+  ]
 }
 
 action("lit-lldb-init-quiet") {
@@ -163,8 +179,8 @@ group("test") {
     ":lit_unit_site_cfg",
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
-    "//lldb/tools/lldb-dap",
     "//lldb/tools/driver:lldb",
+    "//lldb/tools/lldb-dap",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",

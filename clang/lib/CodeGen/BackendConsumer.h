@@ -74,8 +74,8 @@ public:
                   const HeaderSearchOptions &HeaderSearchOpts,
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts,
-                  const LangOptions &LangOpts, const std::string &InFile,
+                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
+                  const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
                   std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
@@ -88,9 +88,9 @@ public:
                   const HeaderSearchOptions &HeaderSearchOpts,
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts,
-                  const LangOptions &LangOpts, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
+                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
+                  llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
+                  llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
 
   llvm::Module *getModule() const;
@@ -107,13 +107,12 @@ public:
   void HandleTagDeclDefinition(TagDecl *D) override;
   void HandleTagDeclRequiredDefinition(const TagDecl *D) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
-  void CompleteExternalDeclaration(VarDecl *D) override;
+  void CompleteExternalDeclaration(DeclaratorDecl *D) override;
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
 
-
- // Links each entry in LinkModules into our module.  Returns true on error.
-  bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
+  // Links each entry in LinkModules into our module.  Returns true on error.
+  bool LinkInModules(llvm::Module *M);
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.

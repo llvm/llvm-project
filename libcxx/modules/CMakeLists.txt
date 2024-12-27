@@ -137,6 +137,25 @@ set(LIBCXX_MODULE_STD_COMPAT_SOURCES
   std.compat/cwctype.inc
 )
 
+# TODO MODULES the CMakeLists.txt in the build directory is only temporary.
+# This allows using as available in the build directory. Once build systems
+# have proper support for the installed files this will be removed.
+if ("${LIBCXX_GENERATED_INCLUDE_DIR}" STREQUAL "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}")
+  # This typically happens when the target is not installed.
+  set(LIBCXX_CONFIGURED_INCLUDE_DIRS "${LIBCXX_GENERATED_INCLUDE_DIR}")
+else()
+  # It's important that the arch directory be included first so that its header files
+  # which interpose on the default include dir be included instead of the default ones.
+  set(LIBCXX_CONFIGURED_INCLUDE_DIRS
+    "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR};${LIBCXX_GENERATED_INCLUDE_DIR}"
+  )
+endif()
+configure_file(
+  "CMakeLists.txt.in"
+  "${LIBCXX_GENERATED_MODULE_DIR}/CMakeLists.txt"
+  @ONLY
+)
+
 set(LIBCXX_MODULE_STD_INCLUDE_SOURCES)
 foreach(file ${LIBCXX_MODULE_STD_SOURCES})
   set(
@@ -166,6 +185,7 @@ configure_file(
 )
 
 set(_all_modules)
+list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/CMakeLists.txt")
 list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/std.cppm")
 list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/std.compat.cppm")
 foreach(file ${LIBCXX_MODULE_STD_SOURCES} ${LIBCXX_MODULE_STD_COMPAT_SOURCES})
@@ -186,9 +206,20 @@ add_custom_target(generate-cxx-modules
 # Configure the modules manifest.
 # Use the relative path between the installation and the module in the json
 # file. This allows moving the entire installation to a different location.
+if("${CMAKE_INSTALL_PREFIX}" STREQUAL "")
+  set(BASE_DIRECTORY "/")
+else()
+  set(BASE_DIRECTORY ${CMAKE_INSTALL_PREFIX})
+endif()
+cmake_path(ABSOLUTE_PATH LIBCXX_INSTALL_LIBRARY_DIR
+  BASE_DIRECTORY ${BASE_DIRECTORY}
+  OUTPUT_VARIABLE ABS_LIBRARY_DIR)
+cmake_path(ABSOLUTE_PATH LIBCXX_INSTALL_MODULES_DIR
+  BASE_DIRECTORY ${BASE_DIRECTORY}
+  OUTPUT_VARIABLE ABS_MODULES_DIR)
 file(RELATIVE_PATH LIBCXX_MODULE_RELATIVE_PATH
-  ${CMAKE_INSTALL_PREFIX}/${LIBCXX_INSTALL_LIBRARY_DIR}
-  ${CMAKE_INSTALL_PREFIX}/${LIBCXX_INSTALL_MODULES_DIR})
+  ${ABS_LIBRARY_DIR}
+  ${ABS_MODULES_DIR})
 configure_file(
   "modules.json.in"
   "${LIBCXX_LIBRARY_DIR}/libc++.modules.json"

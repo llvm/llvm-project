@@ -1,4 +1,3 @@
-// REQUIRES: arm-registered-target
 // RUN: %clang -target armv7-linux-gnueabihf -moutline -c %s -### 2>&1 | FileCheck %s -check-prefix=ON
 // ON: "-mllvm" "-enable-machine-outliner"
 // RUN: %clang -target armv7-linux-gnueabihf -flto -moutline %s -### 2>&1 | FileCheck %s -check-prefix=ON-LTO

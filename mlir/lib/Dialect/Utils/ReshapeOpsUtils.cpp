@@ -42,12 +42,12 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   while (sourceDim < sourceShape.size()) {
     unsigned targetDim = reassociationMap.size();
     // If we have mapped all the target dimensions stop and handle the remaining
-    // tail of size-1 dimensions explictly.
+    // tail of size-1 dimensions explicitly.
     if (targetDim == targetShape.size())
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceDim < sourceShape.size() &&
+    while (sourceDim < (sourceShape.size() - 1) &&
            sourceShape[sourceDim] != ShapedType::kDynamic &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
@@ -168,7 +168,7 @@ ArrayAttr mlir::getReassociationIndicesAttribute(
 }
 
 SmallVector<ReassociationIndices, 2> mlir::convertReassociationMapsToIndices(
-    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs) {
+    ArrayRef<ReassociationExprs> reassociationExprs) {
   SmallVector<ReassociationIndices, 2> reassociationIndices;
   for (const auto &exprs : reassociationExprs) {
     ReassociationIndices indices;
@@ -230,24 +230,17 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
     ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape) {
   unsigned expandedDimStart = 0;
   for (const auto &map : llvm::enumerate(reassociationMaps)) {
-    std::optional<int64_t> dynamicShape;
+    bool foundDynamicShape = false;
     int64_t linearizedStaticShape = 1;
+
     for (const auto &dim : llvm::enumerate(
              expandedShape.slice(expandedDimStart, map.value().size()))) {
-      if (ShapedType::isDynamic(dim.value())) {
-        if (isExpandingReshape && dynamicShape) {
-          return emitError("invalid to have a single dimension (" +
-                           Twine(map.index()) +
-                           ") expanded into multiple dynamic dims (" +
-                           Twine(expandedDimStart + dynamicShape.value()) +
-                           "," + Twine(expandedDimStart + dim.index()) + ")");
-        }
-        dynamicShape = dim.index();
-      } else {
+      if (ShapedType::isDynamic(dim.value()))
+        foundDynamicShape = true;
+      else
         linearizedStaticShape *= dim.value();
-      }
     }
-    if (dynamicShape) {
+    if (foundDynamicShape) {
       if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
         return emitError(
             "expected dimension " + Twine(map.index()) +

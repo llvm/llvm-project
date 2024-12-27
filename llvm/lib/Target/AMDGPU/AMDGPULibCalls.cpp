@@ -20,10 +20,8 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
@@ -54,7 +52,7 @@ private:
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
 
-  typedef llvm::AMDGPULibFunc FuncInfo;
+  using FuncInfo = llvm::AMDGPULibFunc;
 
   bool UnsafeFPMath = false;
 
@@ -135,7 +133,7 @@ protected:
   }
 
 public:
-  AMDGPULibCalls() {}
+  AMDGPULibCalls() = default;
 
   bool fold(CallInst *CI);
 
@@ -146,7 +144,7 @@ public:
   bool useNative(CallInst *CI);
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 template <typename IRB>
 static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
@@ -470,9 +468,11 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
     nf.setId(AMDGPULibFunc::EI_COS);
     FunctionCallee cosExpr = getFunction(M, nf);
     if (sinExpr && cosExpr) {
-      Value *sinval = CallInst::Create(sinExpr, opr0, "splitsin", aCI);
-      Value *cosval = CallInst::Create(cosExpr, opr0, "splitcos", aCI);
-      new StoreInst(cosval, aCI->getArgOperand(1), aCI);
+      Value *sinval =
+          CallInst::Create(sinExpr, opr0, "splitsin", aCI->getIterator());
+      Value *cosval =
+          CallInst::Create(cosExpr, opr0, "splitcos", aCI->getIterator());
+      new StoreInst(cosval, aCI->getArgOperand(1), aCI->getIterator());
 
       DEBUG_WITH_TYPE("usenative", dbgs() << "<useNative> replace " << *aCI
                                           << " with native version of sin/cos");
@@ -575,18 +575,26 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 
 static bool isKnownIntegral(const Value *V, const DataLayout &DL,
                             FastMathFlags FMF) {
-  if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
     return true;
+  if (isa<UndefValue>(V))
+    return false;
 
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
     return CF->getValueAPF().isInteger();
 
-  if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(V)) {
-    for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
-      Constant *ConstElt = CDV->getElementAsConstant(i);
-      if (isa<UndefValue>(ConstElt))
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  const Constant *CV = dyn_cast<Constant>(V);
+  if (VFVTy && CV) {
+    unsigned NumElts = VFVTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = CV->getAggregateElement(i);
+      if (!Elt)
+        return false;
+      if (isa<PoisonValue>(Elt))
         continue;
-      const ConstantFP *CFP = dyn_cast<ConstantFP>(ConstElt);
+
+      const ConstantFP *CFP = dyn_cast<ConstantFP>(Elt);
       if (!CFP || !CFP->getValue().isInteger())
         return false;
     }
@@ -607,7 +615,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
 
     // Need to check int size cannot produce infinity, which computeKnownFPClass
     // knows how to do already.
-    return isKnownNeverInfinity(I, DL);
+    return isKnownNeverInfinity(I, /*Depth=*/0, SimplifyQuery(DL));
   case Instruction::Call: {
     const CallInst *CI = cast<CallInst>(I);
     switch (CI->getIntrinsicID()) {
@@ -619,7 +627,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
     case Intrinsic::round:
     case Intrinsic::roundeven:
       return (FMF.noInfs() && FMF.noNaNs()) ||
-             isKnownNeverInfOrNaN(I, DL, nullptr);
+             isKnownNeverInfOrNaN(I, /*Depth=*/0, SimplifyQuery(DL));
     default:
       break;
     }
@@ -646,7 +654,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
   // Further check the number of arguments to see if they match.
   // TODO: Check calling convention matches too
-  if (!FInfo.isCompatibleSignature(CI->getFunctionType()))
+  if (!FInfo.isCompatibleSignature(*Callee->getParent(), CI->getFunctionType()))
     return false;
 
   LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
@@ -655,6 +663,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     return true;
 
   IRBuilder<> B(CI);
+  if (CI->isStrictFP())
+    B.setIsFPConstrained(true);
 
   if (FPMathOperator *FPOp = dyn_cast<FPMathOperator>(CI)) {
     // Under unsafe-math, evaluate calls if possible.
@@ -740,7 +750,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
         CI->setArgOperand(1, SplatArg1);
       }
 
-      CI->setCalledFunction(Intrinsic::getDeclaration(
+      CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
       return true;
@@ -754,8 +764,9 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       // pow(x, y) -> powr(x, y) for x >= -0.0
       // TODO: Account for flags on current call
       if (PowrFunc &&
-          cannotBeOrderedLessThanZero(FPOp->getOperand(0), M->getDataLayout(),
-                                      TLInfo, 0, AC, Call, DT)) {
+          cannotBeOrderedLessThanZero(
+              FPOp->getOperand(0), /*Depth=*/0,
+              SimplifyQuery(M->getDataLayout(), TLInfo, DT, AC, Call))) {
         Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;
       }
@@ -774,7 +785,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
               B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
           // Have to drop any nofpclass attributes on the original call site.
           Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                                  Call->getParamAttributes(1)));
           Call->setCalledFunction(PownFunc);
           Call->setArgOperand(1, CastedArg);
           return fold_pow(FPOp, B, PownInfo) || true;
@@ -847,9 +859,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i = 0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         nval = ConstantDataVector::get(context, tmp);
       } else { // F64
@@ -885,7 +896,7 @@ static double log2(double V) {
   return log(V) / numbers::ln2;
 #endif
 }
-}
+} // namespace llvm
 
 bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
@@ -901,8 +912,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
   const APFloat *CF = nullptr;
   const APInt *CINT = nullptr;
-  if (!match(opr1, m_APFloatAllowUndef(CF)))
-    match(opr1, m_APIntAllowUndef(CINT));
+  if (!match(opr1, m_APFloatAllowPoison(CF)))
+    match(opr1, m_APIntAllowPoison(CINT));
 
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
@@ -1021,7 +1032,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // pown/pow ---> powr(fabs(x), y) | (x & ((int)y << 31))
   FunctionCallee ExpExpr;
   if (ShouldUseIntrinsic)
-    ExpExpr = Intrinsic::getDeclaration(M, Intrinsic::exp2, {FPOp->getType()});
+    ExpExpr = Intrinsic::getOrInsertDeclaration(M, Intrinsic::exp2,
+                                                {FPOp->getType()});
   else {
     ExpExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_EXP2, FInfo));
     if (!ExpExpr)
@@ -1034,7 +1046,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   Constant *cnval = nullptr;
   if (getVecSize(FInfo) == 1) {
     CF = nullptr;
-    match(opr0, m_APFloatAllowUndef(CF));
+    match(opr0, m_APFloatAllowPoison(CF));
 
     if (CF) {
       double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
@@ -1068,9 +1080,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
       }
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
-        for (unsigned i=0; i < DVal.size(); ++i) {
-          FVal.push_back((float)DVal[i]);
-        }
+        for (double D : DVal)
+          FVal.push_back((float)D);
         ArrayRef<float> tmp(FVal);
         cnval = ConstantDataVector::get(M->getContext(), tmp);
       } else {
@@ -1096,8 +1107,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needlog) {
     FunctionCallee LogExpr;
     if (ShouldUseIntrinsic) {
-      LogExpr =
-          Intrinsic::getDeclaration(M, Intrinsic::log2, {FPOp->getType()});
+      LogExpr = Intrinsic::getOrInsertDeclaration(M, Intrinsic::log2,
+                                                  {FPOp->getType()});
     } else {
       LogExpr = getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_LOG2, FInfo));
       if (!LogExpr)
@@ -1115,15 +1126,11 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = CreateCallEx(B,ExpExpr, nval, "__exp2");
 
   if (needcopysign) {
-    Value *opr_n;
-    Type* rTy = opr0->getType();
     Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
-    Type *nTy = nTyS;
-    if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
-      nTy = FixedVectorType::get(nTyS, vTy);
+    Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     unsigned size = nTy->getScalarSizeInBits();
-    opr_n = FPOp->getOperand(1);
-    if (opr_n->getType()->isIntegerTy())
+    Value *opr_n = FPOp->getOperand(1);
+    if (opr_n->getType()->getScalarType()->isIntegerTy())
       opr_n = B.CreateZExtOrTrunc(opr_n, nTy, "__ytou");
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");
@@ -1143,35 +1150,49 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
 bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                 const FuncInfo &FInfo) {
-  // skip vector function
-  if (getVecSize(FInfo) != 1)
-    return false;
-
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
 
-  ConstantInt *CINT = dyn_cast<ConstantInt>(opr1);
-  if (!CINT) {
+  const APInt *CINT = nullptr;
+  if (!match(opr1, m_APIntAllowPoison(CINT)))
     return false;
-  }
+
+  Function *Parent = B.GetInsertBlock()->getParent();
+
   int ci_opr1 = (int)CINT->getSExtValue();
-  if (ci_opr1 == 1) {  // rootn(x, 1) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+  if (ci_opr1 == 1 && !Parent->hasFnAttribute(Attribute::StrictFP)) {
+    // rootn(x, 1) = x
+    //
+    // TODO: Insert constrained canonicalize for strictfp case.
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << '\n');
     replaceCall(FPOp, opr0);
     return true;
   }
 
   Module *M = B.GetInsertBlock()->getModule();
-  if (ci_opr1 == 2) { // rootn(x, 2) = sqrt(x)
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0
-                        << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2sqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
-  } else if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
+
+  CallInst *CI = cast<CallInst>(FPOp);
+  if (ci_opr1 == 2 &&
+      shouldReplaceLibcallWithIntrinsic(CI,
+                                        /*AllowMinSizeF32=*/true,
+                                        /*AllowF64=*/true)) {
+    // rootn(x, 2) = sqrt(x)
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0 << ")\n");
+
+    CallInst *NewCall = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    NewCall->takeName(CI);
+
+    // OpenCL rootn has a looser ulp of 2 requirement than sqrt, so add some
+    // metadata.
+    MDBuilder MDHelper(M->getContext());
+    MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
+    NewCall->setMetadata(LLVMContext::MD_fpmath, FPMD);
+
+    replaceCall(CI, NewCall);
+    return true;
+  }
+
+  if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> cbrt(" << *opr0
@@ -1187,16 +1208,36 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                "__rootn2div");
     replaceCall(FPOp, nval);
     return true;
-  } else if (ci_opr1 == -2) { // rootn(x, -2) = rsqrt(x)
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
-                        << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2rsqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
   }
+
+  if (ci_opr1 == -2 &&
+      shouldReplaceLibcallWithIntrinsic(CI,
+                                        /*AllowMinSizeF32=*/true,
+                                        /*AllowF64=*/true)) {
+    // rootn(x, -2) = rsqrt(x)
+
+    // The original rootn had looser ulp requirements than the resultant sqrt
+    // and fdiv.
+    MDBuilder MDHelper(M->getContext());
+    MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
+
+    // TODO: Could handle strictfp but need to fix strict sqrt emission
+    FastMathFlags FMF = FPOp->getFastMathFlags();
+    FMF.setAllowContract(true);
+
+    CallInst *Sqrt = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    Instruction *RSqrt = cast<Instruction>(
+        B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0), Sqrt));
+    Sqrt->setFastMathFlags(FMF);
+    RSqrt->setFastMathFlags(FMF);
+    RSqrt->setMetadata(LLVMContext::MD_fpmath, FPMD);
+
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> rsqrt(" << *opr0
+                      << ")\n");
+    replaceCall(CI, RSqrt);
+    return true;
+  }
+
   return false;
 }
 
@@ -1256,8 +1297,8 @@ void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
     }
   }
 
-  CI->setCalledFunction(
-      Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
+  CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+      CI->getModule(), IntrID, {CI->getType()}));
 }
 
 bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(
@@ -1654,7 +1695,7 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     // sincos
     assert(FInfo.getId() == AMDGPULibFunc::EI_SINCOS &&
            "math function with ptr arg not supported yet");
-    new StoreInst(nval1, aCI->getArgOperand(1), aCI);
+    new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
 
   replaceCall(aCI, nval0);

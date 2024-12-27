@@ -14,7 +14,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 #include <sys/stat.h>
 
 TEST(LlvmLibcStatTest, CreatAndReadMode) {
@@ -26,11 +26,11 @@ TEST(LlvmLibcStatTest, CreatAndReadMode) {
   // make it readonly using chmod. We test that chmod actually succeeded by
   // trying to open the file for writing and failing.
   constexpr const char *TEST_FILE = "testdata/stat.test";
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   struct stat statbuf;
@@ -42,10 +42,10 @@ TEST(LlvmLibcStatTest, CreatAndReadMode) {
 }
 
 TEST(LlvmLibcStatTest, NonExistentFile) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   struct stat statbuf;
   ASSERT_THAT(LIBC_NAMESPACE::stat("non-existent-file", &statbuf),
               Fails(ENOENT));
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

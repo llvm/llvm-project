@@ -35,6 +35,16 @@ AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;
 
+void AArch64TargetStreamer::emitAuthValue(const MCExpr *Expr,
+                                          uint16_t Discriminator,
+                                          AArch64PACKey::ID Key,
+                                          bool HasAddressDiversity) {
+  Streamer.emitValueImpl(AArch64AuthMCExpr::create(Expr, Discriminator, Key,
+                                                   HasAddressDiversity,
+                                                   Streamer.getContext()),
+                         8);
+}
+
 // The constant pool handling is shared by all AArch64TargetStreamer
 // implementations.
 const MCExpr *AArch64TargetStreamer::addConstantPoolEntry(const MCExpr *Expr,
@@ -58,8 +68,17 @@ void AArch64TargetStreamer::finish() {
     emitNoteSection(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
 }
 
-void AArch64TargetStreamer::emitNoteSection(unsigned Flags) {
-  if (Flags == 0)
+void AArch64TargetStreamer::emitNoteSection(unsigned Flags,
+                                            uint64_t PAuthABIPlatform,
+                                            uint64_t PAuthABIVersion) {
+  assert((PAuthABIPlatform == uint64_t(-1)) ==
+         (PAuthABIVersion == uint64_t(-1)));
+  uint64_t DescSz = 0;
+  if (Flags != 0)
+    DescSz += 4 * 4;
+  if (PAuthABIPlatform != uint64_t(-1))
+    DescSz += 4 + 4 + 8 * 2;
+  if (DescSz == 0)
     return;
 
   MCStreamer &OutStreamer = getStreamer();
@@ -80,15 +99,25 @@ void AArch64TargetStreamer::emitNoteSection(unsigned Flags) {
   // Emit the note header.
   OutStreamer.emitValueToAlignment(Align(8));
   OutStreamer.emitIntValue(4, 4);     // data size for "GNU\0"
-  OutStreamer.emitIntValue(4 * 4, 4); // Elf_Prop size
+  OutStreamer.emitIntValue(DescSz, 4); // Elf_Prop array size
   OutStreamer.emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
   OutStreamer.emitBytes(StringRef("GNU", 4)); // note name
 
   // Emit the PAC/BTI properties.
-  OutStreamer.emitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
-  OutStreamer.emitIntValue(4, 4);     // data size
-  OutStreamer.emitIntValue(Flags, 4); // data
-  OutStreamer.emitIntValue(0, 4);     // pad
+  if (Flags != 0) {
+    OutStreamer.emitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
+    OutStreamer.emitIntValue(4, 4);     // data size
+    OutStreamer.emitIntValue(Flags, 4); // data
+    OutStreamer.emitIntValue(0, 4);     // pad
+  }
+
+  // Emit the PAuth ABI compatibility info
+  if (PAuthABIPlatform != uint64_t(-1)) {
+    OutStreamer.emitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_PAUTH, 4);
+    OutStreamer.emitIntValue(8 * 2, 4); // data size
+    OutStreamer.emitIntValue(PAuthABIPlatform, 8);
+    OutStreamer.emitIntValue(PAuthABIVersion, 8);
+  }
 
   OutStreamer.endSection(Nt);
   OutStreamer.switchSection(Cur);

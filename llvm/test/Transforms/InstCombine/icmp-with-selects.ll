@@ -150,7 +150,7 @@ define <4 x i1> @fold_vector_ops(<4 x i32> %val1, <4 x i32> %val2, <4 x i32> %pa
 ; CHECK-SAME: (<4 x i32> [[VAL1:%.*]], <4 x i32> [[VAL2:%.*]], <4 x i32> [[PARAM:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i32> [[VAL2]], [[VAL1]]
-; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[COND]], <4 x i1> [[TMP0]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[COND]], <4 x i1> [[TMP0]], <4 x i1> splat (i1 true)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
 entry:

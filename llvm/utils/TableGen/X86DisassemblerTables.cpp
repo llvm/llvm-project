@@ -41,8 +41,9 @@ static inline const char *stringForContext(InstructionContext insnContext) {
     break;
 #define ENUM_ENTRY_K_B(n, r, d)                                                \
   ENUM_ENTRY(n, r, d)                                                          \
-  ENUM_ENTRY(n##_K_B, r, d) ENUM_ENTRY(n##_KZ, r, d) ENUM_ENTRY(n##_K, r, d)   \
-      ENUM_ENTRY(n##_B, r, d) ENUM_ENTRY(n##_KZ_B, r, d)
+  ENUM_ENTRY(n##_K_B, r, d)                                                    \
+  ENUM_ENTRY(n##_KZ, r, d)                                                     \
+  ENUM_ENTRY(n##_K, r, d) ENUM_ENTRY(n##_B, r, d) ENUM_ENTRY(n##_KZ_B, r, d)
     INSTRUCTION_CONTEXTS
 #undef ENUM_ENTRY
 #undef ENUM_ENTRY_K_B
@@ -214,6 +215,8 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE)) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE));
   case IC_EVEX_OPSIZE_ADSIZE:
+  case IC_EVEX_XS_ADSIZE:
+  case IC_EVEX_XD_ADSIZE:
     return false;
   case IC_EVEX_K:
     return (VEX_LIG && WIG && inheritsFrom(child, IC_EVEX_L_W_K)) ||
@@ -265,6 +268,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ));
   case IC_EVEX_W:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W));
   case IC_EVEX_W_XS:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS)) ||
@@ -451,6 +455,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ_B));
   case IC_EVEX_W_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_B)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE_B) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_B));
   case IC_EVEX_W_XS_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_B)) ||
@@ -564,11 +569,38 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_L2_W_OPSIZE_KZ_B:
     return false;
   case IC_EVEX_NF:
+    return WIG && inheritsFrom(child, IC_EVEX_W_NF);
   case IC_EVEX_B_NF:
+    return WIG && inheritsFrom(child, IC_EVEX_W_B_NF);
   case IC_EVEX_OPSIZE_NF:
   case IC_EVEX_OPSIZE_B_NF:
   case IC_EVEX_W_NF:
   case IC_EVEX_W_B_NF:
+    return false;
+  case IC_EVEX_B_U:
+  case IC_EVEX_XS_B_U:
+  case IC_EVEX_XD_B_U:
+  case IC_EVEX_OPSIZE_B_U:
+  case IC_EVEX_W_B_U:
+  case IC_EVEX_W_XS_B_U:
+  case IC_EVEX_W_XD_B_U:
+  case IC_EVEX_W_OPSIZE_B_U:
+  case IC_EVEX_K_B_U:
+  case IC_EVEX_XS_K_B_U:
+  case IC_EVEX_XD_K_B_U:
+  case IC_EVEX_OPSIZE_K_B_U:
+  case IC_EVEX_W_K_B_U:
+  case IC_EVEX_W_XS_K_B_U:
+  case IC_EVEX_W_XD_K_B_U:
+  case IC_EVEX_W_OPSIZE_K_B_U:
+  case IC_EVEX_KZ_B_U:
+  case IC_EVEX_XS_KZ_B_U:
+  case IC_EVEX_XD_KZ_B_U:
+  case IC_EVEX_OPSIZE_KZ_B_U:
+  case IC_EVEX_W_KZ_B_U:
+  case IC_EVEX_W_XS_KZ_B_U:
+  case IC_EVEX_W_XD_KZ_B_U:
+  case IC_EVEX_W_OPSIZE_KZ_B_U:
     return false;
   default:
     errs() << "Unknown instruction class: "
@@ -593,8 +625,8 @@ static inline bool outranks(InstructionContext upper,
 #define ENUM_ENTRY_K_B(n, r, d)                                                \
   ENUM_ENTRY(n, r, d)                                                          \
   ENUM_ENTRY(n##_K_B, r, d)                                                    \
-  ENUM_ENTRY(n##_KZ_B, r, d) ENUM_ENTRY(n##_KZ, r, d) ENUM_ENTRY(n##_K, r, d)  \
-      ENUM_ENTRY(n##_B, r, d)
+  ENUM_ENTRY(n##_KZ_B, r, d)                                                   \
+  ENUM_ENTRY(n##_KZ, r, d) ENUM_ENTRY(n##_K, r, d) ENUM_ENTRY(n##_B, r, d)
   static int ranks[IC_max] = {INSTRUCTION_CONTEXTS};
 #undef ENUM_ENTRY
 #undef ENUM_ENTRY_K_B
@@ -680,7 +712,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
                                            unsigned &i1, unsigned &i2,
                                            unsigned &ModRMTableNum,
                                            ModRMDecision &decision) const {
-  static uint32_t sEntryNumber = 1;
+  static uint64_t sEntryNumber = 1;
   ModRMDecisionType dt = getDecisionType(decision);
 
   if (dt == MODRM_ONEENTRY && decision.instructionIDs[0] == 0) {
@@ -755,9 +787,9 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
     break;
   }
 
-  // We assume that the index can fit into uint16_t.
-  assert(sEntryNumber < 65536U &&
-         "Index into ModRMDecision is too large for uint16_t!");
+  // We assume that the index can fit into uint32_t.
+  assert(sEntryNumber < -1U &&
+         "Index into ModRMDecision is too large for uint32_t!");
   (void)sEntryNumber;
 }
 
@@ -820,7 +852,8 @@ void DisassemblerTables::emitContextDecision(raw_ostream &o1, raw_ostream &o2,
   }
 
   i2--;
-  o2.indent(i2) << "}};" << "\n";
+  o2.indent(i2) << "}};"
+                << "\n";
 }
 
 void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
@@ -841,7 +874,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[Index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::make_pair(Encoding, Type));
+      OperandList.push_back(std::pair(Encoding, Type));
     }
     unsigned &N = OperandSets[OperandList];
     if (N != 0)
@@ -857,7 +890,8 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     }
     o << "  },\n";
   }
-  o << "};" << "\n\n";
+  o << "};"
+    << "\n\n";
 
   o.indent(i * 2) << "static const struct InstructionSpecifier ";
   o << INSTRUCTIONS_STR "[" << InstructionSpecifiers.size() << "] = {\n";
@@ -872,7 +906,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::make_pair(Encoding, Type));
+      OperandList.push_back(std::pair(Encoding, Type));
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";
 
@@ -883,7 +917,8 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
   }
 
   i--;
-  o.indent(i * 2) << "};" << "\n";
+  o.indent(i * 2) << "};"
+                  << "\n";
 }
 
 void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
@@ -894,8 +929,12 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   for (unsigned index = 0; index < ATTR_max; ++index) {
     o.indent(i * 2);
 
-    if ((index & ATTR_EVEX) && (index & ATTR_OPSIZE) && (index & ATTR_ADSIZE))
+    if ((index & ATTR_EVEX) && (index & ATTR_ADSIZE) && (index & ATTR_OPSIZE))
       o << "IC_EVEX_OPSIZE_ADSIZE";
+    else if ((index & ATTR_EVEX) && (index & ATTR_ADSIZE) && (index & ATTR_XD))
+      o << "IC_EVEX_XD_ADSIZE";
+    else if ((index & ATTR_EVEX) && (index & ATTR_ADSIZE) && (index & ATTR_XS))
+      o << "IC_EVEX_XS_ADSIZE";
     else if (index & ATTR_EVEXNF) {
       o << "IC_EVEX";
       if (index & ATTR_REXW)
@@ -914,7 +953,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
       else
         o << "IC_VEX";
 
-      if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
+      if ((index & ATTR_EVEXB) && (index & ATTR_EVEXU))
+        ; // Ignore ATTR_VEXL and ATTR_EVEXL2 under YMM rounding.
+      else if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
         o << "_L2";
       else if (index & ATTR_VEXL)
         o << "_L";
@@ -937,6 +978,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
 
         if (index & ATTR_EVEXB)
           o << "_B";
+
+        if ((index & ATTR_EVEXB) && (index & ATTR_EVEXU))
+          o << "_U";
       }
     } else if ((index & ATTR_64BIT) && (index & ATTR_REX2))
       o << "IC_64BIT_REX2";
@@ -998,7 +1042,8 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   }
 
   i--;
-  o.indent(i * 2) << "};" << "\n";
+  o.indent(i * 2) << "};"
+                  << "\n";
 }
 
 void DisassemblerTables::emitContextDecisions(raw_ostream &o1, raw_ostream &o2,
@@ -1049,11 +1094,11 @@ void DisassemblerTables::emit(raw_ostream &o) const {
   i1--;
   emitContextDecisions(o1, o2, i1, i2, ModRMTableNum);
 
-  o << o1.str();
+  o << s1;
   o << "  0x0\n";
   o << "};\n";
   o << "\n";
-  o << o2.str();
+  o << s2;
   o << "\n";
   o << "\n";
 }

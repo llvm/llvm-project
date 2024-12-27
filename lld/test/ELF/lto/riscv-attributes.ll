@@ -10,10 +10,10 @@
 ; CHECK:      BuildAttributes {
 ; CHECK-NEXT:   FormatVersion: 0x41
 ; CHECK-NEXT:   Section 1 {
-; CHECK-NEXT:     SectionLength: 70
+; CHECK-NEXT:     SectionLength: 98
 ; CHECK-NEXT:     Vendor: riscv
 ; CHECK-NEXT:     Tag: Tag_File (0x1)
-; CHECK-NEXT:     Size: 60
+; CHECK-NEXT:     Size: 88
 ; CHECK-NEXT:     FileAttributes {
 ; CHECK-NEXT:       Attribute {
 ; CHECK-NEXT:         Tag: 4
@@ -30,7 +30,7 @@
 ; CHECK-NEXT:       Attribute {
 ; CHECK-NEXT:         Tag: 5
 ; CHECK-NEXT:         TagName: arch
-; CHECK-NEXT:         Value: rv32i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zbb1p0{{$}}
+; CHECK-NEXT:         Value: rv32i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zbb1p0{{$}}
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }
@@ -38,10 +38,10 @@
 
 ;--- 1.s
 .attribute 4, 16
-.attribute 5, "rv32i2p1_m2p0_a2p1_f2p2_d2p2_c2p0"
+.attribute 5, "rv32i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zmmul1p0"
 ;--- 2.s
 .attribute 4, 16
-.attribute 5, "rv32i2p1_m2p0_f2p2_d2p2_zbb1p0"
+.attribute 5, "rv32i2p1_m2p0_f2p2_d2p2_zbb1p0_zmmul1p0"
 .attribute 6, 1
 
 ;--- a.ll

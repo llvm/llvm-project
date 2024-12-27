@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -359,7 +358,8 @@ static void copyPhysSubRegs(MachineBasicBlock &MBB,
 void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I, const DebugLoc &DL,
                               MCRegister DestReg, MCRegister SrcReg,
-                              bool KillSrc) const {
+                              bool KillSrc, bool RenamableDest,
+                              bool RenamableSrc) const {
 
   if (IsAliasOfSX(SrcReg) && IsAliasOfSX(DestReg)) {
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)
@@ -413,7 +413,7 @@ void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (MI.getOpcode() == VE::LDrii ||    // I64
       MI.getOpcode() == VE::LDLSXrii || // I32
@@ -437,7 +437,7 @@ unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned VEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register VEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
   if (MI.getOpcode() == VE::STrii ||   // I64
       MI.getOpcode() == VE::STLrii ||  // I32
@@ -575,9 +575,9 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     report_fatal_error("Can't load this register from stack slot");
 }
 
-bool VEInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool VEInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
-  LLVM_DEBUG(dbgs() << "FoldImmediate\n");
+  LLVM_DEBUG(dbgs() << "foldImmediate\n");
 
   LLVM_DEBUG(dbgs() << "checking DefMI\n");
   int64_t ImmVal;

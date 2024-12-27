@@ -163,7 +163,7 @@ static const struct ThunkNameRegMode {
 
 // An enum for tracking whether Arm and Thumb thunks have been inserted into the
 // current module so far.
-enum ArmInsertedThunks { ArmThunk = 1, ThumbThunk = 2 };
+enum ArmInsertedThunks { NoThunk = 0, ArmThunk = 1, ThumbThunk = 2 };
 
 inline ArmInsertedThunks &operator|=(ArmInsertedThunks &X,
                                      ArmInsertedThunks Y) {
@@ -174,19 +174,12 @@ namespace {
 struct SLSBLRThunkInserter
     : ThunkInserter<SLSBLRThunkInserter, ArmInsertedThunks> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF,
-                   ArmInsertedThunks InsertedThunks) {
-    if ((InsertedThunks & ArmThunk &&
-         !MF.getSubtarget<ARMSubtarget>().isThumb()) ||
-        (InsertedThunks & ThumbThunk &&
-         MF.getSubtarget<ARMSubtarget>().isThumb()))
-      return false;
+  bool mayUseThunk(const MachineFunction &MF) {
     ComdatThunks &= !MF.getSubtarget<ARMSubtarget>().hardenSlsNoComdat();
-    // FIXME: This could also check if there are any indirect calls in the
-    // function to more accurately reflect if a thunk will be needed.
     return MF.getSubtarget<ARMSubtarget>().hardenSlsBlr();
   }
-  ArmInsertedThunks insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
+  ArmInsertedThunks insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
+                                 ArmInsertedThunks InsertedThunks);
   void populateThunk(MachineFunction &MF);
 
 private:
@@ -194,8 +187,14 @@ private:
 };
 } // namespace
 
-ArmInsertedThunks SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
-                                                    MachineFunction &MF) {
+ArmInsertedThunks
+SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
+                                  ArmInsertedThunks InsertedThunks) {
+  if ((InsertedThunks & ArmThunk &&
+       !MF.getSubtarget<ARMSubtarget>().isThumb()) ||
+      (InsertedThunks & ThumbThunk &&
+       MF.getSubtarget<ARMSubtarget>().isThumb()))
+    return NoThunk;
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in indirect calls in this
   // function. But would that be a worthwhile optimization?
@@ -208,6 +207,8 @@ ArmInsertedThunks SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
+  assert(MF.getFunction().hasComdat() == ComdatThunks &&
+         "ComdatThunks value changed since MF creation");
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
   assert(MF.getName().starts_with(getThunkPrefix()));
@@ -384,58 +385,18 @@ FunctionPass *llvm::createARMSLSHardeningPass() {
 }
 
 namespace {
-class ARMIndirectThunks : public MachineFunctionPass {
+class ARMIndirectThunks : public ThunkInserterPass<SLSBLRThunkInserter> {
 public:
   static char ID;
 
-  ARMIndirectThunks() : MachineFunctionPass(ID) {}
+  ARMIndirectThunks() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return "ARM Indirect Thunks"; }
-
-  bool doInitialization(Module &M) override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineModuleInfoWrapperPass>();
-    AU.addPreserved<MachineModuleInfoWrapperPass>();
-  }
-
-private:
-  std::tuple<SLSBLRThunkInserter> TIs;
-
-  // FIXME: When LLVM moves to C++17, these can become folds
-  template <typename... ThunkInserterT>
-  static void initTIs(Module &M,
-                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (void)std::initializer_list<int>{
-        (std::get<ThunkInserterT>(ThunkInserters).init(M), 0)...};
-  }
-  template <typename... ThunkInserterT>
-  static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
-                     std::tuple<ThunkInserterT...> &ThunkInserters) {
-    bool Modified = false;
-    (void)std::initializer_list<int>{
-        Modified |= std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF)...};
-    return Modified;
-  }
 };
-
 } // end anonymous namespace
 
 char ARMIndirectThunks::ID = 0;
 
 FunctionPass *llvm::createARMIndirectThunks() {
   return new ARMIndirectThunks();
-}
-
-bool ARMIndirectThunks::doInitialization(Module &M) {
-  initTIs(M, TIs);
-  return false;
-}
-
-bool ARMIndirectThunks::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << getPassName() << '\n');
-  auto &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-  return runTIs(MMI, MF, TIs);
 }

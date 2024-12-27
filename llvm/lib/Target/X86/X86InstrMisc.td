@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defining the misc X86 instructions.
-// 
+//
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -229,7 +229,7 @@ def PUSHA16  : I<0x60, RawFrm, (outs), (ins), "pushaw", []>,
                OpSize16, Requires<[Not64BitMode]>;
 }
 
-let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32] in {
+let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32], Predicates = [NoNDD_Or_NoMOVBE] in {
 // This instruction is a consequence of BSWAP32r observing operand size. The
 // encoding is valid, but the behavior is undefined.
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
@@ -823,27 +823,27 @@ multiclass ATOMIC_SWAP<bits<8> opc8, bits<8> opc, string mnemonic, string frag> 
                       !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
                       [(set
                          GR8:$dst,
-                         (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))]>;
+                         (!cast<PatFrag>(frag # "_i8") addr:$ptr, GR8:$val))]>;
     def NAME#16rm : I<opc, MRMSrcMem, (outs GR16:$dst),
                       (ins GR16:$val, i16mem:$ptr),
                       !strconcat(mnemonic, "{w}\t{$val, $ptr|$ptr, $val}"),
                       [(set
                          GR16:$dst,
-                         (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))]>,
+                         (!cast<PatFrag>(frag # "_i16") addr:$ptr, GR16:$val))]>,
                       OpSize16;
     def NAME#32rm : I<opc, MRMSrcMem, (outs GR32:$dst),
                       (ins GR32:$val, i32mem:$ptr),
                       !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                       [(set
                          GR32:$dst,
-                         (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>,
+                         (!cast<PatFrag>(frag # "_i32") addr:$ptr, GR32:$val))]>,
                       OpSize32;
     def NAME#64rm : RI<opc, MRMSrcMem, (outs GR64:$dst),
                        (ins GR64:$val, i64mem:$ptr),
                        !strconcat(mnemonic, "{q}\t{$val, $ptr|$ptr, $val}"),
                        [(set
                          GR64:$dst,
-                         (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))]>;
+                         (!cast<PatFrag>(frag # "_i64") addr:$ptr, GR64:$val))]>;
   }
 }
 
@@ -1090,35 +1090,43 @@ def ARPL16mr : I<0x63, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
 //===----------------------------------------------------------------------===//
 // MOVBE Instructions
 //
-let Predicates = [HasMOVBE] in {
-  let SchedRW = [WriteALULd] in {
-  def MOVBE16rm : I<0xF0, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                    "movbe{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (bswap (loadi16 addr:$src)))]>,
-                    OpSize16, T8;
-  def MOVBE32rm : I<0xF0, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                    "movbe{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (bswap (loadi32 addr:$src)))]>,
-                    OpSize32, T8;
-  def MOVBE64rm : RI<0xF0, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                     "movbe{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (bswap (loadi64 addr:$src)))]>,
-                     T8;
-  }
-  let SchedRW = [WriteStore] in {
-  def MOVBE16mr : I<0xF1, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
-                    "movbe{w}\t{$src, $dst|$dst, $src}",
-                    [(store (bswap GR16:$src), addr:$dst)]>,
-                    OpSize16, T8;
-  def MOVBE32mr : I<0xF1, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
-                    "movbe{l}\t{$src, $dst|$dst, $src}",
-                    [(store (bswap GR32:$src), addr:$dst)]>,
-                    OpSize32, T8;
-  def MOVBE64mr : RI<0xF1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
-                     "movbe{q}\t{$src, $dst|$dst, $src}",
-                     [(store (bswap GR64:$src), addr:$dst)]>,
-                     T8;
-  }
+multiclass Movbe<bits<8> o, X86TypeInfo t, string suffix = ""> {
+  def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
+                      (ins t.MemOperand:$src1), "movbe", unaryop_ndd_args,
+                      [(set t.RegClass:$dst, (bswap (t.LoadNode addr:$src1)))]>,
+                  Sched<[WriteALULd]>;
+  def mr#suffix : ITy<!add(o, 1), MRMDestMem, t, (outs),
+                      (ins t.MemOperand:$dst, t.RegClass:$src1),
+                      "movbe", unaryop_ndd_args,
+                      [(store (bswap t.RegClass:$src1), addr:$dst)]>,
+                  Sched<[WriteStore]>;
+}
+
+let Predicates = [HasMOVBE, NoEGPR] in {
+  defm MOVBE16 : Movbe<0xF0, Xi16>, OpSize16, T8;
+  defm MOVBE32 : Movbe<0xF0, Xi32>, OpSize32, T8;
+  defm MOVBE64 : Movbe<0xF0, Xi64>, T8;
+}
+
+let Predicates = [HasMOVBE, HasEGPR, In64BitMode] in {
+  defm MOVBE16 : Movbe<0x60, Xi16, "_EVEX">, EVEX, T_MAP4, PD;
+  defm MOVBE32 : Movbe<0x60, Xi32, "_EVEX">, EVEX, T_MAP4;
+  defm MOVBE64 : Movbe<0x60, Xi64, "_EVEX">, EVEX, T_MAP4;
+}
+
+multiclass Movberr<X86TypeInfo t> {
+  def rr : ITy<0x61, MRMDestReg, t, (outs t.RegClass:$dst),
+               (ins t.RegClass:$src1), "movbe", unaryop_ndd_args,
+               [(set t.RegClass:$dst, (bswap t.RegClass:$src1))]>,
+           EVEX, T_MAP4;
+  def rr_REV : ITy<0x60, MRMSrcReg, t, (outs t.RegClass:$dst),
+                   (ins t.RegClass:$src1), "movbe", unaryop_ndd_args, []>,
+               EVEX, T_MAP4, DisassembleOnly;
+}
+let SchedRW = [WriteALU], Predicates = [HasMOVBE, HasNDD, In64BitMode] in {
+  defm MOVBE16 : Movberr<Xi16>, PD;
+  defm MOVBE32 : Movberr<Xi32>;
+  defm MOVBE64 : Movberr<Xi64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1151,66 +1159,49 @@ let Predicates = [HasRDSEED], Defs = [EFLAGS], SchedRW = [WriteSystem] in {
 //===----------------------------------------------------------------------===//
 // LZCNT Instruction
 //
-let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
-  def LZCNT16rr : I<0xBD, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                    "lzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (ctlz GR16:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize16, Sched<[WriteLZCNT]>;
-  def LZCNT16rm : I<0xBD, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                    "lzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (ctlz (loadi16 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize16, Sched<[WriteLZCNTLd]>;
-
-  def LZCNT32rr : I<0xBD, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                    "lzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (ctlz GR32:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize32, Sched<[WriteLZCNT]>;
-  def LZCNT32rm : I<0xBD, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                    "lzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (ctlz (loadi32 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize32, Sched<[WriteLZCNTLd]>;
-
-  def LZCNT64rr : RI<0xBD, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                     "lzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (ctlz GR64:$src)), (implicit EFLAGS)]>,
-                     TB, XS, Sched<[WriteLZCNT]>;
-  def LZCNT64rm : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                     "lzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (ctlz (loadi64 addr:$src))),
-                      (implicit EFLAGS)]>, TB, XS, Sched<[WriteLZCNTLd]>;
+multiclass Lzcnt<bits<8> o, string m, SDPatternOperator node, X86TypeInfo t,
+                 SchedWrite schedrr, SchedWrite schedrm, string suffix = ""> {
+  def rr#suffix : ITy<o, MRMSrcReg, t, (outs t.RegClass:$dst),
+                      (ins t.RegClass:$src1), m, unaryop_ndd_args,
+                      [(set t.RegClass:$dst, (node t.RegClass:$src1))]>,
+                  TB, Sched<[schedrr]>;
+  let mayLoad = 1 in
+    def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
+                        (ins t.MemOperand:$src1), m, unaryop_ndd_args,
+                        [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1)))]>,
+                    TB, Sched<[schedrm]>;
 }
+
+let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
+  defm LZCNT16 : Lzcnt<0xBD, "lzcnt", ctlz, Xi16, WriteLZCNT, WriteLZCNTLd>, OpSize16, XS;
+  defm LZCNT32 : Lzcnt<0xBD, "lzcnt", ctlz, Xi32, WriteLZCNT, WriteLZCNTLd>, OpSize32, XS;
+  defm LZCNT64 : Lzcnt<0xBD, "lzcnt", ctlz, Xi64, WriteLZCNT, WriteLZCNTLd>, XS;
+
+  defm LZCNT16 : Lzcnt<0xF5, "lzcnt", null_frag, Xi16, WriteLZCNT, WriteLZCNTLd, "_EVEX">, PL, PD;
+  defm LZCNT32 : Lzcnt<0xF5, "lzcnt", null_frag, Xi32, WriteLZCNT, WriteLZCNTLd, "_EVEX">, PL;
+  defm LZCNT64 : Lzcnt<0xF5, "lzcnt", null_frag, Xi64, WriteLZCNT, WriteLZCNTLd, "_EVEX">, PL;
+}
+
+defm LZCNT16 : Lzcnt<0xF5, "lzcnt", null_frag, Xi16, WriteLZCNT, WriteLZCNTLd, "_NF">, NF, PD;
+defm LZCNT32 : Lzcnt<0xF5, "lzcnt", null_frag, Xi32, WriteLZCNT, WriteLZCNTLd, "_NF">, NF;
+defm LZCNT64 : Lzcnt<0xF5, "lzcnt", null_frag, Xi64, WriteLZCNT, WriteLZCNTLd, "_NF">, NF;
 
 //===----------------------------------------------------------------------===//
 // BMI Instructions
 //
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
-  def TZCNT16rr : I<0xBC, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                    "tzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (cttz GR16:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize16, Sched<[WriteTZCNT]>;
-  def TZCNT16rm : I<0xBC, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                    "tzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (cttz (loadi16 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize16, Sched<[WriteTZCNTLd]>;
+  defm TZCNT16 : Lzcnt<0xBC, "tzcnt", cttz, Xi16, WriteTZCNT, WriteTZCNTLd>, OpSize16, XS;
+  defm TZCNT32 : Lzcnt<0xBC, "tzcnt", cttz, Xi32, WriteTZCNT, WriteTZCNTLd>, OpSize32, XS;
+  defm TZCNT64 : Lzcnt<0xBC, "tzcnt", cttz, Xi64, WriteTZCNT, WriteTZCNTLd>, XS;
 
-  def TZCNT32rr : I<0xBC, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                    "tzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (cttz GR32:$src)), (implicit EFLAGS)]>,
-                    TB, XS, OpSize32, Sched<[WriteTZCNT]>;
-  def TZCNT32rm : I<0xBC, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                    "tzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (cttz (loadi32 addr:$src))),
-                     (implicit EFLAGS)]>, TB, XS, OpSize32, Sched<[WriteTZCNTLd]>;
-
-  def TZCNT64rr : RI<0xBC, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                     "tzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (cttz GR64:$src)), (implicit EFLAGS)]>,
-                     TB, XS, Sched<[WriteTZCNT]>;
-  def TZCNT64rm : RI<0xBC, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                     "tzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (cttz (loadi64 addr:$src))),
-                      (implicit EFLAGS)]>, TB, XS, Sched<[WriteTZCNTLd]>;
+  defm TZCNT16 : Lzcnt<0xF4, "tzcnt", null_frag, Xi16, WriteTZCNT, WriteTZCNTLd, "_EVEX">, PL, PD;
+  defm TZCNT32 : Lzcnt<0xF4, "tzcnt", null_frag, Xi32, WriteTZCNT, WriteTZCNTLd, "_EVEX">, PL;
+  defm TZCNT64 : Lzcnt<0xF4, "tzcnt", null_frag, Xi64, WriteTZCNT, WriteTZCNTLd, "_EVEX">, PL;
 }
+
+defm TZCNT16 : Lzcnt<0xF4, "tzcnt", null_frag, Xi16, WriteTZCNT, WriteTZCNTLd, "_NF">, NF, PD;
+defm TZCNT32 : Lzcnt<0xF4, "tzcnt", null_frag, Xi32, WriteTZCNT, WriteTZCNTLd, "_NF">, NF;
+defm TZCNT64 : Lzcnt<0xF4, "tzcnt", null_frag, Xi64, WriteTZCNT, WriteTZCNTLd, "_NF">, NF;
 
 multiclass Bls<string m, Format RegMRM, Format MemMRM, X86TypeInfo t, string Suffix = ""> {
   let SchedRW = [WriteBLS] in {
@@ -1557,32 +1548,39 @@ def MOVDIR64B64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$
 //===----------------------------------------------------------------------===//
 // ENQCMD/S - Enqueue 64-byte command as user with 64-byte write atomicity
 //
+multiclass Enqcmds<string suffix> {
+  def ENQCMD32#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                          "enqcmd\t{$src, $dst|$dst, $src}",
+                          [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
+                        NoCD8, XD, AdSize32;
+  def ENQCMD64#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                          "enqcmd\t{$src, $dst|$dst, $src}",
+                          [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
+                        NoCD8, XD, AdSize64;
+
+  def ENQCMDS32#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                           "enqcmds\t{$src, $dst|$dst, $src}",
+                           [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
+                         NoCD8, XS, AdSize32;
+  def ENQCMDS64#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                          "enqcmds\t{$src, $dst|$dst, $src}",
+                          [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
+                         NoCD8, XS, AdSize64;
+}
+
 let SchedRW = [WriteStore], Defs = [EFLAGS] in {
   def ENQCMD16 : I<0xF8, MRMSrcMem, (outs), (ins GR16:$dst, i512mem_GR16:$src),
-                 "enqcmd\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmd GR16:$dst, addr:$src))]>,
+                   "enqcmd\t{$src, $dst|$dst, $src}",
+                   [(set EFLAGS, (X86enqcmd GR16:$dst, addr:$src))]>,
                  T8, XD, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
-  def ENQCMD32 : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
-                 "enqcmd\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
-                 T8, XD, AdSize32, Requires<[HasENQCMD]>;
-  def ENQCMD64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
-                 "enqcmd\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
-                 T8, XD, AdSize64, Requires<[HasENQCMD, In64BitMode]>;
-
   def ENQCMDS16 : I<0xF8, MRMSrcMem, (outs), (ins GR16:$dst, i512mem_GR16:$src),
-                 "enqcmds\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmds GR16:$dst, addr:$src))]>,
-                 T8, XS, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
-  def ENQCMDS32 : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
-                 "enqcmds\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
-                 T8, XS, AdSize32, Requires<[HasENQCMD]>;
-  def ENQCMDS64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
-                 "enqcmds\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
-                 T8, XS, AdSize64, Requires<[HasENQCMD, In64BitMode]>;
+                    "enqcmds\t{$src, $dst|$dst, $src}",
+                    [(set EFLAGS, (X86enqcmds GR16:$dst, addr:$src))]>,
+                  T8, XS, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
+
+  defm "" : Enqcmds<"">, T8, Requires<[HasENQCMD, NoEGPR]>;
+  defm "" : Enqcmds<"_EVEX">, EVEX, T_MAP4, Requires<[HasENQCMD, HasEGPR, In64BitMode]>;
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -1729,3 +1727,27 @@ def CLWB       : I<0xAE, MRM6m, (outs), (ins i8mem:$src), "clwb\t$src",
 let Predicates = [HasCLDEMOTE], SchedRW = [WriteLoad] in
 def CLDEMOTE : I<0x1C, MRM0m, (outs), (ins i8mem:$src), "cldemote\t$src",
                    [(int_x86_cldemote addr:$src)]>, TB;
+
+//===----------------------------------------------------------------------===//
+// MOVRS Instructions
+//
+
+let SchedRW = [WriteLoad] in {
+let Predicates = [HasMOVRS, NoEGPR] in {
+def MOVRS8rm     : I<0x8A, MRMSrcMem, (outs GR8 :$dst), (ins i8mem :$src),
+                   "movrs{b}\t{$src, $dst|$dst, $src}",
+                   [(set GR8:$dst, (int_x86_movrsqi addr:$src))]>, T8;
+def MOVRS16rm    : I<0x8B, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
+                   "movrs{w}\t{$src, $dst|$dst, $src}",
+                   [(set GR16:$dst, (int_x86_movrshi addr:$src))]>, OpSize16, T8;
+def MOVRS32rm    : I<0x8B, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
+                   "movrs{l}\t{$src, $dst|$dst, $src}",
+                   [(set GR32:$dst, (int_x86_movrssi addr:$src))]>, OpSize32, T8;
+def MOVRS64rm    : RI<0x8B, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
+                   "movrs{q}\t{$src, $dst|$dst, $src}",
+                   [(set GR64:$dst, (int_x86_movrsdi addr:$src))]>, T8;
+def PREFETCHRST2 : I<0x18, MRM4m, (outs), (ins i8mem:$src),
+                   "prefetchrst2\t$src",
+                   [(int_x86_prefetchrs addr:$src)]>, TB;
+}
+}

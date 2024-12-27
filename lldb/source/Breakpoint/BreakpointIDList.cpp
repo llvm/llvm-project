@@ -15,6 +15,9 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -48,27 +51,8 @@ bool BreakpointIDList::AddBreakpointID(BreakpointID bp_id) {
                // return true.
 }
 
-bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id,
-                                        size_t *position) const {
-  for (size_t i = 0; i < m_breakpoint_ids.size(); ++i) {
-    BreakpointID tmp_id = m_breakpoint_ids[i];
-    if (tmp_id.GetBreakpointID() == bp_id.GetBreakpointID() &&
-        tmp_id.GetLocationID() == bp_id.GetLocationID()) {
-      *position = i;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
-                                        size_t *position) const {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  return FindBreakpointID(*bp_id, position);
+bool BreakpointIDList::Contains(BreakpointID bp_id) const {
+  return llvm::is_contained(m_breakpoint_ids, bp_id);
 }
 
 //  This function takes OLD_ARGS, which is usually the result of breaking the
@@ -128,32 +112,27 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
     } else {
       // See if user has specified id.*
       llvm::StringRef tmp_str = old_args[i].ref();
-      size_t pos = tmp_str.find('.');
-      if (pos != llvm::StringRef::npos) {
-        llvm::StringRef bp_id_str = tmp_str.substr(0, pos);
-        if (BreakpointID::IsValidIDExpression(bp_id_str) &&
-            tmp_str[pos + 1] == '*' && tmp_str.size() == (pos + 2)) {
+      auto [prefix, suffix] = tmp_str.split('.');
+      if (suffix == "*" && BreakpointID::IsValidIDExpression(prefix)) {
 
-          BreakpointSP breakpoint_sp;
-          auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-          if (bp_id)
-            breakpoint_sp = target->GetBreakpointByID(bp_id->GetBreakpointID());
-          if (!breakpoint_sp) {
-            new_args.Clear();
-            return llvm::createStringError(
-                llvm::inconvertibleErrorCode(),
-                "'%d' is not a valid breakpoint ID.\n",
-                bp_id->GetBreakpointID());
-          }
-          const size_t num_locations = breakpoint_sp->GetNumLocations();
-          for (size_t j = 0; j < num_locations; ++j) {
-            BreakpointLocation *bp_loc =
-                breakpoint_sp->GetLocationAtIndex(j).get();
-            StreamString canonical_id_str;
-            BreakpointID::GetCanonicalReference(
-                &canonical_id_str, bp_id->GetBreakpointID(), bp_loc->GetID());
-            new_args.AppendArgument(canonical_id_str.GetString());
-          }
+        BreakpointSP breakpoint_sp;
+        auto bp_id = BreakpointID::ParseCanonicalReference(prefix);
+        if (bp_id)
+          breakpoint_sp = target->GetBreakpointByID(bp_id->GetBreakpointID());
+        if (!breakpoint_sp) {
+          new_args.Clear();
+          return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                         "'%d' is not a valid breakpoint ID.\n",
+                                         bp_id->GetBreakpointID());
+        }
+        const size_t num_locations = breakpoint_sp->GetNumLocations();
+        for (size_t j = 0; j < num_locations; ++j) {
+          BreakpointLocation *bp_loc =
+              breakpoint_sp->GetLocationAtIndex(j).get();
+          StreamString canonical_id_str;
+          BreakpointID::GetCanonicalReference(
+              &canonical_id_str, bp_id->GetBreakpointID(), bp_loc->GetID());
+          new_args.AppendArgument(canonical_id_str.GetString());
         }
       }
     }
@@ -280,7 +259,7 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
     
     if (!names_found.empty()) {
       for (BreakpointSP bkpt_sp : target->GetBreakpointList().Breakpoints()) {
-        for (std::string name : names_found) {
+        for (const std::string &name : names_found) {
           if (bkpt_sp->MatchesName(name.c_str())) {
             StreamString canonical_id_str;
             BreakpointID::GetCanonicalReference(

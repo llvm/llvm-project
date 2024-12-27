@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -32,7 +33,6 @@ namespace llvm {
 namespace orc {
 
 class ExecutionSession;
-class SymbolLookupSet;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class ExecutorProcessControl {
@@ -172,14 +172,6 @@ public:
     }
   };
 
-  /// A pair of a dylib and a set of symbols to be looked up.
-  struct LookupRequest {
-    LookupRequest(tpctypes::DylibHandle Handle, const SymbolLookupSet &Symbols)
-        : Handle(Handle), Symbols(Symbols) {}
-    tpctypes::DylibHandle Handle;
-    const SymbolLookupSet &Symbols;
-  };
-
   /// Contains the address of the dispatch function and context that the ORC
   /// runtime can use to call functions in the JIT.
   struct JITDispatchInfo {
@@ -189,7 +181,7 @@ public:
 
   ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
                          std::unique_ptr<TaskDispatcher> D)
-    : SSP(std::move(SSP)), D(std::move(D)) {}
+      : SSP(std::move(SSP)), D(std::move(D)) {}
 
   virtual ~ExecutorProcessControl();
 
@@ -229,14 +221,18 @@ public:
     return *MemMgr;
   }
 
+  /// Return the DylibManager for the target process.
+  DylibManager &getDylibMgr() const {
+    assert(DylibMgr && "No DylibMgr object set");
+    return *DylibMgr;
+  }
+
   /// Returns the bootstrap map.
   const StringMap<std::vector<char>> &getBootstrapMap() const {
     return BootstrapMap;
   }
 
   /// Look up and SPS-deserialize a bootstrap map value.
-  ///
-  ///
   template <typename T, typename SPSTagT>
   Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
     Val = std::nullopt;
@@ -278,20 +274,6 @@ public:
     }
     return Error::success();
   }
-
-  /// Load the dynamic library at the given path and return a handle to it.
-  /// If LibraryPath is null this function will return the global handle for
-  /// the target process.
-  virtual Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) = 0;
-
-  /// Search for symbols in the target process.
-  ///
-  /// The result of the lookup is a 2-dimensional array of target addresses
-  /// that correspond to the lookup order. If a required symbol is not
-  /// found then this method will return an error. If a weakly referenced
-  /// symbol is not found then it be assigned a '0' value.
-  virtual Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) = 0;
 
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
@@ -410,6 +392,7 @@ protected:
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+  DylibManager *DylibMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
@@ -458,15 +441,6 @@ public:
     this->MemAccess = this;
   }
 
-  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override {
-    llvm_unreachable("Unsupported");
-  }
-
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
     llvm_unreachable("Unsupported");
@@ -491,7 +465,8 @@ public:
 
 /// A ExecutorProcessControl implementation targeting the current process.
 class SelfExecutorProcessControl : public ExecutorProcessControl,
-                                   private InProcessMemoryAccess {
+                                   private InProcessMemoryAccess,
+                                   private DylibManager {
 public:
   SelfExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
@@ -507,11 +482,6 @@ public:
   Create(std::shared_ptr<SymbolStringPool> SSP = nullptr,
          std::unique_ptr<TaskDispatcher> D = nullptr,
          std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
-
-  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override;
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
@@ -530,6 +500,11 @@ private:
   static shared::CWrapperFunctionResult
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
                                        const char *Data, size_t Size);
+
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+
+  void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                          SymbolLookupCompleteFn F) override;
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;

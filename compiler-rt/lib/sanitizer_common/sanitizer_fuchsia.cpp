@@ -94,7 +94,6 @@ void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
 void SetAlternateSignalStack() {}
 void UnsetAlternateSignalStack() {}
-void InitTlsSize() {}
 
 bool SignalContext::IsStackOverflow() const { return false; }
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
@@ -288,7 +287,8 @@ uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr map_size,
                           name ? name : name_, true);
 }
 
-void UnmapOrDieVmar(void *addr, uptr size, zx_handle_t target_vmar) {
+void UnmapOrDieVmar(void *addr, uptr size, zx_handle_t target_vmar,
+                    bool raw_report) {
   if (!addr || !size)
     return;
   size = RoundUpTo(size, GetPageSize());
@@ -301,11 +301,8 @@ void UnmapOrDieVmar(void *addr, uptr size, zx_handle_t target_vmar) {
     status = _zx_vmar_unmap(_zx_vmar_root_self(),
                             reinterpret_cast<uintptr_t>(addr), size);
   }
-  if (status != ZX_OK) {
-    Report("ERROR: %s failed to deallocate 0x%zx (%zd) bytes at address %p\n",
-           SanitizerToolName, size, size, addr);
-    CHECK("unable to unmap" && 0);
-  }
+  if (status != ZX_OK)
+    ReportMunmapFailureAndDie(addr, size, status, raw_report);
 
   DecreaseTotalMmap(size);
 }
@@ -327,7 +324,8 @@ void ReservedAddressRange::Unmap(uptr addr, uptr size) {
   }
   // Partial unmapping does not affect the fact that the initial range is still
   // reserved, and the resulting unmapped memory can't be reused.
-  UnmapOrDieVmar(reinterpret_cast<void *>(addr), size, vmar);
+  UnmapOrDieVmar(reinterpret_cast<void *>(addr), size, vmar,
+                 /*raw_report=*/false);
 }
 
 // This should never be called.
@@ -413,8 +411,8 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   return reinterpret_cast<void *>(addr);
 }
 
-void UnmapOrDie(void *addr, uptr size) {
-  UnmapOrDieVmar(addr, size, gSanitizerHeapVmar);
+void UnmapOrDie(void *addr, uptr size, bool raw_report) {
+  UnmapOrDieVmar(addr, size, gSanitizerHeapVmar, raw_report);
 }
 
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
@@ -444,6 +442,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
     _zx_handle_close(vmo);
   }
   return status == ZX_OK;
+}
+
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
 }
 
 // FIXME implement on this platform.
@@ -520,7 +523,6 @@ uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len) {
 uptr MainThreadStackBase, MainThreadStackSize;
 
 bool GetRandom(void *buffer, uptr length, bool blocking) {
-  CHECK_LE(length, ZX_CPRNG_DRAW_MAX_LEN);
   _zx_cprng_draw(buffer, length);
   return true;
 }

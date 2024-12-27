@@ -25,6 +25,7 @@ diag_groups = [
   "CrossTU",
   "Driver",
   "Frontend",
+  "InstallAPI",
   "Lex",
   "Parse",
   "Refactoring",
@@ -67,16 +68,6 @@ clang_tablegen("AttrList") {
   td_file = "Attr.td"
 }
 
-clang_tablegen("AttrLeftSideCanPrintList") {
-  args = [ "-gen-clang-attr-can-print-left-list" ]
-  td_file = "Attr.td"
-}
-
-clang_tablegen("AttrLeftSideMustPrintList") {
-  args = [ "-gen-clang-attr-must-print-left-list" ]
-  td_file = "Attr.td"
-}
-
 clang_tablegen("AttrSubMatchRulesList") {
   args = [ "-gen-clang-attr-subject-match-rule-list" ]
   td_file = "Attr.td"
@@ -100,6 +91,14 @@ clang_tablegen("BuiltinsBPF") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsRISCV") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsX86") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 # ARM CDE, MVE, and NEON.
 
 clang_tablegen("arm_neon") {
@@ -108,6 +107,11 @@ clang_tablegen("arm_neon") {
 
 clang_tablegen("arm_fp16") {
   args = [ "-gen-arm-neon-sema" ]
+}
+
+clang_tablegen("arm_immcheck_types") {
+  args = [ "-gen-arm-immcheck-types" ]
+  td_file = "arm_sve.td"
 }
 
 clang_tablegen("arm_mve_builtins") {

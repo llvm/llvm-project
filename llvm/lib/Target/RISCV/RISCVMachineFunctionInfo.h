@@ -76,8 +76,10 @@ private:
   unsigned RVPushRegs = 0;
   int RVPushRlist = llvm::RISCVZC::RLISTENCODE::INVALID_RLIST;
 
+  int64_t StackProbeSize = 0;
+
 public:
-  RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
+  RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -135,7 +137,7 @@ public:
   bool isPushable(const MachineFunction &MF) const {
     // We cannot use fixed locations for the callee saved spill slots if the
     // function uses a varargs save area.
-    // TODO: Use a seperate placement for vararg registers to enable Zcmp.
+    // TODO: Use a separate placement for vararg registers to enable Zcmp.
     return MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
            !MF.getTarget().Options.DisableFramePointerElim(MF) &&
            VarArgsSaveSize == 0;

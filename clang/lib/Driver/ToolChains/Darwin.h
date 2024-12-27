@@ -223,6 +223,13 @@ public:
     // There aren't any profiling libs for embedded targets currently.
   }
 
+  // Return the full path of the compiler-rt library on a non-Darwin MachO
+  // system. Those are under
+  // <resourcedir>/lib/darwin/macho_embedded/<...>(.dylib|.a).
+  std::string
+  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                FileType Type = ToolChain::FT_Static) const override;
+
   /// }
   /// @name ToolChain Implementation
   /// {
@@ -300,7 +307,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = DriverKit
+    LastDarwinPlatform = XROS
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -355,6 +362,12 @@ public:
 
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
+
+  // Return the full path of the compiler-rt library on a Darwin MachO system.
+  // Those are under <resourcedir>/lib/darwin/<...>(.dylib|.a).
+  std::string
+  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                FileType Type = ToolChain::FT_Static) const override;
 
 protected:
   /// }
@@ -510,6 +523,10 @@ protected:
   /// implemented in the c++ standard library of the deployment target we are
   /// targeting.
   bool isAlignedAllocationUnavailable() const;
+
+  /// Return true if c++14 sized deallocation functions are not implemented in
+  /// the c++ standard library of the deployment target we are targeting.
+  bool isSizedDeallocationUnavailable() const;
 
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,

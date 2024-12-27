@@ -13,7 +13,6 @@
 #include "src/unistd/close.h"
 
 #include "src/errno/libc_errno.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
@@ -25,7 +24,7 @@ TEST(LlvmLibcSocketTest, BindLocalSocket) {
 
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   struct sockaddr_un my_addr;
 
@@ -47,7 +46,7 @@ TEST(LlvmLibcSocketTest, BindLocalSocket) {
                            sizeof(struct sockaddr_un));
 
   ASSERT_EQ(result, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   LIBC_NAMESPACE::close(sock);
 

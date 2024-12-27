@@ -2,33 +2,10 @@ add_custom_target(libc-string-tests)
 
 add_subdirectory(memory_utils)
 
-add_libc_test(
-  bcopy_test
-  SUITE
-    libc-string-tests
-  SRCS
-    bcopy_test.cpp
-  DEPENDS
-    libc.src.string.bcopy
-  LINK_LIBRARIES
-    LibcMemoryHelpers
-)
-
 add_header_library(
   strchr_test_support
   HDRS
     StrchrTest.h
-)
-
-add_libc_test(
-  index_test
-  SUITE
-    libc-string-tests
-  SRCS
-    index_test.cpp
-  DEPENDS
-    libc.src.string.index
-    .strchr_test_support
 )
 
 add_libc_test(
@@ -79,17 +56,6 @@ add_libc_test(
     memrchr_test.cpp
   DEPENDS
     libc.src.string.memrchr
-)
-
-add_libc_test(
-  rindex_test
-  SUITE
-    libc-string-tests
-  SRCS
-    rindex_test.cpp
-  DEPENDS
-    libc.src.string.rindex
-    .strchr_test_support
 )
 
 add_libc_test(
@@ -154,16 +120,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  strcasecmp_test
-  SUITE
-    libc-string-tests
-  SRCS
-    strcasecmp_test.cpp
-  DEPENDS
-    libc.src.string.strcasecmp
-)
-
-add_libc_test(
   strcasestr_test
   SUITE
     libc-string-tests
@@ -210,21 +166,22 @@ add_libc_test(
   SRCS
     strdup_test.cpp
   DEPENDS
-    libc.include.stdlib
     libc.src.string.strdup
     libc.src.errno.errno
 )
 
-add_libc_test(
-  strerror_test
-  SUITE
-    libc-string-tests
-  SRCS
-    strerror_test.cpp
-  DEPENDS
-    libc.src.string.strerror
-)
-
+# FIXME: This is failing on the bot for some reason, disable for now.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    strerror_test
+    SUITE
+      libc-string-tests
+    SRCS
+      strerror_test.cpp
+    DEPENDS
+      libc.src.string.strerror
+  )
+endif()
 
 add_libc_test(
   strerror_r_test
@@ -287,16 +244,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  strncasecmp_test
-  SUITE
-    libc-string-tests
-  SRCS
-    strncasecmp_test.cpp
-  DEPENDS
-    libc.src.string.strncasecmp
-)
-
-add_libc_test(
   strncpy_test
   SUITE
     libc-string-tests
@@ -313,7 +260,6 @@ add_libc_test(
   SRCS
     strndup_test.cpp
   DEPENDS
-    libc.include.stdlib
     libc.src.string.strndup
 )
 
@@ -418,39 +364,17 @@ add_libc_test(
     libc.src.string.strxfrm
 )
 
-# Tests all implementations that can run on the target CPU.
-function(add_libc_multi_impl_test name)
-  get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
-  foreach(fq_config_name IN LISTS fq_implementations)
-    get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
-    cpu_supports(can_run "${required_cpu_features}")
-    if(can_run)
-      string(FIND ${fq_config_name} "." last_dot_loc REVERSE)
-      math(EXPR name_loc "${last_dot_loc} + 1")
-      string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
-      add_libc_test(
-        ${target_name}_test
-        SUITE
-          libc-string-tests
-        COMPILE_OPTIONS
-          ${LIBC_COMPILE_OPTIONS_NATIVE}
-        LINK_LIBRARIES
-          LibcMemoryHelpers
-        ${ARGN}
-        DEPENDS
-          ${fq_config_name}
-          libc.src.__support.macros.sanitizer
-      )
-      get_fq_target_name(${fq_config_name}_test fq_target_name)
-    else()
-      message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
-    endif()
-  endforeach()
-endfunction()
+add_libc_test(
+  memset_explicit_test
+  SUITE
+    libc-string-tests
+  SRCS
+    memset_explicit_test.cpp
+  DEPENDS
+    libc.src.string.memset_explicit
+)
 
-add_libc_multi_impl_test(bcmp SRCS bcmp_test.cpp)
-add_libc_multi_impl_test(bzero SRCS bzero_test.cpp)
-add_libc_multi_impl_test(memcmp SRCS memcmp_test.cpp)
-add_libc_multi_impl_test(memcpy SRCS memcpy_test.cpp)
-add_libc_multi_impl_test(memmove SRCS memmove_test.cpp)
-add_libc_multi_impl_test(memset SRCS memset_test.cpp)
+add_libc_multi_impl_test(memcmp libc-string-tests SRCS memcmp_test.cpp)
+add_libc_multi_impl_test(memcpy libc-string-tests SRCS memcpy_test.cpp)
+add_libc_multi_impl_test(memmove libc-string-tests SRCS memmove_test.cpp)
+add_libc_multi_impl_test(memset libc-string-tests SRCS memset_test.cpp)

@@ -83,8 +83,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 #matmul_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [
     affine_map<(m, n, k) -> (m, k)>,
     affine_map<(m, n, k) -> (k, n)>,
@@ -124,9 +122,49 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+#map = affine_map<() -> ()>
+
+// CHECK-LABEL:   func.func @generic_0d(
+// CHECK-SAME:     %[[ARG_0:.*]]: tensor<f32>, %[[ARG_1:.*]]: tensor<f32>, %[[ARG_2:.*]]: tensor<f32>)
+func.func @generic_0d(%arg0: tensor<f32>, %arg1: tensor<f32>,
+                      %arg2: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[READ_0:.*]] = vector.transfer_read %[[ARG_0]][], %[[PAD]] : tensor<f32>, vector<f32>
+// CHECK:           %[[ARG_0_AS_SCALAR:.*]] = vector.extract %[[READ_0]][] : f32 from vector<f32>
+// CHECK:           %[[READ_1:.*]] = vector.transfer_read %[[ARG_1]][], %[[PAD]] : tensor<f32>, vector<f32>
+// CHECK:           %[[ARG_1_AS_SCALAR:.*]] = vector.extract %[[READ_1]][] : f32 from vector<f32>
+// CHECK:           %[[READ_2:.*]] = vector.transfer_read %[[ARG_2]][], %[[PAD]] : tensor<f32>, vector<f32>
+// CHECK:           %[[ARG_2_AS_SCALAR:.*]] = vector.extract %[[READ_2]][] : f32 from vector<f32>
+// CHECK:           %[[MULF:.*]] = arith.mulf %[[ARG_0_AS_SCALAR]], %[[ARG_1_AS_SCALAR]] : f32
+// CHECK:           %[[ADDF:.*]] = arith.addf %[[ARG_2_AS_SCALAR]], %[[MULF]] : f32
+// CHECK:           %[[ADDF_BCAST:.*]] = vector.broadcast %[[ADDF]] : f32 to vector<f32>
+// CHECK:           vector.transfer_write %[[ADDF_BCAST]], %[[ARG_2]][] : vector<f32>, tensor<f32>
+  %res = linalg.generic {
+    indexing_maps = [#map, #map, #map],
+    iterator_types = []
+  } ins(%arg0, %arg1 : tensor<f32>, tensor<f32>)
+    outs(%arg2 : tensor<f32>) {
+  ^bb(%a: f32, %b: f32, %c: f32) :
+    %d = arith.mulf %a, %b: f32
+    %e = arith.addf %c, %d: f32
+    linalg.yield %e : f32
+  } -> tensor<f32>
+
+  return %res : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 #matmul_transpose_out_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [
     affine_map<(m, n, k) -> (m, k)>,
     affine_map<(m, n, k) -> (k, n)>,
@@ -196,8 +234,6 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 #matmul_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [
     affine_map<(m, n, k) -> (m, k)>,
     affine_map<(m, n, k) -> (k, n)>,
@@ -378,7 +414,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: func @test_vectorize_fill
-func.func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
+func.func @test_vectorize_fill_0d(%A : memref<f32>, %arg0 : f32) {
   // CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[val:.*]]: f32)
   //      CHECK:   %[[VEC:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
   //      CHECK:   vector.transfer_write %[[VEC]], %[[M]][] : vector<f32>, memref<f32>
@@ -416,11 +452,11 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @test_vectorize_copy_scalar
-func.func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
+// CHECK-LABEL: func @test_vectorize_copy_0d
+func.func @test_vectorize_copy_0d(%A : memref<f32>, %B : memref<f32>) {
   //  CHECK-SAME: (%[[A:.*]]: memref<f32>, %[[B:.*]]: memref<f32>)
   //       CHECK:   %[[V:.*]] = vector.transfer_read %[[A]][]{{.*}} : memref<f32>, vector<f32>
-  //       CHECK:   %[[val:.*]] = vector.extractelement %[[V]][] : vector<f32>
+  //       CHECK:   %[[val:.*]] = vector.extract %[[V]][] : f32 from vector<f32>
   //       CHECK:   %[[VV:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
   //       CHECK:   vector.transfer_write %[[VV]], %[[B]][] : vector<f32>, memref<f32>
   memref.copy %A, %B :  memref<f32> to memref<f32>
@@ -528,8 +564,6 @@ func.func @generic_vectorize(%arg0: memref<4x256xf32>,
   //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
   %c1_f32 = arith.constant 1.0 : f32
   linalg.generic {
-    args_in = 0 : i64,
-    args_out = 10 : i64,
     indexing_maps = [
       affine_map<(d0, d1) -> (d0, d1)>,
       affine_map<(d0, d1) -> (d1)>,
@@ -945,155 +979,22 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func @pad_and_transfer_read
-//  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   tensor.pad
-//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[C5:.*]] = arith.constant 5.0
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
-//       CHECK:   return %[[RESULT]]
-func.func @pad_and_transfer_read(%arg0: tensor<5x6xf32>) -> vector<7x9xf32> {
-  %c0 = arith.constant 0 : index
-  %c5 = arith.constant 5.0 : f32
-  %c6 = arith.constant 6.0 : f32
-  %0 = tensor.pad %arg0 low[0, 0] high[5, 7] {
-    ^bb0(%arg1: index, %arg2: index):
-      tensor.yield %c5 : f32
-  } : tensor<5x6xf32> to tensor<10x13xf32>
-  %1 = vector.transfer_read %0[%c0, %c0], %c6
-      : tensor<10x13xf32>, vector<7x9xf32>
-  return %1 : vector<7x9xf32>
-}
-
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_padding } : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-// -----
-
-func.func private @make_vector() -> vector<7x9xf32>
-
-// CHECK-LABEL: func @pad_and_transfer_write_static
-//  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   tensor.pad
-//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[ARG0]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<5x6xf32>
-//       CHECK:   return %[[RESULT]]
-func.func @pad_and_transfer_write_static(
-    %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
-  %c0 = arith.constant 0 : index
-  %c5 = arith.constant 5.0 : f32
-  %0 = tensor.pad %arg0 low[0, 0] high[5, 7] {
-    ^bb0(%arg2: index, %arg3: index):
-      tensor.yield %c5 : f32
-  } : tensor<5x6xf32> to tensor<10x13xf32>
-  %1 = call @make_vector() : () -> vector<7x9xf32>
-  %2 = vector.transfer_write %1, %0[%c0, %c0]
-      : vector<7x9xf32>, tensor<10x13xf32>
-  %3 = tensor.extract_slice %2[0, 0] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
-  return %3 : tensor<5x6xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %5 = transform.structured.vectorize_children_and_apply_patterns %4  { vectorize_padding } : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-
-// -----
-
-func.func private @make_vector() -> vector<7x9xf32>
-
-// CHECK-LABEL: func @pad_and_transfer_write_dynamic_static
-//  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[SIZE:.*]]: index, %[[PADDING:.*]]: index
-//   CHECK-NOT:   tensor.pad
-//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[SUB:.*]] = tensor.extract_slice %[[ARG0]][0, 0] [%[[SIZE]], 6] [1, 1] : tensor<?x?xf32> to tensor<?x6xf32>
-//       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[SUB]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<?x6xf32>
-//       CHECK:   return %[[RESULT]]
-func.func @pad_and_transfer_write_dynamic_static(
-    %arg0: tensor<?x?xf32>, %size: index, %padding: index) -> tensor<?x6xf32> {
-  %c0 = arith.constant 0 : index
-  %c5 = arith.constant 5.0 : f32
-  %s = tensor.extract_slice %arg0[0, 0] [%size, 6] [1, 1]
-      : tensor<?x?xf32> to tensor<?x6xf32>
-  %0 = tensor.pad %s low[0, 0] high[%padding, 7] {
-    ^bb0(%arg2: index, %arg3: index):
-      tensor.yield %c5 : f32
-  } : tensor<?x6xf32> to tensor<?x13xf32>
-  %1 = call @make_vector() : () -> vector<7x9xf32>
-  %2 = vector.transfer_write %1, %0[%c0, %c0]
-      : vector<7x9xf32>, tensor<?x13xf32>
-  %3 = tensor.extract_slice %2[0, 0] [%size, 6] [1, 1] : tensor<?x13xf32> to tensor<?x6xf32>
-  return %3 : tensor<?x6xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %5 = transform.structured.vectorize_children_and_apply_patterns %4 { vectorize_padding } : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-
-// -----
-
 func.func private @make_vector() -> tensor<12x13xf32>
 
-// CHECK-LABEL: func @pad_and_insert_slice_source
-//  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   tensor.pad
-//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[C5:.*]] = arith.constant 5.0
-//       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> tensor<12x13xf32>
-//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
-//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[VEC0]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<7x9xf32>, tensor<12x13xf32>
-//       CHECK:   return %[[WRITE]]
-func.func @pad_and_insert_slice_source(
-    %arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
-  %c0 = arith.constant 0 : index
-  %c5 = arith.constant 5.0 : f32
-  %0 = tensor.pad %arg0 low[0, 0] high[2, 3] {
-    ^bb0(%arg2: index, %arg3: index):
-      tensor.yield %c5 : f32
-  } : tensor<5x6xf32> to tensor<7x9xf32>
-  %1 = call @make_vector() : () -> tensor<12x13xf32>
-  %r = tensor.insert_slice %0 into %1[0, 0][7, 9][1, 1] : tensor<7x9xf32> into tensor<12x13xf32>
-  return %r : tensor<12x13xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %5 = transform.structured.vectorize_children_and_apply_patterns %4  { vectorize_padding } : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-
-// -----
-
-func.func private @make_vector() -> tensor<12x13xf32>
-
-// CHECK-LABEL: func @pad_and_insert_slice_dest
-// Check the insert slice is not rewritten if the padded result is used by the destination operand.
-//       CHECK:   %[[T1:.*]] = call @make_vector() : () -> tensor<12x13xf32>
-//       CHECK:   = tensor.insert_slice %[[T1]] into
+// CHECK-LABEL:   func.func @pad_and_insert_slice_dest(
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
+// CHECK:           %[[C0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[CST:.*]] = arith.constant dense<5.000000e+00> : vector<1x12x13xf32>
+// CHECK:           %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD_VAL:.*]] = arith.constant 5.000000e+00 : f32
+// CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<1x12x13xf32>
+// CHECK:           %[[WRITE_1:.*]] = vector.transfer_write %[[CST]], %[[EMPTY]]{{\[}}%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]] {in_bounds = [true, true, true]} : vector<1x12x13xf32>, tensor<1x12x13xf32>
+// CHECK:           %[[READ_1:.*]] = vector.transfer_read %[[ARG_0]]{{\[}}%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]], %[[PAD_VAL]] {in_bounds = [true, true, true]} : tensor<1x5x6xf32>, vector<1x5x6xf32>
+// CHECK:           %[[WRITE_2:.*]] = vector.transfer_write %[[READ_1]], %[[WRITE_1]]{{\[}}%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]] {in_bounds = [true, true, true]} : vector<1x5x6xf32>, tensor<1x12x13xf32>
+// CHECK:           %[[MAKE_VEC:.*]] = call @make_vector() : () -> tensor<12x13xf32>
+// CHECK:           %[[READ_2:.*]] = vector.transfer_read %[[MAKE_VEC]]{{\[}}%[[C0_IDX]], %[[C0_IDX]]], %[[C0]] {in_bounds = [true, true]} : tensor<12x13xf32>, vector<12x13xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ_2]], %[[WRITE_2]]{{\[}}%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]] {in_bounds = [true, true]} : vector<12x13xf32>, tensor<1x12x13xf32>
+// CHECK:           return %[[RES]] : tensor<1x12x13xf32>
 func.func @pad_and_insert_slice_dest(
     %arg0: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
   %c5 = arith.constant 5.0 : f32
@@ -1110,7 +1011,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %5 = transform.structured.vectorize_children_and_apply_patterns %4 : (!transform.any_op) -> !transform.any_op
+    %5 = transform.structured.vectorize_children_and_apply_patterns %4  { vectorize_padding } : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -1240,8 +1141,8 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL:   func @red_max_2d(
-func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+// CHECK-LABEL:   func @red_maximumf_2d(
+func.func @red_maximumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
   // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.multi_reduction <maximumf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
@@ -1272,8 +1173,40 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL:   func @red_min_2d(
-func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+// CHECK-LABEL:   func @red_maxnumf_2d(
+func.func @red_maxnumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+  // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
+  // CHECK: vector.multi_reduction <maxnumf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
+  %ident = arith.constant -3.40282e+38 : f32
+  %init = tensor.empty() : tensor<4xf32>
+  %fill = linalg.fill ins(%ident : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
+  ^bb0(%in0: f32, %out0: f32):
+    %max = arith.maxnumf %in0, %out0 : f32
+    linalg.yield %max : f32
+  } -> tensor<4xf32>
+  return %red : tensor<4xf32>
+}
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %5 = transform.structured.vectorize_children_and_apply_patterns %4 { vectorize_padding } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_minimumf_2d(
+func.func @red_minimumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMAXF:.+]] = arith.constant dense<3.402820e+38> : vector<4xf32>
   // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
@@ -1288,6 +1221,39 @@ func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):
     %min = arith.minimumf %out0, %in0 : f32
+    linalg.yield %min : f32
+  } -> tensor<4xf32>
+  return %red : tensor<4xf32>
+}
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %5 = transform.structured.vectorize_children_and_apply_patterns %4 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:   func @red_minnumf_2d(
+func.func @red_minnumf_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
+  // CHECK: %[[CMAXF:.+]] = arith.constant dense<3.402820e+38> : vector<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
+  // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
+  // CHECK: vector.multi_reduction <minnumf>, {{.*}}, %[[CMAXF]] [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
+  %maxf32 = arith.constant 3.40282e+38 : f32
+  %init = tensor.empty() : tensor<4xf32>
+  %fill = linalg.fill ins(%maxf32 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+                         iterator_types = ["parallel", "reduction"]}
+                         ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
+  ^bb0(%in0: f32, %out0: f32):
+    %min = arith.minnumf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -1516,7 +1482,6 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-LABEL: func @reduce_1d(
 //   CHECK-SAME:   %[[A:.*]]: tensor<32xf32>
 func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
-  //  CHECK-DAG: %[[vF0:.*]] = arith.constant dense<0.000000e+00> : vector<f32>
   //  CHECK-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %f0 = arith.constant 0.000000e+00 : f32
@@ -1527,8 +1492,7 @@ func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
   %1 = linalg.fill ins(%f0 : f32) outs(%0 : tensor<f32>) -> tensor<f32>
   //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
   // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
-  //      CHECK: %[[f0:.*]] = vector.extractelement %[[vF0]][] : vector<f32>
-  //      CHECK: %[[red:.*]] = vector.multi_reduction <add>, %[[r]], %[[f0]] [0]
+  //      CHECK: %[[red:.*]] = vector.multi_reduction <add>, %[[r]], %[[F0]] [0]
   // CHECK-SAME:   : vector<32xf32> to f32
   //      CHECK: %[[red_v1:.*]] = vector.broadcast %[[red]] : f32 to vector<f32>
   //      CHECK: %[[res:.*]] = vector.transfer_write %[[red_v1]], %[[init]][]
@@ -1710,10 +1674,12 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL:   @not_vectorizable
 func.func @not_vectorizable(%arg0: tensor<1x?xf32>, %arg1: index, %arg2: index, %arg3: index) -> tensor<1x128xf32> {
+  %c0 = arith.constant 0 : index
   %0 = tensor.empty() : tensor<1x128xf32>
   %1 = scf.for %arg5 = %arg2 to %arg1 step %arg3 iter_args(%arg6 = %0) -> (tensor<1x128xf32>) {
     %extracted_slice = tensor.extract_slice %arg6[0, 0] [1, %arg1] [1, 1] : tensor<1x128xf32> to tensor<?xf32>
-    %expanded = tensor.expand_shape %extracted_slice [[0, 1]] : tensor<?xf32> into tensor<1x?xf32>
+    %sz0 = tensor.dim %extracted_slice, %c0 : tensor<?xf32>
+    %expanded = tensor.expand_shape %extracted_slice [[0, 1]] output_shape [1, %sz0] : tensor<?xf32> into tensor<1x?xf32>
     %extracted_slice_0 = tensor.extract_slice %arg0[0, %arg3] [1, %arg2] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
     %extracted_slice_1 = tensor.extract_slice %expanded[0, %arg3] [1, %arg2] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
     %2 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]} ins(%extracted_slice_0 : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) {
@@ -1853,9 +1819,9 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @zero_dim_tensor
 //       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
-//       CHECK:     vector.extractelement
+//       CHECK:     vector.extract
 //       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
-//       CHECK:     vector.extractelement
+//       CHECK:     vector.extract
 //       CHECK:     arith.addf {{.*}} : f32
 //       CHECK:     vector.broadcast %{{.*}} : f32 to vector<f32>
 //       CHECK:     vector.transfer_write {{.*}} : vector<f32>, tensor<f32>
@@ -1897,3 +1863,199 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:     %[[VAL_8:.*]] = vector.transpose %[[VAL_7]], [1, 0] : vector<1x4xf32> to vector<4x1xf32>
 //       CHECK:     vector.transfer_write %[[VAL_8]], %{{.*}} {in_bounds = [true, true]} : vector<4x1xf32>, tensor<4x1xf32>
 //       CHECK:     vector.transfer_write %[[VAL_7]], %{{.*}} {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+
+// -----
+
+// Extracted from: https://github.com/llvm/llvm-project/issues/97247
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, 0)>
+
+func.func @generic_with_reduction_and_broadcast(%arg0: tensor<1x12x197x197xf32>) -> (tensor<1x12x197x1xf32>) {
+  %0 = tensor.empty() : tensor<1x12x197x1xf32>
+  %1 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0 : tensor<1x12x197x197xf32>) outs(%0 : tensor<1x12x197x1xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %818 = arith.addf %in, %out : f32
+    linalg.yield %818 : f32
+  } -> tensor<1x12x197x1xf32>
+  return %1 : tensor<1x12x197x1xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK: #[[$ATTR_32:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CHECK-LABEL:   func.func @generic_with_reduction_and_broadcast(
+// CHECK-SAME:                                                    %[[VAL_0:.*]]: tensor<1x12x197x197xf32>) -> tensor<1x12x197x1xf32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_3:.*]] = tensor.empty() : tensor<1x12x197x1xf32>
+// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_2]], %[[VAL_2]], %[[VAL_2]], %[[VAL_2]]], %[[VAL_1]] {in_bounds = [true, true, true, true]} : tensor<1x12x197x197xf32>, vector<1x12x197x197xf32>
+// CHECK:           %[[VAL_5:.*]] = vector.transfer_read %[[VAL_3]]{{\[}}%[[VAL_2]], %[[VAL_2]], %[[VAL_2]], %[[VAL_2]]], %[[VAL_1]] {in_bounds = [true, true, true], permutation_map = #[[$ATTR_32]]} : tensor<1x12x197x1xf32>, vector<1x12x197xf32>
+// CHECK:           %[[VAL_6:.*]] = vector.multi_reduction <add>, %[[VAL_4]], %[[VAL_5]] [3] : vector<1x12x197x197xf32> to vector<1x12x197xf32>
+// CHECK:           %[[VAL_7:.*]] = vector.broadcast %[[VAL_6]] : vector<1x12x197xf32> to vector<1x1x12x197xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.transpose %[[VAL_7]], [1, 2, 3, 0] : vector<1x1x12x197xf32> to vector<1x12x197x1xf32>
+// CHECK:           %[[VAL_9:.*]] = vector.transfer_write %[[VAL_8]], %[[VAL_3]]{{\[}}%[[VAL_2]], %[[VAL_2]], %[[VAL_2]], %[[VAL_2]]] {in_bounds = [true, true, true, true]} : vector<1x12x197x1xf32>, tensor<1x12x197x1xf32>
+// CHECK:           return %[[VAL_9]] : tensor<1x12x197x1xf32>
+
+// -----
+
+// Input identical as the test in vectorization.mlir. Output is different -
+// vector sizes are inferred (rather than user-specified) and hence _no_
+// masking was used.
+
+func.func @test_vectorize_pack(%arg0: tensor<32x8x16xf32>, %arg1: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
+  %pack = tensor.pack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %arg1 : tensor<32x8x16xf32> -> tensor<4x1x32x16x2xf32>
+  return %pack : tensor<4x1x32x16x2xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   func.func @test_vectorize_pack(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x8x16xf32>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, true, true]} : tensor<32x8x16xf32>, vector<32x8x16xf32>
+// CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
+// CHECK:           %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [1, 3, 0, 4, 2] : vector<32x4x2x1x16xf32> to vector<4x1x32x16x2xf32>
+// CHECK:           %[[VAL_7:.*]] = tensor.empty() : tensor<4x1x32x16x2xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_7]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<4x1x32x16x2xf32>, tensor<4x1x32x16x2xf32>
+// CHECK:           return %[[VAL_8]] : tensor<4x1x32x16x2xf32>
+
+// -----
+
+// Input identical as the test in vectorization.mlir. Output is different -
+// vector sizes are inferred (rather than user-specified) and hence _no_
+// masking was used.
+
+func.func @test_vectorize_padded_pack(%arg0: tensor<32x7x15xf32>, %arg1: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
+  %pad = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %arg1 : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
+  return %pack : tensor<32x4x1x16x2xf32>
+}
+
+// CHECK-LABEL:   func.func @test_vectorize_padded_pack(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x7x15xf32>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
+// CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
+// CHECK:           %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
+// CHECK:           %[[VAL_7:.*]] = tensor.empty() : tensor<32x4x1x16x2xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_7]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+// CHECK:           return %[[VAL_8]] : tensor<32x4x1x16x2xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// tensor.insert_slice
+///----------------------------------------------------------------------------------------
+
+// The pad value for xfer-read is neither needed nor available - use the default (0.0).
+
+// CHECK-LABEL: func @insert_static_slice_default_pad
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x2x3xf32>,
+// CHECK-SAME:      %[[ARG_1:.*]]: tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{\[}}%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x2x3xf32>, vector<1x2x3xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[ARG_1]]{{\[}}%[[C0]], %[[C0]], %[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           return %[[WRITE]] : tensor<9x8x7x1x2x3xf32>
+func.func @insert_static_slice_default_pad(%arg0: tensor<1x2x3xf32>, %arg1: tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32> {
+  %res = tensor.insert_slice %arg0 into %arg1[0, 0, 0, 0, 0, 0] [1, 1, 1, 1, 2, 3][1, 1, 1, 1, 1, 1] : tensor<1x2x3xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_padding } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Same as above, but there's a pad value available that should be used instead of the default value.
+
+// CHECK-LABEL:   func.func @insert_static_slice_non_zero_pad
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x2x3xf32>,
+// CHECK-SAME:      %[[PAD:.*]]: f32) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x2x3xf32>, vector<1x2x3xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} {in_bounds = [true, true, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
+func.func @insert_static_slice_non_zero_pad(%arg0: tensor<1x2x3xf32>, %pad : f32) -> tensor<9x8x7x1x2x3xf32> {
+  %init = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+  %fill = linalg.fill ins(%pad : f32) outs(%init : tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32>
+  %res = tensor.insert_slice %arg0 into %fill[0, 0, 0, 0, 0, 0] [1, 1, 1, 1, 2, 3][1, 1, 1, 1, 1, 1] : tensor<1x2x3xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Same as above, but the source type has is dynamically shaped. This means
+// that the pad value is now required and the vector dim corresponding to the
+// dynamic shape has to be inferred from the shape of the destination tensor.
+
+// CHECK-LABEL:   func.func @insert_dynamic_slice_non_zero_pad(
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x?x3xf32>,
+// CHECK-SAME:      %[[PAD:.*]]: f32,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, false, true]} : tensor<1x?x3xf32>, vector<1x2x3xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} {in_bounds = [true, true, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
+func.func @insert_dynamic_slice_non_zero_pad(%arg0: tensor<1x?x3xf32>, %pad : f32, %size: index) -> tensor<9x8x7x1x2x3xf32> {
+  %init = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+  %fill = linalg.fill ins(%pad : f32) outs(%init : tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32>
+  %res = tensor.insert_slice %arg0 into %fill[0, 0, 0, 0, 0, 0] [1, 1, 1, 1, %size, 3][1, 1, 1, 1, 1, 1] : tensor<1x?x3xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}

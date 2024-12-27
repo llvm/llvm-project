@@ -44,14 +44,26 @@ using namespace llvm::sys;
 using namespace llvm::wasm;
 
 namespace lld::wasm {
-Configuration *config;
+ConfigWrapper config;
 Ctx ctx;
 
+void errorOrWarn(const llvm::Twine &msg) {
+  if (config->noinhibitExec)
+    warn(msg);
+  else
+    error(msg);
+}
+
+Ctx::Ctx() : arg(config.c) {}
+
 void Ctx::reset() {
+  arg.~Config();
+  new (&arg) Config();
   objectFiles.clear();
   stubFiles.clear();
   sharedFiles.clear();
   bitcodeFiles.clear();
+  lazyBitcodeFiles.clear();
   syntheticFunctions.clear();
   syntheticGlobals.clear();
   syntheticTables.clear();
@@ -84,12 +96,15 @@ static void initLLVM() {
 
 class LinkerDriver {
 public:
+  LinkerDriver(Ctx &);
   void linkerMain(ArrayRef<const char *> argsArr);
 
 private:
   void createFiles(opt::InputArgList &args);
   void addFile(StringRef path);
   void addLibrary(StringRef name);
+
+  Ctx &ctx;
 
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
@@ -99,44 +114,64 @@ private:
 
   std::vector<InputFile *> files;
 };
+
+static bool hasZOption(opt::InputArgList &args, StringRef key) {
+  bool ret = false;
+  for (const auto *arg : args.filtered(OPT_z))
+    if (key == arg->getValue()) {
+      ret = true;
+      arg->claim();
+    }
+  return ret;
+}
 } // anonymous namespace
 
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *ctx = new CommonLinkerContext;
+  auto *context = new CommonLinkerContext;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() { wasm::ctx.reset(); };
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "-error-limit=0 to see all errors)";
+  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  context->e.cleanupCallback = []() { ctx.reset(); };
+  context->e.logName = args::getFilenameWithoutExe(args[0]);
+  context->e.errorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "-error-limit=0 to see all errors)";
 
-  config = make<Configuration>();
   symtab = make<SymbolTable>();
 
   initLLVM();
-  LinkerDriver().linkerMain(args);
+  LinkerDriver(ctx).linkerMain(args);
 
   return errorCount() == 0;
 }
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
-  {PREFIX,      NAME,        HELPTEXT,                                         \
-   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
-   PARAM,       FLAGS,       VISIBILITY,                                       \
-   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
+  {PREFIX,                                                                     \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   HELPTEXTSFORVARIANTS,                                                       \
+   METAVAR,                                                                    \
+   OPT_##ID,                                                                   \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   VISIBILITY,                                                                 \
+   OPT_##GROUP,                                                                \
+   OPT_##ALIAS,                                                                \
+   ALIASARGS,                                                                  \
    VALUES},
 #include "Options.inc"
 #undef OPTION
@@ -145,7 +180,8 @@ static constexpr opt::OptTable::Info optInfo[] = {
 namespace {
 class WasmOptTable : public opt::GenericOptTable {
 public:
-  WasmOptTable() : opt::GenericOptTable(optInfo) {}
+  WasmOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -157,16 +193,17 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
+  auto &errs = errorHandler().errs();
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    lld::errs().enable_colors(true);
+    errs.enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    lld::errs().enable_colors(false);
+    errs.enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      lld::errs().enable_colors(true);
+      errs.enable_colors(true);
     else if (s == "never")
-      lld::errs().enable_colors(false);
+      errs.enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -306,9 +343,15 @@ void LinkerDriver::addFile(StringRef path) {
     return;
   }
   case file_magic::bitcode:
-  case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref, "", 0, inLib));
+  case file_magic::wasm_object: {
+    auto obj = createObjectFile(mbref, "", 0, inLib);
+    if (config->isStatic && isa<SharedFile>(obj)) {
+      error("attempted static link of dynamic object " + path);
+      break;
+    }
+    files.push_back(obj);
     break;
+  }
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
       files.push_back(make<StubFile>(mbref));
@@ -331,9 +374,7 @@ static std::optional<std::string> findFromSearchPaths(StringRef path) {
 // search paths.
 static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
-    // Currently we don't enable dynamic linking at all unless -shared or -pie
-    // are used, so don't even look for .so files in that case..
-    if (ctx.isPic && !config->isStatic)
+    if (!config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
     if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
@@ -392,6 +433,33 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   }
   if (files.empty() && errorCount() == 0)
     error("no input files");
+}
+
+static StringRef getAliasSpelling(opt::Arg *arg) {
+  if (const opt::Arg *alias = arg->getAlias())
+    return alias->getSpelling();
+  return arg->getSpelling();
+}
+
+static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
+                                                        unsigned id) {
+  auto *arg = args.getLastArg(id);
+  if (!arg)
+    return {"", ""};
+
+  StringRef s = arg->getValue();
+  std::pair<StringRef, StringRef> ret = s.split(';');
+  if (ret.second.empty())
+    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
+  return ret;
+}
+
+// Parse options of the form "old;new[;extra]".
+static std::tuple<StringRef, StringRef, StringRef>
+getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(args, id);
+  auto [newDir, extraDir] = second.split(';');
+  return {oldDir, newDir, extraDir};
 }
 
 static StringRef getEntry(opt::InputArgList &args) {
@@ -459,6 +527,10 @@ getBuildId(opt::InputArgList &args) {
 
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
+  config->allowMultipleDefinition =
+      hasZOption(args, "muldefs") ||
+      args.hasFlag(OPT_allow_multiple_definition,
+                   OPT_no_allow_multiple_definition, false);
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->checkFeatures =
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
@@ -471,6 +543,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
   config->growableTable = args.hasArg(OPT_growable_table);
+  config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   if (args.hasArg(OPT_import_memory_with_name)) {
     config->memoryImport =
@@ -506,6 +579,7 @@ static void readConfigs(opt::InputArgList &args) {
   else
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 1);
@@ -524,6 +598,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->saveTemps = args.hasArg(OPT_save_temps);
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->shared = args.hasArg(OPT_shared);
+  config->shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   config->stripAll = args.hasArg(OPT_strip_all);
   config->stripDebug = args.hasArg(OPT_strip_debug);
   config->stackFirst = args.hasArg(OPT_stack_first);
@@ -532,6 +607,31 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOEmitIndexFiles = args.hasArg(OPT_thinlto_emit_index_files) ||
+                                  args.hasArg(OPT_thinlto_index_only) ||
+                                  args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
+  config->thinLTOObjectSuffixReplace =
+      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
+  std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
+           config->thinLTOPrefixReplaceNativeObject) =
+      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
+  if (config->thinLTOEmitIndexFiles && !config->thinLTOIndexOnly) {
+    if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
+      error("--thinlto-object-suffix-replace is not supported with "
+            "--thinlto-emit-index-files");
+    else if (args.hasArg(OPT_thinlto_prefix_replace_eq))
+      error("--thinlto-prefix-replace is not supported with "
+            "--thinlto-emit-index-files");
+  }
+  if (!config->thinLTOPrefixReplaceNativeObject.empty() &&
+      config->thinLTOIndexOnlyArg.empty()) {
+    error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
+          "--thinlto-index-only=");
+  }
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   errorHandler().verbose = args.hasArg(OPT_verbose);
@@ -542,8 +642,18 @@ static void readConfigs(opt::InputArgList &args) {
   config->initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
+  config->noGrowableMemory = args.hasArg(OPT_no_growable_memory);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
+
+  // -Bdynamic by default if -pie or -shared is specified.
+  if (config->pie || config->shared)
+    config->isStatic = false;
+
+  if (config->maxMemory != 0 && config->noGrowableMemory) {
+    // Erroring out here is simpler than defining precedence rules.
+    error("--max-memory is incompatible with --no-growable-memory");
+  }
 
   // Default value of exportDynamic depends on `-shared`
   config->exportDynamic =
@@ -666,7 +776,7 @@ static void checkOptions(opt::InputArgList &args) {
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
 
-  if (config->outputFile.empty())
+  if (config->outputFile.empty() && !config->thinLTOIndexOnly)
     error("no output file specified");
 
   if (config->importTable && config->exportTable)
@@ -854,13 +964,6 @@ static void createSyntheticSymbols() {
     WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
-    if (is64) {
-      WasmSym::tableBase32 =
-          createUndefinedGlobal("__table_base32", &globalTypeI32);
-      WasmSym::tableBase32->markLive();
-    } else {
-      WasmSym::tableBase32 = nullptr;
-    }
   } else {
     // For non-PIC code
     WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
@@ -876,17 +979,6 @@ static void createSyntheticSymbols() {
         make<SyntheticFunction>(
             is64 ? i64ArgSignature : i32ArgSignature,
             "__wasm_init_tls"));
-  }
-
-  if (ctx.isPic ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-    // For PIC code, or when dynamically importing addresses, we create
-    // synthetic functions that apply relocations.  These get called from
-    // __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_data_relocs",
-        WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
   }
 }
 
@@ -907,9 +999,6 @@ static void createOptionalSymbols() {
     WasmSym::heapEnd = symtab->addOptionalDataSymbol("__heap_end");
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
-    if (config->is64.value_or(false))
-      WasmSym::definedTableBase32 =
-          symtab->addOptionalDataSymbol("__table_base32");
   }
 
   // For non-shared memory programs we still need to define __tls_base since we
@@ -940,11 +1029,63 @@ static void processStubLibrariesPreLTO() {
           auto* needed = symtab->find(dep);
           if (needed ) {
             needed->isUsedInRegularObj = true;
+            // Like with handleLibcall we have to extract any LTO archive
+            // members that might need to be exported due to stub library
+            // symbols being referenced.  Without this the LTO object could be
+            // extracted during processStubLibraries, which is too late since
+            // LTO has already being performed at that point.
+            if (needed->isLazy() && isa<BitcodeFile>(needed->getFile())) {
+              if (!config->whyExtract.empty())
+                ctx.whyExtractRecords.emplace_back(toString(stub_file),
+                                                   needed->getFile(), *needed);
+              cast<LazySymbol>(needed)->extract();
+            }
           }
         }
       }
     }
   }
+}
+
+static bool addStubSymbolDeps(const StubFile *stub_file, Symbol *sym,
+                              ArrayRef<StringRef> deps) {
+  // The first stub library to define a given symbol sets this and
+  // definitions in later stub libraries are ignored.
+  if (sym->forceImport)
+    return false; // Already handled
+  sym->forceImport = true;
+  if (sym->traced)
+    message(toString(stub_file) + ": importing " + sym->getName());
+  else
+    LLVM_DEBUG(llvm::dbgs() << toString(stub_file) << ": importing "
+                            << sym->getName() << "\n");
+  bool depsAdded = false;
+  for (const auto dep : deps) {
+    auto *needed = symtab->find(dep);
+    if (!needed) {
+      error(toString(stub_file) + ": undefined symbol: " + dep +
+            ". Required by " + toString(*sym));
+    } else if (needed->isUndefined()) {
+      error(toString(stub_file) + ": undefined symbol: " + toString(*needed) +
+            ". Required by " + toString(*sym));
+    } else {
+      if (needed->traced)
+        message(toString(stub_file) + ": exported " + toString(*needed) +
+                " due to import of " + sym->getName());
+      else
+        LLVM_DEBUG(llvm::dbgs()
+                   << "force export: " << toString(*needed) << "\n");
+      needed->forceExport = true;
+      if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
+        depsAdded = true;
+        lazy->extract();
+        if (!config->whyExtract.empty())
+          ctx.whyExtractRecords.emplace_back(toString(stub_file),
+                                             sym->getFile(), *sym);
+      }
+    }
+  }
+  return depsAdded;
 }
 
 static void processStubLibraries() {
@@ -955,49 +1096,28 @@ static void processStubLibraries() {
     for (auto &stub_file : ctx.stubFiles) {
       LLVM_DEBUG(llvm::dbgs()
                  << "processing stub file: " << stub_file->getName() << "\n");
+
+      // First look for any imported symbols that directly match
+      // the names of the stub imports
       for (auto [name, deps]: stub_file->symbolDependencies) {
         auto* sym = symtab->find(name);
-        if (!sym || !sym->isUndefined()) {
+        if (sym && sym->isUndefined()) {
+          depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
+        } else {
           if (sym && sym->traced)
             message(toString(stub_file) + ": stub symbol not needed: " + name);
           else
-            LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: `" << name << "`\n");
-          continue;
+            LLVM_DEBUG(llvm::dbgs()
+                       << "stub symbol not needed: `" << name << "`\n");
         }
-        // The first stub library to define a given symbol sets this and
-        // definitions in later stub libraries are ignored.
-        if (sym->forceImport)
-          continue;  // Already handled
-        sym->forceImport = true;
-        if (sym->traced)
-          message(toString(stub_file) + ": importing " + name);
-        else
-          LLVM_DEBUG(llvm::dbgs()
-                     << toString(stub_file) << ": importing " << name << "\n");
-        for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
-          if (!needed) {
-            error(toString(stub_file) + ": undefined symbol: " + dep +
-                  ". Required by " + toString(*sym));
-          } else if (needed->isUndefined()) {
-            error(toString(stub_file) +
-                  ": undefined symbol: " + toString(*needed) +
-                  ". Required by " + toString(*sym));
-          } else {
-            if (needed->traced)
-              message(toString(stub_file) + ": exported " + toString(*needed) +
-                      " due to import of " + name);
-            else
-              LLVM_DEBUG(llvm::dbgs()
-                         << "force export: " << toString(*needed) << "\n");
-            needed->forceExport = true;
-            if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
-              depsAdded = true;
-              lazy->extract();
-              if (!config->whyExtract.empty())
-                ctx.whyExtractRecords.emplace_back(stub_file->getName(),
-                                                   sym->getFile(), *sym);
-            }
+      }
+
+      // Secondly looks for any symbols with an `importName` that matches
+      for (Symbol *sym : symtab->symbols()) {
+        if (sym->isUndefined() && sym->importName.has_value()) {
+          auto it = stub_file->symbolDependencies.find(sym->importName.value());
+          if (it != stub_file->symbolDependencies.end()) {
+            depsAdded |= addStubSymbolDeps(stub_file, sym, it->second);
           }
         }
       }
@@ -1133,7 +1253,7 @@ static void splitSections() {
 
 static bool isKnownZFlag(StringRef s) {
   // For now, we only support a very limited set of -z flags
-  return s.starts_with("stack-size=");
+  return s.starts_with("stack-size=") || s.starts_with("muldefs");
 }
 
 // Report a warning for an unknown -z option.
@@ -1143,29 +1263,30 @@ static void checkZOptions(opt::InputArgList &args) {
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
+LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
   // Interpret these flags early because error()/warn() depend on them.
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
-  errorHandler().fatalWarnings =
+  auto &errHandler = errorHandler();
+  errHandler.errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errHandler.fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   checkZOptions(args);
 
   // Handle --help
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(lld::outs(),
+    parser.printHelp(errHandler.outs(),
                      (std::string(argsArr[0]) + " [options] file...").c_str(),
                      "LLVM Linker", false);
     return;
   }
 
-  // Handle --version
-  if (args.hasArg(OPT_version) || args.hasArg(OPT_v)) {
-    lld::outs() << getLLDVersion() << "\n";
-    return;
-  }
+  // Handle -v or -version.
+  if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
+    errHandler.outs() << getLLDVersion() << "\n";
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {
@@ -1191,6 +1312,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   readConfigs(args);
   setConfigs();
 
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (args.hasArg(OPT_v) && !args.hasArg(OPT_INPUT))
+    return;
+  if (args.hasArg(OPT_version))
+    return;
+
   createFiles(args);
   if (errorCount())
     return;
@@ -1205,10 +1333,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Fail early if the output file or map file is not writable. If a user has a
   // long link, e.g. due to a large LTO link, they do not wish to run it and
   // find that it failed because there was a mistake in their command-line.
-  if (auto e = tryCreateFile(config->outputFile))
-    error("cannot open output file " + config->outputFile + ": " + e.message());
-  if (auto e = tryCreateFile(config->mapFile))
-    error("cannot open map file " + config->mapFile + ": " + e.message());
+  if (auto e = tryCreateFile(ctx.arg.outputFile))
+    error("cannot open output file " + ctx.arg.outputFile + ": " + e.message());
+  if (auto e = tryCreateFile(ctx.arg.mapFile))
+    error("cannot open map file " + ctx.arg.mapFile + ": " + e.message());
   if (errorCount())
     return;
 
@@ -1217,11 +1345,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     symtab->trace(arg->getValue());
 
   for (auto *arg : args.filtered(OPT_export_if_defined))
-    config->exportedSymbols.insert(arg->getValue());
+    ctx.arg.exportedSymbols.insert(arg->getValue());
 
   for (auto *arg : args.filtered(OPT_export)) {
-    config->exportedSymbols.insert(arg->getValue());
-    config->requiredExports.push_back(arg->getValue());
+    ctx.arg.exportedSymbols.insert(arg->getValue());
+    ctx.arg.requiredExports.push_back(arg->getValue());
   }
 
   createSyntheticSymbols();
@@ -1239,17 +1367,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle the `--export <sym>` options
   // This works like --undefined but also exports the symbol if its found
-  for (auto &iter : config->exportedSymbols)
+  for (auto &iter : ctx.arg.exportedSymbols)
     handleUndefined(iter.first(), "--export");
 
   Symbol *entrySym = nullptr;
-  if (!config->relocatable && !config->entry.empty()) {
-    entrySym = handleUndefined(config->entry, "--entry");
+  if (!ctx.arg.relocatable && !ctx.arg.entry.empty()) {
+    entrySym = handleUndefined(ctx.arg.entry, "--entry");
     if (entrySym && entrySym->isDefined())
       entrySym->forceExport = true;
     else
       error("entry symbol not defined (pass --no-entry to suppress): " +
-            config->entry);
+            ctx.arg.entry);
   }
 
   // If the user code defines a `__wasm_call_dtors` function, remember it so
@@ -1257,10 +1385,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // `__wasm_call_ctors` which we synthesize, `__wasm_call_dtors` is defined
   // by libc/etc., because destructors are registered dynamically with
   // `__cxa_atexit` and friends.
-  if (!config->relocatable && !config->shared &&
+  if (!ctx.arg.relocatable && !ctx.arg.shared &&
       !WasmSym::callCtors->isUsedInRegularObj &&
-      WasmSym::callCtors->getName() != config->entry &&
-      !config->exportedSymbols.count(WasmSym::callCtors->getName())) {
+      WasmSym::callCtors->getName() != ctx.arg.entry &&
+      !ctx.arg.exportedSymbols.count(WasmSym::callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
@@ -1291,9 +1419,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // We only need to add libcall symbols to the link before LTO if the symbol's
   // definition is in bitcode. Any other required libcall symbols will be added
   // to the link after LTO when we add the LTO object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
   if (errorCount())
     return;
 
@@ -1315,6 +1445,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   writeWhyExtract();
 
+  // Bail out if normal linked output is skipped due to LTO.
+  if (ctx.arg.thinLTOIndexOnly)
+    return;
+
   createOptionalSymbols();
 
   // Resolve any variant symbols that were created due to signature
@@ -1327,13 +1461,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!wrapped.empty())
     wrapSymbols(wrapped);
 
-  for (auto &iter : config->exportedSymbols) {
+  for (auto &iter : ctx.arg.exportedSymbols) {
     Symbol *sym = symtab->find(iter.first());
     if (sym && sym->isDefined())
       sym->forceExport = true;
   }
 
-  if (!config->relocatable && !ctx.isPic) {
+  if (!ctx.arg.relocatable && !ctx.isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();

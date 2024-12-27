@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -122,7 +123,7 @@ void TestMakeIsolatedFromAbovePass::runOnOperation() {
   if (simple) {
     RewritePatternSet patterns(context);
     patterns.insert<SimpleMakeIsolatedFromAbove>(context);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(funcOp, std::move(patterns)))) {
       return signalPassFailure();
     }
     return;
@@ -131,7 +132,7 @@ void TestMakeIsolatedFromAbovePass::runOnOperation() {
   if (cloneOpsWithNoOperands) {
     RewritePatternSet patterns(context);
     patterns.insert<MakeIsolatedFromAboveAndCloneOpsWithNoOperands>(context);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(funcOp, std::move(patterns)))) {
       return signalPassFailure();
     }
     return;
@@ -140,7 +141,7 @@ void TestMakeIsolatedFromAbovePass::runOnOperation() {
   if (cloneOpsWithOperands) {
     RewritePatternSet patterns(context);
     patterns.insert<MakeIsolatedFromAboveAndCloneOpsWithOperands>(context);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(funcOp, std::move(patterns)))) {
       return signalPassFailure();
     }
     return;

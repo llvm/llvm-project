@@ -24,6 +24,7 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
+  Breakpoint.cpp
   BreakpointBase.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
@@ -36,6 +37,8 @@ add_lldb_tool(lldb-dap
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   DAP.cpp
+  Watchpoint.cpp
+  InstructionBreakpoint.cpp
 
   LINK_LIBS
     liblldb

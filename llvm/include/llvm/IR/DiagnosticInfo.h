@@ -58,13 +58,17 @@ enum DiagnosticSeverity : char {
 /// Defines the different supported kind of a diagnostic.
 /// This enum should be extended with a new ID for each added concrete subclass.
 enum DiagnosticKind {
+  DK_Generic,
+  DK_GenericWithLoc,
   DK_InlineAsm,
+  DK_RegAllocFailure,
   DK_ResourceLimit,
   DK_StackSize,
   DK_Linker,
   DK_Lowering,
   DK_DebugMetadataVersion,
   DK_DebugMetadataInvalid,
+  DK_Instrumentation,
   DK_ISelFallback,
   DK_SampleProfile,
   DK_OptimizationRemark,
@@ -133,6 +137,33 @@ public:
 
 using DiagnosticHandlerFunction = std::function<void(const DiagnosticInfo &)>;
 
+class DiagnosticInfoGeneric : public DiagnosticInfo {
+  const Twine &MsgStr;
+  const Instruction *Inst = nullptr;
+
+public:
+  /// \p MsgStr is the message to be reported to the frontend.
+  /// This class does not copy \p MsgStr, therefore the reference must be valid
+  /// for the whole life time of the Diagnostic.
+  DiagnosticInfoGeneric(const Twine &MsgStr,
+                        DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Generic, Severity), MsgStr(MsgStr) {}
+
+  DiagnosticInfoGeneric(const Instruction *I, const Twine &ErrMsg,
+                        DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Generic, Severity), MsgStr(ErrMsg), Inst(I) {}
+
+  const Twine &getMsgStr() const { return MsgStr; }
+  const Instruction *getInstruction() const { return Inst; }
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_Generic;
+  }
+};
+
 /// Diagnostic information for inline asm reporting.
 /// This is basically a message and an optional location.
 class DiagnosticInfoInlineAsm : public DiagnosticInfo {
@@ -145,21 +176,12 @@ private:
   const Instruction *Instr = nullptr;
 
 public:
-  /// \p MsgStr is the message to be reported to the frontend.
-  /// This class does not copy \p MsgStr, therefore the reference must be valid
-  /// for the whole life time of the Diagnostic.
-  DiagnosticInfoInlineAsm(const Twine &MsgStr,
-                          DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_InlineAsm, Severity), MsgStr(MsgStr) {}
-
   /// \p LocCookie if non-zero gives the line number for this report.
   /// \p MsgStr gives the message.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
   DiagnosticInfoInlineAsm(uint64_t LocCookie, const Twine &MsgStr,
-                          DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(LocCookie),
-        MsgStr(MsgStr) {}
+                          DiagnosticSeverity Severity = DS_Error);
 
   /// \p Instr gives the original instruction that triggered the diagnostic.
   /// \p MsgStr gives the message.
@@ -351,6 +373,57 @@ private:
 
   /// Debug location where this diagnostic is triggered.
   DiagnosticLocation Loc;
+};
+
+class DiagnosticInfoGenericWithLoc : public DiagnosticInfoWithLocationBase {
+private:
+  /// Message to be reported.
+  const Twine &MsgStr;
+
+public:
+  /// \p MsgStr is the message to be reported to the frontend.
+  /// This class does not copy \p MsgStr, therefore the reference must be valid
+  /// for the whole life time of the Diagnostic.
+  DiagnosticInfoGenericWithLoc(const Twine &MsgStr, const Function &Fn,
+                               const DiagnosticLocation &Loc,
+                               DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfoWithLocationBase(DK_GenericWithLoc, Severity, Fn, Loc),
+        MsgStr(MsgStr) {}
+
+  const Twine &getMsgStr() const { return MsgStr; }
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_GenericWithLoc;
+  }
+};
+
+class DiagnosticInfoRegAllocFailure : public DiagnosticInfoWithLocationBase {
+private:
+  /// Message to be reported.
+  const Twine &MsgStr;
+
+public:
+  /// \p MsgStr is the message to be reported to the frontend.
+  /// This class does not copy \p MsgStr, therefore the reference must be valid
+  /// for the whole life time of the Diagnostic.
+  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+                                const DiagnosticLocation &DL,
+                                DiagnosticSeverity Severity = DS_Error);
+
+  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+                                DiagnosticSeverity Severity = DS_Error);
+
+  const Twine &getMsgStr() const { return MsgStr; }
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_RegAllocFailure;
+  }
 };
 
 /// Diagnostic information for stack size etc. reporting.
@@ -950,6 +1023,22 @@ public:
   }
 };
 
+/// Diagnostic information for IR instrumentation reporting.
+class DiagnosticInfoInstrumentation : public DiagnosticInfo {
+  const Twine &Msg;
+
+public:
+  DiagnosticInfoInstrumentation(const Twine &DiagMsg,
+                                DiagnosticSeverity Severity = DS_Warning)
+      : DiagnosticInfo(DK_Instrumentation, Severity), Msg(DiagMsg) {}
+
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_Instrumentation;
+  }
+};
+
 /// Diagnostic information for ISel fallback path.
 class DiagnosticInfoISelFallback : public DiagnosticInfo {
   /// The function that is concerned by this diagnostic.
@@ -1076,11 +1165,11 @@ class DiagnosticInfoSrcMgr : public DiagnosticInfo {
 
   // For inlineasm !srcloc translation.
   bool InlineAsmDiag;
-  unsigned LocCookie;
+  uint64_t LocCookie;
 
 public:
   DiagnosticInfoSrcMgr(const SMDiagnostic &Diagnostic, StringRef ModName,
-                       bool InlineAsmDiag = true, unsigned LocCookie = 0)
+                       bool InlineAsmDiag = true, uint64_t LocCookie = 0)
       : DiagnosticInfo(DK_SrcMgr, getDiagnosticSeverity(Diagnostic.getKind())),
         Diagnostic(Diagnostic), ModName(ModName), InlineAsmDiag(InlineAsmDiag),
         LocCookie(LocCookie) {}
@@ -1088,7 +1177,7 @@ public:
   StringRef getModuleName() const { return ModName; }
   bool isInlineAsmDiag() const { return InlineAsmDiag; }
   const SMDiagnostic &getSMDiag() const { return Diagnostic; }
-  unsigned getLocCookie() const { return LocCookie; }
+  uint64_t getLocCookie() const { return LocCookie; }
   void print(DiagnosticPrinter &DP) const override;
 
   static bool classof(const DiagnosticInfo *DI) {
@@ -1101,16 +1190,16 @@ void diagnoseDontCall(const CallInst &CI);
 class DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;
   StringRef Note;
-  unsigned LocCookie;
+  uint64_t LocCookie;
 
 public:
   DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
-                         DiagnosticSeverity DS, unsigned LocCookie)
+                         DiagnosticSeverity DS, uint64_t LocCookie)
       : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
         LocCookie(LocCookie) {}
   StringRef getFunctionName() const { return CalleeName; }
   StringRef getNote() const { return Note; }
-  unsigned getLocCookie() const { return LocCookie; }
+  uint64_t getLocCookie() const { return LocCookie; }
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;

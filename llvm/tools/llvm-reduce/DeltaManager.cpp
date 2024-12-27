@@ -20,7 +20,8 @@
 #include "deltas/ReduceAttributes.h"
 #include "deltas/ReduceBasicBlocks.h"
 #include "deltas/ReduceDIMetadata.h"
-#include "deltas/ReduceDPValues.h"
+#include "deltas/ReduceDbgRecords.h"
+#include "deltas/ReduceDistinctMetadata.h"
 #include "deltas/ReduceFunctionBodies.h"
 #include "deltas/ReduceFunctions.h"
 #include "deltas/ReduceGlobalObjects.h"
@@ -92,7 +93,8 @@ static cl::list<std::string>
     DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
     DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
     DELTA_PASS("di-metadata", reduceDIMetadataDeltaPass)                       \
-    DELTA_PASS("dpvalues", reduceDPValuesDeltaPass)                            \
+    DELTA_PASS("dbg-records", reduceDbgRecordDeltaPass)                        \
+    DELTA_PASS("distinct-metadata", reduceDistinctMetadataDeltaPass)           \
     DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
     DELTA_PASS("named-metadata", reduceNamedMetadataDeltaPass)                 \
     DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \
@@ -112,7 +114,7 @@ static cl::list<std::string>
     DELTA_PASS("atomic-ordering", reduceAtomicOrderingDeltaPass)               \
     DELTA_PASS("syncscopes", reduceAtomicSyncScopesDeltaPass)                  \
     DELTA_PASS("instruction-flags", reduceInstructionFlagsDeltaPass)           \
-} while (false)
+  } while (false)
 
 #define DELTA_PASSES_MIR                                                       \
   do {                                                                         \

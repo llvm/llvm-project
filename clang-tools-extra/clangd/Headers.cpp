@@ -41,7 +41,8 @@ public:
                           OptionalFileEntryRef File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const clang::Module * /*Imported*/,
+                          const clang::Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
     auto MainFID = SM.getMainFileID();
     // If an include is part of the preamble patch, translate #line directives.
@@ -74,8 +75,8 @@ public:
               IDs.push_back(HID);
           }
       }
-      Out->MainFileIncludesBySpelling.try_emplace(Inc.Written)
-          .first->second.push_back(Out->MainFileIncludes.size() - 1);
+      Out->MainFileIncludesBySpelling[Inc.Written].push_back(
+          Out->MainFileIncludes.size() - 1);
     }
 
     // Record include graph (not just for main-file includes)

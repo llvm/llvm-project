@@ -91,14 +91,14 @@ func.func @alloca_non_integer_alignment() {
 // -----
 
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 
@@ -160,6 +160,13 @@ func.func @load_unsupported_type(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i33' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i33
+}
+
+// -----
+
 func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
   // expected-error@below {{expected alignment for atomic access}}
   %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
@@ -195,6 +202,13 @@ func.func @store_unsupported_type(%val : i1, %ptr : !llvm.ptr) {
 
 // -----
 
+func.func @store_unsupported_type(%val : i48, %ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i48' for atomic access}}
+  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i48, !llvm.ptr
+}
+
+// -----
+
 func.func @store_unaligned_atomic(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected alignment for atomic access}}
   llvm.store %val, %ptr atomic monotonic : f32, !llvm.ptr
@@ -204,7 +218,7 @@ func.func @store_unaligned_atomic(%val : f32, %ptr : !llvm.ptr) {
 
 func.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
-  "llvm.call"() : () -> ()
+  "llvm.call"() {op_bundle_sizes = array<i32>} : () -> ()
   llvm.return
 }
 
@@ -272,7 +286,7 @@ func.func @call_non_llvm() {
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
-  "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
+  "llvm.call"(%arg0) {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (tensor<*xi32>) -> ()
   llvm.return
 }
 
@@ -353,7 +367,7 @@ func.func @constant_wrong_type_string() {
 // -----
 
 llvm.func @array_attribute_one_element() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  // expected-error @+1 {{expected array attribute of size 2}}
   %0 = llvm.mlir.constant([1.0 : f64]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -361,7 +375,7 @@ llvm.func @array_attribute_one_element() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements of the same type}}
+  // expected-error @+1 {{struct element at index 1 is of wrong type}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -369,7 +383,7 @@ llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  // expected-error @+1 {{expected array attribute}}
   %0 = llvm.mlir.constant(1.0 : f64) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -377,7 +391,7 @@ llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_one_element() -> !llvm.struct<(f64)> {
-  // expected-error @+1 {{expected struct type with two elements of the same type, the type of a complex constant}}
+  // expected-error @+1 {{expected array attribute of size 1}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f64]) : !llvm.struct<(f64)>
   llvm.return %0 : !llvm.struct<(f64)>
 }
@@ -385,7 +399,7 @@ llvm.func @struct_one_element() -> !llvm.struct<(f64)> {
 // -----
 
 llvm.func @struct_two_different_elements() -> !llvm.struct<(f64, f32)> {
-  // expected-error @+1 {{expected struct type with two elements of the same type, the type of a complex constant}}
+  // expected-error @+1 {{struct element at index 1 is of wrong type}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f64]) : !llvm.struct<(f64, f32)>
   llvm.return %0 : !llvm.struct<(f64, f32)>
 }
@@ -396,6 +410,22 @@ llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !
   // expected-error @+1 {{expected struct element types to be floating point type or integer type}}
   %0 = llvm.mlir.constant([dense<[1.0, 1.0]> : tensor<2xf64>, dense<[1.0, 1.0]> : tensor<2xf64>]) : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
   llvm.return %0 : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
+}
+
+// -----
+
+llvm.func @const_wrong_number_of_elements() -> vector<5xf64> {
+  // expected-error @+1{{type and attribute have a different number of elements: 5 vs. 2}}
+  %0 = llvm.mlir.constant(dense<[1.0, 1.0]> : tensor<2xf64>) : vector<5xf64>
+  llvm.return %0 : vector<5xf64>
+}
+
+// -----
+
+llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
+  // expected-error @+1{{scalable vector type requires a splat attribute}}
+  %0 = llvm.mlir.constant(dense<[1.0, 1.0, 2.0, 2.0]> : tensor<4xf64>) : vector<[4]xf64>
+  llvm.return %0 : vector<[4]xf64>
 }
 
 // -----
@@ -608,6 +638,21 @@ func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
 func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{expected LLVM IR floating point type}}
   %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.ptr, i32
+  llvm.return
+}
+
+// -----
+
+func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32>) {
+  // expected-error@+1 {{'val' must be floating point LLVM type or LLVM pointer type or signless integer or LLVM dialect-compatible fixed-length vector type}}
+  %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
+  llvm.return
+}
+// -----
+
+func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
+  // expected-error@+1 {{expected LLVM IR floating point type for vector element}}
+  %0 = llvm.atomicrmw fadd %ptr, %i32_vec unordered : !llvm.ptr, vector<3xi32>
   llvm.return
 }
 
@@ -1218,6 +1263,44 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
   %0 = llvm.intr.vector.extract %arg0[0] : vector<[8]xf32> from vector<16xf32>
 }
 
+
+// -----
+
+func.func @vector_interleave2_bad_type0(%vec1: vector<[2]xf16>, %vec2 : vector<[4]xf16>) {
+  // expected-error@+1 {{op failed to verify that all of {vec1, vec2} have same type}}
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+  return
+}
+
+// -----
+
+func.func @vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[8]xf16>
+  return
+}
+
+// -----
+
+/// result vector type is not scalable.
+
+func.func @vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
+  return
+}
+
+// -----
+
+
+/// element type doesn't match.
+
+func.func @vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
+  return
+}
+
 // -----
 
 func.func @invalid_bitcast_ptr_to_i64(%arg : !llvm.ptr) {
@@ -1363,11 +1446,154 @@ func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
 
 // -----
 
-llvm.func @variadic(...)
+llvm.func @non_variadic(%arg: i32)
 
-llvm.func @invalid_variadic_call(%arg: i32)  {
-  // expected-error@+1 {{missing callee type attribute for vararg call}}
-  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+llvm.func @invalid_var_callee_type(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to be a variadic function type}}
+  llvm.call @non_variadic(%arg) vararg(!llvm.func<void (i32)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.call @variadic(%arg) vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.call %callee(%arg) vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.call @variadic(%arg) vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.call %callee(%arg) vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to return void}}
+  llvm.call @variadic(%arg) vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...) -> i32
+
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
+  %0 = llvm.call @variadic(%arg) vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.func @non_variadic(%arg: i32)
+
+llvm.func @invalid_var_callee_type(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to be a variadic function type}}
+  llvm.invoke @non_variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
+  llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+  // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
+  llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...)
+
+llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+  // expected-error@below {{expected var_callee_type to return void}}
+  llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(%arg: i32, ...) -> i32
+
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+  // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
+  %0 = llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
+^bb1:
+  llvm.return
+^bb2:
   llvm.return
 }
 
@@ -1376,8 +1602,18 @@ llvm.func @invalid_variadic_call(%arg: i32)  {
 llvm.func @variadic(...)
 
 llvm.func @invalid_variadic_call(%arg: i32)  {
-  // expected-error@+1 {{missing callee type attribute for vararg call}}
-  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  // expected-error@+1 {{missing var_callee_type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing var_callee_type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (i32) -> ()
   llvm.return
 }
 
@@ -1393,14 +1629,14 @@ llvm.func @foo(%arg: !llvm.ptr) {
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
   return
 }
 // -----
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
   return
 }
 
@@ -1408,7 +1644,7 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr
   return
 }
 
@@ -1417,6 +1653,45 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
 
 func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr  
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr
   return
+}
+
+// -----
+
+// expected-error @below {{no_inline and always_inline attributes are incompatible}}
+llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'llvm.func' op with optimize_none must also be no_inline}}
+llvm.func @optnone_requires_noinline() attributes { optimize_none } {
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+llvm.func @wrong_number_of_bundle_types() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
+  llvm.call @foo() ["tag"(%0 : i32, i32)] : () -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+llvm.func @wrong_number_of_bundle_tags() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // expected-error@+1 {{expected 2 operand bundle tags, but actually got 1}}
+  "llvm.call"(%0, %1) <{ op_bundle_tags = ["tag"] }> {
+    callee = @foo,
+    operandSegmentSizes = array<i32: 0, 2>,
+    op_bundle_sizes = array<i32: 1, 1>
+  } : (i32, i32) -> ()
+  llvm.return
 }

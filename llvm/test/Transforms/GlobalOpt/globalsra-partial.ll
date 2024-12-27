@@ -8,7 +8,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 ; CHECK: @G = internal unnamed_addr global { i32, [4 x float] }
 ; CHECK: 12345
 define void @onlystore() {
-        store i32 12345, ptr getelementptr ({ i32, [4 x float] }, ptr @G, i32 0, i32 0)
+        store i32 12345, ptr @G
         ret void
 }
 

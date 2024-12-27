@@ -11,6 +11,7 @@
 #define _LIBCPP___CHARCONV_TO_CHARS_BASE_10_H
 
 #include <__algorithm/copy_n.h>
+#include <__assert>
 #include <__charconv/tables.h>
 #include <__config>
 #include <cstdint>
@@ -123,7 +124,7 @@ __base_10_u64(char* __buffer, uint64_t __value) noexcept {
   return __itoa::__append10(__buffer, __value);
 }
 
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
 /// \returns 10^\a exp
 ///
 /// \pre \a exp [19, 39]

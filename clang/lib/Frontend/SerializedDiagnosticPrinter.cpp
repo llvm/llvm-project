@@ -574,7 +574,7 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     SmallString<256> diagnostic;
     Info.FormatDiagnostic(diagnostic);
     getMetaDiags()->Report(
-        diag::warn_fe_serialized_diag_failure_during_finalisation)
+        diag::warn_fe_serialized_diag_failure_during_finalization)
         << diagnostic;
     return;
   }

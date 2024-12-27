@@ -164,20 +164,20 @@ rarely have to include this file directly).
   efficient to use the ``InstVisitor`` class to dispatch over the instruction
   type directly.
 
-``isa_and_nonnull<>``:
-  The ``isa_and_nonnull<>`` operator works just like the ``isa<>`` operator,
+``isa_and_present<>``:
+  The ``isa_and_present<>`` operator works just like the ``isa<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   returns false).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``cast_or_null<>``:
-  The ``cast_or_null<>`` operator works just like the ``cast<>`` operator,
+``cast_if_present<>``:
+  The ``cast_if_present<>`` operator works just like the ``cast<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   propagates).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``dyn_cast_or_null<>``:
-  The ``dyn_cast_or_null<>`` operator works just like the ``dyn_cast<>``
+``dyn_cast_if_present<>``:
+  The ``dyn_cast_if_present<>`` operator works just like the ``dyn_cast<>``
   operator, except that it allows for a null pointer as an argument (which it
   then propagates).  This can sometimes be useful, allowing you to combine
   several null checks into one.
@@ -1362,16 +1362,14 @@ Whatever code you want that control, use ``DebugCounter::shouldExecute`` to cont
   if (DebugCounter::shouldExecute(DeleteAnInstruction))
     I->eraseFromParent();
 
-That's all you have to do.  Now, using opt, you can control when this code triggers using
-the '``--debug-counter``' option.  There are two counters provided, ``skip`` and ``count``.
-``skip`` is the number of times to skip execution of the codepath.  ``count`` is the number
-of times, once we are done skipping, to execute the codepath.
+That's all you have to do. Now, using opt, you can control when this code triggers using
+the '``--debug-counter``' Options. To specify when to execute the codepath.
 
 .. code-block:: none
 
-  $ opt --debug-counter=passname-delete-instruction-skip=1,passname-delete-instruction-count=2 -passname
+  $ opt --debug-counter=passname-delete-instruction=2-3 -passname
 
-This will skip the above code the first time we hit it, then execute it twice, then skip the rest of the executions.
+This will skip the above code the first two times we hit it, then execute it 2 times, then skip the rest of the executions.
 
 So if executed on the following code:
 
@@ -1385,8 +1383,34 @@ So if executed on the following code:
 It would delete number ``%2`` and ``%3``.
 
 A utility is provided in `utils/bisect-skip-count` to binary search
-skip and count arguments. It can be used to automatically minimize the
-skip and count for a debug-counter variable.
+the begin and end of the range argument. It can be used to automatically minimize the
+range for a debug-counter variable.
+
+A more general utility is provided in `llvm/tools/reduce-chunk-list/reduce-chunk-list.cpp` to minimize debug counter chunks lists.
+
+How to use reduce-chunk-list:
+First, Figure out the number of calls to the debug counter you want to minimize.
+To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
+Than find the line with the counter of interest. it should look like:
+
+.. code-block:: none
+
+  my-counter               : {5678,empty}
+
+The number of calls to `my-counter` is 5678
+
+Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
+Build a reproducer script like:
+
+.. code-block:: bash
+
+  #! /bin/bash
+  opt -debug-counter=my-counter=$1
+  # ... Test result of the command. Failure of the script is considered interesting
+
+Than run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
+This command may take some time.
+but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-12:33-34`
 
 .. _ViewGraph:
 
@@ -2044,8 +2068,10 @@ insertion/deleting/queries with low constant factors) and is very stingy with
 malloc traffic.
 
 Note that, unlike :ref:`std::set <dss_set>`, the iterators of ``SmallPtrSet``
-are invalidated whenever an insertion occurs.  Also, the values visited by the
-iterators are not visited in sorted order.
+are invalidated whenever an insertion or erasure occurs. The ``remove_if``
+method can be used to remove elements while iterating over the set.
+
+Also, the values visited by the iterators are not visited in sorted order.
 
 .. _dss_stringset:
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_ABIINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_ABIINFO_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 #include "llvm/IR/CallingConv.h"
@@ -33,6 +34,8 @@ class CGCXXABI;
 class CGFunctionInfo;
 class CodeGenFunction;
 class CodeGenTypes;
+class RValue;
+class AggValueSlot;
 
 // FIXME: All of this stuff should be part of the target interface
 // somehow. It is currently here because it is not clear how to factor
@@ -74,18 +77,18 @@ public:
   // the ABI information any lower than CodeGen. Of course, for
   // VAArg handling it has to be at this level; there is no way to
   // abstract this out.
-  virtual CodeGen::Address EmitVAArg(CodeGen::CodeGenFunction &CGF,
-                                     CodeGen::Address VAListAddr,
-                                     QualType Ty) const = 0;
+  virtual RValue EmitVAArg(CodeGen::CodeGenFunction &CGF,
+                           CodeGen::Address VAListAddr, QualType Ty,
+                           AggValueSlot Slot) const = 0;
 
   bool isAndroid() const;
   bool isOHOSFamily() const;
 
   /// Emit the target dependent code to load a value of
   /// \arg Ty from the \c __builtin_ms_va_list pointed to by \arg VAListAddr.
-  virtual CodeGen::Address EmitMSVAArg(CodeGen::CodeGenFunction &CGF,
-                                       CodeGen::Address VAListAddr,
-                                       QualType Ty) const;
+  virtual RValue EmitMSVAArg(CodeGen::CodeGenFunction &CGF,
+                             CodeGen::Address VAListAddr, QualType Ty,
+                             AggValueSlot Slot) const;
 
   virtual bool isHomogeneousAggregateBaseType(QualType Ty) const;
 
@@ -111,6 +114,15 @@ public:
 
   CodeGen::ABIArgInfo getNaturalAlignIndirectInReg(QualType Ty,
                                                    bool Realign = false) const;
+
+  virtual void appendAttributeMangling(TargetAttr *Attr,
+                                       raw_ostream &Out) const;
+  virtual void appendAttributeMangling(TargetVersionAttr *Attr,
+                                       raw_ostream &Out) const;
+  virtual void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                       raw_ostream &Out) const;
+  virtual void appendAttributeMangling(StringRef AttrStr,
+                                       raw_ostream &Out) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

@@ -88,20 +88,13 @@ define i8 @test4(i8 %x) nounwind readnone {
 ;
 ; NO-POPCOUNT-LABEL: test4:
 ; NO-POPCOUNT:       # %bb.0:
-; NO-POPCOUNT-NEXT:    movl %edi, %ecx
-; NO-POPCOUNT-NEXT:    andb $127, %cl
-; NO-POPCOUNT-NEXT:    shrb %dil
-; NO-POPCOUNT-NEXT:    andb $21, %dil
-; NO-POPCOUNT-NEXT:    subb %dil, %cl
-; NO-POPCOUNT-NEXT:    movl %ecx, %eax
-; NO-POPCOUNT-NEXT:    andb $51, %al
-; NO-POPCOUNT-NEXT:    shrb $2, %cl
-; NO-POPCOUNT-NEXT:    andb $51, %cl
-; NO-POPCOUNT-NEXT:    addb %al, %cl
-; NO-POPCOUNT-NEXT:    movl %ecx, %eax
-; NO-POPCOUNT-NEXT:    shrb $4, %al
-; NO-POPCOUNT-NEXT:    addb %cl, %al
-; NO-POPCOUNT-NEXT:    andb $15, %al
+; NO-POPCOUNT-NEXT:    andl $127, %edi
+; NO-POPCOUNT-NEXT:    imull $134480385, %edi, %eax # imm = 0x8040201
+; NO-POPCOUNT-NEXT:    shrl $3, %eax
+; NO-POPCOUNT-NEXT:    andl $286331153, %eax # imm = 0x11111111
+; NO-POPCOUNT-NEXT:    imull $286331153, %eax, %eax # imm = 0x11111111
+; NO-POPCOUNT-NEXT:    shrl $28, %eax
+; NO-POPCOUNT-NEXT:    # kill: def $al killed $al killed $eax
 ; NO-POPCOUNT-NEXT:    retq
   %x2 = and i8 %x, 127
   %count = tail call i8 @llvm.ctpop.i8(i8 %x2)

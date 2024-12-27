@@ -79,6 +79,10 @@ def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
     HelpText<"Save intermediate LTO compilation results">;
+def lldsavetemps_colon : Joined<["/", "-", "/?", "-?"], "lldsavetemps:">,
+    HelpText<"Save select intermediate LTO compilation results">,
+    Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
+def lto_sample_profile: P<"lto-sample-profile", "Sample profile file path">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
@@ -294,6 +298,8 @@ def wrap : P_priv<"wrap">;
 
 def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
 
+def show_timing : F<"time">,
+    HelpText<"Print the time spent in each phase of linking">;
 def time_trace_eq: Joined<["--"], "time-trace=">, MetaVarName<"<file>">,
   HelpText<"Record time trace to <file>">;
 def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
@@ -307,6 +313,9 @@ defm build_id: B<
      "Generate build ID (always on when generating PDB)",
      "Do not Generate build ID">;
 
+def incl_glob : Joined<["/", "-", "/?", "-?"], "includeglob:">,
+    HelpText<"Force symbol to be added to symbol table as undefined one using a glob pattern">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;
@@ -314,7 +323,6 @@ def map : F<"map">;
 def map_file : P_priv<"map">;
 def map_info : P<"mapinfo", "Include the specified information in a map file">;
 def print_search_paths : F<"print-search-paths">;
-def show_timing : F<"time">;
 def summary : F<"summary">;
 
 //==============================================================================

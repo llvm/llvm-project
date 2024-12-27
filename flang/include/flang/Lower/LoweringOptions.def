@@ -24,9 +24,6 @@ LOWERINGOPT(Name, Bits, Default)
 /// If true, lower transpose without a runtime call.
 ENUM_LOWERINGOPT(OptimizeTranspose, unsigned, 1, 1)
 
-/// If true, enable polymorphic type lowering feature. Off by default.
-ENUM_LOWERINGOPT(PolymorphicTypeImpl, unsigned, 1, 0)
-
 /// If true, lower to High level FIR before lowering to FIR. On by default.
 ENUM_LOWERINGOPT(LowerToHighLevelFIR, unsigned, 1, 1)
 
@@ -36,6 +33,16 @@ ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
 /// If true, assume external names will be suffixed with an underscore.
 /// On by default.
 ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
+
+/// If true, assume the behavior of integer overflow is defined
+/// (i.e. wraps around as two's complement). Off by default.
+ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 0)
+
+/// If true (default), follow Fortran 2003 rules for (re)allocating
+/// the allocatable on the left side of the intrinsic assignment,
+/// if LHS and RHS have mismatching shapes/types.
+/// If false, assume that the shapes/types/allocation-status match.
+ENUM_LOWERINGOPT(ReallocateLHS, unsigned, 1, 1)
 
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

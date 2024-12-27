@@ -1,6 +1,12 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Exercise CUDA data attribute checks
 module m
+  type :: t1
+    integer :: i
+  end type
+  type :: t2
+    real, unified :: r(10) ! ok
+  end type
   real, constant :: mc ! ok
   real, constant :: mci = 1. ! ok
   !ERROR: Object 'mcl' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target
@@ -26,14 +32,11 @@ module m
   real, shared, target :: mst
   !ERROR: Object 'msa' with ATTRIBUTES(SHARED) must be declared in a device subprogram
   real, shared :: msa(*)
-  !ERROR: Object 'mm' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
-  real, managed :: mm
-  !ERROR: Object 'mmi' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
-  real, managed :: mmi = 1.
+  real, managed :: mm ! ok
+  real, managed :: mmi = 1. ! ok
   real, managed, allocatable :: mml ! ok
-  !ERROR: Object 'mmp' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
-  real, managed, pointer :: mmp ! ok
-  !ERROR: Object 'mmt' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument
+  !ERROR: Object 'mmp' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument
+  real, managed, pointer :: mmp(:)
   real, managed, target :: mmt
   !WARNING: Object 'mp' with ATTRIBUTES(PINNED) should also be allocatable
   real, pinned :: mp
@@ -48,12 +51,46 @@ module m
   real, texture, pointer :: mt
   !ERROR: 'bigint' has intrinsic type 'INTEGER(16)' that is not available on the device
   integer(16), device :: bigint
+  !ERROR: Object 'um' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram
+  real, unified :: um
+
  contains
-  attributes(device) subroutine devsubr(n,da)
+  attributes(device) subroutine devsubr(n,da,rs)
     integer, intent(in) :: n
     real, device :: da(*) ! ok
     real, managed :: ma(n) ! ok
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
+    real, constant :: rc ! ok
+    real, shared :: rs ! ok
+    !ERROR: Object 'u' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram
+    real, unified :: u
   end subroutine
+
+  subroutine host()
+    !ERROR: Object 'rc' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram
+    real, constant :: rc
+  end subroutine
+
+  attributes(global) subroutine devsubr2()
+    real, shared :: rs
+
+    rs = 1 ! ok
+  end subroutine
+
+  subroutine host2()
+    real, unified :: ru ! ok
+    type(t1), unified :: tu ! ok
+    type(t2) :: t ! ok
+
+    block
+      real, device :: a(100) ! ok
+    end block
+  end subroutine
+
+
 end module
+
+program p
+  real, unified :: um ! ok
+end program

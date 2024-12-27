@@ -164,7 +164,7 @@ for.end:
 ;      for (int j = 0; j < M; ++j)
 ;        f(&A[i*M+j]);
 ;
-define void @d3_2(i32* %A, i32 %N, i32 %M) {
+define void @d3_2(ptr %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: define void @d3_2(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:

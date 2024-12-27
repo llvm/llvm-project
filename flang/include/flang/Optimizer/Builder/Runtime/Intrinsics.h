@@ -20,6 +20,7 @@
 
 namespace mlir {
 class Location;
+class Type;
 class Value;
 } // namespace mlir
 
@@ -43,12 +44,26 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
+void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
+              mlir::Value values, mlir::Value time);
+
+void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
+
+mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
+mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
+
+mlir::Value genMalloc(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value size);
 
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);
 void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
 void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
                    mlir::Value put, mlir::Value get);
+
+/// generate rename runtime call
+void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value path1, mlir::Value path2, mlir::Value status);
 
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -64,6 +79,17 @@ void genTransferSize(fir::FirOpBuilder &builder, mlir::Location loc,
 /// all intrinsic arguments are optional and may appear here as mlir::Value{}
 void genSystemClock(fir::FirOpBuilder &, mlir::Location, mlir::Value count,
                     mlir::Value rate, mlir::Value max);
+
+// generate signal runtime call
+// CALL SIGNAL(NUMBER, HANDLER [, STATUS])
+// status can be {} or a value. It may also be dynamically absent
+void genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value number, mlir::Value handler, mlir::Value status);
+
+/// generate sleep runtime call
+void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
+              mlir::Value seconds);
+
 } // namespace runtime
 } // namespace fir
 

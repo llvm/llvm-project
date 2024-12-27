@@ -51,7 +51,6 @@ class OpAsmPrinter;
 class OperandRange;
 class OperandRangeRange;
 class OpFoldResult;
-class ParseResult;
 class Pattern;
 class Region;
 class ResultRange;
@@ -250,12 +249,10 @@ public:
   ///  1. They can leave the operation alone and without changing the IR, and
   ///     return failure.
   ///  2. They can mutate the operation in place, without changing anything
-  ///  else
-  ///     in the IR.  In this case, return success.
+  ///     else in the IR. In this case, return success.
   ///  3. They can return a list of existing values that can be used instead
-  ///  of
-  ///     the operation.  In this case, fill in the results list and return
-  ///     success.  The caller will remove the operation and use those results
+  ///     of the operation. In this case, fill in the results list and return
+  ///     success. The caller will remove the operation and use those results
   ///     instead.
   ///
   /// This allows expression of some simple in-place canonicalizations (e.g.
@@ -676,6 +673,11 @@ public:
   static std::optional<RegisteredOperationName> lookup(StringRef name,
                                                        MLIRContext *ctx);
 
+  /// Lookup the registered operation information for the given operation.
+  /// Returns std::nullopt if the operation isn't registered.
+  static std::optional<RegisteredOperationName> lookup(TypeID typeID,
+                                                       MLIRContext *ctx);
+
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list
   /// of operations they contain.
@@ -955,9 +957,12 @@ struct OperationState {
   /// Regions that the op will hold.
   SmallVector<std::unique_ptr<Region>, 1> regions;
 
-  // If we're creating an unregistered operation, this Attribute is used to
-  // build the properties. Otherwise it is ignored. For registered operations
-  // see the `getOrAddProperties` method.
+  /// This Attribute is used to opaquely construct the properties of the
+  /// operation. If we're creating an unregistered operation, the Attribute is
+  /// used as-is as the Properties storage of the operation. Otherwise, the
+  /// operation properties are constructed opaquely using its
+  /// `setPropertiesFromAttr` hook. Note that `getOrAddProperties` is the
+  /// preferred method to construct properties from C++.
   Attribute propertiesAttr;
 
 private:
@@ -1029,8 +1034,11 @@ public:
     addAttribute(StringAttr::get(getContext(), name), attr);
   }
 
-  /// Add an attribute with the specified name.
+  /// Add an attribute with the specified name. `name` and `attr` must not be
+  /// null.
   void addAttribute(StringAttr name, Attribute attr) {
+    assert(name && "attribute name cannot be null");
+    assert(attr && "attribute cannot be null");
     attributes.append(name, attr);
   }
 
@@ -1039,7 +1047,11 @@ public:
     attributes.append(newAttributes);
   }
 
-  void addSuccessors(Block *successor) { successors.push_back(successor); }
+  /// Adds a successor to the operation sate. `successor` must not be null.
+  void addSuccessors(Block *successor) {
+    assert(successor && "successor cannot be null");
+    successors.push_back(successor);
+  }
   void addSuccessors(BlockRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
@@ -1131,6 +1143,13 @@ public:
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
 
+  /// Enables the printing of large element attributes with a hex string. The
+  /// `largeElementLimit` is used to configure what is considered to be a
+  /// "large" ElementsAttr by providing an upper limit to the number of
+  /// elements. Use -1 to disable the hex printing.
+  OpPrintingFlags &
+  printLargeElementsAttrWithHex(int64_t largeElementLimit = 100);
+
   /// Enables the elision of large resources strings by omitting them from the
   /// `dialect_resources` section. The `largeResourceLimit` is used to configure
   /// what is considered to be a "large" resource by providing an upper limit to
@@ -1164,8 +1183,14 @@ public:
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
+  /// Return if the given ElementsAttr should be printed as hex string.
+  bool shouldPrintElementsAttrWithHex(ElementsAttr attr) const;
+
   /// Return the size limit for printing large ElementsAttr.
   std::optional<int64_t> getLargeElementsAttrLimit() const;
+
+  /// Return the size limit for printing large ElementsAttr as hex string.
+  int64_t getLargeElementsAttrHexLimit() const;
 
   /// Return the size limit in chars for printing large resources.
   std::optional<uint64_t> getLargeResourceStringLimit() const;
@@ -1191,6 +1216,13 @@ public:
   /// Return if the printer should print users of values.
   bool shouldPrintValueUsers() const;
 
+  /// Return if printer should use unique SSA IDs.
+  bool shouldPrintUniqueSSAIDs() const;
+
+  /// Return if the printer should use NameLocs as prefixes when printing SSA
+  /// IDs
+  bool shouldUseNameLocAsPrefix() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1198,6 +1230,10 @@ private:
 
   /// Elide printing large resources based on size of string.
   std::optional<uint64_t> resourceStringCharLimit;
+
+  /// Print large element attributes with hex strings if the number of elements
+  /// is larger than the upper limit.
+  int64_t elementsAttrHexElementLimit = 100;
 
   /// Print debug information.
   bool printDebugInfoFlag : 1;
@@ -1217,6 +1253,12 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
+
+  /// Print unique SSA IDs for values, block arguments and naming conflicts
+  bool printUniqueSSAIDsFlag : 1;
+
+  /// Print SSA IDs using NameLocs as prefixes
+  bool useNameLocAsPrefix : 1;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1316,10 +1358,10 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 //===----------------------------------------------------------------------===//
 
 /// A unique fingerprint for a specific operation, and all of it's internal
-/// operations.
+/// operations (if `includeNested` is set).
 class OperationFingerPrint {
 public:
-  OperationFingerPrint(Operation *topOp);
+  OperationFingerPrint(Operation *topOp, bool includeNested = true);
   OperationFingerPrint(const OperationFingerPrint &) = default;
   OperationFingerPrint &operator=(const OperationFingerPrint &) = default;
 

@@ -31,6 +31,36 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///
   Pointer64 = Edge::FirstRelocation,
 
+  /// An arm64e authenticated pointer relocation. The addend contains a 64-bit
+  /// struct containing the authentication parameters:
+  ///
+  ///   Addend encoding:
+  ///     int32_t  addend;
+  ///     uint16_t diversityData;
+  ///     uint16_t hasAddressDiversity : 1;
+  ///     uint16_t key : 2;
+  ///     uint16_t zeroes : 12;
+  ///     uint16_t authenticated : 1;
+  ///
+  /// Note: This means that the addend cannot be interpreted as a plain offset
+  ///       prior to lowering.
+  ///
+  /// Authenticated pointer edges cannot be fixed up directly by JITLink as the
+  /// signing keys are held in the executing process. They can be removed from
+  /// the graph by a combination of the createEmptyPointerSigningFunction pass
+  /// (post-prune) and the lowerPointer64AuthEdgesToSigningFunction pass
+  /// (pre-fixup). Together these passes construct a signing function that will
+  /// be run in the executing process to write the signed pointers to the fixup
+  /// locations.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - Failure to handle edges of this kind prior to the fixup phase will
+  ///     result in an unsupported error during the fixup phase.
+  Pointer64Authenticated,
+
   /// A plain 32-bit pointer value relocation.
   ///
   /// Fixup expression:
@@ -171,7 +201,14 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///
   /// Fixup expression:
   ///
-  ///   Fixup <- (Target - Fixup) >> 2 : int19
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int19
+  ///
+  /// Notes:
+  ///   The '19' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocation.
+  /// Since the low two bits must be zero (because of the 32-bit alignment of
+  /// the target) the operand is effectively a signed 21-bit number.
+  ///
   ///
   /// Errors:
   ///   - The result of the unshifted part of the fixup expression must be
@@ -226,6 +263,21 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///     out-of-range error will be returned.
   PageOffset12,
 
+  /// The 15-bit offset of the GOT entry from the GOT table.
+  ///
+  /// Used for load/store instructions addressing a GOT entry.
+  ///
+  /// Fixup expression:
+  ///
+  ///   Fixup <- ((Target + Addend - Page(GOT))) & 0x7fff) >> 3 : uint12
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into a uint12 otherwise an
+  ///     out-of-range error will be returned.
+  GotPageOffset15,
+
   /// A GOT entry getter/constructor, transformed to Page21 pointing at the GOT
   /// entry for the original target.
   ///
@@ -265,6 +317,23 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///     phase will result in an assert/unreachable during the fixup phase.
   ///
   RequestGOTAndTransformToPageOffset12,
+
+  /// A GOT entry getter/constructor, transformed to Pageoffset15 pointing at
+  /// the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a GotPageOffset15
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does not
+  /// already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToPageOffset15,
 
   /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
   /// entry for the original target.
@@ -377,6 +446,11 @@ inline bool isADR(uint32_t Instr) {
   return (Instr & ADRMask) == 0x10000000;
 }
 
+inline bool isLDRLiteral(uint32_t Instr) {
+  constexpr uint32_t LDRLitMask = 0x3b000000;
+  return (Instr & LDRLitMask) == 0x18000000;
+}
+
 // Returns the amount the address operand of LD/ST (imm12)
 // should be shifted right by.
 //
@@ -418,7 +492,8 @@ inline unsigned getMoveWide16Shift(uint32_t Instr) {
 }
 
 /// Apply fixup expression for edge to block content.
-inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
+inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
+                        const Symbol *GOTSymbol) {
   using namespace support;
 
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();
@@ -494,16 +569,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   }
   case LDRLiteral19: {
     assert((FixupAddress.getValue() & 0x3) == 0 && "LDR is not 32-bit aligned");
-    assert(E.getAddend() == 0 && "LDRLiteral19 with non-zero addend");
     uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
-    assert(RawInstr == 0x58000010 && "RawInstr isn't a 64-bit LDR literal");
-    int64_t Delta = E.getTarget().getAddress() - FixupAddress;
+    assert(isLDRLiteral(RawInstr) && "RawInstr is not an LDR Literal");
+    int64_t Delta = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
     if (Delta & 0x3)
       return make_error<JITLinkError>("LDR literal target is not 32-bit "
                                       "aligned");
-    if (Delta < -(1 << 20) || Delta > ((1 << 20) - 1))
+    if (!isInt<21>(Delta))
       return makeTargetOutOfRangeError(G, B, E);
-
     uint32_t EncodedImm = ((static_cast<uint32_t>(Delta) >> 2) & 0x7ffff) << 5;
     uint32_t FixedInstr = RawInstr | EncodedImm;
     *(ulittle32_t *)FixupPtr = FixedInstr;
@@ -593,6 +666,24 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
+  case GotPageOffset15: {
+    assert(GOTSymbol && "No GOT section symbol");
+    uint64_t TargetOffset =
+        (E.getTarget().getAddress() + E.getAddend()).getValue() -
+        (GOTSymbol->getAddress().getValue() & ~static_cast<uint64_t>(4096 - 1));
+    if (TargetOffset > 0x7fff)
+      return make_error<JITLinkError>("PAGEOFF15 target is out of range");
+
+    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+    const unsigned ImmShift = 3;
+    if (TargetOffset & ((1 << ImmShift) - 1))
+      return make_error<JITLinkError>("PAGEOFF15 target is not aligned");
+
+    uint32_t EncodedImm = (TargetOffset >> ImmShift) << 10;
+    uint32_t FixedInstr = RawInstr | EncodedImm;
+    *(ulittle32_t *)FixupPtr = FixedInstr;
+    break;
+  }
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -664,6 +755,32 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
       sizeof(PointerJumpStubContent), true, false);
 }
 
+/// AArch64 reentry trampoline.
+///
+/// Contains the instruction sequence for a trampoline that stores its return
+/// address (and stack pointer) on the stack and calls the given reentry symbol:
+///   STP  x29, x30, [sp, #-16]!
+///   BL   <reentry-symbol>
+extern const char ReentryTrampolineContent[8];
+
+/// Create a block of N reentry trampolines.
+inline Block &createReentryTrampolineBlock(LinkGraph &G,
+                                           Section &TrampolineSection,
+                                           Symbol &ReentrySymbol) {
+  auto &B = G.createContentBlock(TrampolineSection, ReentryTrampolineContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 4, 0);
+  B.addEdge(Branch26PCRel, 4, ReentrySymbol, 0);
+  return B;
+}
+
+inline Symbol &createAnonymousReentryTrampoline(LinkGraph &G,
+                                                Section &TrampolineSection,
+                                                Symbol &ReentrySymbol) {
+  return G.addAnonymousSymbol(
+      createReentryTrampolineBlock(G, TrampolineSection, ReentrySymbol), 0,
+      sizeof(ReentryTrampolineContent), true, false);
+}
+
 /// Global Offset Table Builder.
 class GOTTableManager : public TableManager<GOTTableManager> {
 public:
@@ -687,6 +804,15 @@ public:
       (void)RawInstr;
       assert(E.getAddend() == 0 &&
              "GOTPageOffset12/TLVPageOffset12 with non-zero addend");
+      assert((RawInstr & 0xfffffc00) == 0xf9400000 &&
+             "RawInstr isn't a 64-bit LDR immediate");
+      break;
+    }
+    case aarch64::RequestGOTAndTransformToPageOffset15: {
+      KindToSet = aarch64::GotPageOffset15;
+      uint32_t RawInstr = *(const support::ulittle32_t *)FixupPtr;
+      (void)RawInstr;
+      assert(E.getAddend() == 0 && "GOTPageOffset15 with non-zero addend");
       assert((RawInstr & 0xfffffc00) == 0xf9400000 &&
              "RawInstr isn't a 64-bit LDR immediate");
       break;
@@ -761,6 +887,29 @@ public:
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
 };
+
+/// Returns the name of the pointer signing function section.
+const char *getPointerSigningFunctionSectionName();
+
+/// Creates a pointer signing function section, block, and symbol to reserve
+/// space for a signing function for this LinkGraph. Clients should insert this
+/// pass in the post-prune phase, and add the paired
+/// lowerPointer64AuthEdgesToSigningFunction pass to the pre-fixup phase.
+///
+/// No new Pointer64Auth edges can be inserted into the graph between when this
+/// pass is run and when the pass below runs (since there will not be sufficient
+/// space reserved in the signing function to write the signing code for them).
+Error createEmptyPointerSigningFunction(LinkGraph &G);
+
+/// Given a LinkGraph containing Pointer64Authenticated edges, transform those
+/// edges to Pointer64 and add signing code to the pointer signing function
+/// (which must already have been created by the
+/// createEmptyPointerSigningFunction pass above).
+///
+/// This function will add a $__ptrauth_sign section with finalization-lifetime
+/// containing an anonymous function that will sign all pointers in the graph.
+/// An allocation action will be added to run this function during finalization.
+Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G);
 
 } // namespace aarch64
 } // namespace jitlink

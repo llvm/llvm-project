@@ -51,6 +51,7 @@ public:
   bool MCNoTypeCheck : 1;
   bool MCSaveTempLabels : 1;
   bool MCIncrementalLinkerCompatible : 1;
+  bool FDPIC : 1;
   bool ShowMCEncoding : 1;
   bool ShowMCInst : 1;
   bool AsmVerbose : 1;
@@ -59,6 +60,19 @@ public:
   bool PreserveAsmComments : 1;
 
   bool Dwarf64 : 1;
+
+  // Use CREL relocation format for ELF.
+  bool Crel = false;
+
+  bool ImplicitMapSyms = false;
+
+  // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
+  // ELF.
+  bool X86RelaxRelocations = true;
+
+  bool X86Sse2Avx = false;
+
+  std::optional<unsigned> OutputAsmVariant;
 
   EmitDwarfUnwindType EmitDwarfUnwind;
 
@@ -75,13 +89,17 @@ public:
   };
   DwarfDirectory MCUseDwarfDirectory;
 
+  // Whether to compress DWARF debug sections.
+  DebugCompressionType CompressDebugSections = DebugCompressionType::None;
+
   std::string ABIName;
   std::string AssemblyLanguage;
   std::string SplitDwarfFile;
   std::string AsSecureLogFile;
 
-  const char *Argv0 = nullptr;
-  ArrayRef<std::string> CommandLineArgs;
+  // Used for codeview debug info. These will be set as compiler path and commandline arguments in LF_BUILDINFO
+  std::string Argv0;
+  std::string CommandlineArgs;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.

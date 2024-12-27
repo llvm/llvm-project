@@ -232,9 +232,7 @@ createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
-  // TODO: This only works for targets implementing LLVMTargetMachine.
-  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP->getMMI());
   // Saving reserved registers for client.
@@ -242,7 +240,7 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
 }
 
 Error assembleToStream(const ExegesisTarget &ET,
-                       std::unique_ptr<LLVMTargetMachine> TM,
+                       std::unique_ptr<TargetMachine> TM,
                        ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
@@ -274,6 +272,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   std::vector<unsigned> RegistersSetUp;
+  RegistersSetUp.reserve(Key.RegisterInitialValues.size());
   for (const auto &InitValue : Key.RegisterInitialValues) {
     RegistersSetUp.push_back(InitValue.Register);
   }
@@ -305,7 +304,7 @@ Error assembleToStream(const ExegesisTarget &ET,
 
   // prologue/epilogue pass needs the reserved registers to be frozen, this
   // is usually done by the SelectionDAGISel pass.
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 
   // We create the pass manager, run the passes to populate AsmBuffer.
   MCContext &MCContext = MMIWP->getMMI().getContext();
@@ -358,18 +357,27 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename) {
 }
 
 Expected<ExecutableFunction> ExecutableFunction::create(
-    std::unique_ptr<LLVMTargetMachine> TM,
+    std::unique_ptr<TargetMachine> TM,
     object::OwningBinary<object::ObjectFile> &&ObjectFileHolder) {
   assert(ObjectFileHolder.getBinary() && "cannot create object file");
   std::unique_ptr<LLVMContext> Ctx = std::make_unique<LLVMContext>();
 
   auto SymbolSizes = object::computeSymbolSizes(*ObjectFileHolder.getBinary());
   // Get the size of the function that we want to call into (with the name of
-  // FunctionID). This should always be the third symbol returned by
-  // calculateSymbolSizes.
-  assert(SymbolSizes.size() == 3);
-  assert(cantFail(std::get<0>(SymbolSizes[2]).getName()) == FunctionID);
-  uintptr_t CodeSize = std::get<1>(SymbolSizes[2]);
+  // FunctionID).
+  auto SymbolIt = find_if(SymbolSizes, [&](const auto &Pair) {
+    auto SymbolName = Pair.first.getName();
+    if (SymbolName)
+      return *SymbolName == FunctionID;
+    // We should always succeed in finding the FunctionID, hence we suppress
+    // the error here and assert later on the search result, rather than
+    // propagating the Expected<> error back to the caller.
+    consumeError(SymbolName.takeError());
+    return false;
+  });
+  assert(SymbolIt != SymbolSizes.end() &&
+         "Cannot find the symbol for FunctionID");
+  uintptr_t CodeSize = SymbolIt->second;
 
   auto EJITOrErr = orc::LLJITBuilder().create();
   if (!EJITOrErr)

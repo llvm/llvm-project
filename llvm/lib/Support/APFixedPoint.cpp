@@ -29,6 +29,16 @@ void FixedPointSemantics::print(llvm::raw_ostream &OS) const {
   OS << "IsSaturated=" << IsSaturated;
 }
 
+uint32_t FixedPointSemantics::toOpaqueInt() const {
+  return llvm::bit_cast<uint32_t>(*this);
+}
+
+FixedPointSemantics FixedPointSemantics::getFromOpaqueInt(uint32_t I) {
+  FixedPointSemantics F(0, 0, false, false, false);
+  std::memcpy(&F, &I, sizeof(F));
+  return F;
+}
+
 APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
                                    bool *Overflow) const {
   APSInt NewVal = Val;
@@ -126,6 +136,12 @@ APFixedPoint APFixedPoint::getMax(const FixedPointSemantics &Sema) {
 
 APFixedPoint APFixedPoint::getMin(const FixedPointSemantics &Sema) {
   auto Val = APSInt::getMinValue(Sema.getWidth(), !Sema.isSigned());
+  return APFixedPoint(Val, Sema);
+}
+
+APFixedPoint APFixedPoint::getEpsilon(const FixedPointSemantics &Sema) {
+  APSInt Val(Sema.getWidth(), !Sema.isSigned());
+  Val.setBit(/*BitPosition=*/0);
   return APFixedPoint(Val, Sema);
 }
 

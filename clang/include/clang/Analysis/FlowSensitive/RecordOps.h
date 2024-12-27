@@ -31,7 +31,11 @@ namespace dataflow {
 ///
 /// Requirements:
 ///
-///  `Src` and `Dst` must have the same canonical unqualified type.
+///  Either:
+///    - `Src` and `Dest` must have the same canonical unqualified type, or
+///    - The type of `Src` must be derived from `Dest`, or
+///    - The type of `Dest` must be derived from `Src` (in this case, any fields
+///      that are only present in `Dest` are not overwritten).
 void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
                 Environment &Env);
 

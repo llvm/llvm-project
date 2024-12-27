@@ -8,7 +8,6 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -19,20 +18,15 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
-#include "ModuleDependencyCollector.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Progress.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
@@ -40,10 +34,8 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 #include <memory>
-#include <mutex>
 
 using namespace lldb_private;
 
@@ -75,12 +67,11 @@ private:
   std::vector<IDAndDiagnostic> m_diagnostics;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
-  std::shared_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
+  std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
   /// Output stream of m_diag_printer.
-  std::shared_ptr<llvm::raw_string_ostream> m_os;
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os. Will be reused for different diagnostics.
   std::string m_output;
-  Log *m_log;
   /// A Progress with explicitly managed lifetime.
   std::unique_ptr<Progress> m_current_progress_up;
   std::vector<std::string> m_module_build_stack;
@@ -142,12 +133,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_log = GetLog(LLDBLog::Expressions);
-
-  clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
-  m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+  auto *options = new clang::DiagnosticOptions();
+  m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
@@ -158,7 +147,6 @@ void StoringDiagnosticConsumer::HandleDiagnostic(
   // Print the diagnostic to m_output.
   m_output.clear();
   m_diag_printer->HandleDiagnostic(DiagLevel, info);
-  m_os->flush();
 
   // Store the diagnostic for later.
   m_diagnostics.push_back(IDAndDiagnostic(DiagLevel, m_output));
@@ -191,7 +179,7 @@ void StoringDiagnosticConsumer::EndSourceFile() {
 
 bool StoringDiagnosticConsumer::HandleModuleRemark(
     const clang::Diagnostic &info) {
-  Log *log = GetLog(LLDBLog::Expressions);
+  Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
   switch (info.getID()) {
   case clang::diag::remark_module_build: {
     const auto &module_name = info.getArgStdStr(0);
@@ -718,8 +706,9 @@ ClangModulesDeclVendor::Create(Target &target) {
   auto diag_options_up =
       clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
-      clang::CompilerInstance::createDiagnostics(diag_options_up.release(),
-                                                 new StoringDiagnosticConsumer);
+      clang::CompilerInstance::createDiagnostics(
+          *FileSystem::Instance().GetVirtualFileSystem(),
+          diag_options_up.release(), new StoringDiagnosticConsumer);
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",

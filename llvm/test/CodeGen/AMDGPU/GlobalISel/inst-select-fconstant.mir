@@ -87,13 +87,13 @@ tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_s_s64
-    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4607182418800017408
-    ; GCN-NEXT: [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4620693217682128896
-    ; GCN-NEXT: [[S_MOV_B2:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -4611686018427387904
-    ; GCN-NEXT: [[S_MOV_B3:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -4601552919265804288
-    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_MOV_B]]
-    ; GCN-NEXT: $sgpr2_sgpr3 = COPY [[S_MOV_B1]]
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B]], implicit [[S_MOV_B1]], implicit [[S_MOV_B2]], implicit [[S_MOV_B3]]
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4607182418800017408
+    ; GCN-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4620693217682128896
+    ; GCN-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -4611686018427387904
+    ; GCN-NEXT: [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -4601552919265804288
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: $sgpr2_sgpr3 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B1]]
     %0:sgpr(s64) = G_FCONSTANT double 1.0
     %1:sgpr(s64) = G_FCONSTANT double 8.0
     %2:sgpr(s64) = G_FCONSTANT double -2.0

@@ -1385,6 +1385,16 @@ define i32 @test_intrinsic_lrint(float %a) {
   ret i32 %res
 }
 
+declare i32 @llvm.llrint.i32.f32(float)
+define i32 @test_intrinsic_llrint(float %a) {
+; CHECK-LABEL: name: test_intrinsic_llrint
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_LLRINT [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.llrint.i32.f32(float %a)
+  ret i32 %res
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 ; CHECK-LABEL: name: test_ctlz_intrinsic_zero_not_undef
@@ -1467,6 +1477,20 @@ define void @test_lifetime_intrin() {
   ret void
 }
 
+define void @test_lifetime_intrin_optnone() optnone noinline {
+; CHECK-LABEL: name: test_lifetime_intrin_optnone
+; CHECK: RET_ReallyLR
+; O3-LABEL: name: test_lifetime_intrin_optnone
+; O3: {{%[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.0.slot
+; O3-NEXT: G_STORE
+; O3-NEXT: RET_ReallyLR
+  %slot = alloca i8, i32 4
+  call void @llvm.lifetime.start.p0(i64 0, ptr %slot)
+  store volatile i8 10, ptr %slot
+  call void @llvm.lifetime.end.p0(i64 0, ptr %slot)
+  ret void
+}
+
 define void @test_load_store_atomics(ptr %addr) {
 ; CHECK-LABEL: name: test_load_store_atomics
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
@@ -1538,7 +1562,8 @@ define <2 x i32> @test_insertelement(<2 x i32> %vec, i32 %elt, i32 %idx){
 ; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK: [[ELT:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[IDX:%[0-9]+]]:_(s32) = COPY $w1
-; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX]](s32)
+; CHECK: [[IDX2:%[0-9]+]]:_(s64) = G_ZEXT [[IDX]]
+; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX2]](s64)
 ; CHECK: $d0 = COPY [[RES]](<2 x s32>)
   %res = insertelement <2 x i32> %vec, i32 %elt, i32 %idx
   ret <2 x i32> %res
@@ -2299,6 +2324,70 @@ define float @test_sin_f32(float %x) {
   ; CHECK-LABEL: name:            test_sin_f32
   ; CHECK: %{{[0-9]+}}:_(s32) = G_FSIN %{{[0-9]+}}
   %y = call float @llvm.sin.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.tan.f32(float)
+define float @test_tan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTAN %{{[0-9]+}}
+  %y = call float @llvm.tan.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.acos.f32(float)
+define float @test_acos_f32(float %x) {
+  ; CHECK-LABEL: name:            test_acos_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FACOS %{{[0-9]+}}
+  %y = call float @llvm.acos.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.asin.f32(float)
+define float @test_asin_f32(float %x) {
+  ; CHECK-LABEL: name:            test_asin_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FASIN %{{[0-9]+}}
+  %y = call float @llvm.asin.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.atan.f32(float)
+define float @test_atan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_atan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN %{{[0-9]+}}
+  %y = call float @llvm.atan.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.atan2.f32(float, float)
+define float @test_atan2_f32(float %x, float %y) {
+  ; CHECK-LABEL: name:            test_atan2_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN2 %{{[0-9]+}}
+  %z = call float @llvm.atan2.f32(float %x, float %y)
+  ret float %z
+}
+
+declare float @llvm.cosh.f32(float)
+define float @test_cosh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_cosh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FCOSH %{{[0-9]+}}
+  %y = call float @llvm.cosh.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.sinh.f32(float)
+define float @test_sinh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_sinh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FSINH %{{[0-9]+}}
+  %y = call float @llvm.sinh.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.tanh.f32(float)
+define float @test_tanh_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tanh_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTANH %{{[0-9]+}}
+  %y = call float @llvm.tanh.f32(float %x)
   ret float %y
 }
 

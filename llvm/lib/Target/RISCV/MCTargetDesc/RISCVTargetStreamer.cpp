@@ -14,11 +14,19 @@
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
+
+// This option controls wether or not we emit ELF attributes for ABI features,
+// like RISC-V atomics or X3 usage.
+static cl::opt<bool> RiscvAbiAttr(
+    "riscv-abi-attributes",
+    cl::desc("Enable emitting RISC-V ELF attributes for ABI features"),
+    cl::Hidden);
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
@@ -48,15 +56,23 @@ void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
   TargetABI = ABI;
 }
 
+void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
+  HasRVC = STI.hasFeature(RISCV::FeatureStdExtC) ||
+           STI.hasFeature(RISCV::FeatureStdExtZca);
+  HasTSO = STI.hasFeature(RISCV::FeatureStdExtZtso);
+}
+
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
   if (EmitStackAlign) {
+    unsigned StackAlign;
     if (TargetABI == RISCVABI::ABI_ILP32E)
-      emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_4);
+      StackAlign = 4;
     else if (TargetABI == RISCVABI::ABI_LP64E)
-      emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_8);
+      StackAlign = 8;
     else
-      emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_16);
+      StackAlign = 16;
+    emitAttribute(RISCVAttrs::STACK_ALIGN, StackAlign);
   }
 
   auto ParseResult = RISCVFeatures::parseFeatureBits(
@@ -66,6 +82,14 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
   } else {
     auto &ISAInfo = *ParseResult;
     emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
+  }
+
+  if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {
+    unsigned AtomicABITag = static_cast<unsigned>(
+        STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence)
+            ? RISCVAttrs::RISCVAtomicAbiTag::A6C
+            : RISCVAttrs::RISCVAtomicAbiTag::A6S);
+    emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
   }
 }
 

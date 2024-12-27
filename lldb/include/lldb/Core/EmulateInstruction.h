@@ -369,6 +369,8 @@ public:
 
   virtual bool ReadInstruction() = 0;
 
+  virtual std::optional<uint32_t> GetLastInstrSize() { return std::nullopt; }
+
   virtual bool EvaluateInstruction(uint32_t evaluate_options) = 0;
 
   virtual InstructionCondition GetInstructionCondition() {

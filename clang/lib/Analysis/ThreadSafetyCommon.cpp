@@ -97,7 +97,7 @@ static StringRef ClassifyDiagnostic(QualType VDT) {
     if (const auto *TD = TT->getDecl())
       if (const auto *CA = TD->getAttr<CapabilityAttr>())
         return ClassifyDiagnostic(CA);
-  } else if (VDT->isPointerType() || VDT->isReferenceType())
+  } else if (VDT->isPointerOrReferenceType())
     return ClassifyDiagnostic(VDT->getPointeeType());
 
   return "mutex";
@@ -135,13 +135,29 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     Ctx.NumArgs   = CE->getNumArgs();
     Ctx.FunArgs   = CE->getArgs();
   } else if (const auto *CE = dyn_cast<CallExpr>(DeclExp)) {
-    Ctx.NumArgs = CE->getNumArgs();
-    Ctx.FunArgs = CE->getArgs();
+    // Calls to operators that are members need to be treated like member calls.
+    if (isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(D)) {
+      Ctx.SelfArg = CE->getArg(0);
+      Ctx.SelfArrow = false;
+      Ctx.NumArgs = CE->getNumArgs() - 1;
+      Ctx.FunArgs = CE->getArgs() + 1;
+    } else {
+      Ctx.NumArgs = CE->getNumArgs();
+      Ctx.FunArgs = CE->getArgs();
+    }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(DeclExp)) {
     Ctx.SelfArg = nullptr;  // Will be set below
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
   }
+
+  // Usually we want to substitute the self-argument for "this", but lambdas
+  // are an exception: "this" on or in a lambda call operator doesn't refer
+  // to the lambda, but to captured "this" in the context it was created in.
+  // This can happen for operator calls and member calls, so fix it up here.
+  if (const auto *CMD = dyn_cast<CXXMethodDecl>(D))
+    if (CMD->getParent()->isLambda())
+      Ctx.SelfArg = nullptr;
 
   if (Self) {
     assert(!Ctx.SelfArg && "Ambiguous self argument");
@@ -177,7 +193,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     return CapabilityExpr();
 
   if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
-    if (SLit->getString() == StringRef("*"))
+    if (SLit->getString() == "*")
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
       return CapabilityExpr(new (Arena) til::Wildcard(), StringRef("wildcard"),
@@ -197,7 +213,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
     if (UO->getOpcode() == UO_LNot) {
       Neg = true;
-      AttrExp = UO->getSubExpr();
+      AttrExp = UO->getSubExpr()->IgnoreImplicit();
     }
   }
 
@@ -326,7 +342,7 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
         }
 
         assert(I == 0);
-        return Ctx->FunArgs.get<til::SExpr *>();
+        return cast<til::SExpr *>(Ctx->FunArgs);
       }
     }
     // Map the param back to the param of the original function declaration
@@ -995,7 +1011,7 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   IncompleteArgs.clear();
 }
 
-/*
+#ifndef NDEBUG
 namespace {
 
 class TILPrinter :
@@ -1016,4 +1032,4 @@ void printSCFG(CFGWalker &Walker) {
 
 } // namespace threadSafety
 } // namespace clang
-*/
+#endif // NDEBUG

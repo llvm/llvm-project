@@ -222,18 +222,6 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
   }
 }
 
-bool CoreEngine::ExecuteWorkListWithInitialState(const LocationContext *L,
-                                                 unsigned Steps,
-                                                 ProgramStateRef InitState,
-                                                 ExplodedNodeSet &Dst) {
-  bool DidNotFinish = ExecuteWorkList(L, Steps, InitState);
-  for (ExplodedGraph::eop_iterator I = G.eop_begin(), E = G.eop_end(); I != E;
-       ++I) {
-    Dst.Add(*I);
-  }
-  return DidNotFinish;
-}
-
 void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   const CFGBlock *Blk = L.getDst();
   NodeBuilderContext BuilderCtx(*this, Blk, Pred);
@@ -637,8 +625,8 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             bool MarkAsSink) {
   HasGeneratedNodes = true;
   bool IsNew;
-  ExplodedNode *N = C.Eng.G.getNode(Loc, State, MarkAsSink, &IsNew);
-  N->addPredecessor(FromN, C.Eng.G);
+  ExplodedNode *N = C.getEngine().G.getNode(Loc, State, MarkAsSink, &IsNew);
+  N->addPredecessor(FromN, C.getEngine().G);
   Frontier.erase(FromN);
 
   if (!IsNew)
@@ -661,14 +649,15 @@ StmtNodeBuilder::~StmtNodeBuilder() {
 void BranchNodeBuilder::anchor() {}
 
 ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
-                                              bool branch,
+                                              bool Branch,
                                               ExplodedNode *NodePred) {
-  // If the branch has been marked infeasible we should not generate a node.
-  if (!isFeasible(branch))
+  const CFGBlock *Dst = Branch ? DstT : DstF;
+
+  if (!Dst)
     return nullptr;
 
-  ProgramPoint Loc = BlockEdge(C.Block, branch ? DstT:DstF,
-                               NodePred->getLocationContext());
+  ProgramPoint Loc =
+      BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
   ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
   return Succ;
 }

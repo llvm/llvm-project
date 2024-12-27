@@ -15,17 +15,17 @@
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.cpp.inc"
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::detail::verifyFirAliasTagOpInterface(mlir::Operation *op) {
   auto iface = mlir::cast<FirAliasTagOpInterface>(op);
 
   mlir::ArrayAttr tags = iface.getTBAATagsOrNull();
   if (!tags)
-    return mlir::success();
+    return llvm::success();
 
   for (mlir::Attribute iter : tags)
     if (!mlir::isa<mlir::LLVM::TBAATagAttr>(iter))
       return op->emitOpError("expected op to return array of ")
              << mlir::LLVM::TBAATagAttr::getMnemonic() << " attributes";
-  return mlir::success();
+  return llvm::success();
 }

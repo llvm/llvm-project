@@ -72,7 +72,6 @@
 #include <cstdint>
 #include <iterator>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -103,6 +102,7 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::TracksLiveness: return "TracksLiveness";
   case P::TiedOpsRewritten: return "TiedOpsRewritten";
   case P::FailsVerification: return "FailsVerification";
+  case P::FailedRegAlloc: return "FailedRegAlloc";
   case P::TracksDebugUserValues: return "TracksDebugUserValues";
   }
   // clang-format on
@@ -161,10 +161,10 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
   return STI->getFrameLowering()->getStackAlign();
 }
 
-MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
-                                 const TargetSubtargetInfo &STI,
-                                 unsigned FunctionNum, MachineModuleInfo &mmi)
-    : F(F), Target(Target), STI(&STI), Ctx(mmi.getContext()), MMI(mmi) {
+MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
+                                 const TargetSubtargetInfo &STI, MCContext &Ctx,
+                                 unsigned FunctionNum)
+    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -200,10 +200,11 @@ void MachineFunction::init() {
   // explicitly asked us not to.
   bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
+  bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
+                        F.hasFnAttribute("stackrealign");
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
-      /*ForcedRealign=*/CanRealignSP &&
-          F.hasFnAttribute(Attribute::StackAlignment));
+      /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
 
   setUnsafeStackSize(F, *FrameInfo);
 
@@ -306,7 +307,7 @@ void MachineFunction::clear() {
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
-  return F.getParent()->getDataLayout();
+  return F.getDataLayout();
 }
 
 /// Get the JumpTableInfo for this function.
@@ -374,6 +375,38 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
+  MBBNumberingEpoch++;
+}
+
+int64_t MachineFunction::estimateFunctionSizeInBytes() {
+  const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
+  const Align FunctionAlignment = getAlignment();
+  MachineFunction::iterator MBBI = begin(), E = end();
+  /// Offset - Distance from the beginning of the function to the end
+  /// of the basic block.
+  int64_t Offset = 0;
+
+  for (; MBBI != E; ++MBBI) {
+    const Align Alignment = MBBI->getAlignment();
+    int64_t BlockSize = 0;
+
+    for (auto &MI : *MBBI) {
+      BlockSize += TII.getInstSizeInBytes(MI);
+    }
+
+    int64_t OffsetBB;
+    if (Alignment <= FunctionAlignment) {
+      OffsetBB = alignTo(Offset, Alignment);
+    } else {
+      // The alignment of this MBB is larger than the function's alignment, so
+      // we can't tell whether or not it will insert nops. Assume that it will.
+      OffsetBB = alignTo(Offset, Alignment) + Alignment.value() -
+                 FunctionAlignment.value();
+    }
+    Offset = OffsetBB + BlockSize;
+  }
+
+  return Offset;
 }
 
 /// This method iterates over the basic blocks and assigns their IsBeginSection
@@ -463,10 +496,9 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
   MachineBasicBlock *MBB =
       new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
           MachineBasicBlock(*this, BB);
-  // Set BBID for `-basic-block=sections=labels` and
-  // `-basic-block-sections=list` to allow robust mapping of profiles to basic
-  // blocks.
-  if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
+  // Set BBID for `-basic-block-sections=list` and `-basic-block-address-map` to
+  // allow robust mapping of profiles to basic blocks.
+  if (Target.Options.BBAddrMap ||
       Target.getBBSectionsType() == BasicBlockSection::List)
     MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;
@@ -483,13 +515,17 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
-    MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-    Align base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
+    MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
+    Align BaseAlignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
     SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {
+  assert((!Size.hasValue() ||
+          Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
+         "Unexpected an unknown size to be represented using "
+         "LocationSize::beforeOrAfter()");
   return new (Allocator)
-      MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges,
-                        SSID, Ordering, FailureOrdering);
+      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, AAInfo, Ranges, SSID,
+                        Ordering, FailureOrdering);
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
@@ -502,8 +538,14 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
                         Ordering, FailureOrdering);
 }
 
-MachineMemOperand *MachineFunction::getMachineMemOperand(
-    const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, uint64_t Size) {
+MachineMemOperand *
+MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
+                                      const MachinePointerInfo &PtrInfo,
+                                      LocationSize Size) {
+  assert((!Size.hasValue() ||
+          Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
+         "Unexpected an unknown size to be represented using "
+         "LocationSize::beforeOrAfter()");
   return new (Allocator)
       MachineMemOperand(PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
                         AAMDNodes(), nullptr, MMO->getSyncScopeID(),
@@ -562,10 +604,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
     MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
-    uint32_t CFIType) {
+    uint32_t CFIType, MDNode *MMRAs) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
                                          PostInstrSymbol, HeapAllocMarker,
-                                         PCSections, CFIType);
+                                         PCSections, CFIType, MMRAs);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {
@@ -642,9 +684,14 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
 
 /// True if this function needs frame moves for debug or exceptions.
 bool MachineFunction::needsFrameMoves() const {
-  return getMMI().hasDebugInfo() ||
-         getTarget().Options.ForceDwarfFrameSection ||
-         F.needsUnwindTableEntry();
+  // TODO: Ideally, what we'd like is to have a switch that allows emitting
+  // synchronous (precise at call-sites only) CFA into .eh_frame. However, even
+  // under this switch, we'd like .debug_frame to be precise when using -g. At
+  // this moment, there's no way to specify that some CFI directives go into
+  // .eh_frame only, while others go into .debug_frame only.
+  return getTarget().Options.ForceDwarfFrameSection ||
+         F.needsUnwindTableEntry() ||
+         !F.getParent()->debug_compile_units().empty();
 }
 
 namespace llvm {

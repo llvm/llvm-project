@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mcpu=atmega328 -O1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mcpu=atmega328 -O1 -verify-machineinstrs | FileCheck %s
 ; CHECK-NOT: stdwstk
 
 ; Checks that we expand STDWSPQRr always - even if it appears outside of the

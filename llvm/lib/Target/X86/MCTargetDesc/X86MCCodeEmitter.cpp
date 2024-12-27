@@ -111,9 +111,9 @@ class X86OpcodePrefixHelper {
   //  0b11: F2
 
   // EVEX (4 bytes)
-  // +-----+ +---------------+ +--------------------+ +------------------------+
-  // | 62h | | RXBR' | B'mmm | | W | vvvv | X' | pp | | z | L'L | b | v' | aaa |
-  // +-----+ +---------------+ +--------------------+ +------------------------+
+  // +-----+ +---------------+ +-------------------+ +------------------------+
+  // | 62h | | RXBR' | B'mmm | | W | vvvv | U | pp | | z | L'L | b | v' | aaa |
+  // +-----+ +---------------+ +-------------------+ +------------------------+
 
   // EVEX_L2/VEX_L (Vector Length):
   // L2 L
@@ -131,7 +131,7 @@ class X86OpcodePrefixHelper {
   // | RM (VR)  | EVEX_X  | EVEX_B | modrm.r/m | VR      | Dest or Src  |
   // | RM (GPR) | EVEX_B' | EVEX_B | modrm.r/m | GPR     | Dest or Src  |
   // | BASE     | EVEX_B' | EVEX_B | modrm.r/m | GPR     | MA           |
-  // | INDEX    | EVEX_X' | EVEX_X | sib.index | GPR     | MA           |
+  // | INDEX    | EVEX_U  | EVEX_X | sib.index | GPR     | MA           |
   // | VIDX     | EVEX_v' | EVEX_X | sib.index | VR      | VSIB MA      |
   // +----------+---------+--------+-----------+---------+--------------+
   //
@@ -190,7 +190,7 @@ public:
     setR(getRegEncoding(MI, OpNum));
   }
   void setX(const MCInst &MI, unsigned OpNum, unsigned Shift = 3) {
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     // X is used to extend vector register only when shift is not 3.
     if (Shift != 3 && X86II::isApxExtendedReg(Reg))
       return;
@@ -200,8 +200,12 @@ public:
   void setB(const MCInst &MI, unsigned OpNum) {
     B = getRegEncoding(MI, OpNum) >> 3 & 1;
   }
-  void set4V(const MCInst &MI, unsigned OpNum) {
-    set4V(getRegEncoding(MI, OpNum));
+  void set4V(const MCInst &MI, unsigned OpNum, bool IsImm = false) {
+    // OF, SF, ZF and CF reuse VEX_4V bits but are not reversed
+    if (IsImm)
+      set4V(~(MI.getOperand(OpNum).getImm()));
+    else
+      set4V(getRegEncoding(MI, OpNum));
   }
   void setL(bool V) { VEX_L = V; }
   void setPP(unsigned V) { VEX_PP = V; }
@@ -216,7 +220,7 @@ public:
   }
   void setM(bool V) { M = V; }
   void setXX2(const MCInst &MI, unsigned OpNum) {
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     unsigned Encoding = MRI.getEncodingValue(Reg);
     setX(Encoding);
     // Index can be a vector register while X2 is used to extend GPR only.
@@ -224,7 +228,7 @@ public:
       setX2(Encoding);
   }
   void setBB2(const MCInst &MI, unsigned OpNum) {
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     unsigned Encoding = MRI.getEncodingValue(Reg);
     setB(Encoding);
     // Base can be a vector register while B2 is used to extend GPR only
@@ -234,11 +238,12 @@ public:
   void setZ(bool V) { EVEX_z = V; }
   void setL2(bool V) { EVEX_L2 = V; }
   void setEVEX_b(bool V) { EVEX_b = V; }
+  void setEVEX_U(bool V) { X2 = V; }
   void setV2(const MCInst &MI, unsigned OpNum, bool HasVEX_4V) {
     // Only needed with VSIB which don't use VVVV.
     if (HasVEX_4V)
       return;
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     if (X86II::isApxExtendedReg(Reg))
       return;
     setV2(MRI.getEncodingValue(Reg));
@@ -252,6 +257,11 @@ public:
     EVEX_aaa = getRegEncoding(MI, OpNum);
   }
   void setNF(bool V) { EVEX_aaa |= V << 2; }
+  void setSC(const MCInst &MI, unsigned OpNum) {
+    unsigned Encoding = MI.getOperand(OpNum).getImm();
+    EVEX_V2 = ~(Encoding >> 3) & 0x1;
+    EVEX_aaa = Encoding & 0x7;
+  }
 
   X86OpcodePrefixHelper(const MCRegisterInfo &MRI)
       : W(0), R(0), X(0), B(0), M(0), R2(0), X2(0), B2(0), VEX_4V(0), VEX_L(0),
@@ -335,7 +345,7 @@ public:
   ~X86MCCodeEmitter() override = default;
 
   void emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
-                  const MCSubtargetInfo &STI) const override;
+                  const MCSubtargetInfo &STI) const;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -558,9 +568,12 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
   if (FixupKind == FK_PCRel_4 ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load_rex2) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
-      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel)) {
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex2) ||
+      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_evex)) {
     ImmOffset -= 4;
     // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
     // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
@@ -568,6 +581,7 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
     if (startsWithGlobalOffsetTable(Expr) != GOT_None)
       FixupKind = MCFixupKind(X86::reloc_global_offset_table);
   }
+
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
   if (FixupKind == FK_PCRel_1)
@@ -604,15 +618,14 @@ void X86MCCodeEmitter::emitMemModRMByte(
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Scale = MI.getOperand(Op + X86::AddrScaleAmt);
   const MCOperand &IndexReg = MI.getOperand(Op + X86::AddrIndexReg);
-  unsigned BaseReg = Base.getReg();
+  MCRegister BaseReg = Base.getReg();
 
   // Handle %rip relative addressing.
   if (BaseReg == X86::RIP ||
       BaseReg == X86::EIP) { // [disp32+rIP] in X86-64 mode
     assert(STI.hasFeature(X86::Is64Bit) &&
            "Rip-relative addressing requires 64-bit mode");
-    assert(IndexReg.getReg() == 0 && !ForceSIB &&
-           "Invalid rip-relative address");
+    assert(!IndexReg.getReg() && !ForceSIB && "Invalid rip-relative address");
     emitByte(modRMByte(0, RegOpcodeField, 5), CB);
 
     unsigned Opcode = MI.getOpcode();
@@ -628,12 +641,11 @@ void X86MCCodeEmitter::emitMemModRMByte(
       default:
         return X86::reloc_riprel_4byte;
       case X86::MOV64rm:
-        // movq loads is a subset of reloc_riprel_4byte_relax_rex. It is a
+        // movq loads is a subset of reloc_riprel_4byte_relax_rex/rex2. It is a
         // special case because COFF and Mach-O don't support ELF's more
-        // flexible R_X86_64_REX_GOTPCRELX relaxation.
-        // TODO: Support new relocation for REX2.
-        assert(Kind == REX || Kind == REX2);
-        return X86::reloc_riprel_4byte_movq_load;
+        // flexible R_X86_64_REX_GOTPCRELX/R_X86_64_CODE_4_GOTPCRELX relaxation.
+        return Kind == REX2 ? X86::reloc_riprel_4byte_movq_load_rex2
+                            : X86::reloc_riprel_4byte_movq_load;
       case X86::ADC32rm:
       case X86::ADD32rm:
       case X86::AND32rm:
@@ -656,11 +668,16 @@ void X86MCCodeEmitter::emitMemModRMByte(
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm:
-        // We haven't support relocation for REX2 prefix, so temporarily use REX
-        // relocation.
-        // TODO: Support new relocation for REX2.
-        return (Kind == REX || Kind == REX2) ? X86::reloc_riprel_4byte_relax_rex
-                                             : X86::reloc_riprel_4byte_relax;
+      case X86::LEA64r:
+        return Kind == REX2  ? X86::reloc_riprel_4byte_relax_rex2
+               : Kind == REX ? X86::reloc_riprel_4byte_relax_rex
+                             : X86::reloc_riprel_4byte_relax;
+      case X86::ADD64rm_NF:
+      case X86::ADD64rm_ND:
+      case X86::ADD64mr_ND:
+      case X86::ADD64mr_NF_ND:
+      case X86::ADD64rm_NF_ND:
+        return X86::reloc_riprel_4byte_relax_evex;
       }
     }();
 
@@ -682,9 +699,12 @@ void X86MCCodeEmitter::emitMemModRMByte(
 
   unsigned BaseRegNo = BaseReg ? getX86RegNum(Base) : -1U;
 
+  bool IsAdSize16 = STI.hasFeature(X86::Is32Bit) &&
+                    (TSFlags & X86II::AdSizeMask) == X86II::AdSize16;
+
   // 16-bit addressing forms of the ModR/M byte have a different encoding for
   // the R/M field and are far more limited in which registers can be used.
-  if (X86_MC::is16BitMemOperand(MI, Op, STI)) {
+  if (IsAdSize16 || X86_MC::is16BitMemOperand(MI, Op, STI)) {
     if (BaseReg) {
       // For 32-bit addressing, the row and column values in Table 2-2 are
       // basically the same. It's AX/CX/DX/BX/SP/BP/SI/DI in that order, with
@@ -733,7 +753,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       // This is the [REG]+disp16 case.
       emitByte(modRMByte(2, RegOpcodeField, RMfield), CB);
     } else {
-      assert(IndexReg.getReg() == 0 && "Unexpected index register!");
+      assert(!IndexReg.getReg() && "Unexpected index register!");
       // There is no BaseReg; this is the plain [disp16] case.
       emitByte(modRMByte(0, RegOpcodeField, 6), CB);
     }
@@ -753,18 +773,9 @@ void X86MCCodeEmitter::emitMemModRMByte(
   bool AllowDisp8 = !UseDisp32;
 
   // Determine whether a SIB byte is needed.
-  if ( // The SIB byte must be used if there is an index register or the
-       // encoding requires a SIB byte.
-      !ForceSIB && IndexReg.getReg() == 0 &&
-      // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
-      // which encode to an R/M value of 4, which indicates that a SIB byte is
-      // present.
-      BaseRegNo != N86::ESP &&
-      // If there is no base register and we're in 64-bit mode, we need a SIB
-      // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
-      (!STI.hasFeature(X86::Is64Bit) || BaseReg != 0)) {
-
-    if (BaseReg == 0) { // [disp32]     in X86-32 mode
+  if (!ForceSIB && !X86II::needSIB(BaseReg, IndexReg.getReg(),
+                                   STI.hasFeature(X86::Is64Bit))) {
+    if (!BaseReg) { // [disp32]     in X86-32 mode
       emitByte(modRMByte(0, RegOpcodeField, 5), CB);
       emitImmediate(Disp, MI.getLoc(), 4, FK_Data_4, StartByte, CB, Fixups);
       return;
@@ -827,7 +838,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
   bool ForceDisp32 = false;
   bool ForceDisp8 = false;
   int ImmOffset = 0;
-  if (BaseReg == 0) {
+  if (!BaseReg) {
     // If there is no base register, we emit the special case SIB byte with
     // MOD=0, BASE=5, to JUST get the index, scale, and displacement.
     BaseRegNo = 5;
@@ -964,7 +975,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     const MCOperand &MO = MI.getOperand(I);
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
       report_fatal_error(
           "Cannot encode high byte register in VEX/EVEX-prefixed instruction");
@@ -980,7 +991,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     break;
   case X86II::VEX:
     // VEX can be 2 byte or 3 byte, not determined yet if not explicit
-    Prefix.setLowerBound(MI.getFlags() & X86::IP_USE_VEX3 ? VEX3 : VEX2);
+    Prefix.setLowerBound((MI.getFlags() & X86::IP_USE_VEX3) ? VEX3 : VEX2);
     break;
   case X86II::EVEX:
     Prefix.setLowerBound(EVEX);
@@ -1049,11 +1060,13 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   Prefix.setZ(HasEVEX_K && (TSFlags & X86II::EVEX_Z));
   Prefix.setEVEX_b(TSFlags & X86II::EVEX_B);
+  Prefix.setEVEX_U(TSFlags & X86II::EVEX_U);
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
 
   unsigned CurOp = X86II::getOperandBias(Desc);
+  bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   switch (TSFlags & X86II::FormMask) {
   default:
@@ -1070,6 +1083,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   case X86II::MRM_C0:
   case X86II::RawFrm:
     break;
+  case X86II::MRMDestMemCC:
   case X86II::MRMDestMemFSIB:
   case X86II::MRMDestMem: {
     // MRMDestMem instructions forms:
@@ -1095,8 +1109,13 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
+  case X86II::MRMSrcMemCC:
   case X86II::MRMSrcMemFSIB:
   case X86II::MRMSrcMem: {
     // MRMSrcMem instructions forms:
@@ -1124,7 +1143,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
-
+    CurOp += X86::AddrNumOperands;
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
   case X86II::MRMSrcMem4VOp3: {
@@ -1144,6 +1167,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     break;
   }
+  case X86II::MRMXmCC:
   case X86II::MRM0m:
   case X86II::MRM1m:
   case X86II::MRM2m:
@@ -1164,9 +1188,14 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
-
+    CurOp += X86::AddrNumOperands + 1; // Skip first imm.
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
+  case X86II::MRMSrcRegCC:
   case X86II::MRMSrcReg: {
     // MRMSrcReg instructions forms:
     //  dst(ModR/M), src1(VEX_4V), src2(ModR/M), src3(Imm[7:4])
@@ -1191,6 +1220,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
+
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
 
     if (TSFlags & X86II::EVEX_B) {
       if (HasEVEX_RC) {
@@ -1224,6 +1258,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     ++CurOp;
     break;
   }
+  case X86II::MRMDestRegCC:
   case X86II::MRMDestReg: {
     // MRMDestReg instructions forms:
     //  dst(ModR/M), src(ModR/M)
@@ -1245,6 +1280,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     if (TSFlags & X86II::EVEX_B)
       EncodeRC = true;
     break;
@@ -1256,6 +1295,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setRR2(MI, CurOp++);
     break;
   }
+  case X86II::MRMXrCC:
   case X86II::MRM0r:
   case X86II::MRM1r:
   case X86II::MRM2r:
@@ -1275,6 +1315,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, ++CurOp, /*IsImm=*/true);
+      Prefix.setSC(MI, ++CurOp);
+    }
     break;
   }
   }
@@ -1314,7 +1358,7 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
 #ifndef NDEBUG
       HasRegOp = true;
 #endif
-      unsigned Reg = MO.getReg();
+      MCRegister Reg = MO.getReg();
       if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
         UsesHighByteReg = true;
       // If it accesses SPL, BPL, SIL, or DIL, then it requires a REX prefix.
@@ -1333,7 +1377,10 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
       }
     }
   }
-  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix)
+  if (MI.getFlags() & X86::IP_USE_REX)
+    Prefix.setLowerBound(REX);
+  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix ||
+      MI.getFlags() & X86::IP_USE_REX2)
     Prefix.setLowerBound(REX2);
   switch (TSFlags & X86II::FormMask) {
   default:
@@ -1409,7 +1456,7 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
 void X86MCCodeEmitter::emitSegmentOverridePrefix(
     unsigned SegOperand, const MCInst &MI, SmallVectorImpl<char> &CB) const {
   // Check for explicit segment override on memory operand.
-  if (unsigned Reg = MI.getOperand(SegOperand).getReg())
+  if (MCRegister Reg = MI.getOperand(SegOperand).getReg())
     emitByte(X86::getSegmentOverridePrefixForReg(Reg), CB);
 }
 
@@ -1496,6 +1543,11 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
   emitPrefixImpl(CurOp, MI, STI, CB);
 }
 
+void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
+                        SmallVectorImpl<char> &CB, const MCSubtargetInfo &STI) {
+  static_cast<X86MCCodeEmitter &>(MCE).emitPrefix(MI, CB, STI);
+}
+
 void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
                                          SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
@@ -1534,6 +1586,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   unsigned OpcodeOffset = 0;
 
   bool IsND = X86II::hasNewDataDest(TSFlags);
+  bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
@@ -1611,6 +1664,15 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     CurOp = SrcRegNum + 1;
     break;
   }
+  case X86II::MRMDestRegCC: {
+    unsigned FirstOp = CurOp++;
+    unsigned SecondOp = CurOp++;
+    unsigned CC = MI.getOperand(CurOp++).getImm();
+    emitByte(BaseOpcode + CC, CB);
+    emitRegModRMByte(MI.getOperand(FirstOp),
+                     getX86RegNum(MI.getOperand(SecondOp)), CB);
+    break;
+  }
   case X86II::MRMDestMem4VOp3CC: {
     unsigned CC = MI.getOperand(8).getImm();
     emitByte(BaseOpcode + CC, CB);
@@ -1638,6 +1700,16 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     emitMemModRMByte(MI, CurOp, getX86RegNum(MI.getOperand(SrcRegNum)), TSFlags,
                      Kind, StartByte, CB, Fixups, STI, ForceSIB);
     CurOp = SrcRegNum + 1;
+    break;
+  }
+  case X86II::MRMDestMemCC: {
+    unsigned MemOp = CurOp;
+    CurOp = MemOp + X86::AddrNumOperands;
+    unsigned RegOp = CurOp++;
+    unsigned CC = MI.getOperand(CurOp++).getImm();
+    emitByte(BaseOpcode + CC, CB);
+    emitMemModRMByte(MI, MemOp, getX86RegNum(MI.getOperand(RegOp)), TSFlags,
+                     Kind, StartByte, CB, Fixups, STI);
     break;
   }
   case X86II::MRMSrcReg: {
@@ -1690,6 +1762,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcRegCC: {
+    if (IsND) // Skip new data destination
+      ++CurOp;
     unsigned FirstOp = CurOp++;
     unsigned SecondOp = CurOp++;
 
@@ -1751,6 +1825,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcMemCC: {
+    if (IsND) // Skip new data destination
+      ++CurOp;
     unsigned RegOp = CurOp++;
     unsigned FirstMemOp = CurOp;
     CurOp = FirstMemOp + X86::AddrNumOperands;
@@ -1923,18 +1999,23 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     // If there is a remaining operand, it must be a trailing immediate. Emit it
     // according to the right size for the instruction. Some instructions
     // (SSE4a extrq and insertq) have two trailing immediates.
-    while (CurOp != NumOps && NumOps - CurOp <= 2) {
+
+    // Skip two trainling conditional operands encoded in EVEX prefix
+    unsigned RemaningOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    while (RemaningOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
                     X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
                     StartByte, CB, Fixups);
+      --RemaningOps;
     }
+    CurOp += 2 * HasTwoConditionalOps;
   }
 
   if ((TSFlags & X86II::OpMapMask) == X86II::ThreeDNow)
     emitByte(X86II::getBaseOpcodeFor(TSFlags), CB);
 
-  assert(CB.size() - StartByte <= 15 &&
-         "The size of instruction must be no longer than 15.");
+  if (CB.size() - StartByte > 15)
+    Ctx.reportError(MI.getLoc(), "instruction length exceeds the limit of 15");
 #ifndef NDEBUG
   // FIXME: Verify.
   if (/*!Desc.isVariadic() &&*/ CurOp != NumOps) {

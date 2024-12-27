@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "gtest/gtest.h"
 #include <random>
@@ -429,7 +430,8 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   BB->insertInto(F);
   Instruction *Ret = ReturnInst::Create(C);
   Ret->insertInto(BB, BB->begin());
-  Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
+  Function *FnAssume =
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;
   BitVector HasArg;
@@ -461,7 +463,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
     if (count > 1)
       Args.push_back(ConstantInt::get(Type::getInt32Ty(C), value));
 
-    OpBundle.push_back(OperandBundleDef{ss.str().c_str(), std::move(Args)});
+    OpBundle.push_back(OperandBundleDef{str.c_str(), std::move(Args)});
   }
 
   auto *Assume = cast<AssumeInst>(CallInst::Create(

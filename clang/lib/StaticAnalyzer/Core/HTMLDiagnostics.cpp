@@ -27,6 +27,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
@@ -52,6 +53,7 @@
 
 using namespace clang;
 using namespace ento;
+using llvm::RewriteBuffer;
 
 //===----------------------------------------------------------------------===//
 // Boilerplate.
@@ -69,6 +71,8 @@ class HTMLDiagnostics : public PathDiagnosticConsumer {
   const Preprocessor &PP;
   const bool SupportsCrossFileDiagnostics;
   llvm::StringSet<> EmittedHashes;
+  html::RelexRewriteCacheRef RewriterCache =
+      html::instantiateRelexRewriteCache();
 
 public:
   HTMLDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
@@ -309,10 +313,6 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
     return;
   }
 
-  // FIXME: This causes each file to be re-parsed and syntax-highlighted
-  // and macro-expanded separately for each report. We could cache such rewrites
-  // across all reports and only re-do the part that's actually different:
-  // the warning/note bubbles.
   std::string report = GenerateHTML(D, R, SMgr, path, declName.c_str());
   if (report.empty()) {
     llvm::errs() << "warning: no diagnostics generated for main file.\n";
@@ -882,8 +882,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
   // for example.
-  html::SyntaxHighlight(R, FID, PP);
-  html::HighlightMacros(R, FID, PP);
+  html::SyntaxHighlight(R, FID, PP, RewriterCache);
+  html::HighlightMacros(R, FID, PP, RewriterCache);
 }
 
 void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
@@ -1211,18 +1211,19 @@ const arrowIndices = )<<<";
                      OS.str());
 }
 
-std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
+static std::string getSpanBeginForControl(const char *ClassName,
+                                          unsigned Index) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "<span id=\"" << ClassName << Index << "\">";
   return Result;
 }
 
-std::string getSpanBeginForControlStart(unsigned Index) {
+static std::string getSpanBeginForControlStart(unsigned Index) {
   return getSpanBeginForControl("start", Index);
 }
 
-std::string getSpanBeginForControlEnd(unsigned Index) {
+static std::string getSpanBeginForControlEnd(unsigned Index) {
   return getSpanBeginForControl("end", Index);
 }
 

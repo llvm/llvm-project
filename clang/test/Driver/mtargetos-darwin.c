@@ -4,6 +4,7 @@
 // RUN: %clang -mtargetos=ios14-macabi -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=MACCATALYST %s
 // RUN: %clang -mtargetos=tvos14 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=TVOS %s
 // RUN: %clang -mtargetos=watchos7.1 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=WATCHOS %s
+// RUN: %clang -mtargetos=visionos1 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=VISIONOS %s
 
 // RUN: not %clang -target arm64-apple-ios14 -mtargetos=ios14 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=NOMIX1 %s
 // RUN: not %clang -mtargetos=ios14 -arch arm64 -miphoneos-version-min=14 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=NOMIX2 %s
@@ -19,6 +20,7 @@
 // MACCATALYST: "-cc1" "-triple" "arm64-apple-ios14.0.0-macabi"
 // TVOS: "-cc1" "-triple" "arm64-apple-tvos14.0.0"
 // WATCHOS: "-cc1" "-triple" "arm64-apple-watchos7.1.0"
+// VISIONOS: "-cc1" "-triple" "arm64-apple-xros1.0.0"
 
 // NOMIX1: error: cannot specify '-mtargetos=ios14' along with '-target arm64-apple-ios14'
 // NOMIX2: error: cannot specify '-miphoneos-version-min=14' along with '-mtargetos=ios14'

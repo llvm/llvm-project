@@ -29,30 +29,35 @@ def note_pch_rebuild_required : Note<"please rebuild precompiled header '%0'">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
 
-def err_pch_targetopt_mismatch : Error<
-    "PCH file was compiled for the %0 '%1' but the current translation "
-    "unit is being compiled for target '%2'">;
-def err_pch_targetopt_feature_mismatch : Error<
-    "%select{AST file was|current translation unit is}0 compiled with the target "
-    "feature '%1' but the %select{current translation unit is|AST file was}0 "
+def err_ast_file_targetopt_mismatch : Error<
+    "AST file '%0' was compiled for the %1 '%2' but the current translation "
+    "unit is being compiled for target '%3'">;
+def err_ast_file_targetopt_feature_mismatch : Error<
+    "%select{AST file '%1' was|current translation unit is}0 compiled with the target "
+    "feature '%2' but the %select{current translation unit is|AST file '%1' was}0 "
     "not">;
-def err_pch_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
-    "PCH file but is currently %select{disabled|enabled}2">;
-def err_pch_langopt_value_mismatch : Error<
-  "%0 differs in PCH file vs. current file">;
-def err_pch_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
-  "the PCH file">;
-def err_pch_modulecache_mismatch : Error<"PCH was compiled with module cache "
+def err_ast_file_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
+    "AST file '%3' but is currently %select{disabled|enabled}2">;
+def err_ast_file_langopt_value_mismatch : Error<
+  "%0 differs in AST file '%1' vs. current file">;
+def err_ast_file_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
+  "the AST file '%1'">;
+def err_ast_file_modulecache_mismatch : Error<"AST file '%2' was compiled with module cache "
   "path '%0', but the path is currently '%1'">;
+def warn_pch_vfsoverlay_mismatch : Warning<
+  "PCH was compiled with different VFS overlay files than are currently in use">,
+  InGroup<DiagGroup<"pch-vfs-diff">>;
+def note_pch_vfsoverlay_files : Note<"%select{PCH|current translation unit}0 has the following VFS overlays:\n%1">;
+def note_pch_vfsoverlay_empty : Note<"%select{PCH|current translation unit}0 has no VFS overlays">;
 
-def err_pch_version_too_old : Error<
-    "PCH file uses an older PCH format that is no longer supported">;
-def err_pch_version_too_new : Error<
-    "PCH file uses a newer PCH format that cannot be read">;
-def err_pch_different_branch : Error<
-    "PCH file built from a different branch (%0) than the compiler (%1)">;
-def err_pch_with_compiler_errors : Error<
-    "PCH file contains compiler errors">;
+def err_ast_file_version_too_old : Error<
+    "%select{PCH|module|AST}0 file '%1' uses an older format that is no longer supported">;
+def err_ast_file_version_too_new : Error<
+    "%select{PCH|module|AST}0 file '%1' uses a newer format that cannot be read">;
+def err_ast_file_different_branch : Error<
+    "%select{PCH|module|AST}0 file '%1' built from a different branch (%2) than the compiler (%3)">;
+def err_ast_file_with_compiler_errors : Error<
+    "%select{PCH|module|AST}0 file '%1' contains compiler errors">;
 
 def err_module_file_conflict : Error<
   "module '%0' is defined in both '%1' and '%2'">, DefaultFatal;
@@ -94,19 +99,19 @@ def err_module_different_modmap : Error<
     "module '%0' %select{uses|does not use}1 additional module map '%2'"
     "%select{| not}1 used when the module was built">;
 
-def err_pch_macro_def_undef : Error<
-    "macro '%0' was %select{defined|undef'd}1 in the precompiled header but "
+def err_ast_file_macro_def_undef : Error<
+    "macro '%0' was %select{defined|undef'd}1 in the AST file '%2' but "
     "%select{undef'd|defined}1 on the command line">;
-def err_pch_macro_def_conflict : Error<
-    "definition of macro '%0' differs between the precompiled header ('%1') "
+def err_ast_file_macro_def_conflict : Error<
+    "definition of macro '%0' differs between the AST file '%3' ('%1') "
     "and the command line ('%2')">;
-def err_pch_undef : Error<
-    "%select{command line contains|precompiled header was built with}0 "
-    "'-undef' but %select{precompiled header was not built with it|"
+def err_ast_file_undef : Error<
+    "%select{command line contains|AST file '%1' was built with}0 "
+    "'-undef' but %select{AST file '%1' was not built with it|"
     "it is not present on the command line}0">;
-def err_pch_pp_detailed_record : Error<
-    "%select{command line contains|precompiled header was built with}0 "
-    "'-detailed-preprocessing-record' but %select{precompiled header was not "
+def err_ast_file_pp_detailed_record : Error<
+    "%select{command line contains|AST file '%1' was built with}0 "
+    "'-detailed-preprocessing-record' but %select{AST file '%1' was not "
     "built with it|it is not present on the command line}0">;
 
 def err_module_odr_violation_missing_decl : Error<
@@ -128,6 +133,12 @@ def warn_module_system_bit_conflict : Warning<
   "module file '%0' was validated as a system module and is now being imported "
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
+
+def warn_decls_in_multiple_modules : Warning<
+  "declaration %0 is detected to be defined in multiple module units, first is from '%1' and second is from '%2'; "
+  "the compiler may not be good at merging the definitions. ">,
+  InGroup<DiagGroup<"decls-in-multiple-modules">>,
+  DefaultIgnore;
 
 def err_failed_to_find_module_file : Error<
   "failed to find module file for module '%0'">;

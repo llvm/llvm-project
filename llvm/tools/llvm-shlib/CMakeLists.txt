@@ -11,7 +11,7 @@ if(LLVM_LINK_LLVM_DYLIB AND LLVM_DYLIB_EXPORTED_SYMBOL_FILE)
 endif()
 
 if(LLVM_BUILD_LLVM_DYLIB)
-  if(MSVC)
+  if(MSVC AND NOT LLVM_BUILD_LLVM_DYLIB_VIS)
     message(FATAL_ERROR "Generating libLLVM is not supported on MSVC")
   endif()
   if(ZOS)
@@ -33,7 +33,13 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if (LLVM_LINK_LLVM_DYLIB)
     set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
   endif()
-  add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+  if (WIN32)
+    add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+  else()
+    add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB OUTPUT_NAME LLVM ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+    # Add symlink for backwards compatibility with old library name
+    llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
+  endif()
 
   list(REMOVE_DUPLICATES LIB_NAMES)
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
@@ -43,18 +49,25 @@ if(LLVM_BUILD_LLVM_DYLIB)
     ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
     ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
 
-    # GNU ld doesn't resolve symbols in the version script.
-    set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
-    if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
-      # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
-      set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
-    endif()
-    if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
-      # Optimize function calls for default visibility definitions to avoid PLT and
-      # reduce dynamic relocations.
-      # Note: for -fno-pic default, the address of a function may be different from
-      # inside and outside libLLVM.so.
-      target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+    if(MSVC)
+      target_link_directories(LLVM PRIVATE ${LLVM_LIBRARY_DIR})
+      foreach(library ${LIB_NAMES})
+        target_link_options(LLVM PRIVATE /WHOLEARCHIVE:${library}.lib)
+      endforeach()
+    else()
+      # GNU ld doesn't resolve symbols in the version script.
+      set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
+      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
+        # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
+        set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
+      endif()
+      if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+        # Optimize function calls for default visibility definitions to avoid PLT and
+        # reduce dynamic relocations.
+        # Note: for -fno-pic default, the address of a function may be different from
+        # inside and outside libLLVM.so.
+        target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+      endif()
     endif()
   endif()
 
@@ -175,7 +188,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
 
   if (LLVM_INTEGRATED_CRT_ALLOC AND MSVC)
     # Make sure we search LLVMSupport first, before the CRT libs
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -INCLUDE:malloc")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}-INCLUDE:malloc")
   endif()
   
 endif()

@@ -24,7 +24,7 @@ contains
 ! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc1(
 ! HLFIR-SAME:      %[[ARG_0:.*]]: !fir.ref<f32> {fir.bindc_name = "y"}) {
 ! HLFIR:    %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
-! HLFIR:    %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG_0]] {uniq_name = "_QMm_struct_ctorFtest_alloc1Ey"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! HLFIR:    %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMm_struct_ctorFtest_alloc1Ey"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! HLFIR:    %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
 ! HLFIR:    %[[VAL_14:.*]] = fir.embox %[[VAL_13]]#0 : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
 ! HLFIR:    %[[VAL_15:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
@@ -49,8 +49,8 @@ contains
 ! HLFIR:    %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
 ! HLFIR:    %[[CONS_6:.*]] = arith.constant 5 : index
 ! HLFIR:    %[[VAL_12:.*]] = fir.shape %[[CONS_6]] : (index) -> !fir.shape<1>
-! HLFIR:    %[[VAL_13:.*]]:2 = hlfir.declare %[[ARG_1]](%[[VAL_12]]) {uniq_name = "_QMm_struct_ctorFtest_alloc2Eb"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
-! HLFIR:    %[[VAL_14:.*]]:2 = hlfir.declare %[[ARG_0]] {uniq_name = "_QMm_struct_ctorFtest_alloc2Ey"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! HLFIR:    %[[VAL_13:.*]]:2 = hlfir.declare %[[ARG_1]](%[[VAL_12]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QMm_struct_ctorFtest_alloc2Eb"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
+! HLFIR:    %[[VAL_14:.*]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMm_struct_ctorFtest_alloc2Ey"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! HLFIR:    %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
 ! HLFIR:    %[[VAL_16:.*]] = fir.embox %[[VAL_15]]#0 : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
 ! HLFIR:    %[[VAL_17:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>

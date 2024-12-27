@@ -249,43 +249,6 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   return sliceOp.getSource();
 }
 
-GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
-                          Value outputTensor,
-                          ArrayRef<int64_t> transposeVector) {
-  auto resultTensorType = cast<RankedTensorType>(outputTensor.getType());
-  Type elementType = resultTensorType.getElementType();
-
-  assert(isPermutationVector(transposeVector) &&
-         "expect transpose vector to be a permutation");
-  assert(transposeVector.size() ==
-             static_cast<size_t>(resultTensorType.getRank()) &&
-         "expect transpose vector size to match result tensor rank");
-
-  // Compute the transpose and the indentity indexing maps.
-  SmallVector<AffineMap> indexingMaps = {
-      inversePermutation(AffineMap::getPermutationMap(
-          SmallVector<unsigned>(transposeVector.begin(), transposeVector.end()),
-          b.getContext())),
-      AffineMap::getMultiDimIdentityMap(transposeVector.size(),
-                                        b.getContext())};
-  SmallVector<utils::IteratorType> iteratorTypes(transposeVector.size(),
-                                                 utils::IteratorType::parallel);
-
-  // Create a GenericOp to transpose `inputTensor` into `outputTensor`.
-  auto transposeOp =
-      b.create<GenericOp>(loc, resultTensorType, inputTensor, outputTensor,
-                          indexingMaps, iteratorTypes);
-  Region &body = transposeOp.getRegion();
-  body.push_back(new Block());
-  body.front().addArguments({elementType, elementType}, {loc, loc});
-
-  // Create the body of the transpose operation.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPointToEnd(&body.front());
-  b.create<YieldOp>(loc, transposeOp.getRegion().front().getArgument(0));
-  return transposeOp;
-}
-
 GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
   auto memrefTypeTo = cast<MemRefType>(to.getType());
 #ifndef NDEBUG
@@ -567,9 +530,9 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
 }
 
-static Value materializeTiledShape(OpBuilder &builder, Location loc,
-                                   Value valueToTile,
-                                   const SliceParameters &sliceParams) {
+static Operation *materializeTiledShape(OpBuilder &builder, Location loc,
+                                        Value valueToTile,
+                                        const SliceParameters &sliceParams) {
   auto shapedType = dyn_cast<ShapedType>(valueToTile.getType());
   auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
                       .Case([&](MemRefType) {
@@ -585,14 +548,15 @@ static Value materializeTiledShape(OpBuilder &builder, Location loc,
                       .Default([](ShapedType) -> Operation * {
                         llvm_unreachable("Unexpected shaped type");
                       });
-  return sliceOp->getResult(0);
+  return sliceOp;
 }
 
-Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
-                     ArrayRef<OpFoldResult> tileSizes, AffineMap map,
-                     ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
-                     ArrayRef<OpFoldResult> subShapeSizes,
-                     bool omitPartialTileCheck) {
+Operation *makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
+                          ArrayRef<OpFoldResult> tileSizes, AffineMap map,
+                          ArrayRef<OpFoldResult> lbs,
+                          ArrayRef<OpFoldResult> ubs,
+                          ArrayRef<OpFoldResult> subShapeSizes,
+                          bool omitPartialTileCheck) {
   SliceParameters sliceParams =
       computeSliceParameters(builder, loc, valueToTile, tileSizes, map, lbs,
                              ubs, subShapeSizes, omitPartialTileCheck);
@@ -670,7 +634,8 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
                               << ": make sure in bound with affine.min\n");
 
       AffineExpr dim0, dim1, dim2;
-      bindDims(builder.getContext(), dim0, dim1, dim2);
+      MLIRContext *context = builder.getContext();
+      bindDims(context, dim0, dim1, dim2);
 
       // Get the dimension size for this dimension. We need to first calculate
       // the max index and then plus one. This is important because for
@@ -678,12 +643,12 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
       // form `(d0 * s0 + d1)`, where `d0`/`d1 is an output/filter window
       // dimension and `s0` is stride. Directly use the dimension size of
       // output/filer window dimensions will cause incorrect calculation.
-      AffineMap minusOneMap =
-          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 - 1}})
-              .front();
-      AffineMap plusOneMap =
-          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 + 1}})
-              .front();
+      AffineMap minusOneMap = AffineMap::inferFromExprList(
+                                  {ArrayRef<AffineExpr>{dim0 - 1}}, context)
+                                  .front();
+      AffineMap plusOneMap = AffineMap::inferFromExprList(
+                                 {ArrayRef<AffineExpr>{dim0 + 1}}, context)
+                                 .front();
       SmallVector<OpFoldResult> maxIndices =
           llvm::to_vector(llvm::map_range(ubs, [&](OpFoldResult ub) {
             return makeComposedFoldedAffineApply(rewriter, loc, minusOneMap,
@@ -696,7 +661,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
 
       // Compute min(dim - offset, size) to avoid out-of-bounds accesses.
       AffineMap minMap = AffineMap::inferFromExprList(
-                             {ArrayRef<AffineExpr>{dim1 - dim2, dim0}})
+                             {ArrayRef<AffineExpr>{dim1 - dim2, dim0}}, context)
                              .front();
       size =
           makeComposedFoldedAffineMin(rewriter, loc, minMap, {size, d, offset});
@@ -842,6 +807,7 @@ SmallVector<Value> makeTiledShapes(OpBuilder &builder, Location loc,
     tiledShapes.push_back(
         sliceParams.has_value()
             ? materializeTiledShape(builder, loc, valueToTile, *sliceParams)
+                  ->getResult(0)
             : valueToTile);
   }
   return tiledShapes;
@@ -870,7 +836,7 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
         {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.getDim()]});
     Value materialized =
         getValueOrCreateConstantIndexOp(b, indexOp.getLoc(), applied);
-    b.replaceOpWithIf(indexOp, materialized, [&](OpOperand &use) {
+    b.replaceUsesWithIf(indexOp, materialized, [&](OpOperand &use) {
       return use.getOwner() != materialized.getDefiningOp();
     });
   }

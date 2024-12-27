@@ -18,8 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
-
-struct LogicalResult;
 class Region;
 class RewriterBase;
 class Operation;
@@ -28,8 +26,21 @@ class Value;
 namespace scf {
 
 class IfOp;
+class ForallOp;
 class ForOp;
 class ParallelOp;
+class WhileOp;
+
+/// Try converting scf.forall into a set of nested scf.for loops.
+/// The newly created scf.for ops will be returned through the `results`
+/// vector if provided.
+LogicalResult forallToForLoop(RewriterBase &rewriter, ForallOp forallOp,
+                              SmallVectorImpl<Operation *> *results = nullptr);
+
+/// Try converting scf.forall into an scf.parallel loop.
+/// The conversion is only supported for forall operations with no results.
+LogicalResult forallToParallelLoop(RewriterBase &rewriter, ForallOp forallOp,
+                                   ParallelOp *result = nullptr);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
@@ -180,6 +191,57 @@ struct PipeliningOption {
 FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
                                  const PipeliningOption &options,
                                  bool *modifiedIR = nullptr);
+
+/// Create zero-trip-check around a `while` op and return the new loop op in the
+/// check. The while loop is rotated to avoid evaluating the condition twice
+///
+/// By default the check won't be created for do-while loop as it is not
+/// required. `forceCreateCheck` can force the creation.
+///
+/// It turns:
+///
+///   scf.while (%arg0 = %init) : (i32) -> i64 {
+///     %val = .., %arg0 : i64
+///     %cond = arith.cmpi .., %arg0 : i32
+///     scf.condition(%cond) %val : i64
+///   } do {
+///   ^bb0(%arg1: i64):
+///     %next = .., %arg1 : i32
+///     scf.yield %next : i32
+///   }
+///
+///  into:
+///
+///   %pre_val = .., %init : i64
+///   %pre_cond = arith.cmpi .., %init : i32
+///   scf.if %pre_cond -> i64 {
+///     %res = scf.while (%arg1 = %va0) : (i64) -> i64 {
+///       %next = .., %arg1 : i32
+///       %val = .., %next : i64
+///       %cond = arith.cmpi .., %next : i32
+///       scf.condition(%cond) %val : i64
+///     } do {
+///     ^bb0(%arg2: i64):
+///       %scf.yield %arg2 : i32
+///     }
+///     scf.yield %res : i64
+///   } else {
+///     scf.yield %pre_val : i64
+///   }
+///
+/// Failure mechanism is not implemented for this function, so it currently
+/// always returns a `WhileOp` operation: a new one if the transformation took
+/// place or the input `whileOp` if the loop was already in a `do-while` form
+/// and `forceCreateCheck` is `false`.
+FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
+                                                RewriterBase &rewriter,
+                                                bool forceCreateCheck = false);
+
+/// Try to uplift `scf.while` op to `scf.for`.
+/// Uplifitng expects a specific ops pattern:
+///  * `before` block consisting of single arith.cmp op
+///  * `after` block containing arith.addi
+FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
 
 } // namespace scf
 } // namespace mlir

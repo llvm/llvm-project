@@ -21,6 +21,7 @@ add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
   StoppointSite.cpp
   StopPointSiteList.cpp
   Watchpoint.cpp
+  WatchpointAlgorithms.cpp
   WatchpointList.cpp
   WatchpointOptions.cpp
   WatchpointResource.cpp
@@ -32,6 +33,7 @@ add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
 
   LINK_COMPONENTS
     Support

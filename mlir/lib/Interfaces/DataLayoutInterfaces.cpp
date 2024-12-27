@@ -29,7 +29,7 @@ using namespace mlir;
   os << "neither the scoping op nor the type class provide data layout "
         "information for "
      << type;
-  llvm::report_fatal_error(Twine(os.str()));
+  llvm::report_fatal_error(Twine(message));
 }
 
 /// Returns the bitwidth of the index type if specified in the param list.
@@ -75,10 +75,12 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
   // there is no bit-packing at the moment element sizes are taken in bytes and
   // multiplied with 8 bits.
   // TODO: make this extensible.
-  if (auto vecType = dyn_cast<VectorType>(type))
-    return vecType.getNumElements() / vecType.getShape().back() *
-           llvm::PowerOf2Ceil(vecType.getShape().back()) *
-           dataLayout.getTypeSize(vecType.getElementType()) * 8;
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
+                        llvm::PowerOf2Ceil(vecType.getShape().back()) *
+                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+    return llvm::TypeSize::get(baseSize, vecType.isScalable());
+  }
 
   if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
     return typeInterface.getTypeSizeInBits(dataLayout, params);
@@ -93,7 +95,7 @@ findEntryForIntegerType(IntegerType intType,
   std::map<unsigned, DataLayoutEntryInterface> sortedParams;
   for (DataLayoutEntryInterface entry : params) {
     sortedParams.insert(std::make_pair(
-        entry.getKey().get<Type>().getIntOrFloatBitWidth(), entry));
+        cast<Type>(entry.getKey()).getIntOrFloatBitWidth(), entry));
   }
   auto iter = sortedParams.lower_bound(intType.getWidth());
   if (iter == sortedParams.end())
@@ -138,9 +140,10 @@ getFloatTypeABIAlignment(FloatType fltType, const DataLayout &dataLayout,
 uint64_t mlir::detail::getDefaultABIAlignment(
     Type type, const DataLayout &dataLayout,
     ArrayRef<DataLayoutEntryInterface> params) {
-  // Natural alignment is the closest power-of-two number above.
+  // Natural alignment is the closest power-of-two number above. For scalable
+  // vectors, aligning them to the same as the base vector is sufficient.
   if (isa<VectorType>(type))
-    return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
+    return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type).getKnownMinValue());
 
   if (auto fltType = dyn_cast<FloatType>(type))
     return getFloatTypeABIAlignment(fltType, dataLayout, params);
@@ -218,7 +221,32 @@ uint64_t mlir::detail::getDefaultPreferredAlignment(
   reportMissingDataLayout(type);
 }
 
-// Returns the memory space used for allocal operations if specified in the
+std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
+    Type type, const DataLayout &dataLayout,
+    ArrayRef<DataLayoutEntryInterface> params) {
+  if (isa<IndexType>(type))
+    return getIndexBitwidth(params);
+
+  if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
+    if (std::optional<uint64_t> indexBitwidth =
+            typeInterface.getIndexBitwidth(dataLayout, params))
+      return *indexBitwidth;
+
+  // Return std::nullopt for all other types, which are assumed to be non
+  // pointer-like types.
+  return std::nullopt;
+}
+
+// Returns the endianness if specified in the given entry. If the entry is empty
+// the default endianness represented by an empty attribute is returned.
+Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+
+  return entry.getValue();
+}
+
+// Returns the memory space used for alloca operations if specified in the
 // given entry. If the entry is empty the default memory space represented by
 // an empty attribute is returned.
 Attribute
@@ -265,23 +293,31 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
+std::optional<Attribute>
+mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return std::nullopt;
+
+  return entry.getValue();
+}
+
 DataLayoutEntryList
 mlir::detail::filterEntriesForType(DataLayoutEntryListRef entries,
                                    TypeID typeID) {
-  return llvm::to_vector<4>(llvm::make_filter_range(
+  return llvm::filter_to_vector<4>(
       entries, [typeID](DataLayoutEntryInterface entry) {
         auto type = llvm::dyn_cast_if_present<Type>(entry.getKey());
         return type && type.getTypeID() == typeID;
-      }));
+      });
 }
 
 DataLayoutEntryInterface
 mlir::detail::filterEntryForIdentifier(DataLayoutEntryListRef entries,
                                        StringAttr id) {
   const auto *it = llvm::find_if(entries, [id](DataLayoutEntryInterface entry) {
-    if (!entry.getKey().is<StringAttr>())
-      return false;
-    return entry.getKey().get<StringAttr>() == id;
+    if (auto attr = dyn_cast<StringAttr>(entry.getKey()))
+      return attr == id;
+    return false;
   });
   return it == entries.end() ? DataLayoutEntryInterface() : *it;
 }
@@ -294,6 +330,16 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
         llvm_unreachable("expected an op with data layout spec");
         return DataLayoutSpecInterface();
       });
+}
+
+static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {
+  if (operation) {
+    ModuleOp moduleOp = dyn_cast<ModuleOp>(operation);
+    if (!moduleOp)
+      moduleOp = operation->getParentOfType<ModuleOp>();
+    return moduleOp.getTargetSystemSpec();
+  }
+  return TargetSystemSpecInterface();
 }
 
 /// Populates `opsWithLayout` with the list of proper ancestors of `leaf` that
@@ -347,9 +393,9 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
 
   // Create the list of non-null specs (null/missing specs can be safely
   // ignored) from the outermost to the innermost.
-  auto nonNullSpecs = llvm::to_vector<2>(llvm::make_filter_range(
+  auto nonNullSpecs = llvm::filter_to_vector<2>(
       llvm::reverse(specs),
-      [](DataLayoutSpecInterface iface) { return iface != nullptr; }));
+      [](DataLayoutSpecInterface iface) { return iface != nullptr; });
 
   // Combine the specs using the innermost as anchor.
   if (DataLayoutSpecInterface current = getSpec(leaf))
@@ -405,7 +451,8 @@ void checkMissingLayout(DataLayoutSpecInterface originalLayout, OpTy op) {
 mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op),
+    : originalLayout(getCombinedDataLayout(op)),
+      originalTargetSystemDesc(getTargetSystemSpec(op)), scope(op),
       allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
       globalMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -415,7 +462,8 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 }
 
 mlir::DataLayout::DataLayout(ModuleOp op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op),
+    : originalLayout(getCombinedDataLayout(op)),
+      originalTargetSystemDesc(getTargetSystemSpec(op)), scope(op),
       allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
       globalMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -520,6 +568,34 @@ uint64_t mlir::DataLayout::getTypePreferredAlignment(Type t) const {
   });
 }
 
+std::optional<uint64_t> mlir::DataLayout::getTypeIndexBitwidth(Type t) const {
+  checkValid();
+  return cachedLookup<std::optional<uint64_t>>(t, indexBitwidths, [&](Type ty) {
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getIndexBitwidth(ty, *this, list);
+    return detail::getDefaultIndexBitwidth(ty, *this, list);
+  });
+}
+
+mlir::Attribute mlir::DataLayout::getEndianness() const {
+  checkValid();
+  if (endianness)
+    return *endianness;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getEndiannessIdentifier(originalLayout.getContext()));
+
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    endianness = iface.getEndianness(entry);
+  else
+    endianness = detail::getDefaultEndianness(entry);
+  return *endianness;
+}
+
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   checkValid();
   if (allocaMemorySpace)
@@ -584,6 +660,26 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   return *stackAlignment;
 }
 
+std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
+    TargetSystemSpecInterface::DeviceID deviceID,
+    StringAttr propertyName) const {
+  checkValid();
+  DataLayoutEntryInterface entry;
+  if (originalTargetSystemDesc) {
+    if (std::optional<TargetDeviceSpecInterface> device =
+            originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
+      entry = device->getSpecForIdentifier(propertyName);
+  }
+  // Currently I am not caching the results because we do not return
+  // default values of these properties. Instead if the property is
+  // missing, we return std::nullopt so that the users can resort to
+  // the default value however they want.
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    return iface.getDevicePropertyValue(entry);
+  else
+    return detail::getDevicePropertyValue(entry);
+}
+
 //===----------------------------------------------------------------------===//
 // DataLayoutSpecInterface
 //===----------------------------------------------------------------------===//
@@ -595,7 +691,7 @@ void DataLayoutSpecInterface::bucketEntriesByType(
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey()))
       types[type.getTypeID()].push_back(entry);
     else
-      ids[entry.getKey().get<StringAttr>()] = entry;
+      ids[llvm::cast<StringAttr>(entry.getKey())] = entry;
   }
 }
 
@@ -613,7 +709,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
   spec.bucketEntriesByType(types, ids);
 
   for (const auto &kvp : types) {
-    auto sampleType = kvp.second.front().getKey().get<Type>();
+    auto sampleType = cast<Type>(kvp.second.front().getKey());
     if (isa<IndexType>(sampleType)) {
       assert(kvp.second.size() == 1 &&
              "expected one data layout entry for non-parametric 'index' type");
@@ -667,7 +763,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
   }
 
   for (const auto &kvp : ids) {
-    StringAttr identifier = kvp.second.getKey().get<StringAttr>();
+    StringAttr identifier = cast<StringAttr>(kvp.second.getKey());
     Dialect *dialect = identifier.getReferencedDialect();
 
     // Ignore attributes that belong to an unknown dialect, the dialect may
@@ -682,6 +778,64 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
              << "' dialect does not support identifier data layout entries";
     }
     if (failed(iface->verifyEntry(kvp.second, loc)))
+      return failure();
+  }
+
+  return success();
+}
+
+LogicalResult
+mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
+                                     Location loc) {
+  DenseMap<StringAttr, DataLayoutEntryInterface> deviceDescKeys;
+  DenseSet<TargetSystemSpecInterface::DeviceID> deviceIDs;
+  for (const auto &entry : spec.getEntries()) {
+    auto targetDeviceSpec =
+        dyn_cast<TargetDeviceSpecInterface>(entry.getValue());
+
+    if (!targetDeviceSpec)
+      return failure();
+
+    // First, verify individual target device desc specs.
+    if (failed(targetDeviceSpec.verifyEntry(loc)))
+      return failure();
+
+    // Check that device IDs are unique across all entries.
+    auto deviceID =
+        llvm::dyn_cast<TargetSystemSpecInterface::DeviceID>(entry.getKey());
+    if (!deviceID)
+      return failure();
+
+    if (!deviceIDs.insert(deviceID).second) {
+      return failure();
+    }
+
+    // collect all the keys used by all the target device specs.
+    for (DataLayoutEntryInterface entry : targetDeviceSpec.getEntries()) {
+      if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
+        // targetDeviceSpec does not support Type as a key.
+        return failure();
+      } else {
+        deviceDescKeys[cast<StringAttr>(entry.getKey())] = entry;
+      }
+    }
+  }
+
+  for (const auto &[keyName, keyVal] : deviceDescKeys) {
+    Dialect *dialect = keyName.getReferencedDialect();
+
+    // Ignore attributes that belong to an unknown dialect, the dialect may
+    // actually implement the relevant interface but we don't know about that.
+    if (!dialect)
+      return failure();
+
+    const auto *iface = dyn_cast<DataLayoutDialectInterface>(dialect);
+    if (!iface) {
+      return emitError(loc)
+             << "the '" << dialect->getNamespace()
+             << "' dialect does not support identifier data layout entries";
+    }
+    if (failed(iface->verifyEntry(keyVal, loc)))
       return failure();
   }
 

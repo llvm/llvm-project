@@ -9,6 +9,7 @@
 #include "flang/Semantics/semantics.h"
 #include "assignment.h"
 #include "canonicalize-acc.h"
+#include "canonicalize-directives.h"
 #include "canonicalize-do.h"
 #include "canonicalize-omp.h"
 #include "check-acc-structure.h"
@@ -159,6 +160,41 @@ private:
   SemanticsContext &context_;
 };
 
+static void WarnUndefinedFunctionResult(
+    SemanticsContext &context, const Scope &scope) {
+  auto WasDefined{[&context](const Symbol &symbol) {
+    return context.IsSymbolDefined(symbol) ||
+        IsInitialized(symbol, /*ignoreDataStatements=*/true,
+            /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
+  }};
+  if (const Symbol * symbol{scope.symbol()}) {
+    if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
+      if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
+        bool wasDefined{WasDefined(subp->result())};
+        if (!wasDefined) {
+          // Definitions of ENTRY result variables also count.
+          for (const auto &pair : scope) {
+            const Symbol &local{*pair.second};
+            if (IsFunctionResult(local) && WasDefined(local)) {
+              wasDefined = true;
+              break;
+            }
+          }
+          if (!wasDefined) {
+            context.Warn(common::UsageWarning::UndefinedFunctionResult,
+                symbol->name(), "Function result is never defined"_warn_en_US);
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUndefinedFunctionResult(context, child);
+    }
+  }
+}
+
 using StatementSemanticsPass1 = ExprChecker;
 using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
@@ -184,6 +220,9 @@ static bool PerformStatementSemantics(
   }
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);
+  }
+  if (!context.messages().AnyFatalError()) {
+    WarnUndefinedFunctionResult(context, context.globalScope());
   }
   if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
@@ -243,15 +282,15 @@ public:
           info.initialization = common;
         }
       }
-      if (common.size() != info.biggestSize->size() && !common.name().empty() &&
-          context.ShouldWarn(common::LanguageFeature::DistinctCommonSizes)) {
-        context
-            .Say(common.name(),
+      if (common.size() != info.biggestSize->size() && !common.name().empty()) {
+        if (auto *msg{context.Warn(common::LanguageFeature::DistinctCommonSizes,
+                common.name(),
                 "A named COMMON block should have the same size everywhere it appears (%zd bytes here)"_port_en_US,
-                common.size())
-            .Attach(info.biggestSize->name(),
-                "Previously defined with a size of %zd bytes"_en_US,
-                info.biggestSize->size());
+                common.size())}) {
+          msg->Attach(info.biggestSize->name(),
+              "Previously defined with a size of %zd bytes"_en_US,
+              info.biggestSize->size());
+        }
       }
       if (common.size() > info.biggestSize->size()) {
         info.biggestSize = common;
@@ -306,14 +345,15 @@ private:
 SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
+    const common::LangOptions &langOpts,
     parser::AllCookedSources &allCookedSources)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      allCookedSources_{allCookedSources},
+      langOpts_{langOpts}, allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
-          intrinsics_, targetCharacteristics_, languageFeatures_} {}
+          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -430,21 +470,29 @@ void SemanticsContext::PopConstruct() {
   constructStack_.pop_back();
 }
 
-void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
-    const Symbol &variable, parser::MessageFixedText &&message) {
+parser::Message *SemanticsContext::CheckIndexVarRedefine(
+    const parser::CharBlock &location, const Symbol &variable,
+    parser::MessageFixedText &&message) {
   const Symbol &symbol{ResolveAssociations(variable)};
   auto it{activeIndexVars_.find(symbol)};
   if (it != activeIndexVars_.end()) {
     std::string kind{EnumToString(it->second.kind)};
-    Say(location, std::move(message), kind, symbol.name())
-        .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
+    return &Say(location, std::move(message), kind, symbol.name())
+                .Attach(
+                    it->second.location, "Enclosing %s construct"_en_US, kind);
+  } else {
+    return nullptr;
   }
 }
 
 void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckIndexVarRedefine(location, variable,
-      "Possible redefinition of %s variable '%s'"_warn_en_US);
+  if (ShouldWarn(common::UsageWarning::IndexVarRedefinition)) {
+    if (auto *msg{CheckIndexVarRedefine(location, variable,
+            "Possible redefinition of %s variable '%s'"_warn_en_US)}) {
+      msg->set_usageWarning(common::UsageWarning::IndexVarRedefinition);
+    }
+  }
 }
 
 void SemanticsContext::CheckIndexVarRedefine(
@@ -515,7 +563,7 @@ bool SemanticsContext::IsTempName(const std::string &name) {
 
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {
   return ModFileReader{*this}.Read(SourceName{name, std::strlen(name)},
-      true /*intrinsic*/, nullptr, true /*silence errors*/);
+      true /*intrinsic*/, nullptr, /*silent=*/true);
 }
 
 void SemanticsContext::UseFortranBuiltinsModule() {
@@ -539,6 +587,14 @@ const Scope &SemanticsContext::GetCUDABuiltinsScope() {
     CHECK(cudaBuiltinsScope_.value() != nullptr);
   }
   return **cudaBuiltinsScope_;
+}
+
+const Scope &SemanticsContext::GetCUDADeviceScope() {
+  if (!cudaDeviceScope_) {
+    cudaDeviceScope_ = GetBuiltinModule("cudadevice");
+    CHECK(cudaDeviceScope_.value() != nullptr);
+  }
+  return **cudaDeviceScope_;
 }
 
 void SemanticsContext::UsePPCBuiltinsModule() {
@@ -590,16 +646,28 @@ bool Semantics::Perform() {
       CanonicalizeOmp(context_.messages(), program_) &&
       CanonicalizeCUDA(program_) &&
       PerformStatementSemantics(context_, program_) &&
-      ModFileWriter{context_}.WriteAll();
+      CanonicalizeDirectives(context_.messages(), program_) &&
+      ModFileWriter{context_}
+          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+          .WriteAll();
 }
 
-void Semantics::EmitMessages(llvm::raw_ostream &os) const {
+void Semantics::EmitMessages(llvm::raw_ostream &os) {
+  // Resolve the CharBlock locations of the Messages to ProvenanceRanges
+  // so messages from parsing and semantics are intermixed in source order.
+  context_.messages().ResolveProvenances(context_.allCookedSources());
   context_.messages().Emit(os, context_.allCookedSources());
 }
 
-void Semantics::DumpSymbols(llvm::raw_ostream &os) {
-  DoDumpSymbols(os, context_.globalScope());
+void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
+  DoDumpSymbols(os, globalScope());
 }
+
+ProgramTree &SemanticsContext::SaveProgramTree(ProgramTree &&tree) {
+  return programTrees_.emplace_back(std::move(tree));
+}
+
+void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }
 
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;
@@ -693,6 +761,14 @@ CommonBlockList SemanticsContext::GetCommonBlocks() const {
     return commonBlockMap_->GetCommonBlocks();
   }
   return {};
+}
+
+void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {
+  isDefined_.insert(symbol);
+}
+
+bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
+  return isDefined_.find(symbol) != isDefined_.end();
 }
 
 } // namespace Fortran::semantics

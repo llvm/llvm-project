@@ -6,6 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpcle %s -o %t.le.o
 # RUN: ld.lld %t.le.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump -s %t | FileCheck %s --check-prefix=HEX
 
 .section .R_PPC_REL14,"ax",@progbits
   beq 1f
@@ -23,7 +24,7 @@
   .long 1f - .
 1:
 # HEX-LABEL: section .R_PPC_REL32:
-# HEX-NEXT: 10010008 00000004
+# HEX-NEXT:  04000000
 
 .section .R_PPC_PLTREL24,"ax",@progbits
   b 1f@PLT+32768

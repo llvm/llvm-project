@@ -11,7 +11,7 @@ class TestCase(TestBase):
         callee_break = target.BreakpointCreateByName(
             "SomeClass::SomeClass(ParamClass)", None
         )
-        self.assertTrue(callee_break.GetNumLocations() > 0)
+        self.assertGreater(callee_break.GetNumLocations(), 0)
         self.runCmd("run", RUN_SUCCEEDED)
 
         to_complete = "e ParamClass"

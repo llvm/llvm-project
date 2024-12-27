@@ -13,14 +13,14 @@ define internal spir_func void @spir_func_internal() {
 ; // -----
 
 ; CHECK-LABEL: @func_readnone
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return
 define void @func_readnone() readnone {
   ret void
 }
 
 ; CHECK-LABEL: @func_readnone_indirect
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 declare void @func_readnone_indirect() #0
 attributes #0 = { readnone }
 
@@ -45,6 +45,7 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.returned}
 ; CHECK-SAME:  !llvm.ptr {llvm.alignstack = 32 : i64}
 ; CHECK-SAME:  !llvm.ptr {llvm.writeonly}
+; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
     ptr byref(i64) %arg1,
@@ -63,7 +64,8 @@ define ptr @func_arg_attrs(
     ptr preallocated(double) %arg16,
     ptr returned %arg17,
     ptr alignstack(32) %arg18,
-    ptr writeonly %arg19) {
+    ptr writeonly %arg19,
+    i64 range(i64 0, 4097) %arg20) {
   ret ptr %arg17
 }
 
@@ -141,6 +143,12 @@ declare inreg ptr @func_res_attr_inreg()
 
 ; // -----
 
+; CHECK-LABEL: @func_res_attr_range
+; CHECK-SAME:  (i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
+declare range(i64 0, 4097) i64 @func_res_attr_range()
+
+; // -----
+
 ; CHECK-LABEL: @entry_count
 ; CHECK-SAME:  attributes {function_entry_count = 4242 : i64}
 define void @entry_count() !prof !1 {
@@ -152,7 +160,7 @@ define void @entry_count() !prof !1 {
 ; // -----
 
 ; CHECK-LABEL: @func_memory
-; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 ; CHECK:   llvm.return
 define void @func_memory() memory(readwrite, argmem: none) {
   ret void
@@ -163,11 +171,10 @@ define void @func_memory() memory(readwrite, argmem: none) {
 ; CHECK-LABEL: @passthrough_combined
 ; CHECK-SAME: attributes {passthrough = [
 ; CHECK-DAG: ["alignstack", "16"]
-; CHECK-DAG: "noinline"
 ; CHECK-DAG: "probe-stack"
 ; CHECK-DAG: ["alloc-family", "malloc"]
 ; CHECK:   llvm.return
-define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc-family"="malloc" {
+define void @passthrough_combined() alignstack(16) "probe-stack" "alloc-family"="malloc" {
   ret void
 }
 
@@ -222,20 +229,32 @@ define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
 
 ; CHECK-LABEL: @arm_new_za_func
 ; CHECK-SAME: attributes {arm_new_za}
-define void @arm_new_za_func() "aarch64_pstate_za_new" {
+define void @arm_new_za_func() "aarch64_new_za" {
   ret void
 }
 
+
+; CHECK-LABEL: @arm_in_za_func
+; CHECK-SAME: attributes {arm_in_za}
+define void @arm_in_za_func() "aarch64_in_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_out_za_func
+; CHECK-SAME: attributes {arm_out_za}
+define void @arm_out_za_func() "aarch64_out_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_inout_za_func
+; CHECK-SAME: attributes {arm_inout_za}
+define void @arm_inout_za_func() "aarch64_inout_za" {
+  ret void
+}
 
 ; CHECK-LABEL: @arm_preserves_za_func
 ; CHECK-SAME: attributes {arm_preserves_za}
-define void @arm_preserves_za_func() "aarch64_pstate_za_preserved" {
-  ret void
-}
-
-; CHECK-LABEL: @arm_shared_za_func
-; CHECK-SAME: attributes {arm_shared_za}
-define void @arm_shared_za_func() "aarch64_pstate_za_shared" {
+define void @arm_preserves_za_func() "aarch64_preserves_za" {
   ret void
 }
 
@@ -272,3 +291,117 @@ define void @align_func() align 2 {
 ; CHECK-LABEL: @align_decl
 ; CHECK-SAME: attributes {alignment = 64 : i64}
 declare void @align_decl() align 64
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math_true
+; CHECK-SAME: attributes {unsafe_fp_math = true}
+declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math_false
+; CHECK-SAME: attributes {unsafe_fp_math = false}
+declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math_true
+; CHECK-SAME: attributes {no_infs_fp_math = true}
+declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math_false
+; CHECK-SAME: attributes {no_infs_fp_math = false}
+declare void @func_attr_no_infs_fp_math_false() "no-infs-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math_true
+; CHECK-SAME: attributes {no_nans_fp_math = true}
+declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math_false
+; CHECK-SAME: attributes {no_nans_fp_math = false}
+declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math_true
+; CHECK-SAME: attributes {approx_func_fp_math = true}
+declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math_false
+; CHECK-SAME: attributes {approx_func_fp_math = false}
+declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_false
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = false}
+declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_denormal_fp_math_ieee
+; CHECK-SAME: attributes {denormal_fp_math = "ieee"}
+declare void @func_attr_denormal_fp_math_ieee() "denormal-fp-math"="ieee"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_denormal_fp_math_f32_preserve_sign
+; CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
+declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_fp_contract_fast
+; CHECK-SAME: attributes {fp_contract = "fast"}
+declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
+
+// -----
+
+; CHECK-LABEL: @noinline_attribute
+; CHECK-SAME: attributes {no_inline}
+declare void @noinline_attribute() noinline
+
+// -----
+
+; CHECK-LABEL: @alwaysinline_attribute
+; CHECK-SAME: attributes {always_inline}
+declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @optnone_attribute
+; CHECK-SAME: attributes {no_inline, optimize_none}
+declare void @optnone_attribute() noinline optnone
+
+// -----
+
+; CHECK-LABEL: @convergent_attribute
+; CHECK-SAME: attributes {convergent}
+declare void @convergent_attribute() convergent
+
+// -----
+
+; CHECK-LABEL: @nounwind_attribute
+; CHECK-SAME: attributes {no_unwind}
+declare void @nounwind_attribute() nounwind
+
+// -----
+
+; CHECK-LABEL: @willreturn_attribute
+; CHECK-SAME: attributes {will_return}
+declare void @willreturn_attribute() willreturn

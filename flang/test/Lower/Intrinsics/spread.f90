@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module spread_mod
 

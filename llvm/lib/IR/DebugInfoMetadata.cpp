@@ -34,6 +34,10 @@ cl::opt<bool> EnableFSDiscriminator(
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 
+uint32_t DIType::getAlignInBits() const {
+  return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
+}
+
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
@@ -42,10 +46,10 @@ DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
       Fragment(DII->getExpression()->getFragmentInfo()),
       InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
-DebugVariable::DebugVariable(const DPValue *DPV)
-    : Variable(DPV->getVariable()),
-      Fragment(DPV->getExpression()->getFragmentInfo()),
-      InlinedAt(DPV->getDebugLoc().getInlinedAt()) {}
+DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
+    : Variable(DVR->getVariable()),
+      Fragment(DVR->getExpression()->getFragmentInfo()),
+      InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
 DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
     : DebugVariable(DVI->getVariable(), std::nullopt,
@@ -659,14 +663,16 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, uint64_t SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  DIFlags Flags, StorageType Storage,
-                                  bool ShouldCreate) {
+                                  uint32_t NumExtraInhabitants, DIFlags Flags,
+                                  StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags));
+  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
+                                      Encoding, NumExtraInhabitants, Flags));
   Metadata *Ops[] = {nullptr, nullptr, Name};
-  DEFINE_GETIMPL_STORE(DIBasicType,
-                       (Tag, SizeInBits, AlignInBits, Encoding, Flags), Ops);
+  DEFINE_GETIMPL_STORE(
+      DIBasicType,
+      (Tag, SizeInBits, AlignInBits, Encoding, NumExtraInhabitants, Flags),
+      Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -731,24 +737,30 @@ Constant *DIDerivedType::getDiscriminantValue() const {
   return nullptr;
 }
 
-DIDerivedType *
-DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-                       Metadata *File, unsigned Line, Metadata *Scope,
-                       Metadata *BaseType, uint64_t SizeInBits,
-                       uint32_t AlignInBits, uint64_t OffsetInBits,
-                       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-                       Metadata *ExtraData, Metadata *Annotations,
-                       StorageType Storage, bool ShouldCreate) {
+DIDerivedType *DIDerivedType::getImpl(
+    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
+    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                         ExtraData, Annotations));
+                         AlignInBits, OffsetInBits, DWARFAddressSpace,
+                         PtrAuthData, Flags, ExtraData, Annotations));
   Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
   DEFINE_GETIMPL_STORE(DIDerivedType,
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, Flags),
+                        DWARFAddressSpace, PtrAuthData, Flags),
                        Ops);
+}
+
+std::optional<DIDerivedType::PtrAuthData>
+DIDerivedType::getPtrAuthData() const {
+  return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
+             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             : std::nullopt;
 }
 
 DICompositeType *DICompositeType::getImpl(
@@ -758,35 +770,36 @@ DICompositeType *DICompositeType::getImpl(
     Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
     Metadata *TemplateParams, MDString *Identifier, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations, StorageType Storage,
-    bool ShouldCreate) {
+    Metadata *Rank, Metadata *Annotations, Metadata *Specification,
+    uint32_t NumExtraInhabitants, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
   // Keep this in sync with buildODRType.
-  DEFINE_GETIMPL_LOOKUP(DICompositeType,
-                        (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, Flags, Elements,
-                         RuntimeLang, VTableHolder, TemplateParams, Identifier,
-                         Discriminator, DataLocation, Associated, Allocated,
-                         Rank, Annotations));
+  DEFINE_GETIMPL_LOOKUP(
+      DICompositeType,
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
+       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
+       Annotations, Specification, NumExtraInhabitants));
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations};
-  DEFINE_GETIMPL_STORE(
-      DICompositeType,
-      (Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits, Flags),
-      Ops);
+                     Rank,          Annotations,  Specification};
+  DEFINE_GETIMPL_STORE(DICompositeType,
+                       (Tag, Line, RuntimeLang, SizeInBits, AlignInBits,
+                        OffsetInBits, NumExtraInhabitants, Flags),
+                       Ops);
 }
 
 DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-    DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
-    Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
-    Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations) {
+    Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
+    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
+    Metadata *TemplateParams, Metadata *Discriminator, Metadata *DataLocation,
+    Metadata *Associated, Metadata *Allocated, Metadata *Rank,
+    Metadata *Annotations) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -796,8 +809,8 @@ DICompositeType *DICompositeType::buildODRType(
                Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
                VTableHolder, TemplateParams, &Identifier, Discriminator,
-               DataLocation, Associated, Allocated, Rank, Annotations);
-
+               DataLocation, Associated, Allocated, Rank, Annotations,
+               Specification, NumExtraInhabitants);
   if (CT->getTag() != Tag)
     return nullptr;
 
@@ -808,11 +821,11 @@ DICompositeType *DICompositeType::buildODRType(
 
   // Mutate CT in place.  Keep this in sync with getImpl.
   CT->mutate(Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits,
-             Flags);
+             NumExtraInhabitants, Flags);
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, &Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations};
+                     Rank,          Annotations,  Specification};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -825,10 +838,11 @@ DICompositeType *DICompositeType::getODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-    DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
-    Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
-    Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations) {
+    Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
+    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
+    Metadata *TemplateParams, Metadata *Discriminator, Metadata *DataLocation,
+    Metadata *Associated, Metadata *Allocated, Metadata *Rank,
+    Metadata *Annotations) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -838,7 +852,7 @@ DICompositeType *DICompositeType::getODRType(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
         TemplateParams, &Identifier, Discriminator, DataLocation, Associated,
-        Allocated, Rank, Annotations);
+        Allocated, Rank, Annotations, Specification, NumExtraInhabitants);
   } else {
     if (CT->getTag() != Tag)
       return nullptr;
@@ -857,7 +871,7 @@ DISubroutineType::DISubroutineType(LLVMContext &C, StorageType Storage,
                                    DIFlags Flags, uint8_t CC,
                                    ArrayRef<Metadata *> Ops)
     : DIType(C, DISubroutineTypeKind, Storage, dwarf::DW_TAG_subroutine_type, 0,
-             0, 0, 0, Flags, Ops),
+             0, 0, 0, 0, Flags, Ops),
       CC(CC) {}
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
@@ -1394,6 +1408,8 @@ unsigned DIExpression::ExprOperand::getSize() const {
   switch (Op) {
   case dwarf::DW_OP_LLVM_convert:
   case dwarf::DW_OP_LLVM_fragment:
+  case dwarf::DW_OP_LLVM_extract_bits_sext:
+  case dwarf::DW_OP_LLVM_extract_bits_zext:
   case dwarf::DW_OP_bregx:
     return 3;
   case dwarf::DW_OP_constu:
@@ -1464,6 +1480,8 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
+    case dwarf::DW_OP_LLVM_extract_bits_sext:
+    case dwarf::DW_OP_LLVM_extract_bits_zext:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
@@ -1512,7 +1530,6 @@ bool DIExpression::isImplicit() const {
     default:
       break;
     case dwarf::DW_OP_stack_value:
-    case dwarf::DW_OP_LLVM_tag_offset:
       return true;
     }
   }
@@ -1666,6 +1683,41 @@ DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
   return std::nullopt;
 }
 
+std::optional<uint64_t> DIExpression::getActiveBits(DIVariable *Var) {
+  std::optional<uint64_t> InitialActiveBits = Var->getSizeInBits();
+  std::optional<uint64_t> ActiveBits = InitialActiveBits;
+  for (auto Op : expr_ops()) {
+    switch (Op.getOp()) {
+    default:
+      // We assume the worst case for anything we don't currently handle and
+      // revert to the initial active bits.
+      ActiveBits = InitialActiveBits;
+      break;
+    case dwarf::DW_OP_LLVM_extract_bits_zext:
+    case dwarf::DW_OP_LLVM_extract_bits_sext: {
+      // We can't handle an extract whose sign doesn't match that of the
+      // variable.
+      std::optional<DIBasicType::Signedness> VarSign = Var->getSignedness();
+      bool VarSigned = (VarSign == DIBasicType::Signedness::Signed);
+      bool OpSigned = (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext);
+      if (!VarSign || VarSigned != OpSigned) {
+        ActiveBits = InitialActiveBits;
+        break;
+      }
+      [[fallthrough]];
+    }
+    case dwarf::DW_OP_LLVM_fragment:
+      // Extract or fragment narrows the active bits
+      if (ActiveBits)
+        ActiveBits = std::min(*ActiveBits, Op.getArg(1));
+      else
+        ActiveBits = Op.getArg(1);
+      break;
+    }
+  }
+  return ActiveBits;
+}
+
 void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
                                 int64_t Offset) {
   if (Offset > 0) {
@@ -1710,6 +1762,45 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   }
 
   return false;
+}
+
+bool DIExpression::extractLeadingOffset(
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  OffsetInBytes = 0;
+  RemainingOps.clear();
+
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt)
+    return false;
+
+  auto ExprOpEnd = expr_op_iterator(SingleLocEltsOpt->end());
+  auto ExprOpIt = expr_op_iterator(SingleLocEltsOpt->begin());
+  while (ExprOpIt != ExprOpEnd) {
+    uint64_t Op = ExprOpIt->getOp();
+    if (Op == dwarf::DW_OP_deref || Op == dwarf::DW_OP_deref_size ||
+        Op == dwarf::DW_OP_deref_type || Op == dwarf::DW_OP_LLVM_fragment ||
+        Op == dwarf::DW_OP_LLVM_extract_bits_zext ||
+        Op == dwarf::DW_OP_LLVM_extract_bits_sext) {
+      break;
+    } else if (Op == dwarf::DW_OP_plus_uconst) {
+      OffsetInBytes += ExprOpIt->getArg(0);
+    } else if (Op == dwarf::DW_OP_constu) {
+      uint64_t Value = ExprOpIt->getArg(0);
+      ++ExprOpIt;
+      if (ExprOpIt->getOp() == dwarf::DW_OP_plus)
+        OffsetInBytes += Value;
+      else if (ExprOpIt->getOp() == dwarf::DW_OP_minus)
+        OffsetInBytes -= Value;
+      else
+        return false;
+    } else {
+      // Not a const plus/minus operation or deref.
+      return false;
+    }
+    ++ExprOpIt;
+  }
+  RemainingOps.append(ExprOpIt.getBase(), ExprOpEnd.getBase());
+  return true;
 }
 
 bool DIExpression::hasAllLocationOps(unsigned N) const {
@@ -1774,7 +1865,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
               [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
     assert(ArgNo == 0 &&
            "Location Index must be 0 for a non-variadic expression.");
-    SmallVector<uint64_t, 8> NewOps(Ops.begin(), Ops.end());
+    SmallVector<uint64_t, 8> NewOps(Ops);
     return DIExpression::prependOpcodes(Expr, NewOps, StackValue);
   }
 
@@ -1867,13 +1958,13 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
       NewOps.append(Ops.begin(), Ops.end());
 
       // Ensure that the new opcodes are only appended once.
-      Ops = std::nullopt;
+      Ops = {};
     }
     Op.appendToVector(NewOps);
   }
-
   NewOps.append(Ops.begin(), Ops.end());
-  auto *result = DIExpression::get(Expr->getContext(), NewOps);
+  auto *result =
+      DIExpression::get(Expr->getContext(), NewOps)->foldConstantMath();
   assert(result->isValid() && "concatenated expression is not valid");
   return result;
 }
@@ -1881,11 +1972,12 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
 DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                                           ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
-  assert(none_of(Ops,
-                 [](uint64_t Op) {
-                   return Op == dwarf::DW_OP_stack_value ||
-                          Op == dwarf::DW_OP_LLVM_fragment;
-                 }) &&
+  assert(std::none_of(expr_op_iterator(Ops.begin()),
+                      expr_op_iterator(Ops.end()),
+                      [](auto Op) {
+                        return Op.getOp() == dwarf::DW_OP_stack_value ||
+                               Op.getOp() == dwarf::DW_OP_LLVM_fragment;
+                      }) &&
          "Can't append this op");
 
   // Append a DW_OP_deref after Expr's current op list if it's non-empty and
@@ -1917,6 +2009,8 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
   // Track whether it's safe to split the value at the top of the DWARF stack,
   // assuming that it'll be used as an implicit location value.
   bool CanSplitValue = true;
+  // Track whether we need to add a fragment expression to the end of Expr.
+  bool EmitFragment = true;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
@@ -1952,6 +2046,11 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
           return std::nullopt;
         break;
       case dwarf::DW_OP_LLVM_fragment: {
+        // If we've decided we don't need a fragment then give up if we see that
+        // there's already a fragment expression.
+        // FIXME: We could probably do better here
+        if (!EmitFragment)
+          return std::nullopt;
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
         uint64_t FragmentSizeInBits = Op.getArg(1);
@@ -1961,16 +2060,108 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
         OffsetInBits += FragmentOffsetInBits;
         continue;
       }
+      case dwarf::DW_OP_LLVM_extract_bits_zext:
+      case dwarf::DW_OP_LLVM_extract_bits_sext: {
+        // If we're extracting bits from inside of the fragment that we're
+        // creating then we don't have a fragment after all, and just need to
+        // adjust the offset that we're extracting from.
+        uint64_t ExtractOffsetInBits = Op.getArg(0);
+        uint64_t ExtractSizeInBits = Op.getArg(1);
+        if (ExtractOffsetInBits >= OffsetInBits &&
+            ExtractOffsetInBits + ExtractSizeInBits <=
+                OffsetInBits + SizeInBits) {
+          Ops.push_back(Op.getOp());
+          Ops.push_back(ExtractOffsetInBits - OffsetInBits);
+          Ops.push_back(ExtractSizeInBits);
+          EmitFragment = false;
+          continue;
+        }
+        // If the extracted bits aren't fully contained within the fragment then
+        // give up.
+        // FIXME: We could probably do better here
+        return std::nullopt;
+      }
       }
       Op.appendToVector(Ops);
     }
   }
   assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
-  Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-  Ops.push_back(OffsetInBits);
-  Ops.push_back(SizeInBits);
+  if (EmitFragment) {
+    Ops.push_back(dwarf::DW_OP_LLVM_fragment);
+    Ops.push_back(OffsetInBits);
+    Ops.push_back(SizeInBits);
+  }
   return DIExpression::get(Expr->getContext(), Ops);
+}
+
+/// See declaration for more info.
+bool DIExpression::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *SliceStart, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const Value *DbgPtr, int64_t DbgPtrOffsetInBits,
+    int64_t DbgExtractOffsetInBits, DIExpression::FragmentInfo VarFrag,
+    std::optional<DIExpression::FragmentInfo> &Result,
+    int64_t &OffsetFromLocationInBits) {
+
+  if (VarFrag.SizeInBits == 0)
+    return false; // Variable size is unknown.
+
+  // Difference between mem slice start and the dbg location start.
+  // 0   4   8   12   16 ...
+  // |       |
+  // dbg location start
+  //         |
+  //         mem slice start
+  // Here MemStartRelToDbgStartInBits is 8. Note this can be negative.
+  int64_t MemStartRelToDbgStartInBits;
+  {
+    auto MemOffsetFromDbgInBytes = SliceStart->getPointerOffsetFrom(DbgPtr, DL);
+    if (!MemOffsetFromDbgInBytes)
+      return false; // Can't calculate difference in addresses.
+    // Difference between the pointers.
+    MemStartRelToDbgStartInBits = *MemOffsetFromDbgInBytes * 8;
+    // Add the difference of the offsets.
+    MemStartRelToDbgStartInBits +=
+        SliceOffsetInBits - (DbgPtrOffsetInBits + DbgExtractOffsetInBits);
+  }
+
+  // Out-param. Invert offset to get offset from debug location.
+  OffsetFromLocationInBits = -MemStartRelToDbgStartInBits;
+
+  // Check if the variable fragment sits outside (before) this memory slice.
+  int64_t MemEndRelToDbgStart = MemStartRelToDbgStartInBits + SliceSizeInBits;
+  if (MemEndRelToDbgStart < 0) {
+    Result = {0, 0}; // Out-param.
+    return true;
+  }
+
+  // Work towards creating SliceOfVariable which is the bits of the variable
+  // that the memory region covers.
+  // 0   4   8   12   16 ...
+  // |       |
+  // dbg location start with VarFrag offset=32
+  //         |
+  //         mem slice start: SliceOfVariable offset=40
+  int64_t MemStartRelToVarInBits =
+      MemStartRelToDbgStartInBits + VarFrag.OffsetInBits;
+  int64_t MemEndRelToVarInBits = MemStartRelToVarInBits + SliceSizeInBits;
+  // If the memory region starts before the debug location the fragment
+  // offset would be negative, which we can't encode. Limit those to 0. This
+  // is fine because those bits necessarily don't overlap with the existing
+  // variable fragment.
+  int64_t MemFragStart = std::max<int64_t>(0, MemStartRelToVarInBits);
+  int64_t MemFragSize =
+      std::max<int64_t>(0, MemEndRelToVarInBits - MemFragStart);
+  DIExpression::FragmentInfo SliceOfVariable(MemFragSize, MemFragStart);
+
+  // Intersect the memory region fragment with the variable location fragment.
+  DIExpression::FragmentInfo TrimmedSliceOfVariable =
+      DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);
+  if (TrimmedSliceOfVariable == VarFrag)
+    Result = std::nullopt; // Out-param.
+  else
+    Result = TrimmedSliceOfVariable; // Out-param.
+  return true;
 }
 
 std::pair<DIExpression *, const ConstantInt *>

@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=aarch64-windows-msvc %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -mtriple=arm64ec-windows-msvc %s -o - | FileCheck %s --check-prefixes=CHECK-EC
 ; RUN: llc -global-isel -global-isel-abort=2 -verify-machineinstrs -mtriple=aarch64-windows-msvc %s -o - | FileCheck %s
 ; RUN: llc -global-isel -global-isel-abort=2 -verify-machineinstrs -mtriple=aarch64-linux-gnu %s -o - | FileCheck %s
 
@@ -32,3 +33,10 @@ attributes #1 = { noinline optnone "thunk" }
 ; CHECK: ldr     x9, [x9]
 ; CHECK: mov     v0.16b, v16.16b
 ; CHECK: br      x9
+; CHECK-EC: mov     v7.16b, v0.16b
+; CHECK-EC: ldr     x9, [x0]
+; CHECK-EC: ldr     x11, [x9]
+; CHECK-EC: mov     v0.16b, v7.16b
+; CHECK-EC: add     x4, sp, #64
+; CHECK-EC: add     sp, sp, #64
+; CHECK-EC: br      x11

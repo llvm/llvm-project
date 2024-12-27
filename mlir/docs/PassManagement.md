@@ -56,8 +56,7 @@ By default, an operation pass is `op-agnostic`, meaning that it operates on the
 operation type of the pass manager that it is added to. This means a pass may operate
 on many different types of operations. Agnostic passes should be written such that
 they do not make assumptions on the operation they run on. Examples of this type of pass are
-[Canonicalization](Pass.md/-canonicalize-canonicalize-operations)
-[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions).
+[Canonicalization](Passes.md/#-canonicalize) and [Common Sub-Expression Elimination](Passes.md/#-cse).
 
 To create an agnostic operation pass, a derived class must adhere to the following:
 
@@ -362,7 +361,7 @@ specific operation, and executed on any viable operation type). Operation types 
 anchor pass managers must adhere to the following requirement:
 
 *   Must be registered and marked
-    [`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
+    [`IsolatedFromAbove`](Traits/#isolatedfromabove).
 
     *   Passes are expected not to modify operations at or above the current
         operation being processed. If the operation is not isolated, it may
@@ -1125,17 +1124,44 @@ pipeline. This display mode is available in mlir-opt via
 $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing -mlir-timing-display=list
 
 ===-------------------------------------------------------------------------===
-                      ... Pass execution timing report ...
+                         ... Execution time report ...
 ===-------------------------------------------------------------------------===
-  Total Execution Time: 0.0203 seconds
+  Total Execution Time: 0.0135 seconds
 
-   ---Wall Time---  --- Name ---
-   0.0047 ( 55.9%)  Canonicalizer
-   0.0019 ( 22.2%)  VerifierPass
-   0.0016 ( 18.5%)  LLVMLoweringPass
-   0.0003 (  3.4%)  CSE
-   0.0002 (  1.9%)  (A) DominanceInfo
-   0.0084 (100.0%)  Total
+  ----Wall Time----  ----Name----
+    0.0135 (100.0%)  root
+    0.0041 ( 30.1%)  Parser
+    0.0018 ( 13.3%)  ConvertFuncToLLVMPass
+    0.0011 (  8.2%)  Output
+    0.0007 (  5.2%)  Pipeline Collection : ['func.func']
+    0.0006 (  4.6%)  'func.func' Pipeline
+    0.0005 (  3.5%)  Canonicalizer
+    0.0001 (  0.9%)  CSE
+    0.0001 (  0.5%)  (A) DataLayoutAnalysis
+    0.0000 (  0.1%)  (A) DominanceInfo
+    0.0058 ( 43.2%)  Rest
+    0.0135 (100.0%)  Total
+```
+
+The results can be displayed in JSON format via `-mlir-output-format=json`.
+
+```shell
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing -mlir-timing-display=list -mlir-output-format=json
+
+[
+{"wall": {"duration":   0.0135, "percentage": 100.0}, "name": "root"},
+{"wall": {"duration":   0.0041, "percentage":  30.1}, "name": "Parser"},
+{"wall": {"duration":   0.0018, "percentage":  13.3}, "name": "ConvertFuncToLLVMPass"},
+{"wall": {"duration":   0.0011, "percentage":   8.2}, "name": "Output"},
+{"wall": {"duration":   0.0007, "percentage":   5.2}, "name": "Pipeline Collection : ['func.func']"},
+{"wall": {"duration":   0.0006, "percentage":   4.6}, "name": "'func.func' Pipeline"},
+{"wall": {"duration":   0.0005, "percentage":   3.5}, "name": "Canonicalizer"},
+{"wall": {"duration":   0.0001, "percentage":   0.9}, "name": "CSE"},
+{"wall": {"duration":   0.0001, "percentage":   0.5}, "name": "(A) DataLayoutAnalysis"},
+{"wall": {"duration":   0.0000, "percentage":   0.1}, "name": "(A) DominanceInfo"},
+{"wall": {"duration":   0.0058, "percentage":  43.2}, "name": "Rest"},
+{"wall": {"duration":   0.0135, "percentage": 100.0}, "name": "Total"}
+]
 ```
 
 ##### Tree Display Mode
@@ -1150,21 +1176,48 @@ invalidated and recomputed. This is the default display mode.
 $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing
 
 ===-------------------------------------------------------------------------===
-                      ... Pass execution timing report ...
+                         ... Execution time report ...
 ===-------------------------------------------------------------------------===
-  Total Execution Time: 0.0249 seconds
+  Total Execution Time: 0.0127 seconds
 
-   ---Wall Time---  --- Name ---
-   0.0058 ( 70.8%)  'func.func' Pipeline
-   0.0004 (  4.3%)    CSE
-   0.0002 (  2.6%)      (A) DominanceInfo
-   0.0004 (  4.8%)    VerifierPass
-   0.0046 ( 55.4%)    Canonicalizer
-   0.0005 (  6.2%)    VerifierPass
-   0.0005 (  5.8%)  VerifierPass
-   0.0014 ( 17.2%)  LLVMLoweringPass
-   0.0005 (  6.2%)  VerifierPass
-   0.0082 (100.0%)  Total
+  ----Wall Time----  ----Name----
+    0.0038 ( 30.2%)  Parser
+    0.0006 (  4.8%)  'func.func' Pipeline
+    0.0001 (  0.9%)    CSE
+    0.0000 (  0.1%)      (A) DominanceInfo
+    0.0005 (  3.7%)    Canonicalizer
+    0.0017 ( 13.7%)  ConvertFuncToLLVMPass
+    0.0001 (  0.6%)    (A) DataLayoutAnalysis
+    0.0010 (  8.2%)  Output
+    0.0054 ( 42.5%)  Rest
+    0.0127 (100.0%)  Total
+```
+
+The results can be displayed in JSON format via `-mlir-output-format=json`.
+
+```shell
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing -mlir-output-format=json
+
+[
+{"wall": {"duration":   0.0038, "percentage":  30.2}, "name": "Parser", "passes": [
+{}]},
+{"wall": {"duration":   0.0006, "percentage":   4.8}, "name": "'func.func' Pipeline", "passes": [
+  {"wall": {"duration":   0.0001, "percentage":   0.9}, "name": "CSE", "passes": [
+    {"wall": {"duration":   0.0000, "percentage":   0.1}, "name": "(A) DominanceInfo", "passes": [
+    {}]},
+  {}]},
+  {"wall": {"duration":   0.0005, "percentage":   3.7}, "name": "Canonicalizer", "passes": [
+  {}]},
+{}]},
+{"wall": {"duration":   0.0017, "percentage":  13.7}, "name": "ConvertFuncToLLVMPass", "passes": [
+  {"wall": {"duration":   0.0001, "percentage":   0.6}, "name": "(A) DataLayoutAnalysis", "passes": [
+  {}]},
+{}]},
+{"wall": {"duration":   0.0010, "percentage":   8.2}, "name": "Output", "passes": [
+{}]},
+{"wall": {"duration":   0.0054, "percentage":  42.5}, "name": "Rest"},
+{"wall": {"duration":   0.0127, "percentage": 100.0}, "name": "Total"}
+]
 ```
 
 ##### Multi-threaded Pass Timing
@@ -1305,6 +1358,66 @@ func.func @simple_constant() -> (i32, i32) {
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
+
+*   `mlir-print-ir-tree-dir=(directory path)`
+    *   Without setting this option, the IR printed by the instrumentation will
+        be printed to `stderr`. If you provide a directory using this option,
+        the output corresponding to each pass will be printed to a file in the
+        directory tree rooted at `(directory path)`. The path created for each
+        pass reflects the nesting structure of the IR and the pass pipeline.
+    *   The below example illustrates the file tree created by running a pass
+        pipeline on IR that has two `func.func` located within two nested
+        `builtin.module` ops.
+    *   The subdirectories are given names that reflect the parent op names and
+        the symbol names for those ops (if present).
+    *   The printer keeps a counter associated with ops that are targeted by
+        passes and their isolated-from-above parents. Each filename is given a
+        numeric prefix using the counter value for the op that the pass is
+        targeting. The counter values for each parent are then prepended. This
+        gives a naming where it is easy to distinguish which passes may have run
+        concurrently versus which have a clear ordering. In the below example,for
+        both `1_1_pass4.mlir` files, the first 1 refers to the counter for the
+        parent op, and the second refers to the counter for the respective
+        function.
+
+```
+$ pipeline="builtin.module(pass1,pass2,func.func(pass3,pass4),pass5)"
+$ mlir-opt foo.mlir -pass-pipeline="$pipeline" -mlir-print-ir-tree-dir=/tmp/pipeline_output
+$ tree /tmp/pipeline_output
+
+/tmp/pass_output
+├── builtin_module_the_symbol_name
+│   ├── 0_pass1.mlir
+│   ├── 1_pass2.mlir
+│   ├── 2_pass5.mlir
+│   ├── func_func_my_func_name
+│   │   ├── 1_0_pass3.mlir
+│   │   ├── 1_1_pass4.mlir
+│   ├── func_func_my_other_func_name
+│   │   ├── 1_0_pass3.mlir
+│   │   ├── 1_1_pass4.mlir
+```
+
+*   `mlir-use-nameloc-as-prefix`
+    * If your source IR has named locations (`loc("named_location")"`) then passing this flag will use those
+      names (`named_location`) to prefix the corresponding SSA identifiers:
+    
+      ```mlir
+      %1 = memref.load %0[] : memref<i32> loc("alice")  
+      %2 = memref.load %0[] : memref<i32> loc("bob")
+      %3 = memref.load %0[] : memref<i32> loc("bob")
+      ```
+      
+      will print 
+    
+      ```mlir
+      %alice = memref.load %0[] : memref<i32>
+      %bob = memref.load %0[] : memref<i32>
+      %bob_0 = memref.load %0[] : memref<i32>
+      ```
+      
+      These names will also be preserved through passes to newly created operations if using the appropriate location.
+      
 
 ## Crash and Failure Reproduction
 

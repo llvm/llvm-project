@@ -4,12 +4,12 @@
 ; and Exception Selector registers, and that the exception table is emitted.
 
 declare void @callee()
-declare void @passeh(i8*, i32) noreturn
+declare void @passeh(ptr, i32) noreturn
 declare i32 @__zos_cxx_personality_v2(...)
 
-define void @test1() uwtable personality i32 (...)* @__zos_cxx_personality_v2 {
+define void @test1() uwtable personality ptr @__zos_cxx_personality_v2 {
 entry:
-  %ehptr = alloca i8*, align 8
+  %ehptr = alloca ptr, align 8
   %ehsel = alloca i32, align 8
   invoke void @callee() to label %done unwind label %lpad
 done:
@@ -17,16 +17,16 @@ done:
 ; Match the return instruction.
 ; CHECK: b 2(7)
 lpad:
-  %0 = landingpad { i8*, i32 } cleanup
+  %0 = landingpad { ptr, i32 } cleanup
 ; The Exception Pointer is %r1; the Exception Selector, %r2.
-; CHECK: @BB{{[^%]*}} %lpad
-; CHECK-DAG: stg 1, {{.*}}
-; CHECK-DAG: st 2, {{.*}}
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = extractvalue { i8*, i32 } %0, 1
-  store i8* %1, i8** %ehptr, align 8
-  store i32 %2, i32* %ehsel, align 8
-  call void @passeh(i8* %1, i32 %2)
+; CHECK: L#BB{{[^%]*}} %lpad
+; CHECK-DAG: stg 1,{{.*}}
+; CHECK-DAG: st 2,{{.*}}
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = extractvalue { ptr, i32 } %0, 1
+  store ptr %1, ptr %ehptr, align 8
+  store i32 %2, ptr %ehsel, align 8
+  call void @passeh(ptr %1, i32 %2)
   unreachable
 }
 

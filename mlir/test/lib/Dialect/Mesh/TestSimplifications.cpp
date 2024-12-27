@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Mesh/IR/MeshOps.h"
+#include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/Transforms/Simplifications.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -34,7 +34,7 @@ void TestMeshSimplificationsPass::runOnOperation() {
   SymbolTableCollection symbolTableCollection;
   mesh::populateSimplificationPatterns(patterns, symbolTableCollection);
   [[maybe_unused]] LogicalResult status =
-      applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+      applyPatternsGreedily(getOperation(), std::move(patterns));
   assert(succeeded(status) && "Rewrite patters application did not converge.");
 }
 

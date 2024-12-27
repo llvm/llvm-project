@@ -25,7 +25,7 @@ namespace llvm {
 // respective filename.
 class TestRunner {
 public:
-  TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs,
+  TestRunner(StringRef TestName, ArrayRef<std::string> TestArgs,
              std::unique_ptr<ReducerWorkItem> Program,
              std::unique_ptr<TargetMachine> TM, StringRef ToolName,
              StringRef OutputFilename, bool InputIsBitcode, bool OutputBitcode);
@@ -55,7 +55,7 @@ public:
 private:
   StringRef TestName;
   StringRef ToolName;
-  const std::vector<std::string> &TestArgs;
+  SmallVector<StringRef> TestArgs;
   std::unique_ptr<ReducerWorkItem> Program;
   std::unique_ptr<TargetMachine> TM;
   StringRef OutputFilename;

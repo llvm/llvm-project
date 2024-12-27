@@ -63,12 +63,13 @@ public:
 
   Expected<RunnableConfiguration>
   getRunnableConfiguration(const BenchmarkCode &Configuration,
-                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           unsigned MinInstructions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
   std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
-                   const std::optional<StringRef> &DumpFile) const;
+                   const std::optional<StringRef> &DumpFile,
+                   std::optional<int> BenchmarkProcessCPU) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -93,16 +94,16 @@ public:
   public:
     virtual ~FunctionExecutor();
 
-    Expected<llvm::SmallVector<int64_t, 4>>
+    Expected<SmallVector<int64_t, 4>>
     runAndSample(const char *Counters,
                  ArrayRef<const char *> ValidationCounters,
                  SmallVectorImpl<int64_t> &ValidationCounterValues) const;
 
   protected:
     static void
-    accumulateCounterValues(const llvm::SmallVectorImpl<int64_t> &NewValues,
-                            llvm::SmallVectorImpl<int64_t> *Result);
-    virtual Expected<llvm::SmallVector<int64_t, 4>>
+    accumulateCounterValues(const SmallVectorImpl<int64_t> &NewValues,
+                            SmallVectorImpl<int64_t> *Result);
+    virtual Expected<SmallVector<int64_t, 4>>
     runWithCounter(StringRef CounterName,
                    ArrayRef<const char *> ValidationCounters,
                    SmallVectorImpl<int64_t> &ValidationCounterValues) const = 0;
@@ -135,7 +136,8 @@ private:
 
   Expected<std::unique_ptr<FunctionExecutor>>
   createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
-                         const BenchmarkKey &Key) const;
+                         const BenchmarkKey &Key,
+                         std::optional<int> BenchmarkProcessCPU) const;
 };
 
 } // namespace exegesis

@@ -275,13 +275,27 @@ static Value genPositionsCall(OpBuilder &builder, Location loc,
       .getResult(0);
 }
 
-/// Generates a call to obtain the coordindates array.
+/// Generates a call to obtain the coordinates array.
 static Value genCoordinatesCall(OpBuilder &builder, Location loc,
                                 SparseTensorType stt, Value ptr, Level l) {
   Type crdTp = stt.getCrdType();
   auto resTp = MemRefType::get({ShapedType::kDynamic}, crdTp);
   Value lvl = constantIndex(builder, loc, l);
   SmallString<19> name{"sparseCoordinates", overheadTypeFunctionSuffix(crdTp)};
+  return createFuncCall(builder, loc, name, resTp, {ptr, lvl},
+                        EmitCInterface::On)
+      .getResult(0);
+}
+
+/// Generates a call to obtain the coordinates array (AoS view).
+static Value genCoordinatesBufferCall(OpBuilder &builder, Location loc,
+                                      SparseTensorType stt, Value ptr,
+                                      Level l) {
+  Type crdTp = stt.getCrdType();
+  auto resTp = MemRefType::get({ShapedType::kDynamic}, crdTp);
+  Value lvl = constantIndex(builder, loc, l);
+  SmallString<25> name{"sparseCoordinatesBuffer",
+                       overheadTypeFunctionSuffix(crdTp)};
   return createFuncCall(builder, loc, name, resTp, {ptr, lvl},
                         EmitCInterface::On)
       .getResult(0);
@@ -518,13 +532,35 @@ public:
   LogicalResult
   matchAndRewrite(ToCoordinatesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getTensor());
-    auto crds = genCoordinatesCall(rewriter, op.getLoc(), stt,
-                                   adaptor.getTensor(), op.getLevel());
+    auto crds = genCoordinatesCall(rewriter, loc, stt, adaptor.getTensor(),
+                                   op.getLevel());
     // Cast the MemRef type to the type expected by the users, though these
     // two types should be compatible at runtime.
     if (op.getType() != crds.getType())
-      crds = rewriter.create<memref::CastOp>(op.getLoc(), op.getType(), crds);
+      crds = rewriter.create<memref::CastOp>(loc, op.getType(), crds);
+    rewriter.replaceOp(op, crds);
+    return success();
+  }
+};
+
+/// Sparse conversion rule for coordinate accesses (AoS style).
+class SparseToCoordinatesBufferConverter
+    : public OpConversionPattern<ToCoordinatesBufferOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ToCoordinatesBufferOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const Location loc = op.getLoc();
+    auto stt = getSparseTensorType(op.getTensor());
+    auto crds = genCoordinatesBufferCall(
+        rewriter, loc, stt, adaptor.getTensor(), stt.getAoSCOOStart());
+    // Cast the MemRef type to the type expected by the users, though these
+    // two types should be compatible at runtime.
+    if (op.getType() != crds.getType())
+      crds = rewriter.create<memref::CastOp>(loc, op.getType(), crds);
     rewriter.replaceOp(op, crds);
     return success();
   }
@@ -580,17 +616,24 @@ public:
 };
 
 /// Sparse conversion rule for the insertion operator.
-class SparseTensorInsertConverter : public OpConversionPattern<InsertOp> {
+class SparseTensorInsertConverter
+    : public OpConversionPattern<tensor::InsertOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(InsertOp op, OpAdaptor adaptor,
+  matchAndRewrite(tensor::InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Note that the current regime only allows for strict lexicographic
     // coordinate order. All values are passed by reference through stack
     // allocated memrefs.
     Location loc = op->getLoc();
-    const auto stt = getSparseTensorType(op.getTensor());
+    const auto stt = getSparseTensorType(op.getDest());
+
+    // Dense tensor insertion.
+    if (!stt.hasEncoding())
+      return failure();
+
+    assert(stt.isIdentity() && "Run reinterpret-map before conversion.");
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
     Value lvlCoords, vref;
@@ -608,12 +651,12 @@ public:
       lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
       vref = genAllocaScalar(rewriter, loc, elemTp);
     }
-    storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
-    rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
+    storeAll(rewriter, loc, lvlCoords, adaptor.getIndices());
+    rewriter.create<memref::StoreOp>(loc, adaptor.getScalar(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     createFuncCall(rewriter, loc, name, {},
-                   {adaptor.getTensor(), lvlCoords, vref}, EmitCInterface::On);
-    rewriter.replaceOp(op, adaptor.getTensor());
+                   {adaptor.getDest(), lvlCoords, vref}, EmitCInterface::On);
+    rewriter.replaceOp(op, adaptor.getDest());
     return success();
   }
 };
@@ -724,6 +767,12 @@ public:
 };
 
 /// Sparse conversion rule for the sparse_tensor.disassemble operator.
+/// Note that the current implementation simply exposes the buffers to
+/// the external client. This assumes the client only reads the buffers
+/// (usually copying it to the external data structures, such as numpy
+/// arrays). The semantics of the disassemble operation technically
+/// require that the copying is done here already using the out-levels
+/// and out-values clause.
 class SparseTensorDisassembleConverter
     : public OpConversionPattern<DisassembleOp> {
 public:
@@ -731,20 +780,11 @@ public:
   LogicalResult
   matchAndRewrite(DisassembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // We simply expose the buffers to the external client. This
-    // assumes the client only reads the buffers (usually copying it
-    // to the external data structures, such as numpy arrays).
     Location loc = op->getLoc();
     auto stt = getSparseTensorType(op.getTensor());
     SmallVector<Value> retVal;
     SmallVector<Value> retLen;
-    // Get the values buffer first.
-    auto vals = genValuesCall(rewriter, loc, stt, adaptor.getTensor());
-    auto valLenTp = op.getValLen().getType();
-    auto valLen = linalg::createOrFoldDimOp(rewriter, loc, vals, 0);
-    retVal.push_back(vals);
-    retLen.push_back(genScalarToTensor(rewriter, loc, valLen, valLenTp));
-    // Then get the positions and coordinates buffers.
+    // Get the positions and coordinates buffers.
     const Level lvlRank = stt.getLvlRank();
     Level trailCOOLen = 0;
     for (Level l = 0; l < lvlRank; l++) {
@@ -761,7 +801,7 @@ public:
         auto poss =
             genPositionsCall(rewriter, loc, stt, adaptor.getTensor(), l);
         auto posLen = linalg::createOrFoldDimOp(rewriter, loc, poss, 0);
-        auto posLenTp = op.getLvlLens().getTypes()[retLen.size() - 1];
+        auto posLenTp = op.getLvlLens().getTypes()[retLen.size()];
         retVal.push_back(poss);
         retLen.push_back(genScalarToTensor(rewriter, loc, posLen, posLenTp));
       }
@@ -769,7 +809,7 @@ public:
         auto crds =
             genCoordinatesCall(rewriter, loc, stt, adaptor.getTensor(), l);
         auto crdLen = linalg::createOrFoldDimOp(rewriter, loc, crds, 0);
-        auto crdLenTp = op.getLvlLens().getTypes()[retLen.size() - 1];
+        auto crdLenTp = op.getLvlLens().getTypes()[retLen.size()];
         retVal.push_back(crds);
         retLen.push_back(genScalarToTensor(rewriter, loc, crdLen, crdLenTp));
       }
@@ -784,14 +824,13 @@ public:
       auto poss = genPositionsCall(rewriter, loc, stt, adaptor.getTensor(),
                                    cooStartLvl);
       auto posLen = linalg::createOrFoldDimOp(rewriter, loc, poss, 0);
-      auto posLenTp = op.getLvlLens().getTypes()[retLen.size() - 1];
+      auto posLenTp = op.getLvlLens().getTypes()[retLen.size()];
       retVal.push_back(poss);
       retLen.push_back(genScalarToTensor(rewriter, loc, posLen, posLenTp));
       // Coordinates, copied over with:
       //    for (i = 0; i < crdLen; i++)
       //       buf[i][0] = crd0[i]; buf[i][1] = crd1[i];
-      auto buf =
-          genToMemref(rewriter, loc, op.getOutLevels()[retLen.size() - 1]);
+      auto buf = genToMemref(rewriter, loc, op.getOutLevels()[retLen.size()]);
       auto crds0 = genCoordinatesCall(rewriter, loc, stt, adaptor.getTensor(),
                                       cooStartLvl);
       auto crds1 = genCoordinatesCall(rewriter, loc, stt, adaptor.getTensor(),
@@ -814,10 +853,17 @@ public:
       args[1] = one;
       rewriter.create<memref::StoreOp>(loc, c1, buf, args);
       rewriter.setInsertionPointAfter(forOp);
-      auto bufLenTp = op.getLvlLens().getTypes()[retLen.size() - 1];
+      auto bufLenTp = op.getLvlLens().getTypes()[retLen.size()];
       retVal.push_back(buf);
       retLen.push_back(genScalarToTensor(rewriter, loc, bufLen, bufLenTp));
     }
+    // Get the values buffer last.
+    auto vals = genValuesCall(rewriter, loc, stt, adaptor.getTensor());
+    auto valLenTp = op.getValLen().getType();
+    auto valLen = linalg::createOrFoldDimOp(rewriter, loc, vals, 0);
+    retVal.push_back(vals);
+    retLen.push_back(genScalarToTensor(rewriter, loc, valLen, valLenTp));
+
     // Converts MemRefs back to Tensors.
     assert(retVal.size() + retLen.size() == op.getNumResults());
     for (unsigned i = 0, sz = retVal.size(); i < sz; i++) {
@@ -825,9 +871,23 @@ public:
       retVal[i] =
           rewriter.create<tensor::CastOp>(loc, op.getResultTypes()[i], tensor);
     }
+
     // Appends the actual memory length used in each buffer returned.
     retVal.append(retLen.begin(), retLen.end());
     rewriter.replaceOp(op, retVal);
+    return success();
+  }
+};
+
+struct SparseHasRuntimeLibraryConverter
+    : public OpConversionPattern<HasRuntimeLibraryOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(HasRuntimeLibraryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto i1Type = rewriter.getI1Type();
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, i1Type, rewriter.getIntegerAttr(i1Type, 1));
     return success();
   }
 };
@@ -849,17 +909,18 @@ mlir::SparseTensorTypeToPtrConverter::SparseTensorTypeToPtrConverter() {
 
 /// Populates the given patterns list with conversion rules required for
 /// the sparsification of linear algebra operations.
-void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
-                                                  RewritePatternSet &patterns) {
+void mlir::populateSparseTensorConversionPatterns(
+    const TypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns
       .add<SparseReturnConverter, SparseTensorLvlOpConverter,
            SparseCastConverter, SparseReMapConverter, SparseTensorNewConverter,
            SparseTensorAllocConverter, SparseTensorEmptyConverter,
            SparseTensorDeallocConverter, SparseTensorReorderCOOConverter,
            SparseTensorToPositionsConverter, SparseTensorToCoordinatesConverter,
-           SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
-           SparseTensorLoadConverter, SparseTensorInsertConverter,
-           SparseTensorExpandConverter, SparseTensorCompressConverter,
-           SparseTensorAssembleConverter, SparseTensorDisassembleConverter>(
+           SparseToCoordinatesBufferConverter, SparseTensorToValuesConverter,
+           SparseNumberOfEntriesConverter, SparseTensorLoadConverter,
+           SparseTensorInsertConverter, SparseTensorExpandConverter,
+           SparseTensorCompressConverter, SparseTensorAssembleConverter,
+           SparseTensorDisassembleConverter, SparseHasRuntimeLibraryConverter>(
           typeConverter, patterns.getContext());
 }

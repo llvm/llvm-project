@@ -20,8 +20,8 @@ declare <vscale x 1 x i8> @llvm.riscv.vasub.nxv1i8.nxv1i8(
 define <vscale x 1 x i8> @test1(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -44,8 +44,8 @@ entry:
 define <vscale x 1 x i8> @test2(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
@@ -75,22 +75,20 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 1
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    addi a1, sp, 16
 ; RV32-NEXT:    vs1r.v v10, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    csrwi vxrm, 0
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
 ; RV32-NEXT:    call foo
-; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
 ; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    add sp, sp, a0
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -103,22 +101,20 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 1
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    addi a1, sp, 16
 ; RV64-NEXT:    vs1r.v v10, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 0
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
 ; RV64-NEXT:    call foo
-; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -144,13 +140,13 @@ entry:
 define <vscale x 1 x i8> @test4(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -174,8 +170,8 @@ define <vscale x 1 x i8> @test5(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    beqz a1, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %condblock
@@ -249,8 +245,8 @@ define <vscale x 1 x i8> @test7(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    beqz a1, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %trueblock
@@ -385,7 +381,7 @@ mergeblock:
 }
 
 ; Test loop with no dominating vxrm write.
-define void @test10(i8* nocapture %ptr_dest, i8* nocapture readonly %ptr_op1, i8* nocapture readonly %ptr_op2, iXLen %n) {
+define void @test10(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, ptr nocapture readonly %ptr_op2, iXLen %n) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    beqz a3, .LBB9_3
@@ -422,11 +418,11 @@ for.end:
 }
 
 declare iXLen @llvm.riscv.vsetvli.iXLen(iXLen, iXLen immarg, iXLen immarg)
-declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8>, <vscale x 1 x i8>* nocapture, iXLen)
-declare void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8>, <vscale x 1 x i8>* nocapture, iXLen)
+declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8>, ptr nocapture, iXLen)
+declare void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8>, ptr nocapture, iXLen)
 
 ; Test loop with dominating vxrm write. Make sure there is no write in the loop.
-define void @test11(i8* nocapture %ptr_dest, i8* nocapture readonly %ptr_op1, i8* nocapture readonly %ptr_op2, iXLen %n) {
+define void @test11(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, ptr nocapture readonly %ptr_op2, iXLen %n) {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a4, a3, e8, mf8, ta, ma
@@ -480,8 +476,8 @@ define <vscale x 1 x i8> @test12(i1 %c1, <vscale x 1 x i8> %0, <vscale x 1 x i8>
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v9, v8, v9
 ; CHECK-NEXT:    beqz a0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %block1
@@ -513,8 +509,8 @@ define <vscale x 1 x i8> @test13(i1 %c1, i1 %c2, i1 %c3, <vscale x 1 x i8> %0, <
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    vsetvli zero, a3, e8, mf8, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetvli zero, a3, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v10, v8, v9
 ; CHECK-NEXT:    beqz a0, .LBB12_2
 ; CHECK-NEXT:  # %bb.1: # %block1

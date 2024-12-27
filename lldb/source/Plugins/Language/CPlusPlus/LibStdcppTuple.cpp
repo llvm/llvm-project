@@ -8,10 +8,10 @@
 
 #include "LibStdcpp.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <memory>
 #include <vector>
@@ -26,11 +26,11 @@ class LibStdcppTupleSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppTupleSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -53,19 +53,19 @@ LibStdcppTupleSyntheticFrontEnd::LibStdcppTupleSyntheticFrontEnd(
   Update();
 }
 
-bool LibStdcppTupleSyntheticFrontEnd::Update() {
+lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
   m_members.clear();
 
   ValueObjectSP valobj_backend_sp = m_backend.GetSP();
   if (!valobj_backend_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP next_child_sp = valobj_backend_sp->GetNonSyntheticValue();
   while (next_child_sp != nullptr) {
     ValueObjectSP current_child = next_child_sp;
     next_child_sp = nullptr;
 
-    size_t child_count = current_child->GetNumChildren();
+    size_t child_count = current_child->GetNumChildrenIgnoringErrors();
     for (size_t i = 0; i < child_count; ++i) {
       ValueObjectSP child_sp = current_child->GetChildAtIndex(i);
       llvm::StringRef name_str = child_sp->GetName().GetStringRef();
@@ -83,19 +83,20 @@ bool LibStdcppTupleSyntheticFrontEnd::Update() {
     }
   }
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
-LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx < m_members.size() && m_members[idx])
     return m_members[idx]->GetSP();
   return lldb::ValueObjectSP();
 }
 
-size_t LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t>
+LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
   return m_members.size();
 }
 

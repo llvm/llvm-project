@@ -139,6 +139,46 @@ kernel void reqd_work_group_size_32_2_1_flat_work_group_size_16_128() {
 // CHECK: define{{.*}} amdgpu_kernel void @reqd_work_group_size_32_2_1_flat_work_group_size_16_128() [[FLAT_WORK_GROUP_SIZE_16_128:#[0-9]+]]
 }
 
+__attribute__((amdgpu_max_num_work_groups(1, 1, 1))) // expected-no-diagnostics
+kernel void max_num_work_groups_1_1_1() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_1_1_1() [[MAX_NUM_WORK_GROUPS_1_1_1:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(32, 1, 1))) // expected-no-diagnostics
+kernel void max_num_work_groups_32_1_1() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_32_1_1() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(32, 8, 1))) // expected-no-diagnostics
+kernel void max_num_work_groups_32_8_1() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_32_8_1() [[MAX_NUM_WORK_GROUPS_32_8_1:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(1, 1, 32))) // expected-no-diagnostics
+kernel void max_num_work_groups_1_1_32() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_1_1_32() [[MAX_NUM_WORK_GROUPS_1_1_32:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(1, 8, 32))) // expected-no-diagnostics
+kernel void max_num_work_groups_1_8_32() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_1_8_32() [[MAX_NUM_WORK_GROUPS_1_8_32:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(4, 8, 32))) // expected-no-diagnostics
+kernel void max_num_work_groups_4_8_32() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_4_8_32() [[MAX_NUM_WORK_GROUPS_4_8_32:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(32))) // expected-no-diagnostics
+kernel void max_num_work_groups_32() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_32() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+
+__attribute__((amdgpu_max_num_work_groups(32,1))) // expected-no-diagnostics
+kernel void max_num_work_groups_32_1() {
+// CHECK: define{{.*}} amdgpu_kernel void @max_num_work_groups_32_1() [[MAX_NUM_WORK_GROUPS_32_1_1:#[0-9]+]]
+}
+
 void a_function() {
 // CHECK: define{{.*}} void @a_function() [[A_FUNCTION:#[0-9]+]]
 }
@@ -188,6 +228,13 @@ kernel void default_kernel() {
 
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
+
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_1_1_1]] = {{.*}} "amdgpu-max-num-workgroups"="1,1,1"
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_1_1]] = {{.*}} "amdgpu-max-num-workgroups"="32,1,1"
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_8_1]] = {{.*}} "amdgpu-max-num-workgroups"="32,8,1"
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_1_1_32]] = {{.*}} "amdgpu-max-num-workgroups"="1,1,32"
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_1_8_32]] = {{.*}} "amdgpu-max-num-workgroups"="1,8,32"
+// CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_4_8_32]] = {{.*}} "amdgpu-max-num-workgroups"="4,8,32"
 
 // CHECK-DAG: attributes [[A_FUNCTION]] = {{.*}}
 // CHECK-DAG: attributes [[DEFAULT_KERNEL_ATTRS]] = {{.*}} "amdgpu-flat-work-group-size"="1,256"

@@ -21,6 +21,7 @@
 
 #include "test_comparisons.h"
 #include "test_iterators.h"
+#include "test_range.h"
 
 template <bool Const>
 using MaybeConstIterator = cpp20_input_iterator<std::conditional_t<Const, const int*, int*>>;
@@ -76,14 +77,6 @@ struct NonCrossConstComparableView : std::ranges::view_base {
 
 static_assert(std::ranges::range<NonCrossConstComparableView>);
 static_assert(std::ranges::range<const NonCrossConstComparableView>);
-
-template <class T, class U>
-concept weakly_equality_comparable_with = requires(const T& t, const U& u) {
-  t == u;
-  t != u;
-  u == t;
-  u != t;
-};
 
 constexpr bool test() {
   int buffer[8]                      = {1, 2, 3, 4, 5, 6, 7, 8};

@@ -27,7 +27,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
-#include <algorithm>
 #define DEBUG_TYPE "predicateinfo"
 using namespace llvm;
 using namespace PatternMatch;
@@ -478,10 +477,8 @@ void PredicateInfoBuilder::processSwitch(
 
   // Remember how many outgoing edges there are to every successor.
   SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
-    BasicBlock *TargetBlock = SI->getSuccessor(i);
+  for (BasicBlock *TargetBlock : successors(BranchBB))
     ++SwitchEdges[TargetBlock];
-  }
 
   // Now propagate info for each case value
   for (auto C : SI->cases()) {
@@ -561,7 +558,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
       auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getDeclaration(
+      Function *IF = Intrinsic::getOrInsertDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       if (NumDecls != F.getParent()->getNumNamedValues())
         PI.CreatedDeclarations.insert(IF);
@@ -577,7 +574,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       // directly before it, assume(i1 true) is not a useful fact.
       IRBuilder<> B(PAssume->AssumeInst->getNextNode());
       auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getDeclaration(
+      Function *IF = Intrinsic::getOrInsertDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       if (NumDecls != F.getParent()->getNumNamedValues())
         PI.CreatedDeclarations.insert(IF);

@@ -198,14 +198,14 @@ let DecoderNamespace = "XCValu" in {
 
 } // DecoderNamespace = "XCValu"
 
-let Predicates = [HasVendorXCValu],
+let Predicates = [HasVendorXCValu, IsRV32],
   hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   // General ALU Operations
   def CV_ABS    : CVInstAluR<0b0101000, 0b011, "cv.abs">,
                   Sched<[]>;
-  def CV_SLET   : CVInstAluRR<0b0101001, 0b011, "cv.slet">,
+  def CV_SLE    : CVInstAluRR<0b0101001, 0b011, "cv.sle">,
                   Sched<[]>;
-  def CV_SLETU  : CVInstAluRR<0b0101010, 0b011, "cv.sletu">,
+  def CV_SLEU   : CVInstAluRR<0b0101010, 0b011, "cv.sleu">,
                   Sched<[]>;
   def CV_MIN    : CVInstAluRR<0b0101011, 0b011, "cv.min">,
                   Sched<[]>;
@@ -249,10 +249,10 @@ let Predicates = [HasVendorXCValu],
                   Sched<[]>;
   def CV_SUBURN : CVInstAluRRI<0b11, 0b011, "cv.suburn">,
                   Sched<[]>;
-} // Predicates = [HasVendorXCValu],
+} // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let Predicates = [HasVendorXCValu],
+let Predicates = [HasVendorXCValu, IsRV32],
   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   Constraints = "$rd = $rd_wb" in {
   def CV_ADDNR   : CVInstAluRRNR<0b1000000, 0b011, "cv.addnr">,
@@ -272,10 +272,14 @@ let Predicates = [HasVendorXCValu],
   def CV_SUBURNR : CVInstAluRRNR<0b1000111, 0b011, "cv.suburnr">,
                    Sched<[]>;
 
-} // Predicates = [HasVendorXCValu],
+} // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   //   Constraints = "$rd = $rd_wb"
 
+let Predicates = [HasVendorXCValu, IsRV32] in {
+  def : MnemonicAlias<"cv.slet", "cv.sle">;
+  def : MnemonicAlias<"cv.sletu", "cv.sleu">;
+}
 
 class CVInstSIMDRR<bits<5> funct5, bit F, bit funct1, bits<3> funct3,
                    RISCVOpcode opcode, dag outs,
@@ -512,11 +516,13 @@ def CVrrAsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidRegReg";
 }
 
-def CVrr : Operand<OtherVT> {
+def CVrr : Operand<i32>,
+           ComplexPattern<i32, 2, "SelectAddrRegReg",[]> {
    let ParserMatchClass = CVrrAsmOperand;
    let EncoderMethod =  "getRegReg";
    let DecoderMethod = "decodeRegReg";
    let PrintMethod = "printRegReg";
+   let MIOperandInfo = (ops GPR:$base, GPR:$offset);
 }
 
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
@@ -659,6 +665,47 @@ let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0,
   def CV_ELW : CVLoad_ri<0b011, "cv.elw">;
 }
 
+//===----------------------------------------------------------------------===//
+// Patterns for load & store operations
+//===----------------------------------------------------------------------===//
+class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
+    : Pat<(XLenVT (LoadOp CVrr:$regreg)),
+          (Inst CVrr:$regreg)>;
+
+class CVStriPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (XLenVT GPR:$rs2), GPR:$rs1, simm12:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
+
+class CVStrriPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (XLenVT GPR:$rs2), GPR:$rs1, GPR:$rs3),
+          (Inst GPR:$rs2, GPR:$rs1, GPR:$rs3)>;
+
+class CVStrrPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (XLenVT GPR:$rs2), CVrr:$regreg),
+          (Inst GPR:$rs2, CVrr:$regreg)>;
+
+let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
+  def : CVLdrrPat<sextloadi8, CV_LB_rr>;
+  def : CVLdrrPat<zextloadi8, CV_LBU_rr>;
+  def : CVLdrrPat<extloadi8, CV_LBU_rr>;
+  def : CVLdrrPat<sextloadi16, CV_LH_rr>;
+  def : CVLdrrPat<zextloadi16, CV_LHU_rr>;
+  def : CVLdrrPat<extloadi16, CV_LHU_rr>;
+  def : CVLdrrPat<load, CV_LW_rr>;
+
+  def : CVStriPat<post_truncsti8, CV_SB_ri_inc>;
+  def : CVStriPat<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStriPat<post_store, CV_SW_ri_inc>;
+
+  def : CVStrriPat<post_truncsti8, CV_SB_rr_inc>;
+  def : CVStrriPat<post_truncsti16, CV_SH_rr_inc>;
+  def : CVStrriPat<post_store, CV_SW_rr_inc>;
+
+  def : CVStrrPat<truncstorei8, CV_SB_rr>;
+  def : CVStrrPat<truncstorei16, CV_SH_rr>;
+  def : CVStrrPat<store, CV_SW_rr>;
+}
+
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 def cv_tuimm5 : TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 def cv_uimm10 : ImmLeaf<XLenVT, [{return isUInt<10>(Imm);}]>;
@@ -671,6 +718,13 @@ def CV_LO5: SDNodeXForm<imm, [{
 def CV_HI5: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() >> 5, SDLoc(N),
                                    N->getValueType(0));
+}]>;
+
+def powerOf2Minus1 : ImmLeaf<XLenVT, [{ return isPowerOf2_32(Imm+1); }]>;
+def trailing1sPlus1 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(
+                          llvm::countr_one(N->getZExtValue()) + 1,
+                          SDLoc(N), N->getValueType(0));
 }]>;
 
 multiclass PatCoreVBitManip<Intrinsic intr> {
@@ -703,4 +757,110 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
              cv_tuimm2:$radix),
             (CV_BITREV GPR:$rs1, cv_tuimm2:$radix, cv_tuimm5:$pts)>;
   def : Pat<(bitreverse (XLenVT GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;
+}
+
+class PatCoreVAluGpr<string intr, string asm> :
+  PatGpr<!cast<Intrinsic>("int_riscv_cv_alu_" # intr),
+            !cast<RVInst>("CV_" # asm)>;
+class PatCoreVAluGprGpr <string intr, string asm> :
+  PatGprGpr<!cast<Intrinsic>("int_riscv_cv_alu_" # intr),
+               !cast<RVInst>("CV_" # asm)>;
+
+multiclass PatCoreVAluGprImm<Intrinsic intr> {
+  def : PatGprGpr<intr, !cast<RVInst>("CV_" # NAME # "R")>;
+  def : Pat<(intr (XLenVT GPR:$rs1), powerOf2Minus1:$upperBound),
+            (!cast<RVInst>("CV_" # NAME) GPR:$rs1,
+            (trailing1sPlus1 imm:$upperBound))>;
+}
+
+multiclass PatCoreVAluGprGprImm<Intrinsic intr> {
+  def : Pat<(intr GPR:$rs1, GPR:$rs2, GPR:$rs3),
+            (!cast<RVInst>("CV_" # NAME # "R") GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+  def : Pat<(intr GPR:$rs1, GPR:$rs2, uimm5:$imm),
+            (!cast<RVInst>("CV_" # NAME) GPR:$rs1, GPR:$rs2, uimm5:$imm)>;
+}
+
+let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
+  def : PatGpr<abs, CV_ABS>;
+  def : PatGprGpr<setle, CV_SLE>;
+  def : PatGprGpr<setule, CV_SLEU>;
+  def : PatGprGpr<smin, CV_MIN>;
+  def : PatGprGpr<umin, CV_MINU>;
+  def : PatGprGpr<smax, CV_MAX>;
+  def : PatGprGpr<umax, CV_MAXU>;
+
+  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
+  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xff), (CV_EXTBZ GPR:$rs1)>;
+
+  defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
+  defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;
+  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addN>;
+  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_adduN>;
+  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addRN>;
+  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_adduRN>;
+  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subN>;
+  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subuN>;
+  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subRN>;
+  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_subuRN>;
+} // Predicates = [HasVendorXCValu, IsRV32]
+
+//===----------------------------------------------------------------------===//
+// Patterns for immediate branching operations
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
+  def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
+            (CV_BEQIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+  def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
+            (CV_BNEIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+
+  let usesCustomInserter = 1 in
+  def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
+                             (ins GPR:$lhs, simm5:$imm5, cond_code:$cc,
+                              GPR:$truev, GPR:$falsev), []>;
+
+
+  class Selectbi<CondCode Cond>
+      : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
+                                     (i32 GPR:$truev), GPR:$falsev),
+            (Select_GPR_Using_CC_Imm GPR:$lhs, simm5:$Constant,
+             (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+  def : Selectbi<SETEQ>;
+  def : Selectbi<SETNE>;
+}
+
+class PatCoreVMacGprGprGpr <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, GPR:$rd),
+        (!cast<RVInst>("CV_" # asm) GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+class PatCoreVMacGprGprGprUimm5 <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, GPR:$rd, cv_tuimm5:$imm5),
+        (!cast<RVInst>("CV_" # asm) GPR:$rd, GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
+class PatCoreVMacGprGprUimm5 <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5),
+        (!cast<RVInst>("CV_" # asm) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
+
+let Predicates = [HasVendorXCVmac] in {
+  def : PatCoreVMacGprGprGpr<"mac", "MAC">;
+  def : PatCoreVMacGprGprGpr<"msu", "MSU">;
+
+  def : PatCoreVMacGprGprUimm5<"muluN", "MULUN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhuN", "MULHHUN">;
+  def : PatCoreVMacGprGprUimm5<"mulsN", "MULSN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhsN", "MULHHSN">;
+  def : PatCoreVMacGprGprUimm5<"muluRN", "MULURN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhuRN", "MULHHURN">;
+  def : PatCoreVMacGprGprUimm5<"mulsRN", "MULSRN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhsRN", "MULHHSRN">;
+
+  def : PatCoreVMacGprGprGprUimm5<"macuN", "MACUN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhuN", "MACHHUN">;
+  def : PatCoreVMacGprGprGprUimm5<"macsN", "MACSN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhsN", "MACHHSN">;
+  def : PatCoreVMacGprGprGprUimm5<"macuRN", "MACURN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhuRN", "MACHHURN">;
+  def : PatCoreVMacGprGprGprUimm5<"macsRN", "MACSRN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhsRN", "MACHHSRN">;
 }

@@ -61,7 +61,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
-      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+      B.buildSplatBuildVector(v4s64, B.buildConstant(s64, 42));
   int64_t Cst;
   EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
   EXPECT_EQ(Cst, 42);
@@ -223,6 +223,32 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   auto MIBCst = B.buildConstant(s64, 42);
   auto MIBAddCst = B.buildAdd(s64, MIBCst, Copies[0]);
   auto MIBUnmerge = B.buildUnmerge({s32, s32}, B.buildConstant(s64, 42));
+
+  // Match min/max, and make sure they're commutative.
+  auto SMin = B.buildSMin(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(SMin.getReg(0), *MRI,
+                       m_GSMin(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+  auto SMax = B.buildSMax(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(SMax.getReg(0), *MRI,
+                       m_GSMax(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+  auto UMin = B.buildUMin(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(UMin.getReg(0), *MRI,
+                       m_GUMin(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
+  auto UMax = B.buildUMax(s64, Copies[2], MIBAdd);
+  EXPECT_TRUE(mi_match(UMax.getReg(0), *MRI,
+                       m_GUMax(m_GAdd(m_Reg(Src1), m_Reg(Src2)), m_Reg(Src0))));
+  EXPECT_EQ(Src0, Copies[2]);
+  EXPECT_EQ(Src1, Copies[0]);
+  EXPECT_EQ(Src2, Copies[1]);
 
   // m_BinOp with opcode.
   // Match binary instruction, opcode and its non-commutative operands.
@@ -576,6 +602,11 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   Register Reg = MIBAdd.getReg(0);
 
+  // Extract the type.
+  LLT Ty;
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_GAdd(m_Type(Ty), m_Reg())));
+  EXPECT_EQ(Ty, s64);
+
   // Only one use of Reg.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
@@ -625,7 +656,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
-      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+      B.buildSplatBuildVector(v4s64, B.buildConstant(s64, 42));
   MachineInstrBuilder FortyTwo = B.buildConstant(s64, 42);
 
   EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstSplat(42)));
@@ -655,7 +686,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
-      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+      B.buildSplatBuildVector(v4s64, B.buildConstant(s64, 42));
   MachineInstrBuilder FortyTwo = B.buildConstant(s64, 42);
 
   EXPECT_TRUE(

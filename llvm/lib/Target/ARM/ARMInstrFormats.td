@@ -155,7 +155,11 @@ def iflags_op : Operand<i32> {
 
 // ARM Predicate operand. Default to 14 = always (AL). Second part is CC
 // register whose default is 0 (no register).
-def CondCodeOperand : AsmOperandClass { let Name = "CondCode"; }
+def CondCodeOperand : AsmOperandClass {
+  let Name = "CondCode";
+  let DefaultMethod = "defaultCondCodeOp";
+  let IsOptional = true;
+}
 def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
                                      (ops (i32 14), (i32 zero_reg))> {
   let PrintMethod = "printPredicateOperand";
@@ -163,18 +167,12 @@ def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
   let DecoderMethod = "DecodePredicateOperand";
 }
 
-// Selectable predicate operand for CMOV instructions. We can't use a normal
-// predicate because the default values interfere with instruction selection. In
-// all other respects it is identical though: pseudo-instruction expansion
-// relies on the MachineOperands being compatible.
-def cmovpred : Operand<i32>, PredicateOp,
-               ComplexPattern<i32, 2, "SelectCMOVPred"> {
-  let MIOperandInfo = (ops i32imm, i32imm);
-  let PrintMethod = "printPredicateOperand";
-}
-
 // Conditional code result for instructions whose 's' bit is set, e.g. subs.
-def CCOutOperand : AsmOperandClass { let Name = "CCOut"; }
+def CCOutOperand : AsmOperandClass {
+  let Name = "CCOut";
+  let DefaultMethod = "defaultCCOutOp";
+  let IsOptional = true;
+}
 def cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 zero_reg))> {
   let EncoderMethod = "getCCOutOpValue";
   let PrintMethod = "printSBitModifierOperand";
@@ -202,10 +200,14 @@ def inv_cond_XFORM : SDNodeXForm<imm, [{
 def VPTPredNOperand : AsmOperandClass {
   let Name = "VPTPredN";
   let PredicateMethod = "isVPTPred";
+  let DefaultMethod = "defaultVPTPredOp";
+  let IsOptional = true;
 }
 def VPTPredROperand : AsmOperandClass {
   let Name = "VPTPredR";
   let PredicateMethod = "isVPTPred";
+  let DefaultMethod = "defaultVPTPredOp";
+  let IsOptional = true;
 }
 
 // Operand classes for the cluster of MC operands describing a
@@ -468,7 +470,7 @@ class InstThumb<AddrMode am, int sz, IndexMode im,
 // These are aliases that require C++ handling to convert to the target
 // instruction, while InstAliases can be handled directly by tblgen.
 class AsmPseudoInst<string asm, dag iops, dag oops = (outs)>
-  : InstTemplate<AddrModeNone, 0, IndexModeNone, Pseudo, GenericDomain,
+  : InstTemplate<AddrModeNone, 4, IndexModeNone, Pseudo, GenericDomain,
                  "", NoItinerary> {
   let OutOperandList = oops;
   let InOperandList = iops;
@@ -1122,6 +1124,9 @@ class ARMV5MOPat<dag pattern, dag result> : Pat<pattern, result> {
 class ARMV6Pat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsARM, HasV6];
 }
+class ARMV6T2Pat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [IsARM, HasV6T2];
+}
 class VFPPat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [HasVFP2];
 }
@@ -1747,6 +1752,37 @@ class AXSI4<dag oops, dag iops, IndexMode im, InstrItinClass itin,
   let Inst{27-25} = 0b110;
   let Inst{11-9}  = 0b101;
   let Inst{8}     = 0;          // Single precision
+}
+
+// Single Precision with fixed registers.
+// For when the registers-to-be-stored/loaded are fixed, e.g. VLLDM and VLSTM
+class AXSI4FR<string asm, bit et, bit load>
+    : InstARM<AddrMode4, 4, IndexModeNone, VFPLdStMulFrm, VFPDomain, "", NoItinerary> {
+  // Instruction operands.
+  bits<4> Rn;
+  bits<13> regs;    // Does not affect encoding, for assembly/disassembly only.
+  list<Predicate> Predicates = [HasVFP2];
+  let OutOperandList = (outs);
+  let InOperandList = (ins GPRnopc:$Rn, pred:$p, dpr_reglist:$regs);
+  let AsmString = asm;
+  let Pattern = [];
+  let DecoderNamespace = "VFP";
+  // Encode instruction operands.
+  let Inst{19-16} = Rn;
+  let Inst{31-28} = 0b1110;
+  let Inst{27-25} = 0b110;
+  let Inst{24}    = 0b0;
+  let Inst{23}    = 0b0;
+  let Inst{22}    = 0b0;
+  let Inst{21}    = 0b1;
+  let Inst{20}    = load;       // Distinguishes vlldm from vlstm
+  let Inst{15-12} = 0b0000;
+  let Inst{11-9}  = 0b101;
+  let Inst{8}     = 0;          // Single precision
+  let Inst{7}     = et;         // encoding type, 0 for T1 and 1 for T2.
+  let Inst{6-0}   = 0b0000000;
+  let mayLoad     = load;
+  let mayStore    = !eq(load, 0);
 }
 
 // Double precision, unary

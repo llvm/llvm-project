@@ -5,10 +5,10 @@ define dso_local void @_Z1fv() {
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
   call void @llvm.dbg.declare(metadata ptr %1, metadata !16, metadata !DIExpression()), !dbg !19
 ; CHECK: %[[A:.*]] = alloca i32, align 4
-; CHECK: call void @llvm.dbg.value(metadata ptr %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: #dbg_value(ptr %[[A]], {{.*}}, !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
   call void @_Z1gPv(ptr nonnull %1)
-; CHECK-NOT: call void @llvm.dbg.value
+; CHECK-NOT: #dbg_value
 ; CHECK: call void @_Z1gPv
   call void @_Z1gPv(ptr nonnull %1)
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
@@ -20,13 +20,13 @@ define dso_local void @_Z2fv() {
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
   call void @llvm.dbg.declare(metadata ptr %1, metadata !16, metadata !DIExpression()), !dbg !19
 ; CHECK: %[[A:.*]] = alloca i32, align 4
-; CHECK: call void @llvm.dbg.value(metadata ptr %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: #dbg_value(ptr %[[A]], {{.*}}, !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
   call void @_Z1gPv(ptr nonnull %1)
   br label %block2
 
 block2:
-; CHECK: call void @llvm.dbg.value(metadata ptr %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: #dbg_value(ptr %[[A]], {{.*}}, !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
   call void @_Z1gPv(ptr nonnull %1)
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)

@@ -15,13 +15,12 @@
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
-class RISCVTargetMachine : public LLVMTargetMachine {
+class RISCVTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
 
@@ -59,7 +58,12 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
+
+std::unique_ptr<ScheduleDAGMutation>
+createRISCVVectorMaskDAGMutation(const TargetRegisterInfo *TRI);
+
 } // namespace llvm
 
 #endif

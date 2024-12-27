@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; llvm.org/PR48422
 ; Use of ScalarEvolution in Codegen not possible because DominatorTree is not updated.
@@ -41,9 +41,11 @@ for.cond.cleanup.loopexit:
 
 ; CHECK-LABEL: @func(
 ; CHECK:         polly.stmt.omp.inner.for.body.us.us.us.preheader:
-; CHECK:         load i32, ptr %scevgep, align 4, !alias.scope !0, !noalias !3
+; CHECK:         load i32, ptr %scevgep, align 4, !alias.scope !2, !noalias !5
 
-; CHECK:       !0 = !{!1}
-; CHECK:       !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_d"}
-; CHECK:       !2 = distinct !{!2, !"polly.alias.scope.domain"}
-; CHECK:       !3 = !{}
+; CHECK:       !0 = distinct !{!0, !1}
+; CHECK:       !1 = !{!"llvm.loop.vectorize.enable", i32 0}
+; CHECK:       !2 = !{!3}
+; CHECK:       !3 = distinct !{!3, !4, !"polly.alias.scope.MemRef_d"}
+; CHECK:       !4 = distinct !{!4, !"polly.alias.scope.domain"}
+; CHECK:       !5 = !{}

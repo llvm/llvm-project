@@ -24,6 +24,7 @@ struct basic_string {
   basic_string();
   basic_string(const C *p, const A &a = A());
   basic_string(const C *p, size_type count);
+  basic_string(const C *b, const C *e);
 
   ~basic_string();
 
@@ -43,6 +44,8 @@ struct basic_string {
   int compare(const C* s) const;
   int compare(size_type pos, size_type len, const _Type&) const;
   int compare(size_type pos, size_type len, const C* s) const;
+  template<class StringViewLike>
+  int compare(size_type pos1, size_type count1, const StringViewLike& t) const;
 
   size_type find(const _Type& str, size_type pos = 0) const;
   size_type find(const C* s, size_type pos = 0) const;
@@ -57,9 +60,15 @@ struct basic_string {
   _Type& insert(size_type pos, const C* s);
   _Type& insert(size_type pos, const C* s, size_type n);
 
+  _Type substr(size_type pos = 0, size_type count = npos) const;
+
   constexpr bool starts_with(std::basic_string_view<C, T> sv) const noexcept;
   constexpr bool starts_with(C ch) const noexcept;
   constexpr bool starts_with(const C* s) const;
+
+  constexpr bool ends_with(std::basic_string_view<C, T> sv) const noexcept;
+  constexpr bool ends_with(C ch) const noexcept;
+  constexpr bool ends_with(const C* s) const;
 
   _Type& operator[](size_type);
   const _Type& operator[](size_type) const;
@@ -85,6 +94,12 @@ struct basic_string_view {
   const C *str;
   constexpr basic_string_view(const C* s) : str(s) {}
 
+  const C *data() const;
+
+  bool empty() const;
+  size_type size() const;
+  size_type length() const;
+
   size_type find(_Type v, size_type pos = 0) const;
   size_type find(C ch, size_type pos = 0) const;
   size_type find(const C* s, size_type pos, size_type count) const;
@@ -98,6 +113,12 @@ struct basic_string_view {
   constexpr bool starts_with(basic_string_view sv) const noexcept;
   constexpr bool starts_with(C ch) const noexcept;
   constexpr bool starts_with(const C* s) const;
+
+  constexpr bool ends_with(basic_string_view sv) const noexcept;
+  constexpr bool ends_with(C ch) const noexcept;
+  constexpr bool ends_with(const C* s) const;
+
+  constexpr int compare(basic_string_view sv) const noexcept;
 
   static constexpr size_t npos = -1;
 };
@@ -115,13 +136,25 @@ bool operator==(const std::string&, const std::string&);
 bool operator==(const std::string&, const char*);
 bool operator==(const char*, const std::string&);
 
+bool operator==(const std::wstring&, const std::wstring&);
+bool operator==(const std::wstring&, const wchar_t*);
+bool operator==(const wchar_t*, const std::wstring&);
+
+bool operator==(const std::string_view&, const std::string_view&);
+bool operator==(const std::string_view&, const char*);
+bool operator==(const char*, const std::string_view&);
+
+#if __cplusplus < 202002L
 bool operator!=(const std::string&, const std::string&);
 bool operator!=(const std::string&, const char*);
 bool operator!=(const char*, const std::string&);
 
-bool operator==(const std::wstring&, const std::wstring&);
-bool operator==(const std::wstring&, const wchar_t*);
-bool operator==(const wchar_t*, const std::wstring&);
+bool operator!=(const std::string_view&, const std::string_view&);
+bool operator!=(const std::string_view&, const char*);
+bool operator!=(const char*, const std::string_view&);
+#endif
+
+size_t strlen(const char* str);
 }
 
 #endif // _STRING_

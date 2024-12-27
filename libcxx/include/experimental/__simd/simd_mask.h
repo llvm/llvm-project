@@ -10,9 +10,10 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 
+#include <__config>
+#include <__cstddef/size_t.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
-#include <cstddef>
-#include <experimental/__config>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
@@ -41,6 +42,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI simd_mask() noexcept = default;
 
+  // explicit conversion from and to implementation-defined types
+  struct __storage_tag_t {};
+  static constexpr __storage_tag_t __storage_tag{};
+  explicit _LIBCPP_HIDE_FROM_ABI operator _Storage() const { return __s_; }
+  explicit _LIBCPP_HIDE_FROM_ABI simd_mask(const _Storage& __s, __storage_tag_t) : __s_(__s) {}
+
   // broadcast constructor
   _LIBCPP_HIDE_FROM_ABI explicit simd_mask(value_type __v) noexcept : __s_(_Impl::__broadcast(__v)) {}
 
@@ -56,6 +63,17 @@ public:
   template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI simd_mask(const value_type* __mem, _Flags) {
     _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
+  // copy functions
+  template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void copy_from(const value_type* __mem, _Flags) {
+    _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
+  template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void copy_to(value_type* __mem, _Flags) const {
+    _Impl::__store(__s_, _Flags::template __apply<simd_mask>(__mem));
   }
 
   // scalar access [simd.mask.subscr]

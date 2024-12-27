@@ -1,10 +1,10 @@
-# Test the control of aggressiveness of 3-way splitting by -call-scale.
-# When -call-scale=0.0, the tested function is 2-way splitted.
-# When -call-scale=1.0, the tested function is 3-way splitted with 5 blocks
-# in warm because of the increased benefit of shortening the call edges.
-# When -call-scale=1000.0, the tested function is still 3-way splitted with
-# 5 blocks in warm because cdsplit does not allow hot-warm splitting to break
-# a fall through branch from a basic block to its most likely successor.
+## Test the control of aggressiveness of 3-way splitting by -call-scale.
+## When -call-scale=0.0, the tested function is 2-way splitted.
+## When -call-scale=1.0, the tested function is 3-way splitted with 5 blocks
+## in warm because of the increased benefit of shortening the call edges.
+## When -call-scale=1000.0, the tested function is still 3-way splitted with
+## 5 blocks in warm because cdsplit does not allow hot-warm splitting to break
+## a fall through branch from a basic block to its most likely successor.
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata

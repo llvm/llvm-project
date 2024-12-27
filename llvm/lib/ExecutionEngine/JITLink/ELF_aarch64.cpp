@@ -11,14 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
-#include "EHFrameSupportImpl.h"
-#include "ELFLinkGraphBuilder.h"
-#include "JITLinkGeneric.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
+
+#include "DefineExternalSectionStartAndEndSymbols.h"
+#include "EHFrameSupportImpl.h"
+#include "ELFLinkGraphBuilder.h"
+#include "JITLinkGeneric.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -27,6 +29,8 @@ using namespace llvm::jitlink;
 
 namespace {
 
+constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+
 class ELFJITLinker_aarch64 : public JITLinker<ELFJITLinker_aarch64> {
   friend class JITLinker<ELFJITLinker_aarch64>;
 
@@ -34,11 +38,87 @@ public:
   ELFJITLinker_aarch64(std::unique_ptr<JITLinkContext> Ctx,
                        std::unique_ptr<LinkGraph> G,
                        PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    if (shouldAddDefaultTargetPasses(getGraph().getTargetTriple()))
+      getPassConfig().PostAllocationPasses.push_back(
+          [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+  }
 
 private:
+  Symbol *GOTSymbol = nullptr;
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return aarch64::applyFixup(G, B, E);
+    return aarch64::applyFixup(G, B, E, GOTSymbol);
+  }
+
+  Error getOrCreateGOTSymbol(LinkGraph &G) {
+    auto InteredGOTSymbolName =
+        G.getSymbolStringPool()->intern(ELFGOTSymbolName);
+
+    auto DefineExternalGOTSymbolIfPresent =
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
+              if (*Sym.getName() == ELFGOTSymbolName)
+                if (auto *GOTSection = G.findSectionByName(
+                        aarch64::GOTTableManager::getSectionName())) {
+                  GOTSymbol = &Sym;
+                  return {*GOTSection, true};
+                }
+              return {};
+            });
+
+    // Try to attach _GLOBAL_OFFSET_TABLE_ to the GOT if it's defined as an
+    // external.
+    if (auto Err = DefineExternalGOTSymbolIfPresent(G))
+      return Err;
+
+    // If we succeeded then we're done.
+    if (GOTSymbol)
+      return Error::success();
+
+    // Otherwise look for a GOT section: If it already has a start symbol we'll
+    // record it, otherwise we'll create our own.
+    // If there's a GOT section but we didn't find an external GOT symbol...
+    if (auto *GOTSection =
+            G.findSectionByName(aarch64::GOTTableManager::getSectionName())) {
+
+      // Check for an existing defined symbol.
+      for (auto *Sym : GOTSection->symbols())
+        if (Sym->getName() == InteredGOTSymbolName) {
+          GOTSymbol = Sym;
+          return Error::success();
+        }
+
+      // If there's no defined symbol then create one.
+      SectionRange SR(*GOTSection);
+      if (SR.empty())
+        GOTSymbol =
+            // FIXME: we should only do this once
+            &G.addAbsoluteSymbol(InteredGOTSymbolName, orc::ExecutorAddr(), 0,
+                                 Linkage::Strong, Scope::Local, true);
+      else
+        GOTSymbol =
+            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, InteredGOTSymbolName, 0,
+                                Linkage::Strong, Scope::Local, false, true);
+    }
+
+    // If we still haven't found a GOT symbol then double check the externals.
+    // We may have a GOT-relative reference but no GOT section, in which case
+    // we just need to point the GOT symbol at some address in this graph.
+    if (!GOTSymbol) {
+      for (auto *Sym : G.external_symbols()) {
+        if (*Sym->getName() == ELFGOTSymbolName) {
+          auto Blocks = G.blocks();
+          if (!Blocks.empty()) {
+            G.makeAbsolute(*Sym, (*Blocks.begin())->getAddress());
+            GOTSymbol = Sym;
+            break;
+          }
+        }
+      }
+    }
+
+    return Error::success();
   }
 };
 
@@ -47,6 +127,7 @@ class ELFLinkGraphBuilder_aarch64 : public ELFLinkGraphBuilder<ELFT> {
 private:
   enum ELFAArch64RelocationKind : Edge::Kind {
     ELFCall26 = Edge::FirstRelocation,
+    ELFLdrLo19,
     ELFAdrLo21,
     ELFAdrPage21,
     ELFAddAbs12,
@@ -67,6 +148,7 @@ private:
     ELFPrel64,
     ELFAdrGOTPage21,
     ELFLd64GOTLo12,
+    ELFLd64GOTPAGELo15,
     ELFTLSDescAdrPage21,
     ELFTLSDescAddLo12,
     ELFTLSDescLd64Lo12,
@@ -80,6 +162,8 @@ private:
     case ELF::R_AARCH64_CALL26:
     case ELF::R_AARCH64_JUMP26:
       return ELFCall26;
+    case ELF::R_AARCH64_LD_PREL_LO19:
+      return ELFLdrLo19;
     case ELF::R_AARCH64_ADR_PREL_LO21:
       return ELFAdrLo21;
     case ELF::R_AARCH64_ADR_PREL_PG_HI21:
@@ -120,6 +204,8 @@ private:
       return ELFAdrGOTPage21;
     case ELF::R_AARCH64_LD64_GOT_LO12_NC:
       return ELFLd64GOTLo12;
+    case ELF::R_AARCH64_LD64_GOTPAGE_LO15:
+      return ELFLd64GOTPAGELo15;
     case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
       return ELFTLSDescAdrPage21;
     case ELF::R_AARCH64_TLSDESC_ADD_LO12:
@@ -187,6 +273,15 @@ private:
     switch (*RelocKind) {
     case ELFCall26: {
       Kind = aarch64::Branch26PCRel;
+      break;
+    }
+    case ELFLdrLo19: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isLDRLiteral(Instr))
+        return make_error<JITLinkError>(
+            "R_AARCH64_LDR_PREL_LO19 target is not an LDR Literal instruction");
+
+      Kind = aarch64::LDRLiteral19;
       break;
     }
     case ELFAdrLo21: {
@@ -348,6 +443,10 @@ private:
       Kind = aarch64::RequestGOTAndTransformToPageOffset12;
       break;
     }
+    case ELFLd64GOTPAGELo15: {
+      Kind = aarch64::RequestGOTAndTransformToPageOffset15;
+      break;
+    }
     case ELFTLSDescAdrPage21: {
       Kind = aarch64::RequestTLSDescEntryAndTransformToPage21;
       break;
@@ -413,6 +512,8 @@ private:
       return "ELFAdrGOTPage21";
     case ELFLd64GOTLo12:
       return "ELFLd64GOTLo12";
+    case ELFLd64GOTPAGELo15:
+      return "ELFLd64GOTPAGELo15";
     case ELFTLSDescAdrPage21:
       return "ELFTLSDescAdrPage21";
     case ELFTLSDescAddLo12:
@@ -428,10 +529,13 @@ private:
 
 public:
   ELFLinkGraphBuilder_aarch64(StringRef FileName,
-                              const object::ELFFile<ELFT> &Obj, Triple TT,
-                              SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, aarch64::getEdgeKindName) {}
+                              const object::ELFFile<ELFT> &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, SubtargetFeatures Features)
+
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  aarch64::getEdgeKindName) {}
 };
 
 // TLS Info Builder.
@@ -568,8 +672,8 @@ Error buildTables_ELF_aarch64(LinkGraph &G) {
 namespace llvm {
 namespace jitlink {
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -588,7 +692,7 @@ createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
   return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
@@ -610,6 +714,11 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Resolve any external section start / end symbols.
+    Config.PostAllocationPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyELFSectionStartAndEndSymbols));
 
     // Add an in-place GOT/TLS/Stubs build pass.
     Config.PostPrunePasses.push_back(buildTables_ELF_aarch64);

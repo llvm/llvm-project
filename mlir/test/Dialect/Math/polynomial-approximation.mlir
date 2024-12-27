@@ -94,6 +94,20 @@ func.func @erf_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL:   func @erf_scalable_vector(
+// CHECK-SAME:                     %[[arg0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[zero:.*]] = arith.constant dense<0.000000e+00> : vector<[8]xf32>
+// CHECK-NOT:       erf
+// CHECK-NOT:       vector<8xf32>
+// CHECK-COUNT-20:  select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[res:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[res]] : vector<[8]xf32>
+// CHECK:         }
+func.func @erf_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.erf %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
 // CHECK-LABEL:   func @exp_scalar(
 // CHECK-SAME:                     %[[VAL_0:.*]]: f32) -> f32 {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 5.000000e-01 : f32
@@ -149,6 +163,17 @@ func.func @exp_scalar(%arg0: f32) -> f32 {
 func.func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.exp %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL:   func @exp_scalable_vector
+// CHECK-NOT:      math.exp
+// CHECK-NOT:      vector<8xf32>
+// CHECK-COUNT-46: vector<[8]x{{(i32)|(f32)}}>
+// CHECK-NOT:      vector<8xf32>
+// CHECK-NOT:      math.exp
+func.func @exp_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.exp %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
 }
 
 // CHECK-LABEL:   func @expm1_scalar(
@@ -277,6 +302,22 @@ func.func @expm1_vector(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
   return %0 : vector<8x8xf32>
 }
 
+// CHECK-LABEL:   func @expm1_scalable_vector(
+// CHECK-SAME:                       %{{.*}}: vector<8x[8]xf32>) -> vector<8x[8]xf32> {
+// CHECK-NOT:       vector<8x8xf32>
+// CHECK-NOT:       exp
+// CHECK-NOT:       log
+// CHECK-NOT:       expm1
+// CHECK-COUNT-127: vector<8x[8]x{{(i32)|(f32)|(i1)}}>
+// CHECK-NOT:       vector<8x8xf32>
+// CHECK-NOT:       exp
+// CHECK-NOT:       log
+// CHECK-NOT:       expm1
+func.func @expm1_scalable_vector(%arg0: vector<8x[8]xf32>) -> vector<8x[8]xf32> {
+  %0 = math.expm1 %arg0 : vector<8x[8]xf32>
+  return %0 : vector<8x[8]xf32>
+}
+
 // CHECK-LABEL:   func @log_scalar(
 // CHECK-SAME:                             %[[X:.*]]: f32) -> f32 {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
@@ -357,6 +398,18 @@ func.func @log_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL:   func @log_scalable_vector(
+// CHECK-SAME:                     %{{.*}}: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[CST_LN2:.*]] = arith.constant dense<0.693147182> : vector<[8]xf32>
+// CHECK-COUNT-5:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_71:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_71]] : vector<[8]xf32>
+// CHECK:         }
+func.func @log_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.log %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
 // CHECK-LABEL:   func @log2_scalar(
 // CHECK-SAME:                      %[[VAL_0:.*]]: f32) -> f32 {
 // CHECK:           %[[CST_LOG2E:.*]] = arith.constant 1.44269502 : f32
@@ -379,6 +432,18 @@ func.func @log2_scalar(%arg0: f32) -> f32 {
 func.func @log2_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.log2 %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL:   func @log2_scalable_vector(
+// CHECK-SAME:                      %{{.*}}: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[CST_LOG2E:.*]] = arith.constant dense<1.44269502> : vector<[8]xf32>
+// CHECK-COUNT-5:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_71:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_71]] : vector<[8]xf32>
+// CHECK:         }
+func.func @log2_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.log2 %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
 }
 
 // CHECK-LABEL:   func @log1p_scalar(
@@ -414,6 +479,17 @@ func.func @log1p_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   return %0 : vector<8xf32>
 }
 
+// CHECK-LABEL:   func @log1p_scalable_vector(
+// CHECK-SAME:                       %[[VAL_0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[CST_ONE:.*]] = arith.constant dense<1.000000e+00> : vector<[8]xf32>
+// CHECK-COUNT-6:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_79:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_79]] : vector<[8]xf32>
+// CHECK:         }
+func.func @log1p_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.log1p %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
 
 // CHECK-LABEL:   func @tanh_scalar(
 // CHECK-SAME:                      %[[VAL_0:.*]]: f32) -> f32 {
@@ -468,6 +544,19 @@ func.func @tanh_scalar(%arg0: f32) -> f32 {
 func.func @tanh_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.tanh %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL:   func @tanh_scalable_vector(
+// CHECK-SAME:                      %[[VAL_0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<-7.99881172> : vector<[8]xf32>
+// CHECK-NOT:       tanh
+// CHECK-COUNT-2:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_33:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           return %[[VAL_33]] : vector<[8]xf32>
+// CHECK:         }
+func.func @tanh_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = math.tanh %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
 }
 
 // We only approximate rsqrt for vectors and when the AVX2 option is enabled.
@@ -805,6 +894,47 @@ func.func @math_f16(%arg0 : vector<4xf16>) -> vector<4xf16> {
   return %11 : vector<4xf16>
 }
 
+// CHECK-LABEL: @math_zero_rank
+func.func @math_zero_rank(%arg0 : vector<f16>) -> vector<f16> {
+
+  // CHECK-NOT: math.atan
+  %0 = "math.atan"(%arg0) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.atan2
+  %1 = "math.atan2"(%0, %arg0) : (vector<f16>, vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.tanh
+  %2 = "math.tanh"(%1) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log
+  %3 = "math.log"(%2) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log2
+  %4 = "math.log2"(%3) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log1p
+  %5 = "math.log1p"(%4) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.erf
+  %6 = "math.erf"(%5) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.exp
+  %7 = "math.exp"(%6) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.expm1
+  %8 = "math.expm1"(%7) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.cbrt
+  %9 = "math.cbrt"(%8) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.sin
+  %10 = "math.sin"(%9) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.cos
+  %11 = "math.cos"(%10) : (vector<f16>) -> vector<f16>
+
+  return %11 : vector<f16>
+}
 
 // AVX2-LABEL: @rsqrt_f16
 func.func @rsqrt_f16(%arg0 : vector<2x8xf16>) -> vector<2x8xf16> {

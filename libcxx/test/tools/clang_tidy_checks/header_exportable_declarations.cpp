@@ -9,8 +9,6 @@
 #include "clang-tidy/ClangTidyCheck.h"
 #include "clang-tidy/ClangTidyModuleRegistry.h"
 
-#include "clang/Basic/Module.h"
-
 #include "llvm/ADT/ArrayRef.h"
 
 #include "header_exportable_declarations.hpp"
@@ -69,50 +67,20 @@ header_exportable_declarations::header_exportable_declarations(
   }
 
   std::optional<llvm::StringRef> list = Options.get("SkipDeclarations");
-  // TODO(LLVM-17) Remove clang 15 work-around.
-#if defined(__clang_major__) && __clang_major__ < 16
-  if (list) {
-    std::string_view s = *list;
-    auto b             = s.begin();
-    auto e             = std::find(b, s.end(), ' ');
-    while (b != e) {
-      skip_decls_.emplace(b, e);
-      if (e == s.end())
-        break;
-      b = e + 1;
-      e = std::find(b, s.end(), ' ');
-    }
-  }
-#else  // defined(__clang_major__) && __clang_major__ < 16
   if (list)
     for (auto decl : std::views::split(*list, ' ')) {
       std::string s;
       std::ranges::copy(decl, std::back_inserter(s)); // use range based constructor
       skip_decls_.emplace(std::move(s));
     }
-#endif // defined(__clang_major__) && __clang_major__ < 16
   decls_ = skip_decls_;
 
   list = Options.get("ExtraDeclarations");
-  // TODO(LLVM-17) Remove clang 15 work-around.
-#if defined(__clang_major__) && __clang_major__ < 16
-  if (list) {
-    std::string_view s = *list;
-    auto b             = s.begin();
-    auto e             = std::find(b, s.end(), ' ');
-    while (b != e) {
-      std::cout << "using ::" << std::string_view{b, e} << ";\n";
-      if (e == s.end())
-        break;
-      b = e + 1;
-      e = std::find(b, s.end(), ' ');
-    }
-  }
-#else  // defined(__clang_major__) && __clang_major__ < 16
   if (list)
-    for (auto decl : std::views::split(*list, ' '))
-      std::cout << "using ::" << std::string_view{decl.data(), decl.size()} << ";\n";
-#endif // defined(__clang_major__) && __clang_major__ < 16
+    for (auto decl : std::views::split(*list, ' ')) {
+      auto common = decl | std::views::common;
+      std::cout << "using ::" << std::string{common.begin(), common.end()} << ";\n";
+    }
 }
 
 header_exportable_declarations::~header_exportable_declarations() {
@@ -154,7 +122,9 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
     [[fallthrough]];
   case FileType::ModulePartition:
   case FileType::CompatModulePartition:
-    finder->addMatcher(namedDecl(isExpansionInFileMatching(filename_)).bind("header_exportable_declarations"), this);
+    finder->addMatcher(namedDecl(anyOf(isExpansionInFileMatching(filename_), isExpansionInFileMatching(extra_header_)))
+                           .bind("header_exportable_declarations"),
+                       this);
     break;
   case FileType::Module:
   case FileType::CompatModule:

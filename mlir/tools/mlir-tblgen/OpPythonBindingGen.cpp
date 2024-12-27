@@ -23,6 +23,9 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::formatv;
+using llvm::Record;
+using llvm::RecordKeeper;
 
 /// File header and includes.
 ///   {0} is the dialect namespace.
@@ -31,7 +34,6 @@ constexpr const char *fileHeader = R"Py(
 
 from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
-    SubClassValueT as _SubClassValueT,
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
@@ -52,8 +54,6 @@ constexpr const char *dialectClassTemplate = R"Py(
 @_ods_cext.register_dialect
 class _Dialect(_ods_ir.Dialect):
   DIALECT_NAMESPACE = "{0}"
-  pass
-
 )Py";
 
 constexpr const char *dialectExtensionTemplate = R"Py(
@@ -142,13 +142,14 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 /// First part of the template for equally-sized variadic group accessor:
 ///   {0} is the name of the accessor;
 ///   {1} is either 'operand' or 'result';
-///   {2} is the total number of variadic groups;
-///   {3} is the number of non-variadic groups preceding the current group;
-///   {3} is the number of variadic groups preceding the current group.
+///   {2} is the total number of non-variadic groups;
+///   {3} is the total number of variadic groups;
+///   {4} is the number of non-variadic groups preceding the current group;
+///   {5} is the number of variadic groups preceding the current group.
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
   @builtins.property
   def {0}(self):
-    start, pg = _ods_equally_sized_accessor(operation.{1}s, {2}, {3}, {4}))Py";
+    start, elements_per_group = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}, {5}))Py";
 
 /// Second part of the template for equally-sized case, accessing a single
 /// element:
@@ -161,7 +162,7 @@ constexpr const char *opVariadicEqualSimpleTemplate = R"Py(
 /// group:
 ///   {0} is either 'operand' or 'result'.
 constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
-    return self.operation.{0}s[start:start + pg]
+    return self.operation.{0}s[start:start + elements_per_group]
 )Py";
 
 /// Template for an attribute-sized group accessor:
@@ -271,6 +272,11 @@ constexpr const char *regionAccessorTemplate = R"Py(
 
 constexpr const char *valueBuilderTemplate = R"Py(
 def {0}({2}) -> {4}:
+  return {1}({3}){5}
+)Py";
+
+constexpr const char *valueBuilderVariadicTemplate = R"Py(
+def {0}({2}) -> {4}:
   return _get_op_result_or_op_results({1}({3}))
 )Py";
 
@@ -317,9 +323,9 @@ static std::string sanitizeName(StringRef name) {
 }
 
 static std::string attrSizedTraitForKind(const char *kind) {
-  return llvm::formatv("::mlir::OpTrait::AttrSized{0}{1}Segments",
-                       llvm::StringRef(kind).take_front().upper(),
-                       llvm::StringRef(kind).drop_front());
+  return formatv("::mlir::OpTrait::AttrSized{0}{1}Segments",
+                 StringRef(kind).take_front().upper(),
+                 StringRef(kind).drop_front());
 }
 
 /// Emits accessors to "elements" of an Op definition. Currently, the supported
@@ -327,46 +333,39 @@ static std::string attrSizedTraitForKind(const char *kind) {
 /// `operand` or `result` and is used verbatim in the emitted code.
 static void emitElementAccessors(
     const Operator &op, raw_ostream &os, const char *kind,
-    llvm::function_ref<unsigned(const Operator &)> getNumVariableLength,
-    llvm::function_ref<int(const Operator &)> getNumElements,
+    unsigned numVariadicGroups, unsigned numElements,
     llvm::function_ref<const NamedTypeConstraint &(const Operator &, int)>
         getElement) {
-  assert(llvm::is_contained(
-             llvm::SmallVector<StringRef, 2>{"operand", "result"}, kind) &&
+  assert(llvm::is_contained(SmallVector<StringRef, 2>{"operand", "result"},
+                            kind) &&
          "unsupported kind");
 
   // Traits indicating how to process variadic elements.
-  std::string sameSizeTrait =
-      llvm::formatv("::mlir::OpTrait::SameVariadic{0}{1}Size",
-                    llvm::StringRef(kind).take_front().upper(),
-                    llvm::StringRef(kind).drop_front());
+  std::string sameSizeTrait = formatv("::mlir::OpTrait::SameVariadic{0}{1}Size",
+                                      StringRef(kind).take_front().upper(),
+                                      StringRef(kind).drop_front());
   std::string attrSizedTrait = attrSizedTraitForKind(kind);
-
-  unsigned numVariableLength = getNumVariableLength(op);
 
   // If there is only one variable-length element group, its size can be
   // inferred from the total number of elements. If there are none, the
   // generation is straightforward.
-  if (numVariableLength <= 1) {
+  if (numVariadicGroups <= 1) {
     bool seenVariableLength = false;
-    for (int i = 0, e = getNumElements(op); i < e; ++i) {
+    for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (element.isVariableLength())
         seenVariableLength = true;
       if (element.name.empty())
         continue;
       if (element.isVariableLength()) {
-        os << llvm::formatv(element.isOptional() ? opOneOptionalTemplate
-                                                 : opOneVariadicTemplate,
-                            sanitizeName(element.name), kind,
-                            getNumElements(op), i);
+        os << formatv(element.isOptional() ? opOneOptionalTemplate
+                                           : opOneVariadicTemplate,
+                      sanitizeName(element.name), kind, numElements, i);
       } else if (seenVariableLength) {
-        os << llvm::formatv(opSingleAfterVariableTemplate,
-                            sanitizeName(element.name), kind,
-                            getNumElements(op), i);
+        os << formatv(opSingleAfterVariableTemplate, sanitizeName(element.name),
+                      kind, numElements, i);
       } else {
-        os << llvm::formatv(opSingleTemplate, sanitizeName(element.name), kind,
-                            i);
+        os << formatv(opSingleTemplate, sanitizeName(element.name), kind, i);
       }
     }
     return;
@@ -374,18 +373,28 @@ static void emitElementAccessors(
 
   // Handle the operations where variadic groups have the same size.
   if (op.getTrait(sameSizeTrait)) {
+    // Count the number of simple elements
+    unsigned numSimpleLength = 0;
+    for (unsigned i = 0; i < numElements; ++i) {
+      const NamedTypeConstraint &element = getElement(op, i);
+      if (!element.isVariableLength()) {
+        ++numSimpleLength;
+      }
+    }
+
+    // Generate the accessors
     int numPrecedingSimple = 0;
     int numPrecedingVariadic = 0;
-    for (int i = 0, e = getNumElements(op); i < e; ++i) {
+    for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (!element.name.empty()) {
-        os << llvm::formatv(opVariadicEqualPrefixTemplate,
-                            sanitizeName(element.name), kind, numVariableLength,
-                            numPrecedingSimple, numPrecedingVariadic);
-        os << llvm::formatv(element.isVariableLength()
-                                ? opVariadicEqualVariadicTemplate
-                                : opVariadicEqualSimpleTemplate,
-                            kind);
+        os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
+                      kind, numSimpleLength, numVariadicGroups,
+                      numPrecedingSimple, numPrecedingVariadic);
+        os << formatv(element.isVariableLength()
+                          ? opVariadicEqualVariadicTemplate
+                          : opVariadicEqualSimpleTemplate,
+                      kind);
       }
       if (element.isVariableLength())
         ++numPrecedingVariadic;
@@ -399,7 +408,7 @@ static void emitElementAccessors(
   // provided as an attribute. For non-variadic elements, make sure to return
   // an element rather than a singleton container.
   if (op.getTrait(attrSizedTrait)) {
-    for (int i = 0, e = getNumElements(op); i < e; ++i) {
+    for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (element.name.empty())
         continue;
@@ -408,9 +417,9 @@ static void emitElementAccessors(
         trailing = "[0]";
       else if (element.isOptional())
         trailing = std::string(
-            llvm::formatv(opVariadicSegmentOptionalTrailingTemplate, kind));
-      os << llvm::formatv(opVariadicSegmentTemplate, sanitizeName(element.name),
-                          kind, i, trailing);
+            formatv(opVariadicSegmentOptionalTrailingTemplate, kind));
+      os << formatv(opVariadicSegmentTemplate, sanitizeName(element.name), kind,
+                    i, trailing);
     }
     return;
   }
@@ -430,20 +439,14 @@ static const NamedTypeConstraint &getResult(const Operator &op, int i) {
 
 /// Emits accessors to Op operands.
 static void emitOperandAccessors(const Operator &op, raw_ostream &os) {
-  auto getNumVariableLengthOperands = [](const Operator &oper) {
-    return oper.getNumVariableLengthOperands();
-  };
-  emitElementAccessors(op, os, "operand", getNumVariableLengthOperands,
-                       getNumOperands, getOperand);
+  emitElementAccessors(op, os, "operand", op.getNumVariableLengthOperands(),
+                       getNumOperands(op), getOperand);
 }
 
 /// Emits accessors Op results.
 static void emitResultAccessors(const Operator &op, raw_ostream &os) {
-  auto getNumVariableLengthResults = [](const Operator &oper) {
-    return oper.getNumVariableLengthResults();
-  };
-  emitElementAccessors(op, os, "result", getNumVariableLengthResults,
-                       getNumResults, getResult);
+  emitElementAccessors(op, os, "result", op.getNumVariableLengthResults(),
+                       getNumResults(op), getResult);
 }
 
 /// Emits accessors to Op attributes.
@@ -460,28 +463,22 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
     std::string sanitizedName = sanitizeName(namedAttr.name);
 
     // Unit attributes are handled specially.
-    if (namedAttr.attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
-      os << llvm::formatv(unitAttributeGetterTemplate, sanitizedName,
-                          namedAttr.name);
-      os << llvm::formatv(unitAttributeSetterTemplate, sanitizedName,
-                          namedAttr.name);
-      os << llvm::formatv(attributeDeleterTemplate, sanitizedName,
-                          namedAttr.name);
+    if (namedAttr.attr.getStorageType().trim() == "::mlir::UnitAttr") {
+      os << formatv(unitAttributeGetterTemplate, sanitizedName, namedAttr.name);
+      os << formatv(unitAttributeSetterTemplate, sanitizedName, namedAttr.name);
+      os << formatv(attributeDeleterTemplate, sanitizedName, namedAttr.name);
       continue;
     }
 
     if (namedAttr.attr.isOptional()) {
-      os << llvm::formatv(optionalAttributeGetterTemplate, sanitizedName,
-                          namedAttr.name);
-      os << llvm::formatv(optionalAttributeSetterTemplate, sanitizedName,
-                          namedAttr.name);
-      os << llvm::formatv(attributeDeleterTemplate, sanitizedName,
-                          namedAttr.name);
+      os << formatv(optionalAttributeGetterTemplate, sanitizedName,
+                    namedAttr.name);
+      os << formatv(optionalAttributeSetterTemplate, sanitizedName,
+                    namedAttr.name);
+      os << formatv(attributeDeleterTemplate, sanitizedName, namedAttr.name);
     } else {
-      os << llvm::formatv(attributeGetterTemplate, sanitizedName,
-                          namedAttr.name);
-      os << llvm::formatv(attributeSetterTemplate, sanitizedName,
-                          namedAttr.name);
+      os << formatv(attributeGetterTemplate, sanitizedName, namedAttr.name);
+      os << formatv(attributeSetterTemplate, sanitizedName, namedAttr.name);
       // Non-optional attributes cannot be deleted.
     }
   }
@@ -534,7 +531,7 @@ constexpr const char *multiResultAppendTemplate = "results.extend({0})";
 /// there is no method registered to make it an Attribute.
 constexpr const char *initAttributeWithBuilderTemplate =
     R"Py(attributes["{1}"] = ({0} if (
-    issubclass(type({0}), _ods_ir.Attribute) or
+    isinstance({0}, _ods_ir.Attribute) or
     not _ods_ir.AttrBuilder.contains('{2}')) else
       _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -547,7 +544,7 @@ constexpr const char *initAttributeWithBuilderTemplate =
 /// there is no method registered to make it an Attribute.
 constexpr const char *initOptionalAttributeWithBuilderTemplate =
     R"Py(if {0} is not None: attributes["{1}"] = ({0} if (
-        issubclass(type({0}), _ods_ir.Attribute) or
+        isinstance({0}, _ods_ir.Attribute) or
         not _ods_ir.AttrBuilder.contains('{2}')) else
           _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
 
@@ -597,7 +594,7 @@ static bool canInferType(const Operator &op) {
 /// accept them as arguments.
 static void
 populateBuilderArgsResults(const Operator &op,
-                           llvm::SmallVectorImpl<std::string> &builderArgs) {
+                           SmallVectorImpl<std::string> &builderArgs) {
   if (canInferType(op))
     return;
 
@@ -609,7 +606,7 @@ populateBuilderArgsResults(const Operator &op,
         // to properly match the built-in result accessor.
         name = "result";
       } else {
-        name = llvm::formatv("_gen_res_{0}", i);
+        name = formatv("_gen_res_{0}", i);
       }
     }
     name = sanitizeName(name);
@@ -622,32 +619,32 @@ populateBuilderArgsResults(const Operator &op,
 /// appear in the `arguments` field of the op definition. Additionally,
 /// `operandNames` is populated with names of operands in their order of
 /// appearance.
-static void
-populateBuilderArgs(const Operator &op,
-                    llvm::SmallVectorImpl<std::string> &builderArgs,
-                    llvm::SmallVectorImpl<std::string> &operandNames) {
+static void populateBuilderArgs(const Operator &op,
+                                SmallVectorImpl<std::string> &builderArgs,
+                                SmallVectorImpl<std::string> &operandNames) {
   for (int i = 0, e = op.getNumArgs(); i < e; ++i) {
     std::string name = op.getArgName(i).str();
     if (name.empty())
-      name = llvm::formatv("_gen_arg_{0}", i);
+      name = formatv("_gen_arg_{0}", i);
     name = sanitizeName(name);
     builderArgs.push_back(name);
-    if (!op.getArg(i).is<NamedAttribute *>())
+    if (!isa<NamedAttribute *>(op.getArg(i)))
       operandNames.push_back(name);
   }
 }
 
 /// Populates `builderArgs` with the Python-compatible names of builder function
 /// successor arguments. Additionally, `successorArgNames` is also populated.
-static void populateBuilderArgsSuccessors(
-    const Operator &op, llvm::SmallVectorImpl<std::string> &builderArgs,
-    llvm::SmallVectorImpl<std::string> &successorArgNames) {
+static void
+populateBuilderArgsSuccessors(const Operator &op,
+                              SmallVectorImpl<std::string> &builderArgs,
+                              SmallVectorImpl<std::string> &successorArgNames) {
 
   for (int i = 0, e = op.getNumSuccessors(); i < e; ++i) {
     NamedSuccessor successor = op.getSuccessor(i);
     std::string name = std::string(successor.name);
     if (name.empty())
-      name = llvm::formatv("_gen_successor_{0}", i);
+      name = formatv("_gen_successor_{0}", i);
     name = sanitizeName(name);
     builderArgs.push_back(name);
     successorArgNames.push_back(name);
@@ -660,9 +657,8 @@ static void populateBuilderArgsSuccessors(
 /// operands and attributes in the same order as they appear in the `arguments`
 /// field.
 static void
-populateBuilderLinesAttr(const Operator &op,
-                         llvm::ArrayRef<std::string> argNames,
-                         llvm::SmallVectorImpl<std::string> &builderLines) {
+populateBuilderLinesAttr(const Operator &op, ArrayRef<std::string> argNames,
+                         SmallVectorImpl<std::string> &builderLines) {
   builderLines.push_back("_ods_context = _ods_get_default_loc_context(loc)");
   for (int i = 0, e = op.getNumArgs(); i < e; ++i) {
     Argument arg = op.getArg(i);
@@ -671,13 +667,13 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
 
     // Unit attributes are handled specially.
-    if (attribute->attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
-      builderLines.push_back(llvm::formatv(initUnitAttributeTemplate,
-                                           attribute->name, argNames[i]));
+    if (attribute->attr.getStorageType().trim() == "::mlir::UnitAttr") {
+      builderLines.push_back(
+          formatv(initUnitAttributeTemplate, attribute->name, argNames[i]));
       continue;
     }
 
-    builderLines.push_back(llvm::formatv(
+    builderLines.push_back(formatv(
         attribute->attr.isOptional() || attribute->attr.hasDefaultValue()
             ? initOptionalAttributeWithBuilderTemplate
             : initAttributeWithBuilderTemplate,
@@ -688,30 +684,30 @@ populateBuilderLinesAttr(const Operator &op,
 /// Populates `builderLines` with additional lines that are required in the
 /// builder to set up successors. successorArgNames is expected to correspond
 /// to the Python argument name for each successor on the op.
-static void populateBuilderLinesSuccessors(
-    const Operator &op, llvm::ArrayRef<std::string> successorArgNames,
-    llvm::SmallVectorImpl<std::string> &builderLines) {
+static void
+populateBuilderLinesSuccessors(const Operator &op,
+                               ArrayRef<std::string> successorArgNames,
+                               SmallVectorImpl<std::string> &builderLines) {
   if (successorArgNames.empty()) {
-    builderLines.push_back(llvm::formatv(initSuccessorsTemplate, "None"));
+    builderLines.push_back(formatv(initSuccessorsTemplate, "None"));
     return;
   }
 
-  builderLines.push_back(llvm::formatv(initSuccessorsTemplate, "[]"));
+  builderLines.push_back(formatv(initSuccessorsTemplate, "[]"));
   for (int i = 0, e = successorArgNames.size(); i < e; ++i) {
     auto &argName = successorArgNames[i];
     const NamedSuccessor &successor = op.getSuccessor(i);
-    builderLines.push_back(
-        llvm::formatv(addSuccessorTemplate,
-                      successor.isVariadic() ? "extend" : "append", argName));
+    builderLines.push_back(formatv(addSuccessorTemplate,
+                                   successor.isVariadic() ? "extend" : "append",
+                                   argName));
   }
 }
 
 /// Populates `builderLines` with additional lines that are required in the
 /// builder to set up op operands.
 static void
-populateBuilderLinesOperand(const Operator &op,
-                            llvm::ArrayRef<std::string> names,
-                            llvm::SmallVectorImpl<std::string> &builderLines) {
+populateBuilderLinesOperand(const Operator &op, ArrayRef<std::string> names,
+                            SmallVectorImpl<std::string> &builderLines) {
   bool sizedSegments = op.getTrait(attrSizedTraitForKind("operand")) != nullptr;
 
   // For each element, find or generate a name.
@@ -720,7 +716,7 @@ populateBuilderLinesOperand(const Operator &op,
     std::string name = names[i];
 
     // Choose the formatting string based on the element kind.
-    llvm::StringRef formatString;
+    StringRef formatString;
     if (!element.isVariableLength()) {
       formatString = singleOperandAppendTemplate;
     } else if (element.isOptional()) {
@@ -740,7 +736,7 @@ populateBuilderLinesOperand(const Operator &op,
       }
     }
 
-    builderLines.push_back(llvm::formatv(formatString.data(), name));
+    builderLines.push_back(formatv(formatString.data(), name));
   }
 }
 
@@ -760,7 +756,7 @@ constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
 /// Appends the given multiline string as individual strings into
 /// `builderLines`.
 static void appendLineByLine(StringRef string,
-                             llvm::SmallVectorImpl<std::string> &builderLines) {
+                             SmallVectorImpl<std::string> &builderLines) {
 
   std::pair<StringRef, StringRef> split = std::make_pair(string, string);
   do {
@@ -772,14 +768,13 @@ static void appendLineByLine(StringRef string,
 /// Populates `builderLines` with additional lines that are required in the
 /// builder to set up op results.
 static void
-populateBuilderLinesResult(const Operator &op,
-                           llvm::ArrayRef<std::string> names,
-                           llvm::SmallVectorImpl<std::string> &builderLines) {
+populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
+                           SmallVectorImpl<std::string> &builderLines) {
   bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
 
   if (hasSameArgumentAndResultTypes(op)) {
-    builderLines.push_back(llvm::formatv(
-        appendSameResultsTemplate, "operands[0].type", op.getNumResults()));
+    builderLines.push_back(formatv(appendSameResultsTemplate,
+                                   "operands[0].type", op.getNumResults()));
     return;
   }
 
@@ -787,12 +782,11 @@ populateBuilderLinesResult(const Operator &op,
     const NamedAttribute &firstAttr = op.getAttribute(0);
     assert(!firstAttr.name.empty() && "unexpected empty name for the attribute "
                                       "from which the type is derived");
-    appendLineByLine(
-        llvm::formatv(deriveTypeFromAttrTemplate, firstAttr.name).str(),
-        builderLines);
-    builderLines.push_back(llvm::formatv(appendSameResultsTemplate,
-                                         "_ods_derived_result_type",
-                                         op.getNumResults()));
+    appendLineByLine(formatv(deriveTypeFromAttrTemplate, firstAttr.name).str(),
+                     builderLines);
+    builderLines.push_back(formatv(appendSameResultsTemplate,
+                                   "_ods_derived_result_type",
+                                   op.getNumResults()));
     return;
   }
 
@@ -805,7 +799,7 @@ populateBuilderLinesResult(const Operator &op,
     std::string name = names[i];
 
     // Choose the formatting string based on the element kind.
-    llvm::StringRef formatString;
+    StringRef formatString;
     if (!element.isVariableLength()) {
       formatString = singleResultAppendTemplate;
     } else if (element.isOptional()) {
@@ -821,17 +815,16 @@ populateBuilderLinesResult(const Operator &op,
       }
     }
 
-    builderLines.push_back(llvm::formatv(formatString.data(), name));
+    builderLines.push_back(formatv(formatString.data(), name));
   }
 }
 
 /// If the operation has variadic regions, adds a builder argument to specify
 /// the number of those regions and builder lines to forward it to the generic
 /// constructor.
-static void
-populateBuilderRegions(const Operator &op,
-                       llvm::SmallVectorImpl<std::string> &builderArgs,
-                       llvm::SmallVectorImpl<std::string> &builderLines) {
+static void populateBuilderRegions(const Operator &op,
+                                   SmallVectorImpl<std::string> &builderArgs,
+                                   SmallVectorImpl<std::string> &builderLines) {
   if (op.hasNoVariadicRegions())
     return;
 
@@ -846,19 +839,19 @@ populateBuilderRegions(const Operator &op,
           .str();
   builderArgs.push_back(name);
   builderLines.push_back(
-      llvm::formatv("regions = {0} + {1}", op.getNumRegions() - 1, name));
+      formatv("regions = {0} + {1}", op.getNumRegions() - 1, name));
 }
 
 /// Emits a default builder constructing an operation from the list of its
 /// result types, followed by a list of its operands. Returns vector
 /// of fully built functionArgs for downstream users (to save having to
 /// rebuild anew).
-static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
-                                                           raw_ostream &os) {
-  llvm::SmallVector<std::string> builderArgs;
-  llvm::SmallVector<std::string> builderLines;
-  llvm::SmallVector<std::string> operandArgNames;
-  llvm::SmallVector<std::string> successorArgNames;
+static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
+                                                     raw_ostream &os) {
+  SmallVector<std::string> builderArgs;
+  SmallVector<std::string> builderLines;
+  SmallVector<std::string> operandArgNames;
+  SmallVector<std::string> successorArgNames;
   builderArgs.reserve(op.getNumOperands() + op.getNumResults() +
                       op.getNumNativeAttributes() + op.getNumSuccessors());
   populateBuilderArgsResults(op, builderArgs);
@@ -868,10 +861,10 @@ static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   populateBuilderArgsSuccessors(op, builderArgs, successorArgNames);
 
   populateBuilderLinesOperand(op, operandArgNames, builderLines);
-  populateBuilderLinesAttr(
-      op, llvm::ArrayRef(builderArgs).drop_front(numResultArgs), builderLines);
+  populateBuilderLinesAttr(op, ArrayRef(builderArgs).drop_front(numResultArgs),
+                           builderLines);
   populateBuilderLinesResult(
-      op, llvm::ArrayRef(builderArgs).take_front(numResultArgs), builderLines);
+      op, ArrayRef(builderArgs).take_front(numResultArgs), builderLines);
   populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
   populateBuilderRegions(op, builderArgs, builderLines);
 
@@ -898,7 +891,7 @@ static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   };
 
   // StringRefs in functionArgs refer to strings allocated by builderArgs.
-  llvm::SmallVector<llvm::StringRef> functionArgs;
+  SmallVector<StringRef> functionArgs;
 
   // Add positional arguments.
   for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i) {
@@ -931,11 +924,10 @@ static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   initArgs.push_back("loc=loc");
   initArgs.push_back("ip=ip");
 
-  os << llvm::formatv(initTemplate, llvm::join(functionArgs, ", "),
-                      llvm::join(builderLines, "\n    "),
-                      llvm::join(initArgs, ", "));
+  os << formatv(initTemplate, llvm::join(functionArgs, ", "),
+                llvm::join(builderLines, "\n    "), llvm::join(initArgs, ", "));
   return llvm::to_vector<8>(
-      llvm::map_range(functionArgs, [](llvm::StringRef s) { return s.str(); }));
+      llvm::map_range(functionArgs, [](StringRef s) { return s.str(); }));
 }
 
 static void emitSegmentSpec(
@@ -957,15 +949,15 @@ static void emitSegmentSpec(
   }
   segmentSpec.append("]");
 
-  os << llvm::formatv(opClassSizedSegmentsTemplate, kind, segmentSpec);
+  os << formatv(opClassSizedSegmentsTemplate, kind, segmentSpec);
 }
 
 static void emitRegionAttributes(const Operator &op, raw_ostream &os) {
   // Emit _ODS_REGIONS = (min_region_count, has_no_variadic_regions).
   // Note that the base OpView class defines this as (0, True).
   unsigned minRegionCount = op.getNumRegions() - op.getNumVariadicRegions();
-  os << llvm::formatv(opClassRegionSpecTemplate, minRegionCount,
-                      op.hasNoVariadicRegions() ? "True" : "False");
+  os << formatv(opClassRegionSpecTemplate, minRegionCount,
+                op.hasNoVariadicRegions() ? "True" : "False");
 }
 
 /// Emits named accessors to regions.
@@ -977,20 +969,20 @@ static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
 
     assert((!region.isVariadic() || en.index() == op.getNumRegions() - 1) &&
            "expected only the last region to be variadic");
-    os << llvm::formatv(regionAccessorTemplate, sanitizeName(region.name),
-                        std::to_string(en.index()) +
-                            (region.isVariadic() ? ":" : ""));
+    os << formatv(regionAccessorTemplate, sanitizeName(region.name),
+                  std::to_string(en.index()) +
+                      (region.isVariadic() ? ":" : ""));
   }
 }
 
 /// Emits builder that extracts results from op
 static void emitValueBuilder(const Operator &op,
-                             llvm::SmallVector<std::string> functionArgs,
+                             SmallVector<std::string> functionArgs,
                              raw_ostream &os) {
   // Params with (possibly) default args.
   auto valueBuilderParams =
       llvm::map_range(functionArgs, [](const std::string &argAndMaybeDefault) {
-        llvm::SmallVector<llvm::StringRef> argMaybeDefault =
+        SmallVector<StringRef> argMaybeDefault =
             llvm::to_vector<2>(llvm::split(argAndMaybeDefault, "="));
         auto arg = llvm::convertToSnakeFromCamelCase(argMaybeDefault[0]);
         if (argMaybeDefault.size() == 2)
@@ -1005,22 +997,34 @@ static void emitValueBuilder(const Operator &op,
         auto lhs = *llvm::split(arg, "=").begin();
         return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
       });
-  std::string nameWithoutDialect =
-      op.getOperationName().substr(op.getOperationName().find('.') + 1);
-  os << llvm::formatv(valueBuilderTemplate, sanitizeName(nameWithoutDialect),
-                      op.getCppClassName(),
-                      llvm::join(valueBuilderParams, ", "),
-                      llvm::join(opBuilderArgs, ", "),
-                      (op.getNumResults() > 1
-                           ? "_Sequence[_SubClassValueT]"
-                           : (op.getNumResults() > 0 ? "_SubClassValueT"
-                                                     : "_ods_ir.Operation")));
+  std::string nameWithoutDialect = sanitizeName(
+      op.getOperationName().substr(op.getOperationName().find('.') + 1));
+  std::string params = llvm::join(valueBuilderParams, ", ");
+  std::string args = llvm::join(opBuilderArgs, ", ");
+  const char *type =
+      (op.getNumResults() > 1
+           ? "_Sequence[_ods_ir.Value]"
+           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation"));
+  if (op.getNumVariableLengthResults() > 0) {
+    os << formatv(valueBuilderVariadicTemplate, nameWithoutDialect,
+                  op.getCppClassName(), params, args, type);
+  } else {
+    const char *results;
+    if (op.getNumResults() == 0) {
+      results = "";
+    } else if (op.getNumResults() == 1) {
+      results = ".result";
+    } else {
+      results = ".results";
+    }
+    os << formatv(valueBuilderTemplate, nameWithoutDialect,
+                  op.getCppClassName(), params, args, type, results);
+  }
 }
 
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op, raw_ostream &os) {
-  os << llvm::formatv(opClassTemplate, op.getCppClassName(),
-                      op.getOperationName());
+  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName());
 
   // Sized segments.
   if (op.getTrait(attrSizedTraitForKind("operand")) != nullptr) {
@@ -1031,7 +1035,7 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
   }
 
   emitRegionAttributes(op, os);
-  llvm::SmallVector<std::string> functionArgs = emitDefaultOpBuilder(op, os);
+  SmallVector<std::string> functionArgs = emitDefaultOpBuilder(op, os);
   emitOperandAccessors(op, os);
   emitAttributeAccessors(op, os);
   emitResultAccessors(op, os);
@@ -1042,17 +1046,17 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
 /// Emits bindings for the dialect specified in the command line, including file
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
-static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
+static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
   if (clDialectName.empty())
     llvm::PrintFatalError("dialect name not provided");
 
   os << fileHeader;
   if (!clDialectExtensionName.empty())
-    os << llvm::formatv(dialectExtensionTemplate, clDialectName.getValue());
+    os << formatv(dialectExtensionTemplate, clDialectName.getValue());
   else
-    os << llvm::formatv(dialectClassTemplate, clDialectName.getValue());
+    os << formatv(dialectClassTemplate, clDialectName.getValue());
 
-  for (const llvm::Record *rec : records.getAllDerivedDefinitions("Op")) {
+  for (const Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
     if (op.getDialectName() == clDialectName.getValue())
       emitOpBindings(op, os);

@@ -55,20 +55,39 @@ namespace {
 constexpr StringLiteral
     kEnableArmStreamingIgnoreAttr("enable_arm_streaming_ignore");
 
+template <typename... Ops>
+constexpr auto opList() {
+  return std::array{TypeID::get<Ops>()...};
+}
+
+bool isScalableVector(Type type) {
+  if (auto vectorType = dyn_cast<VectorType>(type))
+    return vectorType.isScalable();
+  return false;
+}
+
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
   EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode,
-                         bool onlyIfRequiredByOps) {
+                         bool ifRequiredByOps, bool ifScalableAndSupported) {
     this->streamingMode = streamingMode;
     this->zaMode = zaMode;
-    this->onlyIfRequiredByOps = onlyIfRequiredByOps;
+    this->ifRequiredByOps = ifRequiredByOps;
+    this->ifScalableAndSupported = ifScalableAndSupported;
   }
   void runOnOperation() override {
-    auto op = getOperation();
+    auto function = getOperation();
 
-    if (onlyIfRequiredByOps) {
+    if (ifRequiredByOps && ifScalableAndSupported) {
+      function->emitOpError(
+          "enable-arm-streaming: `if-required-by-ops` and "
+          "`if-scalable-and-supported` are mutually exclusive");
+      return signalPassFailure();
+    }
+
+    if (ifRequiredByOps) {
       bool foundTileOp = false;
-      op.walk([&](Operation *op) {
+      function.walk([&](Operation *op) {
         if (llvm::isa<ArmSMETileOpInterface>(op)) {
           foundTileOp = true;
           return WalkResult::interrupt();
@@ -79,27 +98,51 @@ struct EnableArmStreamingPass
         return;
     }
 
-    if (op->getAttr(kEnableArmStreamingIgnoreAttr) ||
+    if (ifScalableAndSupported) {
+      // FIXME: This should be based on target information (i.e., the presence
+      // of FEAT_SME_FA64). This currently errs on the side of caution. If
+      // possible gathers/scatters should be lowered regular vector loads/stores
+      // before invoking this pass.
+      auto disallowedOperations = opList<vector::GatherOp, vector::ScatterOp>();
+      bool isCompatibleScalableFunction = false;
+      function.walk([&](Operation *op) {
+        if (llvm::is_contained(disallowedOperations,
+                               op->getName().getTypeID())) {
+          isCompatibleScalableFunction = false;
+          return WalkResult::interrupt();
+        }
+        if (!isCompatibleScalableFunction &&
+            (llvm::any_of(op->getOperandTypes(), isScalableVector) ||
+             llvm::any_of(op->getResultTypes(), isScalableVector))) {
+          isCompatibleScalableFunction = true;
+        }
+        return WalkResult::advance();
+      });
+      if (!isCompatibleScalableFunction)
+        return;
+    }
+
+    if (function->getAttr(kEnableArmStreamingIgnoreAttr) ||
         streamingMode == ArmStreamingMode::Disabled)
       return;
 
     auto unitAttr = UnitAttr::get(&getContext());
 
-    op->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
+    function->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
 
     // The pass currently only supports enabling ZA when in streaming-mode, but
     // ZA can be accessed by the SME LDR, STR and ZERO instructions when not in
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
     if (zaMode != ArmZaMode::Disabled)
-      op->setAttr(stringifyArmZaMode(zaMode), unitAttr);
+      function->setAttr(stringifyArmZaMode(zaMode), unitAttr);
   }
 };
 } // namespace
 
 std::unique_ptr<Pass> mlir::arm_sme::createEnableArmStreamingPass(
     const ArmStreamingMode streamingMode, const ArmZaMode zaMode,
-    bool onlyIfRequiredByOps) {
-  return std::make_unique<EnableArmStreamingPass>(streamingMode, zaMode,
-                                                  onlyIfRequiredByOps);
+    bool ifRequiredByOps, bool ifScalableAndSupported) {
+  return std::make_unique<EnableArmStreamingPass>(
+      streamingMode, zaMode, ifRequiredByOps, ifScalableAndSupported);
 }

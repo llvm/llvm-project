@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" \
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils \
 // RUN: | FileCheck %s
@@ -64,7 +64,7 @@ func.func @main() -> () {
   %unranked_scalar_copy = memref.cast %scalar_copy : memref<f32> to memref<*xf32>
   call @printMemrefF32(%unranked_scalar_copy) : (memref<*xf32>) -> ()
   // CHECK: rank = 0 offset = 0 sizes = [] strides = []
-  // CHECK-NEXT [42]
+  // CHECK-NEXT: [42]
 
   memref.dealloc %copy_empty : memref<3x0x1xf32>
   memref.dealloc %copy_empty_casted : memref<0x3x1xf32>

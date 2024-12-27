@@ -3,6 +3,7 @@ add_library(FortranEvaluateTesting
   testing.cpp
   fp-testing.cpp
 )
+set_target_properties(FortranEvaluateTesting PROPERTIES FOLDER "Flang/Tests")
 if (LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)
 else()

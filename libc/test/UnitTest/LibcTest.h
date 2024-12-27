@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
-#define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
+#define LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
 
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
 // below.
+#include "src/__support/macros/config.h"
 #ifdef libc_make_test_file_path
 #undef libc_make_test_file_path
 #endif // libc_make_test_file_path
@@ -32,7 +33,7 @@
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // Only the following conditions are supported. Notice that we do not have
@@ -100,6 +101,15 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
 
 } // namespace internal
 
+struct TestOptions {
+  // If set, then just this one test from the suite will be run.
+  const char *TestFilter = nullptr;
+  // Should the test results print color codes to stdout?
+  bool PrintColor = true;
+  // Should the test results print timing only in milliseconds, as GTest does?
+  bool TimeInMs = false;
+};
+
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
 class Test {
@@ -107,13 +117,14 @@ class Test {
   internal::RunContext *Ctx = nullptr;
 
   void setContext(internal::RunContext *C) { Ctx = C; }
+  static int getNumTests();
 
 public:
   virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  static int runTests(const char *);
+  static int runTests(const TestOptions &Options);
 
 protected:
   static void addTest(Test *T);
@@ -125,8 +136,11 @@ protected:
   // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_integral_v<ValType>, int> = 0>
+  template <
+      typename ValType,
+      cpp::enable_if_t<cpp::is_integral_v<ValType> || is_big_int_v<ValType> ||
+                           cpp::is_fixed_point_v<ValType>,
+                       int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
@@ -146,6 +160,14 @@ protected:
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, (unsigned long long)LHS,
                           (unsigned long long)RHS, LHSStr, RHSStr, Loc);
+  }
+
+  // Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
+  template <typename ValType,
+            cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
+  bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
   }
 
   template <
@@ -299,7 +321,7 @@ template <typename... Types> using TypeList = internal::TypeList<Types...>;
 CString libc_make_test_file_path_func(const char *file_name);
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 // For TYPED_TEST and TYPED_TEST_F below we need to display which type was used
 // to run the test. The default will return the fully qualified canonical type
@@ -481,4 +503,6 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define WITH_SIGNAL(X) X
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#define LIBC_TEST_HAS_MATCHERS() (1)
+
+#endif // LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H

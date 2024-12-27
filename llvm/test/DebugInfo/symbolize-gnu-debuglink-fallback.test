@@ -1,4 +1,4 @@
-# REQUIRES: shell
+# UNSUPPORTED: system-windows
 # Ensures that .debuglink can fallback to a separate location. This is normally
 # /usr/lib/debug (or /usr/libdata/debug for NetBSD), but can be configured on
 # the command line (mainly for testing).

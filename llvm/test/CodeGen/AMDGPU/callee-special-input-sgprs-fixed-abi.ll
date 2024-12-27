@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5]
@@ -28,8 +30,8 @@ define hidden void @use_queue_ptr() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_queue_ptr:
-; GCN: s_swappc_b64 s[30:31], s[4:5]
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: s_swappc_b64 s[30:31], s[10:11]
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
   call void @use_queue_ptr()
   ret void
@@ -468,7 +470,7 @@ define hidden void @use_every_sgpr_input() #1 {
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
@@ -487,13 +489,13 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; We have to pass the kernarg segment, but there are no kernel
 ; arguments so null is passed.
 ; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input_no_kernargs:
-; GCN: s_mov_b64 s[10:11], s[6:7]
+; GCN: s_mov_b64 s[10:11], s[8:9]
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
@@ -582,4 +584,4 @@ attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

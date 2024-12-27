@@ -23,6 +23,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
@@ -33,7 +34,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -43,10 +43,18 @@
 #include <cstring>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 using namespace clang;
+
+#define STMT(CLASS, PARENT)
+#define STMT_RANGE(BASE, FIRST, LAST)
+#define LAST_STMT_RANGE(BASE, FIRST, LAST)                                     \
+  static_assert(llvm::isUInt<NumStmtBits>(Stmt::StmtClass::LAST##Class),             \
+                "The number of 'StmtClass'es is strictly bound "               \
+                "by a bitfield of width NumStmtBits");
+#define ABSTRACT_STMT(STMT)
+#include "clang/AST/StmtNodes.inc"
 
 static struct StmtClassNameTable {
   const char *Name;

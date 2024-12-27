@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple r600-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple r600-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 typedef __attribute__(( ext_vector_type(2) )) char char2;
 typedef __attribute__(( ext_vector_type(3) )) char char3;
@@ -402,14 +402,14 @@ struct_arr16 func_ret_struct_arr16()
   return s;
 }
 
-// CHECK: define{{.*}} void @func_ret_struct_arr32(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.struct_arr32) align 4 %agg.result)
+// CHECK: define{{.*}} void @func_ret_struct_arr32(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.struct_arr32) align 4 initializes((0, 128)) %agg.result)
 struct_arr32 func_ret_struct_arr32()
 {
   struct_arr32 s = { 0 };
   return s;
 }
 
-// CHECK: define{{.*}} void @func_ret_struct_arr33(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.struct_arr33) align 4 %agg.result)
+// CHECK: define{{.*}} void @func_ret_struct_arr33(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.struct_arr33) align 4 initializes((0, 132)) %agg.result)
 struct_arr33 func_ret_struct_arr33()
 {
   struct_arr33 s = { 0 };
@@ -438,7 +438,7 @@ different_size_type_pair func_different_size_type_pair_ret()
   return s;
 }
 
-// CHECK: define{{.*}} void @func_flexible_array_ret(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.flexible_array) align 4 %agg.result)
+// CHECK: define{{.*}} void @func_flexible_array_ret(ptr addrspace(5) dead_on_unwind noalias nocapture writable writeonly sret(%struct.flexible_array) align 4 initializes((0, 4)) %agg.result)
 flexible_array func_flexible_array_ret()
 {
   flexible_array s = { 0 };
@@ -467,7 +467,7 @@ double_nested_struct func_double_nested_struct_ret(int4 arg0, int arg1) {
 // CHECK: define{{.*}} void @func_large_struct_padding_arg_direct(i8 %arg.coerce0, i32 %arg.coerce1, i8 %arg.coerce2, i32 %arg.coerce3, i8 %arg.coerce4, i8 %arg.coerce5, i16 %arg.coerce6, i16 %arg.coerce7, [3 x i8] %arg.coerce8, i64 %arg.coerce9, i32 %arg.coerce10, i8 %arg.coerce11, i32 %arg.coerce12, i16 %arg.coerce13, i8 %arg.coerce14)
 void func_large_struct_padding_arg_direct(large_struct_padding arg) { }
 
-// CHECK: define{{.*}} void @func_large_struct_padding_arg_store(ptr addrspace(1) nocapture noundef writeonly %out, ptr addrspace(5) nocapture noundef readonly byref(%struct.large_struct_padding) align 8 %{{.*}})
+// CHECK: define{{.*}} void @func_large_struct_padding_arg_store(ptr addrspace(1) nocapture noundef writeonly initializes((0, 56)) %out, ptr addrspace(5) nocapture noundef readonly byref(%struct.large_struct_padding) align 8 %{{.*}})
 void func_large_struct_padding_arg_store(global large_struct_padding* out, large_struct_padding arg) {
   *out = arg;
 }

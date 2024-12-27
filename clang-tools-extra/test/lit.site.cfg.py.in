@@ -10,7 +10,7 @@ config.python_executable = "@Python3_EXECUTABLE@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.clang_tidy_staticanalyzer = @CLANG_TIDY_ENABLE_STATIC_ANALYZER@
-config.has_plugins = @CLANG_PLUGIN_SUPPORT@ & ~@LLVM_INSTALL_TOOLCHAIN_ONLY@
+config.has_plugins = @CLANG_PLUGIN_SUPPORT@
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")

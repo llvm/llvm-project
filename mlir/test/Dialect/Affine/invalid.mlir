@@ -178,6 +178,22 @@ func.func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @affine_min() {
+  // expected-error@+1 {{'affine.min' op affine map expect at least one result}}
+  %0 = affine.min affine_map<() -> ()> ()
+  return
+}
+
+// -----
+
+func.func @affine_min(%arg0 : index) {
+  // expected-error@+1 {{'affine.min' op affine map expect at least one result}}
+  %0 = affine.min affine_map<(d0) -> ()> (%arg0)
+  return
+}
+
+// -----
+
 func.func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
   %0 = affine.max affine_map<(d0) -> (d0)> (%arg0, %arg1)
@@ -200,6 +216,22 @@ func.func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
   %0 = affine.max affine_map<(d0) -> (d0)> ()
 
+  return
+}
+
+// -----
+
+func.func @affine_max() {
+  // expected-error@+1 {{'affine.max' op affine map expect at least one result}}
+  %0 = affine.max affine_map<() -> ()> ()
+  return
+}
+
+// -----
+
+func.func @affine_max(%arg0 : index) {
+  // expected-error@+1 {{'affine.max' op affine map expect at least one result}}
+  %0 = affine.max affine_map<(d0) -> ()> (%arg0)
   return
 }
 
@@ -501,17 +533,25 @@ func.func @missing_for_min(%arg0: index, %arg1: index, %arg2: memref<100xf32>) {
 // -----
 
 func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
-  // expected-error@+1 {{'affine.delinearize_index' op should return an index for each basis element}}
+  // expected-error@+1 {{'affine.delinearize_index' op should return an index for each basis element and up to one extra index}}
   %1 = affine.delinearize_index %idx into (%basis0, %basis1) : index
   return
 }
 
 // -----
 
-func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
-  // expected-error@+1 {{'affine.delinearize_index' op basis should not be empty}}
-  affine.delinearize_index %idx into () : index
+func.func @delinearize(%idx: index) {
+  // expected-error@+1 {{'affine.delinearize_index' op no basis element may be statically non-positive}}
+  %1:2 = affine.delinearize_index %idx into (2, -2) : index, index
   return
+}
+
+// -----
+
+func.func @linearize(%idx: index, %basis0: index, %basis1 :index) -> index {
+  // expected-error@+1 {{'affine.linearize_index' op should be passed a basis element for each index except possibly the first}}
+  %0 = affine.linearize_index [%idx] by (%basis0, %basis1) : index
+  return %0 : index
 }
 
 // -----

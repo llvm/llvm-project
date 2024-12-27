@@ -13,7 +13,6 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -139,7 +138,9 @@ Stmt* ParentMap::getParent(Stmt* S) const {
 }
 
 Stmt *ParentMap::getParentIgnoreParens(Stmt *S) const {
-  do { S = getParent(S); } while (S && isa<ParenExpr>(S));
+  do {
+    S = getParent(S);
+  } while (isa_and_nonnull<ParenExpr>(S));
   return S;
 }
 
@@ -155,7 +156,8 @@ Stmt *ParentMap::getParentIgnoreParenCasts(Stmt *S) const {
 Stmt *ParentMap::getParentIgnoreParenImpCasts(Stmt *S) const {
   do {
     S = getParent(S);
-  } while (S && isa<Expr>(S) && cast<Expr>(S)->IgnoreParenImpCasts() != S);
+  } while (isa_and_nonnull<Expr>(S) &&
+           cast<Expr>(S)->IgnoreParenImpCasts() != S);
 
   return S;
 }

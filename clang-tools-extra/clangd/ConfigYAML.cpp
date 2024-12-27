@@ -14,7 +14,6 @@
 #include "llvm/Support/YAMLParser.h"
 #include <optional>
 #include <string>
-#include <system_error>
 
 namespace clang {
 namespace clangd {
@@ -177,6 +176,10 @@ private:
       if (auto Values = scalarValues(N))
         F.IgnoreHeader = std::move(*Values);
     });
+    Dict.handle("AnalyzeAngledIncludes", [&](Node &N) {
+      if (auto Value = boolValue(N, "AnalyzeAngledIncludes"))
+        F.AnalyzeAngledIncludes = *Value;
+    });
     Dict.parse(N);
   }
 
@@ -234,6 +237,10 @@ private:
       if (auto AllScopes = boolValue(N, "AllScopes"))
         F.AllScopes = *AllScopes;
     });
+    Dict.handle("ArgumentLists", [&](Node &N) {
+      if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
+        F.ArgumentLists = *ArgumentLists;
+    });
     Dict.parse(N);
   }
 
@@ -267,6 +274,10 @@ private:
     Dict.handle("BlockEnd", [&](Node &N) {
       if (auto Value = boolValue(N, "BlockEnd"))
         F.BlockEnd = *Value;
+    });
+    Dict.handle("DefaultArguments", [&](Node &N) {
+      if (auto Value = boolValue(N, "DefaultArguments"))
+        F.DefaultArguments = *Value;
     });
     Dict.handle("TypeNameLimit", [&](Node &N) {
       if (auto Value = uint32Value(N, "TypeNameLimit"))

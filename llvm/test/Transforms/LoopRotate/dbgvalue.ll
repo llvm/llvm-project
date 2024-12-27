@@ -4,7 +4,6 @@
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
-; CHECK: declare void @llvm.dbg.value(metadata,
 
 ; This function rotates the exit conditon into the entry block, moving the
 ; dbg.values with it. Check that they resolve through the PHIs to the arguments
@@ -15,23 +14,23 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 define i32 @tak(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !0 {
 ; CHECK-LABEL: define i32 @tak(
 ; CHECK: entry
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %x
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %y
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %z
+; CHECK-NEXT: #dbg_value(i32 %x
+; CHECK-NEXT: #dbg_value(i32 %y
+; CHECK-NEXT: #dbg_value(i32 %z
 ; CHECK: if.then.lr.ph:
 ; CHECK: if.then:
 ; CHECK-NEXT: %z.tr4 = phi
 ; CHECK-NEXT: %y.tr3 = phi
 ; CHECK-NEXT: %x.tr2 = phi
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %z.tr4
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %y.tr3
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %x.tr2
+; CHECK-NEXT: #dbg_value(i32 %z.tr4
+; CHECK-NEXT: #dbg_value(i32 %y.tr3
+; CHECK-NEXT: #dbg_value(i32 %x.tr2
 ; CHECK:      %call = tail call i32 @tak(i32
 ; CHECK:      %call9 = tail call i32 @tak(i32
 ; CHECK:      %call14 = tail call i32 @tak(i32
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %call
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %call9
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %call14
+; CHECK-NEXT: #dbg_value(i32 %call
+; CHECK-NEXT: #dbg_value(i32 %call9
+; CHECK-NEXT: #dbg_value(i32 %call14
 entry:
   br label %tailrecurse
 
@@ -70,19 +69,19 @@ return:                                           ; preds = %if.end
 define i32 @tak_dup(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !50 {
 ; CHECK-LABEL: define i32 @tak_dup(
 ; CHECK: entry
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %x
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %y
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %z
+; CHECK-NEXT: #dbg_value(i32 %x
+; CHECK-NEXT: #dbg_value(i32 %y
+; CHECK-NEXT: #dbg_value(i32 %z
 ; CHECK: if.then.lr.ph:
 ; CHECK: if.then:
 ; CHECK-NEXT: %z.tr4 = phi
 ; CHECK-NEXT: %y.tr3 = phi
 ; CHECK-NEXT: %x.tr2 = phi
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %x.tr2
+; CHECK-NEXT: #dbg_value(i32 %x.tr2
 ; CHECK:      %call = tail call i32 @tak(i32
 ; CHECK:      %call9 = tail call i32 @tak(i32
 ; CHECK:      %call14 = tail call i32 @tak(i32
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %call14
+; CHECK-NEXT: #dbg_value(i32 %call14
 entry:
   br label %tailrecurse
 
@@ -114,7 +113,7 @@ return:                                           ; preds = %if.end
 
 ; Check that the dbg.values move up to being immediately below the PHIs,
 ; using their Values. However once we exit the loop, the x and y values
-; become irrelevant and undef, only z gets an LCSSA PHI to preserve it.
+; become irrelevant and poison, only z gets an LCSSA PHI to preserve it.
 ;
 ; Note that while the icmp is initially undominated by any dbg.value and thus
 ; shouldn't get a variable location, the first iteration is peeled off into the
@@ -131,17 +130,17 @@ define i32 @tak2(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !21 {
 ; CHECK-NEXT: %z.tr4 = phi i32
 ; CHECK-NEXT: %y.tr3 = phi i32
 ; CHECK-NEXT: %x.tr2 = phi i32
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %x.tr2
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %y.tr3
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %z.tr4
+; CHECK-NEXT: #dbg_value(i32 %x.tr2
+; CHECK-NEXT: #dbg_value(i32 %y.tr3
+; CHECK-NEXT: #dbg_value(i32 %z.tr4
 ; CHECK:      tail call i32 @tak(i32
 ; CHECK:      tail call i32 @tak(i32
 ; CHECK:      tail call i32 @tak(i32
 ; CHECK: if.end:
 ; CHECK-NEXT: z.tr.lcssa = phi i32
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 undef
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 undef
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %z.tr.lcssa
+; CHECK-NEXT: #dbg_value(i32 poison
+; CHECK-NEXT: #dbg_value(i32 poison
+; CHECK-NEXT: #dbg_value(i32 %z.tr.lcssa
 entry:
   br label %tailrecurse
 
@@ -182,7 +181,7 @@ define void @FindFreeHorzSeg(i64 %startCol, i64 %row, ptr %rowStart) {
 ; body, even though it contains a debug intrinsic call.
 ; CHECK-LABEL: define void @FindFreeHorzSeg(
 ; CHECK: %dec = add
-; CHECK-NEXT: tail call void @llvm.dbg.value
+; CHECK-NEXT: #dbg_value
 ; CHECK: %cmp = icmp
 ; CHECK: br i1 %cmp
 ; CHECK: phi i64 [ %{{[^,]*}}, %{{[^,]*}} ]
@@ -220,7 +219,7 @@ for.end:
 
 ; Test that dbg.value intrinsincs adjacent to the `icmp slt i32 0, 0` get
 ; rotated as expected. The icmp is loop-invariant and so gets hoisted to the
-; preheader via a different code path. This is more difficult for DPValue
+; preheader via a different code path. This is more difficult for DbgVariableRecord
 ; debug-info records to handle, because they have to get detached and moved
 ; somewhere else during rotation.
 define void @invariant_hoist() !dbg !70 {
@@ -228,14 +227,14 @@ define void @invariant_hoist() !dbg !70 {
 ; CHECK: entry:
 ; CHECK-NEXT: br label %L0.preheader
 ; CHECK: L0.preheader:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 0,
+; CHECK-NEXT: #dbg_value(i32 0,
 ; CHECK-NEXT: %cmp = icmp slt i32 0, 0,
 ; CHECK: L1.preheader:
 ; CHECK-NEXT: %spec.select3 = phi i32
 ; CHECK-NEXT: %k.02 = phi i32
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %k.02,
+; CHECK-NEXT: #dbg_value(i32 %k.02,
 ; CHECK: L0.latch:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %spec.select3,
+; CHECK-NEXT: #dbg_value(i32 %spec.select3,
 entry:
   br label %L0.preheader, !dbg !77
 

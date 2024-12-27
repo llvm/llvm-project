@@ -11,7 +11,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -114,6 +114,13 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
         dependents_.find(symbol) == dependents_.end() &&
         equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
       DoSymbol(*symbol);
+      if (auto *generic{symbol->detailsIf<GenericDetails>()}) {
+        if (Symbol * specific{generic->specific()};
+            specific && !FindCommonBlockContaining(*specific)) {
+          // might be a shadowed procedure pointer
+          DoSymbol(*specific);
+        }
+      }
     }
   }
   // Ensure that the size is a multiple of the alignment
@@ -160,11 +167,9 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
     if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
-      if (context_.ShouldWarn(common::UsageWarning::CommonBlockPadding)) {
-        context_.Say(errorSite,
-            "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
-            commonBlock.name(), padding, symbol.name());
-      }
+      context_.Warn(common::UsageWarning::CommonBlockPadding, errorSite,
+          "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
+          commonBlock.name(), padding, symbol.name());
     }
     previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};
@@ -277,20 +282,22 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
     const EquivalenceObject &object) {
   std::size_t offset{0};
   if (!object.subscripts.empty()) {
-    const ArraySpec &shape{object.symbol.get<ObjectEntityDetails>().shape()};
-    auto lbound{[&](std::size_t i) {
-      return *ToInt64(shape[i].lbound().GetExplicit());
-    }};
-    auto ubound{[&](std::size_t i) {
-      return *ToInt64(shape[i].ubound().GetExplicit());
-    }};
-    for (std::size_t i{object.subscripts.size() - 1};;) {
-      offset += object.subscripts[i] - lbound(i);
-      if (i == 0) {
-        break;
+    if (const auto *details{object.symbol.detailsIf<ObjectEntityDetails>()}) {
+      const ArraySpec &shape{details->shape()};
+      auto lbound{[&](std::size_t i) {
+        return *ToInt64(shape[i].lbound().GetExplicit());
+      }};
+      auto ubound{[&](std::size_t i) {
+        return *ToInt64(shape[i].ubound().GetExplicit());
+      }};
+      for (std::size_t i{object.subscripts.size() - 1};;) {
+        offset += object.subscripts[i] - lbound(i);
+        if (i == 0) {
+          break;
+        }
+        --i;
+        offset *= ubound(i) - lbound(i) + 1;
       }
-      --i;
-      offset *= ubound(i) - lbound(i) + 1;
     }
   }
   auto result{offset * GetSizeAndAlignment(object.symbol, false).size};
@@ -332,8 +339,12 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     const auto *derived{evaluate::GetDerivedTypeSpec(dyType)};
     int lenParams{derived ? CountLenParameters(*derived) : 0};
     bool needAddendum{derived || (dyType && dyType->IsUnlimitedPolymorphic())};
-    std::size_t size{runtime::Descriptor::SizeInBytes(
+
+    // FIXME: Get descriptor size from targetCharacteristics instead
+    // overapproximation
+    std::size_t size{runtime::MaxDescriptorSizeInBytes(
         symbol.Rank(), needAddendum, lenParams)};
+
     return {size, targetCharacteristics.descriptorAlignment()};
   }
   if (IsProcedurePointer(symbol)) {

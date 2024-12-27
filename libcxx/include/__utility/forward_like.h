@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__type_traits/conditional.h>
+#include <__type_traits/is_base_of.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_reference.h>
@@ -34,9 +35,25 @@ template <class _Ap, class _Bp>
 using _ForwardLike = _OverrideRef<_Ap&&, _CopyConst<remove_reference_t<_Ap>, remove_reference_t<_Bp>>>;
 
 template <class _Tp, class _Up>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto forward_like(_LIBCPP_LIFETIMEBOUND _Up&& __ux) noexcept
-    -> _ForwardLike<_Tp, _Up> {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto
+forward_like(_LIBCPP_LIFETIMEBOUND _Up&& __ux) noexcept -> _ForwardLike<_Tp, _Up> {
   return static_cast<_ForwardLike<_Tp, _Up>>(__ux);
+}
+
+// This function is used for `deducing this` cases where you want to make sure the operation is performed on the class
+// itself and not on a derived class. For example
+//   struct S {
+//     template <class Self>
+//     void func(Self&& self) {
+//       // This will always call `do_something` of S instead of any class derived from S.
+//       std::__forward_as<Self, S>(self).do_something();
+//     }
+//   };
+template <class _Tp, class _As, class _Up>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _ForwardLike<_Tp, _As>
+__forward_as(_LIBCPP_LIFETIMEBOUND _Up&& __val) noexcept {
+  static_assert(is_base_of_v<_As, remove_reference_t<_Up>>);
+  return static_cast<_ForwardLike<_Tp, _As>>(__val);
 }
 
 #endif // _LIBCPP_STD_VER >= 23

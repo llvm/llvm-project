@@ -15,10 +15,13 @@
 // basic_stringstream() : basic_stringstream(ios_base::out | ios_base::in) {}            // C++20
 // explicit basic_stringstream(ios_base::openmode which);                                // C++20
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <sstream>
 #include <cassert>
 
 #include "test_macros.h"
+#include "operator_hijacker.h"
 #if TEST_STD_VER >= 11
 #include "test_convertible.h"
 
@@ -33,26 +36,38 @@ int main(int, char**)
 {
     {
         std::stringstream ss;
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == "");
     }
     {
+      std::basic_stringstream<char, std::char_traits<char>, operator_hijacker_allocator<char> > ss;
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == "");
+    }
+    {
         std::stringstream ss(std::ios_base::in);
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == "");
+    }
+    {
+      std::basic_stringstream<char, std::char_traits<char>, operator_hijacker_allocator<char> > ss(std::ios_base::in);
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == "");
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wstringstream ss;
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == L"");
     }
     {
         std::wstringstream ss(std::ios_base::in);
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == L"");
     }

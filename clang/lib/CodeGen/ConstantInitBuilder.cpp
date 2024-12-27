@@ -20,10 +20,10 @@ using namespace CodeGen;
 
 llvm::Type *ConstantInitFuture::getType() const {
   assert(Data && "dereferencing null future");
-  if (Data.is<llvm::Constant*>()) {
-    return Data.get<llvm::Constant*>()->getType();
+  if (const auto *C = dyn_cast<llvm::Constant *>(Data)) {
+    return C->getType();
   } else {
-    return Data.get<ConstantInitBuilderBase*>()->Buffer[0]->getType();
+    return cast<ConstantInitBuilderBase *>(Data)->Buffer[0]->getType();
   }
 }
 
@@ -37,10 +37,10 @@ void ConstantInitFuture::abandon() {
 
 void ConstantInitFuture::installInGlobal(llvm::GlobalVariable *GV) {
   assert(Data && "installing null future");
-  if (Data.is<llvm::Constant*>()) {
-    GV->setInitializer(Data.get<llvm::Constant*>());
+  if (auto *C = dyn_cast<llvm::Constant *>(Data)) {
+    GV->setInitializer(C);
   } else {
-    auto &builder = *Data.get<ConstantInitBuilderBase*>();
+    auto &builder = *cast<ConstantInitBuilderBase *>(Data);
     assert(builder.Buffer.size() == 1);
     builder.setGlobalInitializer(GV, builder.Buffer[0]);
     builder.Buffer.clear();
@@ -295,4 +295,22 @@ ConstantAggregateBuilderBase::finishStruct(llvm::StructType *ty) {
 
   buffer.erase(buffer.begin() + Begin, buffer.end());
   return constant;
+}
+
+/// Sign the given pointer and add it to the constant initializer
+/// currently being built.
+void ConstantAggregateBuilderBase::addSignedPointer(
+    llvm::Constant *Pointer, const PointerAuthSchema &Schema,
+    GlobalDecl CalleeDecl, QualType CalleeType) {
+  if (!Schema || !Builder.CGM.shouldSignPointer(Schema))
+    return add(Pointer);
+
+  llvm::Constant *StorageAddress = nullptr;
+  if (Schema.isAddressDiscriminated()) {
+    StorageAddress = getAddrOfCurrentPosition(Pointer->getType());
+  }
+
+  llvm::Constant *SignedPointer = Builder.CGM.getConstantSignedPointer(
+      Pointer, Schema, StorageAddress, CalleeDecl, CalleeType);
+  add(SignedPointer);
 }

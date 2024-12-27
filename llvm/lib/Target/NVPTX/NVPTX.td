@@ -35,13 +35,14 @@ class FeaturePTX<int version>:
                     "Use PTX version " # version>;
 
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
-              60, 61, 62, 70, 72, 75, 80, 86, 87, 89, 90] in
+              60, 61, 62, 70, 72, 75, 80, 86, 87, 89, 90, 100] in
   def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
 
 def SM90a: FeatureSM<"90a", 901>;
 
-foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 63, 64, 65,
-                   70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83] in
+foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
+                   70, 71, 72, 73, 74, 75, 76, 77, 78,
+                   80, 81, 82, 83, 84, 85, 86] in
   def PTX#version: FeaturePTX<version>;
 
 //===----------------------------------------------------------------------===//
@@ -72,6 +73,7 @@ def : Proc<"sm_87", [SM87, PTX74]>;
 def : Proc<"sm_89", [SM89, PTX78]>;
 def : Proc<"sm_90", [SM90, PTX78]>;
 def : Proc<"sm_90a", [SM90a, PTX80]>;
+def : Proc<"sm_100", [SM100, PTX86]>;
 
 def NVPTXInstrInfo : InstrInfo {
 }

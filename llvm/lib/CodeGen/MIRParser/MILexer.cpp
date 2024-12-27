@@ -212,7 +212,11 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("reassoc", MIToken::kw_reassoc)
       .Case("nuw", MIToken::kw_nuw)
       .Case("nsw", MIToken::kw_nsw)
+      .Case("nusw", MIToken::kw_nusw)
       .Case("exact", MIToken::kw_exact)
+      .Case("nneg", MIToken::kw_nneg)
+      .Case("disjoint", MIToken::kw_disjoint)
+      .Case("samesign", MIToken::kw_samesign)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -235,10 +239,13 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("window_save", MIToken::kw_cfi_window_save)
       .Case("negate_ra_sign_state",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
+      .Case("negate_ra_sign_state_with_pc",
+            MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
       .Case("half", MIToken::kw_half)
+      .Case("bfloat", MIToken::kw_bfloat)
       .Case("float", MIToken::kw_float)
       .Case("double", MIToken::kw_double)
       .Case("x86_fp80", MIToken::kw_x86_fp80)
@@ -719,7 +726,7 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
     return C.remaining();
   }
 
-  C = skipMachineOperandComment(C);
+  C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
     return R.remaining();

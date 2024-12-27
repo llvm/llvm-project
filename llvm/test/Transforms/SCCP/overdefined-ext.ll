@@ -21,12 +21,12 @@ define i1 @zext_icmp(i1 %t0) {
   ret i1 %t2
 }
 
-; negative test. SCCP operates poorly with vector ranges
+; TODO: SCCP operates poorly with vector ranges
 
 define <2 x i1> @zext_vector(<2 x i1> %t0) {
 ; CHECK-LABEL: @zext_vector(
 ; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i1> [[T0:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], <i32 2, i32 2>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i1> [[T2]]
 ;
   %t1 = zext <2 x i1> %t0 to <2 x i32>
@@ -34,14 +34,11 @@ define <2 x i1> @zext_vector(<2 x i1> %t0) {
   ret <2 x i1> %t2
 }
 
-; negative test. SCCP operates poorly with vector ranges
-
 define <2 x i1> @zext_vector2(<2 x i1> %t0) {
 ; CHECK-LABEL: @zext_vector2(
 ; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i1> [[T0:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[T1]], <i32 2, i32 2>
-; CHECK-NEXT:    [[T3:%.*]] = icmp eq <2 x i32> [[T1]], [[T2]]
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw <2 x i32> [[T1]], splat (i32 2)
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t1 = zext <2 x i1> %t0 to <2 x i32>
   %t2 = add <2 x i32> %t1, <i32 2, i32 2>
@@ -72,12 +69,12 @@ define i1 @sext_icmp(i1 %t0) {
   ret i1 %t2
 }
 
-; negative test. SCCP operates poorly with vector ranges
+; TODO: SCCP operates poorly with vector ranges
 
 define <2 x i1> @sext_vector(<2 x i1> %t0) {
 ; CHECK-LABEL: @sext_vector(
 ; CHECK-NEXT:    [[T1:%.*]] = sext <2 x i1> [[T0:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], <i32 2, i32 2>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i1> [[T2]]
 ;
   %t1 = sext <2 x i1> %t0 to <2 x i32>
@@ -85,14 +82,11 @@ define <2 x i1> @sext_vector(<2 x i1> %t0) {
   ret <2 x i1> %t2
 }
 
-; negative test. SCCP operates poorly with vector ranges
-
 define <2 x i1> @sext_vector2(<2 x i1> %t0) {
 ; CHECK-LABEL: @sext_vector2(
 ; CHECK-NEXT:    [[T1:%.*]] = sext <2 x i1> [[T0:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[T1]], <i32 2, i32 2>
-; CHECK-NEXT:    [[T3:%.*]] = icmp eq <2 x i32> [[T1]], [[T2]]
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    [[T2:%.*]] = add nsw <2 x i32> [[T1]], splat (i32 2)
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t1 = sext <2 x i1> %t0 to <2 x i32>
   %t2 = add <2 x i32> %t1, <i32 2, i32 2>

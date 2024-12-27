@@ -17,11 +17,6 @@
 
 #include "TokenAnnotator.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/SmallVector.h"
-#include <algorithm>
-#include <string>
-#include <tuple>
 
 namespace clang {
 namespace format {
@@ -226,6 +221,11 @@ private:
   /// Align consecutive bitfields over all \c Changes.
   void alignConsecutiveBitFields();
 
+  /// Align consecutive colon. For bitfields, TableGen DAGArgs and defintions.
+  void
+  alignConsecutiveColons(const FormatStyle::AlignConsecutiveStyle &AlignStyle,
+                         TokenType Type);
+
   /// Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
 
@@ -233,7 +233,16 @@ private:
   void alignChainedConditionals();
 
   /// Align consecutive short case statements over all \c Changes.
-  void alignConsecutiveShortCaseStatements();
+  void alignConsecutiveShortCaseStatements(bool IsExpr);
+
+  /// Align consecutive TableGen DAGArg colon over all \c Changes.
+  void alignConsecutiveTableGenBreakingDAGArgColons();
+
+  /// Align consecutive TableGen cond operator colon over all \c Changes.
+  void alignConsecutiveTableGenCondOperatorColons();
+
+  /// Align consecutive TableGen definitions over all \c Changes.
+  void alignConsecutiveTableGenDefinitions();
 
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();
@@ -340,7 +349,7 @@ private:
 
   /// Stores \p Text as the replacement for the whitespace in \p Range.
   void storeReplacement(SourceRange Range, StringRef Text);
-  void appendNewlineText(std::string &Text, unsigned Newlines);
+  void appendNewlineText(std::string &Text, const Change &C);
   void appendEscapedNewlineText(std::string &Text, unsigned Newlines,
                                 unsigned PreviousEndOfTokenColumn,
                                 unsigned EscapedNewlineColumn);

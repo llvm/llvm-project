@@ -73,24 +73,49 @@ private:
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
+  llvm::DIStringType *translateImpl(DIStringTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
+  llvm::DIImportedEntity *translateImpl(DIImportedEntityAttr attr);
   llvm::DILabel *translateImpl(DILabelAttr attr);
   llvm::DILexicalBlock *translateImpl(DILexicalBlockAttr attr);
   llvm::DILexicalBlockFile *translateImpl(DILexicalBlockFileAttr attr);
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
   llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
+  llvm::DIVariable *translateImpl(DIVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
+  llvm::DIGenericSubrange *translateImpl(DIGenericSubrangeAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
+  llvm::DICommonBlock *translateImpl(DICommonBlockAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
+
+  /// Attributes that support self recursion need to implement an additional
+  /// method to hook into `translateRecursive`.
+  /// - `<temp llvm type> translateTemporaryImpl(<mlir type>)`:
+  ///   Create a temporary translation of the DI attr without recursively
+  ///   translating any nested DI attrs.
+  llvm::DINode *translateRecursive(DIRecursiveTypeAttrInterface attr);
+
+  /// Translate the given attribute to a temporary llvm debug metadata of the
+  /// corresponding type.
+  llvm::TempDICompositeType translateTemporaryImpl(DICompositeTypeAttr attr);
+  llvm::TempDISubprogram translateTemporaryImpl(DISubprogramAttr attr);
 
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.
   llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
+
+  /// Constructs a tuple metadata node from the `elements`. Returns nullptr if
+  /// `elements` is empty.
+  llvm::MDTuple *getMDTupleOrNull(ArrayRef<DINodeAttr> elements);
+
+  /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
+  /// nullptr if `DIExpressionAttr` is null.
+  llvm::DIExpression *getExpressionAttrOrNull(DIExpressionAttr attr);
 
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.
@@ -101,6 +126,14 @@ private:
   /// A mapping between debug attribute and the corresponding llvm debug
   /// metadata.
   DenseMap<Attribute, llvm::DINode *> attrToNode;
+
+  /// A mapping between recursive ID and the translated DINode.
+  llvm::MapVector<DistinctAttr, llvm::DINode *> recursiveNodeMap;
+
+  /// A mapping between a distinct ID and the translated LLVM metadata node.
+  /// This helps identify attrs that should translate into the same LLVM debug
+  /// node.
+  DenseMap<DistinctAttr, llvm::DINode *> distinctAttrToNode;
 
   /// A mapping between filename and llvm debug file.
   /// TODO: Change this to DenseMap<Identifier, ...> when we can

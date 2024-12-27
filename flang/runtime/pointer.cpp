@@ -9,6 +9,7 @@
 #include "flang/Runtime/pointer.h"
 #include "assign-impl.h"
 #include "derived.h"
+#include "environment.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"
@@ -123,23 +124,51 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
   }
 }
 
+RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t byteSize) {
+  // Add space for a footer to validate during deallocation.
+  constexpr std::size_t align{sizeof(std::uintptr_t)};
+  byteSize = ((byteSize + align - 1) / align) * align;
+  std::size_t total{byteSize + sizeof(std::uintptr_t)};
+  void *p{std::malloc(total)};
+  if (p) {
+    // Fill the footer word with the XOR of the ones' complement of
+    // the base address, which is a value that would be highly unlikely
+    // to appear accidentally at the right spot.
+    std::uintptr_t *footer{
+        reinterpret_cast<std::uintptr_t *>(static_cast<char *>(p) + byteSize)};
+    *footer = ~reinterpret_cast<std::uintptr_t>(p);
+  }
+  return p;
+}
+
 int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
   }
-  int stat{ReturnError(terminator, pointer.Allocate(), errMsg, hasStat)};
-  if (stat == StatOk) {
-    if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
-      if (const auto *derived{addendum->derivedType()}) {
-        if (!derived->noInitializationNeeded()) {
-          stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
-        }
+  std::size_t elementBytes{pointer.ElementBytes()};
+  if (static_cast<std::int64_t>(elementBytes) < 0) {
+    // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
+    // to a negative value, the length of character entities declared is zero."
+    elementBytes = pointer.raw().elem_len = 0;
+  }
+  std::size_t byteSize{pointer.Elements() * elementBytes};
+  void *p{AllocateValidatedPointerPayload(byteSize)};
+  if (!p) {
+    return ReturnError(terminator, CFI_ERROR_MEM_ALLOCATION, errMsg, hasStat);
+  }
+  pointer.set_base_addr(p);
+  pointer.SetByteStrides();
+  int stat{StatOk};
+  if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noInitializationNeeded()) {
+        stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
       }
     }
   }
-  return stat;
+  return ReturnError(terminator, stat, errMsg, hasStat);
 }
 
 int RTDEF(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
@@ -154,6 +183,27 @@ int RTDEF(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
   return stat;
 }
 
+static RT_API_ATTRS std::size_t GetByteSize(
+    const ISO::CFI_cdesc_t &descriptor) {
+  std::size_t rank{descriptor.rank};
+  const ISO::CFI_dim_t *dim{descriptor.dim};
+  std::size_t byteSize{descriptor.elem_len};
+  for (std::size_t j{0}; j < rank; ++j) {
+    byteSize *= dim[j].extent;
+  }
+  return byteSize;
+}
+
+bool RT_API_ATTRS ValidatePointerPayload(const ISO::CFI_cdesc_t &desc) {
+  std::size_t byteSize{GetByteSize(desc)};
+  constexpr std::size_t align{sizeof(std::uintptr_t)};
+  byteSize = ((byteSize + align - 1) / align) * align;
+  const void *p{desc.base_addr};
+  const std::uintptr_t *footer{reinterpret_cast<const std::uintptr_t *>(
+      static_cast<const char *>(p) + byteSize)};
+  return *footer == ~reinterpret_cast<std::uintptr_t>(p);
+}
+
 int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -162,6 +212,10 @@ int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   }
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
+  }
+  if (executionEnvironment.checkPointerDeallocation &&
+      !ValidatePointerPayload(pointer.raw())) {
+    return ReturnError(terminator, StatBadPointerDeallocation, errMsg, hasStat);
   }
   return ReturnError(terminator,
       pointer.Destroy(/*finalize=*/true, /*destroyPointers=*/true, &terminator),

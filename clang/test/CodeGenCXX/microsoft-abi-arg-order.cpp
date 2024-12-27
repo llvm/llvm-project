@@ -15,9 +15,9 @@ void foo(A a, A b, A c) {
 //
 // X86-LABEL: define dso_local void @"?foo@@YAXUA@@00@Z"
 // X86:          (ptr inalloca([[argmem_ty:<{ %struct.A, %struct.A, %struct.A }>]]) %0)
-// X86: %[[a:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %0, i32 0, i32 0
-// X86: %[[b:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %0, i32 0, i32 1
-// X86: %[[c:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %0, i32 0, i32 2
+// X86: %[[a:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %0, i32 0, i32 0
+// X86: %[[b:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %0, i32 0, i32 1
+// X86: %[[c:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %0, i32 0, i32 2
 // X86: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr {{[^,]*}} %[[a]])
 // X86: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr {{[^,]*}} %[[b]])
 // X86: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr {{[^,]*}} %[[c]])
@@ -41,11 +41,11 @@ void call_foo() {
 // X86-LABEL: define dso_local void @"?call_foo@@YAXXZ"()
 // X86: call ptr @llvm.stacksave.p0()
 // X86: %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty]]
-// X86: %[[arg3:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 2
+// X86: %[[arg3:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 2
 // X86: call x86_thiscallcc noundef ptr @"??0A@@QAE@H@Z"(ptr {{[^,]*}} %[[arg3]], i32 noundef 3)
-// X86: %[[arg2:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
+// X86: %[[arg2:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
 // X86: invoke x86_thiscallcc noundef ptr @"??0A@@QAE@H@Z"(ptr {{[^,]*}} %[[arg2]], i32 noundef 2)
-// X86: %[[arg1:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
+// X86: %[[arg1:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
 // X86: invoke x86_thiscallcc noundef ptr @"??0A@@QAE@H@Z"(ptr {{[^,]*}} %[[arg1]], i32 noundef 1)
 // X86: call void @"?foo@@YAXUA@@00@Z"(ptr inalloca([[argmem_ty]]) %[[argmem]])
 // X86: call void @llvm.stackrestore.p0

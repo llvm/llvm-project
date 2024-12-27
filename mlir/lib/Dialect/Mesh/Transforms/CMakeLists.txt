@@ -13,13 +13,16 @@ add_mlir_dialect_library(MLIRMeshTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRAffineUtils
   MLIRArithDialect
+  MLIRArithUtils
   MLIRControlFlowDialect
+  MLIRControlFlowInterfaces
   MLIRFuncDialect
+  MLIRFunctionInterfaces
   MLIRIR
   MLIRMeshDialect
   MLIRPass
-  MLIRShardingInterface
   MLIRSupport
   MLIRTensorDialect
   MLIRTosaShardingInterfaceImpl

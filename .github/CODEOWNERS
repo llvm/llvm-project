@@ -7,10 +7,9 @@
 # to receive an approval from a "code owner" in particular -- any LLVM project
 # member can approve pull requests.
 #
-# Note that GitHub's concept of "code owner" is independent from LLVM's own
-# "code owner" concept, they merely happen to share terminology. See
-# https://llvm.org/docs/DeveloperPolicy.html#code-owners, as well as the
-# CODE_OWNERS.txt files in the respective subproject directories.
+# This is independent of LLVM's own "maintainer" concept.
+# See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
+# Maintainers.* files in the the respective subproject directories.
 
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
@@ -23,13 +22,19 @@
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
+/clang/include/clang/Sema/Sema.h @Endilll
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
+
+/clang/include/clang/CIR @lanza @bcardosolopes
+/clang/lib/CIR @lanza @bcardosolopes
+/clang/tools/cir-* @lanza @bcardosolopes
 
 /lldb/ @JDevlieghere
 
@@ -55,14 +60,14 @@
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache @Groverkss
 
 # MemRef Dialect in MLIR.
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
@@ -73,14 +78,15 @@
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @nicolasvasilache @matthias-springer
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @hanhanW
-/mlir/lib/Dialect/Vector/Transforms/* @hanhanW @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/include/mlir/Dialect/Vector/IR @kuhar
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
+/mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
 
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
@@ -92,6 +98,7 @@
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache
 /mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache
 
 # SPIR-V Dialect in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar
@@ -101,3 +108,44 @@
 
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+
+# MLIR NVGPU Dialect
+/mlir/**/NVGPU*/ @grypp
+/mlir/test/**/CUDA/ @grypp
+
+# MLIR NVVM Dialect in MLIR
+/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
+/mlir/**/NVVM* @grypp
+
+# MLIR Index Dialect
+/mlir/**/Index* @mogball
+
+# MLIR Python Bindings
+/mlir/test/python/ @ftynse @makslevental @stellaraccident
+/mlir/python/ @ftynse @makslevental @stellaraccident
+
+# MLIR Mem2Reg/SROA
+/mlir/**/Transforms/Mem2Reg.* @moxinilian
+/mlir/**/Transforms/SROA.* @moxinilian
+
+# BOLT
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
+
+# Bazel build system.
+/utils/bazel/ @rupprecht @keith
+
+# InstallAPI and TextAPI
+/llvm/**/TextAPI/ @cyndyishida
+/clang/**/InstallAPI/ @cyndyishida
+/clang/tools/clang-installapi/ @cyndyishida
+
+# ExtractAPI
+/clang/**/ExtractAPI @daniel-grumberg @QuietMisdreavus
+
+# DWARFLinker, dwarfutil, dsymutil
+/llvm/**/DWARFLinker/ @JDevlieghere
+/llvm/**/dsymutil/ @JDevlieghere
+/llvm/**/llvm-dwarfutil/ @JDevlieghere
+
+# libclang/Python bindings
+/clang/bindings/python @DeinAlptraum

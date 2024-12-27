@@ -217,6 +217,10 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+; ptrauth constant
+@auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
+; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
 ;                   [unnamed_addr] alias <AliaseeTy> @<Aliasee>
@@ -394,6 +398,8 @@ declare preserve_mostcc void @f.preserve_mostcc()
 ; CHECK: declare preserve_mostcc void @f.preserve_mostcc()
 declare preserve_allcc void @f.preserve_allcc()
 ; CHECK: declare preserve_allcc void @f.preserve_allcc()
+declare preserve_nonecc void @f.preserve_nonecc()
+; CHECK: declare preserve_nonecc void @f.preserve_nonecc()
 declare swifttailcc void @f.swifttailcc()
 ; CHECK: declare swifttailcc void @f.swifttailcc()
 declare cc64 void @f.cc64()
@@ -900,6 +906,34 @@ define void @uinc_udec_wrap_atomics(ptr %word) {
   ret void
 }
 
+define void @usub_cond_usub_sat_atomics(ptr %word) {
+; CHECK: %atomicrmw.condsub0 = atomicrmw usub_cond ptr %word, i32 64 monotonic
+  %atomicrmw.condsub0 = atomicrmw usub_cond ptr %word, i32 64 monotonic
+
+; CHECK: %atomicrmw.condsub1 = atomicrmw usub_cond ptr %word, i32 128 seq_cst
+  %atomicrmw.condsub1 = atomicrmw usub_cond ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.condsub2 = atomicrmw volatile usub_cond ptr %word, i32 128 seq_cst
+  %atomicrmw.condsub2 = atomicrmw volatile usub_cond ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.condsub0.syncscope = atomicrmw usub_cond ptr %word, i32 27 syncscope("agent") monotonic
+  %atomicrmw.condsub0.syncscope = atomicrmw usub_cond ptr %word, i32 27 syncscope("agent") monotonic
+
+; CHECK: %atomicrmw.subclamp0 = atomicrmw usub_sat ptr %word, i32 99 monotonic
+  %atomicrmw.subclamp0 = atomicrmw usub_sat ptr %word, i32 99 monotonic
+
+; CHECK: %atomicrmw.subclamp1 = atomicrmw usub_sat ptr %word, i32 12 seq_cst
+  %atomicrmw.subclamp1 = atomicrmw usub_sat ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.subclamp2 = atomicrmw volatile usub_sat ptr %word, i32 12 seq_cst
+  %atomicrmw.subclamp2 = atomicrmw volatile usub_sat ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.subclamp0.syncscope = atomicrmw usub_sat ptr %word, i32 5 syncscope("system") monotonic
+  %atomicrmw.subclamp0.syncscope = atomicrmw usub_sat ptr %word, i32 5 syncscope("system") monotonic
+
+  ret void
+}
+
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
@@ -1088,6 +1122,68 @@ define void @fastMathFlagsForArrayCalls([2 x float] %f, [2 x double] %d1, [2 x <
   ret void
 }
 
+declare { float, float } @fmf_struct_f32()
+declare { double, double, double } @fmf_struct_f64()
+declare { <4 x double> } @fmf_struct_v4f64()
+
+; CHECK-LABEL: fastMathFlagsForStructCalls(
+define void @fastMathFlagsForStructCalls() {
+  %call.fast = call fast { float, float } @fmf_struct_f32()
+  ; CHECK: %call.fast = call fast { float, float } @fmf_struct_f32()
+
+  ; Throw in some other attributes to make sure those stay in the right places.
+
+  %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+
+  %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fpext(
+define void @fastmathflags_fpext(float %op1) {
+  %f.nnan = fpext nnan float %op1 to double
+  ; CHECK: %f.nnan = fpext nnan float %op1 to double
+  %f.ninf = fpext ninf float %op1 to double
+  ; CHECK: %f.ninf = fpext ninf float %op1 to double
+  %f.nsz = fpext nsz float %op1 to double
+  ; CHECK: %f.nsz = fpext nsz float %op1 to double
+  %f.arcp = fpext arcp float %op1 to double
+  ; CHECK: %f.arcp = fpext arcp float %op1 to double
+  %f.contract = fpext contract float %op1 to double
+  ; CHECK: %f.contract = fpext contract float %op1 to double
+  %f.afn = fpext afn float %op1 to double
+  ; CHECK: %f.afn = fpext afn float %op1 to double
+  %f.reassoc = fpext reassoc float %op1 to double
+  ; CHECK: %f.reassoc = fpext reassoc float %op1 to double
+  %f.fast = fpext fast float %op1 to double
+  ; CHECK: %f.fast = fpext fast float %op1 to double
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fptrunc(
+define void @fastmathflags_fptrunc(float %op1) {
+  %f.nnan = fptrunc nnan float %op1 to half
+  ; CHECK: %f.nnan = fptrunc nnan float %op1 to half
+  %f.ninf = fptrunc ninf float %op1 to half
+  ; CHECK: %f.ninf = fptrunc ninf float %op1 to half
+  %f.nsz = fptrunc nsz float %op1 to half
+  ; CHECK: %f.nsz = fptrunc nsz float %op1 to half
+  %f.arcp = fptrunc arcp float %op1 to half
+  ; CHECK: %f.arcp = fptrunc arcp float %op1 to half
+  %f.contract = fptrunc contract float %op1 to half
+  ; CHECK: %f.contract = fptrunc contract float %op1 to half
+  %f.afn = fptrunc afn float %op1 to half
+  ; CHECK: %f.afn = fptrunc afn float %op1 to half
+  %f.reassoc = fptrunc reassoc float %op1 to half
+  ; CHECK: %f.reassoc = fptrunc reassoc float %op1 to half
+  %f.fast = fptrunc fast float %op1 to half
+  ; CHECK: %f.fast = fptrunc fast float %op1 to half
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {
@@ -1106,8 +1202,6 @@ define void @typesystem() {
   ; CHECK: %t5 = alloca x86_fp80
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
-  %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
   %t8 = alloca ptr
   ; CHECK: %t8 = alloca ptr
   %t9 = alloca <4 x i32>
@@ -1273,6 +1367,14 @@ terminate:
 
 continue:
   ret i32 0
+}
+
+declare void @instructions.bundles.callee(i32)
+define void @instructions.bundles.metadata(i32 %x) {
+entry:
+  call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+; CHECK: call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+  ret void
 }
 
 ; Instructions -- Unary Operations
@@ -1558,7 +1660,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #51
+  ; CHECK: call void @f.nobuiltin() #54
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -1646,16 +1748,16 @@ define void @instructions.va_arg(ptr %v, ...) {
   %ap = alloca ptr
 
   call void @llvm.va_start(ptr %ap)
-  ; CHECK: call void @llvm.va_start(ptr %ap)
+  ; CHECK: call void @llvm.va_start.p0(ptr %ap)
 
   va_arg ptr %ap, i32
   ; CHECK: va_arg ptr %ap, i32
 
   call void @llvm.va_copy(ptr %v, ptr %ap)
-  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap)
 
   call void @llvm.va_end(ptr %ap)
-  ; CHECK: call void @llvm.va_end(ptr %ap)
+  ; CHECK: call void @llvm.va_end.p0(ptr %ap)
 
   ret void
 }
@@ -1939,8 +2041,8 @@ declare void @f.speculatable() speculatable
 ;; Constant Expressions
 
 define ptr @constexpr() {
-  ; CHECK: ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
-  ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
+  ; CHECK: ret ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
+  ret ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
 }
 
 define void @instructions.strictfp() strictfp {
@@ -1982,6 +2084,14 @@ declare void @f.nosanitize_bounds() nosanitize_bounds
 declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: declare void @f.allockind() #50
 
+declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
+; CHECK: declare void @f.sanitize_numerical_stability() #51
+
+declare void @f.sanitize_realtime() sanitize_realtime
+; CHECK: declare void @f.sanitize_realtime() #52
+
+declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
+; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
@@ -2037,9 +2147,14 @@ declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
 ; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
 declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
 
+; CHECK: declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+
 declare float @unknown_fpclass_func(float)
 
-define float @nofpclass_callsites(float %arg) {
+declare { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float })
+
+define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
   %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
 
@@ -2048,6 +2163,10 @@ define float @nofpclass_callsites(float %arg) {
 
   ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
   %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+
+  ; CHECK: %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+  %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+
   %add0 = fadd float %call0, %call1
   %add1 = fadd float %add0, %call2
   ret float %add1
@@ -2089,12 +2208,12 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { nounwind memory(argmem: read) }
-; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #40 = { nocallback nounwind }
-; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #36 = { nounwind memory(argmem: read) }
+; CHECK: attributes #37 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #39 = { nocallback nounwind }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #42 = { memory(write) }
 ; CHECK: attributes #43 = { speculatable }
 ; CHECK: attributes #44 = { strictfp }
@@ -2104,7 +2223,10 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #48 = { allocsize(1,0) }
 ; CHECK: attributes #49 = { nosanitize_bounds }
 ; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
-; CHECK: attributes #51 = { builtin }
+; CHECK: attributes #51 = { sanitize_numerical_stability }
+; CHECK: attributes #52 = { sanitize_realtime }
+; CHECK: attributes #53 = { sanitize_realtime_blocking }
+; CHECK: attributes #54 = { builtin }
 
 ;; Metadata
 

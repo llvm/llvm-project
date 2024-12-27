@@ -20,7 +20,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -79,7 +78,7 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
     SmallVector<WeakTrackingVH, 8> WUsers(CE->users());
     llvm::sort(WUsers);
-    WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
+    WUsers.erase(llvm::unique(WUsers), WUsers.end());
     while (!WUsers.empty())
       if (WeakTrackingVH WU = WUsers.pop_back_val()) {
         if (PHINode *PN = dyn_cast<PHINode>(WU)) {
@@ -88,12 +87,15 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
               BasicBlock *PredBB = PN->getIncomingBlock(I);
               if (PredBB->getTerminator()->getNumSuccessors() > 1)
                 PredBB = SplitEdge(PredBB, PN->getParent());
-              Instruction *InsertPos = PredBB->getTerminator();
-              Instruction *NewInst = CE->getAsInstruction(InsertPos);
+              BasicBlock::iterator InsertPos =
+                  PredBB->getTerminator()->getIterator();
+              Instruction *NewInst = CE->getAsInstruction();
+              NewInst->insertBefore(*PredBB, InsertPos);
               PN->setOperand(I, NewInst);
             }
         } else if (Instruction *Instr = dyn_cast<Instruction>(WU)) {
-          Instruction *NewInst = CE->getAsInstruction(Instr);
+          Instruction *NewInst = CE->getAsInstruction();
+          NewInst->insertBefore(*Instr->getParent(), Instr->getIterator());
           Instr->replaceUsesOfWith(CE, NewInst);
         } else {
           ConstantExpr *CExpr = dyn_cast<ConstantExpr>(WU);
@@ -151,13 +153,10 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
 
   // Update uses.
   SmallVector<User *, 16> Users(GV->users());
-  for (unsigned I = 0, E = Users.size(); I != E; ++I) {
-    User *U = Users[I];
+  for (User *U : Users) {
     Instruction *Inst = cast<Instruction>(U);
     IRBuilder<> Builder(Inst);
-    Function *GetID = Intrinsic::getDeclaration(GV->getParent(),
-                                                Intrinsic::xcore_getid);
-    Value *ThreadID = Builder.CreateCall(GetID, {});
+    Value *ThreadID = Builder.CreateIntrinsic(Intrinsic::xcore_getid, {}, {});
     Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
                                             {Builder.getInt64(0), ThreadID});
     U->replaceUsesOfWith(GV, Addr);
@@ -176,8 +175,7 @@ bool XCoreLowerThreadLocal::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals())
     if (GV.isThreadLocal())
       ThreadLocalGlobals.push_back(&GV);
-  for (unsigned I = 0, E = ThreadLocalGlobals.size(); I != E; ++I) {
-    MadeChange |= lowerGlobal(ThreadLocalGlobals[I]);
-  }
+  for (GlobalVariable *GV : ThreadLocalGlobals)
+    MadeChange |= lowerGlobal(GV);
   return MadeChange;
 }

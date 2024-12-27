@@ -131,11 +131,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // If -march=native, autodetect the feature list.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
-      llvm::StringMap<bool> HostFeatures;
-      if (llvm::sys::getHostCPUFeatures(HostFeatures))
-        for (auto &F : HostFeatures)
-          Features.push_back(
-              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+      for (auto &F : llvm::sys::getHostCPUFeatures())
+        Features.push_back(
+            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
     }
   }
 
@@ -243,7 +241,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     StringRef Version, Width;
     std::tie(Version, Width) = Name.substr(6).split('-');
-    assert(Version == "1" && "Invalid AVX10 feature name.");
+    assert((Version == "1" || Version == "2") && "Invalid AVX10 feature name.");
     assert((Width == "256" || Width == "512") && "Invalid AVX10 feature name.");
 #endif
 
@@ -268,18 +266,29 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
 
     bool IsNegative = Name.starts_with("no-");
+
+    bool Not64Bit = ArchType != llvm::Triple::x86_64;
+    if (Not64Bit && Name == "uintr")
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
 
+      if (Not64Bit && !IsNegative)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef(A->getSpelling().str() + "|-mapxf")
+            << Triple.getTriple();
+
       for (StringRef Value : A->getValues()) {
-        if (Value == "egpr" || Value == "push2pop2" || Value == "ppx" ||
-            Value == "ndd" || Value == "ccmp" || Value == "cf") {
-          Features.push_back(
-              Args.MakeArgString((IsNegative ? "-" : "+") + Value));
-          continue;
-        }
-        D.Diag(clang::diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << Value;
+        if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
+            Value != "ndd" && Value != "ccmp" && Value != "nf" &&
+            Value != "cf" && Value != "zu")
+          D.Diag(clang::diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Value;
+
+        Features.push_back(
+            Args.MakeArgString((IsNegative ? "-" : "+") + Value));
       }
       continue;
     }
@@ -309,4 +318,19 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+prefer-no-gather");
   if (Args.hasArg(options::OPT_mno_scatter))
     Features.push_back("+prefer-no-scatter");
+  if (Args.hasArg(options::OPT_mapx_inline_asm_use_gpr32))
+    Features.push_back("+inline-asm-use-gpr32");
+
+  // Warn for removed 3dnow support
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_m3dnowa, options::OPT_mno_3dnowa,
+                          options::OPT_mno_3dnow)) {
+    if (A->getOption().matches(options::OPT_m3dnowa))
+      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
+  }
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_m3dnow, options::OPT_mno_3dnow)) {
+    if (A->getOption().matches(options::OPT_m3dnow))
+      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
+  }
 }

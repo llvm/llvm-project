@@ -1,5 +1,44 @@
 # REQUIRES: system-linux
-# RUN: llvm-bolt  %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin --print-pseudo-probes=all -o %t.bolt 2>&1 | FileCheck %s
+# RUN: llvm-bolt  %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin --print-pseudo-probes=all -o %t.bolt --lite=0 --enable-bat 2>&1 | FileCheck %s
+
+# PREAGG: B X:0 #foo# 1 0
+# PREAGG: B X:0 #bar# 1 0
+# PREAGG: B X:0 #main# 1 0
+## Check pseudo-probes in regular YAML profile (non-BOLTed binary)
+# RUN: link_fdata %s %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin %t.preagg PREAGG
+# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata --profile-write-pseudo-probes
+# RUN: FileCheck --input-file %t.yaml %s --check-prefix CHECK-YAML
+## Check pseudo-probes in BAT YAML profile (BOLTed binary)
+# RUN: link_fdata %s %t.bolt %t.preagg2 PREAGG
+# RUN: perf2bolt %t.bolt -p %t.preagg2 --pa -w %t.yaml2 -o %t.fdata2 --profile-write-pseudo-probes
+# RUN: FileCheck --input-file %t.yaml2 %s --check-prefix CHECK-YAML
+# CHECK-YAML: name: bar
+# CHECK-YAML: - bid: 0
+# CHECK-YAML:   probes: [ { blx: 9 } ]
+# CHECK-YAML: inline_tree: [ { } ]
+#
+# CHECK-YAML: name: foo
+# CHECK-YAML: - bid: 0
+# CHECK-YAML:   probes: [ { blx: 3 } ]
+# CHECK-YAML: inline_tree: [ { g: 1 }, { g: 0, cs: 8 } ]
+#
+# CHECK-YAML: name: main
+# CHECK-YAML: - bid: 0
+# CHECK-YAML:   probes: [ { blx: 3, id: 1 }, { blx: 1 } ]
+# CHECK-YAML: inline_tree: [ { g: 2 }, { g: 1, cs: 2 }, { g: 0, p: 1, cs: 8 } ]
+#
+# CHECK-YAML: pseudo_probe_desc:
+# CHECK-YAML-NEXT: gs: [ 0xE413754A191DB537, 0x5CF8C24CDB18BDAC, 0xDB956436E78DD5FA ]
+# CHECK-YAML-NEXT: gh: [ 2, 0, 1 ]
+# CHECK-YAML-NEXT: hs: [ 0x200205A19C5B4, 0x10000FFFFFFFF, 0x10E852DA94 ]
+#
+## Check that without --profile-write-pseudo-probes option, no pseudo probes are
+## generated
+# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml3 -o %t.fdata
+# RUN: FileCheck --input-file %t.yaml3 %s --check-prefix CHECK-NO-OPT
+# CHECK-NO-OPT-NOT: probes:
+# CHECK-NO-OPT-NOT: inline_tree:
+# CHECK-NO-OPT-NOT: pseudo_probe_desc:
 
 CHECK: Report of decoding input pseudo probe binaries
 

@@ -12,13 +12,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <numeric>
@@ -26,6 +25,10 @@
 #include <type_traits>
 
 using namespace mlir;
+
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
+using llvm::mod;
 
 namespace {
 
@@ -73,7 +76,7 @@ private:
               hasPoison_ = true;
               return std::nullopt;
             }
-            return floorDiv(lhs, rhs);
+            return divideFloorSigned(lhs, rhs);
           });
     case AffineExprKind::CeilDiv:
       return constantFoldBinExpr(
@@ -82,7 +85,7 @@ private:
               hasPoison_ = true;
               return std::nullopt;
             }
-            return ceilDiv(lhs, rhs);
+            return divideCeilSigned(lhs, rhs);
           });
     case AffineExprKind::Constant:
       return cast<AffineConstantExpr>(expr).getValue();
@@ -153,6 +156,19 @@ bool AffineMap::isMinorIdentity() const {
   return getNumDims() >= getNumResults() &&
          *this ==
              getMinorIdentityMap(getNumDims(), getNumResults(), getContext());
+}
+
+SmallVector<unsigned> AffineMap::getBroadcastDims() const {
+  SmallVector<unsigned> broadcastedDims;
+  for (const auto &[resIdx, expr] : llvm::enumerate(getResults())) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
+      if (constExpr.getValue() != 0)
+        continue;
+      broadcastedDims.push_back(resIdx);
+    }
+  }
+
+  return broadcastedDims;
 }
 
 /// Returns true if this affine map is a minor identity up to broadcasted
@@ -249,7 +265,7 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
                                        MLIRContext *context) {
   assert(!permutation.empty() &&
          "Cannot create permutation map from empty permutation vector");
-  const auto *m = std::max_element(permutation.begin(), permutation.end());
+  const auto *m = llvm::max_element(permutation);
   auto permutationMap = getMultiDimMapWithTargets(*m + 1, permutation, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
@@ -272,12 +288,16 @@ AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
   return result;
 }
 
+/// Creates an affine map each for each list of AffineExpr's in `exprsList`
+/// while inferring the right number of dimensional and symbolic inputs needed
+/// based on the maximum dimensional and symbolic identifier appearing in the
+/// expressions.
 template <typename AffineExprContainer>
 static SmallVector<AffineMap, 4>
-inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
-  assert(!exprsList.empty());
-  assert(!exprsList[0].empty());
-  auto context = exprsList[0][0].getContext();
+inferFromExprList(ArrayRef<AffineExprContainer> exprsList,
+                  MLIRContext *context) {
+  if (exprsList.empty())
+    return {};
   int64_t maxDim = -1, maxSym = -1;
   getMaxDimAndSymbol(exprsList, maxDim, maxSym);
   SmallVector<AffineMap, 4> maps;
@@ -289,13 +309,15 @@ inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
 }
 
 SmallVector<AffineMap, 4>
-AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList) {
-  return ::inferFromExprList(exprsList);
+AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                             MLIRContext *context) {
+  return ::inferFromExprList(exprsList, context);
 }
 
 SmallVector<AffineMap, 4>
-AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList) {
-  return ::inferFromExprList(exprsList);
+AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                             MLIRContext *context) {
+  return ::inferFromExprList(exprsList, context);
 }
 
 uint64_t AffineMap::getLargestKnownDivisorOfMapExprs() {
@@ -353,9 +375,7 @@ bool AffineMap::isSingleConstant() const {
 }
 
 bool AffineMap::isConstant() const {
-  return llvm::all_of(getResults(), [](AffineExpr expr) {
-    return isa<AffineConstantExpr>(expr);
-  });
+  return llvm::all_of(getResults(), llvm::IsaPred<AffineConstantExpr>);
 }
 
 int64_t AffineMap::getSingleConstantResult() const {
@@ -521,7 +541,7 @@ AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
   newResults.reserve(getNumResults());
   for (AffineExpr e : getResults())
     newResults.push_back(e.replace(map));
-  return AffineMap::inferFromExprList(newResults).front();
+  return AffineMap::inferFromExprList(newResults, getContext()).front();
 }
 
 AffineMap AffineMap::dropResults(const llvm::SmallBitVector &positions) const {
@@ -570,6 +590,29 @@ SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   for (auto e : resMap.getResults())
     res.push_back(cast<AffineConstantExpr>(e).getValue());
   return res;
+}
+
+size_t AffineMap::getNumOfZeroResults() const {
+  size_t res = 0;
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (constExpr && constExpr.getValue() == 0)
+      res++;
+  }
+
+  return res;
+}
+
+AffineMap AffineMap::dropZeroResults() {
+  auto exprs = llvm::to_vector(getResults());
+  SmallVector<AffineExpr> newExprs;
+
+  for (auto expr : getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(expr);
+    if (!constExpr || constExpr.getValue() != 0)
+      newExprs.push_back(expr);
+  }
+  return AffineMap::get(getNumDims(), getNumSymbols(), newExprs, getContext());
 }
 
 bool AffineMap::isProjectedPermutation(bool allowZeroInResults) const {
@@ -707,20 +750,20 @@ AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
   for (int64_t i = 0; i < map.getNumDims(); ++i) {
     if (auto attr = operands[i].dyn_cast<Attribute>()) {
       dimReplacements.push_back(
-          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+          b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
       dimReplacements.push_back(b.getAffineDimExpr(numDims++));
-      remainingValues.push_back(operands[i].get<Value>());
+      remainingValues.push_back(cast<Value>(operands[i]));
     }
   }
   int64_t numSymbols = 0;
   for (int64_t i = 0; i < map.getNumSymbols(); ++i) {
     if (auto attr = operands[i + map.getNumDims()].dyn_cast<Attribute>()) {
       symReplacements.push_back(
-          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+          b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
       symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
-      remainingValues.push_back(operands[i + map.getNumDims()].get<Value>());
+      remainingValues.push_back(cast<Value>(operands[i + map.getNumDims()]));
     }
   }
   return map.replaceDimsAndSymbols(dimReplacements, symReplacements, numDims,
@@ -739,9 +782,8 @@ AffineMap mlir::simplifyAffineMap(AffineMap map) {
 
 AffineMap mlir::removeDuplicateExprs(AffineMap map) {
   auto results = map.getResults();
-  SmallVector<AffineExpr, 4> uniqueExprs(results.begin(), results.end());
-  uniqueExprs.erase(std::unique(uniqueExprs.begin(), uniqueExprs.end()),
-                    uniqueExprs.end());
+  SmallVector<AffineExpr, 4> uniqueExprs(results);
+  uniqueExprs.erase(llvm::unique(uniqueExprs), uniqueExprs.end());
   return AffineMap::get(map.getNumDims(), map.getNumSymbols(), uniqueExprs,
                         map.getContext());
 }
@@ -791,7 +833,10 @@ AffineMap mlir::inverseAndBroadcastProjectedPermutation(AffineMap map) {
   return AffineMap::get(map.getNumResults(), /*symbolCount=*/0, exprs, context);
 }
 
-AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
+AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps,
+                                 MLIRContext *context) {
+  if (maps.empty())
+    return AffineMap::get(context);
   unsigned numResults = 0, numDims = 0, numSymbols = 0;
   for (auto m : maps)
     numResults += m.getNumResults();
@@ -804,8 +849,7 @@ AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
     numSymbols += m.getNumSymbols();
     numDims = std::max(m.getNumDims(), numDims);
   }
-  return AffineMap::get(numDims, numSymbols, results,
-                        maps.front().getContext());
+  return AffineMap::get(numDims, numSymbols, results, context);
 }
 
 /// Common implementation to project out dimensions or symbols from an affine
@@ -920,9 +964,8 @@ mlir::expandDimsToRank(AffineMap map, int64_t rank,
 //===----------------------------------------------------------------------===//
 
 MutableAffineMap::MutableAffineMap(AffineMap map)
-    : results(map.getResults().begin(), map.getResults().end()),
-      numDims(map.getNumDims()), numSymbols(map.getNumSymbols()),
-      context(map.getContext()) {}
+    : results(map.getResults()), numDims(map.getNumDims()),
+      numSymbols(map.getNumSymbols()), context(map.getContext()) {}
 
 void MutableAffineMap::reset(AffineMap map) {
   results.clear();

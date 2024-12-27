@@ -10,6 +10,8 @@
 #define LLDB_API_LLDB_H
 
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBAddressRange.h"
+#include "lldb/API/SBAddressRangeList.h"
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBlock.h"
 #include "lldb/API/SBBreakpoint.h"
@@ -40,6 +42,7 @@
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBLanguages.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBListener.h"
@@ -54,8 +57,10 @@
 #include "lldb/API/SBQueue.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBReproducer.h"
+#include "lldb/API/SBSaveCoreOptions.h"
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBSourceManager.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"

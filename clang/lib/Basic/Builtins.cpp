@@ -64,7 +64,7 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
   for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
        ++i) {
-    if (FuncName.equals(BuiltinInfo[i].Name) &&
+    if (FuncName == BuiltinInfo[i].Name &&
         (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
       return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
   }
@@ -89,6 +89,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
     return false;
   /* MSMode Unsupported */
   if (!LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
+    return false;
+  /* HLSLMode Unsupported */
+  if (!LangOpts.HLSL && (BuiltinInfo.Langs & HLSL_LANG))
     return false;
   /* ObjC Unsupported */
   if (!LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG)
@@ -119,6 +122,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   /* CPlusPlus Unsupported */
   if (!LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
     return false;
+  /* consteval Unsupported */
+  if (!LangOpts.CPlusPlus20 && strchr(BuiltinInfo.Attributes, 'G') != nullptr)
+    return false;
   return true;
 }
 
@@ -128,7 +134,7 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
 void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
                                           const LangOptions& LangOpts) {
   // Step #1: mark all target-independent builtins with their ID's.
-  for (unsigned i = Builtin::NotBuiltin+1; i != Builtin::FirstTSBuiltin; ++i)
+  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
     if (builtinIsSupported(BuiltinInfo[i], LangOpts)) {
       Table.get(BuiltinInfo[i].Name).setBuiltinID(i);
     }

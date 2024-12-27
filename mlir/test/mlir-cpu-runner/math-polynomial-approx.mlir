@@ -1,4 +1,4 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation,convert-arith-to-llvm),convert-vector-to-scf,convert-scf-to-cf,convert-cf-to-llvm,convert-vector-to-llvm,func.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
@@ -462,6 +462,88 @@ func.func @cos() {
 }
 
 // -------------------------------------------------------------------------- //
+// Asin.
+// -------------------------------------------------------------------------- //
+func.func @asin_f32(%a : f32) {
+  %r = math.asin %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @asin_3xf32(%a : vector<3xf32>) {
+  %r = math.asin %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @asin() {
+  // CHECK: 0
+  %zero = arith.constant 0.0 : f32
+  call @asin_f32(%zero) : (f32) -> ()
+
+  // CHECK: -0.597406
+  %cst1 = arith.constant -0.5625 : f32
+  call @asin_f32(%cst1) : (f32) -> ()
+
+  // CHECK: -0.384397
+  %cst2 = arith.constant -0.375 : f32
+  call @asin_f32(%cst2) : (f32) -> ()
+
+  // CHECK: -0.25268
+  %cst3 = arith.constant -0.25 : f32
+  call @asin_f32(%cst3) : (f32) -> ()
+
+  // CHECK: -1.1197
+  %cst4 = arith.constant -0.90 : f32
+  call @asin_f32(%cst4) : (f32) -> ()
+
+  // CHECK: 0.25268, 0.384397, 0.597406
+  %vec_x = arith.constant dense<[0.25, 0.375, 0.5625]> : vector<3xf32>
+  call @asin_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// Acos.
+// -------------------------------------------------------------------------- //
+func.func @acos_f32(%a : f32) {
+  %r = math.acos %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @acos_3xf32(%a : vector<3xf32>) {
+  %r = math.acos %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @acos() {
+  // CHECK: 1.5708
+  %zero = arith.constant 0.0 : f32
+  call @acos_f32(%zero) : (f32) -> ()
+
+  // CHECK: 2.1682
+  %cst1 = arith.constant -0.5625 : f32
+  call @acos_f32(%cst1) : (f32) -> ()
+
+  // CHECK: 1.95519
+  %cst2 = arith.constant -0.375 : f32
+  call @acos_f32(%cst2) : (f32) -> ()
+
+  // CHECK: 1.82348
+  %cst3 = arith.constant -0.25 : f32
+  call @acos_f32(%cst3) : (f32) -> ()
+
+  // CHECK: 1.31812, 1.1864, 0.97339
+  %vec_x = arith.constant dense<[0.25, 0.375, 0.5625]> : vector<3xf32>
+  call @acos_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
 // Atan.
 // -------------------------------------------------------------------------- //
 func.func @atan_f32(%a : f32) {
@@ -694,6 +776,8 @@ func.func @main() {
   call @expm1(): () -> ()
   call @sin(): () -> ()
   call @cos(): () -> ()
+  call @asin(): () -> ()
+  call @acos(): () -> ()
   call @atan() : () -> ()
   call @atan2() : () -> ()
   call @cbrt() : () -> ()

@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -197,10 +196,14 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
+  StringAttr memoryModelName = module.getMemoryModelAttrName();
   auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+      module->getAttrOfType<spirv::MemoryModelAttr>(memoryModelName)
+          .getValue());
+
+  StringAttr addressingModelName = module.getAddressingModelAttrName();
   auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+      module->getAttrOfType<spirv::AddressingModelAttr>(addressingModelName)
           .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
@@ -211,8 +214,43 @@ static std::string getDecorationName(StringRef attrName) {
   // expected FPFastMathMode.
   if (attrName == "fp_fast_math_mode")
     return "FPFastMathMode";
+  // similar here
+  if (attrName == "fp_rounding_mode")
+    return "FPRoundingMode";
+  // convertToCamelFromSnakeCase will not capitalize "INTEL".
+  if (attrName == "cache_control_load_intel")
+    return "CacheControlLoadINTEL";
+  if (attrName == "cache_control_store_intel")
+    return "CacheControlStoreINTEL";
 
   return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
+}
+
+template <typename AttrTy, typename EmitF>
+LogicalResult processDecorationList(Location loc, Decoration decoration,
+                                    Attribute attrList, StringRef attrName,
+                                    EmitF emitter) {
+  auto arrayAttr = dyn_cast<ArrayAttr>(attrList);
+  if (!arrayAttr) {
+    return emitError(loc, "expecting array attribute of ")
+           << attrName << " for " << stringifyDecoration(decoration);
+  }
+  if (arrayAttr.empty()) {
+    return emitError(loc, "expecting non-empty array attribute of ")
+           << attrName << " for " << stringifyDecoration(decoration);
+  }
+  for (Attribute attr : arrayAttr.getValue()) {
+    auto cacheControlAttr = dyn_cast<AttrTy>(attr);
+    if (!cacheControlAttr) {
+      return emitError(loc, "expecting array attribute of ")
+             << attrName << " for " << stringifyDecoration(decoration);
+    }
+    // This named attribute encodes several decorations. Emit one per
+    // element in the array.
+    if (failed(emitter(cacheControlAttr)))
+      return failure();
+  }
+  return success();
 }
 
 LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
@@ -238,6 +276,13 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
       break;
     }
     return emitError(loc, "expected FPFastMathModeAttr attribute for ")
+           << stringifyDecoration(decoration);
+  case spirv::Decoration::FPRoundingMode:
+    if (auto intAttr = dyn_cast<FPRoundingModeAttr>(attr)) {
+      args.push_back(static_cast<uint32_t>(intAttr.getValue()));
+      break;
+    }
+    return emitError(loc, "expected FPRoundingModeAttr attribute for ")
            << stringifyDecoration(decoration);
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
@@ -272,6 +317,8 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::RelaxedPrecision:
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
+  case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -279,6 +326,26 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
     return emitError(loc,
                      "expected unit attribute or decoration attribute for ")
            << stringifyDecoration(decoration);
+  case spirv::Decoration::CacheControlLoadINTEL:
+    return processDecorationList<CacheControlLoadINTELAttr>(
+        loc, decoration, attr, "CacheControlLoadINTEL",
+        [&](CacheControlLoadINTELAttr attr) {
+          unsigned cacheLevel = attr.getCacheLevel();
+          LoadCacheControl loadCacheControl = attr.getLoadCacheControl();
+          return emitDecoration(
+              resultID, decoration,
+              {cacheLevel, static_cast<uint32_t>(loadCacheControl)});
+        });
+  case spirv::Decoration::CacheControlStoreINTEL:
+    return processDecorationList<CacheControlStoreINTELAttr>(
+        loc, decoration, attr, "CacheControlStoreINTEL",
+        [&](CacheControlStoreINTELAttr attr) {
+          unsigned cacheLevel = attr.getCacheLevel();
+          StoreCacheControl storeCacheControl = attr.getStoreCacheControl();
+          return emitDecoration(
+              resultID, decoration,
+              {cacheLevel, static_cast<uint32_t>(storeCacheControl)});
+        });
   default:
     return emitError(loc, "unhandled decoration ")
            << stringifyDecoration(decoration);
@@ -648,25 +715,6 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
-  if (auto jointMatrixType = dyn_cast<spirv::JointMatrixINTELType>(type)) {
-    uint32_t elementTypeID = 0;
-    if (failed(processTypeImpl(loc, jointMatrixType.getElementType(),
-                               elementTypeID, serializationCtx))) {
-      return failure();
-    }
-    typeEnum = spirv::Opcode::OpTypeJointMatrixINTEL;
-    auto getConstantOp = [&](uint32_t id) {
-      auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
-      return prepareConstantInt(loc, attr);
-    };
-    llvm::append_values(
-        operands, elementTypeID, getConstantOp(jointMatrixType.getRows()),
-        getConstantOp(jointMatrixType.getColumns()),
-        getConstantOp(static_cast<uint32_t>(jointMatrixType.getMatrixLayout())),
-        getConstantOp(static_cast<uint32_t>(jointMatrixType.getScope())));
-    return success();
-  }
-
   if (auto matrixType = dyn_cast<spirv::MatrixType>(type)) {
     uint32_t elementTypeID = 0;
     if (failed(processTypeImpl(loc, matrixType.getColumnType(), elementTypeID,
@@ -920,7 +968,7 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     value.print(rss, /*isSigned=*/false);
 
     emitError(loc, "cannot serialize ")
-        << bitwidth << "-bit integer literal: " << rss.str();
+        << bitwidth << "-bit integer literal: " << valueStr;
     return 0;
   }
   }
@@ -973,7 +1021,7 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     value.print(rss);
 
     emitError(loc, "cannot serialize ")
-        << floatAttr.getType() << "-typed float literal: " << rss.str();
+        << floatAttr.getType() << "-typed float literal: " << valueStr;
     return 0;
   }
 
@@ -1027,9 +1075,9 @@ Serializer::processBlock(Block *block, bool omitLabel,
   // into multiple basic blocks. If that's the case, we need to emit the merge
   // right now and then create new blocks for further serialization of the ops
   // in this block.
-  if (emitMerge && llvm::any_of(block->getOperations(), [](Operation &op) {
-        return isa<spirv::LoopOp, spirv::SelectionOp>(op);
-      })) {
+  if (emitMerge &&
+      llvm::any_of(block->getOperations(),
+                   llvm::IsaPred<spirv::LoopOp, spirv::SelectionOp>)) {
     if (failed(emitMerge()))
       return failure();
     emitMerge = nullptr;
@@ -1041,7 +1089,7 @@ Serializer::processBlock(Block *block, bool omitLabel,
   }
 
   // Process each op in this block except the terminator.
-  for (auto &op : llvm::make_range(block->begin(), std::prev(block->end()))) {
+  for (Operation &op : llvm::drop_end(*block)) {
     if (failed(processOperation(&op)))
       return failure();
   }

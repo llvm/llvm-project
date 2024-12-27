@@ -13,6 +13,7 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include "gtest/gtest.h"
@@ -54,7 +55,7 @@ public:
 // Provides "empty" ASTContext etc if we fail before parsing gets started.
 void createMissingComponents(CompilerInstance &Clang) {
   if (!Clang.hasDiagnostics())
-    Clang.createDiagnostics();
+    Clang.createDiagnostics(*llvm::vfs::getRealFileSystem());
   if (!Clang.hasFileManager())
     Clang.createFileManager();
   if (!Clang.hasSourceManager())
@@ -81,9 +82,24 @@ TestAST::TestAST(const TestInputs &In) {
   auto RecoverFromEarlyExit =
       llvm::make_scope_exit([&] { createMissingComponents(*Clang); });
 
+  std::string Filename = In.FileName;
+  if (Filename.empty())
+    Filename = getFilenameForTesting(In.Language).str();
+
+  // Set up a VFS with only the virtual file visible.
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  if (auto Err = VFS->setCurrentWorkingDirectory(In.WorkingDir))
+    ADD_FAILURE() << "Failed to setWD: " << Err.message();
+  VFS->addFile(Filename, /*ModificationTime=*/0,
+               llvm::MemoryBuffer::getMemBufferCopy(In.Code, Filename));
+  for (const auto &Extra : In.ExtraFiles)
+    VFS->addFile(
+        Extra.getKey(), /*ModificationTime=*/0,
+        llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(), Extra.getKey()));
+
   // Extra error conditions are reported through diagnostics, set that up first.
   bool ErrorOK = In.ErrorOK || llvm::StringRef(In.Code).contains("error-ok");
-  Clang->createDiagnostics(new StoreDiagnostics(Diagnostics, !ErrorOK));
+  Clang->createDiagnostics(*VFS, new StoreDiagnostics(Diagnostics, !ErrorOK));
 
   // Parse cc1 argv, (typically [-std=c++20 input.cc]) into CompilerInvocation.
   std::vector<const char *> Argv;
@@ -92,9 +108,6 @@ TestAST::TestAST(const TestInputs &In) {
     Argv.push_back(S.c_str());
   for (const auto &S : In.ExtraArgs)
     Argv.push_back(S.c_str());
-  std::string Filename = In.FileName;
-  if (Filename.empty())
-    Filename = getFilenameForTesting(In.Language).str();
   Argv.push_back(Filename.c_str());
   Clang->setInvocation(std::make_unique<CompilerInvocation>());
   if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
@@ -104,14 +117,6 @@ TestAST::TestAST(const TestInputs &In) {
   }
   assert(!Clang->getInvocation().getFrontendOpts().DisableFree);
 
-  // Set up a VFS with only the virtual file visible.
-  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  VFS->addFile(Filename, /*ModificationTime=*/0,
-               llvm::MemoryBuffer::getMemBufferCopy(In.Code, Filename));
-  for (const auto &Extra : In.ExtraFiles)
-    VFS->addFile(
-        Extra.getKey(), /*ModificationTime=*/0,
-        llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(), Extra.getKey()));
   Clang->createFileManager(VFS);
 
   // Running the FrontendAction creates the other components: SourceManager,

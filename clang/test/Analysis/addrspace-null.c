@@ -1,12 +1,12 @@
 // RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
-// RUN: -analyze -analyzer-checker=core -DAMDGCN_TRIPLE \
-// RUN: -analyze -analyzer-checker=debug.ExprInspection \
-// RUN: -Wno-implicit-int -Wno-int-conversion -verify %s
+// RUN:   -analyzer-checker=core -DAMDGCN_TRIPLE \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -Wno-implicit-int -Wno-int-conversion -verify %s
 //
 // RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
-// RUN: -analyze -analyzer-checker=core -DDEFAULT_TRIPLE \
-// RUN: -analyze -analyzer-checker=debug.ExprInspection \
-// RUN: -Wno-implicit-int -Wno-int-conversion -verify %s
+// RUN:   -analyzer-checker=core -DDEFAULT_TRIPLE \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -Wno-implicit-int -Wno-int-conversion -verify %s
 
 // From https://llvm.org/docs/AMDGPUUsage.html#address-spaces,
 // select address space 3 (local), since the pointer size is

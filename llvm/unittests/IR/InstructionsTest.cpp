@@ -25,11 +25,14 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm-c/Core.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 namespace {
@@ -202,7 +205,6 @@ TEST(InstructionsTest, CastInst) {
   Type *Int64Ty = Type::getInt64Ty(C);
   Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
   Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
-  Type *X86MMXTy = Type::getX86_MMXTy(C);
 
   Type *HalfTy = Type::getHalfTy(C);
   Type *FloatTy = Type::getFloatTy(C);
@@ -245,9 +247,6 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
 
-  EXPECT_FALSE(CastInst::isBitCastable(V8x8Ty, X86MMXTy));
-  EXPECT_FALSE(CastInst::isBitCastable(X86MMXTy, V8x8Ty));
-  EXPECT_FALSE(CastInst::isBitCastable(Int64Ty, X86MMXTy));
   EXPECT_FALSE(CastInst::isBitCastable(V8x64Ty, V8x8Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V8x8Ty, V8x64Ty));
 
@@ -488,7 +487,7 @@ TEST(InstructionsTest, VectorGep) {
 
   BasicBlock* BB0 = BasicBlock::Create(C);
   // Test InsertAtEnd ICmpInst constructor.
-  ICmpInst *ICmp2 = new ICmpInst(*BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
+  ICmpInst *ICmp2 = new ICmpInst(BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
   EXPECT_NE(ICmp0, ICmp2); // suppress warning.
 
   GetElementPtrInst *Gep0 = GetElementPtrInst::Create(I32Ty, PtrVecA, C2xi32a);
@@ -757,7 +756,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, {})));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
@@ -787,7 +786,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, {})));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
@@ -897,6 +896,20 @@ TEST(InstructionsTest, GEPIndices) {
   EXPECT_EQ(CGEPI->idx_end(), CGEPI->indices().end());
 
   delete GEPI;
+}
+
+TEST(InstructionsTest, ZeroIndexGEP) {
+  LLVMContext Context;
+  DataLayout DL;
+  Type *PtrTy = PointerType::getUnqual(Context);
+  auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(Context),
+                                        PoisonValue::get(PtrTy), {});
+
+  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
+  EXPECT_TRUE(GEP->accumulateConstantOffset(DL, Offset));
+  EXPECT_TRUE(Offset.isZero());
+
+  delete GEP;
 }
 
 TEST(InstructionsTest, SwitchInst) {
@@ -1160,7 +1173,8 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_TRUE(
       ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3}), 2));
 
-  // Nothing special about the values here - just re-using inputs to reduce code. 
+  // Nothing special about the values here - just re-using inputs to reduce
+  // code.
   Constant *V0 = ConstantVector::get({C0, C1, C2, C3});
   Constant *V1 = ConstantVector::get({C3, C2, C1, C0});
 
@@ -1217,7 +1231,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id6->isIdentityWithExtract());
   EXPECT_FALSE(Id6->isConcat());
   delete Id6;
-  
+
   // Result has more elements than operands, but extra elements are not undef.
   ShuffleVectorInst *Id7 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C0, C1, C2, C3, CU, C1}));
@@ -1226,7 +1240,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id7->isIdentityWithExtract());
   EXPECT_FALSE(Id7->isConcat());
   delete Id7;
-  
+
   // Result has more elements than operands; choose from Op0 and Op1 is not identity.
   ShuffleVectorInst *Id8 = new ShuffleVectorInst(V0, V1,
                                                  ConstantVector::get({C4, CU, C2, C3, CU, CU}));
@@ -1410,6 +1424,7 @@ TEST(InstructionsTest, GetSplat) {
   LLVMContext Ctx;
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
   Constant *C0 = ConstantInt::get(Int32Ty, 0);
   Constant *C1 = ConstantInt::get(Int32Ty, 1);
 
@@ -1419,34 +1434,48 @@ TEST(InstructionsTest, GetSplat) {
   Constant *Splat1Undef = ConstantVector::get({CU, CU, C1, CU});
   Constant *NotSplat = ConstantVector::get({C1, C1, C0, C1 ,C1});
   Constant *NotSplatUndef = ConstantVector::get({CU, C1, CU, CU ,C0});
+  Constant *Splat0Poison = ConstantVector::get({C0, CP, C0, CP});
+  Constant *Splat1Poison = ConstantVector::get({CP, CP, C1, CP});
+  Constant *NotSplatPoison = ConstantVector::get({CP, C1, CP, CP, C0});
 
-  // Default - undefs are not allowed.
+  // Default - undef/poison is not allowed.
   EXPECT_EQ(Splat0->getSplatValue(), C0);
   EXPECT_EQ(Splat1->getSplatValue(), C1);
   EXPECT_EQ(Splat0Undef->getSplatValue(), nullptr);
   EXPECT_EQ(Splat1Undef->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat1Poison->getSplatValue(), nullptr);
   EXPECT_EQ(NotSplat->getSplatValue(), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(), nullptr);
 
-  // Disallow undefs explicitly.
+  // Disallow poison explicitly.
   EXPECT_EQ(Splat0->getSplatValue(false), C0);
   EXPECT_EQ(Splat1->getSplatValue(false), C1);
   EXPECT_EQ(Splat0Undef->getSplatValue(false), nullptr);
   EXPECT_EQ(Splat1Undef->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat1Poison->getSplatValue(false), nullptr);
   EXPECT_EQ(NotSplat->getSplatValue(false), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(false), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(false), nullptr);
 
-  // Allow undefs.
+  // Allow poison but not undef.
   EXPECT_EQ(Splat0->getSplatValue(true), C0);
   EXPECT_EQ(Splat1->getSplatValue(true), C1);
-  EXPECT_EQ(Splat0Undef->getSplatValue(true), C0);
-  EXPECT_EQ(Splat1Undef->getSplatValue(true), C1);
+  EXPECT_EQ(Splat0Undef->getSplatValue(true), nullptr);
+  EXPECT_EQ(Splat1Undef->getSplatValue(true), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(true), C0);
+  EXPECT_EQ(Splat1Poison->getSplatValue(true), C1);
   EXPECT_EQ(NotSplat->getSplatValue(true), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(true), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(true), nullptr);
 }
 
 TEST(InstructionsTest, SkipDebug) {
   LLVMContext C;
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
       declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -1482,6 +1511,7 @@ TEST(InstructionsTest, SkipDebug) {
 
   // After the terminator, there are no non-debug instructions.
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
+  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
@@ -1543,12 +1573,61 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
-  Type *AAVFTy = ArrayType::get(AVFTy, 2);
-  FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(PtrTy);
-  std::unique_ptr<CallInst> AAVFCall(
-      CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
-  EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));
+  Type *StructITy = StructType::get(ITy, ITy);
+  FunctionType *StructIFnTy = FunctionType::get(StructITy, {});
+  Value *StructICallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructICall(
+      CallInst::Create(StructIFnTy, StructICallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(StructICall));
+
+  Type *EmptyStructTy = StructType::get(C);
+  FunctionType *EmptyStructFnTy = FunctionType::get(EmptyStructTy, {});
+  Value *EmptyStructCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> EmptyStructCall(
+      CallInst::Create(EmptyStructFnTy, EmptyStructCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(EmptyStructCall));
+
+  Type *NamedStructFTy = StructType::create({FTy, FTy}, "AStruct");
+  FunctionType *NamedStructFFnTy = FunctionType::get(NamedStructFTy, {});
+  Value *NamedStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> NamedStructFCall(
+      CallInst::Create(NamedStructFFnTy, NamedStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(NamedStructFCall));
+
+  Type *MixedStructTy = StructType::get(FTy, ITy);
+  FunctionType *MixedStructFnTy = FunctionType::get(MixedStructTy, {});
+  Value *MixedStructCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> MixedStructCall(
+      CallInst::Create(MixedStructFnTy, MixedStructCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(MixedStructCall));
+
+  Type *StructFTy = StructType::get(FTy, FTy, FTy);
+  FunctionType *StructFFnTy = FunctionType::get(StructFTy, {});
+  Value *StructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructFCall(
+      CallInst::Create(StructFFnTy, StructFCallee, {}, ""));
+  EXPECT_TRUE(isa<FPMathOperator>(StructFCall));
+
+  Type *StructVFTy = StructType::get(VFTy, VFTy, VFTy, VFTy);
+  FunctionType *StructVFFnTy = FunctionType::get(StructVFTy, {});
+  Value *StructVFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructVFCall(
+      CallInst::Create(StructVFFnTy, StructVFCallee, {}, ""));
+  EXPECT_TRUE(isa<FPMathOperator>(StructVFCall));
+
+  Type *NestedStructFTy = StructType::get(StructFTy, StructFTy, StructFTy);
+  FunctionType *NestedStructFFnTy = FunctionType::get(NestedStructFTy, {});
+  Value *NestedStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> NestedStructFCall(
+      CallInst::Create(NestedStructFFnTy, NestedStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(NestedStructFCall));
+
+  Type *AStructFTy = ArrayType::get(StructFTy, 5);
+  FunctionType *AStructFFnTy = FunctionType::get(AStructFTy, {});
+  Value *AStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> AStructFCall(
+      CallInst::Create(AStructFFnTy, AStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(AStructFCall));
 }
 
 TEST(InstructionsTest, FNegInstruction) {
@@ -1717,6 +1796,20 @@ TEST(InstructionsTest, BranchWeightOverflow) {
   ASSERT_EQ(ProfWeight, UINT32_MAX);
 }
 
+TEST(InstructionsTest, FreezeInst) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      define void @foo(i8 %arg) {
+        freeze i8 %arg
+        ret void
+  }
+  )");
+  ASSERT_TRUE(M);
+  Value *FI = &M->getFunction("foo")->getEntryBlock().front();
+  EXPECT_TRUE(isa<UnaryInstruction>(FI));
+}
+
 TEST(InstructionsTest, AllocaInst) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(
@@ -1726,11 +1819,12 @@ TEST(InstructionsTest, AllocaInst) {
         %A = alloca i32, i32 1
         %B = alloca i32, i32 4
         %C = alloca i32, i32 %n
-        %D = alloca <8 x double>
+        %D = alloca double
         %E = alloca <vscale x 8 x double>
         %F = alloca [2 x half]
         %G = alloca [2 x [3 x i128]]
         %H = alloca %T
+        %I = alloca i32, i64 9223372036854775807
         ret void
       }
     )");
@@ -1747,14 +1841,17 @@ TEST(InstructionsTest, AllocaInst) {
   AllocaInst &F = cast<AllocaInst>(*It++);
   AllocaInst &G = cast<AllocaInst>(*It++);
   AllocaInst &H = cast<AllocaInst>(*It++);
+  AllocaInst &I = cast<AllocaInst>(*It++);
   EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
   EXPECT_FALSE(C.getAllocationSizeInBits(DL));
-  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(DL.getTypeSizeInBits(D.getAllocatedType()), TypeSize::getFixed(64));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(64));
   EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+  EXPECT_FALSE(I.getAllocationSizeInBits(DL));
 }
 
 TEST(InstructionsTest, InsertAtBegin) {
@@ -1793,6 +1890,73 @@ TEST(InstructionsTest, InsertAtEnd) {
   auto It = I->insertInto(BB, BB->end());
   EXPECT_EQ(&*It, I);
   EXPECT_EQ(Ret->getNextNode(), I);
+}
+
+TEST(InstructionsTest, AtomicSyncscope) {
+  LLVMContext Ctx;
+
+  Module M("Mod", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
+  IRBuilder<> Builder(BB);
+
+  // SyncScope-variants of LLVM C IRBuilder APIs are tested by llvm-c-test,
+  // so cover the old versions (with a SingleThreaded argument) here.
+  Value *Ptr = ConstantPointerNull::get(Builder.getPtrTy());
+  Value *Val = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+
+  // fence
+  LLVMValueRef Fence = LLVMBuildFence(
+      wrap(&Builder), LLVMAtomicOrderingSequentiallyConsistent, 0, "");
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(Fence));
+  Fence = LLVMBuildFence(wrap(&Builder),
+                         LLVMAtomicOrderingSequentiallyConsistent, 1, "");
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(Fence));
+
+  // atomicrmw
+  LLVMValueRef AtomicRMW = LLVMBuildAtomicRMW(
+      wrap(&Builder), LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
+      LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(AtomicRMW));
+  AtomicRMW = LLVMBuildAtomicRMW(wrap(&Builder), LLVMAtomicRMWBinOpXchg,
+                                 wrap(Ptr), wrap(Val),
+                                 LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(AtomicRMW));
+
+  // cmpxchg
+  LLVMValueRef CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 0);
+  EXPECT_FALSE(LLVMIsAtomicSingleThread(CmpXchg));
+  CmpXchg =
+      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+                             LLVMAtomicOrderingSequentiallyConsistent,
+                             LLVMAtomicOrderingSequentiallyConsistent, 1);
+  EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
+}
+
+TEST(InstructionsTest, CmpPredicate) {
+  CmpPredicate P0(CmpInst::ICMP_ULE, false), P1(CmpInst::ICMP_ULE, true),
+      P2(CmpInst::ICMP_SLE, false), P3(CmpInst::ICMP_SLT, false);
+  CmpPredicate Q0 = P0, Q1 = P1, Q2 = P2;
+  CmpInst::Predicate R0 = P0, R1 = P1, R2 = P2;
+
+  EXPECT_EQ(*CmpPredicate::getMatching(P0, P1), CmpInst::ICMP_ULE);
+  EXPECT_EQ(CmpPredicate::getMatching(P0, P1)->hasSameSign(), false);
+  EXPECT_EQ(*CmpPredicate::getMatching(P1, P1), CmpInst::ICMP_ULE);
+  EXPECT_EQ(CmpPredicate::getMatching(P1, P1)->hasSameSign(), true);
+  EXPECT_EQ(CmpPredicate::getMatching(P0, P2), std::nullopt);
+  EXPECT_EQ(*CmpPredicate::getMatching(P1, P2), CmpInst::ICMP_SLE);
+  EXPECT_EQ(CmpPredicate::getMatching(P1, P2)->hasSameSign(), false);
+  EXPECT_EQ(CmpPredicate::getMatching(P1, P3), std::nullopt);
+  EXPECT_FALSE(Q0.hasSameSign());
+  EXPECT_TRUE(Q1.hasSameSign());
+  EXPECT_FALSE(Q2.hasSameSign());
+  EXPECT_EQ(P0, R0);
+  EXPECT_EQ(P1, R1);
+  EXPECT_EQ(P2, R2);
 }
 
 } // end anonymous namespace

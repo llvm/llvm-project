@@ -243,6 +243,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(equalsBoundNode);
   REGISTER_MATCHER(equalsIntegralValue);
   REGISTER_MATCHER(explicitCastExpr);
+  REGISTER_MATCHER(exportDecl);
   REGISTER_MATCHER(expr);
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);
@@ -432,6 +433,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isExpansionInMainFile);
   REGISTER_MATCHER(isExpansionInSystemHeader);
   REGISTER_MATCHER(isExplicit);
+  REGISTER_MATCHER(isExplicitObjectMemberFunction);
   REGISTER_MATCHER(isExplicitTemplateSpecialization);
   REGISTER_MATCHER(isExpr);
   REGISTER_MATCHER(isExternC);
@@ -790,7 +792,7 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
           TypedText += "\"";
       }
 
-      Completions.emplace_back(TypedText, OS.str(), MaxSpecificity);
+      Completions.emplace_back(TypedText, Decl, MaxSpecificity);
     }
   }
 

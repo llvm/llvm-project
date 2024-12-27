@@ -1,8 +1,5 @@
-// REQUIRES: system-linux
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-// REQUIRES: nvptx-registered-target
 // REQUIRES: shell
+// XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/amdgpu-arch/amdgpu_arch_fail %t/
@@ -31,7 +28,7 @@
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch= \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_empty --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
-// NO-OUTPUT-ERROR: error: failed to deduce triple for target architecture 'native'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead.
+// NO-OUTPUT-ERROR: error: failed to deduce triple for target architecture 'native'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
 
 // case when amdgpu-arch succeeds.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
@@ -78,3 +75,19 @@
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=AMDGPU
 // AMDGPU: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '-march'
+
+// case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed for nvptx-arch.
+// RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -nogpulib \
+// RUN:     --nvptx-arch-tool=%t/nvptx_arch_sm_70 %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT-NVPTX
+// BAD-TIMEOUT-NVPTX: clang: error: cannot determine nvptx64 architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '-march'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)
+
+// case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed for amdgpu-arch.
+// RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT= \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib \
+// RUN:     --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT-AMDGPU
+// BAD-TIMEOUT-AMDGPU: clang: error: cannot determine amdgcn architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got ''; consider passing it via '-march'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)

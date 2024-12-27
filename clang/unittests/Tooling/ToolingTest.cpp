@@ -384,7 +384,8 @@ struct CommandLineExtractorTest : public ::testing::Test {
 public:
   CommandLineExtractorTest()
       : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS,
+                                                  new DiagnosticOptions)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 
@@ -586,6 +587,11 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
   EXPECT_FALSE(runToolOnCodeWithArgs(
       std::make_unique<SkipBodyAction>(),
       "template<typename T> int skipMeNot() { an_error_here }", Args2));
+
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<SkipBodyAction>(),
+      "__inline __attribute__((__gnu_inline__)) void skipMe() {}",
+      {"--cuda-host-only", "-nocudainc", "-xcuda"}));
 }
 
 TEST(runToolOnCodeWithArgs, TestNoDepFile) {

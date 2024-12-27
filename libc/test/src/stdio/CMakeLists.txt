@@ -14,6 +14,7 @@ add_libc_test(
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopen
     libc.src.stdio.fputs
     libc.src.stdio.fread
@@ -97,7 +98,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
@@ -115,11 +116,20 @@ add_libc_test(
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
 
 add_fp_unittest(
@@ -132,6 +142,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
+    libc.include.inttypes
   COMPILE_OPTIONS
     ${sprintf_test_copts}
 )
@@ -186,6 +197,19 @@ add_libc_test(
     libc.src.stdio.printf
 )
 
+add_libc_test(
+   asprintf_test
+   SUITE
+     libc_stdio_unittests
+   SRCS
+     asprintf_test.cpp
+   DEPENDS
+     libc.src.stdio.asprintf
+     libc.src.string.memset
+     libc.include.stdlib
+     libc.src.stdio.sprintf
+ )
+
 add_fp_unittest(
   vsprintf_test
   UNIT_TEST_ONLY
@@ -231,6 +255,18 @@ add_libc_test(
     libc.src.stdio.vprintf
 )
 
+add_libc_test(
+   vasprintf_test
+   SUITE
+     libc_stdio_unittests
+   SRCS
+     vasprintf_test.cpp
+   DEPENDS
+     libc.src.stdio.vasprintf
+     libc.src.string.memset
+     libc.include.stdlib
+     libc.src.stdio.sprintf
+ )
 
 if(LLVM_LIBC_FULL_BUILD)
   # In fullbuild mode, fscanf's tests use the internal FILE for other functions.
@@ -242,19 +278,44 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
-add_libc_test(
-  fscanf_test
-  SUITE
-    libc_stdio_unittests
-  SRCS
-    fscanf_test.cpp
-  DEPENDS
-    libc.src.stdio.fscanf
-    ${fscanf_test_deps}
-    libc.src.__support.CPP.string_view
-  COMPILE_OPTIONS
-    ${use_system_file}
-)
+# FIXME: These tests currently fail on AMDGPU due to an optimization bug in the
+#        `amdgpu-attributor` pass. Disable until that's fixed.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+  add_libc_test(
+    fscanf_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      fscanf_test.cpp
+    DEPENDS
+      libc.src.stdio.fscanf
+      ${fscanf_test_deps}
+      libc.src.__support.CPP.string_view
+    COMPILE_OPTIONS
+      ${use_system_file}
+  )
+
+  add_libc_test(
+    vfscanf_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      vfscanf_test.cpp
+    DEPENDS
+      libc.src.stdio.vfscanf
+      ${fscanf_test_deps}
+      libc.src.__support.CPP.string_view
+    COMPILE_OPTIONS
+      ${use_system_file}
+  )
+endif()
+
+if(LIBC_CONF_SCANF_DISABLE_FLOAT)
+  list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
+  list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+endif()
 
 add_libc_test(
   sscanf_test
@@ -266,6 +327,22 @@ add_libc_test(
     libc.src.stdio.sscanf
   LINK_LIBRARIES
     LibcFPTestHelpers
+  COMPILE_OPTIONS
+    ${sscanf_test_copts}
+)
+
+add_libc_test(
+  vsscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vsscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.vsscanf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+  COMPILE_OPTIONS
+    ${sscanf_test_copts}
 )
 
 add_libc_test(
@@ -349,6 +426,37 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.unistd.access
       libc.src.unistd.close
   )
+
+  add_libc_test(
+    rename_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      rename_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.fcntl.open
+      libc.src.stdio.rename
+      libc.src.unistd.access
+      libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
+
+  add_libc_test(
+    fdopen_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      fdopen_test.cpp
+    DEPENDS
+      libc.src.fcntl.open
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.fgets
+      libc.src.stdio.fputs
+      libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
 endif()
 
 add_libc_test(
@@ -422,6 +530,8 @@ add_libc_test(
     libc.src.stdio.fread
     libc.src.stdio.fseek
     libc.src.stdio.ftell
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftello
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
 )
@@ -429,7 +539,7 @@ add_libc_test(
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 

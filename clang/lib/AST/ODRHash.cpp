@@ -16,7 +16,6 @@
 
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
 using namespace clang;
@@ -146,15 +145,24 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::Template:
     AddDecl(Name.getAsTemplateDecl());
     break;
+  case TemplateName::QualifiedTemplate: {
+    QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
+    if (NestedNameSpecifier *NNS = QTN->getQualifier())
+      AddNestedNameSpecifier(NNS);
+    AddBoolean(QTN->hasTemplateKeyword());
+    AddTemplateName(QTN->getUnderlyingTemplate());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
   case TemplateName::UsingTemplate:
     break;
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("Unexpected DeducedTemplate");
   }
 }
 
@@ -244,7 +252,7 @@ unsigned ODRHash::CalculateHash() {
 
   assert(I == Bools.rend());
   Bools.clear();
-  return ID.ComputeHash();
+  return ID.computeStableHash();
 }
 
 namespace {
@@ -454,6 +462,7 @@ public:
     } else {
       AddDecl(D->getFriendDecl());
     }
+    Hash.AddBoolean(D->isPackExpansion());
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
@@ -462,7 +471,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddTemplateArgument(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -480,7 +489,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddStmt(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -696,6 +705,12 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
 
+  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  AddBoolean(DeletedMessage);
+
+  if (DeletedMessage)
+    ID.AddString(DeletedMessage->getBytes());
+
   AddDecl(Function);
 
   AddQualType(Function->getReturnType());
@@ -745,55 +760,8 @@ void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
   if (Enum->isScoped())
     AddBoolean(Enum->isScopedUsingClassTag());
 
-  if (Enum->getIntegerTypeSourceInfo()) {
-    // FIMXE: This allows two enums with different spellings to have the same
-    // hash.
-    //
-    //  // mod1.cppm
-    //  module;
-    //  extern "C" {
-    //      typedef unsigned __int64 size_t;
-    //  }
-    //  namespace std {
-    //      using :: size_t;
-    //  }
-    //
-    //  extern "C++" {
-    //      namespace std {
-    //          enum class align_val_t : std::size_t {};
-    //      }
-    //  }
-    //
-    //  export module mod1;
-    //  export using std::align_val_t;
-    //
-    //  // mod2.cppm
-    //  module;
-    //  extern "C" {
-    //      typedef unsigned __int64 size_t;
-    //  }
-    //
-    //  extern "C++" {
-    //      namespace std {
-    //          enum class align_val_t : size_t {};
-    //      }
-    //  }
-    //
-    //  export module mod2;
-    //  import mod1;
-    //  export using std::align_val_t;
-    //
-    // The above example should be disallowed since it violates
-    // [basic.def.odr]p14:
-    //
-    //    Each such definition shall consist of the same sequence of tokens
-    //
-    // The definitions of `std::align_val_t` in two module units have different
-    // spellings but we failed to give an error here.
-    //
-    // See https://github.com/llvm/llvm-project/issues/76638 for details.
+  if (Enum->getIntegerTypeSourceInfo())
     AddQualType(Enum->getIntegerType().getCanonicalType());
-  }
 
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.
@@ -850,15 +818,20 @@ void ODRHash::AddDecl(const Decl *D) {
 
   AddDeclarationName(ND->getDeclName());
 
-  const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(D);
-  AddBoolean(Specialization);
-  if (Specialization) {
-    const TemplateArgumentList &List = Specialization->getTemplateArgs();
-    ID.AddInteger(List.size());
-    for (const TemplateArgument &TA : List.asArray())
-      AddTemplateArgument(TA);
-  }
+  // If this was a specialization we should take into account its template
+  // arguments. This helps to reduce collisions coming when visiting template
+  // specialization types (eg. when processing type template arguments).
+  ArrayRef<TemplateArgument> Args;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    Args = CTSD->getTemplateArgs().asArray();
+  else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D))
+    Args = VTSD->getTemplateArgs().asArray();
+  else if (auto *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->getTemplateSpecializationArgs())
+      Args = FD->getTemplateSpecializationArgs()->asArray();
+
+  for (auto &TA : Args)
+    AddTemplateArgument(TA);
 }
 
 namespace {
@@ -989,6 +962,10 @@ public:
   void VisitConstantArrayType(const ConstantArrayType *T) {
     T->getSize().Profile(ID);
     VisitArrayType(T);
+  }
+
+  void VisitArrayParameterType(const ArrayParameterType *T) {
+    VisitConstantArrayType(T);
   }
 
   void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {

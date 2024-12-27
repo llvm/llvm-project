@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -39,7 +40,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %f0 = arith.constant 0.0 : f64
@@ -80,13 +81,15 @@ module {
     %sv = sparse_tensor.convert %output : tensor<?xf64> to tensor<?xf64, #SparseVector>
     %n0 = sparse_tensor.number_of_entries %sv : tensor<?xf64, #SparseVector>
 
-    // Print the number of non-zeros for verification.
+    // Print the number of non-zeros for verification
+    // as shuffle may generate different numbers.
     //
     // CHECK: 5
     vector.print %n0 : index
 
     // Release the resources.
     bufferization.dealloc_tensor %sv : tensor<?xf64, #SparseVector>
+    bufferization.dealloc_tensor %empty : tensor<?xf64>
     memref.dealloc %array : memref<?xi64>
     func.call @rtdrand(%g) : (!Generator) -> ()
 

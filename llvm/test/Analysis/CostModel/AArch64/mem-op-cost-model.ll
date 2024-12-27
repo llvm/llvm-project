@@ -190,19 +190,19 @@ declare <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr>, i32 immarg, <4 x i1>, 
 define <4 x i8> @gather_load_4xi8_constant_mask(<4 x ptr> %ptrs) {
 ; CHECK:         gather_load_4xi8_constant_mask
 ; CHECK-NEON-LABEL: 'gather_load_4xi8_constant_mask'
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i8> undef)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %lv
 ;
 ; CHECK-SVE-128-LABEL: 'gather_load_4xi8_constant_mask'
-; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i8> undef)
 ; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %lv
 ;
 ; CHECK-SVE-256-LABEL: 'gather_load_4xi8_constant_mask'
-; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i8> undef)
 ; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %lv
 ;
 ; CHECK-SVE-512-LABEL: 'gather_load_4xi8_constant_mask'
-; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i8> undef)
 ; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %lv
 ;
   %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
@@ -235,19 +235,19 @@ declare void @llvm.masked.scatter.v4i8.v4p0(<4 x i8>, <4 x ptr>, i32 immarg, <4 
 define void @scatter_store_4xi8_constant_mask(<4 x i8> %val, <4 x ptr> %ptrs) {
 ; CHECK:         scatter_store_4xi8_constant_mask
 ; CHECK-NEON-LABEL: 'scatter_store_4xi8_constant_mask'
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-128-LABEL: 'scatter_store_4xi8_constant_mask'
-; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-256-LABEL: 'scatter_store_4xi8_constant_mask'
-; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-512-LABEL: 'scatter_store_4xi8_constant_mask'
-; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
@@ -280,19 +280,19 @@ declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32 immarg, <4 x i1>
 define <4 x i32> @gather_load_4xi32_constant_mask(<4 x ptr> %ptrs) {
 ; CHECK:         gather_load_4xi32_constant_mask
 ; CHECK-NEON-LABEL: 'gather_load_4xi32_constant_mask'
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %lv
 ;
 ; CHECK-SVE-128-LABEL: 'gather_load_4xi32_constant_mask'
-; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %lv
 ;
 ; CHECK-SVE-256-LABEL: 'gather_load_4xi32_constant_mask'
-; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %lv
 ;
 ; CHECK-SVE-512-LABEL: 'gather_load_4xi32_constant_mask'
-; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %lv
 ;
   %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
@@ -325,19 +325,19 @@ declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32 immarg, <
 define void @scatter_store_4xi32_constant_mask(<4 x i32> %val, <4 x ptr> %ptrs) {
 ; CHECK:         scatter_store_4xi32_constant_mask
 ; CHECK-NEON-LABEL: 'scatter_store_4xi32_constant_mask'
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-128-LABEL: 'scatter_store_4xi32_constant_mask'
-; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-SVE-128-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-256-LABEL: 'scatter_store_4xi32_constant_mask'
-; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-SVE-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-512-LABEL: 'scatter_store_4xi32_constant_mask'
-; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> splat (i1 true))
 ; CHECK-SVE-512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)

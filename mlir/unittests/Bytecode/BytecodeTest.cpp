@@ -23,7 +23,7 @@
 using namespace llvm;
 using namespace mlir;
 
-StringLiteral IRWithResources = R"(
+StringLiteral irWithResources = R"(
 module @TestDialectResources attributes {
   bytecode.test = dense_resource<resource> : tensor<4xi32>
 } {}
@@ -42,26 +42,25 @@ TEST(Bytecode, MultiModuleWithResource) {
   Builder builder(&context);
   ParserConfig parseConfig(&context);
   OwningOpRef<Operation *> module =
-      parseSourceString<Operation *>(IRWithResources, parseConfig);
+      parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
 
   // Write the module to bytecode
   std::string buffer;
   llvm::raw_string_ostream ostream(buffer);
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
-  ostream.flush();
 
   // Create copy of buffer which is aligned to requested resource alignment.
   constexpr size_t kAlignment = 0x20;
-  size_t buffer_size = buffer.size();
-  buffer.reserve(buffer_size + kAlignment - 1);
-  size_t pad = ~(uintptr_t)buffer.data() + 1 & kAlignment - 1;
+  size_t bufferSize = buffer.size();
+  buffer.reserve(bufferSize + kAlignment - 1);
+  size_t pad = (~(uintptr_t)buffer.data() + 1) & (kAlignment - 1);
   buffer.insert(0, pad, ' ');
-  StringRef aligned_buffer(buffer.data() + pad, buffer_size);
+  StringRef alignedBuffer(buffer.data() + pad, bufferSize);
 
   // Parse it back
   OwningOpRef<Operation *> roundTripModule =
-      parseSourceString<Operation *>(aligned_buffer, parseConfig);
+      parseSourceString<Operation *>(alignedBuffer, parseConfig);
   ASSERT_TRUE(roundTripModule);
 
   // FIXME: Parsing external resources does not work on big-endian
@@ -70,8 +69,8 @@ TEST(Bytecode, MultiModuleWithResource) {
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
-  auto checkResourceAttribute = [&](Operation *op) {
-    Attribute attr = roundTripModule->getDiscardableAttr("bytecode.test");
+  auto checkResourceAttribute = [](Operation *parsedModule) {
+    Attribute attr = parsedModule->getDiscardableAttr("bytecode.test");
     ASSERT_TRUE(attr);
     auto denseResourceAttr = dyn_cast<DenseI32ResourceElementsAttr>(attr);
     ASSERT_TRUE(denseResourceAttr);
@@ -139,7 +138,7 @@ TEST(Bytecode, OpWithoutProperties) {
   ASSERT_TRUE(succeeded(writeBytecodeToFile(op.get(), os)));
   std::unique_ptr<Block> block = std::make_unique<Block>();
   ASSERT_TRUE(succeeded(readBytecodeFile(
-      llvm::MemoryBufferRef(os.str(), "string-buffer"), block.get(), config)));
+      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
   Operation *roundtripped = &block->front();
   EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
   EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);

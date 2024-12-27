@@ -1,4 +1,4 @@
-//===-- SimpleStreamChecker.cpp -----------------------------------------*- C++ -*--//
+//===-- SimpleStreamChecker.cpp -----------------------------------*- C++ -*--//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,8 +52,8 @@ class SimpleStreamChecker : public Checker<check::PostCall,
                                            check::PreCall,
                                            check::DeadSymbols,
                                            check::PointerEscape> {
-  const CallDescription OpenFn{{"fopen"}, 2};
-  const CallDescription CloseFn{{"fclose"}, 1};
+  const CallDescription OpenFn{CDM::CLibrary, {"fopen"}, 2};
+  const CallDescription CloseFn{CDM::CLibrary, {"fclose"}, 1};
 
   const BugType DoubleCloseBugType{this, "Double fclose",
                                    "Unix Stream API Error"};
@@ -92,9 +92,6 @@ REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
 void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
-  if (!Call.isGlobalCFunction())
-    return;
-
   if (!OpenFn.matches(Call))
     return;
 
@@ -111,9 +108,6 @@ void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
 
 void SimpleStreamChecker::checkPreCall(const CallEvent &Call,
                                        CheckerContext &C) const {
-  if (!Call.isGlobalCFunction())
-    return;
-
   if (!CloseFn.matches(Call))
     return;
 
