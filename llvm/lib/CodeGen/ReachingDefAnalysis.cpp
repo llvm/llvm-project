@@ -380,21 +380,23 @@ void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, MCRegister PhysReg,
   // Collect the uses that each def touches within the block.
   getReachingLocalUses(MI, PhysReg, Uses);
 
-  // Handle live-out values.
-  if (auto *LiveOut = getLocalLiveOutMIDef(MI->getParent(), PhysReg)) {
-    if (LiveOut != MI)
-      return;
+  // If the definition doesn't live-out stop search.
+  if (getLocalLiveOutMIDef(MBB, PhysReg) != MI)
+    return;
 
-    SmallVector<MachineBasicBlock *, 4> ToVisit(MBB->successors());
-    SmallPtrSet<MachineBasicBlock*, 4>Visited;
-    while (!ToVisit.empty()) {
-      MachineBasicBlock *MBB = ToVisit.pop_back_val();
-      if (Visited.count(MBB) || !MBB->isLiveIn(PhysReg))
-        continue;
-      if (getLiveInUses(MBB, PhysReg, Uses))
-        llvm::append_range(ToVisit, MBB->successors());
-      Visited.insert(MBB);
-    }
+  SmallVector<MachineBasicBlock *, 4> ToVisit(MBB->successors());
+  SmallPtrSet<MachineBasicBlock *, 4> Visited;
+
+  // Otherwise visit successors until PhysReg is redefined.
+  while (!ToVisit.empty()) {
+    MachineBasicBlock *MBB = ToVisit.pop_back_val();
+    if (Visited.count(MBB) || !MBB->isLiveIn(PhysReg))
+      continue;
+    getLiveInUses(MBB, PhysReg, Uses);
+    // Check if any PhysReg definition exist in the current MBB.
+    if (!getLocalLiveOutMIDef(MBB, PhysReg))
+      llvm::append_range(ToVisit, MBB->successors());
+    Visited.insert(MBB);
   }
 }
 
