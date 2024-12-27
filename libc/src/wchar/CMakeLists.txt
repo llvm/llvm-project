@@ -58,3 +58,14 @@ add_entrypoint_object(
     .wmemchr
     libc.hdr.types.wchar_t
 )
+
+add_entrypoint_object(
+  wcsrchr
+  SRCS
+    wcsrchr.cpp
+  HDRS
+    wcsrchr.h
+  DEPENDS
+    .wcslen
+    libc.hdr.types.wchar_t
+)
