@@ -29,7 +29,12 @@ TEST(LlvmLibcStrcollTest, SimpleTest) {
   result = LIBC_NAMESPACE::strcoll(s3, s1);
   ASSERT_GT(result, 0);
 }
+
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+
 TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strcoll(nullptr, nullptr); },
                WITH_SIGNAL(SIGSEGV));
 }
+
+#endif // defined(LIBC_TARGET_OS_IS_LINUX)
