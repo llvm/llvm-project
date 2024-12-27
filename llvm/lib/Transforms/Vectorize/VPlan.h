@@ -3859,6 +3859,8 @@ public:
   /// scalar header blocks of the new VPlan.
   VPlan(Loop *L);
 
+  /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
+  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
   VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);

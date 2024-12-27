@@ -28,7 +28,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPBB1->appendRecipe(DefI);
 
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -58,7 +58,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -97,7 +97,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB4, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB4, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -132,7 +132,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
@@ -168,7 +168,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB3, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -196,7 +196,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());

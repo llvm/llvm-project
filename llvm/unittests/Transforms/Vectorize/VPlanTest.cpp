@@ -272,7 +272,7 @@ TEST_F(VPBasicBlockTest, getPlan) {
     // VPBasicBlock is the entry into the VPlan, followed by a region.
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB2, "R1");
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBlockUtils::connectBlocks(VPBB1, R1);
@@ -289,12 +289,12 @@ TEST_F(VPBasicBlockTest, getPlan) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB2, "R1");
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB2, "R2");
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -372,7 +372,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB4, "R1");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB4, "R1");
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -385,7 +385,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB2, "R2");
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
@@ -470,7 +470,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB3, "R1");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB3, "R1");
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock(""
                                                   "R2BB1");
@@ -478,7 +478,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
                                                   "R2BB2");
     VPBasicBlock *R2BB3 = Plan.createVPBasicBlock(""
                                                   "R2BB3");
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB3, "R2");
+    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB3, "R2");
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);
@@ -544,10 +544,10 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB2, "R2");
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
-    VPRegionBlock *R1 = new VPRegionBlock(R2, R2, "R1");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(R2, R2, "R1");
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -597,15 +597,15 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     //
     VPlan &Plan = getPlan();
     VPBasicBlock *R3BB1 = Plan.createVPBasicBlock("R3BB1");
-    VPRegionBlock *R3 = new VPRegionBlock(R3BB1, R3BB1, "R3");
+    VPRegionBlock *R3 = Plan.createVPRegionBlock(R3BB1, R3BB1, "R3");
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock(""
                                                   "R2BB1");
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R3, "R2");
+    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R3, "R2");
     R3->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R3);
 
-    VPRegionBlock *R1 = new VPRegionBlock(R2, R2, "R1");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(R2, R2, "R1");
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
