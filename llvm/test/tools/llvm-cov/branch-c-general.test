@@ -117,19 +117,19 @@
 // REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
 // REPORT-NEXT: simple_loops                      8       0 100.00%         9       0 100.00%         6       0 100.00%
-// REPORT-NEXT: conditionals                     24       0 100.00%        15       0 100.00%        16       2  87.50%
+// REPORT-NEXT: conditionals                     22       0 100.00%        15       0 100.00%        16       2  87.50%
 // REPORT-NEXT: early_exits                      20       4  80.00%        25       2  92.00%        16       6  62.50%
 // REPORT-NEXT: jumps                            39      12  69.23%        48       2  95.83%        26       9  65.38%
-// REPORT-NEXT: switches                         28       5  82.14%        38       4  89.47%        28       7  75.00%
+// REPORT-NEXT: switches                         27       4  85.19%        38       4  89.47%        28       7  75.00%
 // REPORT-NEXT: big_switch                       25       1  96.00%        32       0 100.00%        30       6  80.00%
-// REPORT-NEXT: boolean_operators                16       0 100.00%        13       0 100.00%        22       2  90.91%
-// REPORT-NEXT: boolop_loops                     19       0 100.00%        14       0 100.00%        16       2  87.50%
+// REPORT-NEXT: boolean_operators                14       0 100.00%        13       0 100.00%        22       2  90.91%
+// REPORT-NEXT: boolop_loops                     15       0 100.00%        14       0 100.00%        16       2  87.50%
 // REPORT-NEXT: conditional_operator              4       2  50.00%         8       0 100.00%         4       2  50.00%
 // REPORT-NEXT: do_fallthrough                    9       0 100.00%        12       0 100.00%         6       0 100.00%
 // REPORT-NEXT: main                              1       0 100.00%        16       0 100.00%         0       0   0.00%
 // REPORT-NEXT: c-general.c:static_func           4       0 100.00%         4       0 100.00%         2       0 100.00%
 // REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                           197      24  87.82%       234       8  96.58%       172      36  79.07%
+// REPORT-NEXT: TOTAL                           188      23  87.77%       234       8  96.58%       172      36  79.07%
 
 // Test file-level report.
 // RUN: llvm-profdata merge %S/Inputs/branch-c-general.proftext -o %t.profdata
@@ -159,7 +159,7 @@
 // HTML-INDEX: <td class='column-entry-yellow'>
 // HTML-INDEX: 96.58% (226/234)
 // HTML-INDEX: <td class='column-entry-yellow'>
-// HTML-INDEX: 87.82% (173/197)
+// HTML-INDEX: 87.77% (165/188)
 // HTML-INDEX: <td class='column-entry-red'>
 // HTML-INDEX: 79.07% (136/172)
 // HTML-INDEX: <tr class='light-row-bold'>
