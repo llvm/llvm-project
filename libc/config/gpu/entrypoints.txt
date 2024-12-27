@@ -261,6 +261,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.nanosleep
 
     # wchar.h entrypoints
+    libc.src.wchar.wcslen
     libc.src.wchar.wmemchr
     libc.src.wchar.wctob
 

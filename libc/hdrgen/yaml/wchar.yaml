@@ -22,3 +22,9 @@ functions:
       - type: const wchar_t *
       - type: wchar_t
       - type: size_t
+  - name: wcslen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
