@@ -259,6 +259,33 @@ private:
     return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
   }
 
+  /// Checks if the provided mask \p is a splat mask, i.e. it contains only -1
+  /// or same non -1 index value and this index value contained at least twice.
+  /// So, mask <0, -1,-1, -1> is not considered splat (it is just identity),
+  /// same for <-1, 0, -1, -1> (just a slide), while <2, -1, 2, -1> is a splat
+  /// with \p Index=2.
+  static bool isSplatMask(ArrayRef<int> Mask, unsigned NumSrcElts, int &Index) {
+    // Check that the broadcast index meets at least twice.
+    bool IsCompared = false;
+    if (int SplatIdx = PoisonMaskElem;
+        all_of(enumerate(Mask), [&](const auto &P) {
+          if (P.value() == PoisonMaskElem)
+            return P.index() != Mask.size() - 1 || IsCompared;
+          if (static_cast<unsigned>(P.value()) >= NumSrcElts * 2)
+            return false;
+          if (SplatIdx == PoisonMaskElem) {
+            SplatIdx = P.value();
+            return P.index() != Mask.size() - 1;
+          }
+          IsCompared = true;
+          return SplatIdx == P.value();
+        })) {
+      Index = SplatIdx;
+      return true;
+    }
+    return false;
+  }
+
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
@@ -780,7 +807,8 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *InTy,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind) {
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -788,6 +816,7 @@ public:
     auto *Ty = cast<FixedVectorType>(InTy);
 
     assert(DemandedElts.getBitWidth() == Ty->getNumElements() &&
+           (VL.empty() || VL.size() == Ty->getNumElements()) &&
            "Vector size mismatch");
 
     InstructionCost Cost = 0;
@@ -795,9 +824,11 @@ public:
     for (int i = 0, e = Ty->getNumElements(); i < e; ++i) {
       if (!DemandedElts[i])
         continue;
-      if (Insert)
+      if (Insert) {
+        Value *InsertedVal = VL.empty() ? nullptr : VL[i];
         Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
-                                            CostKind, i, nullptr, nullptr);
+                                            CostKind, i, nullptr, InsertedVal);
+      }
       if (Extract)
         Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
                                             CostKind, i, nullptr, nullptr);
@@ -815,9 +846,14 @@ public:
     return false;
   }
 
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) const {
-    return ScalarOpdIdx == -1;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const {
+    return OpdIdx == -1;
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const {
+    return RetIdx == 0;
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
@@ -1005,10 +1041,12 @@ public:
       return Kind;
     int NumSrcElts = Ty->getElementCount().getKnownMinValue();
     switch (Kind) {
-    case TTI::SK_PermuteSingleSrc:
+    case TTI::SK_PermuteSingleSrc: {
       if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
         return TTI::SK_Reverse;
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
+        return TTI::SK_Broadcast;
+      if (isSplatMask(Mask, NumSrcElts, Index))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
           (Index + Mask.size()) <= (size_t)NumSrcElts) {
@@ -1016,6 +1054,7 @@ public:
         return TTI::SK_ExtractSubvector;
       }
       break;
+    }
     case TTI::SK_PermuteTwoSrc: {
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -1931,6 +1970,8 @@ public:
 
       return Cost;
     }
+    case Intrinsic::experimental_vector_match:
+      return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     }
 
     // Assume that we need to scalarize this intrinsic.)
@@ -2186,6 +2227,35 @@ public:
     case Intrinsic::vector_reduce_fminimum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::experimental_vector_match: {
+      auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+      unsigned SearchSize = NeedleTy->getNumElements();
+
+      // If we're not expanding the intrinsic then we assume this is cheap to
+      // implement.
+      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
+      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
+        return getTypeLegalizationCost(RetTy).first;
+
+      // Approximate the cost based on the expansion code in
+      // SelectionDAGBuilder.
+      InstructionCost Cost = 0;
+      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
+                                          CostKind, 1, nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
+                                          CostKind, 0, nullptr, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, std::nullopt,
+                                      CostKind, 0, nullptr);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost *= SearchSize;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      return Cost;
+    }
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;

@@ -2506,9 +2506,9 @@ struct FormatStyle {
   /// lists.
   ///
   /// Important differences:
-  /// - No spaces inside the braced list.
-  /// - No line break before the closing brace.
-  /// - Indentation with the continuation indent, not with the block indent.
+  /// * No spaces inside the braced list.
+  /// * No line break before the closing brace.
+  /// * Indentation with the continuation indent, not with the block indent.
   ///
   /// Fundamentally, C++11 braced lists are formatted exactly like function
   /// calls would be formatted in their place. If the braced list follows a name
@@ -3742,19 +3742,19 @@ struct FormatStyle {
   QualifierAlignmentStyle QualifierAlignment;
 
   /// The order in which the qualifiers appear.
-  /// Order is an array that can contain any of the following:
+  /// The order is an array that can contain any of the following:
   ///
-  ///   * const
-  ///   * inline
-  ///   * static
-  ///   * friend
-  ///   * constexpr
-  ///   * volatile
-  ///   * restrict
-  ///   * type
+  ///   * ``const``
+  ///   * ``inline``
+  ///   * ``static``
+  ///   * ``friend``
+  ///   * ``constexpr``
+  ///   * ``volatile``
+  ///   * ``restrict``
+  ///   * ``type``
   ///
   /// \note
-  ///  It **must** contain ``type``.
+  ///  It must contain ``type``.
   /// \endnote
   ///
   /// Items to the left of ``type`` will be placed to the left of the type and
@@ -5449,10 +5449,10 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// cleaning up the code after that on success; otherwise, return an llvm::Error
 /// carrying llvm::StringError.
 /// This also supports inserting/deleting C++ #include directives:
-/// - If a replacement has offset UINT_MAX, length 0, and a replacement text
+/// * If a replacement has offset UINT_MAX, length 0, and a replacement text
 ///   that is an #include directive, this will insert the #include into the
 ///   correct block in the \p Code.
-/// - If a replacement has offset UINT_MAX, length 1, and a replacement text
+/// * If a replacement has offset UINT_MAX, length 1, and a replacement text
 ///   that is the name of the header to be removed, the header will be removed
 ///   from \p Code if it exists.
 /// The include manipulation is done via ``tooling::HeaderInclude``, see its
@@ -5558,13 +5558,12 @@ extern const char *DefaultFallbackStyle;
 ///
 /// ``StyleName`` can take several forms:
 /// * "{<key>: <value>, ...}" - Set specic style parameters.
-/// * "<style name>" - One of the style names supported by
-/// getPredefinedStyle().
+/// * "<style name>" - One of the style names supported by getPredefinedStyle().
 /// * "file" - Load style configuration from a file called ``.clang-format``
-/// located in one of the parent directories of ``FileName`` or the current
-/// directory if ``FileName`` is empty.
+///   located in one of the parent directories of ``FileName`` or the current
+///   directory if ``FileName`` is empty.
 /// * "file:<format_file_path>" to explicitly specify the configuration file to
-/// use.
+///   use.
 ///
 /// \param[in] StyleName Style name to interpret according to the description
 /// above.

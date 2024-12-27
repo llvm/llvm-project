@@ -6,7 +6,7 @@
 int foo(int i) { // CHECK-NEXT: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
   switch (i) {   // CHECK-NEXT: Gap,File 0, [[@LINE]]:14 -> {{[0-9]+}}:11 = 0
   default:       // CHECK-NEXT: File 0, [[@LINE]]:3 -> {{[0-9]+}}:11 = #2
-                 // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = #2, 0
+                 // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = #2, (#0 - #2)
     if (i == 1)  // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:15 = #2
                  // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:9 -> [[@LINE-1]]:15 = #3, (#2 - #3)
       return 0;  // CHECK: File 0, [[@LINE]]:7 -> [[@LINE]]:15 = #3
@@ -15,7 +15,7 @@ int foo(int i) { // CHECK-NEXT: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
     // CHECK-NEXT: File 0, [[@LINE+1]]:8 -> {{[0-9]+}}:11 = (#2 - #3)
     FOO(1);
   case 0:        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:13 = ((#2 + #4) - #3)
-                 // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #4, 0
+                 // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = #4, (#0 - #4)
     return 2;    // CHECK-NEXT: Gap,File 0, [[@LINE]]:14 -> [[@LINE+4]]:3 = 0
 
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:6 = 0

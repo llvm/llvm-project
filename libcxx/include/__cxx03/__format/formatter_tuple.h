@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_TUPLE_H
-#define _LIBCPP___FORMAT_FORMATTER_TUPLE_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMATTER_TUPLE_H
+#define _LIBCPP___CXX03___FORMAT_FORMATTER_TUPLE_H
 
 #include <__cxx03/__algorithm/ranges_copy.h>
 #include <__cxx03/__chrono/statically_widen.h>
@@ -147,4 +147,4 @@ struct _LIBCPP_TEMPLATE_VIS formatter<tuple<_Args...>, _CharT>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_TUPLE_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMATTER_TUPLE_H

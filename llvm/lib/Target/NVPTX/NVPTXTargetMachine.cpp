@@ -414,14 +414,10 @@ void NVPTXPassConfig::addIRPasses() {
 }
 
 bool NVPTXPassConfig::addInstSelector() {
-  const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
-
   addPass(createLowerAggrCopies());
   addPass(createAllocaHoisting());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
-
-  if (!ST.hasImageHandles())
-    addPass(createNVPTXReplaceImageHandlesPass());
+  addPass(createNVPTXReplaceImageHandlesPass());
 
   return false;
 }

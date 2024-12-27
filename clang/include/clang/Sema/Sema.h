@@ -2524,6 +2524,17 @@ private:
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
 
+  enum BuiltinCountedByRefKind {
+    AssignmentKind,
+    InitializerKind,
+    FunctionArgKind,
+    ReturnArgKind,
+    ArraySubscriptKind,
+    BinaryExprKind,
+  };
+
+  bool CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                       BuiltinCountedByRefKind K);
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Matrix builtin handling.
@@ -5303,7 +5314,7 @@ public:
   /// is complete.
   void ActOnFinishCXXInClassMemberInitializer(Decl *VarDecl,
                                               SourceLocation EqualLoc,
-                                              Expr *Init);
+                                              ExprResult Init);
 
   /// Handle a C++ member initializer using parentheses syntax.
   MemInitResult
@@ -10647,6 +10658,11 @@ public:
   StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl, SourceLocation StartLoc,
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
+
+  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
+  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
+  /// value has been discarded.
+  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
