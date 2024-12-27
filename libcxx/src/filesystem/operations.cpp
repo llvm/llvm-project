@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <iterator>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <vector>
 
@@ -321,6 +322,7 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
   return copy_file_impl_fstream(read_fd, write_fd, ec);
 #  else
   // since iostreams are unavailable in the no-locale build, just fail after a failed sendfile
+  ec.assign(EINVAL, std::system_category());
   return false;
 #  endif
 }
