@@ -1375,12 +1375,18 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     // used as a replacement.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
+    auto insertPoint = OpBuilder::InsertPoint(newBlock, newBlock->begin());
     if (replArgs.size() == 1) {
-      mapping.map(origArg, replArgs.front());
+      // We need an argument materialization to replace the block argument.
+      Value argMat = buildUnresolvedMaterialization(
+          MaterializationKind::Argument, insertPoint, origArg.getLoc(),
+          /*valueToMap=*/origArg, /*inputs=*/replArgs,
+          /*outputType=*/origArg.getType(), /*originalType=*/Type(), converter);
+      mapping.map(origArg, argMat);
     } else {
-      insertNTo1Materialization(
-          OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
-          /*replacements=*/replArgs, /*outputValue=*/origArg, converter);
+      insertNTo1Materialization(insertPoint, origArg.getLoc(),
+                                /*replacements=*/replArgs,
+                                /*originalValue=*/origArg, converter);
     }
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
   }
