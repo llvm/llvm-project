@@ -79,11 +79,11 @@ findPriorityOption(const ClangTidyOptions::OptionMap &Options,
   auto IterLocal = Options.find((NamePrefix + LocalName).str());
   auto IterGlobal = Options.find(LocalName);
   // FIXME: temporary solution for deprecation warnings, should be removed
-  // after 22.x.
-  if (IterGlobal != Options.end() &&
+  // after 22.x. Warn configuration deps on deprecation global options.
+  if (IterLocal == Options.end() && IterGlobal != Options.end() &&
       DeprecatedGlobalOptions.contains(LocalName))
     Context->configurationDiag(
-        "deprecation global option '%0', please use '%1%0'.")
+        "global option '%0' is deprecated, please use '%1%0' instead.")
         << LocalName << NamePrefix;
   if (IterLocal == Options.end())
     return IterGlobal;
