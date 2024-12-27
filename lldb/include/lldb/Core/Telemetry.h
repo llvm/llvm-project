@@ -10,13 +10,6 @@
 #ifndef LLDB_CORE_TELEMETRY_H
 #define LLDB_CORE_TELEMETRY_H
 
-#include <chrono>
-#include <ctime>
-#include <memory>
-#include <optional>
-#include <string>
-#include <unordered_map>
-
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/StructuredData.h"
@@ -25,6 +18,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Telemetry/Telemetry.h"
+#include <chrono>
+#include <ctime>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
 
 namespace lldb_private {
 
