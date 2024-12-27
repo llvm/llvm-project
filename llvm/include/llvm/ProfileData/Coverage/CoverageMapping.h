@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -57,6 +58,12 @@ namespace coverage {
 
 class CoverageMappingReader;
 struct CoverageMappingRecord;
+
+enum class MergeStrategy {
+  Merge,
+  Any,
+  All,
+};
 
 enum class coveragemap_error {
   success = 0,
@@ -364,19 +371,42 @@ struct CountedRegion : public CounterMappingRegion {
   uint64_t FalseExecutionCount;
   bool TrueFolded;
   bool FalseFolded;
-  bool HasSingleByteCoverage;
 
-  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                bool HasSingleByteCoverage)
+  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true),
-        HasSingleByteCoverage(HasSingleByteCoverage) {}
+        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true) {}
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                uint64_t FalseExecutionCount, bool HasSingleByteCoverage)
+                uint64_t FalseExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
         FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
-        FalseFolded(false), HasSingleByteCoverage(HasSingleByteCoverage) {}
+        FalseFolded(false) {}
+
+  LineColPair viewLoc() const { return startLoc(); }
+
+  bool isMergeable(const CountedRegion &RHS) const {
+    return (this->viewLoc() == RHS.viewLoc());
+  }
+
+  void merge(const CountedRegion &RHS, MergeStrategy Strategy);
+
+  /// Returns comparable rank value in selecting a better Record for merging.
+  auto getMergeRank(MergeStrategy Strategy) const {
+    assert(isBranch() && "Dedicated to Branch");
+    assert(Strategy == MergeStrategy::Any && "Dedicated to Any");
+    unsigned m = 0;
+    // Prefer both Counts have values.
+    m = (m << 1) | (ExecutionCount != 0 && FalseExecutionCount != 0);
+    // Prefer both are unfolded.
+    m = (m << 1) | (!TrueFolded && !FalseFolded);
+    // Prefer either Count has value.
+    m = (m << 1) | (ExecutionCount != 0 || FalseExecutionCount != 0);
+    // Prefer either is unfolded.
+    m = (m << 1) | (!TrueFolded || !FalseFolded);
+    return std::make_pair(m, ExecutionCount + FalseExecutionCount);
+  }
+
+  void commit() const {}
 };
 
 /// MCDC Record grouping all information together.
@@ -442,7 +472,7 @@ struct MCDCRecord {
   };
 
   using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
-  using BoolVector = llvm::SmallVector<bool>;
+  using BoolVector = std::array<BitVector, 2>;
   using TVRowPair = std::pair<unsigned, unsigned>;
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
   using CondIDMap = llvm::DenseMap<unsigned, unsigned>;
@@ -451,26 +481,44 @@ struct MCDCRecord {
 private:
   CounterMappingRegion Region;
   TestVectors TV;
-  TVPairMap IndependencePairs;
+  std::optional<TVPairMap> IndependencePairs;
   BoolVector Folded;
   CondIDMap PosToID;
   LineColPairMap CondLoc;
 
 public:
   MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
-             TVPairMap &&IndependencePairs, BoolVector &&Folded,
-             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
-      : Region(Region), TV(std::move(TV)),
-        IndependencePairs(std::move(IndependencePairs)),
-        Folded(std::move(Folded)), PosToID(std::move(PosToID)),
-        CondLoc(std::move(CondLoc)){};
+             BoolVector &&Folded, CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)), Folded(std::move(Folded)),
+        PosToID(std::move(PosToID)), CondLoc(std::move(CondLoc)) {
+    findIndependencePairs();
+  }
+
+  inline LineColPair viewLoc() const { return Region.endLoc(); }
+
+  bool isMergeable(const MCDCRecord &RHS) const {
+    return (this->viewLoc() == RHS.viewLoc() && this->PosToID == RHS.PosToID &&
+            this->CondLoc == RHS.CondLoc);
+  }
+
+  // This may invalidate IndependencePairs
+  // MCDCRecord &operator+=(const MCDCRecord &RHS);
+  void merge(MCDCRecord &&RHS, MergeStrategy Strategy);
+
+  void commit() { findIndependencePairs(); }
+
+  // Compare executed test vectors against each other to find an independence
+  // pairs for each condition.  This processing takes the most time.
+  void findIndependencePairs();
 
   const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
     return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
-  bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
+  bool isCondFolded(unsigned Condition) const {
+    return Folded[false][Condition] || Folded[true][Condition];
+  }
 
   /// Return the evaluation of a condition (indicated by Condition) in an
   /// executed test vector (indicated by TestVectorIndex), which will be True,
@@ -494,10 +542,10 @@ public:
   /// TestVectors requires a translation from a ordinal position to actual
   /// condition ID. This is done via PosToID[].
   bool isConditionIndependencePairCovered(unsigned Condition) const {
+    assert(IndependencePairs);
     auto It = PosToID.find(Condition);
-    if (It != PosToID.end())
-      return IndependencePairs.contains(It->second);
-    llvm_unreachable("Condition ID without an Ordinal mapping");
+    assert(It != PosToID.end() && "Condition ID without an Ordinal mapping");
+    return IndependencePairs->contains(It->second);
   }
 
   /// Return the Independence Pair that covers the given condition. Because
@@ -507,18 +555,46 @@ public:
   /// via PosToID[].
   TVRowPair getConditionIndependencePair(unsigned Condition) {
     assert(isConditionIndependencePairCovered(Condition));
-    return IndependencePairs[PosToID[Condition]];
+    assert(IndependencePairs);
+    return (*IndependencePairs)[PosToID[Condition]];
   }
 
-  float getPercentCovered() const {
-    unsigned Folded = 0;
+  std::pair<unsigned, unsigned> getCoveredCount() const {
     unsigned Covered = 0;
+    unsigned Folded = 0;
     for (unsigned C = 0; C < getNumConditions(); C++) {
       if (isCondFolded(C))
         Folded++;
       else if (isConditionIndependencePairCovered(C))
         Covered++;
     }
+    return {Covered, Folded};
+  }
+
+  /// Returns comparable rank value in selecting a better Record for merging.
+  std::tuple<unsigned, unsigned, unsigned>
+  getMergeRank(MergeStrategy Strategy) const {
+    auto [Covered, Folded] = getCoveredCount();
+    auto NumTVs = getNumTestVectors();
+    switch (Strategy) {
+    case MergeStrategy::Merge:
+    case MergeStrategy::Any:
+      return {
+          Covered, // The largest covered number
+          ~Folded, // Less folded is better
+          NumTVs,  // Show more test vectors
+      };
+    case MergeStrategy::All:
+      return {
+          ~Covered, // The smallest covered number
+          ~Folded,  // Less folded is better
+          NumTVs,   // Show more test vectors
+      };
+    }
+  }
+
+  float getPercentCovered() const {
+    auto [Covered, Folded] = getCoveredCount();
 
     unsigned Total = getNumConditions() - Folded;
     if (Total == 0)
@@ -719,10 +795,9 @@ struct FunctionRecord {
   }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
-                  uint64_t FalseCount, bool HasSingleByteCoverage) {
+                  uint64_t FalseCount) {
     if (Region.isBranch()) {
-      CountedBranchRegions.emplace_back(Region, Count, FalseCount,
-                                        HasSingleByteCoverage);
+      CountedBranchRegions.emplace_back(Region, Count, FalseCount);
       // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
       CountedBranchRegions.back().TrueFolded = Region.Count.isZero();
@@ -731,8 +806,7 @@ struct FunctionRecord {
     }
     if (CountedRegions.empty())
       ExecutionCount = Count;
-    CountedRegions.emplace_back(Region, Count, FalseCount,
-                                HasSingleByteCoverage);
+    CountedRegions.emplace_back(Region, Count, FalseCount);
   }
 };
 
@@ -889,19 +963,27 @@ public:
 class CoverageData {
   friend class CoverageMapping;
 
+protected:
   std::string Filename;
   std::vector<CoverageSegment> Segments;
   std::vector<ExpansionRecord> Expansions;
   std::vector<CountedRegion> BranchRegions;
   std::vector<MCDCRecord> MCDCRecords;
 
+  bool SingleByteCoverage = false;
+
 public:
   CoverageData() = default;
 
-  CoverageData(StringRef Filename) : Filename(Filename) {}
+  CoverageData(bool Single, StringRef Filename)
+      : Filename(Filename), SingleByteCoverage(Single) {}
+
+  CoverageData(CoverageData &&RHS) = default;
 
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
+
+  bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// Get an iterator over the coverage segments for this object. The segments
   /// are guaranteed to be uniqued and sorted by location.
@@ -934,6 +1016,8 @@ class CoverageMapping {
   std::vector<FunctionRecord> Functions;
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
+
+  std::optional<bool> SingleByteCoverage;
 
   CoverageMapping() = default;
 
@@ -1002,10 +1086,14 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  CoverageData getCoverageForFile(StringRef Filename) const;
+  CoverageData getCoverageForFile(
+      StringRef Filename, MergeStrategy Strategy = MergeStrategy::Merge,
+      const DenseSet<const FunctionRecord *> &FilteredOutFunctions = {}) const;
 
   /// Get the coverage for a particular function.
-  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
+  CoverageData
+  getCoverageForFunction(const FunctionRecord &Function,
+                         MergeStrategy Strategy = MergeStrategy::Merge) const;
 
   /// Get the coverage for an expansion within a coverage set.
   CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;

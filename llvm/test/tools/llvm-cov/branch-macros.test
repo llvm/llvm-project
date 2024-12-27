@@ -1,6 +1,10 @@
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
 // RUN: llvm-cov show --show-expansions --show-branches=count %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-macros.cpp -check-prefixes=CHECK,BRCOV -D#C=999
 // RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-macros.cpp | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-macros.cpp | FileCheck %s -check-prefix=FILE
+
+// RUN: llvm-cov show --binary-counters=true --show-expansions --show-branches=count %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-macros.cpp -check-prefixes=CHECK,BRCOV -D#C=1
+// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-macros.cpp | FileCheck %s -check-prefix=REPORT
 
 // RUN: yaml2obj %S/Inputs/branch-macros-single.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/branch-macros-single.proftext -o %t.profdata
@@ -8,8 +12,14 @@
 
 // REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
-// REPORT-NEXT: _Z4funcii                        28       4  85.71%        18       0 100.00%        30      14  53.33%
-// REPORT-NEXT: _Z5func2ii                       13       1  92.31%         8       0 100.00%        10       2  80.00%
+// REPORT-NEXT: _Z4funcii                        12       4  66.67%        18       0 100.00%        30      14  53.33%
+// REPORT-NEXT: _Z5func2ii                        3       0 100.00%         8       0 100.00%        10       2  80.00%
 // REPORT-NEXT: main                              1       0 100.00%         6       0 100.00%         0       0   0.00%
 // REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                            42       5  88.10%        32       0 100.00%        40      16  60.00%
+// REPORT-NEXT: TOTAL                            16       4  75.00%        32       0 100.00%        40      16  60.00%
+
+// FILE:      Filename          Regions Missed Regions  Cover   Functions Missed Functions Executed      Lines  Missed Lines    Cover   Branches Missed Branches Cover
+// FILE-NEXT: ---
+// FILE-NEXT: branch-macros.cpp      28              5  82.14%          3                0  100.00%         39             0   100.00%        16              10 37.50%
+// FILE-NEXT: ---
+// FILE-NEXT: TOTAL                  28              5  82.14%          3                0  100.00%         39             0   100.00%        16              10 37.50%

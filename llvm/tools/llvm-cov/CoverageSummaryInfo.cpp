@@ -16,8 +16,9 @@
 using namespace llvm;
 using namespace coverage;
 
-static void sumBranches(size_t &NumBranches, size_t &CoveredBranches,
-                        const ArrayRef<CountedRegion> &Branches) {
+static auto sumBranches(const ArrayRef<CountedRegion> &Branches) {
+  size_t NumBranches = 0;
+  size_t CoveredBranches = 0;
   for (const auto &BR : Branches) {
     if (!BR.TrueFolded) {
       // "True" Condition Branches.
@@ -32,20 +33,22 @@ static void sumBranches(size_t &NumBranches, size_t &CoveredBranches,
         ++CoveredBranches;
     }
   }
+  return BranchCoverageInfo(CoveredBranches, NumBranches);
 }
 
-static void sumBranchExpansions(size_t &NumBranches, size_t &CoveredBranches,
-                                const CoverageMapping &CM,
-                                ArrayRef<ExpansionRecord> Expansions) {
+static BranchCoverageInfo
+sumBranchExpansions(const CoverageMapping &CM,
+                    ArrayRef<ExpansionRecord> Expansions) {
+  BranchCoverageInfo BranchCoverage;
   for (const auto &Expansion : Expansions) {
     auto CE = CM.getCoverageForExpansion(Expansion);
-    sumBranches(NumBranches, CoveredBranches, CE.getBranches());
-    sumBranchExpansions(NumBranches, CoveredBranches, CM, CE.getExpansions());
+    BranchCoverage += sumBranches(CE.getBranches());
+    BranchCoverage += sumBranchExpansions(CM, CE.getExpansions());
   }
+  return BranchCoverage;
 }
 
-static std::pair<size_t, size_t>
-sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
+auto sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
   size_t NumPairs = 0, CoveredPairs = 0;
   for (const auto &Record : Records) {
     const auto NumConditions = Record.getNumConditions();
@@ -56,18 +59,19 @@ sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
         ++CoveredPairs;
     }
   }
-  return {NumPairs, CoveredPairs};
+  return MCDCCoverageInfo(CoveredPairs, NumPairs);
 }
 
 static std::pair<RegionCoverageInfo, LineCoverageInfo>
-sumRegions(ArrayRef<CountedRegion> CodeRegions, const CoverageData &CD) {
+sumRegions(const CoverageData &CD) {
   // Compute the region coverage.
   size_t NumCodeRegions = 0, CoveredRegions = 0;
-  for (auto &CR : CodeRegions) {
-    if (CR.Kind != CounterMappingRegion::CodeRegion)
+  for (auto I = CD.begin(), E = CD.end(); I != E; ++I) {
+    if (!I->IsRegionEntry || !I->HasCount || I->IsGapRegion)
       continue;
+
     ++NumCodeRegions;
-    if (CR.ExecutionCount != 0)
+    if (I->Count)
       ++CoveredRegions;
   }
 
@@ -85,49 +89,24 @@ sumRegions(ArrayRef<CountedRegion> CodeRegions, const CoverageData &CD) {
           LineCoverageInfo(CoveredLines, NumLines)};
 }
 
+CoverageDataSummary::CoverageDataSummary(const CoverageData &CD) {
+  std::tie(RegionCoverage, LineCoverage) = sumRegions(CD);
+  BranchCoverage = sumBranches(CD.getBranches());
+  MCDCCoverage = sumMCDCPairs(CD.getMCDCRecords());
+}
+
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
                              const coverage::FunctionRecord &Function) {
   CoverageData CD = CM.getCoverageForFunction(Function);
-  auto [RegionCoverage, LineCoverage] = sumRegions(Function.CountedRegions, CD);
+
+  auto Summary =
+      FunctionCoverageSummary(Function.Name, Function.ExecutionCount);
+
+  Summary += CoverageDataSummary(CD);
 
   // Compute the branch coverage, including branches from expansions.
-  size_t NumBranches = 0, CoveredBranches = 0;
-  sumBranches(NumBranches, CoveredBranches, CD.getBranches());
-  sumBranchExpansions(NumBranches, CoveredBranches, CM, CD.getExpansions());
+  Summary.BranchCoverage += sumBranchExpansions(CM, CD.getExpansions());
 
-  size_t NumPairs = 0, CoveredPairs = 0;
-  std::tie(NumPairs, CoveredPairs) = sumMCDCPairs(CD.getMCDCRecords());
-
-  return FunctionCoverageSummary(
-      Function.Name, Function.ExecutionCount, RegionCoverage, LineCoverage,
-      BranchCoverageInfo(CoveredBranches, NumBranches),
-      MCDCCoverageInfo(CoveredPairs, NumPairs));
-}
-
-FunctionCoverageSummary
-FunctionCoverageSummary::get(const InstantiationGroup &Group,
-                             ArrayRef<FunctionCoverageSummary> Summaries) {
-  std::string Name;
-  if (Group.hasName()) {
-    Name = std::string(Group.getName());
-  } else {
-    llvm::raw_string_ostream OS(Name);
-    OS << "Definition at line " << Group.getLine() << ", column "
-       << Group.getColumn();
-  }
-
-  FunctionCoverageSummary Summary(Name);
-  Summary.ExecutionCount = Group.getTotalExecutionCount();
-  Summary.RegionCoverage = Summaries[0].RegionCoverage;
-  Summary.LineCoverage = Summaries[0].LineCoverage;
-  Summary.BranchCoverage = Summaries[0].BranchCoverage;
-  Summary.MCDCCoverage = Summaries[0].MCDCCoverage;
-  for (const auto &FCS : Summaries.drop_front()) {
-    Summary.RegionCoverage.merge(FCS.RegionCoverage);
-    Summary.LineCoverage.merge(FCS.LineCoverage);
-    Summary.BranchCoverage.merge(FCS.BranchCoverage);
-    Summary.MCDCCoverage.merge(FCS.MCDCCoverage);
-  }
   return Summary;
 }

@@ -11,6 +11,7 @@
 
 #include "RenderingSupport.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include <vector>
 
 namespace llvm {
@@ -45,8 +46,10 @@ struct CoverageViewOptions {
   bool SkipExpansions;
   bool SkipFunctions;
   bool SkipBranches;
+  bool BinaryCounters;
   OutputFormat Format;
   BranchOutputType ShowBranches;
+  coverage::MergeStrategy MergeStrategyOpts;
   std::string ShowOutputDirectory;
   std::vector<std::string> DemanglerOpts;
   uint32_t TabSize;

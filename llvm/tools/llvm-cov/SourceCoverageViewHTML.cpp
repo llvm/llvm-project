@@ -23,6 +23,16 @@ using namespace llvm;
 
 namespace {
 
+template <class SummaryTy>
+bool IsSummaryEmpty(const SummaryTy &Report, const CoverageViewOptions &Opts) {
+  return !(Report.FunctionCoverage.getNumFunctions() ||
+           (Opts.ShowInstantiationSummary &&
+            Report.InstantiationCoverage.getNumFunctions()) ||
+           (Opts.ShowRegionSummary && Report.RegionCoverage.getNumRegions()) ||
+           (Opts.ShowBranchSummary && Report.BranchCoverage.getNumBranches()) ||
+           (Opts.ShowMCDCSummary && Report.MCDCCoverage.getNumPairs()));
+}
+
 // Return a string with the special characters in \p Str escaped.
 std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
   std::string TabExpandedResult;
@@ -666,7 +676,7 @@ Error CoveragePrinterHTML::createIndexFile(
       Coverage, Totals, SourceFiles, Opts, Filters);
   bool EmptyFiles = false;
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
-    if (FileReports[I].FunctionCoverage.getNumFunctions())
+    if (!IsSummaryEmpty(FileReports[I], Opts))
       emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
     else
       EmptyFiles = true;
@@ -734,7 +744,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
     // Make directories at the top of the table.
     for (auto &&SubDir : SubDirs) {
       auto &Report = SubDir.second.first;
-      if (!Report.FunctionCoverage.getNumFunctions())
+      if (IsSummaryEmpty(Report, Printer.Opts))
         EmptyFiles.push_back(&Report);
       else
         emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
@@ -743,7 +753,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
 
     for (auto &&SubFile : SubFiles) {
       auto &Report = SubFile.second;
-      if (!Report.FunctionCoverage.getNumFunctions())
+      if (IsSummaryEmpty(Report, Printer.Opts))
         EmptyFiles.push_back(&Report);
       else
         emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
@@ -1019,19 +1029,22 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     // Just consider the segments which start *and* end on this line.
     for (unsigned I = 0, E = Segments.size() - 1; I < E; ++I) {
       const auto *CurSeg = Segments[I];
+      auto CurSegCount = BinaryCount(CurSeg->Count);
+      auto LCSCount = BinaryCount(LCS.getExecutionCount());
       if (!CurSeg->IsRegionEntry)
         continue;
-      if (CurSeg->Count == LCS.getExecutionCount())
+      if (CurSegCount == LCSCount)
         continue;
 
       Snippets[I + 1] =
-          tag("div", Snippets[I + 1] + tag("span", formatCount(CurSeg->Count),
-                                           "tooltip-content"),
+          tag("div",
+              Snippets[I + 1] +
+                  tag("span", formatCount(CurSegCount), "tooltip-content"),
               "tooltip");
 
       if (getOptions().Debug)
         errs() << "Marker at " << CurSeg->Line << ":" << CurSeg->Col << " = "
-               << formatCount(CurSeg->Count) << "\n";
+               << formatCount(CurSegCount) << "\n";
     }
   }
 
@@ -1051,7 +1064,7 @@ void SourceCoverageViewHTML::renderLineCoverageColumn(
     raw_ostream &OS, const LineCoverageStats &Line) {
   std::string Count;
   if (Line.isMapped())
-    Count = tag("pre", formatCount(Line.getExecutionCount()));
+    Count = tag("pre", formatBinaryCount(Line.getExecutionCount()));
   std::string CoverageClass =
       (Line.getExecutionCount() > 0)
           ? "covered-line"
@@ -1106,7 +1119,7 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
 
     OS << tag("span", Label, (Count ? "None" : "red branch")) << ": ";
     if (getOptions().ShowBranchCounts)
-      OS << tag("span", formatCount(Count),
+      OS << tag("span", formatBinaryCount(Count),
                 (Count ? "covered-line" : "uncovered-line"));
     else
       OS << format("%0.2f", (Total != 0 ? 100.0 * Count / Total : 0.0)) << "%";

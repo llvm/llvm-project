@@ -41,11 +41,6 @@ public:
     return *this;
   }
 
-  void merge(const RegionCoverageInfo &RHS) {
-    Covered = std::max(Covered, RHS.Covered);
-    NumRegions = std::max(NumRegions, RHS.NumRegions);
-  }
-
   size_t getCovered() const { return Covered; }
 
   size_t getNumRegions() const { return NumRegions; }
@@ -80,11 +75,6 @@ public:
     Covered += RHS.Covered;
     NumLines += RHS.NumLines;
     return *this;
-  }
-
-  void merge(const LineCoverageInfo &RHS) {
-    Covered = std::max(Covered, RHS.Covered);
-    NumLines = std::max(NumLines, RHS.NumLines);
   }
 
   size_t getCovered() const { return Covered; }
@@ -123,11 +113,6 @@ public:
     return *this;
   }
 
-  void merge(const BranchCoverageInfo &RHS) {
-    Covered = std::max(Covered, RHS.Covered);
-    NumBranches = std::max(NumBranches, RHS.NumBranches);
-  }
-
   size_t getCovered() const { return Covered; }
 
   size_t getNumBranches() const { return NumBranches; }
@@ -162,11 +147,6 @@ public:
     CoveredPairs += RHS.CoveredPairs;
     NumPairs += RHS.NumPairs;
     return *this;
-  }
-
-  void merge(const MCDCCoverageInfo &RHS) {
-    CoveredPairs = std::max(CoveredPairs, RHS.CoveredPairs);
-    NumPairs = std::max(NumPairs, RHS.NumPairs);
   }
 
   size_t getCoveredPairs() const { return CoveredPairs; }
@@ -223,72 +203,65 @@ public:
   }
 };
 
-/// A summary of function's code coverage.
-struct FunctionCoverageSummary {
-  std::string Name;
-  uint64_t ExecutionCount;
+struct CoverageDataSummary {
   RegionCoverageInfo RegionCoverage;
   LineCoverageInfo LineCoverage;
   BranchCoverageInfo BranchCoverage;
   MCDCCoverageInfo MCDCCoverage;
 
-  FunctionCoverageSummary(const std::string &Name)
-      : Name(Name), ExecutionCount(0) {}
+  CoverageDataSummary() = default;
+  CoverageDataSummary(const coverage::CoverageData &CD);
 
-  FunctionCoverageSummary(const std::string &Name, uint64_t ExecutionCount,
-                          const RegionCoverageInfo &RegionCoverage,
-                          const LineCoverageInfo &LineCoverage,
-                          const BranchCoverageInfo &BranchCoverage,
-                          const MCDCCoverageInfo &MCDCCoverage)
-      : Name(Name), ExecutionCount(ExecutionCount),
-        RegionCoverage(RegionCoverage), LineCoverage(LineCoverage),
-        BranchCoverage(BranchCoverage), MCDCCoverage(MCDCCoverage) {}
+  bool empty() const {
+    return (RegionCoverage.getNumRegions() == 0 &&
+            LineCoverage.getNumLines() == 0 &&
+            BranchCoverage.getNumBranches() == 0 &&
+            MCDCCoverage.getNumPairs() == 0);
+  }
+
+  auto &operator+=(const CoverageDataSummary &RHS) {
+    RegionCoverage += RHS.RegionCoverage;
+    LineCoverage += RHS.LineCoverage;
+    BranchCoverage += RHS.BranchCoverage;
+    MCDCCoverage += RHS.MCDCCoverage;
+    return *this;
+  }
+};
+
+/// A summary of function's code coverage.
+struct FunctionCoverageSummary : CoverageDataSummary {
+  std::string Name;
+  uint64_t ExecutionCount;
+
+  FunctionCoverageSummary(const std::string &Name, uint64_t ExecutionCount = 0)
+      : Name(Name), ExecutionCount(ExecutionCount) {}
 
   /// Compute the code coverage summary for the given function coverage
   /// mapping record.
   static FunctionCoverageSummary get(const coverage::CoverageMapping &CM,
                                      const coverage::FunctionRecord &Function);
-
-  /// Compute the code coverage summary for an instantiation group \p Group,
-  /// given a list of summaries for each instantiation in \p Summaries.
-  static FunctionCoverageSummary
-  get(const coverage::InstantiationGroup &Group,
-      ArrayRef<FunctionCoverageSummary> Summaries);
 };
 
 /// A summary of file's code coverage.
-struct FileCoverageSummary {
+struct FileCoverageSummary : CoverageDataSummary {
   StringRef Name;
-  RegionCoverageInfo RegionCoverage;
-  LineCoverageInfo LineCoverage;
-  BranchCoverageInfo BranchCoverage;
-  MCDCCoverageInfo MCDCCoverage;
   FunctionCoverageInfo FunctionCoverage;
   FunctionCoverageInfo InstantiationCoverage;
 
   FileCoverageSummary() = default;
   FileCoverageSummary(StringRef Name) : Name(Name) {}
 
+  bool empty() const {
+    return (CoverageDataSummary::empty() &&
+            FunctionCoverage.getNumFunctions() == 0 &&
+            InstantiationCoverage.getNumFunctions() == 0);
+  }
+
   FileCoverageSummary &operator+=(const FileCoverageSummary &RHS) {
-    RegionCoverage += RHS.RegionCoverage;
-    LineCoverage += RHS.LineCoverage;
+    *static_cast<CoverageDataSummary *>(this) += RHS;
     FunctionCoverage += RHS.FunctionCoverage;
-    BranchCoverage += RHS.BranchCoverage;
-    MCDCCoverage += RHS.MCDCCoverage;
     InstantiationCoverage += RHS.InstantiationCoverage;
     return *this;
-  }
-
-  void addFunction(const FunctionCoverageSummary &Function) {
-    RegionCoverage += Function.RegionCoverage;
-    LineCoverage += Function.LineCoverage;
-    BranchCoverage += Function.BranchCoverage;
-    MCDCCoverage += Function.MCDCCoverage;
-    FunctionCoverage.addFunction(/*Covered=*/Function.ExecutionCount > 0);
-  }
-
-  void addInstantiation(const FunctionCoverageSummary &Function) {
-    InstantiationCoverage.addFunction(/*Covered=*/Function.ExecutionCount > 0);
   }
 };
 

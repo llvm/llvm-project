@@ -395,7 +395,8 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
-  auto FileCoverage = Coverage.getCoverageForFile(SourceFile);
+  auto FileCoverage =
+      Coverage.getCoverageForFile(SourceFile, ViewOpts.MergeStrategyOpts);
   if (FileCoverage.empty())
     return nullptr;
 
@@ -795,6 +796,14 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
+  cl::opt<MergeStrategy> MergeStrategyOpts(
+      "merge-instantiations", cl::desc("Merge instantiations"),
+      cl::values(
+          clEnumValN(MergeStrategy::Merge, "merge", "Merge entries by adding"),
+          clEnumValN(MergeStrategy::Any, "any", "Pick up any better entries"),
+          clEnumValN(MergeStrategy::All, "all", "Pick up the worst entries")),
+      cl::init(MergeStrategy::Merge));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -951,6 +960,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
+    ViewOpts.MergeStrategyOpts = MergeStrategyOpts;
 
     return 0;
   };
@@ -1022,6 +1032,12 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       cl::desc("Directory in which coverage information is written out"));
   cl::alias ShowOutputDirectoryA("o", cl::desc("Alias for --output-dir"),
                                  cl::aliasopt(ShowOutputDirectory));
+
+  cl::opt<bool> BinaryCounters(
+      "binary-counters", cl::Optional,
+      cl::desc("Show when lines/branches are covered (1) or uncovered (0) "
+               "instead of showing actual counter values."),
+      cl::cat(ViewCategory));
 
   cl::opt<uint32_t> TabSize(
       "tab-size", cl::init(2),
@@ -1100,6 +1116,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowDirectoryCoverage = ShowDirectoryCoverage;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
+  ViewOpts.BinaryCounters = BinaryCounters;
   ViewOpts.TabSize = TabSize;
   ViewOpts.ProjectTitle = ProjectTitle;
 

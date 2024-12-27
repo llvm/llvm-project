@@ -1,0 +1,41 @@
+# Test `merge-instantiations=merge/any/all`
+
+RUN: yaml2obj %S/Inputs/mcdc-templates-merge.yaml -o %t.o
+RUN: llvm-profdata merge %S/Inputs/mcdc-templates-merge.proftext -o %t.profdata
+
+RUN: llvm-cov show -merge-instantiations=merge --show-mcdc -show-instantiations=true %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/mcdc-templates-merge.cpp --check-prefixes=CHECK,MERGE
+RUN: llvm-cov show -merge-instantiations=any --show-mcdc -show-instantiations=true %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/mcdc-templates-merge.cpp --check-prefixes=CHECK,ANY
+RUN: llvm-cov show -merge-instantiations=all --show-mcdc -show-instantiations=true %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/mcdc-templates-merge.cpp --check-prefixes=CHECK,ALL
+
+RUN: llvm-cov report -merge-instantiations=merge --show-mcdc-summary %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefixes=REPORT,MERGE
+RUN: llvm-cov report -merge-instantiations=any --show-mcdc-summary %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefixes=REPORT,ANY
+RUN: llvm-cov report -merge-instantiations=all --show-mcdc-summary %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefixes=REPORT,ALL
+
+REPORT: mcdc-templates-merge.cpp
+
+# Regions
+MERGE:      10  1  90.00%
+ANY:        10  1  90.00%
+ALL:        10  4  60.00%
+
+# Functions
+MERGE:       3  0 100.00%
+ANY:         3  0 100.00%
+ALL:         3  0 100.00%
+
+# Lines
+MERGE:      19  1  94.74%
+ANY:        19  1  94.74%
+ALL:        19  4  78.95%
+
+# Branches
+MERGE:      12  1  91.67%
+ANY:        11  1  90.91%
+ALL:        12  7  41.67%
+
+# MC/DC Conditions
+MERGE:       4  2  50.00%
+ANY:         4  2  50.00%
+ALL:         4  4   0.00%
+
+REPORT: TOTAL
