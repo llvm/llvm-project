@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -3022,8 +3023,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (!Ty.isScalar())
-      return UnableToLegalize;
+    if (!Ty.isScalar()) {
+      // We need to widen the vector element type.
+      Observer.changingInstr(MI);
+      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+      // We also need to adjust the MMO to turn this into a truncating store.
+      MachineMemOperand &MMO = **MI.memoperands_begin();
+      MachineFunction &MF = MIRBuilder.getMF();
+      auto *NewMMO = MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), Ty);
+      MI.setMemRefs(MF, {NewMMO});
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
 
     Observer.changingInstr(MI);
 
@@ -4131,9 +4142,40 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   }
 
   if (MemTy.isVector()) {
-    // TODO: Handle vector trunc stores
-    if (MemTy != SrcTy)
+    LLT MemScalarTy = MemTy.getElementType();
+    if (MemTy != SrcTy) {
+      if (!MemScalarTy.isByteSized()) {
+        // We need to build an integer scalar of the vector bit pattern.
+        // It's not legal for us to add padding when storing a vector.
+        unsigned NumBits = MemTy.getSizeInBits();
+        LLT IntTy = LLT::scalar(NumBits);
+        auto CurrVal = MIRBuilder.buildConstant(IntTy, 0);
+        LLT IdxTy = getLLTForMVT(TLI.getVectorIdxTy(MF.getDataLayout()));
+
+        for (unsigned I = 0, E = MemTy.getNumElements(); I < E; ++I) {
+          auto Elt = MIRBuilder.buildExtractVectorElement(
+              SrcTy.getElementType(), SrcReg,
+              MIRBuilder.buildConstant(IdxTy, I));
+          auto Trunc = MIRBuilder.buildTrunc(MemScalarTy, Elt);
+          auto ZExt = MIRBuilder.buildZExt(IntTy, Trunc);
+          unsigned ShiftIntoIdx = MF.getDataLayout().isBigEndian()
+                                      ? (MemTy.getNumElements() - 1) - I
+                                      : I;
+          auto ShiftAmt = MIRBuilder.buildConstant(
+              IntTy, ShiftIntoIdx * MemScalarTy.getSizeInBits());
+          auto Shifted = MIRBuilder.buildShl(IntTy, ZExt, ShiftAmt);
+          CurrVal = MIRBuilder.buildOr(IntTy, CurrVal, Shifted);
+        }
+        auto PtrInfo = MMO.getPointerInfo();
+        auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, IntTy);
+        MIRBuilder.buildStore(CurrVal, PtrReg, *NewMMO);
+        StoreMI.eraseFromParent();
+        return Legalized;
+      }
+
+      // FIXME: implement simple scalarization.
       return UnableToLegalize;
+    }
 
     // TODO: We can do better than scalarizing the vector and at least split it
     // in half.
@@ -4651,6 +4693,20 @@ LegalizerHelper::createStackTemporary(TypeSize Bytes, Align Alignment,
 
   PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIdx);
   return MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx);
+}
+
+MachineInstrBuilder LegalizerHelper::createStackStoreLoad(Register Val,
+                                                          LLT DstTy) {
+  LLT SrcTy = MRI.getType(Val);
+  Align StackTypeAlign = getStackTemporaryAlignment(SrcTy);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp =
+      createStackTemporary(SrcTy.getSizeInBytes(), StackTypeAlign, PtrInfo);
+
+  MIRBuilder.buildStore(Val, StackTemp, PtrInfo, StackTypeAlign);
+  return MIRBuilder.buildLoad(
+      DstTy, StackTemp, PtrInfo,
+      std::min(StackTypeAlign, getStackTemporaryAlignment(DstTy)));
 }
 
 static Register clampVectorIndex(MachineIRBuilder &B, Register IdxReg,
