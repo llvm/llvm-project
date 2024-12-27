@@ -187,16 +187,19 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``abort_on_error``
      - OS dependent
      - boolean
-     - If true, the tool calls abort() instead of _exit() after printing the error report. On some OSes (OSX, for exmple) this is beneficial because a better stack trace is emitted on crash.
+     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (MacOS, for exmple) this is beneficial because a better stack trace is emitted on crash.
    * - ``symbolize``
      - ``true``
      - boolean
      - If set, use the symbolizer to turn virtual addresses to file/line locations. If false, can greatly speed up the error reporting.
    * - ``suppressions``
-     - ""
+     - ``""``
      - path
-     - If set to a valid suppressions file, will suppress issue reporting. See details in "Disabling", below.
-
+     - If set to a valid suppressions file, will suppress issue reporting. See details in `Disabling and Suppressing`_.
+   * - ``verify_interceptors``
+     - ``true``
+     - boolean
+     - If true, verifies interceptors are working at initialization. The program will abort with error ``==ERROR: Interceptors are not working. This may be because RealtimeSanitizer is loaded too late (e.g. via dlopen)`` if an issue is detected.
 
 Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
 
@@ -244,6 +247,7 @@ To register a callback which will be invoked before a RTSan kills the process:
     ...
   }
 
+.. _disabling-and-suppressing:
 
 Disabling and suppressing
 -------------------------

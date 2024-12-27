@@ -94,7 +94,7 @@ RedundantCastingCheck::RedundantCastingCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
-      IgnoreTypeAliases(Options.getLocalOrGlobal("IgnoreTypeAliases", false)) {}
+      IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)) {}
 
 void RedundantCastingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

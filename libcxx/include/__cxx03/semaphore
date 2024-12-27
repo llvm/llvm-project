@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SEMAPHORE
-#define _LIBCPP_SEMAPHORE
+#ifndef _LIBCPP___CXX03_SEMAPHORE
+#define _LIBCPP___CXX03_SEMAPHORE
 
 /*
     semaphore synopsis
@@ -185,4 +185,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/atomic>
 #endif
 
-#endif //_LIBCPP_SEMAPHORE
+#endif //_LIBCPP___CXX03_SEMAPHORE

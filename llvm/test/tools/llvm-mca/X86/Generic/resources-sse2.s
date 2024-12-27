@@ -464,13 +464,13 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      28    22.00   *                   divpd	(%rax), %xmm2
 # CHECK-NEXT:  1      22    22.00                       divsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      28    22.00   *                   divsd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00    *      *      U     lfence
+# CHECK-NEXT:  2      1     1.00    *      *      U     lfence
 # CHECK-NEXT:  1      1     1.00    *      *      U     maskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  1      3     1.00                        maxpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   maxpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        maxsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   maxsd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00    *      *      U     mfence
+# CHECK-NEXT:  2      1     1.00    *      *      U     mfence
 # CHECK-NEXT:  1      3     1.00                        minpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   minpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        minsd	%xmm0, %xmm2

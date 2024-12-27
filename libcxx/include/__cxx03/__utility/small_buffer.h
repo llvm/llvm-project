@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_SMALL_BUFFER_H
-#define _LIBCPP___UTILITY_SMALL_BUFFER_H
+#ifndef _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
+#define _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/construct_at.h>
@@ -96,4 +96,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
 
-#endif // _LIBCPP___UTILITY_SMALL_BUFFER_H
+#endif // _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H

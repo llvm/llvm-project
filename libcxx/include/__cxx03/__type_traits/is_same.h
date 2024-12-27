@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_SAME_H
-#define _LIBCPP___TYPE_TRAITS_IS_SAME_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_SAME_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_SAME_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -41,4 +41,4 @@ using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_SAME_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_SAME_H

@@ -158,13 +158,12 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 /// Non-copyable functions cannot be cloned into multiple partitions, and only
 /// one copy of the function can be present across all partitions.
 ///
-/// External functions fall into this category. If we were to clone them, we
-/// would end up with multiple symbol definitions and a very unhappy linker.
+/// Kernel functions and external functions fall into this category. If we were
+/// to clone them, we would end up with multiple symbol definitions and a very
+/// unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
-             ? F.hasExternalLinkage()
-             : true && "Kernel w/o external linkage?");
-  return F.hasExternalLinkage() || !F.isDefinitionExact();
+  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
+         AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -1101,10 +1100,10 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
         // Check if the amount of code in common makes it worth it.
         assert(SimilarDepsCost && Entry.CostExcludingGraphEntryPoints);
-        const double Ratio =
-            SimilarDepsCost / Entry.CostExcludingGraphEntryPoints;
+        const double Ratio = static_cast<double>(SimilarDepsCost) /
+                             Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (LargeFnOverlapForMerge > Ratio) {
+        if (Ratio > LargeFnOverlapForMerge) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.

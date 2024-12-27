@@ -8,9 +8,9 @@ define i32 @foo(ptr nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_EXT2:%.*]] = zext i32 [[CUR_MATCH:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, ptr [[WIN:%.*]], i64 [[IDX_EXT2]]
+; CHECK-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds nuw i8, ptr [[WIN:%.*]], i64 [[IDX_EXT2]]
 ; CHECK-NEXT:    [[IDX_EXT1:%.*]] = zext i32 [[BEST_LEN:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR25:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR4]], i64 [[IDX_EXT1]]
+; CHECK-NEXT:    [[ADD_PTR25:%.*]] = getelementptr inbounds nuw i8, ptr [[ADD_PTR4]], i64 [[IDX_EXT1]]
 ; CHECK-NEXT:    [[ADD_PTR36:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR25]], i64 -1
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ADD_PTR36]], align 4
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[I1]], [[SCAN_END:%.*]]
@@ -19,8 +19,8 @@ define i32 @foo(ptr nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[I4:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[WIN]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[IDX_EXT1]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[WIN]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[ADD_PTR]], i64 [[IDX_EXT1]]
 ; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR2]], i64 -1
 ; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[ADD_PTR3]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I3]], [[SCAN_END]]
@@ -30,7 +30,7 @@ define i32 @foo(ptr nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-NEXT:    [[CHAIN_LENGTH_ADDR_08:%.*]] = phi i32 [ [[CHAIN_LENGTH:%.*]], [[IF_THEN_LR_PH]] ], [ [[DEC:%.*]], [[DO_BODY]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CUR_MATCH_ADDR_09]], [[WMASK:%.*]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[PREV:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[PREV:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[I4]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[I4]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[LAND_LHS_TRUE:%.*]], label [[DO_END]]
@@ -94,7 +94,7 @@ define void @PR37005(ptr %base, ptr %in) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
@@ -126,11 +126,11 @@ define void @PR37005_2(ptr %base, ptr %in) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint ptr [[E2]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[PI1]], 14
 ; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], 1125899906842496
-; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[SL1]]
+; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE:%.*]], i64 [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, ptr [[E5]], <2 x i64> <i64 80, i64 60>
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -156,7 +156,7 @@ define void @PR37005_3(<2 x ptr> %base, ptr %in) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
@@ -222,7 +222,7 @@ define float @gep_cross_loop(ptr %_arg_, ptr %_arg_3, float %_arg_8) {
 ; CHECK:       for.cond.i.i.i.preheader:
 ; CHECK-NEXT:    ret float [[SUM]]
 ; CHECK:       for.body.i:
-; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds float, ptr [[ADD_PTR]], i64 [[IDX]]
+; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds nuw float, ptr [[ADD_PTR]], i64 [[IDX]]
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[ARRAYIDX_I84_I]], align 4
 ; CHECK-NEXT:    [[ADD_I]] = fadd fast float [[SUM]], [[I1]]
 ; CHECK-NEXT:    [[ADD11_I]] = add nuw nsw i64 [[IDX]], 1
@@ -259,7 +259,7 @@ define void @only_one_inbounds(ptr %ptr, i1 %c, i32 noundef %arg1, i32 noundef %
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG1_EXT:%.*]] = zext i32 [[ARG1:%.*]] to i64
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[ARG1_EXT]]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 [[ARG1_EXT]]
 ; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR2]], i64 [[ARG2_EXT]]
 ; CHECK-NEXT:    call void @use(ptr [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
@@ -287,7 +287,7 @@ define void @both_inbounds_one_neg(ptr %ptr, i1 %c, i32 noundef %arg) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 [[ARG_EXT]]
 ; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR2]], i64 -1
 ; CHECK-NEXT:    call void @use(ptr nonnull [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
@@ -314,8 +314,8 @@ define void @both_inbounds_pos(ptr %ptr, i1 %c, i32 noundef %arg) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[ARG_EXT]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR2]], i64 1
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 1
 ; CHECK-NEXT:    call void @use(ptr nonnull [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:

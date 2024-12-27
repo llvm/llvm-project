@@ -153,6 +153,7 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
 
   if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
     return decl;
+
   // create function
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -161,6 +162,7 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
   mlir::func::FuncOp funcOp =
       modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
