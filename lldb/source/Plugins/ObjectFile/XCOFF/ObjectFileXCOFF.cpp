@@ -1,4 +1,5 @@
-//===-- ObjectFileXCOFF.cpp -------------------------------------------------===//
+//===-- ObjectFileXCOFF.cpp
+//-------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjectFileXCOFF.h"
-
-#include <algorithm>
-#include <cassert>
-#include <unordered_map>
-#include <string.h>
-
-#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -28,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
@@ -38,12 +33,16 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Object/XCOFFObjectFile.h"
+#include <algorithm>
+#include <cassert>
+#include <cstring>
+#include <unordered_map>
 
 using namespace llvm;
 using namespace lldb;
@@ -69,21 +68,19 @@ void ObjectFileXCOFF::Terminate() {
 bool UGLY_FLAG_FOR_AIX __attribute__((weak)) = false;
 
 ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
-                                          DataBufferSP data_sp,
-                                          lldb::offset_t data_offset,
-                                          const lldb_private::FileSpec *file,
-                                          lldb::offset_t file_offset,
-                                          lldb::offset_t length) {
+                                            DataBufferSP data_sp,
+                                            lldb::offset_t data_offset,
+                                            const lldb_private::FileSpec *file,
+                                            lldb::offset_t file_offset,
+                                            lldb::offset_t length) {
   if (!data_sp) {
     data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
   }
-
   if (!ObjectFileXCOFF::MagicBytesMatch(data_sp, data_offset, length))
     return nullptr;
-
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
     data_sp = MapFileData(*file, length, file_offset);
@@ -114,15 +111,15 @@ bool ObjectFileXCOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto binary = llvm::object::XCOFFObjectFile::createObjectFile(llvm::MemoryBufferRef(
-      toStringRef(m_data.GetData()), m_file.GetFilename().GetStringRef()),
-    file_magic::xcoff_object_64);
+  auto binary = llvm::object::ObjectFile::createObjectFile(
+      llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
+                            m_file.GetFilename().GetStringRef()),
+      file_magic::xcoff_object_64);
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
     return false;
   }
-
   // Make sure we only handle COFF format.
   m_binary =
       llvm::unique_dyn_cast<llvm::object::XCOFFObjectFile>(std::move(*binary));
@@ -132,6 +129,7 @@ bool ObjectFileXCOFF::CreateBinary() {
   LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
            this, GetModule().get(), GetModule()->GetSpecificationDescription(),
            m_file.GetPath(), m_binary.get());
+
   return true;
 }
 
@@ -148,9 +146,12 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
   const size_t initial_count = specs.GetSize();
 
   if (ObjectFileXCOFF::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
-    ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+    ArchSpec arch_spec =
+        ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
-    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
+    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
+                                           LLDB_INVALID_CPUTYPE,
+                                           llvm::Triple::AIX);
     specs.Append(spec);
   }
   return specs.GetSize() - initial_count;
@@ -158,11 +159,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-  /* TODO: 32bit not supported yet
-  case XCOFF::XCOFF32:
-    return sizeof(struct llvm::object::XCOFFFileHeader32);
-  */
-
+    // TODO: 32bit not supported.
+    // case XCOFF::XCOFF32:
+    //  return sizeof(struct llvm::object::XCOFFFileHeader32);
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);
     break;
@@ -174,10 +173,12 @@ static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
 }
 
 bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
-                                    lldb::addr_t data_offset,
-                                    lldb::addr_t data_length) {
-  lldb_private::DataExtractor data; 
+                                      lldb::addr_t data_offset,
+                                      lldb::addr_t data_length) {
+  lldb_private::DataExtractor data;
   data.SetData(data_sp, data_offset, data_length);
+  // Need to set this as XCOFF is only compatible with Big Endian
+  data.SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
   uint16_t magic = data.GetU16(&offset);
   return XCOFFHeaderSizeFromMagic(magic) != 0;
@@ -386,13 +387,10 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
   return changed;
 }
 
-ByteOrder ObjectFileXCOFF::GetByteOrder() const {
-  return eByteOrderBig;
-}
 
-bool ObjectFileXCOFF::IsExecutable() const {
-  return true;
-}
+ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
+
+bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
   if (m_xcoff_header.magic == XCOFF::XCOFF64)
@@ -592,13 +590,12 @@ void ObjectFileXCOFF::Dump(Stream *s) {
 }
 
 ArchSpec ObjectFileXCOFF::GetArchitecture() {
-  ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+  ArchSpec arch_spec =
+      ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
   return arch_spec;
 }
 
-UUID ObjectFileXCOFF::GetUUID() {
-  return UUID();
-}
+UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 
 std::optional<FileSpec> ObjectFileXCOFF::GetDebugLink() {
   return std::nullopt;
@@ -724,16 +721,14 @@ lldb_private::Address ObjectFileXCOFF::GetBaseAddress() {
 }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_xcoff_header.flags & XCOFF::F_EXEC)
+  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
     return eTypeExecutable;
-  else if (m_xcoff_header.flags & XCOFF::F_SHROBJ)
+  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
     return eTypeSharedLibrary;
   return eTypeUnknown;
 }
 
-ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() {
-  return eStrataUnknown;
-}
+ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() { return eStrataUnknown; }
 
 llvm::StringRef
 ObjectFileXCOFF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
@@ -752,7 +747,7 @@ ObjectFileXCOFF::GetLoadableData(Target &target) {
 
 lldb::WritableDataBufferSP
 ObjectFileXCOFF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
-                                   uint64_t Offset) {
+                                     uint64_t Offset) {
   return FileSystem::Instance().CreateWritableDataBuffer(file.GetPath(), Size,
                                                          Offset);
 }

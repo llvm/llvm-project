@@ -1,4 +1,5 @@
-//===-- ObjectFileXCOFF.h --------------------------------------- -*- C++ -*-===//
+//===-- ObjectFileXCOFF.h --------------------------------------- -*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,16 +10,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 
-#include <cstdint>
-
-#include <vector>
-
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include <cstdint>
+#include <vector>
 
 /// \class ObjectFileXCOFF
 /// Generic XCOFF object file reader.
@@ -240,4 +239,4 @@ private:
   std::map<std::string, std::vector<std::string>> m_deps_base_members;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H

@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_aix_HostInfoAIX_h_
-#define lldb_Host_aix_HostInfoAIX_h_
+#ifndef LLDB_HOST_AIX_HOSTINFOAIX_H_
+#define LLDB_HOST_AIX_HOSTINFOAIX_H_
 
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
-
-#include <string>
 
 namespace lldb_private {
 
@@ -25,15 +23,10 @@ public:
   static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
   static void Terminate();
 
-  static llvm::VersionTuple GetOSVersion();
-  static std::optional<std::string> GetOSBuildString();
   static llvm::StringRef GetDistributionId();
   static FileSpec GetProgramFileSpec();
 
 protected:
-  static bool ComputeSupportExeDirectory(FileSpec &file_spec);
-  static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
-  static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                              ArchSpec &arch_64);
 };
