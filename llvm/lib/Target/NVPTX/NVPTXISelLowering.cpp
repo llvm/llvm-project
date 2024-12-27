@@ -2528,11 +2528,7 @@ SDValue NVPTXTargetLowering::LowerFADD(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // FADD(a, b) -> FMA(a, 1.0, b)
-  SDLoc DL(Op);
-  auto VT = Op.getValueType();
-  auto One = DAG.getConstantFP(1.0, DL, VT);
-  SmallVector<SDValue, 3> Operands{Op->getOperand(0), One, Op->getOperand(1)};
-  return DAG.getNode(ISD::FMA, DL, VT, Operands);
+  return expandFADD(Op.getNode(), DAG);
 }
 
 SDValue NVPTXTargetLowering::LowerFSUB(SDValue Op, SelectionDAG &DAG) const {
@@ -2542,12 +2538,7 @@ SDValue NVPTXTargetLowering::LowerFSUB(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // FSUB(a, b) -> FMA(b, -1.0, a)
-  SDLoc DL(Op);
-  auto VT = Op.getValueType();
-  auto NegOne = DAG.getConstantFP(-1.0, DL, VT);
-  SmallVector<SDValue, 3> Operands{Op->getOperand(1), NegOne,
-                                   Op->getOperand(0)};
-  return DAG.getNode(ISD::FMA, DL, VT, Operands);
+  return expandFSUB(Op.getNode(), DAG);
 }
 
 SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
@@ -2557,13 +2548,7 @@ SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // FMUL(a, b) -> FMA(a, b, -0.0)
-  // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
-  SDLoc DL(Op);
-  auto VT = Op.getValueType();
-  auto NegZero = DAG.getConstantFP(-0.0, DL, VT);
-  SmallVector<SDValue, 3> Operands{Op->getOperand(0), Op->getOperand(1),
-                                   NegZero};
-  return DAG.getNode(ISD::FMA, DL, VT, Operands);
+  return expandFMUL(Op.getNode(), DAG);
 }
 
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,

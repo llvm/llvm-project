@@ -9068,6 +9068,60 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   return Res;
 }
 
+SDValue TargetLowering::expandFADD(SDNode *Node, SelectionDAG &DAG) const {
+  auto VT = Node->getValueType(0);
+  if (!isOperationLegalOrCustom(ISD::FMA, VT)) {
+    return {};
+  }
+
+  // FADD(a, b) -> FMA(a, 1.0, b)
+  SDLoc DL(Node);
+  auto One = DAG.getConstantFP(1.0, DL, VT);
+  SmallVector<SDValue, 3> Operands{Node->getOperand(0), One,
+                                   Node->getOperand(1)};
+  return DAG.getNode(ISD::FMA, DL, VT, Operands, Node->getFlags());
+}
+
+SDValue TargetLowering::expandFMUL(SDNode *Node, SelectionDAG &DAG) const {
+  auto VT = Node->getValueType(0);
+  if (!isOperationLegalOrCustom(ISD::FMA, VT)) {
+    return {};
+  }
+
+  // FMUL(a, b) -> FMA(a, b, -0.0)
+  // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
+  SDLoc DL(Node);
+  auto NegZero = DAG.getConstantFP(-0.0, DL, VT);
+  SmallVector<SDValue, 3> Operands{Node->getOperand(0), Node->getOperand(1),
+                                   NegZero};
+  return DAG.getNode(ISD::FMA, DL, VT, Operands, Node->getFlags());
+}
+
+SDValue TargetLowering::expandFSUB(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDNodeFlags SDFlags = Node->getFlags();
+  auto VT = Node->getValueType(0);
+
+  bool CanUseFMA = isOperationLegalOrCustom(ISD::FMA, VT);
+  bool CanUseAddSub = (isOperationLegalOrCustom(ISD::FADD, VT) &&
+                       isOperationLegalOrCustom(ISD::FNEG, VT));
+  bool PreferAddSub = CanUseAddSub && isFNegFree(VT);
+
+  // FSUB(a, b) -> FMA(b, -1.0, a)
+  if (CanUseFMA && !PreferAddSub) {
+    auto NegOne = DAG.getConstantFP(-1.0, DL, VT);
+    SmallVector<SDValue, 3> Operands{Node->getOperand(1), NegOne,
+                                     Node->getOperand(0)};
+    return DAG.getNode(ISD::FMA, DL, VT, Operands, SDFlags);
+  }
+  // FSUB(a, b) -> FADD(a, FNEG(b))
+  if (CanUseAddSub) {
+    auto Neg = DAG.getNode(ISD::FNEG, DL, VT, Node->getOperand(1));
+    return DAG.getNode(ISD::FADD, DL, VT, Node->getOperand(0), Neg, SDFlags);
+  }
+  return {};
+}
+
 // Only expand vector types if we have the appropriate vector bit operations.
 static bool canExpandVectorCTPOP(const TargetLowering &TLI, EVT VT) {
   assert(VT.isVector() && "Expected vector type");

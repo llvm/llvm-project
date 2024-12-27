@@ -3672,14 +3672,21 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandConstant(CP));
     break;
   }
+  case ISD::FADD: {
+    if (SDValue Expand = TLI.expandFADD(Node, DAG)) {
+      Results.push_back(Expand);
+    }
+    break;
+  }
+  case ISD::FMUL: {
+    if (SDValue Expand = TLI.expandFMUL(Node, DAG)) {
+      Results.push_back(Expand);
+    }
+    break;
+  }
   case ISD::FSUB: {
-    EVT VT = Node->getValueType(0);
-    if (TLI.isOperationLegalOrCustom(ISD::FADD, VT) &&
-        TLI.isOperationLegalOrCustom(ISD::FNEG, VT)) {
-      const SDNodeFlags Flags = Node->getFlags();
-      Tmp1 = DAG.getNode(ISD::FNEG, dl, VT, Node->getOperand(1));
-      Tmp1 = DAG.getNode(ISD::FADD, dl, VT, Node->getOperand(0), Tmp1, Flags);
-      Results.push_back(Tmp1);
+    if (SDValue Expand = TLI.expandFSUB(Node, DAG)) {
+      Results.push_back(Expand);
     }
     break;
   }
