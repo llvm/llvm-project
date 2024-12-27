@@ -110,11 +110,13 @@ concept __concat_indirectly_readable =
     common_reference_with<__concat_reference_t<_Rs...>&&, __concat_value_t<_Rs...>&> &&
     common_reference_with<__concat_reference_t<_Rs...>&&, __concat_rvalue_reference_t<_Rs...>&&> &&
     common_reference_with<__concat_rvalue_reference_t<_Rs...>&&, __concat_value_t<_Rs...> const&> &&
-    (__concat_indirectly_readable_impl<__concat_reference_t<_Rs...>, __concat_rvalue_reference_t<_Rs...>, iterator_t<_Rs>> &&
+    (__concat_indirectly_readable_impl<__concat_reference_t<_Rs...>,
+                                       __concat_rvalue_reference_t<_Rs...>,
+                                       iterator_t<_Rs>> &&
      ...);
 
 template <class... _Rs>
-concept __concatable = requires { 
+concept __concatable = requires {
   typename __concat_reference_t<_Rs...>;
   typename __concat_value_t<_Rs...>;
   typename __concat_rvalue_reference_t<_Rs...>;
@@ -124,15 +126,12 @@ template <bool _Const, class... _Rs>
 concept __concat_is_random_access =
     (random_access_range<__maybe_const<_Const, _Rs>> && ...) && (sized_range<__maybe_const<_Const, _Rs>> && ...);
 
-
 template <bool _Const, class... _Rs>
 concept __concat_is_bidirectional =
-    ((bidirectional_range<__maybe_const<_Const, _Rs>> && ...) &&
-      (common_range<__maybe_const<_Const, _Rs>> && ...));
+    ((bidirectional_range<__maybe_const<_Const, _Rs>> && ...) && (common_range<__maybe_const<_Const, _Rs>> && ...));
 
 template <bool _Const, class... _Views>
-concept __all_forward = 
-    (forward_range<__maybe_const<_Const, _Views>> && ...);
+concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
 
 template <bool _Const, class... Ts>
 struct __apply_drop_first;
@@ -227,13 +226,13 @@ class concat_view<_Views...>::iterator {
 public:
   constexpr static bool derive_pack_random_iterator =
       __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                        random_access_iterator_tag>::value;
+                          random_access_iterator_tag>::value;
   constexpr static bool derive_pack_bidirectional_iterator =
       __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                        bidirectional_iterator_tag>::value;
+                          bidirectional_iterator_tag>::value;
   constexpr static bool derive_pack_forward_iterator =
       __derived_from_pack<typename iterator_traits< iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                        forward_iterator_tag>::value;
+                          forward_iterator_tag>::value;
   using iterator_category =
       _If<!is_reference_v<__concat_reference_t<__maybe_const<_Const, _Views>...>>,
           input_iterator_tag,
@@ -252,8 +251,8 @@ public:
   using difference_type = common_type_t<range_difference_t<__maybe_const<_Const, _Views>>...>;
   using base_iter       = variant<iterator_t<__maybe_const<_Const, _Views>>...>;
 
-  base_iter it_;                                        
-  __maybe_const<_Const, concat_view>* parent_ = nullptr; 
+  base_iter it_;
+  __maybe_const<_Const, concat_view>* parent_ = nullptr;
 
   template <std::size_t N>
   constexpr void satisfy() {
@@ -498,7 +497,9 @@ public:
 
   {
     return std::visit(
-        [](const auto& i) -> __concat_rvalue_reference_t<__maybe_const<_Const, _Views>...> { return ranges::iter_move(i); },
+        [](const auto& i) -> __concat_rvalue_reference_t<__maybe_const<_Const, _Views>...> {
+          return ranges::iter_move(i);
+        },
         it.it_);
   }
 
@@ -604,7 +605,8 @@ namespace __concat {
 struct __fn {
   template <class... _Views>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const
-      noexcept(noexcept(concat_view(std::forward<_Views>(views)...))) -> decltype(concat_view(std::forward<_Views>(views)...)) {
+      noexcept(noexcept(concat_view(std::forward<_Views>(views)...)))
+          -> decltype(concat_view(std::forward<_Views>(views)...)) {
     return concat_view(std::forward<_Views>(views)...);
   }
 };
