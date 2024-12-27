@@ -80,3 +80,14 @@ add_entrypoint_object(
     .wcslen
     libc.hdr.types.wchar_t
 )
+
+add_entrypoint_object(
+  wcsstr
+  SRCS
+    wcsstr.cpp
+  HDRS
+    wcsstr.h
+  DEPENDS
+    .wcslen
+    libc.hdr.types.wchar_t
+)

@@ -49,3 +49,10 @@ functions:
     arguments:
       - type: const wchar_t *
       - type: const wchar_t *
+  - name: wcsstr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
