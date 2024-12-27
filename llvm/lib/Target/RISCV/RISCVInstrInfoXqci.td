@@ -210,8 +210,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Constraints = "$rd = $rd_wb";
   }
 
-  def QC_SHLADD : RVInstRBase<0b011, OPC_CUSTOM_0, (outs GPR:$rd),
-                              (ins GPRMem:$rs1, GPRNoX0:$rs2, uimm5gt3:$shamt),
+  def QC_SHLADD : RVInstRBase<0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+                              (ins GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$shamt),
                               "qc.shladd", "$rd, $rs1, $rs2, $shamt"> {
     bits<5> shamt;
 
