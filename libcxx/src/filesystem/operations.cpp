@@ -261,10 +261,14 @@ bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, 
   size_t count = read_fd.get_stat().st_size;
   // a zero-length file is either empty, or not copyable by this syscall
   // return early to avoid the syscall cost
+  // however, we can't afford this luxury in the no-locale build,
+  // as we can't utilize the fstream impl to copy empty files
+#  if _LIBCPP_HAS_LOCALIZATION
   if (count == 0) {
     ec = {EINVAL, generic_category()};
     return false;
   }
+#  endif
   do {
     ssize_t res;
     if ((res = ::sendfile(write_fd.fd, read_fd.fd, nullptr, count)) == -1) {
