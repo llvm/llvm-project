@@ -2061,7 +2061,6 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = reverse-vector-pointer";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -2176,6 +2175,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
     Value *NewCond = State.get(Cond, State.VF.isScalar());
