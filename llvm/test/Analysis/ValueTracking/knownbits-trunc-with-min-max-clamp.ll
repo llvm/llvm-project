@@ -2,7 +2,8 @@
 ; RUN: opt < %s -passes=aggressive-instcombine -S | FileCheck %s
 
 ; The LIT tests rely on i32, i16 and i8 being valid machine types.
-target datalayout = "n8:16:32"
+; The bounds checking tests require also i64 and i128.
+target datalayout = "n8:16:32:64:128"
 
 ; This LIT test checks if TruncInstCombine pass correctly recognizes the
 ; constraints from a signed min-max clamp. The clamp is a sequence of smin and
@@ -12,6 +13,11 @@ target datalayout = "n8:16:32"
 ; of smin and smax:
 ; a) y = smax(smin(x, upper_limit), lower_limit)
 ; b) y = smin(smax(x, lower_limit), upper_limit)
+;
+; The clamp is used in TruncInstCombine.cpp pass (as part of aggressive-instcombine)
+; to optimize extensions and truncations of lshr. This is what is tested here.
+; The pass also optimizes extensions and truncations of other binary operators,
+; but in such cases the smin-smax clamp may not be used.
 
 define i8 @test_0a(i16 %x) {
 ; CHECK-LABEL: define i8 @test_0a(
@@ -47,6 +53,8 @@ define i8 @test_0b(i16 %x) {
   ret i8 %b.trunc
 }
 
+; The following two tests contain add instead of lshr.
+; The optimization works here as well.
 define i8 @test_1a(i16 %x) {
 ; CHECK-LABEL: define i8 @test_1a(
 ; CHECK-SAME: i16 [[X:%.*]]) {
@@ -86,14 +94,15 @@ define i8 @test_2a(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -31)
-; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 -1)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 -31)
   %a = sext i16 %2 to i32
-  %b = add i32 %a, 2
+  %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
@@ -103,14 +112,15 @@ define i8 @test_2b(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smax.i16(i16 [[X]], i16 -31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smin.i16(i16 [[TMP1]], i16 -1)
-; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smax.i16(i16 %x, i16 -31)
   %2 = tail call i16 @llvm.smin.i16(i16 %1, i16 -1)
   %a = sext i16 %2 to i32
-  %b = add i32 %a, 2
+  %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
@@ -120,14 +130,15 @@ define i8 @test_3a(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -31)
-; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 31)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 -31)
   %a = sext i16 %2 to i32
-  %b = add i32 %a, 2
+  %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
@@ -137,14 +148,15 @@ define i8 @test_3b(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smax.i16(i16 [[X]], i16 -31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smin.i16(i16 [[TMP1]], i16 31)
-; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smax.i16(i16 %x, i16 -31)
   %2 = tail call i16 @llvm.smin.i16(i16 %1, i16 31)
   %a = sext i16 %2 to i32
-  %b = add i32 %a, 2
+  %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
@@ -155,13 +167,13 @@ define <16 x i8> @test_vec_1a(<16 x i16> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> [[X]], <16 x i16> splat (i16 127))
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> [[TMP1]], <16 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[A:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
-; CHECK-NEXT:    [[B:%.*]] = add <16 x i8> [[A]], splat (i8 2)
+; CHECK-NEXT:    [[B:%.*]] = lshr <16 x i8> [[A]], splat (i8 2)
 ; CHECK-NEXT:    ret <16 x i8> [[B]]
 ;
   %1 = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> %x, <16 x i16> splat (i16 127))
   %2 = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %1, <16 x i16> zeroinitializer)
   %a = sext <16 x i16> %2 to <16 x i32>
-  %b = add <16 x i32> %a, splat (i32 2)
+  %b = lshr <16 x i32> %a, splat (i32 2)
   %b.trunc = trunc <16 x i32> %b to <16 x i8>
   ret <16 x i8> %b.trunc
 }
@@ -172,13 +184,13 @@ define <16 x i8> @test_vec_1b(<16 x i16> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> [[X]], <16 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> [[TMP1]], <16 x i16> splat (i16 127))
 ; CHECK-NEXT:    [[A:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
-; CHECK-NEXT:    [[B:%.*]] = add <16 x i8> [[A]], splat (i8 2)
+; CHECK-NEXT:    [[B:%.*]] = lshr <16 x i8> [[A]], splat (i8 2)
 ; CHECK-NEXT:    ret <16 x i8> [[B]]
 ;
   %1 = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %x, <16 x i16> zeroinitializer)
   %2 = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> %1, <16 x i16> splat (i16 127))
   %a = sext <16 x i16> %2 to <16 x i32>
-  %b = add <16 x i32> %a, splat (i32 2)
+  %b = lshr <16 x i32> %a, splat (i32 2)
   %b.trunc = trunc <16 x i32> %b to <16 x i8>
   ret <16 x i8> %b.trunc
 }
@@ -217,14 +229,14 @@ define i8 @test_bounds_1(i16 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 127)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 0)
 ; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i8 [[A]], 7
-; CHECK-NEXT:    ret i8 [[SHR]]
+; CHECK-NEXT:    [[B:%.*]] = lshr i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[B]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 127)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 0)
   %a = sext i16 %2 to i32
-  %shr = ashr i32 %a, 7
-  %b.trunc = trunc i32 %shr to i8
+  %b = lshr i32 %a, 7
+  %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
 
@@ -234,15 +246,15 @@ define i8 @test_bounds_2(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 0)
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[TMP2]], 7
-; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[SHR]] to i8
-; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[B:%.*]] = lshr i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[B]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 128)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 0)
   %a = sext i16 %2 to i32
-  %shr = ashr i32 %a, 7
-  %b.trunc = trunc i32 %shr to i8
+  %b = lshr i32 %a, 7
+  %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
 
@@ -253,14 +265,88 @@ define i8 @test_bounds_3(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 32767)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 32752)
-; CHECK-NEXT:    [[A:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[A]], -1
-; CHECK-NEXT:    ret i8 [[AND]]
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 32767)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 32752)
   %a = sext i16 %2 to i32
-  %and = and i32 %a, 255
-  %b.trunc = trunc i32 %and to i8
+  %b = lshr i32 %a, 2
+  %b.trunc = trunc i32 %b to i8
+  ret i8 %b.trunc
+}
+
+; Here min = 128 is greater than max = 0.
+define i8 @test_bounds_4(i16 %x) {
+; CHECK-LABEL: define i8 @test_bounds_4(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 128)
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 0)
+  %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 128)
+  %a = sext i16 %2 to i32
+  %b = lshr i32 %a, 2
+  %b.trunc = trunc i32 %b to i8
+  ret i8 %b.trunc
+}
+
+; The following 3 tests check the situation where min and max are minimal and
+; maximal signed values. No transformations should occur here.
+define i8 @test_bounds_5(i16 %x) {
+; CHECK-LABEL: define i8 @test_bounds_5(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 32767)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -32768)
+; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 32767)
+  %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 -32768)
+  %a = sext i16 %2 to i32
+  %b = lshr i32 %a, 2
+  %b.trunc = trunc i32 %b to i8
+  ret i8 %b.trunc
+}
+
+define i8 @test_bounds_6(i32 %x) {
+; CHECK-LABEL: define i8 @test_bounds_6(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[X]], i32 2147483647)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 -2147483648)
+; CHECK-NEXT:    [[A:%.*]] = sext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[B:%.*]] = lshr i64 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i64 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i32 @llvm.smin.i32(i32 %x, i32 2147483647)
+  %2 = tail call i32 @llvm.smax.i32(i32 %1, i32 -2147483648)
+  %a = sext i32 %2 to i64
+  %b = lshr i64 %a, 2
+  %b.trunc = trunc i64 %b to i8
+  ret i8 %b.trunc
+}
+
+define i8 @test_bounds_7(i64 %x) {
+; CHECK-LABEL: define i8 @test_bounds_7(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.smin.i64(i64 [[X]], i64 9223372036854775807)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 -9223372036854775808)
+; CHECK-NEXT:    [[A:%.*]] = sext i64 [[TMP2]] to i128
+; CHECK-NEXT:    [[B:%.*]] = lshr i128 [[A]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i128 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i64 @llvm.smin.i32(i64 %x, i64 9223372036854775807)
+  %2 = tail call i64 @llvm.smax.i32(i64 %1, i64 -9223372036854775808)
+  %a = sext i64 %2 to i128
+  %b = lshr i128 %a, 2
+  %b.trunc = trunc i128 %b to i8
   ret i8 %b.trunc
 }
