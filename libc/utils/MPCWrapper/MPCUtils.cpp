@@ -191,10 +191,10 @@ bool compare_unary_operation_single_output_same_type(Operation op,
   mpc_imag(imag, mpc_result.value, rounding.Irnd);
   MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
   MPFRNumber mpfr_imag(imag, precision, rounding.Irnd);
-  double ulp_real =
-      mpfr_real.ulp((cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).real);
-  double ulp_imag =
-      mpfr_imag.ulp((cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).imag);
+  double ulp_real = mpfr_real.ulp(
+      (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).real);
+  double ulp_imag = mpfr_imag.ulp(
+      (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).imag);
   return ((ulp_real <= ulp_tolerance) && (ulp_imag <= ulp_tolerance));
 }
 
