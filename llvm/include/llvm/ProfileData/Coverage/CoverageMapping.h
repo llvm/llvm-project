@@ -442,7 +442,7 @@ struct MCDCRecord {
   };
 
   using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
-  using BoolVector = llvm::SmallVector<bool>;
+  using BoolVector = std::array<BitVector, 2>;
   using TVRowPair = std::pair<unsigned, unsigned>;
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
   using CondIDMap = llvm::DenseMap<unsigned, unsigned>;
@@ -470,7 +470,9 @@ public:
     return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
-  bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
+  bool isCondFolded(unsigned Condition) const {
+    return Folded[false][Condition] || Folded[true][Condition];
+  }
 
   /// Return the evaluation of a condition (indicated by Condition) in an
   /// executed test vector (indicated by TestVectorIndex), which will be True,
