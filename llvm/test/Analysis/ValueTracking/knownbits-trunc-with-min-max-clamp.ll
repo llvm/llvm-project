@@ -89,6 +89,9 @@ define i8 @test_1b(i16 %x) {
   ret i8 %b.trunc
 }
 
+; Tests for clamping with negative min and max.
+
+; With sext no optimization occurs.
 define i8 @test_2a(i16 %x) {
 ; CHECK-LABEL: define i8 @test_2a(
 ; CHECK-SAME: i16 [[X:%.*]]) {
@@ -125,19 +128,55 @@ define i8 @test_2b(i16 %x) {
   ret i8 %b.trunc
 }
 
+; With zext the optimization occurs.
+define i8 @test_2c(i16 %x) {
+; CHECK-LABEL: define i8 @test_2c(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -31)
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 -1)
+  %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 -31)
+  %a = zext i16 %2 to i32
+  %b = lshr i32 %a, 2
+  %b.trunc = trunc i32 %b to i8
+  ret i8 %b.trunc
+}
+
+define i8 @test_2d(i16 %x) {
+; CHECK-LABEL: define i8 @test_2d(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smax.i16(i16 [[X]], i16 -31)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smin.i16(i16 [[TMP1]], i16 -1)
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
+; CHECK-NEXT:    ret i8 [[B_TRUNC]]
+;
+  %1 = tail call i16 @llvm.smax.i16(i16 %x, i16 -31)
+  %2 = tail call i16 @llvm.smin.i16(i16 %1, i16 -1)
+  %a = zext i16 %2 to i32
+  %b = lshr i32 %a, 2
+  %b.trunc = trunc i32 %b to i8
+  ret i8 %b.trunc
+}
+
+; Tests for clamping with mixed-signed min and max.
+; With zext the optimization occurs.
 define i8 @test_3a(i16 %x) {
 ; CHECK-LABEL: define i8 @test_3a(
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -31)
-; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
-; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
 ; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 31)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 -31)
-  %a = sext i16 %2 to i32
+  %a = zext i16 %2 to i32
   %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
@@ -148,19 +187,19 @@ define i8 @test_3b(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smax.i16(i16 [[X]], i16 -31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smin.i16(i16 [[TMP1]], i16 31)
-; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
-; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
 ; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smax.i16(i16 %x, i16 -31)
   %2 = tail call i16 @llvm.smin.i16(i16 %1, i16 31)
-  %a = sext i16 %2 to i32
+  %a = zext i16 %2 to i32
   %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
 }
 
+; Optimizations with vector types.
 define <16 x i8> @test_vec_1a(<16 x i16> %x) {
 ; CHECK-LABEL: define <16 x i8> @test_vec_1a(
 ; CHECK-SAME: <16 x i16> [[X:%.*]]) {
@@ -302,14 +341,13 @@ define i8 @test_bounds_5(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[X]], i16 32767)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -32768)
-; CHECK-NEXT:    [[A:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A]], 2
-; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    [[B:%.*]] = lshr i16 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i16 [[B]] to i8
 ; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i16 @llvm.smin.i16(i16 %x, i16 32767)
   %2 = tail call i16 @llvm.smax.i16(i16 %1, i16 -32768)
-  %a = sext i16 %2 to i32
+  %a = zext i16 %2 to i32
   %b = lshr i32 %a, 2
   %b.trunc = trunc i32 %b to i8
   ret i8 %b.trunc
@@ -320,14 +358,13 @@ define i8 @test_bounds_6(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[X]], i32 2147483647)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 -2147483648)
-; CHECK-NEXT:    [[A:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[B:%.*]] = lshr i64 [[A]], 2
-; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i64 [[B]] to i8
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i32 [[B]] to i8
 ; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
   %1 = tail call i32 @llvm.smin.i32(i32 %x, i32 2147483647)
   %2 = tail call i32 @llvm.smax.i32(i32 %1, i32 -2147483648)
-  %a = sext i32 %2 to i64
+  %a = zext i32 %2 to i64
   %b = lshr i64 %a, 2
   %b.trunc = trunc i64 %b to i8
   ret i8 %b.trunc
@@ -338,14 +375,13 @@ define i8 @test_bounds_7(i64 %x) {
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.smin.i64(i64 [[X]], i64 9223372036854775807)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 -9223372036854775808)
-; CHECK-NEXT:    [[A:%.*]] = sext i64 [[TMP2]] to i128
-; CHECK-NEXT:    [[B:%.*]] = lshr i128 [[A]], 2
-; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i128 [[B]] to i8
+; CHECK-NEXT:    [[B:%.*]] = lshr i64 [[TMP2]], 2
+; CHECK-NEXT:    [[B_TRUNC:%.*]] = trunc i64 [[B]] to i8
 ; CHECK-NEXT:    ret i8 [[B_TRUNC]]
 ;
-  %1 = tail call i64 @llvm.smin.i32(i64 %x, i64 9223372036854775807)
-  %2 = tail call i64 @llvm.smax.i32(i64 %1, i64 -9223372036854775808)
-  %a = sext i64 %2 to i128
+  %1 = tail call i64 @llvm.smin.i64(i64 %x, i64 9223372036854775807)
+  %2 = tail call i64 @llvm.smax.i64(i64 %1, i64 -9223372036854775808)
+  %a = zext i64 %2 to i128
   %b = lshr i128 %a, 2
   %b.trunc = trunc i128 %b to i8
   ret i8 %b.trunc
