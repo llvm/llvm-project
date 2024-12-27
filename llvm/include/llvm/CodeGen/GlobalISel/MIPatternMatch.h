@@ -372,6 +372,36 @@ inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
 inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
 
+template <typename BindTy> struct deferred_helper {
+  static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
+    return VR == V;
+  }
+};
+
+template <> struct deferred_helper<LLT> {
+  static bool match(const MachineRegisterInfo &MRI, LLT VT, Register R) {
+    return VT == MRI.getType(R);
+  }
+};
+
+template <typename Class> struct deferred_ty {
+  Class &VR;
+
+  deferred_ty(Class &V) : VR(V) {}
+
+  template <typename ITy> bool match(const MachineRegisterInfo &MRI, ITy &&V) {
+    return deferred_helper<Class>::match(MRI, VR, V);
+  }
+};
+
+/// Similar to m_SpecificReg/Type, but the specific value to match originated
+/// from an earlier sub-pattern in the same mi_match expression. For example,
+/// we cannot match `(add X, X)` with `m_GAdd(m_Reg(X), m_SpecificReg(X))`
+/// because `X` is not initialized at the time it's passed to `m_SpecificReg`.
+/// Instead, we can use `m_GAdd(m_Reg(x), m_DeferredReg(X))`.
+inline deferred_ty<Register> m_DeferredReg(Register &R) { return R; }
+inline deferred_ty<LLT> m_DeferredType(LLT &Ty) { return Ty; }
+
 struct ImplicitDefMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     MachineInstr *TmpMI;
@@ -401,8 +431,13 @@ struct BinaryOp_match {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
         return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
                 R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               (Commutable && (R.match(MRI, TmpMI->getOperand(1).getReg()) &&
-                               L.match(MRI, TmpMI->getOperand(2).getReg())));
+               // NOTE: When trying the alternative different operand ordering
+               // with a commutative operation, it is imperative to always run
+               // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+               // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
+               // expected.
+               (Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
+                               R.match(MRI, TmpMI->getOperand(1).getReg())));
       }
     }
     return false;
@@ -426,8 +461,13 @@ struct BinaryOpc_match {
           TmpMI->getNumOperands() == 3) {
         return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
                 R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               (Commutable && (R.match(MRI, TmpMI->getOperand(1).getReg()) &&
-                               L.match(MRI, TmpMI->getOperand(2).getReg())));
+               // NOTE: When trying the alternative different operand ordering
+               // with a commutative operation, it is imperative to always run
+               // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+               // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
+               // expected.
+               (Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
+                               R.match(MRI, TmpMI->getOperand(1).getReg())));
       }
     }
     return false;
@@ -674,6 +714,10 @@ struct CompareOp_match {
     Register RHS = TmpMI->getOperand(3).getReg();
     if (L.match(MRI, LHS) && R.match(MRI, RHS))
       return true;
+    // NOTE: When trying the alternative different operand ordering
+    // with a commutative operation, it is imperative to always run
+    // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+    // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as expected.
     if (Commutable && L.match(MRI, RHS) && R.match(MRI, LHS) &&
         P.match(MRI, CmpInst::getSwappedPredicate(TmpPred)))
       return true;
