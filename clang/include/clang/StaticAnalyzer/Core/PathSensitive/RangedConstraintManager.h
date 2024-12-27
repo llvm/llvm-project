@@ -401,7 +401,22 @@ private:
   friend class Factory;
 };
 
-using ConstraintMap = llvm::ImmutableMap<SymbolRef, RangeSet>;
+struct ConstraintKVInfo : llvm::ImutKeyValueInfo<SymbolRef, RangeSet> {
+  static inline bool isEqual(key_type_ref L, key_type_ref R) {
+    return L->getAllocID() == R->getAllocID();
+  }
+
+  static inline bool isLess(key_type_ref L, key_type_ref R) {
+    return L->getAllocID() < R->getAllocID();
+  }
+
+  static inline void Profile(llvm::FoldingSetNodeID &ID, value_type_ref V) {
+    ID.AddInteger(V.first->getAllocID());
+    ID.Add(V.second);
+  }
+};
+
+using ConstraintMap = llvm::ImmutableMap<SymbolRef, RangeSet, ConstraintKVInfo>;
 ConstraintMap getConstraintMap(ProgramStateRef State);
 
 class RangedConstraintManager : public SimpleConstraintManager {

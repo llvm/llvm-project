@@ -44,8 +44,9 @@ class SymbolRegionValue : public SymbolData {
   const TypedValueRegion *R;
 
 public:
-  SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
-      : SymbolData(SymbolRegionValueKind, sym), R(r) {
+  SymbolRegionValue(SymbolID sym, const TypedValueRegion *r,
+                    AllocIDType AllocID)
+      : SymbolData(SymbolRegionValueKind, sym, AllocID), R(r) {
     assert(r);
     assert(isValidTypeForSymbol(r->getValueType()));
   }
@@ -86,8 +87,9 @@ class SymbolConjured : public SymbolData {
 
 public:
   SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
-                 QualType t, unsigned count, const void *symbolTag)
-      : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
+                 QualType t, unsigned count, const void *symbolTag,
+                 AllocIDType AllocID)
+      : SymbolData(SymbolConjuredKind, sym, AllocID), S(s), T(t), Count(count),
         LCtx(lctx), SymbolTag(symbolTag) {
     // FIXME: 's' might be a nullptr if we're conducting invalidation
     // that was caused by a destructor call on a temporary object,
@@ -138,8 +140,10 @@ class SymbolDerived : public SymbolData {
   const TypedValueRegion *R;
 
 public:
-  SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
-      : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {
+  SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r,
+                AllocIDType AllocID)
+      : SymbolData(SymbolDerivedKind, sym, AllocID), parentSymbol(parent),
+        R(r) {
     assert(parent);
     assert(r);
     assert(isValidTypeForSymbol(r->getValueType()));
@@ -181,8 +185,8 @@ class SymbolExtent : public SymbolData {
   const SubRegion *R;
 
 public:
-  SymbolExtent(SymbolID sym, const SubRegion *r)
-      : SymbolData(SymbolExtentKind, sym), R(r) {
+  SymbolExtent(SymbolID sym, const SubRegion *r, AllocIDType AllocID)
+      : SymbolData(SymbolExtentKind, sym, AllocID), R(r) {
     assert(r);
   }
 
@@ -223,16 +227,17 @@ class SymbolMetadata : public SymbolData {
   const void *Tag;
 
 public:
-  SymbolMetadata(SymbolID sym, const MemRegion* r, const Stmt *s, QualType t,
-                 const LocationContext *LCtx, unsigned count, const void *tag)
-      : SymbolData(SymbolMetadataKind, sym), R(r), S(s), T(t), LCtx(LCtx),
-        Count(count), Tag(tag) {
-      assert(r);
-      assert(s);
-      assert(isValidTypeForSymbol(t));
-      assert(LCtx);
-      assert(tag);
-    }
+  SymbolMetadata(SymbolID sym, const MemRegion *r, const Stmt *s, QualType t,
+                 const LocationContext *LCtx, unsigned count, const void *tag,
+                 AllocIDType AllocID)
+      : SymbolData(SymbolMetadataKind, sym, AllocID), R(r), S(s), T(t),
+        LCtx(LCtx), Count(count), Tag(tag) {
+    assert(r);
+    assert(s);
+    assert(isValidTypeForSymbol(t));
+    assert(LCtx);
+    assert(tag);
+  }
 
     LLVM_ATTRIBUTE_RETURNS_NONNULL
     const MemRegion *getRegion() const { return R; }
@@ -287,8 +292,8 @@ class SymbolCast : public SymExpr {
   QualType ToTy;
 
 public:
-  SymbolCast(const SymExpr *In, QualType From, QualType To)
-      : SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) {
+  SymbolCast(const SymExpr *In, QualType From, QualType To, AllocIDType AllocID)
+      : SymExpr(SymbolCastKind, AllocID), Operand(In), FromTy(From), ToTy(To) {
     assert(In);
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
@@ -333,8 +338,9 @@ class UnarySymExpr : public SymExpr {
   QualType T;
 
 public:
-  UnarySymExpr(const SymExpr *In, UnaryOperator::Opcode Op, QualType T)
-      : SymExpr(UnarySymExprKind), Operand(In), Op(Op), T(T) {
+  UnarySymExpr(const SymExpr *In, UnaryOperator::Opcode Op, QualType T,
+               AllocIDType AllocID)
+      : SymExpr(UnarySymExprKind, AllocID), Operand(In), Op(Op), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -381,8 +387,9 @@ class BinarySymExpr : public SymExpr {
   QualType T;
 
 protected:
-  BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
-      : SymExpr(k), Op(op), T(t) {
+  BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t,
+                AllocIDType AllocID)
+      : SymExpr(k, AllocID), Op(op), T(t) {
     assert(classof(this));
     // Binary expressions are results of arithmetic. Pointer arithmetic is not
     // handled by binary expressions, but it is instead handled by applying
@@ -427,8 +434,8 @@ class BinarySymExprImpl : public BinarySymExpr {
 
 public:
   BinarySymExprImpl(LHSTYPE lhs, BinaryOperator::Opcode op, RHSTYPE rhs,
-                    QualType t)
-      : BinarySymExpr(ClassKind, op, t), LHS(lhs), RHS(rhs) {
+                    QualType t, AllocIDType AllocID)
+      : BinarySymExpr(ClassKind, op, t, AllocID), LHS(lhs), RHS(rhs) {
     assert(getPointer(lhs));
     assert(getPointer(rhs));
   }

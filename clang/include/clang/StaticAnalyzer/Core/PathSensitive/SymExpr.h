@@ -31,6 +31,7 @@ class SymExpr : public llvm::FoldingSetNode {
   virtual void anchor();
 
 public:
+  using AllocIDType = int64_t;
   enum Kind {
 #define SYMBOL(Id, Parent) Id##Kind,
 #define SYMBOL_RANGE(Id, First, Last) BEGIN_##Id = First, END_##Id = Last,
@@ -39,9 +40,10 @@ public:
 
 private:
   Kind K;
+  AllocIDType AllocID;
 
 protected:
-  SymExpr(Kind k) : K(k) {}
+  SymExpr(Kind K, AllocIDType AllocID) : K(K), AllocID(AllocID) {}
 
   static bool isValidTypeForSymbol(QualType T) {
     // FIXME: Depending on whether we choose to deprecate structural symbols,
@@ -55,6 +57,8 @@ public:
   virtual ~SymExpr() = default;
 
   Kind getKind() const { return K; }
+
+  AllocIDType getAllocID() const { return AllocID; }
 
   virtual void dump() const;
 
@@ -122,7 +126,8 @@ class SymbolData : public SymExpr {
   void anchor() override;
 
 protected:
-  SymbolData(Kind k, SymbolID sym) : SymExpr(k), Sym(sym) {
+  SymbolData(Kind k, SymbolID sym, AllocIDType AllocID)
+      : SymExpr(k, AllocID), Sym(sym) {
     assert(classof(this));
   }
 
