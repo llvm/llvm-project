@@ -349,6 +349,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
+    libc.src.wchar.wcspbrk
     libc.src.wchar.wcsrchr
     libc.src.wchar.wcschr
     libc.src.wchar.wcslen
