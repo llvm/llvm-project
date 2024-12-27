@@ -498,8 +498,6 @@ def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1
 // number of operands (the variable)
 def SDT_AArch64TLSDescCallSeq : SDTypeProfile<0,1,
                                           [SDTCisPtrTy<0>]>;
-def SDT_AArch64TLSDescAuthCallSeq : SDTypeProfile<0,1,
-                                          [SDTCisPtrTy<0>]>;
 
 def SDT_AArch64WrapperLarge : SDTypeProfile<1, 4,
                                         [SDTCisVT<0, i64>, SDTCisVT<1, i32>,
@@ -886,9 +884,8 @@ def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
-                                    SDT_AArch64TLSDescAuthCallSeq,
-                                    [SDNPInGlue, SDNPOutGlue, SDNPHasChain,
-                                     SDNPVariadic]>;
+                                    SDT_AArch64TLSDescCallSeq,
+                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;

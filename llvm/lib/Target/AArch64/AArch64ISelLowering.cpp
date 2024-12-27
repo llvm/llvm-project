@@ -10143,11 +10143,9 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   AArch64FunctionInfo *MFI =
       DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
 
-  TLSModel::Model Model;
-  if (MFI->hasELFSignedGOT())
-    Model = TLSModel::GeneralDynamic;
-  else
-    Model = getTargetMachine().getTLSModel(GA->getGlobal());
+  TLSModel::Model Model = MFI->hasELFSignedGOT()
+                              ? TLSModel::GeneralDynamic
+                              : getTargetMachine().getTLSModel(GA->getGlobal());
 
   if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
     if (Model == TLSModel::LocalDynamic)

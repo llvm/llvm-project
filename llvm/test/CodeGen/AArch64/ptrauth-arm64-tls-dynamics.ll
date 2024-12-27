@@ -46,6 +46,9 @@ define ptr @test_generaldynamic_addr() {
 ; CHECK-OBJ-NOT: R_AARCH64_TLSDESC_CALL
 }
 
+;; Note: with signed TLSDESC, general dynamic model is always used,
+;; even when local dynamic is requested.
+
 @local_dynamic_var = external thread_local(localdynamic) global i32
 
 define i32 @test_localdynamic() {
