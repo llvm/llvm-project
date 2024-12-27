@@ -530,6 +530,24 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIEmitC",
+    srcs = [
+        "lib/CAPI/Dialect/EmitC.cpp",
+    ],
+    hdrs = ["include/mlir-c/Dialect/EmitC.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    header_deps = [
+        ":EmitCPassIncGen",
+    ],
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPILinalg",
     srcs = [
         "lib/CAPI/Dialect/Linalg.cpp",
@@ -932,7 +950,6 @@ exports_files(
 filegroup(
     name = "MLIRBindingsPythonHeaderFiles",
     srcs = glob([
-        "lib/Bindings/Python/*.h",
         "include/mlir-c/Bindings/Python/*.h",
         "include/mlir/Bindings/Python/*.h",
     ]),
@@ -942,12 +959,10 @@ cc_library(
     name = "MLIRBindingsPythonHeaders",
     includes = [
         "include",
-        "lib/Bindings/Python",
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIRHeaders",
-        ":CAPITransformsHeaders",
         "@pybind11",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -957,13 +972,37 @@ cc_library(
     name = "MLIRBindingsPythonHeadersAndDeps",
     includes = [
         "include",
-        "lib/Bindings/Python",
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIR",
-        ":CAPITransforms",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+)
+
+cc_library(
+    name = "MLIRBindingsPythonNanobindHeaders",
+    includes = [
+        "include",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    deps = [
+        ":CAPIIRHeaders",
+        "@nanobind",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+)
+
+cc_library(
+    name = "MLIRBindingsPythonNanobindHeadersAndDeps",
+    includes = [
+        "include",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    deps = [
+        ":CAPIIR",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -993,21 +1032,33 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "MLIRBindingsPythonCoreHeaders",
+    srcs = glob([
+        "lib/Bindings/Python/*.h",
+    ]),
+)
+
 cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    includes = [
+        "lib/Bindings/Python",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
         ":CAPIIR",
         ":CAPIInterfaces",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":CAPITransforms",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         ":Support",
         ":config",
         "//llvm:Support",
-        "@pybind11",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1017,15 +1068,20 @@ cc_library(
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    includes = [
+        "lib/Bindings/Python",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
-        ":MLIRBindingsPythonHeaders",
+        ":CAPITransformsHeaders",
+        ":MLIRBindingsPythonNanobindHeaders",
         ":Support",
         ":config",
         "//llvm:Support",
-        "@pybind11",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1050,11 +1106,15 @@ cc_binary(
     # These flags are needed for pybind11 to work.
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    includes = [
+        "lib/Bindings/Python",
+    ],
     linkshared = 1,
     linkstatic = 0,
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
+        "@nanobind",
     ],
 )
 
@@ -1063,12 +1123,16 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    includes = [
+        "lib/Bindings/Python",
+    ],
     linkshared = 1,
     linkstatic = 0,
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
-        ":MLIRBindingsPythonHeadersAndDeps",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
     ],
 )
 
@@ -1082,8 +1146,8 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPILLVM",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
     ],
 )
 
@@ -1097,8 +1161,8 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPIQuant",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
     ],
 )
 
@@ -1112,8 +1176,8 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPISparseTensor",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
     ],
 )
 
@@ -1127,8 +1191,8 @@ cc_binary(
     linkstatic = 0,
     deps = [
         ":CAPIExecutionEngine",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1143,8 +1207,8 @@ cc_binary(
     linkstatic = 0,
     deps = [
         ":CAPILinalg",
-        ":MLIRBindingsPythonHeadersAndDeps",
-        "@pybind11",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -3205,8 +3269,10 @@ cc_library(
     includes = ["include"],
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
+        ":ArithToLLVM",
         ":ArithTransforms",
         ":BufferizationTransforms",
+        ":ControlFlowToLLVM",
         ":ConversionPasses",
         ":FuncDialect",
         ":GPUDialect",
@@ -3426,6 +3492,31 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MeshToMPIConversion",
+    srcs = glob([
+        "lib/Conversion/MeshToMPI/*.cpp",
+    ]),
+    hdrs = glob(["include/mlir/Conversion/MeshToMPI/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":BufferizationDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":IR",
+        ":MPIDialect",
+        ":MemRefDialect",
+        ":MeshDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":Support",
+        ":TensorDialect",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -4230,6 +4321,7 @@ cc_library(
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
+        ":MeshToMPIConversion",
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":OpenACCToSCF",
@@ -5085,6 +5177,7 @@ cc_library(
         ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":GPUUtils",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -5715,6 +5808,7 @@ cc_library(
         ":GPUDialect",
         ":GPUPassIncGen",
         ":GPUToLLVMIRTranslation",
+        ":GPUUtils",
         ":IR",
         ":IndexDialect",
         ":LLVMDialect",
@@ -5745,6 +5839,26 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         "//llvm:NVPTXCodeGen",
     ]),
+)
+
+cc_library(
+    name = "GPUUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/GPU/Utils/*.cpp",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/GPU/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithDialect",
+        ":GPUDialect",
+        ":IR",
+        ":Support",
+        ":VectorDialect",
+        "//llvm:Support",
+    ],
 )
 
 td_library(
@@ -6107,6 +6221,7 @@ cc_library(
         ":GPUCommonTransforms",
         ":GPUDialect",
         ":GPUTransforms",
+        ":GPUUtils",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -6114,7 +6229,9 @@ cc_library(
         ":MemRefToLLVM",
         ":SPIRVDialect",
         ":Support",
+        ":TransformUtils",
         ":VectorToLLVM",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -6393,6 +6510,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":GPUToLLVMIRTranslation",
+        ":IR",
         ":LLVMToLLVMIRTranslation",
         ":NVVMDialect",
         ":NVVMToLLVMIRTranslation",
@@ -6595,6 +6713,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":GPUToLLVMIRTranslation",
+        ":IR",
         ":LLVMToLLVMIRTranslation",
         ":ROCDLDialect",
         ":ROCDLToLLVMIRTranslation",
@@ -8422,9 +8541,9 @@ cc_library(
     hdrs = ["include/mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
-        ":Analysis",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -8736,6 +8855,7 @@ cc_library(
     deps = [
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
+        ":ArithTransforms",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":IR",
@@ -10101,7 +10221,9 @@ cc_binary(
     srcs = ["tools/mlir-vulkan-runner/mlir-vulkan-runner.cpp"],
     deps = [
         ":ArithDialect",
+        ":ArithToLLVM",
         ":BuiltinToLLVMIRTranslation",
+        ":ControlFlowToLLVM",
         ":ConvertToSPIRV",
         ":ExecutionEngineUtils",
         ":FuncDialect",
@@ -13752,6 +13874,7 @@ cc_library(
         ":MPIIncGen",
         ":MPIOpsIncGen",
         ":MPITypesIncGen",
+        ":MemRefDialect",
         "//llvm:Support",
     ],
 )

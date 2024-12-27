@@ -1,0 +1,41 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# sub16_sub17_sub18_sub19 is outside the bounds of a 512-bit
+# register. Make sure the verification doesn't assert. This was only
+# broken for targets that require even aligned VGPRs due to the manual
+# alignment check.
+
+---
+name: uses_invalid_subregister_for_regclass
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0, implicit-def %1:vreg_512_align2
+
+
+    ; CHECK: *** Bad machine code: Invalid subregister index for virtual register ***
+    ; CHECK-NEXT: - function:    uses_invalid_subregister_for_regclass
+    ; CHECK-NEXT: - basic block: %bb.0
+    ; CHECK-NEXT: - instruction: GLOBAL_STORE_DWORDX4_SADDR %0:vgpr_32, %1.sub16_sub17_sub18_sub19:vreg_512_align2, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: - operand 1:   %1.sub16_sub17_sub18_sub19:vreg_512_align2
+    ; CHECK-NEXT: Register class VReg_512_Align2 does not support subreg index 166
+
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK-NEXT: - function:    uses_invalid_subregister_for_regclass
+    ; CHECK-NEXT: - basic block: %bb.0
+    ; CHECK-NEXT: - instruction: GLOBAL_STORE_DWORDX4_SADDR %0:vgpr_32, %2.sub16_sub17_sub18_sub19:vreg_512, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %0, %1.sub16_sub17_sub18_sub19, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+
+    ; Test with unaligned class
+    ; CHECK: *** Bad machine code: Invalid subregister index for virtual register ***
+    ; CHECK-NEXT: - function:    uses_invalid_subregister_for_regclass
+    ; CHECK-NEXT: - basic block: %bb.0
+    ; CHECK-NEXT: - instruction: GLOBAL_STORE_DWORDX4_SADDR %0:vgpr_32, %2.sub16_sub17_sub18_sub19:vreg_512, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: - operand 1:   %2.sub16_sub17_sub18_sub19:vreg_512
+    ; CHECK-NEXT: Register class VReg_512 does not support subreg index 166
+    S_NOP 0, implicit-def %2:vreg_512
+    GLOBAL_STORE_DWORDX4_SADDR %0, %2.sub16_sub17_sub18_sub19, undef $sgpr8_sgpr9, 80, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...

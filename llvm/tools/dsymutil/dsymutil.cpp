@@ -64,12 +64,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -80,7 +81,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DsymutilOptTable : public opt::GenericOptTable {
 public:
-  DsymutilOptTable() : opt::GenericOptTable(InfoTable) {}
+  DsymutilOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -832,15 +834,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
-      const bool Fat64 = Options.LinkOpts.Fat64;
+      bool Fat64 = Options.LinkOpts.Fat64;
       if (!Fat64) {
         // Universal Mach-O files can't have an archicture slice that starts
         // beyond the 4GB boundary. "lipo" can create a 64 bit universal
-        // header, but not all tools can parse these files so we want to return
-        // an error if the file can't be encoded as a file with a 32 bit
+        // header, but older tools may not support these files so we want to
+        // emit a warning if the file can't be encoded as a file with a 32 bit
         // universal header. To detect this, we check the size of each
         // architecture's skinny Mach-O file and add up the offsets. If they
-        // exceed 4GB, then we return an error.
+        // exceed 4GB, we emit a warning.
 
         // First we compute the right offset where the first architecture will
         // fit followin the 32 bit universal header. The 32 bit universal header
@@ -859,13 +861,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           if (!stat)
             break;
           if (FileOffset > UINT32_MAX) {
-            WithColor::error()
-                << formatv("the universal binary has a slice with a starting "
-                           "offset ({0:x}) that exceeds 4GB and will produce "
-                           "an invalid Mach-O file. Use the -fat64 flag to "
-                           "generate a universal binary with a 64-bit header "
-                           "but note that not all tools support this format.",
-                           FileOffset);
+            Fat64 = true;
+            WithColor::warning() << formatv(
+                "the universal binary has a slice with a starting offset "
+                "({0:x}) that exceeds 4GB. To avoid producing an invalid "
+                "Mach-O file, a universal binary with a 64-bit header will be "
+                "generated, which may not be supported by older tools. Use the "
+                "-fat64 flag to force a 64-bit header and silence this "
+                "warning.",
+                FileOffset);
             return EXIT_FAILURE;
           }
           FileOffset += stat->getSize();

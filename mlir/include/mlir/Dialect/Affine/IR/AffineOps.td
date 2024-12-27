@@ -1115,7 +1115,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_asis, CArg<"bool", "true">:$hasOuterBound)>,
+    OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_basis, CArg<"bool", "true">:$hasOuterBound)>,
     OpBuilder<(ins "Value":$linear_index, "ValueRange":$basis, CArg<"bool", "true">:$hasOuterBound)>,
     OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis, CArg<"bool", "true">:$hasOuterBound)>,
     OpBuilder<(ins "Value":$linear_index, "ArrayRef<int64_t>":$basis, CArg<"bool", "true">:$hasOuterBound)>
@@ -1193,7 +1193,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
   let arguments = (ins Variadic<Index>:$multi_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis,
-    UnitProperty:$disjoint);
+    UnitProp:$disjoint);
   let results = (outs Index:$linear_index);
 
   let assemblyFormat = [{

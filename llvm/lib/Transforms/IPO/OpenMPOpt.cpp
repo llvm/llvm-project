@@ -1538,26 +1538,12 @@ private:
     // required an RPC server. If its users were all optimized out then we can
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
-    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
-      if (!GV->getType()->isPointerTy())
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
+      if (GV->getNumUses() >= 1)
         return false;
-
-      Constant *C = GV->getInitializer();
-      if (!C)
-        return false;
-
-      // Check to see if the only user of the RPC client is the external handle.
-      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
-      if (!Client || Client->getNumUses() > 1 ||
-          Client->user_back() != GV->getInitializer())
-        return false;
-
-      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
-      Client->eraseFromParent();
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->eraseFromParent();
-
       return true;
     }
     return false;

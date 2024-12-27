@@ -919,13 +919,6 @@ def HWWriteResGroup3 : SchedWriteRes<[HWPort1]> {
 def: InstRW<[HWWriteResGroup3], (instregex "COM(P?)_FST0r",
                                            "UCOM_F(P?)r")>;
 
-def HWWriteResGroup4 : SchedWriteRes<[HWPort5]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ReleaseAtCycles = [1];
-}
-def: InstRW<[HWWriteResGroup4], (instrs MMX_MOVQ2DQrr)>;
-
 def HWWriteResGroup5 : SchedWriteRes<[HWPort6]> {
   let Latency = 1;
   let NumMicroOps = 1;

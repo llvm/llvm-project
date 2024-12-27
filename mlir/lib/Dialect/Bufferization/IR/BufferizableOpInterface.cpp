@@ -174,7 +174,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
             resultDims[llvm::cast<OpResult>(shapedValue).getResultNumber()];
         for (const auto &dim : enumerate(tensorType.getShape()))
           if (ShapedType::isDynamic(dim.value()))
-            dynamicSizes.push_back(shape[dim.index()].get<Value>());
+            dynamicSizes.push_back(cast<Value>(shape[dim.index()]));
       }
     }
 
@@ -483,10 +483,12 @@ bool AnalysisState::isValueRead(Value value) const {
 // Starting from `value`, follow the use-def chain in reverse, always selecting
 // the aliasing OpOperands. Find and return Values for which `condition`
 // evaluates to true. OpOperands of such matching Values are not traversed any
-// further.
+// further, the visited aliasing opOperands will be preserved through
+// `visitedOpOperands`.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition,
-    TraversalConfig config) const {
+    TraversalConfig config,
+    llvm::DenseSet<OpOperand *> *visitedOpOperands) const {
   llvm::DenseSet<Value> visited;
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
@@ -553,6 +555,8 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
       }
 
       workingSet.insert(a.opOperand->get());
+      if (visitedOpOperands)
+        visitedOpOperands->insert(a.opOperand);
     }
   }
 

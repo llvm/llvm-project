@@ -198,6 +198,12 @@ struct AliasAnalysis {
   /// Return the modify-reference behavior of `op` on `location`.
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
+  /// Return the modify-reference behavior of operations inside `region` on
+  /// `location`. Contrary to getModRef(operation, location), this will visit
+  /// nested regions recursively according to the HasRecursiveMemoryEffects
+  /// trait.
+  mlir::ModRefResult getModRef(mlir::Region &region, mlir::Value location);
+
   /// Return the memory source of a value.
   /// If getLastInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy

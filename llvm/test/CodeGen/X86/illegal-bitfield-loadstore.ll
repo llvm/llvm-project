@@ -6,22 +6,12 @@ define void @i24_or(ptr %a) {
 ; X86-LABEL: i24_or:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %ecx
-; X86-NEXT:    movzbl 2(%eax), %edx
-; X86-NEXT:    shll $16, %edx
-; X86-NEXT:    orl %ecx, %edx
-; X86-NEXT:    orl $384, %edx # imm = 0x180
-; X86-NEXT:    movw %dx, (%eax)
+; X86-NEXT:    orw $384, (%eax) # imm = 0x180
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: i24_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    movzbl 2(%rdi), %ecx
-; X64-NEXT:    shll $16, %ecx
-; X64-NEXT:    orl %eax, %ecx
-; X64-NEXT:    orl $384, %ecx # imm = 0x180
-; X64-NEXT:    movw %cx, (%rdi)
+; X64-NEXT:    orw $384, (%rdi) # imm = 0x180
 ; X64-NEXT:    retq
   %aa = load i24, ptr %a, align 1
   %b = or i24 %aa, 384
@@ -103,12 +93,12 @@ define void @i56_or(ptr %a) {
 ; X86-LABEL: i56_or:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl $384, (%eax) # imm = 0x180
+; X86-NEXT:    orw $384, (%eax) # imm = 0x180
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: i56_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    orl $384, (%rdi) # imm = 0x180
+; X64-NEXT:    orw $384, (%rdi) # imm = 0x180
 ; X64-NEXT:    retq
   %aa = load i56, ptr %a, align 1
   %b = or i56 %aa, 384
