@@ -73,9 +73,12 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
 
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+
 TEST(LlvmLibcMemcpyTest, CrashOnNullPtr) {
-  ASSERT_DEATH([](){LIBC_NAMESPACE::memcpy(nullptr, nullptr, 1);},
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memcpy(nullptr, nullptr, 1); },
                WITH_SIGNAL(SIGSEGV));
-}
+
+#endif // defined(LIBC_TARGET_OS_IS_LINUX)
 
 } // namespace LIBC_NAMESPACE_DECL

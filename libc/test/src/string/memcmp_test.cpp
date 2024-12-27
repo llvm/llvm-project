@@ -66,9 +66,13 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
   }
 }
 
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+
 TEST(LlvmLibcMemcmpTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memcmp(nullptr, nullptr, 1); },
                WITH_SIGNAL(SIGSEGV));
 }
+
+#endif // defined(LIBC_TARGET_OS_IS_LINUX)
 
 } // namespace LIBC_NAMESPACE_DECL
