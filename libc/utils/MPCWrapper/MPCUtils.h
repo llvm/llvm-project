@@ -112,7 +112,8 @@ private:
   MPCRoundingMode rounding;
 
 public:
-  MPCMatcher(InputType testInput, double ulp_tolerance, MPCRoundingMode rounding)
+  MPCMatcher(InputType testInput, double ulp_tolerance,
+             MPCRoundingMode rounding)
       : input(testInput), ulp_tolerance(ulp_tolerance), rounding(rounding) {}
 
   bool match(OutputType libcResult) {
@@ -205,18 +206,21 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
 } // namespace LIBC_NAMESPACE_DECL
 
 #define EXPECT_MPC_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)        \
-  EXPECT_THAT(match_value,                                                     \
-              LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(               \
-                  input, match_value, ulp_tolerance,                           \
-                  MPCRoundingMode{LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest, \
-                  LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest}))
+  EXPECT_THAT(                                                                 \
+      match_value,                                                             \
+      LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                       \
+          input, match_value, ulp_tolerance,                                   \
+          MPCRoundingMode{                                                     \
+              LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest,          \
+              LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest}))
 
 #define EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,       \
                                   Rrounding, Irounding)                        \
   EXPECT_THAT(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(  \
-                               input, match_value, ulp_tolerance, MPCRoundingMode{Rrounding, Irounding}))
+                               input, match_value, ulp_tolerance,              \
+                               MPCRoundingMode{Rrounding, Irounding}))
 
-/* Rounding Modes: 
+/* Rounding Modes:
     1. N(to nearest)
     2. Z(to zero)
     3. U(towards +infinity)
@@ -224,66 +228,78 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
     5. A(away from zero)
 */
 
-#define EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(i, j, op, input, match_value, ulp_tolerance, Rrounding, Irounding) \
-{                                                                                                               \
-  MPCRND::ForceRoundingMode __r##i##j(Rrounding);                                                               \
-  MPCRND::ForceRoundingMode __i##i##j(Irounding);                                                               \
-  if (__r##i##j.success && __i##i##j.success) {                                                                 \
-    EXPECT_MPC_MATCH_ROUNDING(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                   \
-                                 input, match_value, ulp_tolerance, Rrounding, Irounding))     \
-  }                                                                                                             \
-}
+#define EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(                                  \
+    i, j, op, input, match_value, ulp_tolerance, Rrounding, Irounding)         \
+  {                                                                            \
+    MPCRND::ForceRoundingMode __r##i##j(Rrounding);                            \
+    MPCRND::ForceRoundingMode __i##i##j(Irounding);                            \
+    if (__r##i##j.success && __i##i##j.success) {                              \
+      EXPECT_MPC_MATCH_ROUNDING(                                               \
+          match_value,                                                         \
+          LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                   \
+              input, match_value, ulp_tolerance, Rrounding, Irounding))        \
+    }                                                                          \
+  }
 
-#define EXPECT_MPC_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)                             \
-{                                                                                                        \
-  namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                                                    \
-  for (int i = 0; i < 5; i++) {                                                                          \
-    for (int j = 0; j < 5; j++) {                                                                        \
-      RoundingMode r_mode = static_cast<RoundingMode>(i);                                                \
-      RoundingMode i_mode = static_cast<RoundingMode>(j);                                                \
-      EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(i, j, op, input, match_value, ulp_tolerance, r_mode, i_mode); \
-    }                                                                                                    \
-  }                                                                                                      \
-}
+#define EXPECT_MPC_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)   \
+  {                                                                            \
+    namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                        \
+    for (int i = 0; i < 5; i++) {                                              \
+      for (int j = 0; j < 5; j++) {                                            \
+        RoundingMode r_mode = static_cast<RoundingMode>(i);                    \
+        RoundingMode i_mode = static_cast<RoundingMode>(j);                    \
+        EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(i, j, op, input, match_value,     \
+                                             ulp_tolerance, r_mode, i_mode);   \
+      }                                                                        \
+    }                                                                          \
+  }
 
-#define TEST_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,                                    \
-                                Rrounding, Irounding)                                                     \
-  LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(input, match_value,                                   \
-                                                    ulp_tolerance, MPCRoundingMode{Rrounding, Irounding}) \
+#define TEST_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                Rrounding, Irounding)                          \
+  LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                           \
+      input, match_value, ulp_tolerance,                                       \
+      MPCRoundingMode{Rrounding, Irounding})                                   \
       .match(match_value)
 
 #define ASSERT_MPC_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)        \
-  ASSERT_THAT(match_value,                                                     \
-              LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(               \
-                  input, match_value, ulp_tolerance,                                     \
-                  MPCRoundingMode{LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest, \
-                  LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest}))
+  ASSERT_THAT(                                                                 \
+      match_value,                                                             \
+      LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                       \
+          input, match_value, ulp_tolerance,                                   \
+          MPCRoundingMode{                                                     \
+              LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest,          \
+              LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest}))
 
 #define ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,       \
-                                  Rrounding, Irounding)                                    \
+                                  Rrounding, Irounding)                        \
   ASSERT_THAT(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(  \
-                               input, match_value, ulp_tolerance, MPCRoundingMode{Rrounding, Irounding}))
+                               input, match_value, ulp_tolerance,              \
+                               MPCRoundingMode{Rrounding, Irounding}))
 
-#define ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(i, j, op, input, match_value, ulp_tolerance, Rrounding, Irounding) \
-{                                                                                                               \
-  MPCRND::ForceRoundingMode __r##i##j(Rrounding);                                                               \
-  MPCRND::ForceRoundingMode __i##i##j(Irounding);                                                               \
-  if (__r##i##j.success && __i##i##j.success) {                                                                 \
-    ASSERT_MPC_MATCH_ROUNDING(match_value, LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                                 \
-                                 input, match_value, ulp_tolerance, Rrounding, Irounding))     \
-  }                                                                                                             \
-}
+#define ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(                                  \
+    i, j, op, input, match_value, ulp_tolerance, Rrounding, Irounding)         \
+  {                                                                            \
+    MPCRND::ForceRoundingMode __r##i##j(Rrounding);                            \
+    MPCRND::ForceRoundingMode __i##i##j(Irounding);                            \
+    if (__r##i##j.success && __i##i##j.success) {                              \
+      ASSERT_MPC_MATCH_ROUNDING(                                               \
+          match_value,                                                         \
+          LIBC_NAMESPACE::testing::mpc::get_mpc_matcher<op>(                   \
+              input, match_value, ulp_tolerance, Rrounding, Irounding))        \
+    }                                                                          \
+  }
 
 #define ASSERT_MPC_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)   \
   {                                                                            \
     namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                        \
-    for (int i = 0; i < 5; i++) {                                                                          \
-      for (int j = 0; j < 5; j++) {                                                                        \
-        RoundingMode r_mode = static_cast<RoundingMode>(i);                                                \
-        RoundingMode i_mode = static_cast<RoundingMode>(j);                                                \
-        ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(i, j, op, input, match_value, ulp_tolerance, r_mode, i_mode); \
-      }                                                                                                    \
-    }                                                                                                      \
+    for (int i = 0; i < 5; i++) {                                              \
+      for (int j = 0; j < 5; j++) {                                            \
+        RoundingMode r_mode = static_cast<RoundingMode>(i);                    \
+        RoundingMode i_mode = static_cast<RoundingMode>(j);                    \
+        ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(i, j, op, input, match_value,     \
+                                             ulp_tolerance, r_mode, i_mode);   \
+      }                                                                        \
+    }                                                                          \
   }
 
 #endif // LLVM_LIBC_UTILS_MPCWRAPPER_MPCUTILS_H
