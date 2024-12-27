@@ -48,26 +48,12 @@ bool RegisterContextCorePOSIX_loongarch64::ReadGPR() { return true; }
 
 bool RegisterContextCorePOSIX_loongarch64::ReadFPR() { return true; }
 
-bool RegisterContextCorePOSIX_loongarch64::ReadLSX() { return true; }
-
-bool RegisterContextCorePOSIX_loongarch64::ReadLASX() { return true; }
-
 bool RegisterContextCorePOSIX_loongarch64::WriteGPR() {
   assert(false && "Writing registers is not allowed for core dumps");
   return false;
 }
 
 bool RegisterContextCorePOSIX_loongarch64::WriteFPR() {
-  assert(false && "Writing registers is not allowed for core dumps");
-  return false;
-}
-
-bool RegisterContextCorePOSIX_loongarch64::WriteLSX() {
-  assert(false && "Writing registers is not allowed for core dumps");
-  return false;
-}
-
-bool RegisterContextCorePOSIX_loongarch64::WriteLASX() {
   assert(false && "Writing registers is not allowed for core dumps");
   return false;
 }

@@ -60,12 +60,12 @@ protected:
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;
-  virtual bool ReadLSX() = 0;
-  virtual bool ReadLASX() = 0;
+  virtual bool ReadLSX() { return false; }
+  virtual bool ReadLASX() { return false; }
   virtual bool WriteGPR() = 0;
   virtual bool WriteFPR() = 0;
-  virtual bool WriteLSX() = 0;
-  virtual bool WriteLASX() = 0;
+  virtual bool WriteLSX() { return false; }
+  virtual bool WriteLASX() { return false; }
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_LOONGARCH64_H

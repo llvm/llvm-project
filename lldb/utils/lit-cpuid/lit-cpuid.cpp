@@ -31,6 +31,16 @@ int main(int argc, char **argv) {
   if (features.lookup("avx512f"))
     outs() << "avx512f\n";
 #endif
+#if defined(__loongarch__)
+  const StringMap<bool> features = sys::getHostCPUFeatures();
+  if (features.empty())
+    return 1;
+
+  if (features.lookup("lsx"))
+    outs() << "lsx\n";
+  if (features.lookup("lasx"))
+    outs() << "lasx\n";
+#endif
 
   return 0;
 }

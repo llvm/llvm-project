@@ -35,7 +35,8 @@
 #define NT_LARCH_LASX 0xa03 /* LoongArch Advanced SIMD eXtension registers */
 #endif
 
-#define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
+#define REG_CONTEXT_SIZE                                                       \
+  (GetGPRSize() + GetFPRSize() + sizeof(m_lsx) + sizeof(m_lasx))
 
 using namespace lldb;
 using namespace lldb_private;

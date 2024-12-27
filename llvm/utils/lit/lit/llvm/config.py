@@ -171,6 +171,8 @@ class LLVMConfig(object):
                 features.add("target-arm")
             if re.match(r'^ppc64le.*-linux', target_triple):
                 features.add('target=powerpc64le-linux')
+            if re.match(r"^loongarch64.*", target_triple):
+                features.add("target-loongarch64")
 
         if not user_is_root():
             features.add("non-root-user")
