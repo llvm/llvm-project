@@ -431,7 +431,7 @@ struct BinaryOp_match {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
         return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
                 R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               // NOTE: When trying the alternative different operand ordering
+               // NOTE: When trying the alternative operand ordering
                // with a commutative operation, it is imperative to always run
                // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
                // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
@@ -461,7 +461,7 @@ struct BinaryOpc_match {
           TmpMI->getNumOperands() == 3) {
         return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
                 R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               // NOTE: When trying the alternative different operand ordering
+               // NOTE: When trying the alternative operand ordering
                // with a commutative operation, it is imperative to always run
                // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
                // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
@@ -714,7 +714,7 @@ struct CompareOp_match {
     Register RHS = TmpMI->getOperand(3).getReg();
     if (L.match(MRI, LHS) && R.match(MRI, RHS))
       return true;
-    // NOTE: When trying the alternative different operand ordering
+    // NOTE: When trying the alternative operand ordering
     // with a commutative operation, it is imperative to always run
     // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
     // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as expected.
