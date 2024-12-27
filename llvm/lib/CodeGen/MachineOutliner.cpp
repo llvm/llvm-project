@@ -1170,10 +1170,9 @@ bool MachineOutliner::outline(
                 MF->getSubtarget().getRegisterInfo()->getNumRegs();
             unsigned Size = MachineOperand::getRegMaskSize(NumRegs);
             memset(RegMask, UINT32_MAX, Size * sizeof(RegMask[0]));
-            for (const uint32_t *Mask : RegMasks) {
+            for (const uint32_t *Mask : RegMasks)
               for (unsigned I = 0; I < Size; ++I)
                 RegMask[I] &= Mask[I];
-            }
             CallInst->addOperand(MachineOperand::CreateRegMask(RegMask));
           }
         }
