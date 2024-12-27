@@ -79,7 +79,6 @@
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', FlatAddrspaceAccesses = 0
 ;  CHECK-NOT: {{.}}
 
-
 ; ModuleID = 'test-openmp-amdgcn-amd-amdhsa.bc'
 source_filename = "test.c"
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
@@ -95,14 +94,14 @@ target triple = "amdgcn-amd-amdhsa"
 @__omp_rtl_assume_threads_oversubscription = weak_odr hidden addrspace(1) constant i32 0
 @__omp_rtl_assume_no_thread_state = weak_odr hidden addrspace(1) constant i32 0
 @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden addrspace(1) constant i32 0
-@0 = private unnamed_addr constant [57 x i8] c";test.c;__omp_offloading_fd02_6f0c0_h_l12_debug__;13;3;;\00", align 1
+@0 = private unnamed_addr constant [57 x i8] c";test.c;__omp_offloading_fd02_624a0_h_l12_debug__;13;3;;\00", align 1
 @1 = private unnamed_addr addrspace(1) constant %struct.ident_t { i32 0, i32 2, i32 0, i32 56, ptr @0 }, align 8
-@__omp_offloading_fd02_6f0c0_h_l12_dynamic_environment = weak_odr protected addrspace(1) global %struct.DynamicEnvironmentTy zeroinitializer
-@__omp_offloading_fd02_6f0c0_h_l12_kernel_environment = weak_odr protected addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 256, i32 -1, i32 -1, i32 0, i32 0 }, ptr addrspacecast (ptr addrspace(1) @1 to ptr), ptr addrspacecast (ptr addrspace(1) @__omp_offloading_fd02_6f0c0_h_l12_dynamic_environment to ptr) }
+@__omp_offloading_fd02_624a0_h_l12_dynamic_environment = weak_odr protected addrspace(1) global %struct.DynamicEnvironmentTy zeroinitializer
+@__omp_offloading_fd02_624a0_h_l12_kernel_environment = weak_odr protected addrspace(1) constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 256, i32 -1, i32 -1, i32 0, i32 0 }, ptr addrspacecast (ptr addrspace(1) @1 to ptr), ptr addrspacecast (ptr addrspace(1) @__omp_offloading_fd02_624a0_h_l12_dynamic_environment to ptr) }
 @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
 
 ; Function Attrs: convergent noinline norecurse nounwind optnone
-define internal void @__omp_offloading_fd02_6f0c0_h_l12_debug__(ptr noalias noundef %0) #0 !dbg !16 {
+define internal void @__omp_offloading_fd02_624a0_h_l12_debug__(ptr noalias noundef %0) #0 !dbg !16 {
   %2 = alloca ptr, align 8, addrspace(5)
   %3 = alloca i32, align 4, addrspace(5)
   %4 = alloca [2 x i32], align 4, addrspace(5)
@@ -111,7 +110,7 @@ define internal void @__omp_offloading_fd02_6f0c0_h_l12_debug__(ptr noalias noun
   %7 = addrspacecast ptr addrspace(5) %4 to ptr
   store ptr %0, ptr %5, align 8
     #dbg_declare(ptr addrspace(5) %2, !24, !DIExpression(), !25)
-  %8 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_fd02_6f0c0_h_l12_kernel_environment to ptr), ptr %0), !dbg !26
+  %8 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_fd02_624a0_h_l12_kernel_environment to ptr), ptr %0), !dbg !26
   %9 = icmp eq i32 %8, -1, !dbg !26
   br i1 %9, label %10, label %11, !dbg !26
 
@@ -128,13 +127,13 @@ define internal void @__omp_offloading_fd02_6f0c0_h_l12_debug__(ptr noalias noun
 }
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-define weak_odr protected amdgpu_kernel void @__omp_offloading_fd02_6f0c0_h_l12(ptr noalias noundef %0) #1 !dbg !40 {
+define weak_odr protected amdgpu_kernel void @__omp_offloading_fd02_624a0_h_l12(ptr noalias noundef %0) #1 !dbg !40 {
   %2 = alloca ptr, align 8, addrspace(5)
   %3 = addrspacecast ptr addrspace(5) %2 to ptr
   store ptr %0, ptr %3, align 8
     #dbg_declare(ptr addrspace(5) %2, !41, !DIExpression(), !42)
   %4 = load ptr, ptr %3, align 8, !dbg !43
-  call void @__omp_offloading_fd02_6f0c0_h_l12_debug__(ptr %4) #5, !dbg !43
+  call void @__omp_offloading_fd02_624a0_h_l12_debug__(ptr %4) #5, !dbg !43
   ret void, !dbg !43
 }
 
@@ -172,10 +171,10 @@ attributes #5 = { nounwind }
 !llvm.ident = !{!13, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14, !14}
 !opencl.ocl.version = !{!15, !15, !15, !15, !15, !15, !15, !15, !15, !15, !15, !15, !15, !15, !15, !15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 20.0.0git (/tmp/llvm/clang 0c30e7ceeb36294f4523da2590101314ca1c662d)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "test.c", directory: "/tmp", checksumkind: CSK_MD5, checksum: "854099697e49b3ca7d3b3c08503e6fef")
-!2 = !{i32 0, i32 64770, i32 454848, !"h", i32 12, i32 0, i32 0}
-!3 = !{ptr @__omp_offloading_fd02_6f0c0_h_l12, !"kernel", i32 1}
+!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 20.0.0git (/tmp/llvm/clang 8982f8ff551bd4c11d47afefe97364c3a5c25ec8)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!1 = !DIFile(filename: "test.c", directory: "/tmp", checksumkind: CSK_MD5, checksum: "44c4bbdbb9b7a9c7492ced3432d74b0c")
+!2 = !{i32 0, i32 64770, i32 402592, !"h", i32 12, i32 0, i32 0}
+!3 = !{ptr @__omp_offloading_fd02_624a0_h_l12, !"kernel", i32 1}
 !4 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !5 = !{i32 7, !"Dwarf Version", i32 5}
 !6 = !{i32 2, !"Debug Info Version", i32 3}
@@ -185,10 +184,10 @@ attributes #5 = { nounwind }
 !10 = !{i32 8, !"PIC Level", i32 2}
 !11 = !{i32 7, !"frame-pointer", i32 2}
 !12 = !{i32 4, !"amdgpu_hostcall", i32 1}
-!13 = !{!"clang version 20.0.0git (/tmp/llvm/clang 0c30e7ceeb36294f4523da2590101314ca1c662d)"}
+!13 = !{!"clang version 20.0.0git (/tmp/llvm/clang 8982f8ff551bd4c11d47afefe97364c3a5c25ec8)"}
 !14 = !{!"AMD clang version 17.0.0 (https://github.com/RadeonOpenCompute/llvm-project roc-6.0.2 24012 af27734ed982b52a9f1be0f035ac91726fc697e4)"}
 !15 = !{i32 2, i32 0}
-!16 = distinct !DISubprogram(name: "__omp_offloading_fd02_6f0c0_h_l12_debug__", scope: !17, file: !17, line: 13, type: !18, scopeLine: 13, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !23)
+!16 = distinct !DISubprogram(name: "__omp_offloading_fd02_624a0_h_l12_debug__", scope: !17, file: !17, line: 13, type: !18, scopeLine: 13, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !23)
 !17 = !DIFile(filename: "test.c", directory: "/tmp")
 !18 = !DISubroutineType(types: !19)
 !19 = !{null, !20}
@@ -212,7 +211,7 @@ attributes #5 = { nounwind }
 !37 = !DILocation(line: 17, column: 5, scope: !28)
 !38 = !DILocation(line: 18, column: 3, scope: !28)
 !39 = !DILocation(line: 18, column: 3, scope: !16)
-!40 = distinct !DISubprogram(name: "__omp_offloading_fd02_6f0c0_h_l12", scope: !17, file: !17, line: 12, type: !18, scopeLine: 12, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !23)
+!40 = distinct !DISubprogram(name: "__omp_offloading_fd02_624a0_h_l12", scope: !17, file: !17, line: 12, type: !18, scopeLine: 12, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !23)
 !41 = !DILocalVariable(name: "dyn_ptr", arg: 1, scope: !40, type: !20, flags: DIFlagArtificial)
 !42 = !DILocation(line: 0, scope: !40)
 !43 = !DILocation(line: 12, column: 1, scope: !40)

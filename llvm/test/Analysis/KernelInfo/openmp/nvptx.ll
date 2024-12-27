@@ -62,7 +62,6 @@
 ; A lot of internal functions (e.g., __kmpc_target_init) come next, but we don't
 ; want to maintain a list of their allocas, calls, etc. in this test.
 
-
 ; ModuleID = 'test-openmp-nvptx64-nvidia-cuda.bc'
 source_filename = "test.c"
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
@@ -75,6 +74,8 @@ target triple = "nvptx64-nvidia-cuda"
 %struct.DeviceMemoryPoolTy = type { ptr, i64 }
 %struct.DeviceMemoryPoolTrackingTy = type { i64, i64, i64, i64 }
 %struct.DeviceEnvironmentTy = type { i32, i32, i32, i32, i64, i64, i64, i64 }
+%"struct.rpc::Client" = type { %"struct.rpc::Process" }
+%"struct.rpc::Process" = type { i32, ptr, ptr, ptr, ptr, [128 x i32] }
 %"struct.(anonymous namespace)::SharedMemorySmartStackTy" = type { [512 x i8], [1024 x i8] }
 %"struct.ompx::state::TeamStateTy" = type { %"struct.ompx::state::ICVStateTy", i32, i32, ptr }
 %"struct.ompx::state::ICVStateTy" = type { i32, i32, i32, i32, i32, i32, i32 }
@@ -83,11 +84,11 @@ target triple = "nvptx64-nvidia-cuda"
 
 @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
 @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
-@0 = private unnamed_addr constant [58 x i8] c";test.c;__omp_offloading_fd02_10d1d6_h_l12_debug__;13;3;;\00", align 1
+@0 = private unnamed_addr constant [58 x i8] c";test.c;__omp_offloading_fd02_100102_h_l12_debug__;13;3;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 57, ptr @0 }, align 8
-@__omp_offloading_fd02_10d1d6_h_l12_dynamic_environment = weak_odr protected global %struct.DynamicEnvironmentTy zeroinitializer
-@__omp_offloading_fd02_10d1d6_h_l12_kernel_environment = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 128, i32 -1, i32 -1, i32 0, i32 0 }, ptr @1, ptr @__omp_offloading_fd02_10d1d6_h_l12_dynamic_environment }
-@llvm.used = appending global [3 x ptr] [ptr addrspacecast (ptr addrspace(4) @__omp_rtl_device_environment to ptr), ptr @__omp_rtl_device_memory_pool, ptr @__omp_rtl_device_memory_pool_tracker], section "llvm.metadata"
+@__omp_offloading_fd02_100102_h_l12_dynamic_environment = weak_odr protected global %struct.DynamicEnvironmentTy zeroinitializer
+@__omp_offloading_fd02_100102_h_l12_kernel_environment = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 128, i32 -1, i32 -1, i32 0, i32 0 }, ptr @1, ptr @__omp_offloading_fd02_100102_h_l12_dynamic_environment }
+@llvm.used = appending global [4 x ptr] [ptr @__llvm_rpc_client, ptr addrspacecast (ptr addrspace(4) @__omp_rtl_device_environment to ptr), ptr @__omp_rtl_device_memory_pool, ptr @__omp_rtl_device_memory_pool_tracker], section "llvm.metadata"
 @__omp_rtl_device_memory_pool = weak protected global %struct.DeviceMemoryPoolTy zeroinitializer, align 8
 @__omp_rtl_device_memory_pool_tracker = weak protected global %struct.DeviceMemoryPoolTrackingTy zeroinitializer, align 8
 @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
@@ -101,23 +102,24 @@ target triple = "nvptx64-nvidia-cuda"
 @.str2 = private unnamed_addr constant [18 x i8] c"WorkFn == nullptr\00", align 1
 @__PRETTY_FUNCTION__.__kmpc_target_deinit = private unnamed_addr constant [28 x i8] c"void __kmpc_target_deinit()\00", align 1
 @IsSPMDMode = internal local_unnamed_addr addrspace(3) global i32 undef, align 4
-@.str1124 = private unnamed_addr constant [48 x i8] c"/tmp/llvm/offload/DeviceRTL/src/Parallelism.cpp\00", align 1
+@__llvm_rpc_client = weak protected global %"struct.rpc::Client" zeroinitializer, align 8
+@.str1125 = private unnamed_addr constant [48 x i8] c"/tmp/llvm/offload/DeviceRTL/src/Parallelism.cpp\00", align 1
 @.str13 = private unnamed_addr constant [23 x i8] c"!mapping::isSPMDMode()\00", align 1
 @__PRETTY_FUNCTION__.__kmpc_kernel_end_parallel = private unnamed_addr constant [34 x i8] c"void __kmpc_kernel_end_parallel()\00", align 1
 @_ZL20KernelEnvironmentPtr = internal unnamed_addr addrspace(3) global ptr undef, align 8
 @_ZL26KernelLaunchEnvironmentPtr = internal unnamed_addr addrspace(3) global ptr undef, align 8
 @_ZN12_GLOBAL__N_122SharedMemorySmartStackE = internal addrspace(3) global %"struct.(anonymous namespace)::SharedMemorySmartStackTy" undef, align 16
-@.str541 = private unnamed_addr constant [42 x i8] c"/tmp/llvm/offload/DeviceRTL/src/State.cpp\00", align 1
-@.str844 = private unnamed_addr constant [33 x i8] c"NThreadsVar == Other.NThreadsVar\00", align 1
+@.str542 = private unnamed_addr constant [42 x i8] c"/tmp/llvm/offload/DeviceRTL/src/State.cpp\00", align 1
+@.str845 = private unnamed_addr constant [33 x i8] c"NThreadsVar == Other.NThreadsVar\00", align 1
 @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_ = private unnamed_addr constant [68 x i8] c"void ompx::state::ICVStateTy::assertEqual(const ICVStateTy &) const\00", align 1
-@.str945 = private unnamed_addr constant [27 x i8] c"LevelVar == Other.LevelVar\00", align 1
-@.str1046 = private unnamed_addr constant [39 x i8] c"ActiveLevelVar == Other.ActiveLevelVar\00", align 1
-@.str1147 = private unnamed_addr constant [47 x i8] c"MaxActiveLevelsVar == Other.MaxActiveLevelsVar\00", align 1
-@.str1248 = private unnamed_addr constant [33 x i8] c"RunSchedVar == Other.RunSchedVar\00", align 1
-@.str1349 = private unnamed_addr constant [43 x i8] c"RunSchedChunkVar == Other.RunSchedChunkVar\00", align 1
+@.str946 = private unnamed_addr constant [27 x i8] c"LevelVar == Other.LevelVar\00", align 1
+@.str1047 = private unnamed_addr constant [39 x i8] c"ActiveLevelVar == Other.ActiveLevelVar\00", align 1
+@.str1148 = private unnamed_addr constant [47 x i8] c"MaxActiveLevelsVar == Other.MaxActiveLevelsVar\00", align 1
+@.str1249 = private unnamed_addr constant [33 x i8] c"RunSchedVar == Other.RunSchedVar\00", align 1
+@.str1350 = private unnamed_addr constant [43 x i8] c"RunSchedChunkVar == Other.RunSchedChunkVar\00", align 1
 @.str14 = private unnamed_addr constant [43 x i8] c"ParallelTeamSize == Other.ParallelTeamSize\00", align 1
 @__PRETTY_FUNCTION__._ZNK4ompx5state11TeamStateTy11assertEqualERS1_ = private unnamed_addr constant [64 x i8] c"void ompx::state::TeamStateTy::assertEqual(TeamStateTy &) const\00", align 1
-@.str1550 = private unnamed_addr constant [39 x i8] c"HasThreadState == Other.HasThreadState\00", align 1
+@.str1551 = private unnamed_addr constant [39 x i8] c"HasThreadState == Other.HasThreadState\00", align 1
 @.str24 = private unnamed_addr constant [32 x i8] c"mapping::isSPMDMode() == IsSPMD\00", align 1
 @__PRETTY_FUNCTION__._ZN4ompx5state18assumeInitialStateEb = private unnamed_addr constant [43 x i8] c"void ompx::state::assumeInitialState(bool)\00", align 1
 @_ZL9ThreadDST = internal unnamed_addr addrspace(3) global ptr undef, align 8
@@ -125,13 +127,13 @@ target triple = "nvptx64-nvidia-cuda"
 @_ZN4ompx5state12ThreadStatesE = internal addrspace(3) global ptr undef, align 8
 
 ; Function Attrs: convergent noinline norecurse nounwind optnone
-define internal void @__omp_offloading_fd02_10d1d6_h_l12_debug__(ptr noalias noundef %0) #0 !dbg !19 {
+define internal void @__omp_offloading_fd02_100102_h_l12_debug__(ptr noalias noundef %0) #0 !dbg !19 {
   %2 = alloca ptr, align 8
   %3 = alloca i32, align 4
   %4 = alloca [2 x i32], align 4
   store ptr %0, ptr %2, align 8
     #dbg_declare(ptr %2, !26, !DIExpression(), !27)
-  %5 = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_10d1d6_h_l12_kernel_environment, ptr %0), !dbg !28
+  %5 = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_100102_h_l12_kernel_environment, ptr %0), !dbg !28
   %6 = icmp eq i32 %5, -1, !dbg !28
   br i1 %6, label %7, label %8, !dbg !28
 
@@ -148,12 +150,12 @@ define internal void @__omp_offloading_fd02_10d1d6_h_l12_debug__(ptr noalias nou
 }
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-define weak_odr protected void @__omp_offloading_fd02_10d1d6_h_l12(ptr noalias noundef %0) #1 !dbg !42 {
+define weak_odr protected void @__omp_offloading_fd02_100102_h_l12(ptr noalias noundef %0) #1 !dbg !42 {
   %2 = alloca ptr, align 8
   store ptr %0, ptr %2, align 8
     #dbg_declare(ptr %2, !43, !DIExpression(), !44)
   %3 = load ptr, ptr %2, align 8, !dbg !45
-  call void @__omp_offloading_fd02_10d1d6_h_l12_debug__(ptr %3) #17, !dbg !45
+  call void @__omp_offloading_fd02_100102_h_l12_debug__(ptr %3) #17, !dbg !45
   ret void, !dbg !45
 }
 
@@ -190,16 +192,16 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
 13:                                               ; preds = %10
   store i32 1, ptr addrspace(3) @IsSPMDMode, align 4, !tbaa !63
   store i8 0, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN12_GLOBAL__N_122SharedMemorySmartStackE to ptr), i64 512) to ptr addrspace(3)), align 1, !tbaa !64
-  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i8 noundef 0, i64 noundef 16, i1 noundef false) #18
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i8 noundef 0, i64 noundef 16, i1 noundef false) #18
   store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 16) to ptr addrspace(3)), align 8, !tbaa !65
-  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 20) to ptr addrspace(3)), align 4, !tbaa !69
-  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 24) to ptr addrspace(3)), align 8, !tbaa !70
-  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !71
-  store i32 0, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 32) to ptr addrspace(3)), align 8, !tbaa !72
-  store ptr null, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !73
-  store ptr null, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !74
-  store ptr %0, ptr addrspace(3) @_ZL20KernelEnvironmentPtr, align 8, !tbaa !74
-  store ptr %1, ptr addrspace(3) @_ZL26KernelLaunchEnvironmentPtr, align 8, !tbaa !74
+  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 20) to ptr addrspace(3)), align 4, !tbaa !70
+  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 24) to ptr addrspace(3)), align 8, !tbaa !71
+  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !72
+  store i32 0, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 32) to ptr addrspace(3)), align 8, !tbaa !73
+  store ptr null, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !74
+  store ptr null, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !75
+  store ptr %0, ptr addrspace(3) @_ZL20KernelEnvironmentPtr, align 8, !tbaa !77
+  store ptr %1, ptr addrspace(3) @_ZL26KernelLaunchEnvironmentPtr, align 8, !tbaa !79
   br label %18
 
 14:                                               ; preds = %10
@@ -213,7 +215,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %12, label %19, label %20
 
 19:                                               ; preds = %18
-  store ptr null, ptr addrspace(3) @_ZL9ThreadDST, align 8, !tbaa !74
+  store ptr null, ptr addrspace(3) @_ZL9ThreadDST, align 8, !tbaa !81
   br label %20
 
 20:                                               ; preds = %18, %19
@@ -221,7 +223,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br label %37
 
 21:                                               ; preds = %2
-  %22 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !75
+  %22 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !83
   %23 = add nsw i32 %22, -1
   %24 = and i32 %23, -32
   %25 = tail call range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #18
@@ -234,16 +236,16 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   %29 = getelementptr inbounds nuw [1024 x i8], ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN12_GLOBAL__N_122SharedMemorySmartStackE to ptr), i64 512), i64 0, i64 %28
   %30 = addrspacecast ptr %29 to ptr addrspace(3)
   store i8 0, ptr addrspace(3) %30, align 1, !tbaa !64
-  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i8 noundef 0, i64 noundef 16, i1 noundef false) #18
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i8 noundef 0, i64 noundef 16, i1 noundef false) #18
   store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 16) to ptr addrspace(3)), align 8, !tbaa !65
-  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 20) to ptr addrspace(3)), align 4, !tbaa !69
-  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 24) to ptr addrspace(3)), align 8, !tbaa !70
-  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !71
-  store i32 0, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 32) to ptr addrspace(3)), align 8, !tbaa !72
-  store ptr null, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !73
-  store ptr null, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !74
-  store ptr %0, ptr addrspace(3) @_ZL20KernelEnvironmentPtr, align 8, !tbaa !74
-  store ptr %1, ptr addrspace(3) @_ZL26KernelLaunchEnvironmentPtr, align 8, !tbaa !74
+  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 20) to ptr addrspace(3)), align 4, !tbaa !70
+  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 24) to ptr addrspace(3)), align 8, !tbaa !71
+  store i32 1, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !72
+  store i32 0, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 32) to ptr addrspace(3)), align 8, !tbaa !73
+  store ptr null, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !74
+  store ptr null, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !75
+  store ptr %0, ptr addrspace(3) @_ZL20KernelEnvironmentPtr, align 8, !tbaa !77
+  store ptr %1, ptr addrspace(3) @_ZL26KernelLaunchEnvironmentPtr, align 8, !tbaa !79
   br label %35
 
 31:                                               ; preds = %21
@@ -257,7 +259,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %26, label %36, label %37
 
 36:                                               ; preds = %35
-  store ptr null, ptr addrspace(3) @_ZL9ThreadDST, align 8, !tbaa !74
+  store ptr null, ptr addrspace(3) @_ZL9ThreadDST, align 8, !tbaa !81
   br label %37
 
 37:                                               ; preds = %36, %35, %20
@@ -265,23 +267,23 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
 
 38:                                               ; preds = %37
   %39 = load i32, ptr @__omp_rtl_debug_kind, align 4, !tbaa !63
-  %40 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !76
+  %40 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !84
   %41 = and i32 %39, 1
   %42 = and i32 %41, %40
   %43 = icmp ne i32 %42, 0
-  %44 = load i32, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 8, !tbaa !79
+  %44 = load i32, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 8, !tbaa !87
   %45 = icmp ne i32 %44, 0
   %46 = select i1 %43, i1 %45, i1 false
   br i1 %46, label %47, label %48
 
 47:                                               ; preds = %38
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(33) @.str844, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 193, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(33) @.str845, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 193, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
   unreachable
 
 48:                                               ; preds = %38
   %49 = icmp eq i32 %44, 0
   tail call void @llvm.assume(i1 noundef %49) #21
-  %50 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 4) to ptr addrspace(3)), align 4, !tbaa !80
+  %50 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 4) to ptr addrspace(3)), align 4, !tbaa !88
   br i1 %43, label %51, label %54
 
 51:                                               ; preds = %48
@@ -289,14 +291,14 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %52, label %54, label %53
 
 53:                                               ; preds = %51
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(27) @.str945, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 194, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(27) @.str946, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 194, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
   unreachable
 
 54:                                               ; preds = %51, %48
   %55 = phi i32 [ 0, %51 ], [ %50, %48 ]
   %56 = icmp eq i32 %55, 0
   tail call void @llvm.assume(i1 noundef %56) #21
-  %57 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 8) to ptr addrspace(3)), align 8, !tbaa !81
+  %57 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 8) to ptr addrspace(3)), align 8, !tbaa !89
   br i1 %43, label %58, label %61
 
 58:                                               ; preds = %54
@@ -304,14 +306,14 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %59, label %61, label %60
 
 60:                                               ; preds = %58
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(39) @.str1046, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 195, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(39) @.str1047, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 195, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
   unreachable
 
 61:                                               ; preds = %58, %54
   %62 = phi i32 [ 0, %58 ], [ %57, %54 ]
   %63 = icmp eq i32 %62, 0
   tail call void @llvm.assume(i1 noundef %63) #21
-  %64 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 16) to ptr addrspace(3)), align 8, !tbaa !82
+  %64 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 16) to ptr addrspace(3)), align 8, !tbaa !90
   br i1 %43, label %65, label %68
 
 65:                                               ; preds = %61
@@ -319,14 +321,14 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %66, label %68, label %67
 
 67:                                               ; preds = %65
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(47) @.str1147, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 196, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(47) @.str1148, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 196, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
   unreachable
 
 68:                                               ; preds = %65, %61
   %69 = phi i32 [ 1, %65 ], [ %64, %61 ]
   %70 = icmp eq i32 %69, 1
   tail call void @llvm.assume(i1 noundef %70) #21
-  %71 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 20) to ptr addrspace(3)), align 4, !tbaa !83
+  %71 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 20) to ptr addrspace(3)), align 4, !tbaa !91
   br i1 %43, label %72, label %93
 
 72:                                               ; preds = %68
@@ -334,7 +336,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %73, label %75, label %74
 
 74:                                               ; preds = %72
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(33) @.str1248, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 197, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(33) @.str1249, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 197, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
   unreachable
 
 75:                                               ; preds = %72
@@ -343,30 +345,30 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %43, label %77, label %95
 
 77:                                               ; preds = %75
-  %78 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 24) to ptr addrspace(3)), align 8, !tbaa !84
+  %78 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 24) to ptr addrspace(3)), align 8, !tbaa !92
   %79 = icmp eq i32 %78, 1
   br i1 %79, label %81, label %80
 
 80:                                               ; preds = %77
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(43) @.str1349, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 198, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(43) @.str1350, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 198, ptr nofree noundef nonnull dereferenceable(68) @__PRETTY_FUNCTION__._ZNK4ompx5state10ICVStateTy11assertEqualERKS1_) #20
   unreachable
 
 81:                                               ; preds = %77
-  %82 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !71
+  %82 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !72
   %83 = icmp eq i32 %82, 1
   br i1 %83, label %85, label %84
 
 84:                                               ; preds = %81
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(43) @.str14, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 222, ptr nofree noundef nonnull dereferenceable(64) @__PRETTY_FUNCTION__._ZNK4ompx5state11TeamStateTy11assertEqualERS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(43) @.str14, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 222, ptr nofree noundef nonnull dereferenceable(64) @__PRETTY_FUNCTION__._ZNK4ompx5state11TeamStateTy11assertEqualERS1_) #20
   unreachable
 
 85:                                               ; preds = %81
-  %86 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 32) to ptr addrspace(3)), align 8, !tbaa !72
+  %86 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 32) to ptr addrspace(3)), align 8, !tbaa !73
   %87 = icmp eq i32 %86, 0
   br i1 %87, label %89, label %88
 
 88:                                               ; preds = %85
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(39) @.str1550, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 223, ptr nofree noundef nonnull dereferenceable(64) @__PRETTY_FUNCTION__._ZNK4ompx5state11TeamStateTy11assertEqualERS1_) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(39) @.str1551, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 223, ptr nofree noundef nonnull dereferenceable(64) @__PRETTY_FUNCTION__._ZNK4ompx5state11TeamStateTy11assertEqualERS1_) #20
   unreachable
 
 89:                                               ; preds = %85
@@ -375,7 +377,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br i1 %91, label %92, label %98
 
 92:                                               ; preds = %89
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(32) @.str24, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str541, i32 noundef 326, ptr nofree noundef nonnull dereferenceable(43) @__PRETTY_FUNCTION__._ZN4ompx5state18assumeInitialStateEb) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(32) @.str24, ptr noundef null, ptr nofree noundef nonnull dereferenceable(66) @.str542, i32 noundef 326, ptr nofree noundef nonnull dereferenceable(43) @__PRETTY_FUNCTION__._ZN4ompx5state18assumeInitialStateEb) #20
   unreachable
 
 93:                                               ; preds = %68
@@ -395,10 +397,10 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br label %130
 
 100:                                              ; preds = %37
-  %101 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !75
+  %101 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !83
   %102 = add nsw i32 %101, -1
   %103 = and i32 %102, -32
-  %104 = tail call range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #18, !range !85
+  %104 = tail call range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #18, !range !93
   %105 = icmp eq i32 %104, %103
   br i1 %105, label %130, label %106
 
@@ -418,10 +420,10 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
 
 116:                                              ; preds = %110, %128
   call void @llvm.lifetime.start.p0(i64 noundef 8, ptr noundef nonnull align 8 dereferenceable(8) %3) #22
-  store ptr null, ptr %3, align 8, !tbaa !74
+  store ptr null, ptr %3, align 8, !tbaa !94
   tail call void @llvm.nvvm.barrier.sync(i32 noundef 8) #18
   %117 = call zeroext i1 @__kmpc_kernel_parallel(ptr noalias nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) %3) #22
-  %118 = load ptr, ptr %3, align 8, !tbaa !74
+  %118 = load ptr, ptr %3, align 8, !tbaa !94
   %119 = icmp eq ptr %118, null
   br i1 %119, label %129, label %120
 
@@ -448,7 +450,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
 128:                                              ; preds = %126, %120
   tail call void @llvm.nvvm.barrier.sync(i32 noundef 8) #18
   call void @llvm.lifetime.end.p0(i64 noundef 8, ptr noundef nonnull %3) #22
-  br label %116, !llvm.loop !86
+  br label %116, !llvm.loop !95
 
 129:                                              ; preds = %116
   call void @llvm.lifetime.end.p0(i64 noundef 8, ptr noundef nonnull %3) #22
@@ -520,17 +522,17 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #10
 declare void @llvm.nvvm.barrier.sync(i32) #11
 
 ; Function Attrs: convergent mustprogress nofree noinline norecurse nosync nounwind willreturn memory(read, argmem: write, inaccessiblemem: none)
-define internal noundef zeroext i1 @__kmpc_kernel_parallel(ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) %0) local_unnamed_addr #12 {
-  %2 = load ptr, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !74
-  store ptr %2, ptr %0, align 8, !tbaa !74
+define internal noundef zeroext i1 @__kmpc_kernel_parallel(ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) initializes((0, 8)) %0) local_unnamed_addr #12 {
+  %2 = load ptr, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !94
+  store ptr %2, ptr %0, align 8, !tbaa !94
   %3 = icmp eq ptr %2, null
   br i1 %3, label %15, label %4
 
 4:                                                ; preds = %1
-  %5 = tail call noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #27, !range !85
+  %5 = tail call noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #27, !range !93
   %6 = load i32, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 28) to ptr addrspace(3)), align 4, !tbaa !63
   %7 = icmp eq i32 %6, 0
-  %8 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !75
+  %8 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !83
   %9 = load i32, ptr addrspace(3) @IsSPMDMode, align 4
   %10 = icmp eq i32 %9, 0
   %11 = select i1 %10, i32 -32, i32 0
@@ -547,7 +549,7 @@ define internal noundef zeroext i1 @__kmpc_kernel_parallel(ptr nocapture nofree 
 ; Function Attrs: convergent mustprogress noinline nounwind
 define internal void @__kmpc_kernel_end_parallel() local_unnamed_addr #13 {
   %1 = load i32, ptr @__omp_rtl_debug_kind, align 4, !tbaa !63
-  %2 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !76
+  %2 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !84
   %3 = and i32 %1, 1
   %4 = and i32 %3, %2
   %5 = icmp ne i32 %4, 0
@@ -557,7 +559,7 @@ define internal void @__kmpc_kernel_end_parallel() local_unnamed_addr #13 {
   br i1 %8, label %9, label %10
 
 9:                                                ; preds = %0
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(23) @.str13, ptr noundef null, ptr nofree noundef nonnull dereferenceable(72) @.str1124, i32 noundef 298, ptr nofree noundef nonnull dereferenceable(34) @__PRETTY_FUNCTION__.__kmpc_kernel_end_parallel) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(23) @.str13, ptr noundef null, ptr nofree noundef nonnull dereferenceable(72) @.str1125, i32 noundef 298, ptr nofree noundef nonnull dereferenceable(34) @__PRETTY_FUNCTION__.__kmpc_kernel_end_parallel) #20
   unreachable
 
 10:                                               ; preds = %0
@@ -571,21 +573,21 @@ define internal void @__kmpc_kernel_end_parallel() local_unnamed_addr #13 {
   br i1 %16, label %17, label %30
 
 17:                                               ; preds = %10
-  %18 = tail call noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #27, !range !85
-  %19 = load ptr, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !74
+  %18 = tail call noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #27, !range !93
+  %19 = load ptr, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !75
   %20 = zext nneg i32 %18 to i64
   %21 = getelementptr inbounds nuw ptr, ptr %19, i64 %20
-  %22 = load ptr, ptr %21, align 8, !tbaa !74
+  %22 = load ptr, ptr %21, align 8, !tbaa !97
   %23 = icmp eq ptr %22, null
-  br i1 %23, label %30, label %24, !prof !88
+  br i1 %23, label %30, label %24, !prof !99
 
 24:                                               ; preds = %17
   %25 = getelementptr inbounds nuw i8, ptr %22, i64 32
-  %26 = load ptr, ptr %25, align 8, !tbaa !89
+  %26 = load ptr, ptr %25, align 8, !tbaa !100
   tail call void @free(ptr noundef nonnull dereferenceable(40) %22) #28
-  %27 = load ptr, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !74
+  %27 = load ptr, ptr addrspace(3) @_ZN4ompx5state12ThreadStatesE, align 8, !tbaa !75
   %28 = getelementptr inbounds nuw ptr, ptr %27, i64 %20
-  store ptr %26, ptr %28, align 8, !tbaa !74
+  store ptr %26, ptr %28, align 8, !tbaa !97
   %29 = load i32, ptr addrspace(3) @IsSPMDMode, align 4
   br label %30
 
@@ -596,7 +598,7 @@ define internal void @__kmpc_kernel_end_parallel() local_unnamed_addr #13 {
   br i1 %33, label %34, label %35
 
 34:                                               ; preds = %30
-  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(23) @.str13, ptr noundef null, ptr nofree noundef nonnull dereferenceable(72) @.str1124, i32 noundef 301, ptr nofree noundef nonnull dereferenceable(34) @__PRETTY_FUNCTION__.__kmpc_kernel_end_parallel) #20
+  tail call fastcc void @__assert_fail_internal(ptr nofree noundef nonnull dereferenceable(23) @.str13, ptr noundef null, ptr nofree noundef nonnull dereferenceable(72) @.str1125, i32 noundef 301, ptr nofree noundef nonnull dereferenceable(34) @__PRETTY_FUNCTION__.__kmpc_kernel_end_parallel) #20
   unreachable
 
 35:                                               ; preds = %30
@@ -628,29 +630,29 @@ define internal void @__kmpc_target_deinit() #4 {
   br i1 %3, label %4, label %27
 
 4:                                                ; preds = %0
-  %5 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !75
+  %5 = tail call range(i32 1, 1025) i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #18, !range !83
   %6 = add nsw i32 %5, -1
   %7 = and i32 %6, -32
-  %8 = tail call range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #18, !range !85
+  %8 = tail call range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #18, !range !93
   %9 = icmp eq i32 %8, %7
   br i1 %9, label %10, label %11
 
 10:                                               ; preds = %4
-  store ptr null, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !74
+  store ptr null, ptr addrspace(3) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZN4ompx5state9TeamStateE to ptr), i64 40) to ptr addrspace(3)), align 8, !tbaa !94
   br label %27
 
 11:                                               ; preds = %4
-  %12 = load ptr, ptr addrspace(3) @_ZL20KernelEnvironmentPtr, align 8, !tbaa !74
-  %13 = load i8, ptr %12, align 8, !tbaa !91
+  %12 = load ptr, ptr addrspace(3) @_ZL20KernelEnvironmentPtr, align 8, !tbaa !77
+  %13 = load i8, ptr %12, align 8, !tbaa !102
   %14 = icmp eq i8 %13, 0
   br i1 %14, label %15, label %27
 
 15:                                               ; preds = %11
   call void @llvm.lifetime.start.p0(i64 noundef 8, ptr noundef nonnull align 8 dereferenceable(8) %1) #29
-  store ptr null, ptr %1, align 8, !tbaa !74
+  store ptr null, ptr %1, align 8, !tbaa !94
   %16 = call zeroext i1 @__kmpc_kernel_parallel(ptr noalias nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) %1) #22
   %17 = load i32, ptr @__omp_rtl_debug_kind, align 4, !tbaa !63
-  %18 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !76
+  %18 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !84
   %19 = and i32 %17, 1
   %20 = and i32 %19, %18
   %21 = icmp eq i32 %20, 0
@@ -721,15 +723,15 @@ attributes #29 = { nofree nounwind willreturn "llvm.assume"="ompx_no_call_asm" }
 !8 = !{i32 7, !"frame-pointer", i32 2}
 !9 = !{i32 1, !"ThinLTO", i32 0}
 !10 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
-!11 = distinct !DICompileUnit(language: DW_LANG_C11, file: !12, producer: "clang version 20.0.0git (/tmp/llvm/clang 0c30e7ceeb36294f4523da2590101314ca1c662d)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!11 = distinct !DICompileUnit(language: DW_LANG_C11, file: !12, producer: "clang version 20.0.0git (/tmp/llvm/clang 8982f8ff551bd4c11d47afefe97364c3a5c25ec8)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !12 = !DIFile(filename: "test.c", directory: "/tmp")
-!13 = !{ptr @__omp_offloading_fd02_10d1d6_h_l12, !"maxntidx", i32 128}
-!14 = !{ptr @__omp_offloading_fd02_10d1d6_h_l12, !"kernel", i32 1}
-!15 = !{i32 0, i32 64770, i32 1102294, !"h", i32 12, i32 0, i32 0}
-!16 = !{!"clang version 20.0.0git (/tmp/llvm/clang 0c30e7ceeb36294f4523da2590101314ca1c662d)"}
+!13 = !{ptr @__omp_offloading_fd02_100102_h_l12, !"maxntidx", i32 128}
+!14 = !{ptr @__omp_offloading_fd02_100102_h_l12, !"kernel", i32 1}
+!15 = !{i32 0, i32 64770, i32 1048834, !"h", i32 12, i32 0, i32 0}
+!16 = !{!"clang version 20.0.0git (/tmp/llvm/clang 8982f8ff551bd4c11d47afefe97364c3a5c25ec8)"}
 !17 = !{!"clang version 3.8.0 (tags/RELEASE_380/final)"}
 !18 = !{i32 2, i32 0}
-!19 = distinct !DISubprogram(name: "__omp_offloading_fd02_10d1d6_h_l12_debug__", scope: !12, file: !12, line: 13, type: !20, scopeLine: 13, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !11, retainedNodes: !25)
+!19 = distinct !DISubprogram(name: "__omp_offloading_fd02_100102_h_l12_debug__", scope: !12, file: !12, line: 13, type: !20, scopeLine: 13, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !11, retainedNodes: !25)
 !20 = !DISubroutineType(types: !21)
 !21 = !{null, !22}
 !22 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !23)
@@ -752,7 +754,7 @@ attributes #29 = { nofree nounwind willreturn "llvm.assume"="ompx_no_call_asm" }
 !39 = !DILocation(line: 17, column: 5, scope: !30)
 !40 = !DILocation(line: 18, column: 3, scope: !30)
 !41 = !DILocation(line: 18, column: 3, scope: !19)
-!42 = distinct !DISubprogram(name: "__omp_offloading_fd02_10d1d6_h_l12", scope: !12, file: !12, line: 12, type: !20, scopeLine: 12, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !11, retainedNodes: !25)
+!42 = distinct !DISubprogram(name: "__omp_offloading_fd02_100102_h_l12", scope: !12, file: !12, line: 12, type: !20, scopeLine: 12, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !11, retainedNodes: !25)
 !43 = !DILocalVariable(name: "dyn_ptr", arg: 1, scope: !42, type: !22, flags: DIFlagArtificial)
 !44 = !DILocation(line: 0, scope: !42)
 !45 = !DILocation(line: 12, column: 1, scope: !42)
@@ -778,28 +780,41 @@ attributes #29 = { nofree nounwind willreturn "llvm.assume"="ompx_no_call_asm" }
 !65 = !{!66, !61, i64 16}
 !66 = !{!"_ZTSN4ompx5state11TeamStateTyE", !67, i64 0, !61, i64 28, !61, i64 32, !68, i64 40}
 !67 = !{!"_ZTSN4ompx5state10ICVStateTyE", !61, i64 0, !61, i64 4, !61, i64 8, !61, i64 12, !61, i64 16, !61, i64 20, !61, i64 24}
-!68 = !{!"any pointer", !58, i64 0}
-!69 = !{!66, !61, i64 20}
-!70 = !{!66, !61, i64 24}
-!71 = !{!66, !61, i64 28}
-!72 = !{!66, !61, i64 32}
-!73 = !{!66, !68, i64 40}
-!74 = !{!68, !68, i64 0}
-!75 = !{i32 1, i32 1025}
-!76 = !{!77, !61, i64 0}
-!77 = !{!"_ZTS19DeviceEnvironmentTy", !61, i64 0, !61, i64 4, !61, i64 8, !61, i64 12, !78, i64 16, !78, i64 24, !78, i64 32, !78, i64 40}
-!78 = !{!"long", !58, i64 0}
-!79 = !{!67, !61, i64 0}
-!80 = !{!67, !61, i64 4}
-!81 = !{!67, !61, i64 8}
-!82 = !{!67, !61, i64 16}
-!83 = !{!67, !61, i64 20}
-!84 = !{!67, !61, i64 24}
-!85 = !{i32 0, i32 1024}
-!86 = distinct !{!86, !87}
-!87 = !{!"llvm.loop.mustprogress"}
-!88 = !{!"branch_weights", !"expected", i32 2000, i32 1}
-!89 = !{!90, !68, i64 32}
-!90 = !{!"_ZTSN4ompx5state13ThreadStateTyE", !67, i64 0, !68, i64 32}
-!91 = !{!92, !58, i64 0}
-!92 = !{!"_ZTS19KernelEnvironmentTy", !57, i64 0, !68, i64 32, !68, i64 40}
+!68 = !{!"p1 void", !69, i64 0}
+!69 = !{!"any pointer", !58, i64 0}
+!70 = !{!66, !61, i64 20}
+!71 = !{!66, !61, i64 24}
+!72 = !{!66, !61, i64 28}
+!73 = !{!66, !61, i64 32}
+!74 = !{!66, !68, i64 40}
+!75 = !{!76, !76, i64 0}
+!76 = !{!"p2 _ZTSN4ompx5state13ThreadStateTyE", !69, i64 0}
+!77 = !{!78, !78, i64 0}
+!78 = !{!"p1 _ZTS19KernelEnvironmentTy", !69, i64 0}
+!79 = !{!80, !80, i64 0}
+!80 = !{!"p1 _ZTS25KernelLaunchEnvironmentTy", !69, i64 0}
+!81 = !{!82, !82, i64 0}
+!82 = !{!"p2 _ZTS22DynamicScheduleTracker", !69, i64 0}
+!83 = !{i32 1, i32 1025}
+!84 = !{!85, !61, i64 0}
+!85 = !{!"_ZTS19DeviceEnvironmentTy", !61, i64 0, !61, i64 4, !61, i64 8, !61, i64 12, !86, i64 16, !86, i64 24, !86, i64 32, !86, i64 40}
+!86 = !{!"long", !58, i64 0}
+!87 = !{!67, !61, i64 0}
+!88 = !{!67, !61, i64 4}
+!89 = !{!67, !61, i64 8}
+!90 = !{!67, !61, i64 16}
+!91 = !{!67, !61, i64 20}
+!92 = !{!67, !61, i64 24}
+!93 = !{i32 0, i32 1024}
+!94 = !{!68, !68, i64 0}
+!95 = distinct !{!95, !96}
+!96 = !{!"llvm.loop.mustprogress"}
+!97 = !{!98, !98, i64 0}
+!98 = !{!"p1 _ZTSN4ompx5state13ThreadStateTyE", !69, i64 0}
+!99 = !{!"branch_weights", !"expected", i32 2000, i32 1}
+!100 = !{!101, !98, i64 32}
+!101 = !{!"_ZTSN4ompx5state13ThreadStateTyE", !67, i64 0, !98, i64 32}
+!102 = !{!103, !58, i64 0}
+!103 = !{!"_ZTS19KernelEnvironmentTy", !57, i64 0, !104, i64 32, !105, i64 40}
+!104 = !{!"p1 _ZTS7IdentTy", !69, i64 0}
+!105 = !{!"p1 _ZTS20DynamicEnvironmentTy", !69, i64 0}
