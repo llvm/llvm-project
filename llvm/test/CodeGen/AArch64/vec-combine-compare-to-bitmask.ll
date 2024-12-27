@@ -6,21 +6,10 @@
 ; IR generated from clang for:
 ; __builtin_convertvector + reinterpret_cast<uint16&>
 
-; GISEL: warning: Instruction selection used fallback path for convert_to_bitmask4
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask2
-; GISEL-NEXT: warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_no_compare
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_compare_chain
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_trunc_in_chain
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_unknown_type_in_long_chain
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_different_types_in_chain
+; GISEL: warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
 ; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_4xi8
 ; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_8xi2
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_float
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_legalized_illegal_element_size
 ; GISEL-NEXT: warning: Instruction selection used fallback path for no_direct_convert_for_bad_concat
-; GISEL-NEXT: warning: Instruction selection used fallback path for no_combine_illegal_num_elements
 
 define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; Bits used in mask
