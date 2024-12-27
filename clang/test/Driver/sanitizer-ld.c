@@ -909,7 +909,7 @@
 // RUN: %clang -target riscv64-linux-android -fsanitize=shadow-call-stack %s -### 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ANDROID-RISCV64
 // CHECK-SHADOWCALLSTACK-ANDROID-RISCV64-NOT: error:
-// CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: libclang_rt.builtins.a
 // CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: libclang_rt.builtins.a
 
@@ -933,7 +933,7 @@
 // RUN:     --target=aarch64-unknown-linux-android -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID-NOT: error:
-// CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
+// CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: libclang_rt.builtins.a
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: libclang_rt.builtins.a
 
