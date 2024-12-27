@@ -14,9 +14,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 
-#include <optional>
-#include <string>
-
 namespace lldb_private {
 
 class HostInfoAIX : public HostInfoPosix {
@@ -26,15 +23,10 @@ public:
   static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
   static void Terminate();
 
-  static llvm::VersionTuple GetOSVersion();
-  static std::optional<std::string> GetOSBuildString();
   static llvm::StringRef GetDistributionId();
   static FileSpec GetProgramFileSpec();
 
 protected:
-  static bool ComputeSupportExeDirectory(FileSpec &file_spec);
-  static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
-  static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                              ArchSpec &arch_64);
 };

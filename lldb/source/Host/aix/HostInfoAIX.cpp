@@ -22,7 +22,6 @@
 
 #include <algorithm>
 #include <mutex>
-#include <optional>
 
 using namespace lldb_private;
 
@@ -30,8 +29,6 @@ namespace {
 struct HostInfoAIXFields {
   llvm::once_flag m_distribution_once_flag;
   std::string m_distribution_id;
-  llvm::once_flag m_os_version_once_flag;
-  llvm::VersionTuple m_os_version;
 };
 } // namespace
 
@@ -48,33 +45,6 @@ void HostInfoAIX::Terminate() {
   delete g_fields;
   g_fields = nullptr;
   HostInfoBase::Terminate();
-}
-
-llvm::VersionTuple HostInfoAIX::GetOSVersion() {
-  assert(g_fields && "Missing call to Initialize?");
-  llvm::call_once(g_fields->m_os_version_once_flag, []() {
-    struct utsname un;
-    if (uname(&un) != 0)
-      return;
-
-    llvm::StringRef release = un.release;
-    // The kernel release string can include a lot of stuff (e.g.
-    // 4.9.0-6-amd64). We're only interested in the numbered prefix.
-    release = release.substr(0, release.find_first_not_of("0123456789."));
-    g_fields->m_os_version.tryParse(release);
-  });
-
-  return g_fields->m_os_version;
-}
-
-std::optional<std::string> HostInfoAIX::GetOSBuildString() {
-  struct utsname un;
-  ::memset(&un, 0, sizeof(utsname));
-
-  if (uname(&un) < 0)
-    return std::nullopt;
-
-  return std::string(un.release);
 }
 
 llvm::StringRef HostInfoAIX::GetDistributionId() {
@@ -165,35 +135,6 @@ FileSpec HostInfoAIX::GetProgramFileSpec() {
   }
 
   return g_program_filespec;
-}
-
-bool HostInfoAIX::ComputeSupportExeDirectory(FileSpec &file_spec) {
-  if (HostInfoPosix::ComputeSupportExeDirectory(file_spec) &&
-      file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
-    return true;
-  file_spec.SetDirectory(GetProgramFileSpec().GetDirectory());
-  return !file_spec.GetDirectory().IsEmpty();
-}
-
-bool HostInfoAIX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/" LLDB_INSTALL_LIBDIR_BASENAME "/lldb/plugins");
-  FileSystem::Instance().Resolve(temp_file);
-  file_spec.SetDirectory(temp_file.GetPath());
-  return true;
-}
-
-bool HostInfoAIX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
-  // XDG Base Directory Specification
-  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html If
-  // XDG_DATA_HOME exists, use that, otherwise use ~/.local/share/lldb.
-  const char *xdg_data_home = getenv("XDG_DATA_HOME");
-  if (xdg_data_home && xdg_data_home[0]) {
-    std::string user_plugin_dir(xdg_data_home);
-    user_plugin_dir += "/lldb";
-    file_spec.SetDirectory(user_plugin_dir.c_str());
-  } else
-    file_spec.SetDirectory("~/.local/share/lldb");
-  return true;
 }
 
 void HostInfoAIX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
