@@ -115,6 +115,10 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    },
+    "LIBC_CONF_ALLOC_TYPE": {
+      "value": "LIBC_ALLOC_TYPE_ARENA",
+      "doc": "The implementation used for allocations, acceptable values are LIBC_ALLOC_TYPE_EXTERN, LIBC_ALLOC_TYPE_SCUDO, LIBC_ALLOC_TYPE_ARENA."
     }
   },
   "unistd": {

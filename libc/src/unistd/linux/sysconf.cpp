@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
+LLVM_LIBC_FUNCTION(long int, sysconf, (int name)) {
   long ret = 0;
   if (name == _SC_PAGESIZE)
     return static_cast<long>(getauxval(AT_PAGESZ));

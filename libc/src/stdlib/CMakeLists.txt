@@ -324,7 +324,7 @@ add_entrypoint_object(
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
-  if(LLVM_LIBC_INCLUDE_SCUDO)
+  if(LLVM_LIBC_INCLUDE_SCUDO AND ${LIBC_CONF_ALLOC_TYPE} MATCHES "LIBC_ALLOC_TYPE_SCUDO")
     set(SCUDO_DEPS "")
 
     include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
@@ -388,7 +388,7 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
       DEPENDS
         ${SCUDO_DEPS}
     )
-  else()
+  elseif(${LIBC_CONF_ALLOC_TYPE} MATCHES "LIBC_ALLOC_TYPE_EXTERN")
     add_entrypoint_external(
       malloc
     )
@@ -406,6 +406,57 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       mallopt
+    )
+  else()
+    add_entrypoint_object(
+      aligned_alloc
+      SRCS
+        aligned_alloc.cpp
+      HDRS
+        aligned_alloc.h
+      DEPENDS
+        libc.src.__support.alloc.alloc
+    )
+
+    add_entrypoint_object(
+      malloc
+      SRCS
+        malloc.cpp
+      HDRS
+        malloc.h
+      DEPENDS
+        .aligned_alloc
+    )
+
+    add_entrypoint_object(
+      calloc
+      SRCS
+        calloc.cpp
+      HDRS
+        calloc.h
+      DEPENDS
+        .malloc
+    )
+
+    add_entrypoint_object(
+      realloc
+      SRCS
+        realloc.cpp
+      HDRS
+        realloc.h
+      DEPENDS
+        libc.src.__support.alloc.alloc
+    )
+
+    add_entrypoint_object(
+      free
+      SRCS
+        free.cpp
+      HDRS
+        free.h
+      DEPENDS
+        libc.src.__support.libc_assert
+        libc.src.__support.alloc.alloc
     )
   endif()
 endif()
@@ -495,7 +546,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
+if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND NOT TARGET libc.src.__support.alloc.alloc)
   add_entrypoint_object(
     malloc
     ALIAS

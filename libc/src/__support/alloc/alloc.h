@@ -1,4 +1,4 @@
-//===-- Implementation header for sysconf -----------------------*- C++ -*-===//
+//===-- libc-wide allocator -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_SYSCONF_H
-#define LLVM_LIBC_SRC_UNISTD_SYSCONF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ALLOC_ALLOC_H
+#define LLVM_LIBC_SRC___SUPPORT_ALLOC_ALLOC_H
 
-#include "hdr/unistd_macros.h"
+#include "src/__support/alloc/base.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-long int sysconf(int name);
+// The primary allocator to use
+extern BaseAllocator *allocator;
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UNISTD_SYSCONF_H
+#endif

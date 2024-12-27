@@ -1,4 +1,4 @@
-//===-- Implementation header for sysconf -----------------------*- C++ -*-===//
+//===-- Page allocations ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_SYSCONF_H
-#define LLVM_LIBC_SRC_UNISTD_SYSCONF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ALLOC_PAGE_H
+#define LLVM_LIBC_SRC___SUPPORT_ALLOC_PAGE_H
 
-#include "hdr/unistd_macros.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-long int sysconf(int name);
+void *page_allocate(size_t n_pages);
+void *page_expand(void *ptr, size_t n_pages);
+bool page_free(void *ptr, size_t n_pages);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UNISTD_SYSCONF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ALLOC_BASE_H

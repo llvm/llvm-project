@@ -384,6 +384,12 @@ else()
   set(libc_opt_high_flag "-O3")
 endif()
 
+if(${LIBC_CONF_ALLOC_TYPE} MATCHES "LIBC_ALLOC_TYPE_SCUDO")
+  set(LLVM_LIBC_INCLUDE_SCUDO ON)
+elseif(LLVM_LIBC_INCLUDE_SCUDO)
+  message(FATAL_ERROR "Cannot include scudo and use a different allocator.")
+endif()
+
 add_subdirectory(include)
 add_subdirectory(config)
 add_subdirectory(hdr)

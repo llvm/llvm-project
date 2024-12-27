@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h" // has_single_bit
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -32,6 +33,19 @@ template <class T> LIBC_INLINE bool mul_overflow(T a, T b, T *res) {
   return overflow;
 #endif
 }
+
+template <class T> LIBC_INLINE T align_forward(T ptr, size_t align) {
+  LIBC_ASSERT((align & (align - 1)) == 0);
+
+  T p = ptr;
+  T a = (T)align;
+
+  T modulo = p & (a - 1);
+  if (modulo != 0)
+    p += a - modulo;
+  return p;
+}
+
 // Limit memory size to the max of ssize_t
 class SafeMemSize {
 private:

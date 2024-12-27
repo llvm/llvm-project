@@ -32,6 +32,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM.
 * **"general" options**
     - ``LIBC_ADD_NULL_CHECKS``: Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior.
+    - ``LIBC_CONF_ALLOC_TYPE``: The implementation used for allocations, acceptable values are LIBC_ALLOC_TYPE_EXTERN, LIBC_ALLOC_TYPE_SCUDO, LIBC_ALLOC_TYPE_ARENA.
 * **"math" options**
     - ``LIBC_CONF_FREXP_INF_NAN_EXPONENT``: The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configue an explicit exp value for Inf/NaN inputs.
     - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
