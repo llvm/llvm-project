@@ -306,7 +306,7 @@ void __llvm_profile_set_dumped(void);
 
 /*!
  * \brief Write custom target-specific profiling data to a seperate file.
- * Used by libomptarget for GPU PGO.
+ * Used by offload PGO.
  */
 int __llvm_write_custom_profile(const char *Target,
                                 const __llvm_profile_data *DataBegin,

@@ -3863,7 +3863,6 @@ class VPlan {
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
-public:
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3873,17 +3872,19 @@ public:
            "scalar header must be a leaf node");
   }
 
-  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
-  /// with \p ScalarHeader wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
-      : VPlan(Entry, ScalarHeader) {
-    TripCount = TC;
-  }
-
+public:
   /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
   /// original preheader and scalar header of \p L, to be used as entry and
   /// scalar header blocks of the new VPlan.
   VPlan(Loop *L);
+
+  /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
+  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
+  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+    setEntry(new VPBasicBlock("preheader"));
+    ScalarHeader = VPIRBasicBlock::fromBasicBlock(ScalarHeaderBB);
+    TripCount = TC;
+  }
 
   ~VPlan();
 

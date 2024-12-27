@@ -860,6 +860,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
+    // Dump out profdata
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
         uint32_t(DeviceDebugKind::PGODump))
       ProfOrErr->dump();
