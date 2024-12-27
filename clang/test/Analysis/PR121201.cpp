@@ -10,7 +10,7 @@ template <typename> struct formatter;
 template <typename Context> struct value {
   template <typename T> value(T) {
     using value_type = T;
-    format_custom_arg<value_type,
+    (void)format_custom_arg<value_type,
                       typename Context::template formatter_type<value_type>>;
   }
 
@@ -52,8 +52,8 @@ template <long N> struct formatter<bitset<N>> {
     bitset<N> bs;
 
     template <typename OutputIt> void operator()(OutputIt) {
-      for (auto pos = N; pos > 0; --pos)
-        ; // no-crash
+      for (auto pos = N; pos > 0; --pos) // no-crash
+        ;
     }
   };
 
