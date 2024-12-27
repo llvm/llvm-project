@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config
-// unroll-loops=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s \
+// RUN:    -analyzer-config unroll-loops=true
 
 // expected-no-diagnostics
 
@@ -52,8 +52,8 @@ template <long N> struct formatter<bitset<N>> {
     bitset<N> bs;
 
     template <typename OutputIt> void operator()(OutputIt) {
-      for (auto pos = N; pos > 0; --pos) // no-crash
-        ;
+      for (auto pos = N; pos > 0; --pos)
+        ; // no-crash
     }
   };
 
