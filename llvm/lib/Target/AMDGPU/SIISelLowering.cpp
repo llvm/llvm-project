@@ -4018,10 +4018,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 // This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
 // except for:
-// 1. stack growth direction(default: downwards, AMDGPU: upwards), and
-// 2. scale size where, scale = wave-reduction(alloca-size) * wave-size
-SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+// 1. Stack growth direction(default: downwards, AMDGPU: upwards), and
+// 2. Scale size where, scale = wave-reduction(alloca-size) * wave-size
+SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -4057,13 +4057,13 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
   SDValue NewSP;
   if (isa<ConstantSDNode>(Op.getOperand(1))) {
-    // for constant sized alloca, scale alloca size by wave-size
+    // For constant sized alloca, scale alloca size by wave-size
     SDValue ScaledSize = DAG.getNode(
         ISD::SHL, dl, VT, Size,
         DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
     NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
   } else {
-    // for dynamic sized alloca, perform wave-wide reduction to get max of
+    // For dynamic sized alloca, perform wave-wide reduction to get max of
     // alloca size(divergent) and then scale it by wave-size
     SDValue WaveReduction =
         DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
@@ -4084,11 +4084,6 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   SDValue CallSeqEnd = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
   return DAG.getMergeValues({BaseAddr, CallSeqEnd}, dl);
-}
-
-SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  return lowerDYNAMIC_STACKALLOCImpl(Op, DAG); // Use "generic" expansion.
 }
 
 SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {

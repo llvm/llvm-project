@@ -1192,8 +1192,7 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
 
   if (SizeBank != &AMDGPU::SGPRRegBank) {
     auto WaveReduction =
-        B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax,
-                         {LLT::scalar(MRI.getType(AllocSize).getSizeInBits())})
+        B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {LLT::scalar(32)})
             .addUse(AllocSize)
             .addImm(0);
     AllocSize = WaveReduction.getReg(0);
