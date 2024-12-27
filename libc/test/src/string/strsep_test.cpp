@@ -52,7 +52,12 @@ TEST(LlvmLibcStrsepTest, DelimitersShouldNotBeIncludedInToken) {
     ASSERT_STREQ(LIBC_NAMESPACE::strsep(&string, "_:"), expected[i]);
   }
 }
+
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+
 TEST(LlvmLibcStrsepTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strsep(nullptr, nullptr); },
                WITH_SIGNAL(SIGSEGV));
 }
+
+#endif // defined(LIBC_TARGET_OS_IS_LINUX)
