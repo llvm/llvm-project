@@ -273,7 +273,6 @@ ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {
 
 void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                                         MacroBuilder &Builder) const {
-  Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
 
   if (isAMDGCN(getTriple()))

@@ -885,6 +885,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
+  if (TI.getTriple().getVendor() == llvm::Triple::AMD)
+    Builder.defineMacro("__AMD__");
+  if (TI.getTriple().getVendor() == llvm::Triple::Apple)
+    Builder.defineMacro("__APPLE__");
+
   // Define macros for the C11 / C++11 memory orderings
   Builder.defineMacro("__ATOMIC_RELAXED", "0");
   Builder.defineMacro("__ATOMIC_CONSUME", "1");
