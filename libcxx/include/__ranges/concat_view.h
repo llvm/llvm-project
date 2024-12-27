@@ -317,7 +317,8 @@ public:
   }
 
   template <size_t... Is, typename Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr void apply_fn_with_const_index(size_t index, Func&& func, std::index_sequence<Is...>) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void
+  apply_fn_with_const_index(size_t index, Func&& func, std::index_sequence<Is...>) {
     ((index == Is ? (func(std::integral_constant<size_t, Is>{}), 0) : 0), ...);
   }
 
@@ -605,7 +606,7 @@ namespace __concat {
 struct __fn {
   template <class... _Views>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const
-      noexcept(noexcept(concat_view(std::forward<_Views>(views)...))) -> decltype(concat_view(std::forward<_Views>(views)...)) {
+      noexcept(concat_view(std::forward<_Views>(views)...)) -> decltype(concat_view(std::forward<_Views>(views)...)) {
     return concat_view(std::forward<_Views>(views)...);
   }
 };
