@@ -3022,8 +3022,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (!Ty.isScalar())
-      return UnableToLegalize;
+    if (!Ty.isScalar()) {
+      // We need to widen the vector element type.
+      Observer.changingInstr(MI);
+      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+      // We also need to adjust the MMO to turn this into a truncating store.
+      MachineMemOperand &MMO = **MI.memoperands_begin();
+      MachineFunction &MF = MIRBuilder.getMF();
+      auto *NewMMO = MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), Ty);
+      MI.setMemRefs(MF, {NewMMO});
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
 
     Observer.changingInstr(MI);
 
