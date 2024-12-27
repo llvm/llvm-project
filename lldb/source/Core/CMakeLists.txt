@@ -51,6 +51,7 @@ add_lldb_library(lldbCore
   Section.cpp
   SourceLocationSpec.cpp
   SourceManager.cpp
+  Telemetry.cpp
   StreamAsynchronousIO.cpp
   ThreadedCommunication.cpp
   UserSettingsController.cpp
@@ -80,6 +81,7 @@ add_lldb_library(lldbCore
     Support
     Demangle
     TargetParser
+    Telemetry
   )
 
 add_dependencies(lldbCore
