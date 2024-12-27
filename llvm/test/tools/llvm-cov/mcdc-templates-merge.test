@@ -34,7 +34,7 @@ ANY:        11  1  90.91%
 ALL:        12  7  41.67%
 
 # MC/DC Conditions
-MERGE:       4  2  50.00%
+MERGE:       5  0 100.00%
 ANY:         4  2  50.00%
 ALL:         4  4   0.00%
 

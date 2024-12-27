@@ -260,17 +260,55 @@ void CountedRegion::merge(const CountedRegion &RHS, MergeStrategy Strategy) {
 }
 
 void MCDCRecord::merge(MCDCRecord &&RHS, MergeStrategy Strategy) {
+  assert(this->TV.size() ==
+         this->BitmapByCond[false].count() + this->BitmapByCond[true].count());
+  assert(RHS.TV.size() ==
+         RHS.BitmapByCond[false].count() + RHS.BitmapByCond[true].count());
   assert(this->PosToID == RHS.PosToID);
   assert(this->CondLoc == RHS.CondLoc);
 
   switch (Strategy) {
   case MergeStrategy::Merge:
+    break;
   case MergeStrategy::Any:
   case MergeStrategy::All:
     if (this->getMergeRank(Strategy) < RHS.getMergeRank(Strategy))
       *this = std::move(RHS);
     return;
   }
+
+  std::array<TestVectors, 2> LHSTV;
+  auto LHSI = this->TV.begin();
+  auto RHSI = RHS.TV.begin();
+  bool Merged = false;
+  for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
+    auto &LHSBitmap = this->BitmapByCond[MCDCCond];
+    auto &RHSBitmap = RHS.BitmapByCond[MCDCCond];
+    for (unsigned I = 0, E = LHSBitmap.size(); I != E; ++I) {
+      if (LHSBitmap[I]) {
+        if (RHSBitmap[I])
+          ++RHSI;
+        LHSTV[LHSI->second].push_back(std::move(*LHSI++));
+      } else if (RHSBitmap[I]) {
+        LHSTV[RHSI->second].push_back(std::move(*RHSI++));
+        LHSBitmap[I] = true;
+        Merged = true;
+      }
+    }
+
+    this->Folded[MCDCCond] &= RHS.Folded[MCDCCond];
+  }
+
+  if (Merged)
+    IndependencePairs.reset();
+
+  assert(LHSI == this->TV.end());
+  assert(RHSI == RHS.TV.end());
+  this->TV = std::move(LHSTV[false]);
+  this->TV.append(std::make_move_iterator(LHSTV[true].begin()),
+                  std::make_move_iterator(LHSTV[true].end()));
+  assert(this->TV.size() ==
+         this->BitmapByCond[false].count() + this->BitmapByCond[true].count());
 }
 
 // Find an independence pair for each condition:
@@ -284,13 +322,7 @@ void MCDCRecord::findIndependencePairs() {
   IndependencePairs.emplace();
 
   unsigned NumTVs = TV.size();
-  // Will be replaced to shorter expr.
-  unsigned TVTrueIdx = std::distance(
-      TV.begin(),
-      std::find_if(TV.begin(), TV.end(),
-                   [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
-
-  );
+  unsigned TVTrueIdx = BitmapByCond[false].count();
   for (unsigned I = TVTrueIdx; I < NumTVs; ++I) {
     const auto &[A, ACond] = TV[I];
     assert(ACond == MCDCRecord::MCDC_True);
@@ -435,6 +467,7 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// with a bit value of '1' indicates that the corresponding Test Vector
   /// identified by that index was executed.
   const BitVector &Bitmap;
+  MCDCRecord::BitmapByCondTy BitmapByCond;
 
   /// Decision Region to which the ExecutedTestVectorBitmap applies.
   const CounterMappingRegion &Region;
@@ -487,6 +520,7 @@ public:
                       ArrayRef<const CounterMappingRegion *> Branches,
                       bool IsVersion11)
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
+        BitmapByCond{{BitVector(NumTestVectors), BitVector(NumTestVectors)}},
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
@@ -518,6 +552,8 @@ private:
                       : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
+      assert(!BitmapByCond[MCDCCond][NextTVIdx]);
+      BitmapByCond[MCDCCond][NextTVIdx] = true;
       ExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx, ExecVectors.size());
 
       // Copy the completed test vector to the vector of testvectors.
@@ -547,6 +583,8 @@ private:
     for (const auto &IdxTuple : ExecVectorIdxs)
       NewTestVectors.push_back(std::move(ExecVectors[IdxTuple.Ord]));
     ExecVectors = std::move(NewTestVectors);
+
+    assert(!BitmapByCond[false].anyCommon(BitmapByCond[true]));
   }
 
 public:
@@ -585,8 +623,9 @@ public:
     findExecutedTestVectors();
 
     // Record Test vectors, executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors), std::move(Folded),
-                      std::move(PosToID), std::move(CondLoc));
+    return MCDCRecord(Region, std::move(ExecVectors), std::move(BitmapByCond),
+                      std::move(Folded), std::move(PosToID),
+                      std::move(CondLoc));
   }
 };
 

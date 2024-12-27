@@ -471,6 +471,7 @@ struct MCDCRecord {
     }
   };
 
+  using BitmapByCondTy = std::array<BitVector, 2>;
   using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
   using BoolVector = std::array<BitVector, 2>;
   using TVRowPair = std::pair<unsigned, unsigned>;
@@ -481,6 +482,7 @@ struct MCDCRecord {
 private:
   CounterMappingRegion Region;
   TestVectors TV;
+  BitmapByCondTy BitmapByCond;
   std::optional<TVPairMap> IndependencePairs;
   BoolVector Folded;
   CondIDMap PosToID;
@@ -488,8 +490,10 @@ private:
 
 public:
   MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
-             BoolVector &&Folded, CondIDMap &&PosToID, LineColPairMap &&CondLoc)
-      : Region(Region), TV(std::move(TV)), Folded(std::move(Folded)),
+             BitmapByCondTy &&BitmapByCond, BoolVector &&Folded,
+             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)),
+        BitmapByCond(std::move(BitmapByCond)), Folded(std::move(Folded)),
         PosToID(std::move(PosToID)), CondLoc(std::move(CondLoc)) {
     findIndependencePairs();
   }
@@ -497,8 +501,9 @@ public:
   inline LineColPair viewLoc() const { return Region.endLoc(); }
 
   bool isMergeable(const MCDCRecord &RHS) const {
-    return (this->viewLoc() == RHS.viewLoc() && this->PosToID == RHS.PosToID &&
-            this->CondLoc == RHS.CondLoc);
+    return (this->viewLoc() == RHS.viewLoc() &&
+            this->BitmapByCond[false].size() == RHS.BitmapByCond[true].size() &&
+            this->PosToID == RHS.PosToID && this->CondLoc == RHS.CondLoc);
   }
 
   // This may invalidate IndependencePairs
@@ -577,7 +582,8 @@ public:
     auto [Covered, Folded] = getCoveredCount();
     auto NumTVs = getNumTestVectors();
     switch (Strategy) {
-    case MergeStrategy::Merge:
+    default:
+      llvm_unreachable("Not supported");
     case MergeStrategy::Any:
       return {
           Covered, // The largest covered number

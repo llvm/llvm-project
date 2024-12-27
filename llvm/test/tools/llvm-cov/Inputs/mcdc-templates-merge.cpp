@@ -8,7 +8,7 @@ bool ab(Ty a, Ty b) {
 // ANY:   [[@LINE-3]]| 2| return
 // ALL:   [[@LINE-4]]| 0| return
 
-// MERGE: MC/DC Coverage for Decision{{[:]}}  50.00%
+// MERGE: MC/DC Coverage for Decision{{[:]}} 100.00%
 // ANY:   MC/DC Coverage for Decision{{[:]}}  50.00%
 // ALL:   MC/DC Coverage for Decision{{[:]}}   0.00%
 
@@ -28,7 +28,7 @@ bool Cab(bool a, bool b) {
 // ANY:   [[@LINE-3]]| 2| return
 // ALL:   [[@LINE-4]]| 2| return
 
-// MERGE:  MC/DC Coverage for Decision{{[:]}}  50.00%
+// MERGE:  MC/DC Coverage for Decision{{[:]}} 100.00%
 // ANY:    MC/DC Coverage for Decision{{[:]}}  50.00%
 // ALL:    MC/DC Coverage for Decision{{[:]}}   0.00%
 
