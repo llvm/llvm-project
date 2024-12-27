@@ -34,3 +34,27 @@ add_entrypoint_object(
     libc.hdr.types.wchar_t
     libc.src.__support.wctype_utils
 )
+
+add_entrypoint_object(
+  wcslen
+  SRCS
+    wcslen.cpp
+  HDRS
+    wcslen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  wcschr
+  SRCS
+    wcschr.cpp
+  HDRS
+    wcschr.h
+  DEPENDS
+    .wcslen
+    .wmemchr
+    libc.hdr.types.wchar_t
+)
