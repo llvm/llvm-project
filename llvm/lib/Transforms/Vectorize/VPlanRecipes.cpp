@@ -2061,7 +2061,6 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = reverse-vector-pointer";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 }
 #endif
