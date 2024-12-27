@@ -1060,15 +1060,28 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto NVT = LT.second;
     if (ST->hasVInstructions() && LT.second.isVector()) {
       SmallVector<unsigned, 3> Opcodes;
-      // f16 with zvfhmin and bf16 with zvfbfmin
+      // f16 with zvfhmin and bf16 with zvfbfmin and the type of nxv32[b]f16
+      // will be spilt.
       if (LT.second.getVectorElementType() == MVT::bf16) {
-        Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
-                   RISCV::VFNCVTBF16_F_F_W};
-        NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+        if (LT.second == MVT::nxv32bf16) {
+          Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
+                     RISCV::VFSQRT_V,         RISCV::VFSQRT_V,
+                     RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
+        } else {
+          Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
+                     RISCV::VFNCVTBF16_F_F_W};
+          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+        }
       } else if (LT.second.getVectorElementType() == MVT::f16 &&
                  !ST->hasVInstructionsF16()) {
-        Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
-        NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+        if (LT.second == MVT::nxv32f16) {
+          Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
+                     RISCV::VFSQRT_V,     RISCV::VFSQRT_V,
+                     RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
+        } else {
+          Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
+          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+        }
       } else {
         Opcodes = {RISCV::VFSQRT_V};
       }
