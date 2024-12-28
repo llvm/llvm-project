@@ -48,6 +48,7 @@ void LLVMDialect::registerAttributes() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
+
       >();
 }
 
@@ -288,9 +289,10 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                    }));
 }
 
-TargetFeaturesAttr TargetFeaturesAttr::getChecked(
-    function_ref<InFlightDiagnostic()> emitError,
-    MLIRContext *context, llvm::ArrayRef<StringRef> features) {
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context,
+                               llvm::ArrayRef<StringRef> features) {
   return Base::getChecked(emitError, context,
                           llvm::map_to_vector(features, [&](StringRef feature) {
                             return StringAttr::get(context, feature);
@@ -305,13 +307,14 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
   return get(context, features);
 }
 
-TargetFeaturesAttr TargetFeaturesAttr::getChecked(
-    function_ref<InFlightDiagnostic()> emitError,
-    MLIRContext *context, StringRef targetFeatures) {
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context, StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
-  return getChecked(emitError, context, features);
+  ArrayRef featuresRef(features);
+  return getChecked(emitError, context, featuresRef);
 }
 
 LogicalResult
