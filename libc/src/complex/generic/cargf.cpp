@@ -14,8 +14,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, cargf, (_Complex float x)) {
-    Complex<float> x_c = cpp::bit_cast<Complex<float>>(x);
-    return atan2f(x_c.imag, x_c.real);
+  Complex<float> x_c = cpp::bit_cast<Complex<float>>(x);
+  return atan2f(x_c.imag, x_c.real);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

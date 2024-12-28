@@ -135,7 +135,7 @@ public:
     mpc_set(value, other.value, mpc_rounding);
   }
 
-  MPCNumber& operator=(const MPCNumber &rhs) {
+  MPCNumber &operator=(const MPCNumber &rhs) {
     mpc_real_precision = rhs.mpc_real_precision;
     mpc_imag_precision = rhs.mpc_imag_precision;
     mpc_rounding = rhs.mpc_rounding;
@@ -151,9 +151,7 @@ public:
 
   ~MPCNumber() { mpc_clear(value); }
 
-  void getValue(mpc_t val) const {
-    mpc_set(val, value, mpc_rounding);
-  }
+  void getValue(mpc_t val) const { mpc_set(val, value, mpc_rounding); }
 
   MPCNumber carg() const {
     mpfr_t res;

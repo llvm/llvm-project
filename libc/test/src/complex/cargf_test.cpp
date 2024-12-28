@@ -17,6 +17,7 @@ using LlvmLibcCargTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpc = LIBC_NAMESPACE::testing::mpc;
 
 TEST_F(LlvmLibcCargTest, RandomFloats) {
-    _Complex float test1 = 5.0 + 10.0i;
-    EXPECT_MPC_MATCH_DEFAULT(mpc::Operation::Carg, test1, LIBC_NAMESPACE::cargf(test1), 0.5);
+  _Complex float test1 = 5.0 + 10.0i;
+  EXPECT_MPC_MATCH_DEFAULT(mpc::Operation::Carg, test1,
+                           LIBC_NAMESPACE::cargf(test1), 0.5);
 }
