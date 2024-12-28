@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -S | FileCheck %s -check-prefix DEBUGLOC
-; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -S --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DEBUGLOC
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S | FileCheck %s -check-prefix DEBUGLOC
+; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DEBUGLOC
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test makes sure we don't duplicate the loop vectorizer's metadata
@@ -54,6 +54,37 @@ exit:
   ret void
 }
 
+define void @predicated_phi_dbg(i64 %n, ptr %x) {
+; DEBUGLOC-LABEL: define void @predicated_phi_dbg(
+; DEBUGLOC: pred.udiv.continue{{.+}}:
+; DEBUGLOC-NEXT:   = phi <4 x i64> {{.+}}, !dbg [[PREDPHILOC:![0-9]+]]
+;
+; DEBUGLOC: for.body:
+; DEBUGLOC:   %tmp4 = udiv i64 %n, %i, !dbg [[PREDPHILOC]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %cmp = icmp ult i64 %i, 5
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %tmp4 = udiv i64 %n, %i
+  br label %for.inc
+
+for.inc:
+  %d = phi i64 [ 0, %for.body ], [ %tmp4, %if.then ]
+  %idx = getelementptr i64, ptr %x, i64 %i
+  store i64 %d, ptr %idx
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
 
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
