@@ -338,6 +338,14 @@ bool SanitizerArgs::needsUbsanRt() const {
          CoverageFeatures;
 }
 
+bool SanitizerArgs::needsUbsanCXXRt() const {
+  // Link UBSAN C++ runtime very selectively, as it's needed in only very
+  // specific cases, but forces the program to depend on C++ ABI. UBSAN C++
+  // runtime is not included with other sanitizers.
+  return static_cast<bool>(Sanitizers.Mask & NeedsUbsanCxxRt &
+                           ~TrapSanitizers.Mask);
+}
+
 bool SanitizerArgs::needsCfiRt() const {
   return !(Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
          CfiCrossDso && !ImplicitCfiRuntime;

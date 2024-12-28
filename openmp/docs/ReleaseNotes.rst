@@ -19,3 +19,9 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
+
+Device Runtime
+--------------
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.
