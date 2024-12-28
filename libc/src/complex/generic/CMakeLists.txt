@@ -1,4 +1,17 @@
 add_entrypoint_object(
+  cargf
+  SRCS
+    cargf.cpp
+  HDRS
+    ../cargf.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.math.atan2f
+)
+
+add_entrypoint_object(
   cproj
   SRCS
     cproj.cpp
