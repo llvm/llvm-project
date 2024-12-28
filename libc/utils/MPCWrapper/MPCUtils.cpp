@@ -194,16 +194,25 @@ bool compare_unary_operation_single_output_same_type(Operation op,
                                                      OutputType libc_result,
                                                      double ulp_tolerance,
                                                      MPCRoundingMode rounding) {
+
   unsigned int precision = get_precision<get_real_t<InputType>>(ulp_tolerance);
+
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
-  mpfr_t real, imag;
+
   mpc_t mpc_result_val;
+  mpc_init3(mpc_result_val, precision, precision);
   mpc_result.getValue(mpc_result_val);
+
+  mpfr_t real, imag;
+  mpfr_init2(real, precision);
+  mpfr_init2(imag, precision);
   mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
   mpc_imag(imag, mpc_result_val, get_mpfr_rounding_mode(rounding.Irnd));
+
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
   mpfr::MPFRNumber mpfr_imag(imag, precision, rounding.Irnd);
+
   double ulp_real = mpfr_real.ulp(
       (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).real);
   double ulp_imag = mpfr_imag.ulp(
@@ -220,17 +229,24 @@ template <typename InputType, typename OutputType>
 bool compare_unary_operation_single_output_different_type(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
     MPCRoundingMode rounding) {
+
   unsigned int precision = get_precision<get_real_t<InputType>>(ulp_tolerance);
+
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
+
   mpc_t mpc_result_val;
   mpc_init3(mpc_result_val, precision, precision);
   mpc_result.getValue(mpc_result_val);
+
   mpfr_t real;
   mpfr_init2(real, precision);
   mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
+
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
+
   double ulp_real = mpfr_real.ulp(libc_result);
+
   return (ulp_real <= ulp_tolerance);
 }
 
