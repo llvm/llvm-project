@@ -365,13 +365,12 @@ private:
     // FIXME: There are probably cases where we should use FirstNonComment
     // instead of TheLine->First.
 
-    if (TheLine->Last->is(tok::l_brace)) {
-      if (Style.AllowShortNamespacesOnASingleLine &&
-          TheLine->First->is(tok::kw_namespace)) {
-        unsigned result = tryMergeNamespace(I, E, Limit);
-        if (result > 0)
-          return result;
-      }
+    if (Style.AllowShortNamespacesOnASingleLine &&
+        TheLine->First->is(tok::kw_namespace) &&
+        TheLine->Last->is(tok::l_brace)) {
+      const auto result = tryMergeNamespace(I, E, Limit);
+      if (result > 0)
+        return result;
     }
 
     if (Style.CompactNamespaces) {
