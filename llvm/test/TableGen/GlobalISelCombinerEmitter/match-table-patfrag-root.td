@@ -39,7 +39,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] __Test0_match_0.z
 // CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: Test0 @ [__Test0_match_0[1]]
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
@@ -59,7 +59,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // MIs[1] __Test0_match_0.x
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: Test0 @ [__Test0_match_0[0]]
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
@@ -75,7 +75,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] __Test0_match_0.z
 // CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: Test0 @ [__Test0_match_0[2]]
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),

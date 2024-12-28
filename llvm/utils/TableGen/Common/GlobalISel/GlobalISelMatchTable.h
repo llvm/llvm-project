@@ -2491,10 +2491,13 @@ public:
 /// instructions together.
 class MakeTempRegisterAction : public MatchAction {
 private:
-  LLTCodeGenOrTempType Ty;
+  std::optional<LLTCodeGenOrTempType> Ty;
   unsigned TempRegID;
 
 public:
+  explicit MakeTempRegisterAction(unsigned TempRegID)
+      : MatchAction(AK_MakeTempReg), TempRegID(TempRegID) {}
+
   MakeTempRegisterAction(const LLTCodeGenOrTempType &Ty, unsigned TempRegID)
       : MatchAction(AK_MakeTempReg), Ty(Ty), TempRegID(TempRegID) {
     if (Ty.isLLTCodeGen())

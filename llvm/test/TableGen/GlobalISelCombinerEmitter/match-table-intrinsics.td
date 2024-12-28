@@ -41,7 +41,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] Operand 2
 // CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 0,
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       // Combiner Rule #0: IntrinTest0
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_INTRINSIC),
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
@@ -62,7 +62,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       // Combiner Rule #1: SpecialIntrins
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_INTRINSIC_CONVERGENT),
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),

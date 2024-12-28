@@ -25,9 +25,9 @@ def Test0 : GICombineRule<
 // CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/1, /*TempTypeIdx*/uint8_t(-2),
 // CHECK-NEXT:       // MIs[0] Operand 2
 // CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-1),
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/uint8_t(-2),
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/1, /*TypeID*/uint8_t(-2),
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/uint8_t(-1),
+// CHECK-NEXT:       GIR_MakeGenericTempReg, /*TempRegID*/0, /*TypeID*/uint8_t(-1),
 // CHECK-NEXT:       // Combiner Rule #0: Test0
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),

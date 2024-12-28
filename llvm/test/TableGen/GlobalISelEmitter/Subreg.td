@@ -59,13 +59,13 @@ def : Pat<(sub (complex DOP:$src1, DOP:$src2), 77),
           (SOME_INSN2 (EXTRACT_SUBREG DOP:$src1, sub0),
                       (EXTRACT_SUBREG DOP:$src2, sub1))>;
 // CHECK-LABEL: // (sub:{ *:[i32] } (complex:{ *:[i32] } DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2), 77:{ *:[i32] })  =>  (SOME_INSN2:{ *:[i32] } (EXTRACT_SUBREG:{ *:[i32] } DOP:{ *:[i32] }:$src1, sub0:{ *:[i32] }), (EXTRACT_SUBREG:{ *:[i32] } DOP:{ *:[i32] }:$src2, sub1:{ *:[i32] }))
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/1,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/2, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_ComplexSubOperandSubRegRenderer, /*InsnID*/2, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, /*SubRegIdx*/GIMT_Encode2(2), // src2
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/2, /*Op*/0, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/2, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_ComplexSubOperandSubRegRenderer, /*InsnID*/1, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, /*SubRegIdx*/GIMT_Encode2(1), // src1
@@ -83,7 +83,7 @@ def : Pat<(sub (complex DOP:$src1, DOP:$src2), 77),
 // class.
 def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SOP:$src, sub0)>;
 // CHECK-LABEL:  (anyext:{ *:[i32] } i16:{ *:[i16] }:$src)  =>  (INSERT_SUBREG:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), SOP:{ *:[i16] }:$src, sub0:{ *:[i32] })
-// CHECK-NEXT:            GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:            GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT:            GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
 // CHECK-NEXT:            GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:            GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
@@ -103,11 +103,11 @@ def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SOP:$src
 // instruction.
 def : Pat<(i32 (anyext i16:$src)), (SOME_INSN (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SOP:$src, sub0))>;
 // CHECK-LABEL:  (anyext:{ *:[i32] } i16:{ *:[i16] }:$src)  =>  (SOME_INSN:{ *:[i32] } (INSERT_SUBREG:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), SOP:{ *:[i16] }:$src, sub0:{ *:[i32] }))
-// CHECK-NEXT:            GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:            GIR_MakeVirtualTempReg, /*TempRegID*/1,
 // CHECK-NEXT:            GIR_BuildMI, /*InsnID*/2, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
 // CHECK-NEXT:            GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:            GIR_ConstrainSelectedInstOperands, /*InsnID*/2,
-// CHECK-NEXT:            GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:            GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT:            GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::INSERT_SUBREG),
 // CHECK-NEXT:            GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:            GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,
@@ -138,12 +138,12 @@ def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (COPY_TO_REGCLASS SOP:$sr
 // by a subinstruction.
 def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), (SUBSOME_INSN SOP:$src), sub0)>;
 // CHECK-LABEL:  (anyext:{ *:[i32] } i16:{ *:[i16] }:$src)  =>  (INSERT_SUBREG:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), (SUBSOME_INSN:{ *:[i16] } SOP:{ *:[i16] }:$src), sub0:{ *:[i32] })
-// CHECK-NEXT:          GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s16,
+// CHECK-NEXT:          GIR_MakeVirtualTempReg, /*TempRegID*/1,
 // CHECK-NEXT:          GIR_BuildMI, /*InsnID*/2, /*Opcode*/GIMT_Encode2(MyTarget::SUBSOME_INSN),
 // CHECK-NEXT:          GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/2, /*OldInsnID*/0, /*OpIdx*/1, // src
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/2,
-// CHECK-NEXT:          GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:          GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT:          GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
 // CHECK-NEXT:          GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
@@ -164,7 +164,7 @@ def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), (SUBSOME
 def : Pat<(i16 (trunc (not DOP:$src))),
           (SUBSOME_INSN (EXTRACT_SUBREG DOP:$src, sub0))>;
 // CHECK-LABEL: // (trunc:{ *:[i16] } (xor:{ *:[i32] } DOP:{ *:[i32] }:$src, -1:{ *:[i32] }))  =>  (SUBSOME_INSN:{ *:[i16] } (EXTRACT_SUBREG:{ *:[i16] } DOP:{ *:[i32] }:$src, sub0:{ *:[i32] }))
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s16,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_CopySubReg, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, /*SubRegIdx*/GIMT_Encode2(1), // src
@@ -180,7 +180,7 @@ def : Pat<(i16 (trunc (bitreverse DOP:$src))),
 // CHECK-NEXT:  GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT:  GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT:  // (trunc:{ *:[i16] } (bitreverse:{ *:[i32] } DOP:{ *:[i32] }:$src))  =>  (EXTRACT_SUBREG:{ *:[i16] } (SOME_INSN:{ *:[i32] } DOP:{ *:[i32] }:$src), sub0:{ *:[i32] })
-// CHECK-NEXT:  GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:  GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT:  GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::SOME_INSN),
 // CHECK-NEXT:  GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:  GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // src
@@ -200,12 +200,12 @@ def : Pat<(i16 (trunc (bitreverse DOP:$src))),
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT: // (trunc:{ *:[i16] } (ctpop:{ *:[i32] } DOP:{ *:[i32] }:$src))  =>  (SUBSOME_INSN2:{ *:[i16] } (EXTRACT_SUBREG:{ *:[i16] } (SOME_INSN:{ *:[i32] } DOP:{ *:[i32] }:$src), sub0:{ *:[i32] }))
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/1,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/2, /*Opcode*/GIMT_Encode2(MyTarget::SOME_INSN),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/2, /*OldInsnID*/1, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/2,
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s16,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_AddTempSubRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(0), GIMT_Encode2(sub0),
@@ -236,7 +236,7 @@ def : Pat<(i16 (trunc DOP:$src)),
 def : Pat<(i32 (zext SOP:$src)),
           (SUBREG_TO_REG (i64 0), (SUBSOME_INSN SOP:$src), sub0)>;
 // CHECK-LABEL:  (zext:{ *:[i32] } SOP:{ *:[i16] }:$src)  =>  (SUBREG_TO_REG:{ *:[i32] } 0:{ *:[i64] }, (SUBSOME_INSN:{ *:[i16] } SOP:{ *:[i16] }:$src), sub0:{ *:[i32] })
-// CHECK-NEXT:        GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s16,
+// CHECK-NEXT:        GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT:        GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::SUBSOME_INSN),
 // CHECK-NEXT:        GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:        GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src

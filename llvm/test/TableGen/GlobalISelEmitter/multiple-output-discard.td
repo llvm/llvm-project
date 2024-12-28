@@ -32,7 +32,7 @@ def : Pat<(two_out GPR32:$val), (THREE_OUTS GPR32:$val)>;
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // (two_out:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$val)  =>  (THREE_OUTS:{ *:[i32] }:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$val)
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::THREE_OUTS),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[out1]
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // DstI[out2]

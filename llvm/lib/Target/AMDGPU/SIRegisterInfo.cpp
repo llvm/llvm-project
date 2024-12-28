@@ -3708,10 +3708,10 @@ const TargetRegisterClass *
 SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
   const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
-  if (const RegisterBank *RB = dyn_cast<const RegisterBank *>(RCOrRB))
+  if (const auto *RB = dyn_cast_or_null<const RegisterBank *>(RCOrRB))
     return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB);
 
-  if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RCOrRB))
+  if (const auto *RC = dyn_cast_or_null<const TargetRegisterClass *>(RCOrRB))
     return getAllocatableClass(RC);
 
   return nullptr;

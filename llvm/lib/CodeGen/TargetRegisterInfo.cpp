@@ -175,11 +175,8 @@ Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
       OS << StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
     else if (RegInfo.getRegBankOrNull(Reg))
       OS << StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
-    else {
+    else
       OS << "_";
-      assert((RegInfo.def_empty(Reg) || RegInfo.getType(Reg).isValid()) &&
-             "Generic registers must have a valid type");
-    }
   });
 }
 

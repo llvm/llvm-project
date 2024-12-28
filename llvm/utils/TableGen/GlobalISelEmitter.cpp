@@ -286,31 +286,6 @@ static std::string getMangledRootDefName(StringRef DefOperandName) {
 
 //===- GlobalISelEmitter class --------------------------------------------===//
 
-static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
-                                              const CodeGenTarget &Target) {
-  // While we allow more than one output (both implicit and explicit defs)
-  // below, we only expect one explicit def here.
-  assert(Dst.getOperator()->isSubClassOf("Instruction"));
-  CodeGenInstruction &InstInfo = Target.getInstruction(Dst.getOperator());
-  if (!InstInfo.Operands.NumDefs)
-    return failedImport("Dst pattern child needs a def");
-
-  ArrayRef<TypeSetByHwMode> ChildTypes = Dst.getExtTypes();
-  if (ChildTypes.size() < 1)
-    return failedImport("Dst pattern child has no result");
-
-  // If there are multiple results, just take the first one (this is how
-  // SelectionDAG does it).
-  std::optional<LLTCodeGen> MaybeOpTy;
-  if (ChildTypes.front().isMachineValueType()) {
-    MaybeOpTy = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
-  }
-
-  if (!MaybeOpTy)
-    return failedImport("Dst operand has an unsupported type");
-  return *MaybeOpTy;
-}
-
 class GlobalISelEmitter final : public GlobalISelMatchTableExecutorEmitter {
 public:
   explicit GlobalISelEmitter(const RecordKeeper &RK);
@@ -1305,12 +1280,8 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
     }
 
     if (R->getName() == "undef_tied_input") {
-      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N.getSimpleType(0));
-      if (!OpTyOrNone)
-        return failedImport("unsupported type");
-
       unsigned TempRegID = M.allocateTempRegID();
-      M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone, TempRegID);
+      M.insertAction<MakeTempRegisterAction>(InsertPt, TempRegID);
 
       auto I = M.insertAction<BuildMIAction>(
           InsertPt, M.allocateOutputInsnID(),
@@ -1374,15 +1345,11 @@ Error GlobalISelEmitter::importXFormNodeRenderer(
 Error GlobalISelEmitter::importInstructionNodeRenderer(
     RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N,
     action_iterator &InsertPt) const {
-  Expected<LLTCodeGen> OpTy = getInstResultType(N, Target);
-  if (!OpTy)
-    return OpTy.takeError();
-
   // TODO: See the comment in importXFormNodeRenderer. We rely on the node
   //   requiring a temporary register, which prevents us from using this
   //   function on the root of the destination DAG.
   unsigned TempRegID = M.allocateTempRegID();
-  InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+  InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, TempRegID);
   MIBuilder.addRenderer<TempRegRenderer>(TempRegID);
 
   auto InsertPtOrError =
@@ -1456,6 +1423,9 @@ Expected<action_iterator>
 GlobalISelEmitter::createAndImportSubInstructionRenderer(
     action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst,
     unsigned TempRegID) const {
+  if (!Target.getInstruction(Dst.getOperator()).Operands.NumDefs)
+    return failedImport("interior instruction does not have explicit defs");
+
   auto InsertPtOrError = createInstructionRenderer(InsertPt, M, Dst);
 
   // TODO: Assert there's exactly one result.
@@ -1553,17 +1523,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
     }
 
     // The def is discarded, create a dead virtual register for it.
-    const TypeSetByHwMode &ExtTy = Dst.getExtType(I);
-    if (!ExtTy.isMachineValueType())
-      return failedImport("unsupported typeset");
-
-    auto OpTy = MVTToLLT(ExtTy.getMachineValueType().SimpleTy);
-    if (!OpTy)
-      return failedImport("unsupported type");
-
     unsigned TempRegID = M.allocateTempRegID();
-    InsertPt =
-        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+    InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, TempRegID);
     DstMIBuilder.addRenderer<TempRegRenderer>(
         TempRegID, /*IsDef=*/true, /*SubReg=*/nullptr, /*IsDead=*/true);
   }
@@ -1601,13 +1562,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     if (!ValChild.isLeaf()) {
       // We really have to handle the source instruction, and then insert a
       // copy from the subregister.
-      auto ExtractSrcTy = getInstResultType(ValChild, Target);
-      if (!ExtractSrcTy)
-        return ExtractSrcTy.takeError();
-
       unsigned TempRegID = M.allocateTempRegID();
-      InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *ExtractSrcTy,
-                                                        TempRegID);
+      InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
           ++InsertPt, M, ValChild, TempRegID);

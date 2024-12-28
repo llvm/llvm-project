@@ -2392,10 +2392,13 @@ void ConstrainOperandToRegClassAction::emitActionOpcodes(
 
 void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
                                                RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIR_MakeTempReg")
+  Table << MatchTable::Opcode(Ty ? "GIR_MakeGenericTempReg"
+                                 : "GIR_MakeVirtualTempReg")
         << MatchTable::Comment("TempRegID")
-        << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID")
-        << Ty << MatchTable::LineBreak;
+        << MatchTable::ULEB128Value(TempRegID);
+  if (Ty)
+    Table << MatchTable::Comment("TypeID") << *Ty;
+  Table << MatchTable::LineBreak;
 }
 
 } // namespace gi
