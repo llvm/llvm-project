@@ -653,7 +653,7 @@ private:
       assert(Limit >= I[1]->Last->TotalLength + 3);
       const unsigned InnerLimit = Limit - I[1]->Last->TotalLength - 3;
       const unsigned MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
-      if (!MergedLines)
+      if (MergedLines == 0)
         return 0;
       const auto N = MergedLines + 2;
       // Check if there is even a line after the inner result.
