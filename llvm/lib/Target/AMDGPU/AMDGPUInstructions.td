@@ -330,7 +330,7 @@ def conc_lo_u8_i16 : PatFrags<
     (or
       (and (i16 $src0), (i16 255)),
       (shl (i16 $src1), (i16 8))
-    ),
+    )
   ]
 >;
 
@@ -349,6 +349,16 @@ def conc_lo_v2i16_i16 : PatFrags<
       (i16 (trunc (i32 (bitconvert $src)))),
       (shl 
         (i16 (trunc(srl (i32 (bitconvert $src)), (i32 16)))), 
+        (i16 8)
+      )
+    ),
+    (or
+      (and (i16 (trunc (i32 (bitconvert $src)))), (i16 255)),
+      (shl
+        (and
+          (i16 (trunc (srl (i32 (bitconvert $src)), (i32 16)))),
+          (i16 255)
+        ),
         (i16 8)
       )
     )
