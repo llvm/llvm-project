@@ -20,12 +20,14 @@
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang::tooling;
@@ -36,6 +38,11 @@ static cl::desc desc(StringRef description) { return {description.ltrim()}; }
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
+static cl::extrahelp ClangTidyParameterFileHelp(R"(
+Parameters files:
+  A large number of options or source files can be passed as parameter files
+  by use '@parameter-file' in the command line.
+)");
 static cl::extrahelp ClangTidyHelp(R"(
 Configuration files:
   clang-tidy attempts to read configuration for each source file from a
@@ -54,12 +61,12 @@ Configuration files:
                                  globs can be specified as a list instead of a
                                  string.
   ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
-  ExtraArgs                    - Same as '--extra-args'.
-  ExtraArgsBefore              - Same as '--extra-args-before'.
+  ExtraArgs                    - Same as '--extra-arg'.
+  ExtraArgsBefore              - Same as '--extra-arg-before'.
   FormatStyle                  - Same as '--format-style'.
   HeaderFileExtensions         - File extensions to consider to determine if a
                                  given diagnostic is located in a header file.
-  HeaderFilterRegex            - Same as '--header-filter-regex'.
+  HeaderFilterRegex            - Same as '--header-filter'.
   ImplementationFileExtensions - File extensions to consider to determine if a
                                  given diagnostic is located in an
                                  implementation file.
@@ -571,6 +578,21 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
+  SmallVector<const char *> Args{argv, argv + argc};
+
+  // expand parameters file to argc and argv.
+  llvm::BumpPtrAllocator Alloc;
+  llvm::cl::TokenizerCallback Tokenizer =
+      llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+          ? llvm::cl::TokenizeWindowsCommandLine
+          : llvm::cl::TokenizeGNUCommandLine;
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
+    llvm::WithColor::error() << llvm::toString(std::move(Err)) << "\n";
+    return 1;
+  }
+  argc = static_cast<int>(Args.size());
+  argv = Args.data();
 
   // Enable help for -load option, if plugins are enabled.
   if (cl::Option *LoadOpt = cl::getRegisteredOptions().lookup("load"))

@@ -708,6 +708,11 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
     return loongarch::getLoongArchTargetCPU(Args, T);
+
+  case llvm::Triple::xtensa:
+    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+      return A->getValue();
+    return "";
   }
 }
 
@@ -1454,6 +1459,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
                          SmallVectorImpl<StringRef> &HelperStaticRuntimes,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
+  assert(!TC.getTriple().isOSDarwin() && "it's not used by Darwin");
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
@@ -1574,7 +1580,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("cfi_diag");
   }
   if (SanArgs.linkCXXRuntimes() && !SanArgs.requiresMinimalRuntime() &&
-      ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) ||
+      ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanCXXRt()) ||
        SanArgs.needsCfiDiagRt())) {
     StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
@@ -2837,8 +2843,7 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                         : options::OPT_libomptarget_nvptx_bc_path_EQ;
 
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
-  std::string LibOmpTargetName =
-      ("libomptarget-" + ArchPrefix + "-" + BitcodeSuffix + ".bc").str();
+  std::string LibOmpTargetName = ("libomptarget-" + ArchPrefix + ".bc").str();
 
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
