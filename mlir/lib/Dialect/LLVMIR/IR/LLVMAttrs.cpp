@@ -311,12 +311,7 @@ TargetFeaturesAttr TargetFeaturesAttr::getChecked(
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
-  SmallVector<StringAttr> featuresAttrs;
-  featuresAttrs.reserve(features.size());
-  for (StringRef feature : features) {
-    featuresAttrs.push_back(StringAttr::get(context, feature));
-  }
-  return getChecked(emitError, context, featuresAttrs);
+  return getChecked(emitError, context, features);
 }
 
 LogicalResult
