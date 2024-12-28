@@ -1429,8 +1429,7 @@ bool AArch64LegalizerInfo::legalizeBitcast(MachineInstr &MI,
       SrcTy.getElementType() != LLT::scalar(1))
     return false;
 
-  auto Load = Helper.createStackStoreLoad(SrcReg, DstTy);
-  Helper.MIRBuilder.buildCopy(DstReg, Load.getReg(0));
+  Helper.createStackStoreLoad(DstReg, SrcReg);
   MI.eraseFromParent();
   return true;
 }
