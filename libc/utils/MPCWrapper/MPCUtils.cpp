@@ -163,7 +163,8 @@ public:
     mpc_arg(res, value, MPC_RND_RE(this->mpc_rounding));
     mpc_set_fr(res_mpc, res, this->mpc_rounding);
 
-    MPCNumber result(res_mpc, this->mpc_real_precision, this->mpc_imag_precision, this->mpc_rounding);
+    MPCNumber result(res_mpc, this->mpc_real_precision,
+                     this->mpc_imag_precision, this->mpc_rounding);
 
     mpfr_clear(res);
     mpc_clear(res_mpc);
@@ -260,12 +261,11 @@ void explain_unary_operation_single_output_different_type_error(
 
   double ulp_real = mpfr_real.ulp(libc_result);
 
-  if(ulp_real > ulp_tolerance) {
+  if (ulp_real > ulp_tolerance) {
     cpp::array<char, 1024> msg_buf;
     cpp::StringStream msg(msg_buf);
     // TODO: Add information to the error message.
   }
-
 }
 
 template void explain_unary_operation_single_output_different_type_error(

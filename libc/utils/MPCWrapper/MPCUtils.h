@@ -249,8 +249,8 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
     MPCRND::ForceRoundingMode __r##i##j(Rrounding);                            \
     MPCRND::ForceRoundingMode __i##i##j(Irounding);                            \
     if (__r##i##j.success && __i##i##j.success) {                              \
-      EXPECT_MPC_MATCH_ROUNDING(                                               \
-          op, input, match_value, ulp_tolerance, Rrounding, Irounding);        \
+      EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                Rrounding, Irounding);                         \
     }                                                                          \
   }
 
@@ -296,8 +296,8 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
     MPCRND::ForceRoundingMode __r##i##j(Rrounding);                            \
     MPCRND::ForceRoundingMode __i##i##j(Irounding);                            \
     if (__r##i##j.success && __i##i##j.success) {                              \
-      ASSERT_MPC_MATCH_ROUNDING(                                               \
-          op, input, match_value, ulp_tolerance, Rrounding, Irounding);        \
+      ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
+                                Rrounding, Irounding);                         \
     }                                                                          \
   }
 
