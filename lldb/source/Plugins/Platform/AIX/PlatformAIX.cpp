@@ -8,12 +8,10 @@
 
 #include "PlatformAIX.h"
 #include "lldb/Host/Config.h"
-
 #include <cstdio>
 #if LLDB_ENABLE_POSIX
 #include <sys/utsname.h>
 #endif
-
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
@@ -28,7 +26,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
-// Define these constants from AIX mman.h for use when targeting remote aix
+// Use defined constants from AIX mman.h for use when targeting remote aix
 // systems even when host has different values.
 
 #if defined(_AIX)
@@ -42,7 +40,6 @@ using namespace lldb_private::platform_aix;
 LLDB_PLUGIN_DEFINE(PlatformAIX)
 
 static uint32_t g_initialize_count = 0;
-
 
 PlatformSP PlatformAIX::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log = GetLog(LLDBLog::Platform);
@@ -112,8 +109,8 @@ PlatformAIX::PlatformAIX(bool is_host)
           HostInfo::GetArchitecture(HostInfo::eArchKind32));
     }
   } else {
-    m_supported_architectures = CreateArchList(
-        llvm::Triple::AIX);
+    m_supported_architectures =
+        CreateArchList({llvm::Triple::ppc64}, llvm::Triple::AIX);
   }
 }
 
@@ -196,14 +193,14 @@ void PlatformAIX::CalculateTrapHandlerSymbolNames() {
 
 lldb::UnwindPlanSP
 PlatformAIX::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
-                                        ConstString name) {
+                                      ConstString name) {
   return {};
 }
 
-MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch,
-                                               addr_t addr, addr_t length,
-                                               unsigned prot, unsigned flags,
-                                               addr_t fd, addr_t offset) {
+MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
+                                             addr_t length, unsigned prot,
+                                             unsigned flags, addr_t fd,
+                                             addr_t offset) {
 #if defined(_AIX)
   unsigned flags_platform = MAP_VARIABLE | MAP_PRIVATE | MAP_ANONYMOUS;
 #else
@@ -259,13 +256,14 @@ CompilerType PlatformAIX::GetSiginfoType(const llvm::Triple &triple) {
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigfault_bounds_type);
-  ast->AddFieldToRecordType(sigfault_bounds_type, "_addr_bnd",
+  ast->AddFieldToRecordType(
+      sigfault_bounds_type, "_addr_bnd",
       ast->CreateStructForIdentifier(ConstString(),
                                      {
                                          {"_lower", voidp_type},
                                          {"_upper", voidp_type},
                                      }),
-                            lldb::eAccessPublic, 0);
+      lldb::eAccessPublic, 0);
   ast->AddFieldToRecordType(sigfault_bounds_type, "_pkey", uint_type,
                             lldb::eAccessPublic, 0);
   ast->CompleteTagDeclarationDefinition(sigfault_bounds_type);

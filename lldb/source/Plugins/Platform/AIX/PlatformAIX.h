@@ -68,7 +68,7 @@ private:
   std::unique_ptr<TypeSystemClang> m_type_system_up;
 };
 
-} // namespace platform_AIX
+} // namespace platform_aix
 } // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_AIX_PLATFORMAIX_H
