@@ -10,6 +10,7 @@ add_libc_test(
     libc.src.complex.cargf
   LINK_LIBRARIES
     LibcFPTestHelpers
+    libcMPCWrapper
 )
 
 add_libc_test(

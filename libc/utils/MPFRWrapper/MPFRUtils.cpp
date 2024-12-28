@@ -188,6 +188,13 @@ public:
     mpfr_set(value, other.value, mpfr_rounding);
   }
 
+  MPFRNumber(const mpfr_t& x, unsigned int precision, RoundingMode rounding)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set(value, x, mpfr_rounding);
+  }
+
   ~MPFRNumber() { mpfr_clear(value); }
 
   MPFRNumber &operator=(const MPFRNumber &rhs) {
