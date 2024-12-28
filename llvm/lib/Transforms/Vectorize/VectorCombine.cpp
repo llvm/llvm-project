@@ -1669,7 +1669,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   Value *X, *Y, *Z, *W;
   bool IsCommutative = false;
-  CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate PredLHS = CmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate PredRHS = CmpInst::BAD_ICMP_PREDICATE;
   if (match(LHS, m_BinOp(m_Value(X), m_Value(Y))) &&
       match(RHS, m_BinOp(m_Value(Z), m_Value(W)))) {
     auto *BO = cast<BinaryOperator>(LHS);
@@ -1677,8 +1678,9 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     if (llvm::is_contained(OldMask, PoisonMaskElem) && BO->isIntDivRem())
       return false;
     IsCommutative = BinaryOperator::isCommutative(BO->getOpcode());
-  } else if (match(LHS, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
-             match(RHS, m_SpecificCmp(Pred, m_Value(Z), m_Value(W)))) {
+  } else if (match(LHS, m_Cmp(PredLHS, m_Value(X), m_Value(Y))) &&
+             match(RHS, m_Cmp(PredRHS, m_Value(Z), m_Value(W))) &&
+             (CmpInst::Predicate)PredLHS == (CmpInst::Predicate)PredRHS) {
     IsCommutative = cast<CmpInst>(LHS)->isCommutative();
   } else
     return false;
@@ -1727,14 +1729,14 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       TTI.getShuffleCost(SK0, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z}) +
       TTI.getShuffleCost(SK1, BinOpTy, NewMask1, CostKind, 0, nullptr, {Y, W});
 
-  if (Pred == CmpInst::BAD_ICMP_PREDICATE) {
+  if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
     NewCost +=
         TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy, CostKind);
   } else {
     auto *ShuffleCmpTy =
         FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
     NewCost += TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy,
-                                      ShuffleDstTy, Pred, CostKind);
+                                      ShuffleDstTy, PredLHS, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
@@ -1750,10 +1752,10 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   Value *Shuf0 = Builder.CreateShuffleVector(X, Z, NewMask0);
   Value *Shuf1 = Builder.CreateShuffleVector(Y, W, NewMask1);
-  Value *NewBO = Pred == CmpInst::BAD_ICMP_PREDICATE
+  Value *NewBO = PredLHS == CmpInst::BAD_ICMP_PREDICATE
                      ? Builder.CreateBinOp(
                            cast<BinaryOperator>(LHS)->getOpcode(), Shuf0, Shuf1)
-                     : Builder.CreateCmp(Pred, Shuf0, Shuf1);
+                     : Builder.CreateCmp(PredLHS, Shuf0, Shuf1);
 
   // Intersect flags from the old binops.
   if (auto *NewInst = dyn_cast<Instruction>(NewBO)) {
