@@ -2616,7 +2616,7 @@ Error MCCASBuilder::createDebugStrSection() {
 }
 
 Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
-  if (!DwarfSections.Str || DwarfSections.Str->empty())
+  if (!DwarfSections.Str)
     return SmallVector<DebugStrRef, 0>();
 
   assert(DwarfSections.Str->curFragList()->Head->getNext() == nullptr &&
@@ -2640,7 +2640,7 @@ Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
 template <typename SectionTy>
 std::optional<Expected<SectionTy>>
 MCCASBuilder::createGenericDebugRef(MCSection *Section) {
-  if (!Section || Section->empty())
+  if (!Section)
     return std::nullopt;
 
   auto DebugCASData = mergeMCFragmentContents(Section, false);
@@ -2660,7 +2660,7 @@ MCCASBuilder::createGenericDebugRef(MCSection *Section) {
 std::optional<Expected<DebugStrOffsetsRef>>
 MCCASBuilder::createDebugStrOffsetsRef() {
 
-  if (!DwarfSections.StrOffsets || DwarfSections.StrOffsets->empty())
+  if (!DwarfSections.StrOffsets)
     return std::nullopt;
 
   auto DebugStrOffsetsData =
@@ -2976,7 +2976,7 @@ Error MCCASBuilder::buildFragments() {
   startGroup();
 
   for (const MCSection &Sec : Asm) {
-    if (Sec.isVirtualSection() || Sec.empty())
+    if (Sec.isVirtualSection())
       continue;
 
     // Handle Debug Info sections separately.
