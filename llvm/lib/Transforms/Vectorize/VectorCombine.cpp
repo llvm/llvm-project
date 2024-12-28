@@ -1532,6 +1532,10 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   if (ShAmtX > 0)
     NewCost += TTI.getArithmeticInstrCost(Instruction::Shl, Ty, CostKind);
 
+  LLVM_DEBUG(dbgs() << "Found a concatenation of bitcasted bool masks: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
   if (NewCost > OldCost)
     return false;
 
