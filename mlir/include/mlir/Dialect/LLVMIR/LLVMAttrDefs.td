@@ -1162,7 +1162,8 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
   let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$features);
 
   let builders = [
-    TypeBuilder<(ins "::llvm::StringRef":$features)>
+    TypeBuilder<(ins "::llvm::StringRef":$features)>,
+    TypeBuilder<(ins "::llvm::ArrayRef<::llvm::StringRef>":$features)>
   ];
 
   let extraClassDeclaration = [{
