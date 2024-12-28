@@ -476,10 +476,10 @@ bool Pointer::pointsToLiteral() const {
   if (isZero() || !isBlockPointer())
     return false;
 
-  const Expr *E = block()->getDescriptor()->asExpr();
   if (block()->isDynamic())
     return false;
 
+  const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 

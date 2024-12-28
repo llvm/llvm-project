@@ -3311,7 +3311,7 @@ private:
 
     /// For gather/buildvector/alt opcode (TODO) nodes, which are combined from
     /// other nodes as a series of insertvector instructions.
-    SmallVector<std::pair<unsigned, unsigned>, 0> CombinedEntriesWithIndices;
+    SmallVector<std::pair<unsigned, unsigned>, 2> CombinedEntriesWithIndices;
 
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
@@ -3545,6 +3545,13 @@ private:
       for (const auto &EInfo : UserTreeIndices)
         dbgs() << EInfo << ", ";
       dbgs() << "\n";
+      if (!CombinedEntriesWithIndices.empty()) {
+        dbgs() << "Combined entries: ";
+        interleaveComma(CombinedEntriesWithIndices, dbgs(), [&](const auto &P) {
+          dbgs() << "Entry index " << P.first << " with offset " << P.second;
+        });
+        dbgs() << "\n";
+      }
     }
 #endif
   };
@@ -10769,23 +10776,21 @@ public:
     }
     if (ForExtracts) {
       // No need to add vectors here, already handled them in adjustExtracts.
-      assert(
-          InVectors.size() == 1 && isa<const TreeEntry *>(InVectors.front()) &&
-          !CommonMask.empty() &&
-          all_of(enumerate(CommonMask),
-                 [&](auto P) {
-                   Value *Scalar =
-                       InVectors.front().get<const TreeEntry *>()->getOrdered(
-                           P.index());
-                   if (P.value() == PoisonMaskElem)
-                     return P.value() == Mask[P.index()] ||
-                            isa<UndefValue>(Scalar);
-                   if (isa<Constant>(V1))
-                     return true;
-                   auto *EI = cast<ExtractElementInst>(Scalar);
-                   return EI->getVectorOperand() == V1;
-                 }) &&
-          "Expected only tree entry for extractelement vectors.");
+      assert(InVectors.size() == 1 && isa<const TreeEntry *>(InVectors[0]) &&
+             !CommonMask.empty() &&
+             all_of(enumerate(CommonMask),
+                    [&](auto P) {
+                      Value *Scalar = cast<const TreeEntry *>(InVectors[0])
+                                          ->getOrdered(P.index());
+                      if (P.value() == PoisonMaskElem)
+                        return P.value() == Mask[P.index()] ||
+                               isa<UndefValue>(Scalar);
+                      if (isa<Constant>(V1))
+                        return true;
+                      auto *EI = cast<ExtractElementInst>(Scalar);
+                      return EI->getVectorOperand() == V1;
+                    }) &&
+             "Expected only tree entry for extractelement vectors.");
       return;
     }
     assert(!InVectors.empty() && !CommonMask.empty() &&
