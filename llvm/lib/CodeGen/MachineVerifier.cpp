@@ -1274,6 +1274,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (TypeSize::isKnownGT(MMO.getSize().getValue(),
                                 ValTy.getSizeInBytes()))
           report("load memory size cannot exceed result size", MI);
+
+        if (MMO.getRanges() && (ValTy.isVector() != MMO.getType().isVector())) {
+          report("scalar operands cannot be loaded into vector values and vice "
+                 "versa",
+                 MI);
+        }
       } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
         if (TypeSize::isKnownLT(ValTy.getSizeInBytes(),
                                 MMO.getSize().getValue()))
