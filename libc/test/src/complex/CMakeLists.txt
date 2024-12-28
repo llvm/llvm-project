@@ -1,6 +1,18 @@
 add_custom_target(libc-complex-unittests)
 
 add_libc_test(
+  cargf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cargf_test.cpp
+  DEPENDS
+    libc.src.complex.cargf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
   conj_test
   SUITE
     libc-complex-unittests

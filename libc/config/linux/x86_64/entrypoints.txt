@@ -373,6 +373,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.cproj
     libc.src.complex.cprojf
     libc.src.complex.cprojl
+    libc.src.complex.cargf
     
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
