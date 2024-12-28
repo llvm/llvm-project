@@ -18195,16 +18195,38 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   unsigned ExtOpcode = Op0.getOpcode();
   SDValue A = Op0;
   SDValue B;
+  unsigned DotOpcode;
   if (ExtOpcode == ISD::MUL) {
     A = Op0.getOperand(0);
     B = Op0.getOperand(1);
-    if (A.getOpcode() != B.getOpcode() ||
-        A.getOperand(0).getValueType() != B.getOperand(0).getValueType())
+    if (A.getOperand(0).getValueType() != B.getOperand(0).getValueType())
       return SDValue();
-    ExtOpcode = A.getOpcode();
-  }
-  if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
+    auto OpCodeA = A.getOpcode();
+    if (OpCodeA != ISD::ZERO_EXTEND && OpCodeA != ISD::SIGN_EXTEND)
+      return SDValue();
+
+    auto OpCodeB = B.getOpcode();
+    if (OpCodeB != ISD::ZERO_EXTEND && OpCodeB != ISD::SIGN_EXTEND)
+      return SDValue();
+
+    if (OpCodeA == OpCodeB) {
+      DotOpcode =
+          OpCodeA == ISD::ZERO_EXTEND ? AArch64ISD::UDOT : AArch64ISD::SDOT;
+    } else {
+      // Check USDOT support support
+      if (!ST->hasMatMulInt8())
+        return SDValue();
+      DotOpcode = AArch64ISD::USDOT;
+      if (OpCodeA == ISD::SIGN_EXTEND)
+        std::swap(A, B);
+    }
+  } else if (ExtOpcode == ISD::ZERO_EXTEND) {
+    DotOpcode = AArch64ISD::UDOT;
+  } else if (ExtOpcode == ISD::SIGN_EXTEND) {
+    DotOpcode = AArch64ISD::SDOT;
+  } else {
     return SDValue();
+  }
 
   EVT Op0VT = A.getOperand(0).getValueType();
   bool IsValidElementCount = Op0VT.getVectorNumElements() % 8 == 0;
@@ -18230,8 +18252,6 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     NumOfVecReduce = Op0VT.getVectorNumElements() / 8;
     TargetType = MVT::v2i32;
   }
-  auto DotOpcode =
-      (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UDOT : AArch64ISD::SDOT;
   // Handle the case where we need to generate only one Dot operation.
   if (NumOfVecReduce == 1) {
     SDValue Zeros = DAG.getConstant(0, DL, TargetType);
