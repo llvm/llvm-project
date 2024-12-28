@@ -33,7 +33,7 @@ void RTDEF(CUFRegisterAllocator)() {
 }
 }
 
-void *CUFAllocPinned(std::size_t sizeInBytes, std::int64_t) {
+void *CUFAllocPinned(std::size_t sizeInBytes) {
   void *p;
   CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
@@ -41,20 +41,15 @@ void *CUFAllocPinned(std::size_t sizeInBytes, std::int64_t) {
 
 void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cudaFreeHost(p)); }
 
-void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t stream) {
+void *CUFAllocDevice(std::size_t sizeInBytes) {
   void *p;
-  if (stream >= 0) {
-    CUDA_REPORT_IF_ERROR(
-        cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)stream));
-  } else {
-    CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
-  }
+  CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
   return p;
 }
 
 void CUFFreeDevice(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
-void *CUFAllocManaged(std::size_t sizeInBytes, std::int64_t) {
+void *CUFAllocManaged(std::size_t sizeInBytes) {
   void *p;
   CUDA_REPORT_IF_ERROR(
       cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
@@ -63,7 +58,7 @@ void *CUFAllocManaged(std::size_t sizeInBytes, std::int64_t) {
 
 void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
-void *CUFAllocUnified(std::size_t sizeInBytes, std::int64_t) {
+void *CUFAllocUnified(std::size_t sizeInBytes) {
   // Call alloc managed for the time being.
   return CUFAllocManaged(sizeInBytes);
 }

@@ -3172,9 +3172,6 @@ TEST_P(ImportDecl, ImportFieldOrder) {
              recordDecl(hasFieldOrder({"b", "a"})));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Expr, DependentScopeDeclRefExpr>
-    dependentScopeDeclRefExpr;
-
 TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> struct S { static T foo; };"

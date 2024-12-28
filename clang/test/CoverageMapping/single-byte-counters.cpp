@@ -50,19 +50,22 @@ int testIfBothReturn(int x) { // CHECK-NEXT: File 0, [[@LINE]]:29 -> [[@LINE+10]
 }
 
 // CHECK-NEXT: testSwitch
-int testSwitch(int x) { // CHECK-NEXT: File 0, [[@LINE]]:23 -> [[@LINE+17]]:2 = [[C30:#0]]
+int testSwitch(int x) { // CHECK-NEXT: File 0, [[@LINE]]:23 -> [[@LINE+20]]:2 = [[C30:#0]]
   int result;
   switch (x) {
-                        // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:14 -> [[@LINE+10]]:15 = 0
-  case 1:               // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = [[C31:#2]]
+                        // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:14 -> [[@LINE+13]]:15 = 0
+  case 1:               // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = [[C31:#2]]
+
     result = 1;
     break;
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = 0
-  case 2:               // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = [[C32:#3]]
+  case 2:               // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = [[C32:#3]]
+
     result = 2;
     break;
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = 0
-  default:              // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:15 = [[C3D:#4]]
+  default:              // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:15 = [[C3D:#4]]
+
     result = 0;
   }
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE+1]]:3 = [[C3E:#1]]
@@ -127,10 +130,9 @@ int testFor() { // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE+13]]:2 = [[C60:#0
 }
 
 // CHECK-NEXT: testForRange
-int testForRange() {    // CHECK-NEXT: File 0, [[@LINE]]:20 -> [[@LINE+12]]:2 = [[C70:#0]]
+int testForRange() {    // CHECK-NEXT: File 0, [[@LINE]]:20 -> [[@LINE+11]]:2 = [[C70:#0]]
   int sum = 0;
   int array[] = {1, 2, 3, 4, 5};
-
                         // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:20 -> [[@LINE+1]]:21 = [[C7B:#1]], [[C7E:#0]]
   for (int element : array) {
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:28 -> [[@LINE-1]]:29 = [[C7B]]
@@ -142,7 +144,7 @@ int testForRange() {    // CHECK-NEXT: File 0, [[@LINE]]:20 -> [[@LINE+12]]:2 = 
 }
 
 // CHECK-NEXT: testDo
-int testDo() {          // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+10]]:2 = [[C80:#0]]
+int testDo() {          // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+9]]:2 = [[C80:#0]]
   int i = 0;
   int sum = 0;
   do {                  // CHECK-NEXT: File 0, [[@LINE]]:6 -> [[@LINE+3]]:4 = ([[C80]] + [[C8B:#1]])
@@ -150,7 +152,6 @@ int testDo() {          // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+10]]:2 = 
     i++;
   } while (i < 5);      // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE]]:17 = ([[C80]] + [[C8B]])
                         // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:12 -> [[@LINE-1]]:17 = [[C8B]], [[C8E:#0]]
-
   return sum;           // #0
 }
 
