@@ -197,6 +197,10 @@ public:
   SmallVectorImpl<char> &getContents() { return Contents; }
   const SmallVectorImpl<char> &getContents() const { return Contents; }
 
+  void appendContents(ArrayRef<char> C) { Contents.append(C.begin(), C.end()); }
+  void appendContents(size_t Num, char Elt) { Contents.append(Num, Elt); }
+  void setContents(ArrayRef<char> C) { Contents.assign(C.begin(), C.end()); }
+
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
 
