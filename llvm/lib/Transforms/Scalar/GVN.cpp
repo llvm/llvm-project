@@ -113,6 +113,7 @@ static cl::opt<bool>
 GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
                                 cl::init(false));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
+static cl::opt<bool> GVNEnableSplitLoad("enable-split-load", cl::init(true));
 
 static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
@@ -2151,6 +2152,105 @@ static void patchAndReplaceAllUsesWith(Instruction *I, Value *Repl) {
   I->replaceAllUsesWith(Repl);
 }
 
+// split load to single byte loads and check if the value can be deduced
+//
+// Example:
+// define i32 @f(i8* %P)
+// 1:  %b2 = getelementptr inbounds i8, i8* %P, i64 1
+// 2:  store i8 0, i8* %b2, align 1
+// 3:  store i8 0, i8* %P, align 1
+// 4:  %s1 = bitcast i8* %P to i16*
+// 5:  %L = load i16, i16* %s1, align 4
+//
+// The last clobbering write for the load is (3) but it doesn't cover the whole
+// read. So AnalyzeLoadAvailability would give up.
+// This function emit temporary byte-sized loads that cover the original load,
+// so that any last write covers the read. We run AnalyzeLoadAvailability on
+// each byte to try to construct the load as a constant.
+bool GVNPass::splitAndprocessLoad(LoadInst *L) {
+  if (L->isAtomic())
+    return false;
+
+  Type *LTy = L->getType();
+  if (!LTy->isIntegerTy())
+    return false;
+
+  unsigned BW = LTy->getIntegerBitWidth();
+  if (BW % 8)
+    return false;
+
+  IntegerType *ByteTy = IntegerType::getInt8Ty(LTy->getContext());
+  Type *BytePtrTy = PointerType::get(ByteTy, L->getPointerAddressSpace());
+  BitCastInst *Base = new BitCastInst(L->getPointerOperand(), BytePtrTy, "", L);
+
+  // we update this byte by byte as we deduce the load value
+  APInt ConstructedValue = APInt::getZero(BW);
+
+  for (unsigned i=0; i<BW/8; i++) {
+    Value *Offset = Constant::getIntegerValue(LTy, APInt(BW, i));
+    GetElementPtrInst *GEP = GetElementPtrInst::Create(
+                               ByteTy, Base, ArrayRef<Value*>(Offset), "", L);
+    LoadInst *ByteLoad = new LoadInst(ByteTy, GEP, "", L);
+    ByteLoad->setDebugLoc(L->getDebugLoc());
+
+    auto CleanupTmps = [&]() {
+      MD->removeInstruction(ByteLoad);
+      ByteLoad->eraseFromParent();
+      GEP->eraseFromParent();
+    };
+
+    MemDepResult ByteDep = MD->getDependency(ByteLoad);
+    // AnalyzeLoadAvailability only analyzes local deps.
+    // If dep is not def or clobber, we cannot get a value from it.
+    if (ByteDep.isNonLocal() || (!ByteDep.isDef() && !ByteDep.isClobber())) {
+      CleanupTmps();
+      Base->eraseFromParent();
+      return false;
+    }
+
+    auto ByteRes = AnalyzeLoadAvailability(ByteLoad, ByteDep, GEP);
+    // If it doesn't reduce to a constant, give up. Creating the value at runtime by
+    // shifting the bytes is not worth it to remove a load.
+    if (ByteRes &&
+          (ByteRes->isMemIntrinValue() ||
+           (ByteRes->isSimpleValue() &&
+            (isa<ConstantInt>(ByteRes->getSimpleValue()) ||
+             isa<UndefValue>(ByteRes->getSimpleValue()))))) {
+        Value *V = ByteRes->MaterializeAdjustedValue(ByteLoad, ByteLoad, *this);
+        ConstantInt *ByteConst = dyn_cast<ConstantInt>(V);
+        if (!ByteConst) {
+          // replace undef with 0. This helps optimize cases where some bits of
+          // load are constant integer, and some are undef. So we can optimize
+          // the load to a particular integer.
+          ByteConst = ConstantInt::get(ByteTy, 0);
+        }
+        ConstructedValue.insertBits(ByteConst->getValue(), 8*i);
+    } else {
+      LLVM_DEBUG(dbgs() << "GVN split load: byte " << i
+                        << " did not reduce to a constant. Giving up");
+      CleanupTmps();
+      Base->eraseFromParent();
+      return false;
+    }
+    CleanupTmps();
+  }
+  Base->eraseFromParent();
+
+  // Replace the load!
+  Constant *LoadValue = ConstantInt::get(LTy, ConstructedValue);
+  patchAndReplaceAllUsesWith(L, LoadValue);
+  markInstructionForDeletion(L);
+  if (MSSAU)
+    MSSAU->removeMemoryAccess(L);
+  ++NumGVNLoad;
+  reportLoadElim(L, LoadValue, ORE);
+  // Tell MDA to reexamine the reused pointer since we might have more
+  // information after forwarding it.
+  if (MD && LoadValue->getType()->isPtrOrPtrVectorTy())
+    MD->invalidateCachedPointerInfo(LoadValue);
+  return true;
+}
+
 /// Attempt to eliminate a load, first by eliminating it
 /// locally, and then attempting non-local elimination if that fails.
 bool GVNPass::processLoad(LoadInst *L) {
@@ -2184,8 +2284,11 @@ bool GVNPass::processLoad(LoadInst *L) {
   }
 
   auto AV = AnalyzeLoadAvailability(L, Dep, L->getPointerOperand());
-  if (!AV)
+  if (!AV) {
+    if (GVNEnableSplitLoad)
+      return splitAndprocessLoad(L);
     return false;
+  }
 
   Value *AvailableValue = AV->MaterializeAdjustedValue(L, L, *this);
 

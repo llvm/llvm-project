@@ -12,11 +12,11 @@ define i32 @TestNoAsan() {
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[I1]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[I]], align 1
-; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr [[I]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i16 [[I3]], 0
-; CHECK-NEXT:    br i1 [[I4]], label [[BB10:%.*]], label [[BB5:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB10:%.*]], label [[BB5:%.*]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[I6:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 2
+; CHECK-NEXT:    [[I8:%.*]] = load i16, ptr [[I6]], align 2
+; CHECK-NEXT:    [[I9:%.*]] = sext i16 [[I8]] to i32
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    ret i32 0
@@ -48,17 +48,14 @@ define i32 @TestAsan() sanitize_address {
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[I1]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[I]], align 1
-; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr [[I]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i16 [[I3]], 0
-; CHECK-NEXT:    br i1 [[I4]], label [[BB10:%.*]], label [[BB5:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB10:%.*]], label [[BB5:%.*]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[I6:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 2
 ; CHECK-NEXT:    [[I8:%.*]] = load i16, ptr [[I6]], align 2
 ; CHECK-NEXT:    [[I9:%.*]] = sext i16 [[I8]] to i32
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[I11:%.*]] = phi i32 [ [[I9]], [[BB5]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    ret i32 [[I11]]
+; CHECK-NEXT:    ret i32 0
 ;
 bb:
   %i = tail call noalias ptr @_Znam(i64 2)
@@ -87,17 +84,14 @@ define i32 @TestHWAsan() sanitize_hwaddress {
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[I1]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[I]], align 1
-; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr [[I]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i16 [[I3]], 0
-; CHECK-NEXT:    br i1 [[I4]], label [[BB10:%.*]], label [[BB5:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB10:%.*]], label [[BB5:%.*]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[I6:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 2
 ; CHECK-NEXT:    [[I8:%.*]] = load i16, ptr [[I6]], align 2
 ; CHECK-NEXT:    [[I9:%.*]] = sext i16 [[I8]] to i32
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[I11:%.*]] = phi i32 [ [[I9]], [[BB5]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    ret i32 [[I11]]
+; CHECK-NEXT:    ret i32 0
 ;
 bb:
   %i = tail call noalias ptr @_Znam(i64 2)
