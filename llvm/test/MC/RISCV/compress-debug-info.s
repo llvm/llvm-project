@@ -7,8 +7,6 @@
 # This file ensures that compressing an instruction preserves its debug info.
 
 
-# BOTH-LABEL: .text
-
 # BOTH: .file 1
 # BOTH-SAME: "compress-debug-info.s"
 
