@@ -306,7 +306,7 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
 }
 
 TargetFeaturesAttr TargetFeaturesAttr::getChecked(
-    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    function_ref<InFlightDiagnostic()> emitError,
     MLIRContext *context, StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
