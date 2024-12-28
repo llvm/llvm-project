@@ -931,15 +931,6 @@
 
   Remove redundant Address-Size override prefix
 
-### BOLT options in relocation mode:
-
-- `--align-macro-fusion=<value>`
-
-  Fix instruction alignment for macro-fusion (x86 relocation mode)
-  - `none`: do not insert alignment no-ops for macro-fusion
-  - `hot`: only insert alignment no-ops on hot execution paths (default)
-  - `all`: always align instructions to allow macro-fusion
-
 ### BOLT instrumentation options:
 
 `llvm-bolt <executable> -instrument [-o outputfile] <instrumented-executable>`
