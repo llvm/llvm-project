@@ -285,10 +285,8 @@ static bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
   unsigned MaxWidth = std::max(InitNum.getBitWidth(), BoundNum.getBitWidth());
 
-  if (InitNum.getBitWidth() != MaxWidth)
-    InitNum = InitNum.zext(MaxWidth);
-  if (BoundNum.getBitWidth() != MaxWidth)
-    BoundNum = BoundNum.zext(MaxWidth);
+  InitNum = InitNum.zext(MaxWidth);
+  BoundNum = BoundNum.zext(MaxWidth);
 
   if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)
     maxStep = (BoundNum - InitNum + 1).abs().getZExtValue();
