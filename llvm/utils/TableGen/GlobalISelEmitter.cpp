@@ -1246,15 +1246,6 @@ Error GlobalISelEmitter::importNamedNodeRenderer(
     if (N.getNumResults() != 1)
       return failedImport("node does not have one result " + to_string(N));
 
-    std::optional<LLTCodeGen> OpTyOrNone;
-    ArrayRef<TypeSetByHwMode> ChildTypes = N.getExtTypes();
-    if (ChildTypes.front().isMachineValueType())
-      OpTyOrNone = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
-
-    // TODO: Remove this check. Types in the destination DAG should not matter.
-    if (!OpTyOrNone)
-      return failedImport("node has unsupported type " + to_string(N));
-
     if (R->isSubClassOf("ComplexPattern")) {
       auto I = ComplexPatternEquivs.find(R);
       if (I == ComplexPatternEquivs.end())
