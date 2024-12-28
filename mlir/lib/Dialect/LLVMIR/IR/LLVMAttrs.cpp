@@ -289,7 +289,7 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
 }
 
 TargetFeaturesAttr TargetFeaturesAttr::getChecked(
-    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    function_ref<InFlightDiagnostic()> emitError,
     MLIRContext *context, llvm::ArrayRef<StringRef> features) {
   return Base::getChecked(emitError, context,
                           llvm::map_to_vector(features, [&](StringRef feature) {
