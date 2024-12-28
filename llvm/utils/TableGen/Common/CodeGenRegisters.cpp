@@ -1306,6 +1306,18 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
       addToMaps(&RC);
   }
 
+  // Resolve cross references.
+  for (const Record *RCRec : RCs) {
+    if (const Record *CrossCopyRCRec =
+            RCRec->getValueAsOptionalDef("CrossCopyRegClass")) {
+      const CodeGenRegisterClass *CrossCopyRC = getRegClass(CrossCopyRCRec);
+      if (!CrossCopyRC->Allocatable)
+        PrintFatalError(RCRec->getFieldLoc("CrossCopyRegClass"),
+                        "cross-copy register class must be allocatable");
+      getRegClass(RCRec)->CrossCopyRC = CrossCopyRC;
+    }
+  }
+
   // Infer missing classes to create a full algebra.
   computeInferredRegisterClasses();
 

@@ -283,6 +283,8 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // value means copying is extremely expensive or impossible.
   int CopyCost = 1;
 
+  RegisterClass CrossCopyRegClass = ?;
+
   // MemberList - Specify which registers are in this class.  If the
   // allocation_order_* method are not specified, this also defines the order of
   // allocation used by the register allocator.

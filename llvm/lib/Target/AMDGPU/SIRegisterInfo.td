@@ -362,13 +362,6 @@ foreach Index = 0...255 in {
 //  Groupings using register classes and tuples
 //===----------------------------------------------------------------------===//
 
-def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
-  let CopyCost = -1;
-  let isAllocatable = 0;
-  let HasSGPR = 1;
-  let BaseClassOrder = 10000;
-}
-
 def M0_CLASS : SIRegisterClass<"AMDGPU", [i32], 32, (add M0)> {
   let CopyCost = 1;
   let isAllocatable = 0;
@@ -800,6 +793,14 @@ def SReg_32_XM0 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
 }
 
 } // End GeneratePressureSet = 0
+
+def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
+  let CopyCost = -1;
+  let isAllocatable = 0;
+  let CrossCopyRegClass = SReg_32_XM0_XEXEC;
+  let HasSGPR = 1;
+  let BaseClassOrder = 10000;
+}
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,

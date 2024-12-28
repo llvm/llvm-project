@@ -1570,6 +1570,17 @@ Expected<action_iterator> GlobalISelEmitter::importDefRenderers(
     StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();
     CopyBuilder.addRenderer<CopyRenderer>(PermanentRef);
     CopyBuilder.addRenderer<AddRegisterRenderer>(Target, Reg);
+
+    const CodeGenRegisterClass *RC = CGRegs.getRegClassForRegister(Reg);
+    if (RC && !RC->Allocatable)
+      RC = RC->CrossCopyRC;
+
+    if (!RC)
+      return failedImport("could not infer register class for " +
+                          Reg->getName());
+
+    M.addAction<ConstrainOperandToRegClassAction>(CopyBuilder.getInsnID(),
+                                                  /*OpIdx=*/0, *RC);
   }
 
   return InsertPt;
