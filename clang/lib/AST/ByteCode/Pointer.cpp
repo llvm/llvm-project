@@ -316,6 +316,7 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   case Storage::Fn:
     OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
        << " }";
+    break;
   case Storage::Typeid:
     OS << "(Typeid)";
   }
