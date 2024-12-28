@@ -368,6 +368,7 @@ cc_library(
         ":utils",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

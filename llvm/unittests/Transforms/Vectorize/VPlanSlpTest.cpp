@@ -16,7 +16,7 @@
 namespace llvm {
 namespace {
 
-class VPlanSlpTest : public VPlanTestBase {
+class VPlanSlpTest : public VPlanTestIRBase {
 protected:
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI;

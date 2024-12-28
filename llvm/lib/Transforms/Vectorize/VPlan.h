@@ -1653,7 +1653,7 @@ public:
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
@@ -2597,8 +2597,9 @@ class VPReductionRecipe : public VPSingleDefRecipe {
 protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
-                    VPValue *CondOp, bool IsOrdered)
-      : VPSingleDefRecipe(SC, Operands, I), RdxDesc(R), IsOrdered(IsOrdered) {
+                    VPValue *CondOp, bool IsOrdered, DebugLoc DL)
+      : VPSingleDefRecipe(SC, Operands, I, DL), RdxDesc(R),
+        IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2608,16 +2609,17 @@ protected:
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered)
+                    bool IsOrdered, DebugLoc DL = {})
       : VPReductionRecipe(VPDef::VPReductionSC, R, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered) {}
+                          IsOrdered, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered);
+                                 getVecOp(), getCondOp(), IsOrdered,
+                                 getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2672,7 +2674,7 @@ public:
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered()) {}
+            R.isOrdered(), R.getDebugLoc()) {}
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -3810,7 +3812,6 @@ class VPlan {
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
-public:
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3820,17 +3821,19 @@ public:
            "scalar header must be a leaf node");
   }
 
-  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
-  /// with \p ScalarHeader wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
-      : VPlan(Entry, ScalarHeader) {
-    TripCount = TC;
-  }
-
+public:
   /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
   /// original preheader and scalar header of \p L, to be used as entry and
   /// scalar header blocks of the new VPlan.
   VPlan(Loop *L);
+
+  /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
+  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
+  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+    setEntry(new VPBasicBlock("preheader"));
+    ScalarHeader = VPIRBasicBlock::fromBasicBlock(ScalarHeaderBB);
+    TripCount = TC;
+  }
 
   ~VPlan();
 
