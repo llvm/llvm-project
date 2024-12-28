@@ -62,6 +62,7 @@ add_object_library(
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
+    libc.hdr.types.FILE
 )
 
 add_object_library(
