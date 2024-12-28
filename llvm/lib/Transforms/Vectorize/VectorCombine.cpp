@@ -1753,9 +1753,9 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     ArrayRef<int> InnerMask;
     if (match(Op, m_OneUse(m_Shuffle(m_Value(InnerOp), m_Undef(),
                                      m_Mask(InnerMask)))) &&
+        InnerOp->getType() == Op->getType() &&
         all_of(InnerMask,
-               [NumSrcElts](int M) { return M < (int)NumSrcElts; }) &&
-        InnerOp->getType() == Op->getType()) {
+               [NumSrcElts](int M) { return M < (int)NumSrcElts; })) {
       for (int &M : Mask)
         if (Offset <= M && M < (int)(Offset + NumSrcElts)) {
           M = InnerMask[M - Offset];
