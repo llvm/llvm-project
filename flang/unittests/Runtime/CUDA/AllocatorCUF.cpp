@@ -68,5 +68,5 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   Descriptor *desc = nullptr;
   desc = RTNAME(CUFAllocDescriptor)(a->SizeInBytes());
   EXPECT_TRUE(desc != nullptr);
-  RTNAME(CUFFreeDesciptor)(desc);
+  RTNAME(CUFFreeDescriptor)(desc);
 }
