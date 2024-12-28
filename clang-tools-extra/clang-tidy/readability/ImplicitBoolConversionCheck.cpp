@@ -349,26 +349,27 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
             forField(hasBitWidth(1)))));
 
     Finder->addMatcher(
-        traverse(TK_AsIs, implicitCastExpr(
-                              ImplicitCastFromBool, unless(ExceptionCases),
-                              // Exclude comparisons of bools, as they are
-                              // always cast to integers in such context:
-                              //   bool_expr_a == bool_expr_b
-                              //   bool_expr_a != bool_expr_b
-                              unless(hasParent(binaryOperator(anyOf(
-                                  BoolComparison, BoolXor, BoolOpAssignment,
-                                  BitfieldAssignment)))),
-                              implicitCastExpr().bind("implicitCastFromBool"),
-                              unless(hasParent(BitfieldConstruct)),
-                              // Check also for nested casts, for example:
-                              // bool -> int -> float.
-                              anyOf(hasParent(implicitCastExpr().bind(
-                                        "furtherImplicitCast")),
-                                    anything()),
-                              unless(isInTemplateInstantiation()),
-                              unless(IsInCompilerGeneratedFunction))),
+        traverse(
+            TK_AsIs,
+            implicitCastExpr(
+                ImplicitCastFromBool, unless(ExceptionCases),
+                // Exclude comparisons of bools, as they are
+                // always cast to integers in such context:
+                //   bool_expr_a == bool_expr_b
+                //   bool_expr_a != bool_expr_b
+                unless(hasParent(binaryOperator(anyOf(BoolComparison, BoolXor,
+                                                      BoolOpAssignment,
+                                                      BitfieldAssignment)))),
+                implicitCastExpr().bind("implicitCastFromBool"),
+                unless(hasParent(BitfieldConstruct)),
+                // Check also for nested casts, for example:
+                // bool -> int -> float.
+                anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
+                      anything()),
+                unless(isInTemplateInstantiation()),
+                unless(IsInCompilerGeneratedFunction))),
         this);
-  }  
+  }
 }
 
 void ImplicitBoolConversionCheck::check(
