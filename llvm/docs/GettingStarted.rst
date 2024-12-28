@@ -356,7 +356,7 @@ popular host toolchains for specific minimum versions in our build systems:
 * Clang 5.0
 * Apple Clang 10.0
 * GCC 7.4
-* Visual Studio 2019 16.7
+* Visual Studio 2019 16.8
 
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.

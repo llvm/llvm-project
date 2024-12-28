@@ -411,12 +411,12 @@ define i32 @nested_smin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mvn r3, #-2147483648
 ; CHECK-NEXT:    mvn r2, #-2147483648
-; CHECK-NEXT:    vminv.s32 r3, q0
-; CHECK-NEXT:    vminv.s32 r2, q1
-; CHECK-NEXT:    cmp r3, r0
-; CHECK-NEXT:    csel r0, r3, r0, lt
-; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    csel r1, r2, r1, lt
+; CHECK-NEXT:    vminv.s32 r3, q1
+; CHECK-NEXT:    vminv.s32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, lt
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, lt
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
@@ -433,12 +433,12 @@ define i32 @nested_smax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov.w r3, #-2147483648
 ; CHECK-NEXT:    mov.w r2, #-2147483648
-; CHECK-NEXT:    vmaxv.s32 r3, q0
-; CHECK-NEXT:    vmaxv.s32 r2, q1
-; CHECK-NEXT:    cmp r3, r0
-; CHECK-NEXT:    csel r0, r3, r0, gt
-; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    csel r1, r2, r1, gt
+; CHECK-NEXT:    vmaxv.s32 r3, q1
+; CHECK-NEXT:    vmaxv.s32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, gt
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, gt
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
@@ -455,12 +455,12 @@ define i32 @nested_umin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov.w r3, #-1
 ; CHECK-NEXT:    mov.w r2, #-1
-; CHECK-NEXT:    vminv.u32 r3, q0
-; CHECK-NEXT:    vminv.u32 r2, q1
-; CHECK-NEXT:    cmp r3, r0
-; CHECK-NEXT:    csel r0, r3, r0, lo
-; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    csel r1, r2, r1, lo
+; CHECK-NEXT:    vminv.u32 r3, q1
+; CHECK-NEXT:    vminv.u32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, lo
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, lo
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
@@ -477,12 +477,12 @@ define i32 @nested_umax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vmaxv.u32 r3, q0
-; CHECK-NEXT:    vmaxv.u32 r2, q1
-; CHECK-NEXT:    cmp r3, r0
-; CHECK-NEXT:    csel r0, r3, r0, hi
-; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    csel r1, r2, r1, hi
+; CHECK-NEXT:    vmaxv.u32 r3, q1
+; CHECK-NEXT:    vmaxv.u32 r2, q0
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    csel r1, r3, r1, hi
+; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    csel r0, r2, r0, hi
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr

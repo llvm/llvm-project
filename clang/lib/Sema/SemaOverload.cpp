@@ -5933,7 +5933,9 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
     DestType = ImplicitParamRecordType;
     FromClassification = From->Classify(Context);
 
-    // When performing member access on a prvalue, materialize a temporary.
+    // CWG2813 [expr.call]p6:
+    //   If the function is an implicit object member function, the object
+    //   expression of the class member access shall be a glvalue [...]
     if (From->isPRValue()) {
       From = CreateMaterializeTemporaryExpr(FromRecordType, From,
                                             Method->getRefQualifier() !=
@@ -6463,11 +6465,6 @@ static Expr *GetExplicitObjectExpr(Sema &S, Expr *Obj,
     Obj = UnaryOperator::Create(S.getASTContext(), Obj, UO_Deref, ObjType,
                                 VK_LValue, OK_Ordinary, SourceLocation(),
                                 /*CanOverflow=*/false, FPOptionsOverride());
-  }
-  if (Obj->Classify(S.getASTContext()).isPRValue()) {
-    Obj = S.CreateMaterializeTemporaryExpr(
-        ObjType, Obj,
-        !Fun->getParamDecl(0)->getType()->isRValueReferenceType());
   }
   return Obj;
 }
@@ -15575,7 +15572,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     // Build the actual expression node.
     ExprResult FnExpr =
         CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
-                              HadMultipleCandidates, MemExpr->getBeginLoc());
+                              HadMultipleCandidates, MemExpr->getExprLoc());
     if (FnExpr.isInvalid())
       return ExprError();
 
@@ -15584,8 +15581,6 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                          CurFPFeatureOverrides(), Proto->getNumParams());
   } else {
     // Convert the object argument (for a non-static member function call).
-    // We only need to do this if there was actually an overload; otherwise
-    // it was done at lookup.
     ExprResult ObjectArg = PerformImplicitObjectArgumentInitialization(
         MemExpr->getBase(), Qualifier, FoundDecl, Method);
     if (ObjectArg.isInvalid())

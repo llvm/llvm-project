@@ -3233,8 +3233,8 @@ def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
 def err_attribute_invalid_bitint_vector_type : Error<
-  "'_BitInt' vector element width must be %select{a power of 2|"
-  "at least as wide as 'CHAR_BIT'}0">;
+  "'_BitInt' %select{vector|matrix}0 element width must be %select{a power of 2|"
+  "at least as wide as 'CHAR_BIT'}1">;
 def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
@@ -3423,7 +3423,7 @@ def warn_typecheck_vector_element_sizes_not_equal : Warning<
 def err_ext_vector_component_exceeds_length : Error<
   "vector component access exceeds type %0">;
 def err_ext_vector_component_name_illegal : Error<
-  "illegal vector component name '%0'">;
+  "illegal vector component name %0">;
 def err_attribute_address_space_negative : Error<
   "address space is negative">;
 def err_attribute_address_space_too_high : Error<
@@ -3999,6 +3999,10 @@ def warn_thread_attribute_decl_not_lockable : Warning<
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
+  "%0 attribute applies to function parameters only if their type is a "
+  "reference to a 'scoped_lockable'-annotated type">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4054,6 +4058,17 @@ def warn_acquired_before : Warning<
 def warn_acquired_before_after_cycle : Warning<
   "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_unmatched_underlying_mutexes : Warning<
+  "%0 managed by '%1' is '%3' instead of '%2'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_expect_more_underlying_mutexes : Warning<
+  "%0 '%2' not managed by '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_expect_fewer_underlying_mutexes : Warning<
+  "did not expect %0 '%2' to be managed by '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def note_managed_mismatch_here_for_param : Note<
+  "see attribute on parameter here">;
 
 
 // Thread safety warnings negative capabilities
@@ -5863,10 +5878,10 @@ def err_pack_expansion_without_parameter_packs : Error<
   "pack expansion does not contain any unexpanded parameter packs">;
 def err_pack_expansion_length_conflict : Error<
   "pack expansion contains parameter packs %0 and %1 that have different "
-  "lengths (%2 vs. %3)">;
+  "lengths (%2 vs. %select{|at least }3%4))">;
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
-  "length (%1 vs. %2) from outer parameter packs">;
+  "length (%1 vs. %select{|at least }2%3) from outer parameter packs">;
 def err_pack_expansion_length_conflict_partial : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (at least %1 vs. %2) from outer parameter packs">;
@@ -10237,16 +10252,16 @@ def warn_dangling_pointer_assignment : Warning<
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
    "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
 def warn_comparison_always : Warning<
-  "%select{self-|array }0comparison always evaluates to "
+  "%select{self-|array |pointer }0comparison always evaluates to "
   "%select{a constant|true|false|'std::strong_ordering::equal'}1">,
   InGroup<TautologicalCompare>;
 def warn_comparison_bitwise_always : Warning<
@@ -10273,6 +10288,11 @@ def warn_array_comparison : Warning<
   "comparison between two arrays compare their addresses and will be deprecated in c++20; "
   "to compare array addresses, use unary '+' to decay operands to pointers">,
   InGroup<DiagGroup<"array-compare">>;
+
+def warn_array_comparison_cxx26 : Warning<
+  "comparison between two arrays is ill-formed in C++26; "
+  "to compare array addresses, use unary '+' to decay operands to pointers">,
+  InGroup<DiagGroup<"array-compare-cxx26">>, DefaultError;
 
 def warn_stringcompare : Warning<
   "result of comparison against %select{a string literal|@encode}0 is "
@@ -12319,6 +12339,8 @@ def warn_noderef_to_dereferenceable_pointer : Warning<
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
+def err_builtin_assume_aligned_invalid_arg : Error<
+  "non-pointer argument to '__builtin_assume_aligned' is not allowed">;
 
 def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
@@ -12662,8 +12684,8 @@ def err_acc_int_expr_requires_integer
 def err_acc_int_expr_incomplete_class_type
     : Error<"OpenACC integer expression has incomplete class type %0">;
 def err_acc_int_expr_explicit_conversion
-    : Error<"OpenACC integer expression type %0 requires explicit conversion "
-            "to %1">;
+    : Error<"OpenACC integer expression requires explicit conversion "
+            "from %0 to %1">;
 def note_acc_int_expr_conversion
     : Note<"conversion to %select{integral|enumeration}0 type %1">;
 def err_acc_int_expr_multiple_conversions
@@ -12677,6 +12699,9 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
+def err_acc_not_a_var_ref_use_device
+    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
+            "name or array name">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -12711,9 +12736,9 @@ def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
 def err_acc_reduction_num_gangs_conflict
-    : Error<
-          "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
-          "with a 'num_gangs' clause with more than 1 argument, have %0">;
+    : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
+            "appear on a '%2' construct "
+            "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
     : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
             "composite of scalar types;%select{| sub-array base}1 type is %0">;
@@ -12755,31 +12780,33 @@ def err_acc_gang_multiple_elt
     : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
             "'num'|'dim'|'static'}0 argument">;
 def err_acc_int_arg_invalid
-    : Error<"'%1' argument on '%0' clause is not permitted on a%select{n "
-            "orphaned|||}2 'loop' construct %select{|associated with a "
-            "'parallel' compute construct|associated with a 'kernels' compute "
-            "construct|associated with a 'serial' compute construct}2">;
+    : Error<"'%0' argument on '%1' clause is not permitted on a%select{|n "
+            "orphaned}2 '%3' construct%select{| associated with a '%5' compute "
+            "construct}4">;
 def err_acc_gang_dim_value
     : Error<"argument to 'gang' clause dimension must be %select{a constant "
             "expression|1, 2, or 3: evaluated to %1}0">;
 def err_acc_num_arg_conflict
-    : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
-            "associated with a 'kernels' construct that has a "
-            "'%select{num_gangs|num_workers|vector_length}1' "
-            "clause">;
+    : Error<"'%0' argument to '%1' clause not allowed on a '%2' "
+            "construct%select{| associated with a '%4' construct}3 that has a "
+            "'%5' clause">;
+def err_acc_num_arg_conflict_reverse
+    : Error<"'%0' clause not allowed on a 'kernels loop' construct that "
+            "has a '%1' clause with a%select{n| 'num'}2 argument">;
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
-            "clause%select{| on a 'kernels' compute construct}2">;
+            "clause%select{| on a '%3' construct}2">;
 def err_acc_gang_reduction_conflict
     : Error<"%select{OpenACC 'gang' clause with a 'dim' value greater than "
             "1|OpenACC 'reduction' clause}0 cannot "
-            "appear on the same 'loop' construct as a %select{'reduction' "
+            "appear on the same '%1' construct as a %select{'reduction' "
             "clause|'gang' clause with a 'dim' value greater than 1}0">;
 def err_acc_gang_reduction_numgangs_conflict
-    : Error<"OpenACC '%0' clause cannot appear on the same 'loop' construct "
-            "as a '%1' clause inside a compute construct with a "
+    : Error<"OpenACC '%0' clause cannot appear on the same '%2' construct as a "
+            "'%1' clause %select{inside a compute construct with a|and a}3 "
             "'num_gangs' clause with more than one argument">;
-def err_reduction_op_mismatch
+
+    def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
 def err_acc_loop_variable_type
@@ -12794,6 +12821,8 @@ def err_acc_loop_terminating_condition
 def err_acc_loop_not_monotonic
     : Error<"OpenACC '%0' variable must monotonically increase or decrease "
             "('++', '--', or compound assignment)">;
+def err_acc_construct_one_clause_of
+    : Error<"OpenACC '%0' construct must have at least one %1 clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

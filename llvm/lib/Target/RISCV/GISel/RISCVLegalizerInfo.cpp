@@ -412,9 +412,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, sXLen})
+      .legalFor({p0, s32, sXLen})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, sXLen, sXLen);
+      .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
       .legalFor({p0});
@@ -482,6 +482,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
 
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
@@ -491,21 +493,24 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FP Operations
 
+  // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
   getActionDefinitionsBuilder(
       {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .libcallFor({s32, s64});
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
 
   getActionDefinitionsBuilder({G_FNEG, G_FABS})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64});
+      .lowerFor({s32, s64, s128});
 
   getActionDefinitionsBuilder(G_FREM)
       .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128})
       .minScalar(0, s32)
       .scalarize(0);
 
@@ -521,19 +526,22 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
       .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
-      .libcallFor({{s32, s64}});
+      .libcallFor({{s32, s64}})
+      .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
       .legalFor(ST.hasStdExtZfh(), {{s32, s16}})
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}})
-      .libcallFor({{s64, s32}});
+      .libcallFor({{s64, s32}})
+      .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
       .clampScalar(0, sXLen, sXLen)
-      .libcallFor({{sXLen, s32}, {sXLen, s64}});
+      .libcallFor({{sXLen, s32}, {sXLen, s64}})
+      .libcallFor(ST.is64Bit(), {{sXLen, s128}});
 
   // TODO: Support vector version of G_IS_FPCLASS.
   getActionDefinitionsBuilder(G_IS_FPCLASS)
@@ -546,7 +554,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64});
+      .lowerFor({s32, s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -558,7 +566,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
-      .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
+      .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
+      .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalFor(ST.hasStdExtF(), {{s32, sXLen}})
@@ -579,22 +588,33 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       // Otherwise only promote to s32 since we have si libcalls.
       .minScalar(1, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
-      .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
+      .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}}) // FIXME RV32.
+      .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}, {s128, s128}});
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
-  // FIXME: Legal with Zfa.
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
                                G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_INTRINSIC_ROUNDEVEN})
-      .libcallFor({s32, s64});
+      .legalFor(ST.hasStdExtZfa(), {s32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {s16})
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
+
+  getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
+      .legalFor(ST.hasStdExtZfa(), {s32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {s16});
 
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
                                G_FTANH})
-      .libcallFor({s32, s64});
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
-      .libcallFor({{s32, s32}, {s64, s32}});
+      .libcallFor({{s32, s32}, {s64, s32}})
+      .libcallFor(ST.is64Bit(), {s128, s32});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 

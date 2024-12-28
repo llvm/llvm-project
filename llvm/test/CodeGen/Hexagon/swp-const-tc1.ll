@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -enable-pipeliner-opt-size \
+; RUN: llc -mtriple=hexagon -enable-pipeliner -enable-pipeliner-opt-size \
 ; RUN:     -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 \
 ; RUN:     -enable-aa-sched-mi=false -hexagon-expand-condsets=0 \
 ; RUN:     < %s -pipeliner-experimental-cg=true | FileCheck %s

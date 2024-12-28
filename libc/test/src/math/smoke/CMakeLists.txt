@@ -13,6 +13,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cosf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cosf16
+)
+
+add_fp_unittest(
   cospif_test
   SUITE
     libc-math-smoke-tests
