@@ -65,11 +65,12 @@ module m
     .and. ieee_support_subnormal(1.0_8) &
     .and. ieee_support_subnormal(1.0_10) &
     .and. ieee_support_subnormal(1.0_16)
-  logical, parameter :: test_ieee_support_underflow_control = ieee_support_underflow_control() &
-    .and. ieee_support_underflow_control(1.0_2) &
-    .and. ieee_support_underflow_control(1.0_3) &
-    .and. ieee_support_underflow_control(1.0_4) &
-    .and. ieee_support_underflow_control(1.0_8) &
-    .and. ieee_support_underflow_control(1.0_10) &
-    .and. ieee_support_underflow_control(1.0_16)
+! varies by architecture
+! logical, parameter :: test_ieee_support_underflow_control = .not. ieee_support_underflow_control() &
+!   .and. .not. ieee_support_underflow_control(1.0_2) &
+!   .and. ieee_support_underflow_control(1.0_3) &
+!   .and. ieee_support_underflow_control(1.0_4) &
+!   .and. ieee_support_underflow_control(1.0_8) &
+!   .and. .not. ieee_support_underflow_control(1.0_10) &
+!   .and. .not. ieee_support_underflow_control(1.0_16)
 end module

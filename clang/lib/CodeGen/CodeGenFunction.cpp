@@ -837,6 +837,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+    if (SanOpts.has(SanitizerKind::Type))
+      Fn->addFnAttr(llvm::Attribute::SanitizeType);
     if (SanOpts.has(SanitizerKind::NumericalStability))
       Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
@@ -899,6 +901,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("ptrauth-auth-traps");
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
+  if (CodeGenOpts.PointerAuth.AArch64JumpTableHardening)
+    Fn->addFnAttr("aarch64-jump-table-hardening");
 
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;

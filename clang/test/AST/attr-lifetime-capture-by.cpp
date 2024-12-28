@@ -30,6 +30,12 @@ struct vector {
 
   void insert(iterator, T&&);
 };
+
+template <typename Key, typename Value>
+struct map {
+  Value& operator[](Key&& p);
+  Value& operator[](const Key& p);
+};
 } // namespace std
 
 // CHECK-NOT:   LifetimeCaptureByAttr
@@ -99,3 +105,13 @@ std::vector<int> ints;
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'iterator'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'int &&'
 // CHECK-NOT:   LifetimeCaptureByAttr
+
+std::map<View, int> map;
+// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct map definition implicit_instantiation
+
+// CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(View &&)' implicit_instantiation
+// CHECK-NEXT:           ParmVarDecl {{.*}} p 'View &&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(const View &)' implicit_instantiation
+// CHECK-NEXT:           ParmVarDecl {{.*}} p 'const View &'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit

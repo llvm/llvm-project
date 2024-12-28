@@ -115,6 +115,26 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
+- Improved :program:`clang-tidy` by accepting parameters file in command line.
+
+- Removed :program:`clang-tidy`'s global options for most of checks. All options
+  are changed to local options except `IncludeStyle`, `StrictMode` and
+  `IgnoreMacros`.
+
+.. csv-table::
+  :header: "Check", "Options removed from global option"
+
+  :doc:`bugprone-reserved-identifier <clang-tidy/checks/bugprone/reserved-identifier>`, AggressiveDependentMemberLookup
+  :doc:`bugprone-unchecked-optional-access <clang-tidy/checks/bugprone/unchecked-optional-access>`, IgnoreSmartPointerDereference
+  :doc:`cppcoreguidelines-pro-type-member-init <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`, UseAssignment
+  :doc:`cppcoreguidelines-rvalue-reference-param-not-moved <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>`, AllowPartialMove; IgnoreUnnamedParams; IgnoreNonDeducedTemplateTypes
+  :doc:`misc-include-cleaner <clang-tidy/checks/misc/include-cleaner>`, IgnoreHeaders; DeduplicateFindings
+  :doc:`performance-inefficient-vector-operation <clang-tidy/checks/performance/inefficient-vector-operation>`, EnableProto
+  :doc:`readability-identifier-naming <clang-tidy/checks/readability/identifier-naming>`, AggressiveDependentMemberLookup
+  :doc:`readability-inconsistent-declaration-parameter-name <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>`, Strict
+  :doc:`readability-redundant-access-specifiers <clang-tidy/checks/readability/redundant-access-specifiers>`, CheckFirstDeclaration
+  :doc:`readability-redundant-casting <clang-tidy/checks/readability/redundant-casting>`, IgnoreTypeAliases
+
 New checks
 ^^^^^^^^^^
 
@@ -136,10 +156,16 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check.
+
+  Replace comparisons between signed and unsigned integers with their safe
+  C++20 ``std::cmp_*`` alternative, if available.
+
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
-  Finds cases when an uninstantiated virtual member function in a template class 
+  Finds cases when an uninstantiated virtual member function in a template class
   causes cross-compiler incompatibility.
 
 New check aliases
@@ -176,6 +202,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` to support detecting
+  conversion directly by ``std::make_unique`` and ``std::make_shared``.
+
 - Improved :doc:`bugprone-posix-return
   <clang-tidy/checks/bugprone/posix-return>` check to support integer literals
   as LHS and posix call as RHS of comparison.
@@ -183,8 +213,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check to
   diagnose potential dangling references when returning a ``const &`` parameter
-  by using the conditional operator ``cond ? var1 : var2`` and no longer giving
-  false positives for functions which contain lambda.
+  by using the conditional operator ``cond ? var1 : var2`` and fixing false
+  positives for functions which contain lambda and ignore parameters
+  with ``[[clang::lifetimebound]]`` attribute.
   
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
@@ -248,7 +279,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
   keyword before type qualifiers such as ``const`` and ``volatile`` and fix
   false positives for function declaration without body and fix false positives
-  for global scoped overloaded ``operator new`` and ``operator delete``.
+  for C++20 export declarations and fix false positives for global scoped
+  overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
@@ -286,6 +318,9 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too and to only expand macros starting with ``PRI``
   and ``__PRI`` from ``<inttypes.h>`` in the format string.
+
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by not expanding macros.
 
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as

@@ -1,12 +1,12 @@
 # RUN: %python %s --target=cuda --tests=suld,sust,tex,tld4 --gen-list=%t.list > %t-cuda.ll
-# RUN: llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll --check-prefixes=CHECK,CHECK-CUDA
+# RUN: llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll
 # RUN: %if ptxas %{ llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
 
 # We only need to run this second time for texture tests, because
 # there is a difference between unified and non-unified intrinsics.
 #
 # RUN: %python %s --target=nvcl --tests=suld,sust,tex,tld4 --gen-list-append --gen-list=%t.list > %t-nvcl.ll
-# RUN: llc %t-nvcl.ll -verify-machineinstrs -o - | FileCheck %t-nvcl.ll --check-prefixes=CHECK,CHECK-NVCL
+# RUN: llc %t-nvcl.ll -verify-machineinstrs -o - | FileCheck %t-nvcl.ll
 # RUN: %if ptxas %{ llc %t-nvcl.ll -verify-machineinstrs -o - | %ptxas-verify %}
 
 # Verify that all instructions and intrinsics defined in TableGen
@@ -269,9 +269,7 @@ def gen_suld_tests(target, global_surf):
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
-  ; CHECK-CUDA: mov.u64 [[REG${reg_id}:%.*]], ${global_surf}
-  ; CHECK-CUDA: ${instruction} ${reg_ret}, [[[REG${reg_id}]], ${reg_access}]
-  ; CHECK-NVCL: ${instruction} ${reg_ret}, [${global_surf}, ${reg_access}]
+  ; CHECK: ${instruction} ${reg_ret}, [${global_surf}, ${reg_access}]
   define void @${test_name}_global(${retty}* %ret, ${access}) {
     %gs = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_surf})
     %val = tail call ${retty} @${intrinsic}(i64 %gs, ${access})
@@ -314,7 +312,6 @@ def gen_suld_tests(target, global_surf):
             "reg_ret": get_ptx_vec_reg(vec, dtype),
             "reg_surf": get_ptx_surface(target),
             "reg_access": get_ptx_surface_access(geom),
-            "reg_id": get_table_gen_id(),
         }
         gen_test(template, params)
         generated_items.append((params["intrinsic"], params["instruction"]))
@@ -364,9 +361,7 @@ def gen_sust_tests(target, global_surf):
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
-  ; CHECK-CUDA: mov.u64 [[REG${reg_id}:%.*]], ${global_surf}
-  ; CHECK-CUDA: ${instruction} [[[REG${reg_id}]], ${reg_access}], ${reg_value}
-  ; CHECK-NVCL: ${instruction} [${global_surf}, ${reg_access}], ${reg_value}
+  ; CHECK: ${instruction} [${global_surf}, ${reg_access}], ${reg_value}
   define void @${test_name}_global(${value}, ${access}) {
     %gs = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_surf})
     tail call void @${intrinsic}(i64 %gs, ${access}, ${value})
@@ -420,7 +415,6 @@ def gen_sust_tests(target, global_surf):
             "reg_value": get_ptx_vec_reg(vec, ctype),
             "reg_surf": get_ptx_surface(target),
             "reg_access": get_ptx_surface_access(geom),
-            "reg_id": get_table_gen_id(),
         }
         gen_test(template, params)
         generated_items.append((params["intrinsic"], params["instruction"]))
@@ -627,9 +621,7 @@ def gen_tex_tests(target, global_tex, global_sampler):
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
-  ; CHECK-CUDA: mov.u64 [[REG${reg_id}:%.*]], ${global_tex}
-  ; CHECK-CUDA: ${instruction} ${ptx_ret}, [[[REG${reg_id}]], ${ptx_global_sampler} ${ptx_access}]
-  ; CHECK-NVCL: ${instruction} ${ptx_ret}, [${global_tex}, ${ptx_global_sampler} ${ptx_access}]
+  ; CHECK: ${instruction} ${ptx_ret}, [${global_tex}, ${ptx_global_sampler} ${ptx_access}]
   define void @${test_name}_global(${retty}* %ret, ${access}) {
     %gt = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_tex})
     ${get_sampler_handle}
@@ -713,7 +705,6 @@ def gen_tex_tests(target, global_tex, global_sampler):
             "ptx_tex": get_ptx_texture(target),
             "ptx_access": get_ptx_texture_access(geom, ctype),
             "ptx_global_sampler": get_ptx_global_sampler(target, global_sampler),
-            "reg_id": get_table_gen_id(),
         }
         gen_test(template, params)
         generated_items.append((params["intrinsic"], params["instruction"]))
@@ -814,9 +805,7 @@ def gen_tld4_tests(target, global_tex, global_sampler):
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
-  ; CHECK-CUDA: mov.u64 [[REG${reg_id}:%.*]], ${global_tex}
-  ; CHECK-CUDA: ${instruction} ${ptx_ret}, [[[REG${reg_id}]], ${ptx_global_sampler} ${ptx_access}]
-  ; CHECK-NVCL: ${instruction} ${ptx_ret}, [${global_tex}, ${ptx_global_sampler} ${ptx_access}]
+  ; CHECK: ${instruction} ${ptx_ret}, [${global_tex}, ${ptx_global_sampler} ${ptx_access}]
   define void @${test_name}_global(${retty}* %ret, ${access}) {
     %gt = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_tex})
     ${get_sampler_handle}
@@ -862,7 +851,6 @@ def gen_tld4_tests(target, global_tex, global_sampler):
             "ptx_tex": get_ptx_texture(target),
             "ptx_access": get_ptx_tld4_access(geom),
             "ptx_global_sampler": get_ptx_global_sampler(target, global_sampler),
-            "reg_id": get_table_gen_id(),
         }
         gen_test(template, params)
         generated_items.append((params["intrinsic"], params["instruction"]))

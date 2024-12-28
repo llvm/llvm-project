@@ -1673,7 +1673,7 @@ void test_cvt_scalef32_sr_fp8_f32(global unsigned *out, float src, uint seed, fl
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[C_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.bitop3.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i8 1)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.bitop3.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 1)
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1696,7 +1696,7 @@ void test_bitop3_b32(global uint* out, uint a, uint b, uint c)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[A_ADDR]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspace(5) [[B_ADDR]], align 2
 // CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(5) [[C_ADDR]], align 2
-// CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.amdgcn.bitop3.i16(i16 [[TMP0]], i16 [[TMP1]], i16 [[TMP2]], i8 1)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.amdgcn.bitop3.i16(i16 [[TMP0]], i16 [[TMP1]], i16 [[TMP2]], i32 1)
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
 // CHECK-NEXT:    store i16 [[TMP3]], ptr addrspace(1) [[TMP4]], align 2
 // CHECK-NEXT:    ret void

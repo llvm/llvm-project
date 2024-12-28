@@ -76,8 +76,9 @@ class InsertionPoint {
   /// Get contained pointer type or nullptr
   template <class T>
   T *tryGetPtr() const {
-    if (location.is<T *>())
-      return location.get<T *>();
+    // Use llvm::dyn_cast_if_present because location may be null here.
+    if (T *ptr = llvm::dyn_cast_if_present<T *>(location))
+      return ptr;
     return nullptr;
   }
 
@@ -793,8 +794,8 @@ void StackArraysPass::runOnOperation() {
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
-  if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
-                                                std::move(patterns), config))) {
+  if (mlir::failed(mlir::applyOpPatternsGreedily(
+          opsToConvert, std::move(patterns), config))) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }

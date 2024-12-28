@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ADD_VOLATILE_H
-#define _LIBCPP___TYPE_TRAITS_ADD_VOLATILE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ADD_VOLATILE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ADD_VOLATILE_H
 
 #include <__cxx03/__config>
 
@@ -29,4 +29,4 @@ using add_volatile_t = typename add_volatile<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ADD_VOLATILE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ADD_VOLATILE_H

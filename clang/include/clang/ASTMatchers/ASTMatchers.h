@@ -1236,6 +1236,17 @@ AST_MATCHER_P(TemplateArgument, equalsIntegralValue,
 extern const internal::VariadicDynCastAllOfMatcher<Stmt,
        ObjCAutoreleasePoolStmt> autoreleasePoolStmt;
 
+/// Matches any export declaration.
+///
+/// Example matches following declarations.
+/// \code
+///   export void foo();
+///   export { void foo(); }
+///   export namespace { void foo(); }
+///   export int v;
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
+
 /// Matches any value declaration.
 ///
 /// Example matches A, B, C and F
@@ -2113,6 +2124,16 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr>
     declRefExpr;
+
+/// Matches expressions that refer to dependent scope declarations.
+///
+/// example matches T::v;
+/// \code
+///  template <class T> class X : T { void f() { T::v; } };
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   DependentScopeDeclRefExpr>
+    dependentScopeDeclRefExpr;
 
 /// Matches a reference to an ObjCIvar.
 ///
@@ -4033,7 +4054,7 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     hasType,
     AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl,
-                                    CXXBaseSpecifier),
+                                    CXXBaseSpecifier, ObjCInterfaceDecl),
     internal::Matcher<Decl>, InnerMatcher, 1) {
   QualType QT = internal::getUnderlyingType(Node);
   if (!QT.isNull())
@@ -7434,7 +7455,8 @@ extern const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
 AST_TYPELOC_TRAVERSE_MATCHER_DECL(
     pointee, getPointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
-                                    PointerType, ReferenceType));
+                                    PointerType, ReferenceType,
+                                    ObjCObjectPointerType));
 
 /// Matches typedef types.
 ///

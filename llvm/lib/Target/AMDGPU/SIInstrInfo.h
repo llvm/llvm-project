@@ -36,6 +36,8 @@ class RegScavenger;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
+constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
+
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
 /// on any path from the start of an entry function to this load.
 static const MachineMemOperand::Flags MONoClobber =
@@ -1567,6 +1569,11 @@ namespace AMDGPU {
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
   int getMFMAEarlyClobberOp(uint16_t Opcode);
+
+  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
+  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  LLVM_READONLY
+  int getMFMASrcCVDstAGPROp(uint16_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
