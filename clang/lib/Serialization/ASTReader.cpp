@@ -10702,7 +10702,8 @@ void ASTReader::FinishedDeserializing() {
     // We do this now rather than in finishPendingActions because we want to
     // be able to walk the complete redeclaration chains of the updated decls.
     while (!PendingExceptionSpecUpdates.empty() ||
-           !PendingDeducedTypeUpdates.empty()) {
+           !PendingDeducedTypeUpdates.empty() ||
+           !PendingUndeducedFunctionDecls.empty()) {
       auto ESUpdates = std::move(PendingExceptionSpecUpdates);
       PendingExceptionSpecUpdates.clear();
       for (auto Update : ESUpdates) {
