@@ -7711,6 +7711,16 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
   return InnerType.matches(Node.getDecayedType(), Finder, Builder);
 }
 
+/// Matches dependent name type
+///
+/// Example matches  T::type
+/// \code
+///  template <typename T> struct declToImport {
+///    typedef typename T::type dependent_name;
+///  };
+/// \endcode
+extern const AstTypeMatcher<DependentNameType> dependentNameType;
+
 /// Matches declarations whose declaration context, interpreted as a
 /// Decl, matches \c InnerMatcher.
 ///
