@@ -3311,7 +3311,7 @@ private:
 
     /// For gather/buildvector/alt opcode (TODO) nodes, which are combined from
     /// other nodes as a series of insertvector instructions.
-    SmallVector<std::pair<unsigned, unsigned>, 0> CombinedEntriesWithIndices;
+    SmallVector<std::pair<unsigned, unsigned>, 2> CombinedEntriesWithIndices;
 
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
@@ -3545,6 +3545,13 @@ private:
       for (const auto &EInfo : UserTreeIndices)
         dbgs() << EInfo << ", ";
       dbgs() << "\n";
+      if (!CombinedEntriesWithIndices.empty()) {
+        dbgs() << "Combined entries: ";
+        interleaveComma(CombinedEntriesWithIndices, dbgs(), [&](const auto &P) {
+          dbgs() << "Entry index " << P.first << " with offset " << P.second;
+        });
+        dbgs() << "\n";
+      }
     }
 #endif
   };
