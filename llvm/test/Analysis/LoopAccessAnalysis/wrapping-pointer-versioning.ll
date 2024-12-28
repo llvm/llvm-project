@@ -22,7 +22,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; LAA-LABEL: f1
 ; LAA: Memory dependences are safe{{$}}
 ; LAA: SCEV assumptions:
-; LAA-NEXT: {0,+,2}<%for.body> Added Flags: <nusw>
+; LAA-NOT: {0,+,2}<%for.body> Added Flags: <nusw>
 ; LAA-NEXT: {%a,+,4}<%for.body> Added Flags: <nusw>
 
 ; The expression for %mul_ext as analyzed by SCEV is
