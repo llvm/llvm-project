@@ -1,8 +1,13 @@
 // Test sanitizers ld flags.
 
-// Match all libclang_rt, excluding platform-inconsistent builtins.
-
-// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt.{{([^b]..|.[^u].|..[^i]).*}}"
+// Match all sanitizer related libclang_rt, we are not interested in
+// libclang_rt.builtins, libclang_rt.osx, libclang_rt.ios, libclang_rt.watchos
+// etc.
+//
+// If we need to add sanitizer with name starting with excluded laters, e.g.
+// `bsan`, we can extend expression like this: `([^iow]|b[^u])`.
+//
+// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt.{{([^biow])}}"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=address \
@@ -37,7 +42,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN
 //
 // CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
-// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: libclang_rt.osx.a"
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -366,7 +370,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-DARWIN-CXX
 // CHECK-TYSAN-DARWIN-CXX: "{{.*}}ld"
 // CHECK-TYSAN-DARWIN-CXX: libclang_rt.tysan_osx_dynamic.dylib
-// CHECK-TYSAN-DARWIN-CXX: libclang_rt.osx.a
 // CHECK-TYSAN-DARWIN-CXX-NOT: -lc++abi
 
 // RUN: %clangxx -### %s 2>&1 \
@@ -403,7 +406,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-TSAN-NO-LINK-RUNTIME-DARWIN
 //
-// CHECK-TSAN-NO-LINK-RUNTIME-DARWIN: libclang_rt.ios.a
+// CHECK-TSAN-NO-LINK-RUNTIME-DARWIN: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
 
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
@@ -473,7 +476,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN
 //
 // CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
-// CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN: libclang_rt.osx.a
 
 // RUN: %clang -fsanitize=fuzzer -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=arm64e-apple-watchos -fuse-ld=ld \
@@ -482,7 +484,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN
 //
 // CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
-// CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN: libclang_rt.watchos.a
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
@@ -838,7 +839,6 @@
 // CHECK-ASAN-DARWIN106-CXX: "{{.*}}ld"
 // CHECK-ASAN-DARWIN106-CXX: libclang_rt.asan_osx_dynamic.dylib
 // CHECK-ASAN-DARWIN106-CXX-NOT: -lc++abi
-// CHECK-ASAN-DARWIN106-CXX: libclang_rt.osx.a
 
 // RUN: %clangxx -fsanitize=leak -### %s 2>&1 \
 // RUN:     -mmacos-version-min=10.6 \
@@ -849,7 +849,6 @@
 // CHECK-LSAN-DARWIN106-CXX: "{{.*}}ld"
 // CHECK-LSAN-DARWIN106-CXX: libclang_rt.lsan_osx_dynamic.dylib
 // CHECK-LSAN-DARWIN106-CXX-NOT: -lc++abi
-// CHECK-LSAN-DARWIN106-CXX: libclang_rt.osx.a
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=safe-stack \
