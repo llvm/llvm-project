@@ -155,12 +155,20 @@ public:
 
   MPCNumber carg() const {
     mpfr_t res;
-    mpfr_init2(res, this->mpc_real_precision);
-    mpc_arg(res, value, MPC_RND_RE(this->mpc_rounding));
     mpc_t res_mpc;
-    mpc_set_fr(res_mpc, res, MPC_RND_RE(this->mpc_rounding));
-    return MPCNumber(res_mpc, this->mpc_real_precision,
-                     this->mpc_imag_precision, this->mpc_rounding);
+
+    mpfr_init2(res, this->mpc_real_precision);
+    mpc_init3(res_mpc, this->mpc_real_precision, this->mpc_imag_precision);
+
+    mpc_arg(res, value, MPC_RND_RE(this->mpc_rounding));
+    mpc_set_fr(res_mpc, res, this->mpc_rounding);
+
+    MPCNumber result(res_mpc, this->mpc_real_precision, this->mpc_imag_precision, this->mpc_rounding);
+
+    mpfr_clear(res);
+    mpc_clear(res_mpc);
+
+    return result;
   }
 };
 
@@ -215,8 +223,10 @@ bool compare_unary_operation_single_output_different_type(
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
   mpc_t mpc_result_val;
+  mpc_init3(mpc_result_val, precision, precision);
   mpc_result.getValue(mpc_result_val);
   mpfr_t real;
+  mpfr_init2(real, precision);
   mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
   double ulp_real = mpfr_real.ulp(libc_result);
@@ -227,6 +237,42 @@ template bool compare_unary_operation_single_output_different_type(
     Operation, _Complex float, float, double, MPCRoundingMode);
 template bool compare_unary_operation_single_output_different_type(
     Operation, _Complex double, double, double, MPCRoundingMode);
+
+template <typename InputType, typename OutputType>
+void explain_unary_operation_single_output_different_type_error(
+    Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
+    MPCRoundingMode rounding) {
+
+  unsigned int precision = get_precision<get_real_t<InputType>>(ulp_tolerance);
+
+  MPCNumber mpc_result;
+  mpc_result = unary_operation(op, input, precision, rounding);
+
+  mpc_t mpc_result_val;
+  mpc_init3(mpc_result_val, precision, precision);
+  mpc_result.getValue(mpc_result_val);
+
+  mpfr_t real;
+  mpfr_init2(real, precision);
+  mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
+
+  mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
+
+  double ulp_real = mpfr_real.ulp(libc_result);
+
+  if(ulp_real > ulp_tolerance) {
+    cpp::array<char, 1024> msg_buf;
+    cpp::StringStream msg(msg_buf);
+    // TODO: Add information to the error message.
+  }
+
+}
+
+template void explain_unary_operation_single_output_different_type_error(
+    Operation, _Complex float, float, double, MPCRoundingMode);
+template void explain_unary_operation_single_output_different_type_error(
+    Operation, _Complex double, double, double, MPCRoundingMode);
+
 } // namespace internal
 
 } // namespace mpc
