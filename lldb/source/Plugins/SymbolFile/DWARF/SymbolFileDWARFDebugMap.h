@@ -305,6 +305,10 @@ protected:
     return m_unique_ast_type_map;
   }
 
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType() {
+    return m_die_to_type;
+  }
+
   // OSOEntry
   class OSOEntry {
   public:
@@ -343,6 +347,8 @@ protected:
   llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
       m_forward_decl_compiler_type_to_die;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> m_die_to_type;
+
   DebugMap m_debug_map;
 
   // When an object file from the debug map gets parsed in
