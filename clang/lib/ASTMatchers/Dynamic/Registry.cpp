@@ -218,11 +218,11 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(cxxTryStmt);
   REGISTER_MATCHER(cxxUnresolvedConstructExpr);
   REGISTER_MATCHER(decayedType);
-  REGISTER_MATCHER(dependentNameType);
   REGISTER_MATCHER(decl);
   REGISTER_MATCHER(decompositionDecl);
   REGISTER_MATCHER(declCountIs);
   REGISTER_MATCHER(declRefExpr);
+  REGISTER_MATCHER(dependentNameType);
   REGISTER_MATCHER(dependentScopeDeclRefExpr);
   REGISTER_MATCHER(declStmt);
   REGISTER_MATCHER(declaratorDecl);

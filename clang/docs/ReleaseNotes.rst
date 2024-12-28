@@ -1110,7 +1110,7 @@ AST Matchers
 
 - Add ``dependentScopeDeclRefExpr`` matcher to match expressions that refer to dependent scope declarations.
 
-- Add ``dependentNameType`` matcher to match dependent name type.
+- Add ``dependentNameType`` matcher to match a dependent name type.
 
 clang-format
 ------------

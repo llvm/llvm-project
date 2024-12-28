@@ -7711,7 +7711,7 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
   return InnerType.matches(Node.getDecayedType(), Finder, Builder);
 }
 
-/// Matches dependent name type
+/// Matches a dependent name type
 ///
 /// Example matches  T::type
 /// \code
