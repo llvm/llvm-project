@@ -342,10 +342,11 @@ Changes in existing checks
   diagnostic.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check
-  by adding the option `UseUpperCaseLiteralSuffix` to select the
-  case of the literal suffix in fixes and fixing false positive for implicit
-  conversion of comparison result in C23.
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by adding the
+  option `UseUpperCaseLiteralSuffix` to select the case of the literal suffix in 
+  fixes and fixing false positive for implicit conversion of comparison result in 
+  C23, and by adding the option `CheckConversionsToBool` or 
+  `CheckConversionsFromBool` to configure checks for conversions involving ``bool``.
 
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
