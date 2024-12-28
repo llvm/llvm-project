@@ -110,7 +110,6 @@ struct Session {
 
   DynLibJDMap DynLibJDs;
 
-  std::mutex M;
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;
 
