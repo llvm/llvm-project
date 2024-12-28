@@ -1251,8 +1251,8 @@ public:
       return false;
 
     // Get the source and destination types of the truncate.
-    Type *SrcTy = ToVectorTy(cast<CastInst>(I)->getSrcTy(), VF);
-    Type *DestTy = ToVectorTy(cast<CastInst>(I)->getDestTy(), VF);
+    Type *SrcTy = toVectorTy(cast<CastInst>(I)->getSrcTy(), VF);
+    Type *DestTy = toVectorTy(cast<CastInst>(I)->getDestTy(), VF);
 
     // If the truncate is free for the given types, return false. Replacing a
     // free truncate with an induction variable would add an induction variable
@@ -2479,7 +2479,7 @@ static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
     assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
     assert(PreVectorPH->getSuccessors()[0] == ScalarPH &&
            "Unexpected successor");
-    VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
+    VPIRBasicBlock *CheckVPIRBB = Plan.createVPIRBasicBlock(CheckIRBB);
     VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
     PreVectorPH = CheckVPIRBB;
   }
@@ -3540,14 +3540,14 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
   }
   InstructionCost SafeDivisorCost = 0;
 
-  auto *VecTy = ToVectorTy(I->getType(), VF);
+  auto *VecTy = toVectorTy(I->getType(), VF);
 
   // The cost of the select guard to ensure all lanes are well defined
   // after we speculate above any internal control flow.
-  SafeDivisorCost += TTI.getCmpSelInstrCost(
-    Instruction::Select, VecTy,
-    ToVectorTy(Type::getInt1Ty(I->getContext()), VF),
-    CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  SafeDivisorCost +=
+      TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
+                             toVectorTy(Type::getInt1Ty(I->getContext()), VF),
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
   // Certain instructions can be cheaper to vectorize if they have a constant
   // second vector operand. One example of this are shifts on x86.
@@ -3581,10 +3581,10 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
-  // We currently only know how to emit interleave/deinterleave with
-  // Factor=2 for scalable vectors. This is purely an implementation
-  // limit.
-  if (VF.isScalable() && InterleaveFactor != 2)
+  // For scalable vectors, the only interleave factor currently supported
+  // must be power of 2 since we require the (de)interleave2 intrinsics
+  // instead of shufflevectors.
+  if (VF.isScalable() && !isPowerOf2_32(InterleaveFactor))
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -4667,7 +4667,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       }
 
       auto WillWiden = [&TTI, VF](Type *ScalarTy) {
-        Type *VectorTy = ToVectorTy(ScalarTy, VF);
+        Type *VectorTy = toVectorTy(ScalarTy, VF);
         unsigned NumLegalParts = TTI.getNumberOfParts(VectorTy);
         if (!NumLegalParts)
           return false;
@@ -5658,7 +5658,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     if (isScalarWithPredication(I, VF) && !I->getType()->isVoidTy()) {
       ScalarCost += TTI.getScalarizationOverhead(
-          cast<VectorType>(ToVectorTy(I->getType(), VF)),
+          cast<VectorType>(toVectorTy(I->getType(), VF)),
           APInt::getAllOnes(VF.getFixedValue()), /*Insert*/ true,
           /*Extract*/ false, CostKind);
       ScalarCost +=
@@ -5677,7 +5677,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
           Worklist.push_back(J);
         else if (needsExtract(J, VF)) {
           ScalarCost += TTI.getScalarizationOverhead(
-              cast<VectorType>(ToVectorTy(J->getType(), VF)),
+              cast<VectorType>(toVectorTy(J->getType(), VF)),
               APInt::getAllOnes(VF.getFixedValue()), /*Insert*/ false,
               /*Extract*/ true, CostKind);
         }
@@ -5788,7 +5788,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   unsigned AS = getLoadStoreAddressSpace(I);
   Value *Ptr = getLoadStorePointerOperand(I);
-  Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
+  Type *PtrTy = toVectorTy(Ptr->getType(), VF);
   // NOTE: PtrTy is a vector to signal `TTI::getAddressComputationCost`
   //       that it is being called from this specific place.
 
@@ -5839,7 +5839,7 @@ InstructionCost
 LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                                     ElementCount VF) {
   Type *ValTy = getLoadStoreType(I);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(ValTy, Ptr);
@@ -5871,7 +5871,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   assert(Legal->isUniformMemOp(*I, VF));
 
   Type *ValTy = getLoadStoreType(I);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -5897,7 +5897,7 @@ InstructionCost
 LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                  ElementCount VF) {
   Type *ValTy = getLoadStoreType(I);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   const Value *Ptr = getLoadStorePointerOperand(I);
 
@@ -5915,7 +5915,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
 
   Instruction *InsertPos = Group->getInsertPos();
   Type *ValTy = getLoadStoreType(InsertPos);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(InsertPos);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
@@ -6160,7 +6160,7 @@ InstructionCost LoopVectorizationCostModel::getScalarizationOverhead(
     return 0;
 
   InstructionCost Cost = 0;
-  Type *RetTy = ToVectorTy(I->getType(), VF);
+  Type *RetTy = toVectorTy(I->getType(), VF);
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
     Cost += TTI.getScalarizationOverhead(
@@ -6426,9 +6426,9 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 
       bool MaskRequired = Legal->isMaskRequired(CI);
       // Compute corresponding vector type for return value and arguments.
-      Type *RetTy = ToVectorTy(ScalarRetTy, VF);
+      Type *RetTy = toVectorTy(ScalarRetTy, VF);
       for (Type *ScalarTy : ScalarTys)
-        Tys.push_back(ToVectorTy(ScalarTy, VF));
+        Tys.push_back(toVectorTy(ScalarTy, VF));
 
       // An in-loop reduction using an fmuladd intrinsic is a special case;
       // we don't want the normal cost for that intrinsic.
@@ -6618,7 +6618,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
            HasSingleCopyAfterVectorization(I, VF));
     VectorTy = RetTy;
   } else
-    VectorTy = ToVectorTy(RetTy, VF);
+    VectorTy = toVectorTy(RetTy, VF);
 
   if (VF.isVector() && VectorTy->isVectorTy() &&
       !TTI.getNumberOfParts(VectorTy))
@@ -6678,8 +6678,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     return Switch->getNumCases() *
            TTI.getCmpSelInstrCost(
                Instruction::ICmp,
-               ToVectorTy(Switch->getCondition()->getType(), VF),
-               ToVectorTy(Type::getInt1Ty(I->getContext()), VF),
+               toVectorTy(Switch->getCondition()->getType(), VF),
+               toVectorTy(Type::getInt1Ty(I->getContext()), VF),
                CmpInst::ICMP_EQ, CostKind);
   }
   case Instruction::PHI: {
@@ -6724,8 +6724,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       }
       return (Phi->getNumIncomingValues() - 1) *
              TTI.getCmpSelInstrCost(
-                 Instruction::Select, ToVectorTy(ResultTy, VF),
-                 ToVectorTy(Type::getInt1Ty(Phi->getContext()), VF),
+                 Instruction::Select, toVectorTy(ResultTy, VF),
+                 toVectorTy(Type::getInt1Ty(Phi->getContext()), VF),
                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
     }
 
@@ -6734,8 +6734,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     if (VF.isVector() && foldTailWithEVL() &&
         Legal->getReductionVars().contains(Phi) && !isInLoopReduction(Phi)) {
       IntrinsicCostAttributes ICA(
-          Intrinsic::vp_merge, ToVectorTy(Phi->getType(), VF),
-          {ToVectorTy(Type::getInt1Ty(Phi->getContext()), VF)});
+          Intrinsic::vp_merge, toVectorTy(Phi->getType(), VF),
+          {toVectorTy(Type::getInt1Ty(Phi->getContext()), VF)});
       return TTI.getIntrinsicInstrCost(ICA, CostKind);
     }
 
@@ -6875,7 +6875,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
     }
 
-    VectorTy = ToVectorTy(ValTy, VF);
+    VectorTy = toVectorTy(ValTy, VF);
     return TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy, nullptr,
                                   cast<CmpInst>(I)->getPredicate(), CostKind,
                                   {TTI::OK_AnyValue, TTI::OP_None},
@@ -6893,7 +6893,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       if (Decision == CM_Scalarize)
         Width = ElementCount::getFixed(1);
     }
-    VectorTy = ToVectorTy(getLoadStoreType(I), Width);
+    VectorTy = toVectorTy(getLoadStoreType(I), Width);
     return getMemoryInstructionCost(I, VF);
   }
   case Instruction::BitCast:
@@ -6974,7 +6974,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       SrcScalarTy =
           IntegerType::get(SrcScalarTy->getContext(), MinBWs[Op0AsInstruction]);
     Type *SrcVecTy =
-        VectorTy->isVectorTy() ? ToVectorTy(SrcScalarTy, VF) : SrcScalarTy;
+        VectorTy->isVectorTy() ? toVectorTy(SrcScalarTy, VF) : SrcScalarTy;
 
     if (canTruncateToMinimalBitwidth(I, VF)) {
       // If the result type is <= the source type, there will be no extend
@@ -7503,7 +7503,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // Pre-compute the cost for I, if it has a reduction pattern cost.
     for (Instruction *I : ChainOpsAndOperands) {
       auto ReductionCost = CM.getReductionPatternCost(
-          I, VF, ToVectorTy(I->getType(), VF), TTI::TCK_RecipThroughput);
+          I, VF, toVectorTy(I->getType(), VF), TTI::TCK_RecipThroughput);
       if (!ReductionCost)
         continue;
 
@@ -8195,11 +8195,10 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   // A new entry block has been created for the epilogue VPlan. Hook it in, as
   // otherwise we would try to modify the entry to the main vector loop.
-  VPIRBasicBlock *NewEntry = VPIRBasicBlock::fromBasicBlock(Insert);
+  VPIRBasicBlock *NewEntry = Plan.createVPIRBasicBlock(Insert);
   VPBasicBlock *OldEntry = Plan.getEntry();
   VPBlockUtils::reassociateBlocks(OldEntry, NewEntry);
   Plan.setEntry(NewEntry);
-  delete OldEntry;
 
   introduceCheckBlockInVPlan(Plan, Insert);
   return Insert;
@@ -9249,9 +9248,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
       // For scalable vectors, the only interleave factor currently supported
-      // is 2 since we require the (de)interleave2 intrinsics instead of
-      // shufflevectors.
-      assert((!Result || !VF.isScalable() || IG->getFactor() == 2) &&
+      // must be power of 2 since we require the (de)interleave2 intrinsics
+      // instead of shufflevectors.
+      assert((!Result || !VF.isScalable() || isPowerOf2_32(IG->getFactor())) &&
              "Unsupported interleave factor for scalable vectors");
       return Result;
     };
@@ -9345,7 +9344,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         VPBB->appendRecipe(Recipe);
     }
 
-    VPBlockUtils::insertBlockAfter(new VPBasicBlock(), VPBB);
+    VPBlockUtils::insertBlockAfter(Plan->createVPBasicBlock(""), VPBB);
     VPBB = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
   }
 
@@ -9621,9 +9620,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
-      VPReductionRecipe *RedRecipe =
-          new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink, VecOp,
-                                CondOp, CM.useOrderedReductions(RdxDesc));
+      auto *RedRecipe = new VPReductionRecipe(
+          RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
+          CM.useOrderedReductions(RdxDesc), CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including

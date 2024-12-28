@@ -60,11 +60,17 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
     if (Name.starts_with("__dtrace"))
       return false;
   }
-  if (isCalleeOperand(CI, OpIdx) &&
-      CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value()) {
+  if (isCalleeOperand(CI, OpIdx)) {
     // The operand is the callee and it has already been signed. Ignore this
     // because we cannot add another ptrauth bundle to the call instruction.
-    return false;
+    if (CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value())
+      return false;
+  } else {
+    // The target of the arc-attached call must be a constant and cannot be
+    // parameterized.
+    if (CI->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
+                                  OpIdx))
+      return false;
   }
   return true;
 }

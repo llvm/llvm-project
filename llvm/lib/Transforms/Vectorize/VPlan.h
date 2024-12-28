@@ -636,9 +636,6 @@ public:
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
-  /// Delete all blocks reachable from a given VPBlockBase, inclusive.
-  static void deleteCFG(VPBlockBase *Entry);
-
   /// Return true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() {
     // There are currently no constraints that prevent an instruction to be
@@ -1653,7 +1650,7 @@ public:
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
@@ -2597,8 +2594,9 @@ class VPReductionRecipe : public VPSingleDefRecipe {
 protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
-                    VPValue *CondOp, bool IsOrdered)
-      : VPSingleDefRecipe(SC, Operands, I), RdxDesc(R), IsOrdered(IsOrdered) {
+                    VPValue *CondOp, bool IsOrdered, DebugLoc DL)
+      : VPSingleDefRecipe(SC, Operands, I, DL), RdxDesc(R),
+        IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2608,16 +2606,17 @@ protected:
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered)
+                    bool IsOrdered, DebugLoc DL = {})
       : VPReductionRecipe(VPDef::VPReductionSC, R, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered) {}
+                          IsOrdered, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered);
+                                 getVecOp(), getCondOp(), IsOrdered,
+                                 getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2672,7 +2671,7 @@ public:
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered()) {}
+            R.isOrdered(), R.getDebugLoc()) {}
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -3585,12 +3584,7 @@ public:
 
   /// Clone the current block and it's recipes, without updating the operands of
   /// the cloned recipes.
-  VPBasicBlock *clone() override {
-    auto *NewBlock = new VPBasicBlock(getName());
-    for (VPRecipeBase &R : *this)
-      NewBlock->appendRecipe(R.clone());
-    return NewBlock;
-  }
+  VPBasicBlock *clone() override;
 
 protected:
   /// Execute the recipes in the IR basic block \p BB.
@@ -3626,20 +3620,11 @@ public:
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
 
-  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
-  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
-  static VPIRBasicBlock *fromBasicBlock(BasicBlock *IRBB);
-
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
-  VPIRBasicBlock *clone() override {
-    auto *NewBlock = new VPIRBasicBlock(IRBB);
-    for (VPRecipeBase &R : Recipes)
-      NewBlock->appendRecipe(R.clone());
-    return NewBlock;
-  }
+  VPIRBasicBlock *clone() override;
 
   BasicBlock *getIRBasicBlock() const { return IRBB; }
 };
@@ -3678,13 +3663,7 @@ public:
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
-  ~VPRegionBlock() override {
-    if (Entry) {
-      VPValue DummyValue;
-      Entry->dropAllReferences(&DummyValue);
-      deleteCFG(Entry);
-    }
-  }
+  ~VPRegionBlock() override {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -3694,8 +3673,6 @@ public:
   const VPBlockBase *getEntry() const { return Entry; }
   VPBlockBase *getEntry() { return Entry; }
 
-  /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
-  /// EntryBlock must have no predecessors.
   void setEntry(VPBlockBase *EntryBlock) {
     assert(EntryBlock->getPredecessors().empty() &&
            "Entry block cannot have predecessors.");
@@ -3720,7 +3697,6 @@ public:
     assert(!isReplicator() && "should only get pre-header of loop regions");
     return getSinglePredecessor()->getExitingBasicBlock();
   }
-  void clearEntry() { Entry = nullptr; }
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
@@ -3811,7 +3787,10 @@ class VPlan {
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
-public:
+  /// Blocks allocated and owned by the VPlan. They will be deleted once the
+  /// VPlan is destroyed.
+  SmallVector<VPBlockBase *> CreatedBlocks;
+
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3821,17 +3800,19 @@ public:
            "scalar header must be a leaf node");
   }
 
-  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
-  /// with \p ScalarHeader wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
-      : VPlan(Entry, ScalarHeader) {
-    TripCount = TC;
-  }
-
+public:
   /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
   /// original preheader and scalar header of \p L, to be used as entry and
   /// scalar header blocks of the new VPlan.
   VPlan(Loop *L);
+
+  /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
+  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
+  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+    setEntry(createVPBasicBlock("preheader"));
+    ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
+    TripCount = TC;
+  }
 
   ~VPlan();
 
@@ -4026,6 +4007,44 @@ public:
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
+
+  /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
+  /// present. The returned block is owned by the VPlan and deleted once the
+  /// VPlan is destroyed.
+  VPBasicBlock *createVPBasicBlock(const Twine &Name,
+                                   VPRecipeBase *Recipe = nullptr) {
+    auto *VPB = new VPBasicBlock(Name, Recipe);
+    CreatedBlocks.push_back(VPB);
+    return VPB;
+  }
+
+  /// Create a new VPRegionBlock with \p Entry, \p Exiting and \p Name. If \p
+  /// IsReplicator is true, the region is a replicate region. The returned block
+  /// is owned by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                     const std::string &Name = "",
+                                     bool IsReplicator = false) {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, IsReplicator);
+    CreatedBlocks.push_back(VPB);
+    return VPB;
+  }
+
+  /// Create a new VPRegionBlock with \p Name and entry and exiting blocks set
+  /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
+  /// The returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
+                                     bool IsReplicator = false) {
+    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+    CreatedBlocks.push_back(VPB);
+    return VPB;
+  }
+
+  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
+  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  /// The returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
+  VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

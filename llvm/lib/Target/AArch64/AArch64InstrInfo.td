@@ -381,9 +381,6 @@ def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
-def UseUnaryUndefPseudos
-  : Predicate<"!(Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))">;
-
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;
@@ -886,6 +883,9 @@ def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
                                     [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
+def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
+                                    SDT_AArch64TLSDescCallSeq,
+                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;
@@ -3315,8 +3315,16 @@ def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
              [(AArch64tlsdesc_callseq tglobaltlsaddr:$sym)]>,
       Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
+let isCall = 1, Defs = [NZCV, LR, X0, X16], hasSideEffects = 1, Size = 16,
+    isCodeGenOnly = 1 in
+def TLSDESC_AUTH_CALLSEQ
+    : Pseudo<(outs), (ins i64imm:$sym),
+             [(AArch64tlsdesc_auth_callseq tglobaltlsaddr:$sym)]>,
+      Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
 def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
           (TLSDESC_CALLSEQ texternalsym:$sym)>;
+def : Pat<(AArch64tlsdesc_auth_callseq texternalsym:$sym),
+          (TLSDESC_AUTH_CALLSEQ texternalsym:$sym)>;
 
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
