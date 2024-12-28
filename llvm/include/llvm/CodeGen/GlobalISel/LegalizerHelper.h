@@ -302,9 +302,6 @@ public:
   /// same type as \p Res.
   MachineInstrBuilder createStackStoreLoad(const DstOp &Res, const SrcOp &Val);
 
-  /// Given a store of a boolean vector, scalarize it.
-  LegalizeResult scalarizeVectorBooleanStore(GStore &MI);
-
   /// Get a pointer to vector element \p Index located in memory for a vector of
   /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out
   /// of bounds the returned pointer is unspecified, but will be within the

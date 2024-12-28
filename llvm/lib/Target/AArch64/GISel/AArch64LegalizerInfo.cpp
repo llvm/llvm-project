@@ -474,8 +474,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  })
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0)
-      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .lower();
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_INDEXED_STORE)
       // Idx 0 == Ptr, Idx 1 == Val
