@@ -288,12 +288,35 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                    }));
 }
 
+TargetFeaturesAttr TargetFeaturesAttr::getChecked(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    MLIRContext *context, llvm::ArrayRef<StringRef> features) {
+  return Base::getChecked(emitError, context,
+                          llvm::map_to_vector(features, [&](StringRef feature) {
+                            return StringAttr::get(context, feature);
+                          }));
+}
+
 TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                                            StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
   return get(context, features);
+}
+
+TargetFeaturesAttr TargetFeaturesAttr::getChecked(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    MLIRContext *context, StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
+  SmallVector<StringAttr> featuresAttrs;
+  featuresAttrs.reserve(features.size());
+  for (StringRef feature : features) {
+    featuresAttrs.push_back(StringAttr::get(context, feature));
+  }
+  return getChecked(emitError, context, featuresAttrs);
 }
 
 LogicalResult
