@@ -563,13 +563,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2s16; },
           1, s32)
       .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
-          s64)
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1].isPointerVector();
+          },
+          0, s64)
       .moreElementsToNextPow2(1)
       .clampNumElements(1, v8s8, v16s8)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
+      .clampNumElements(1, v2p0, v2p0)
       .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
