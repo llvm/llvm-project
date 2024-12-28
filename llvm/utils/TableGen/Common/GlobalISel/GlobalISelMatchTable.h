@@ -19,6 +19,7 @@
 #include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -492,7 +493,7 @@ protected:
   /// the renderers.
   StringMap<OperandMatcher *> DefinedOperands;
 
-  using PhysRegOperandsTy = DenseMap<const Record *, OperandMatcher *>;
+  using PhysRegOperandsTy = MapVector<const Record *, OperandMatcher *>;
 
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.

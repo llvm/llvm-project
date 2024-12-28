@@ -1413,17 +1413,14 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   BuildMIAction &DstMIBuilder = *static_cast<BuildMIAction *>(InsertPt->get());
 
   for (auto PhysOp : M.physoperands()) {
-    auto &OpInsnMatcher = PhysOp.second->getInstructionMatcher();
-    for (auto PhysInput : OpInsnMatcher.getPhysRegInputs()) {
-      InsertPt = M.insertAction<BuildMIAction>(
-          InsertPt, M.allocateOutputInsnID(),
-          &Target.getInstruction(RK.getDef("COPY")));
-      BuildMIAction &CopyToPhysRegMIBuilder =
-          *static_cast<BuildMIAction *>(InsertPt->get());
-      CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(
-          Target, PhysInput.first, true);
-      CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
-    }
+    InsertPt = M.insertAction<BuildMIAction>(
+        InsertPt, M.allocateOutputInsnID(),
+        &Target.getInstruction(RK.getDef("COPY")));
+    BuildMIAction &CopyToPhysRegMIBuilder =
+        *static_cast<BuildMIAction *>(InsertPt->get());
+    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(Target,
+                                                            PhysOp.first, true);
+    CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysOp.first);
   }
 
   if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst,
