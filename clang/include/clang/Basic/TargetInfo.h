@@ -360,7 +360,14 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list_tag {
+    //    int* __va_stk;
+    //    int* __va_reg;
+    //    int __va_ndx;
+    //} va_list;
+    XtensaABIBuiltinVaList
   };
 
 protected:
