@@ -1090,8 +1090,8 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   unsigned srcElemBitwidth = subByteVecType.getElementTypeBitWidth();
   unsigned dstElemBitwidth = dstType.getElementTypeBitWidth();
 
-  // Only {s}i4 -> (size_of({{s}i/f}) >= 8) are supported for now.
-  if (srcElemBitwidth != 4 || dstElemBitwidth < 8 ||
+  // Only {s}i4/i2 -> (size_of({{s}i/f}) >= 8) are supported for now.
+  if ((srcElemBitwidth != 4 && srcElemBitwidth != 2) || dstElemBitwidth < 8 ||
       (dstElemBitwidth % srcElemBitwidth) != 0)
     return rewriter.notifyMatchFailure(op, "Not a supported aligned case");
 
@@ -1238,6 +1238,117 @@ static Value rewriteI4ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
 
   // 3. Interleave low and high i8 elements.
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
+}
+
+/// Rewrite the i2 -> i8 signed extension into a sequence of shuffles and
+/// bitwise ops that take advantage of high-level information to avoid leaving
+/// LLVM to scramble with peephole optimizations.
+static Value rewriteI2ToI8SignedExt(PatternRewriter &rewriter, Location loc,
+                                    Value srcValue) {
+  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+  assert(srcVecType.getElementType().isSignlessInteger(2) &&
+         "Expected i2 type");
+
+  // 1. Generate a bitcast vector<Xxi2> -> vector<X/4xi8>.
+  SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
+  constexpr int64_t i2Toi8BitwidthFactor = 4;
+  i8VecShape.back() = i8VecShape.back() / i2Toi8BitwidthFactor;
+  auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
+  Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
+
+  // Position 0 (bits 0-1)
+  constexpr int8_t shiftConst6 = 6;
+  auto shiftAttr6 = DenseElementsAttr::get(i8VecType, shiftConst6);
+  auto shiftValues6 = rewriter.create<arith::ConstantOp>(loc, shiftAttr6);
+  Value shl0 = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues6);
+  Value elem0 = rewriter.create<arith::ShRSIOp>(loc, shl0, shiftValues6);
+
+  // Position 1 (bits 2-3)
+  constexpr int8_t shiftConst4 = 4;
+  auto shiftAttr4 = DenseElementsAttr::get(i8VecType, shiftConst4);
+  auto shiftValues4 = rewriter.create<arith::ConstantOp>(loc, shiftAttr4);
+  Value shl1 = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues4);
+  Value elem1 = rewriter.create<arith::ShRSIOp>(loc, shl1, shiftValues6);
+
+  // Position 1 (bits 4-5)
+  constexpr int8_t shiftConst2 = 2;
+  auto shiftAttr2 = DenseElementsAttr::get(i8VecType, shiftConst2);
+  auto shiftValues2 = rewriter.create<arith::ConstantOp>(loc, shiftAttr2);
+  Value shl2 = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues2);
+  Value elem2 = rewriter.create<arith::ShRSIOp>(loc, shl2, shiftValues6);
+
+  // Position 3 (bits 6-7)
+  Value elem3 = rewriter.create<arith::ShRSIOp>(loc, i8Vector, shiftValues6);
+
+  // interleave all 4 elements by first interleaving even elements and then odd
+  // elem0 = [0,0,0,0]
+  // elem1 = [1,1,1,1]
+  // elem2 = [2,2,2,2]
+  // elem3 = [3,3,3,3]
+  // 02    = [0,2,0,2]
+  // 13    = [1,3,1,3]
+  // 0213  = [0,1,2,3]
+  Value interleave02 = rewriter.create<vector::InterleaveOp>(loc, elem0, elem2);
+  Value interleave13 = rewriter.create<vector::InterleaveOp>(loc, elem1, elem3);
+  return rewriter.create<vector::InterleaveOp>(loc, interleave02, interleave13);
+}
+
+/// Rewrite the i2 -> i8 unsigned extension into a sequence of shuffles and
+/// bitwise ops that take advantage of high-level information to avoid leaving
+/// LLVM to scramble with peephole optimizations.
+static Value rewriteI2ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
+                                      Value srcValue) {
+  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+  assert(srcVecType.getElementType().isSignlessInteger(2) &&
+         "Expected i2 type");
+
+  // 1. Generate a bitcast vector<Xxi2> -> vector<X/4xi8>.
+  SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
+  constexpr int64_t i2Toi8BitwidthFactor = 4;
+  i8VecShape.back() = i8VecShape.back() / i2Toi8BitwidthFactor;
+  auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
+  Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
+
+  // 2. Extract each i2 element using shifts and masks
+  constexpr uint8_t mask = 3; // Mask for 2 bits: [0000 0011]
+  auto maskAttr = DenseElementsAttr::get(i8VecType, mask);
+  auto maskValues = rewriter.create<arith::ConstantOp>(loc, maskAttr);
+
+  // Element 0 (bits 0-1)
+  Value elem0 = rewriter.create<arith::AndIOp>(loc, i8Vector, maskValues);
+
+  // Element 1 (bits 2-3)
+  constexpr int8_t shift1 = 2;
+  auto shiftAttr1 = DenseElementsAttr::get(i8VecType, shift1);
+  auto shiftValues1 = rewriter.create<arith::ConstantOp>(loc, shiftAttr1);
+  Value shifted1 = rewriter.create<arith::ShRUIOp>(loc, i8Vector, shiftValues1);
+  Value elem1 = rewriter.create<arith::AndIOp>(loc, shifted1, maskValues);
+
+  // Element 2 (bits 4-5)
+  constexpr int8_t shift2 = 4;
+  auto shiftAttr2 = DenseElementsAttr::get(i8VecType, shift2);
+  auto shiftValues2 = rewriter.create<arith::ConstantOp>(loc, shiftAttr2);
+  Value shifted2 = rewriter.create<arith::ShRUIOp>(loc, i8Vector, shiftValues2);
+  Value elem2 = rewriter.create<arith::AndIOp>(loc, shifted2, maskValues);
+
+  // Element 3 (bits 6-7)
+  constexpr int8_t shift3 = 6;
+  auto shiftAttr3 = DenseElementsAttr::get(i8VecType, shift3);
+  auto shiftValues3 = rewriter.create<arith::ConstantOp>(loc, shiftAttr3);
+  Value shifted3 = rewriter.create<arith::ShRUIOp>(loc, i8Vector, shiftValues3);
+  Value elem3 = rewriter.create<arith::AndIOp>(loc, shifted3, maskValues);
+
+  // interleave all 4 elements by first interleaving even elements and then odd
+  // elem0 = [0,0,0,0]
+  // elem1 = [1,1,1,1]
+  // elem2 = [2,2,2,2]
+  // elem3 = [3,3,3,3]
+  // 02    = [0,2,0,2]
+  // 13    = [1,3,1,3]
+  // 0213  = [0,1,2,3]
+  Value interleave02 = rewriter.create<vector::InterleaveOp>(loc, elem0, elem2);
+  Value interleave13 = rewriter.create<vector::InterleaveOp>(loc, elem1, elem3);
+  return rewriter.create<vector::InterleaveOp>(loc, interleave02, interleave13);
 }
 
 /// Rewrite the i8 -> i4 truncation into a deinterleave and series of bitwise
@@ -1445,11 +1556,21 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
     // Perform the rewrite.
     Value subByteExt;
     if (isSigned) {
-      subByteExt =
-          rewriteI4ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
+      if (srcVecType.getElementType().getIntOrFloatBitWidth() == 2)
+        subByteExt =
+            rewriteI2ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
+      else {
+        subByteExt =
+            rewriteI4ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
+      }
     } else {
-      subByteExt =
-          rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+      if (srcVecType.getElementType().getIntOrFloatBitWidth() == 2) {
+        subByteExt =
+            rewriteI2ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+      } else {
+        subByteExt =
+            rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+      }
     }
 
     // Finalize the rewrite.
@@ -1494,6 +1615,10 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
     // to reuse the existing precondition logic.
     if (failed(alignedConversionPrecondition(rewriter, dstVecType, srcVecType,
                                              truncOp)))
+      return failure();
+
+    // not supported currently.
+    if (dstVecType.getElementType().getIntOrFloatBitWidth() == 2)
       return failure();
 
     // Create a new iX -> i8 truncation op.
