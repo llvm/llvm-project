@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -1067,6 +1068,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
           Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
                      RISCV::VFSQRT_V,         RISCV::VFSQRT_V,
                      RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
+          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT,
+                                        NVT.getHalfNumVectorElementsVT());
         } else {
           Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
                      RISCV::VFNCVTBF16_F_F_W};
@@ -1078,6 +1081,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
           Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
                      RISCV::VFSQRT_V,     RISCV::VFSQRT_V,
                      RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
+          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT,
+                                        NVT.getHalfNumVectorElementsVT());
         } else {
           Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
           NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
