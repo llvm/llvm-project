@@ -1256,28 +1256,28 @@ static Value rewriteI2ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
   Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
 
-  // Position 0 (bits 0-1)
+  // Element 0 (bits 0-1)
   constexpr int8_t shiftConst6 = 6;
   auto shiftAttr6 = DenseElementsAttr::get(i8VecType, shiftConst6);
   auto shiftValues6 = rewriter.create<arith::ConstantOp>(loc, shiftAttr6);
   Value shl0 = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues6);
   Value elem0 = rewriter.create<arith::ShRSIOp>(loc, shl0, shiftValues6);
 
-  // Position 1 (bits 2-3)
+  // Element 1 (bits 2-3)
   constexpr int8_t shiftConst4 = 4;
   auto shiftAttr4 = DenseElementsAttr::get(i8VecType, shiftConst4);
   auto shiftValues4 = rewriter.create<arith::ConstantOp>(loc, shiftAttr4);
   Value shl1 = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues4);
   Value elem1 = rewriter.create<arith::ShRSIOp>(loc, shl1, shiftValues6);
 
-  // Position 1 (bits 4-5)
+  // Element 2 (bits 4-5)
   constexpr int8_t shiftConst2 = 2;
   auto shiftAttr2 = DenseElementsAttr::get(i8VecType, shiftConst2);
   auto shiftValues2 = rewriter.create<arith::ConstantOp>(loc, shiftAttr2);
   Value shl2 = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues2);
   Value elem2 = rewriter.create<arith::ShRSIOp>(loc, shl2, shiftValues6);
 
-  // Position 3 (bits 6-7)
+  // Element 3 (bits 6-7)
   Value elem3 = rewriter.create<arith::ShRSIOp>(loc, i8Vector, shiftValues6);
 
   // interleave all 4 elements by first interleaving even elements and then odd
