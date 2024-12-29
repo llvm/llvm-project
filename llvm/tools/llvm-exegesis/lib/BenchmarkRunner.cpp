@@ -422,8 +422,9 @@ private:
            "Expected getcpu call to succeed.");
     assert(static_cast<int>(CurrentCPU) == CPUToUse &&
            "Expected current CPU to equal the CPU requested by the user");
+#else
+    exit(ChildProcessExChildProcessExitCodeE::SetCPUAffinityFailed));
 #endif // defined(__x86_64__) && defined(SYS_getcpu)
-    exit(ChildProcessExitCodeE::SetCPUAffinityFailed);
   }
 
   Error createSubProcessAndRunBenchmark(
