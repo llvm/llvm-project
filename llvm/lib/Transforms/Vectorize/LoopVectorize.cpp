@@ -8854,7 +8854,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-/// Create and return a ResumePhi for \p WideIF, unless it is truncated. If the
+/// Create and return a ResumePhi for \p WideIV, unless it is truncated. If the
 /// induction recipe is not canonical, creates a VPDerivedIVRecipe to compute
 /// the end value of the induction.
 static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
@@ -10064,7 +10064,8 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
   }
-  for (VPRecipeBase &R : *cast<VPIRBasicBlock>(MainPlan.getScalarHeader())) {
+  for (VPRecipeBase &R : make_early_inc_range(
+           *cast<VPIRBasicBlock>(MainPlan.getScalarHeader()))) {
     auto *VPIRInst = cast<VPIRInstruction>(&R);
     auto *IRI = dyn_cast<PHINode>(&VPIRInst->getInstruction());
     if (!IRI)
@@ -10072,12 +10073,11 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     if (EpiWidenedPhis.contains(IRI))
       continue;
     // There is no corresponding wide induction in the epilogue plan that would
-    // need a resume value. Set the operand in VPIRInst to zero, so ResumePhi
-    // can be removed. The resume values for the scalar loop will be created
-    // during execution of EpiPlan.
+    // need a resume value. Remove the VPIRInst wrapping the scalar header phi
+    // together with the corresponding ResumePhi. The resume values for the
+    // scalar loop will be created during execution of EpiPlan.
     VPRecipeBase *ResumePhi = VPIRInst->getOperand(0)->getDefiningRecipe();
-    VPIRInst->setOperand(
-        0, MainPlan.getOrAddLiveIn(Constant::getNullValue(IRI->getType())));
+    VPIRInst->eraseFromParent();
     ResumePhi->eraseFromParent();
   }
   VPlanTransforms::removeDeadRecipes(MainPlan);
