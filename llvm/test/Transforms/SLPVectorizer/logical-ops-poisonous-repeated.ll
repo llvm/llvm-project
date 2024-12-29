@@ -12,7 +12,8 @@ define i1 @test(<4 x i32> %x) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[X1]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[X2]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[X3]], 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[C3]], i1 [[C1]], i1 false
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[C3]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP2]], i1 [[C1]], i1 false
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;

@@ -19679,20 +19679,35 @@ public:
       return cast<Instruction>(ScalarCond);
     };
 
+    bool AnyBoolLogicOp = any_of(ReductionOps.back(), [](Value *V) {
+      return isBoolLogicOp(cast<Instruction>(V));
+    });
     // Return new VectorizedTree, based on previous value.
     auto GetNewVectorizedTree = [&](Value *VectorizedTree, Value *Res) {
       if (VectorizedTree) {
         // Update the final value in the reduction.
         Builder.SetCurrentDebugLocation(
             cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
-        if ((isa<PoisonValue>(VectorizedTree) && !isa<PoisonValue>(Res)) ||
-            (isGuaranteedNotToBePoison(Res) &&
-             !isGuaranteedNotToBePoison(VectorizedTree))) {
-          auto It = ReducedValsToOps.find(Res);
-          if (It != ReducedValsToOps.end() &&
-              any_of(It->getSecond(),
-                     [](Instruction *I) { return isBoolLogicOp(I); }))
+        if (AnyBoolLogicOp) {
+
+          if (auto It = ReducedValsToOps.find(VectorizedTree);
+              It == ReducedValsToOps.end() ||
+              isGuaranteedNotToBePoison(VectorizedTree) ||
+              any_of(It->getSecond(), [&](Instruction *I) {
+                return isBoolLogicOp(I) &&
+                       getRdxOperand(I, 0) == VectorizedTree;
+              })) {
+            ;
+          } else if (auto It = ReducedValsToOps.find(Res);
+                     It == ReducedValsToOps.end() ||
+                     isGuaranteedNotToBePoison(Res) ||
+                     any_of(It->getSecond(), [&](Instruction *I) {
+                       return isBoolLogicOp(I) && getRdxOperand(I, 0) == Res;
+                     })) {
             std::swap(VectorizedTree, Res);
+          } else {
+            VectorizedTree = Builder.CreateFreeze(VectorizedTree);
+          }
         }
 
         return createOp(Builder, RdxKind, VectorizedTree, Res, "op.rdx",
@@ -19701,9 +19716,6 @@ public:
       // Initialize the final value in the reduction.
       return Res;
     };
-    bool AnyBoolLogicOp = any_of(ReductionOps.back(), [](Value *V) {
-      return isBoolLogicOp(cast<Instruction>(V));
-    });
     SmallDenseSet<Value *> IgnoreList(ReductionOps.size() *
                                       ReductionOps.front().size());
     for (ReductionOpsType &RdxOps : ReductionOps)
