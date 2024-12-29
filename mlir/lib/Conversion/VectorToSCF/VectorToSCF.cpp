@@ -1287,6 +1287,10 @@ struct UnrollTransferReadConversion
 
   /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds
   /// accesses, and broadcasts and transposes in permutation maps.
+  ///
+  /// When unpacking rank-1 vectors (i.e. when the target rank is 0), replaces
+  /// `vector.transfer_read` with either `memref.load` or `tensor.extract` (for
+  /// MemRef and Tensor source, respectively).
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
@@ -1319,6 +1323,8 @@ struct UnrollTransferReadConversion
     for (int64_t i = 0; i < dimSize; ++i) {
       Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
 
+      // FIXME: Rename this lambda - it does much more than just
+      // in-bounds-check generation.
       vec = generateInBoundsCheck(
           rewriter, xferOp, iv, unpackedDim(xferOp), TypeRange(vecType),
           /*inBoundsCase=*/
@@ -1333,12 +1339,34 @@ struct UnrollTransferReadConversion
             insertionIndices.push_back(rewriter.getIndexAttr(i));
 
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
-            auto newXferOp = b.create<vector::TransferReadOp>(
-                loc, newXferVecType, xferOp.getSource(), xferIndices,
-                AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
-                xferOp.getPadding(), Value(), inBoundsAttr);
-            maybeAssignMask(b, xferOp, newXferOp, i);
-            return b.create<vector::InsertOp>(loc, newXferOp, vec,
+
+            // A value that's read after rank-reducing the original
+            // vector.transfer_read Op.
+            Value unpackedReadRes;
+            if (newXferVecType.getRank() != 0) {
+              // Unpacking Vector that's rank > 2
+              // (use vector.transfer_read to load a rank-reduced vector)
+              unpackedReadRes = b.create<vector::TransferReadOp>(
+                  loc, newXferVecType, xferOp.getSource(), xferIndices,
+                  AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
+                  xferOp.getPadding(), Value(), inBoundsAttr);
+              maybeAssignMask(b, xferOp,
+                              dyn_cast<vector::TransferReadOp>(
+                                  unpackedReadRes.getDefiningOp()),
+                              i);
+            } else {
+              // Unpacking Vector that's rank == 1
+              // (use memref.load/tensor.extract to load a scalar)
+              unpackedReadRes =
+                  dyn_cast<MemRefType>(xferOp.getSource().getType())
+                      ? b.create<memref::LoadOp>(loc, xferOp.getSource(),
+                                                 xferIndices)
+                            .getResult()
+                      : b.create<tensor::ExtractOp>(loc, xferOp.getSource(),
+                                                    xferIndices)
+                            .getResult();
+            }
+            return b.create<vector::InsertOp>(loc, unpackedReadRes, vec,
                                               insertionIndices);
           },
           /*outOfBoundsCase=*/
