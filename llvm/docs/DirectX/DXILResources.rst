@@ -318,8 +318,8 @@ Examples:
    %ptr = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4f32_0_0_0t(
        target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
 
-16-byte Loads, Samples, and Gathers
------------------------------------
+Loads, Samples, and Gathers
+---------------------------
 
 *relevant types: Buffers, CBuffers, and Textures*
 
