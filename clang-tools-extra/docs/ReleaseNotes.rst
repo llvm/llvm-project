@@ -115,6 +115,8 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
+- Improved :program:`clang-tidy` by accepting parameters file in command line.
+
 - Removed :program:`clang-tidy`'s global options for most of checks. All options
   are changed to local options except `IncludeStyle`, `StrictMode` and
   `IgnoreMacros`.
@@ -358,6 +360,13 @@ Removed checks
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- The :doc:`bugprone-narrowing-conversions <clang-tidy/checks/bugprone/narrowing-conversions>`
+  check is no longer an alias of :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>`. Instead,
+  :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` is now an alias
+  of :doc:`bugprone-narrowing-conversions <clang-tidy/checks/bugprone/narrowing-conversions>`.
 
 Improvements to include-fixer
 -----------------------------
