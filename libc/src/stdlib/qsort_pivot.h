@@ -35,11 +35,10 @@ size_t choose_pivot(const A &array, const F &is_less) {
   const size_t b = len_div_8 * 4; // [4*floor(n/8), 5*floor(n/8))
   const size_t c = len_div_8 * 7; // [7*floor(n/8), 8*floor(n/8))
 
-  if (len < PSEUDO_MEDIAN_REC_THRESHOLD) {
+  if (len < PSEUDO_MEDIAN_REC_THRESHOLD)
     return median3(array, a, b, c, is_less);
-  } else {
+  else
     return median3_rec(array, a, b, c, len_div_8, is_less);
-  }
 }
 
 // Calculates an approximate median of 3 elements from sections a, b, c, or
