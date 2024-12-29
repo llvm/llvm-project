@@ -692,40 +692,20 @@ def ENTRY : BRI12_Inst<0x06, 0x3, 0x0, (outs), (ins AR:$s, entry_imm12:$imm),
 }
 
 let isCall = 1, Defs = [A0] in {
-  def CALL4 : CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
-                      "call4\t$offset", []>, Requires<[HasWindowed]> {
-    let n = 1;
-  }
+  foreach i = {1,2,3} in {
+    defvar I = !mul(4, i);
 
-  def CALL8 : CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
-                       "call8\t$offset", []>, Requires<[HasWindowed]> {
-    let n = 2;
-  }
+    def CALL#I# : CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
+                           "call"#I#"\t$offset", []>, Requires<[HasWindowed]> {
+      let n = i;
+    }
 
-  def CALL12 : CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
-                        "call12\t$offset", []>, Requires<[HasWindowed]> {
-    let n = 3;
-  }
-
-  def CALLX4 : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
-                         "callx4\t$s", []>, Requires<[HasWindowed]> {
-    let m = 0x3;
-    let n = 0x1;
-    let r = 0;
-  }
-
-  def CALLX8 : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
-                         "callx8\t$s", []>, Requires<[HasWindowed]> {
-    let m = 0x3;
-    let n = 0x2;
-    let r = 0;
-  }
-
-  def CALLX12 : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
-                          "callx12\t$s", []>, Requires<[HasWindowed]> {
-    let m = 0x3;
-    let n = 0x3;
-    let r = 0;
+    def CALLX#I# : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
+                             "callx"#I#"\t$s", []>, Requires<[HasWindowed]> {
+      let m = 0x3;
+      let n = i;
+      let r = 0;
+    }
   }
 }
 

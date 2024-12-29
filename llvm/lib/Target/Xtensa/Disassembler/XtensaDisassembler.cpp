@@ -73,18 +73,42 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+// Verify SR
+bool CheckRegister(unsigned RegNo, MCSubtargetInfo STI) {
+  bool Res = true;
+
+  switch (RegNo) {
+  case Xtensa::WINDOWBASE:
+  case Xtensa::WINDOWSTART:
+    Res = STI.getFeatureBits()[Xtensa::FeatureWindowed];
+    break;
+  default:
+    Res = false;
+    break;
+  }
+
+  return Res;
+}
+
 static const unsigned SRDecoderTable[] = {
     Xtensa::SAR, 3, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
                                           const void *Decoder) {
+  const llvm::MCSubtargetInfo STI =
+      ((const MCDisassembler *)Decoder)->getSubtargetInfo();
+
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
   for (unsigned i = 0; i < std::size(SRDecoderTable); i += 2) {
     if (SRDecoderTable[i + 1] == RegNo) {
       unsigned Reg = SRDecoderTable[i];
+
+      if (!CheckRegister(Reg, STI))
+        return MCDisassembler::Fail;
+
       Inst.addOperand(MCOperand::createReg(Reg));
       return MCDisassembler::Success;
     }
@@ -214,10 +238,7 @@ static DecodeStatus decodeImm32n_95Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeImm8n_7Operand(MCInst &Inst, uint64_t Imm,
                                          int64_t Address, const void *Decoder) {
   assert(isUInt<4>(Imm) && "Invalid immediate");
-  if (Imm > 7)
-    Inst.addOperand(MCOperand::createImm(Imm - 16));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  Inst.addOperand(MCOperand::createImm(Imm > 7 ? Imm - 16 : Imm));
   return MCDisassembler::Success;
 }
 

@@ -2,9 +2,9 @@
 # RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
 
 #------------------------------------------------------------------------------
-# Verify that binary code is correctly disassembled with
-# code density option enabled. Also verify that dissasembling without
-# density option generates warnings.
+# Verify that binary code is correctly disassembled with windowed register
+# and code density options enabled. Also verify that
+# dissasembling without these options generates warnings.
 #------------------------------------------------------------------------------
 
 [0x1d,0xf0]

@@ -78,3 +78,28 @@ rfwo
 # CHECK-INST: rfwu
 # CHECK: encoding: [0x00,0x35,0x00]
 rfwu
+
+# Instruction format RSR
+# CHECK-INST: xsr a3, windowbase
+# CHECK: # encoding: [0x30,0x48,0x61]
+xsr a3, windowbase
+
+# CHECK-INST: xsr a3, windowbase
+# CHECK: # encoding: [0x30,0x48,0x61]
+xsr.windowbase a3
+
+# CHECK-INST: xsr a3, windowbase
+# CHECK: # encoding: [0x30,0x48,0x61]
+xsr a3, 72
+
+# CHECK-INST: xsr a3, windowstart
+# CHECK: # encoding: [0x30,0x49,0x61]
+xsr a3, windowstart
+
+# CHECK-INST: xsr a3, windowstart
+# CHECK: # encoding: [0x30,0x49,0x61]
+xsr.windowstart a3
+
+# CHECK-INST: xsr a3, windowstart
+# CHECK: # encoding: [0x30,0x49,0x61]
+xsr a3, 73

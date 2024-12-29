@@ -73,6 +73,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                SMLoc &EndLoc) override {
     return ParseStatus::NoMatch;
   }
+  bool checkRegister(MCRegister RegNo);
   ParseStatus parsePCRelTarget(OperandVector &Operands);
   bool parseLiteralDirective(SMLoc L);
 
@@ -89,6 +90,10 @@ public:
       : MCTargetAsmParser(Options, STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
+
+  bool hasWindowed() const {
+    return getSTI().getFeatureBits()[Xtensa::FeatureWindowed];
+  };
 };
 
 // Return true if Expr is in the range [MinValue, MaxValue].
@@ -181,7 +186,10 @@ public:
            ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
   }
 
-  bool isentry_imm12() const { return isImm(0, 32760); }
+  bool isentry_imm12() const {
+    return isImm(0, 32760) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() % 8) == 0);
+  }
 
   bool isUimm4() const { return isImm(0, 15); }
 
@@ -202,7 +210,7 @@ public:
 
   bool isImm64n_4n() const {
     return isImm(-64, -4) &&
-           ((dyn_cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
   }
 
   bool isB4const() const {
@@ -530,7 +538,8 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                  "should be zero");
   case Match_Invalidentry_imm12:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
-                 "expected immediate in range [0, 32760]");
+                 "expected immediate in range [0, 32760], first 3 bits "
+                 "should be zero");
   }
 
   report_fatal_error("Unknown match type detected!");
@@ -617,6 +626,10 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
       getLexer().UnLex(Buf[0]);
     return ParseStatus::NoMatch;
   }
+
+  if (!checkRegister(RegNo))
+    return ParseStatus::NoMatch;
+
   if (HadParens)
     Operands.push_back(XtensaOperand::createToken("(", FirstS));
   SMLoc S = getLoc();
@@ -718,7 +731,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (RegNo == 0)
+    if (!checkRegister(RegNo))
       return Error(NameLoc, "invalid register name");
 
     // Parse operand
@@ -840,6 +853,22 @@ ParseStatus XtensaAsmParser::parseDirective(AsmToken DirectiveID) {
   }
 
   return ParseStatus::NoMatch;
+}
+
+// Verify Special Register
+bool XtensaAsmParser::checkRegister(MCRegister RegNo) {
+  bool Res = true;
+
+  switch (RegNo) {
+  case Xtensa::WINDOWBASE:
+  case Xtensa::WINDOWSTART:
+    Res = hasWindowed();
+    break;
+  case Xtensa::NoRegister:
+    Res = false;
+  }
+
+  return Res;
 }
 
 // Force static initialization.

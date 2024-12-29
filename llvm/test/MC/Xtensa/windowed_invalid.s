@@ -4,7 +4,15 @@
 
 # entry_imm12
 entry a3, -1
-# CHECK: :[[#@LINE-1]]:11: error: expected immediate in range [0, 32760]
+# CHECK: :[[#@LINE-1]]:11: error: expected immediate in range [0, 32760], first 3 bits should be zero
+
+# entry_imm12
+entry a3, 32764
+# CHECK: :[[#@LINE-1]]:11: error: expected immediate in range [0, 32760], first 3 bits should be zero
+
+# entry_imm12
+entry a3, 4
+# CHECK: :[[#@LINE-1]]:11: error: expected immediate in range [0, 32760], first 3 bits should be zero
 
 # imm8n_7
 rotw 100

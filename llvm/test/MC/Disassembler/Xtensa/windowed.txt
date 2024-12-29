@@ -3,8 +3,8 @@
 
 #------------------------------------------------------------------------------
 # Verify that binary code is correctly disassembled with
-# code density option enabled. Also verify that dissasembling without
-# density option generates warnings.
+# windowed register option enabled. Also verify that dissasembling without
+# windowed register option generates warnings.
 #------------------------------------------------------------------------------
 
 [0x36,0x03,0x01]
@@ -61,4 +61,12 @@
 
 [0x00,0x35,0x00]
 # CHECK-WINDOWED: rfwu
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x30,0x48,0x61]
+# CHECK-WINDOWED: xsr a3, windowbase
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x30,0x49,0x61]
+# CHECK-WINDOWED: xsr a3, windowstart
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
