@@ -305,3 +305,46 @@ static_assert(__is_same_as(_Three_way_comparison_result_with_tuple_like<tuple<in
 static_assert(__is_same_as(_Three_way_comparison_result_with_tuple_like<tuple<int>, 0>::type, long));
 
 }
+
+namespace GH88866 {
+
+template <typename...Ts> struct index_by;
+
+template <typename T, typename Indices>
+concept InitFunc = true;
+
+namespace Invalid {
+
+template <typename Indices, InitFunc<Indices> auto... init>
+struct LazyLitMatrix;
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices>> auto... init
+    // expected-error@-1 {{type constraint contains unexpanded parameter pack 'Indices'}}
+>
+struct LazyLitMatrix<index_by<Indices...>, init...> {
+};
+
+static_assert(
+    !__is_same(LazyLitMatrix<index_by<int, char>, 42, 43>, LazyLitMatrix<index_by<int, char>, 42, 43>));
+// expected-error@-1 {{static assertion failed}}
+}
+
+namespace Valid {
+
+template <typename Indices, InitFunc<Indices> auto... init>
+struct LazyLitMatrix;
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices...>> auto... init
+>
+struct LazyLitMatrix<index_by<Indices...>, init...> {
+};
+
+static_assert(__is_same(LazyLitMatrix<index_by<int, char>, 42, 43>, 
+                        LazyLitMatrix<index_by<int, char>, 42, 43>));
+}
+
+}

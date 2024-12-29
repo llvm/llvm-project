@@ -885,6 +885,7 @@ Bug Fixes to C++ Support
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
+- Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
