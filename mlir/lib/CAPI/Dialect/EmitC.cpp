@@ -14,6 +14,23 @@ using namespace mlir;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(EmitC, emitc, mlir::emitc::EmitCDialect)
 
+// Ensure the C-API enums are uint64_t-castable to C++ equivalents.
+static_assert(static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_EQ) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::eq) &&
+                  static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_NE) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::ne) &&
+                  static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_LT) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::lt) &&
+                  static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_LE) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::le) &&
+                  static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_GT) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::gt) &&
+                  static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_GE) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::ge) &&
+                  static_cast<uint64_t>(MLIR_EMITC_CMP_PREDICATE_THREE_WAY) ==
+                      static_cast<uint64_t>(emitc::CmpPredicate::three_way),
+              "MlirEmitCCmpPredicate (C-API) and CmpPredicate (C++) mismatch");
+
 //===---------------------------------------------------------------------===//
 // ArrayType
 //===---------------------------------------------------------------------===//
@@ -136,13 +153,14 @@ bool mlirAttributeIsAEmitCCmpPredicate(MlirAttribute attr) {
   return llvm::isa<emitc::CmpPredicateAttr>(unwrap(attr));
 }
 
-MlirAttribute mlirEmitCCmpPredicateAttrGet(MlirContext ctx, uint64_t val) {
+MlirAttribute mlirEmitCCmpPredicateAttrGet(MlirContext ctx,
+                                           MlirEmitCCmpPredicate val) {
   return wrap((Attribute)emitc::CmpPredicateAttr::get(
       unwrap(ctx), static_cast<emitc::CmpPredicate>(val)));
 }
 
-uint64_t mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr) {
-  return static_cast<uint64_t>(
+MlirEmitCCmpPredicate mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr) {
+  return static_cast<MlirEmitCCmpPredicate>(
       llvm::cast<emitc::CmpPredicateAttr>(unwrap(attr)).getValue());
 }
 

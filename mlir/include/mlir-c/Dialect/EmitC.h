@@ -19,6 +19,16 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(EmitC, emitc);
 
+enum MlirEmitCCmpPredicate : uint64_t {
+  MLIR_EMITC_CMP_PREDICATE_EQ = 0,
+  MLIR_EMITC_CMP_PREDICATE_NE = 1,
+  MLIR_EMITC_CMP_PREDICATE_LT = 2,
+  MLIR_EMITC_CMP_PREDICATE_LE = 3,
+  MLIR_EMITC_CMP_PREDICATE_GT = 4,
+  MLIR_EMITC_CMP_PREDICATE_GE = 5,
+  MLIR_EMITC_CMP_PREDICATE_THREE_WAY = 6,
+};
+
 //===---------------------------------------------------------------------===//
 // ArrayType
 //===---------------------------------------------------------------------===//
@@ -98,10 +108,10 @@ MLIR_CAPI_EXPORTED MlirType mlirEmitCSizeTTypeGet(MlirContext ctx);
 
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAEmitCCmpPredicate(MlirAttribute attr);
 
-MLIR_CAPI_EXPORTED MlirAttribute mlirEmitCCmpPredicateAttrGet(MlirContext ctx,
-                                                              uint64_t val);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirEmitCCmpPredicateAttrGet(MlirContext ctx, enum MlirEmitCCmpPredicate val);
 
-MLIR_CAPI_EXPORTED uint64_t
+MLIR_CAPI_EXPORTED enum MlirEmitCCmpPredicate
 mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr);
 
 MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCCmpPredicateAttrGetTypeID(void);
