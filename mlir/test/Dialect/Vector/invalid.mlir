@@ -178,9 +178,9 @@ func.func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
 
 // -----
 
-func.func @extract_0d(%arg0: vector<f32>) {
-  // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = vector.extract %arg0[0] : f32 from vector<f32>
+func.func @extract_0d_result(%arg0: vector<f32>) {
+  // expected-error@+1 {{expected a scalar instead of a 0-d vector as the result type}}
+  %1 = vector.extract %arg0[] : vector<f32> from vector<f32>
 }
 
 // -----
@@ -259,16 +259,9 @@ func.func @insert_precise_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
 
 // -----
 
-func.func @insert_0d(%a: vector<f32>, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute rank + source rank to match dest vector rank}}
-  %1 = vector.insert %a, %b[2, 6] : vector<f32> into vector<4x8x16xf32>
-}
-
-// -----
-
-func.func @insert_0d(%a: f32, %b: vector<f32>) {
-  // expected-error@+1 {{expected position attribute of rank no greater than dest vector rank}}
-  %1 = vector.insert %a, %b[0] : f32 into vector<f32>
+func.func @insert_0d_value_to_store(%a: vector<f32>, %b: vector<4x8x16xf32>) {
+  // expected-error@+1 {{expected a scalar instead of a 0-d vector as the source operand}}
+  %1 = vector.insert %a, %b[0, 0, 0] : vector<f32> into vector<4x8x16xf32>
 }
 
 // -----
