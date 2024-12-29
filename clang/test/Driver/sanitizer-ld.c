@@ -579,9 +579,24 @@
 // CHECK-ASAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
 // CHECK-ASAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
+// CHECK-ASAN-UBSAN-LINUX-CXX: libclang_rt.ubsan_standalone_cxx
+// CHECK-ASAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lstdc++"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lpthread"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lresolv"
+
+// RUN: %clangxx -fsanitize=address,undefined -fno-sanitize=vptr -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX %s
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-NOT: libclang_rt.ubsan
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "-lstdc++"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "-lpthread"
+// CHECK-ASAN-UBSAN-NOVPTR-LINUX-CXX-SAME: "-lresolv"
 
 // RUN: %clangxx -fsanitize=memory,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -591,6 +606,8 @@
 // CHECK-MSAN-UBSAN-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.msan.a" "--no-whole-archive"
 // CHECK-MSAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
+// CHECK-MSAN-UBSAN-LINUX-CXX: libclang_rt.ubsan_standalone_cxx
+// CHECK-MSAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
 
 // RUN: %clangxx -fsanitize=thread,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -599,6 +616,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-TSAN-UBSAN-LINUX-CXX %s
 // CHECK-TSAN-UBSAN-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-TSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.tsan.a" "--no-whole-archive"
+// CHECK-TSAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
+// CHECK-TSAN-UBSAN-LINUX-CXX: libclang_rt.ubsan_standalone_cxx
 // CHECK-TSAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
