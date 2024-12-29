@@ -440,11 +440,10 @@ define <8 x i16> @shufsext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: shufsext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-GI-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -493,11 +492,10 @@ define <8 x i16> @shufzext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: shufzext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
-; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI16_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-GI-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
