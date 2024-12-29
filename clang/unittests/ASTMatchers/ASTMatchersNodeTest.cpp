@@ -1914,7 +1914,6 @@ TEST_P(ASTMatchersTest, DeducedTemplateSpecializationType) {
 
 TEST_P(ASTMatchersTest, DependentNameType) {
   if (!GetParam().isCXX()) {
-    // FIXME: Add a test for `dependentNameType()` that does not depend on C++.
     return;
   }
 
