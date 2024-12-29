@@ -6986,11 +6986,12 @@ void Sema::AddOverloadCandidate(
     }
 
     /// Don't remove inline functions with internal linkage from the overload
-    /// set if they are declared in a GMF.
-    /// The global module is meant to be a transition mechanism for C and C++
-    /// headers.
-    /// Inline functions with internal linkage are a common pattern in headers
-    /// to avoid ODR issues.
+    /// set if they are declared in a GMF, in violation of C++ [basic.link]p17.
+    /// However:
+    /// - Inline functions with internal linkage are a common pattern in
+    ///   headers to avoid ODR issues.
+    /// - The global module is meant to be a transition mechanism for C and C++
+    ///   headers, and the current rules as written work against that goal.
     const bool IsInlineFunctionInGMF =
         Function->isFromGlobalModule() &&
         (IsImplicitlyInstantiated || Function->isInlined());
