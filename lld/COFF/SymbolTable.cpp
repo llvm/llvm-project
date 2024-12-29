@@ -27,6 +27,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::support;
 
 namespace lld::coff {
 
@@ -594,6 +595,52 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name, InputFile *file) {
   if (!file || !isa<BitcodeFile>(file))
     result.first->isUsedInRegularObj = true;
   return result;
+}
+
+void SymbolTable::initializeLoadConfig() {
+  auto sym =
+      dyn_cast_or_null<DefinedRegular>(findUnderscore("_load_config_used"));
+  if (!sym) {
+    if (ctx.config.guardCF != GuardCFLevel::Off)
+      Warn(ctx)
+          << "Control Flow Guard is enabled but '_load_config_used' is missing";
+    if (ctx.config.dependentLoadFlags)
+      Warn(ctx) << "_load_config_used not found, /dependentloadflag will have "
+                   "no effect";
+    return;
+  }
+
+  SectionChunk *sc = sym->getChunk();
+  if (!sc->hasData) {
+    Err(ctx) << "_load_config_used points to uninitialized data";
+    return;
+  }
+  uint64_t offsetInChunk = sym->getValue();
+  if (offsetInChunk + 4 > sc->getSize()) {
+    Err(ctx) << "_load_config_used section chunk is too small";
+    return;
+  }
+
+  ArrayRef<uint8_t> secContents = sc->getContents();
+  loadConfigSize =
+      *reinterpret_cast<const ulittle32_t *>(&secContents[offsetInChunk]);
+  if (offsetInChunk + loadConfigSize > sc->getSize()) {
+    Err(ctx) << "_load_config_used specifies a size larger than its containing "
+                "section chunk";
+    return;
+  }
+
+  uint32_t expectedAlign = ctx.config.is64() ? 8 : 4;
+  if (sc->getAlignment() < expectedAlign)
+    Warn(ctx) << "'_load_config_used' is misaligned (expected alignment to be "
+              << expectedAlign << " bytes, got " << sc->getAlignment()
+              << " instead)";
+  else if (!isAligned(Align(expectedAlign), offsetInChunk))
+    Warn(ctx) << "'_load_config_used' is misaligned (section offset is 0x"
+              << Twine::utohexstr(sym->getValue()) << " not aligned to "
+              << expectedAlign << " bytes)";
+
+  loadConfigSym = sym;
 }
 
 void SymbolTable::addEntryThunk(Symbol *from, Symbol *to) {
