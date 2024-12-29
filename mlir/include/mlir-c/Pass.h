@@ -174,11 +174,14 @@ typedef struct MlirExternalPassCallbacks MlirExternalPassCallbacks;
 /// Creates an external `MlirPass` that calls the supplied `callbacks` using the
 /// supplied `userData`. If `opName` is empty, the pass is a generic operation
 /// pass. Otherwise it is an operation pass specific to the specified pass name.
-MLIR_CAPI_EXPORTED MlirPass mlirCreateExternalPass(
+MLIR_CAPI_EXPORTED MlirExternalPass mlirExternalPassCreate(
     MlirTypeID passID, MlirStringRef name, MlirStringRef argument,
     MlirStringRef description, MlirStringRef opName,
     intptr_t nDependentDialects, MlirDialectHandle *dependentDialects,
     MlirExternalPassCallbacks callbacks, void *userData);
+
+// Static cast ExternalPass to Pass.
+MLIR_CAPI_EXPORTED MlirPass mlirExternalPassGetPass(MlirExternalPass pass);
 
 /// This signals that the pass has failed. This is only valid to call during
 /// the `run` callback of `MlirExternalPassCallbacks`.

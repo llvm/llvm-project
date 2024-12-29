@@ -367,9 +367,11 @@ void testExternalPass(void) {
         mlirStringRefCreateFromCString("test-external-pass");
     TestExternalPassUserData userData = {0};
 
-    MlirPass externalPass = mlirCreateExternalPass(
+    MlirExternalPass externalPass = mlirExternalPassCreate(
         passID, name, argument, description, emptyOpName, 0, NULL,
         makeTestExternalPassCallbacks(NULL, testRunExternalPass), &userData);
+
+    MlirPass pass = mlirExternalPassGetPass(externalPass);
 
     if (userData.constructCallCount != 1) {
       fprintf(stderr, "Expected constructCallCount to be 1\n");
@@ -377,7 +379,7 @@ void testExternalPass(void) {
     }
 
     MlirPassManager pm = mlirPassManagerCreate(ctx);
-    mlirPassManagerAddOwnedPass(pm, externalPass);
+    mlirPassManagerAddOwnedPass(pm, pass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsFailure(success)) {
       fprintf(stderr, "Unexpected failure running external pass.\n");
@@ -408,10 +410,12 @@ void testExternalPass(void) {
     MlirDialectHandle funcHandle = mlirGetDialectHandle__func__();
     MlirStringRef funcOpName = mlirStringRefCreateFromCString("func.func");
 
-    MlirPass externalPass = mlirCreateExternalPass(
+    MlirExternalPass externalPass = mlirExternalPassCreate(
         passID, name, argument, description, funcOpName, 1, &funcHandle,
         makeTestExternalPassCallbacks(NULL, testRunExternalFuncPass),
         &userData);
+
+    MlirPass pass = mlirExternalPassGetPass(externalPass);
 
     if (userData.constructCallCount != 1) {
       fprintf(stderr, "Expected constructCallCount to be 1\n");
@@ -421,7 +425,7 @@ void testExternalPass(void) {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirOpPassManager nestedFuncPm =
         mlirPassManagerGetNestedUnder(pm, funcOpName);
-    mlirOpPassManagerAddOwnedPass(nestedFuncPm, externalPass);
+    mlirOpPassManagerAddOwnedPass(nestedFuncPm, pass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsFailure(success)) {
       fprintf(stderr, "Unexpected failure running external operation pass.\n");
@@ -457,11 +461,13 @@ void testExternalPass(void) {
         mlirStringRefCreateFromCString("test-external-pass");
     TestExternalPassUserData userData = {0};
 
-    MlirPass externalPass = mlirCreateExternalPass(
+    MlirExternalPass externalPass = mlirExternalPassCreate(
         passID, name, argument, description, emptyOpName, 0, NULL,
         makeTestExternalPassCallbacks(testInitializeExternalPass,
                                       testRunExternalPass),
         &userData);
+
+    MlirPass pass = mlirExternalPassGetPass(externalPass);
 
     if (userData.constructCallCount != 1) {
       fprintf(stderr, "Expected constructCallCount to be 1\n");
@@ -469,7 +475,7 @@ void testExternalPass(void) {
     }
 
     MlirPassManager pm = mlirPassManagerCreate(ctx);
-    mlirPassManagerAddOwnedPass(pm, externalPass);
+    mlirPassManagerAddOwnedPass(pm, pass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsFailure(success)) {
       fprintf(stderr, "Unexpected failure running external pass.\n");
@@ -504,11 +510,13 @@ void testExternalPass(void) {
         mlirStringRefCreateFromCString("test-external-failing-pass");
     TestExternalPassUserData userData = {0};
 
-    MlirPass externalPass = mlirCreateExternalPass(
+    MlirExternalPass externalPass = mlirExternalPassCreate(
         passID, name, argument, description, emptyOpName, 0, NULL,
         makeTestExternalPassCallbacks(testInitializeFailingExternalPass,
                                       testRunExternalPass),
         &userData);
+
+    MlirPass pass = mlirExternalPassGetPass(externalPass);
 
     if (userData.constructCallCount != 1) {
       fprintf(stderr, "Expected constructCallCount to be 1\n");
@@ -516,7 +524,7 @@ void testExternalPass(void) {
     }
 
     MlirPassManager pm = mlirPassManagerCreate(ctx);
-    mlirPassManagerAddOwnedPass(pm, externalPass);
+    mlirPassManagerAddOwnedPass(pm, pass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsSuccess(success)) {
       fprintf(
@@ -553,10 +561,12 @@ void testExternalPass(void) {
         mlirStringRefCreateFromCString("test-external-failing-pass");
     TestExternalPassUserData userData = {0};
 
-    MlirPass externalPass = mlirCreateExternalPass(
+    MlirExternalPass externalPass = mlirExternalPassCreate(
         passID, name, argument, description, emptyOpName, 0, NULL,
         makeTestExternalPassCallbacks(NULL, testRunFailingExternalPass),
         &userData);
+
+    MlirPass pass = mlirExternalPassGetPass(externalPass);
 
     if (userData.constructCallCount != 1) {
       fprintf(stderr, "Expected constructCallCount to be 1\n");
@@ -564,7 +574,7 @@ void testExternalPass(void) {
     }
 
     MlirPassManager pm = mlirPassManagerCreate(ctx);
-    mlirPassManagerAddOwnedPass(pm, externalPass);
+    mlirPassManagerAddOwnedPass(pm, pass);
     MlirLogicalResult success = mlirPassManagerRunOnOp(pm, module);
     if (mlirLogicalResultIsSuccess(success)) {
       fprintf(

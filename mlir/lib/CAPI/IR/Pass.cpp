@@ -193,19 +193,23 @@ private:
 };
 } // namespace mlir
 
-MlirPass mlirCreateExternalPass(MlirTypeID passID, MlirStringRef name,
-                                MlirStringRef argument,
-                                MlirStringRef description, MlirStringRef opName,
-                                intptr_t nDependentDialects,
-                                MlirDialectHandle *dependentDialects,
-                                MlirExternalPassCallbacks callbacks,
-                                void *userData) {
-  return wrap(static_cast<mlir::Pass *>(new mlir::ExternalPass(
+MlirExternalPass mlirExternalPassCreate(MlirTypeID passID, MlirStringRef name,
+                                        MlirStringRef argument,
+                                        MlirStringRef description, MlirStringRef opName,
+                                        intptr_t nDependentDialects,
+                                        MlirDialectHandle *dependentDialects,
+                                        MlirExternalPassCallbacks callbacks,
+                                        void *userData) {
+  return wrap(new mlir::ExternalPass(
       unwrap(passID), unwrap(name), unwrap(argument), unwrap(description),
       opName.length > 0 ? std::optional<StringRef>(unwrap(opName))
                         : std::nullopt,
       {dependentDialects, static_cast<size_t>(nDependentDialects)}, callbacks,
-      userData)));
+      userData));
+}
+
+MlirPass mlirExternalPassGetPass(MlirExternalPass externalPass) {
+  return wrap(static_cast<mlir::Pass *>(&externalPass));
 }
 
 void mlirExternalPassSignalFailure(MlirExternalPass pass) {
