@@ -121,8 +121,8 @@ libc_support_library(
 )
 
 libc_test(
-    name = "qsort_test",
-    srcs = ["qsort_test.cpp"],
+    name = "quick_sort_test",
+    srcs = ["quick_sort_test.cpp"],
     libc_function_deps = ["//libc:qsort"],
     deps = [
         ":qsort_test_helper",
@@ -131,20 +131,12 @@ libc_test(
 )
 
 libc_test(
-    name = "quick_sort_test",
-    srcs = ["quick_sort_test.cpp"],
-    deps = [
-        ":qsort_test_helper",
-        "//libc:qsort_util",
-    ],
-)
-
-libc_test(
     name = "heap_sort_test",
     srcs = ["heap_sort_test.cpp"],
+    libc_function_deps = ["//libc:qsort"],
     deps = [
         ":qsort_test_helper",
-        "//libc:qsort_util",
+        "//libc:types_size_t",
     ],
 )
 
