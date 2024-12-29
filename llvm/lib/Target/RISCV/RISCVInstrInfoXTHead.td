@@ -538,16 +538,16 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 let Predicates = [HasVendorXTHeadBa] in {
 def : Pat<(add_like_non_imm12 (shl GPR:$rs2, uimm2:$uimm2), (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
-def : Pat<(XLenVT (riscv_shl_add GPR:$rs1, uimm2:$uimm2, GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, GPR:$rs1, uimm2:$uimm2)>;
+def : Pat<(XLenVT (riscv_shl_add GPR:$rs2, uimm2:$uimm2, GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
-def : Pat<(add_like_non_imm12 sh1add_op:$rs1, (XLenVT GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, sh1add_op:$rs1, 1)>;
-def : Pat<(add_like_non_imm12 sh2add_op:$rs1, (XLenVT GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, sh2add_op:$rs1, 2)>;
-def : Pat<(add_like_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
+def : Pat<(add_like_non_imm12 sh1add_op:$rs2, (XLenVT GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, sh1add_op:$rs2, 1)>;
+def : Pat<(add_like_non_imm12 sh2add_op:$rs2, (XLenVT GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, sh2add_op:$rs2, 2)>;
+def : Pat<(add_like_non_imm12 sh3add_op:$rs2, (XLenVT GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, sh3add_op:$rs2, 3)>;
 
 def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy4:$i)), 2)>;
