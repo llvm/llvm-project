@@ -643,10 +643,6 @@ public:
     return true;
   }
 
-  /// Replace all operands of VPUsers in the block with \p NewValue and also
-  /// replaces all uses of VPValues defined in the block with NewValue.
-  virtual void dropAllReferences(VPValue *NewValue) = 0;
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
@@ -3553,8 +3549,6 @@ public:
     return make_range(begin(), getFirstNonPhi());
   }
 
-  void dropAllReferences(VPValue *NewValue) override;
-
   /// Split current block at \p SplitAt by inserting a new block between the
   /// current block and its successors and moving all recipes starting at
   /// SplitAt to the new block. Returns the new block.
@@ -3710,8 +3704,6 @@ public:
 
   // Return the cost of this region.
   InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
-
-  void dropAllReferences(VPValue *NewValue) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPRegionBlock to \p O (recursively), prefixing all lines with
@@ -4042,6 +4034,11 @@ public:
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
+
+  /// Create a VPIRBasicBlock wrapping \p IRBB, but do not create
+  /// VPIRInstructions wrapping the instructions in t\p IRBB.  The returned
+  /// block is owned by the VPlan and deleted once the VPlan is destroyed.
+  VPIRBasicBlock *createEmptyVPIRBasicBlock(BasicBlock *IRBB);
 
   /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
   /// instructions in \p IRBB, except its terminator which is managed in VPlan.
