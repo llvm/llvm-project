@@ -1249,7 +1249,7 @@ static Value rewriteI2ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   assert(srcVecType.getElementType().isSignlessInteger(2) &&
          "Expected i2 type");
 
-  // 1. Generate a bitcast vector<Xxi2> -> vector<X/4xi8>.
+  // 1. Generate a bitcast vector<Xxi2> -> vector<X/2xi8>.
   SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
   constexpr int64_t i2Toi8BitwidthFactor = 4;
   i8VecShape.back() = i8VecShape.back() / i2Toi8BitwidthFactor;
@@ -1302,7 +1302,7 @@ static Value rewriteI2ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
   assert(srcVecType.getElementType().isSignlessInteger(2) &&
          "Expected i2 type");
 
-  // 1. Generate a bitcast vector<Xxi2> -> vector<X/4xi8>.
+  // 1. Generate a bitcast vector<Xxi2> -> vector<X/2xi8>.
   SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
   constexpr int64_t i2Toi8BitwidthFactor = 4;
   i8VecShape.back() = i8VecShape.back() / i2Toi8BitwidthFactor;
