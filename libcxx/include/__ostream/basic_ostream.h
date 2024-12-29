@@ -14,7 +14,7 @@
 #if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__exception/operations.h>
-#  include <__memory/shared_ptr.h>
+#  include <__fwd/memory.h>
 #  include <__memory/unique_ptr.h>
 #  include <__new/exceptions.h>
 #  include <__ostream/put_character_sequence.h>

@@ -522,6 +522,13 @@ std::optional<APInt>
 isConstantOrConstantSplatVector(MachineInstr &MI,
                                 const MachineRegisterInfo &MRI);
 
+/// Determines if \p MI defines a float constant integer or a splat vector of
+/// float constant integers.
+/// \returns the float constant or std::nullopt.
+std::optional<APFloat>
+isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI);
+
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source
 /// value was undef.

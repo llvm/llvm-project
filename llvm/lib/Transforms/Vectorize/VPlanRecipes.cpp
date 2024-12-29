@@ -1031,11 +1031,11 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
     Arguments.push_back(V);
   }
 
-  Type *RetTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *RetTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
-        ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
+        toVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
@@ -1203,7 +1203,7 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   SelectInst *SI = cast<SelectInst>(getUnderlyingValue());
   bool ScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
-  Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   VPValue *Op0, *Op1;
@@ -1384,7 +1384,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   switch (Opcode) {
   case Instruction::FNeg: {
-    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(
         Opcode, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
@@ -1422,7 +1422,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
-    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
 
     SmallVector<const Value *, 4> Operands;
@@ -1435,13 +1435,13 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Freeze: {
     // This opcode is unknown. Assume that it is the same as 'mul'.
-    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
   }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
-    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     return Ctx.TTI.getCmpSelInstrCost(Opcode, VectorTy, nullptr, getPredicate(),
                                       CostKind,
                                       {TTI::OK_AnyValue, TTI::OP_None},
@@ -1569,8 +1569,8 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   }
 
   auto *SrcTy =
-      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(Operand), VF));
-  auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(Operand), VF));
+  auto *DestTy = cast<VectorType>(toVectorTy(getResultType(), VF));
   // Arm TTI will use the underlying instruction to determine the cost.
   return Ctx.TTI.getCastInstrCost(
       Opcode, DestTy, SrcTy, CCH, TTI::TCK_RecipThroughput,
@@ -1582,7 +1582,7 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CAST ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
@@ -2001,7 +2001,6 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = reverse-vector-pointer";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -2078,8 +2077,8 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
   if (vputils::onlyFirstLaneUsed(this))
     return Ctx.TTI.getCFInstrCost(Instruction::PHI, CostKind);
 
-  Type *ResultTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
-  Type *CmpTy = ToVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
+  Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
   return (getNumIncomingValues() - 1) *
          Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
@@ -2116,6 +2115,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
     Value *NewCond = State.get(Cond, State.VF.isScalar());
@@ -2200,7 +2200,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   RecurKind RdxKind = RdxDesc.getRecurrenceKind();
   Type *ElementTy = Ctx.Types.inferScalarType(this);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
+  auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
 
@@ -2452,7 +2452,7 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
-  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   const Align Alignment =
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
@@ -2599,7 +2599,7 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // legacy model, it will always calculate the cost of mask.
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
-  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   const Align Alignment =
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
@@ -2720,7 +2720,7 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // legacy model, it will always calculate the cost of mask.
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
-  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   const Align Alignment =
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
@@ -2789,10 +2789,21 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
-    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
-                                   Vals,
-                                   /*FMFSource=*/nullptr, Name);
+    assert(isPowerOf2_32(Factor) && "Unsupported interleave factor for "
+                                    "scalable vectors, must be power of 2");
+    SmallVector<Value *> InterleavingValues(Vals);
+    // When interleaving, the number of values will be shrunk until we have the
+    // single final interleaved value.
+    auto *InterleaveTy = cast<VectorType>(InterleavingValues[0]->getType());
+    for (unsigned Midpoint = Factor / 2; Midpoint > 0; Midpoint /= 2) {
+      InterleaveTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
+      for (unsigned I = 0; I < Midpoint; ++I)
+        InterleavingValues[I] = Builder.CreateIntrinsic(
+            InterleaveTy, Intrinsic::vector_interleave2,
+            {InterleavingValues[I], InterleavingValues[Midpoint + I]},
+            /*FMFSource=*/nullptr, Name);
+    }
+    return InterleavingValues[0];
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -2878,15 +2889,11 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
     if (State.VF.isScalable()) {
       assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(InterleaveFactor == 2 &&
+      assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
-      SmallVector<Value *, 2> Ops = {ResBlockInMask, ResBlockInMask};
-      auto *MaskTy = VectorType::get(State.Builder.getInt1Ty(),
-                                     State.VF.getKnownMinValue() * 2, true);
-      return State.Builder.CreateIntrinsic(
-          MaskTy, Intrinsic::vector_interleave2, Ops,
-          /*FMFSource=*/nullptr, "interleaved.mask");
+      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
+      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -2926,22 +2933,48 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     ArrayRef<VPValue *> VPDefs = definedValues();
     const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
     if (VecTy->isScalableTy()) {
-      assert(InterleaveFactor == 2 &&
+      assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
 
-        // Scalable vectors cannot use arbitrary shufflevectors (only splats),
-        // so must use intrinsics to deinterleave.
-      Value *DI = State.Builder.CreateIntrinsic(
-          Intrinsic::vector_deinterleave2, VecTy, NewLoad,
-          /*FMFSource=*/nullptr, "strided.vec");
-      unsigned J = 0;
-      for (unsigned I = 0; I < InterleaveFactor; ++I) {
+      // Scalable vectors cannot use arbitrary shufflevectors (only splats),
+      // so must use intrinsics to deinterleave.
+      SmallVector<Value *> DeinterleavedValues(InterleaveFactor);
+      DeinterleavedValues[0] = NewLoad;
+      // For the case of InterleaveFactor > 2, we will have to do recursive
+      // deinterleaving, because the current available deinterleave intrinsic
+      // supports only Factor of 2, otherwise it will bailout after first
+      // iteration.
+      // When deinterleaving, the number of values will double until we
+      // have "InterleaveFactor".
+      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
+           NumVectors *= 2) {
+        // Deinterleave the elements within the vector
+        SmallVector<Value *> TempDeinterleavedValues(NumVectors);
+        for (unsigned I = 0; I < NumVectors; ++I) {
+          auto *DiTy = DeinterleavedValues[I]->getType();
+          TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
+              Intrinsic::vector_deinterleave2, DiTy, DeinterleavedValues[I],
+              /*FMFSource=*/nullptr, "strided.vec");
+        }
+        // Extract the deinterleaved values:
+        for (unsigned I = 0; I < 2; ++I)
+          for (unsigned J = 0; J < NumVectors; ++J)
+            DeinterleavedValues[NumVectors * I + J] =
+                State.Builder.CreateExtractValue(TempDeinterleavedValues[J], I);
+      }
+
+#ifndef NDEBUG
+      for (Value *Val : DeinterleavedValues)
+        assert(Val && "NULL Deinterleaved Value");
+#endif
+      for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
         Instruction *Member = Group->getMember(I);
-
-        if (!Member)
+        Value *StridedVec = DeinterleavedValues[I];
+        if (!Member) {
+          // This value is not needed as it's not used
+          static_cast<Instruction *>(StridedVec)->eraseFromParent();
           continue;
-
-        Value *StridedVec = State.Builder.CreateExtractValue(DI, I);
+        }
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
           VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
@@ -3088,7 +3121,7 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
   Type *ValTy = Ctx.Types.inferScalarType(
       getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
                                 : getStoredValues()[InsertPosIdx]);
-  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(InsertPos);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
@@ -3331,7 +3364,7 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   SmallVector<int> Mask(VF.getKnownMinValue());
   std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
   Type *VectorTy =
-      ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+      toVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
 
   return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                 cast<VectorType>(VectorTy), Mask, CostKind,

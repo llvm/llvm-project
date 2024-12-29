@@ -188,9 +188,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, ir<%for.x.next>
-; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc  vp<[[SPLICE_X]]> to i32
+; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc vp<[[SPLICE_X]]> to i32
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_Y:%.+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext  vp<[[SPLICE_Y]]> to i64
+; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext vp<[[SPLICE_Y]]> to i64
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%for.y.i64>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -266,9 +266,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%for.x.next> = mul ir<%l>, ir<2>
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, ir<%for.x.next>
-; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc  vp<[[SPLICE_X]]> to i32
+; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc vp<[[SPLICE_X]]> to i32
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_Y:%.+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext  vp<[[SPLICE_Y]]> to i64
+; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext vp<[[SPLICE_Y]]> to i64
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%for.y.i64>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
