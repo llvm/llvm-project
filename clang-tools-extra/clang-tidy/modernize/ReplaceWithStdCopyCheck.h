@@ -26,11 +26,6 @@ public:
     MemmoveAndMemcpy,
   };
 
-  enum class StdCallsReplacementStyle {
-    FreeFunc,
-    MemberCall,
-  };
-
   ReplaceWithStdCopyCheck(StringRef Name, ClangTidyContext *Context);
   ~ReplaceWithStdCopyCheck() override = default;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
@@ -70,11 +65,7 @@ private:
   //    with their members or free fns.
 
   static constexpr auto FlaggableCalleesDefault = FlaggableCallees::OnlyMemmove;
-  static constexpr auto StdCallsReplacementStyleDefault =
-      StdCallsReplacementStyle::FreeFunc;
-
   const FlaggableCallees FlaggableCallees_;
-  const StdCallsReplacementStyle StdCallsReplacementStyle_;
 };
 
 } // namespace clang::tidy::modernize
