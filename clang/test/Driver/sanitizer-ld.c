@@ -33,7 +33,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-LINUX
 //
-// CHECK-ASAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-ASAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=address -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=arm64e-apple-macosx -fuse-ld=ld \
@@ -41,7 +41,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN
 //
-// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -398,7 +398,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-TSAN-NO-LINK-RUNTIME-LINUX
 //
-// CHECK-TSAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-TSAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: not %clang -fsanitize=thread -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=arm64e-apple-ios -fuse-ld=ld \
@@ -406,7 +406,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-TSAN-NO-LINK-RUNTIME-DARWIN
 //
-// CHECK-TSAN-NO-LINK-RUNTIME-DARWIN: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-TSAN-NO-LINK-RUNTIME-DARWIN: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
@@ -434,7 +434,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-MSAN-NO-LINK-RUNTIME-LINUX
 //
-// CHECK-MSAN-NO-LINK-RUNTIME-LINUX: "{{.*}}ld"
+// CHECK-MSAN-NO-LINK-RUNTIME-LINUX: "{{.*}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -fuse-ld=ld \
@@ -467,7 +467,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-NO-LINK-RUNTIME-LINUX
 //
-// CHECK-UBSAN-NO-LINK-RUNTIME-LINUX: "{{.*}}ld"
+// CHECK-UBSAN-NO-LINK-RUNTIME-LINUX: "{{.*}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=undefined -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-apple-darwin -fuse-ld=ld \
@@ -475,7 +475,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN
 //
-// CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
+// CHECK-UBSAN-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=fuzzer -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=arm64e-apple-watchos -fuse-ld=ld \
@@ -483,7 +483,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN
 //
-// CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld"
+// CHECK-FUZZER-NO-LINK-RUNTIME-DARWIN: "{{.*}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
@@ -660,7 +660,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-LSAN-NO-LINK-RUNTIME-LINUX
 //
-// CHECK-LSAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-LSAN-NO-LINK-RUNTIME-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:  --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=leak -fsanitize-coverage=func \
@@ -869,7 +869,7 @@
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-X86-64
 // CHECK-SHADOWCALLSTACK-LINUX-X86-64-NOT: error:
-// CHECK-SHADOWCALLSTACK-LINUX-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-SHADOWCALLSTACK-LINUX-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: not %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=aarch64-unknown-linux -fuse-ld=ld \
@@ -886,7 +886,7 @@
 // RUN:     --target=riscv64-unknown-linux -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-RISCV64
 // CHECK-SHADOWCALLSTACK-LINUX-RISCV64-NOT: error:
-// CHECK-SHADOWCALLSTACK-LINUX-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-SHADOWCALLSTACK-LINUX-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clang -target riscv64-linux-android -fsanitize=shadow-call-stack %s -### 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ANDROID-RISCV64
@@ -906,7 +906,7 @@
 // RUN:     --target=arm64-unknown-ios -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-NOT: error:
-// CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=aarch64-unknown-linux-android -fuse-ld=ld \
@@ -923,7 +923,7 @@
 // RUN:     -fsanitize=safe-stack --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-SAFESTACK
 // CHECK-SHADOWCALLSTACK-SAFESTACK-NOT: error:
-// CHECK-SHADOWCALLSTACK-SAFESTACK: "{{(.*[^-.0-9A-Z_a-z])?}}ld"
+// CHECK-SHADOWCALLSTACK-SAFESTACK: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SHADOWCALLSTACK-SAFESTACK: libclang_rt.safestack.a
 
 // RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
