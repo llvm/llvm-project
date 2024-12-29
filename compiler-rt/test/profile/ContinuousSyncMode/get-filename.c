@@ -1,4 +1,4 @@
-// REQUIRES: target={{.*(darwin|aix).*}}
+// REQUIRES: continuous-mode
 
 // RUN: %clang_pgogen_cont -o %t.exe %s
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe %t.profraw
