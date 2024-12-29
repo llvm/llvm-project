@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -241,12 +242,22 @@ BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
   return std::nullopt;
 }
 
+static const MemRegion *skipStdBaseClassRegion(const MemRegion *Reg) {
+  while (Reg) {
+    const auto *BaseClassRegion = dyn_cast<CXXBaseObjectRegion>(Reg);
+    if (!BaseClassRegion || !isWithinStdNamespace(BaseClassRegion->getDecl()))
+      break;
+    Reg = BaseClassRegion->getSuperRegion();
+  }
+  return Reg;
+}
+
 static const MemRegion *getRegion(const CallEvent &Call,
                                   const MutexDescriptor &Descriptor,
                                   bool IsLock) {
   return std::visit(
-      [&Call, IsLock](auto &&Descriptor) {
-        return Descriptor.getRegion(Call, IsLock);
+      [&Call, IsLock](auto &Descr) -> const MemRegion * {
+        return skipStdBaseClassRegion(Descr.getRegion(Call, IsLock));
       },
       Descriptor);
 }

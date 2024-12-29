@@ -11,11 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsSEInstrInfo.h"
-#include "MCTargetDesc/MipsInstPrinter.h"
 #include "MipsAnalyzeImmediate.h"
-#include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -83,7 +80,8 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  MCRegister SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0, ZeroReg = 0;
   bool isMicroMips = Subtarget.inMicroMipsMode();
 

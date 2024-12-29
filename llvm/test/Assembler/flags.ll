@@ -312,6 +312,18 @@ define <2 x i32> @test_trunc_both_reversed_vector(<2 x i64> %a) {
   ret <2 x i32> %res
 }
 
+define i1 @test_icmp_samesign(i32 %a, i32 %b) {
+  ; CHECK: %res = icmp samesign ult i32 %a, %b
+  %res = icmp samesign ult i32 %a, %b
+  ret i1 %res
+}
+
+define <2 x i1> @test_icmp_samesign2(<2 x i32> %a, <2 x i32> %b) {
+  ; CHECK: %res = icmp samesign ult <2 x i32> %a, %b
+  %res = icmp samesign ult <2 x i32> %a, %b
+  ret <2 x i1> %res
+}
+
 define ptr @gep_nuw(ptr %p, i64 %idx) {
 ; CHECK: %gep = getelementptr nuw i8, ptr %p, i64 %idx
   %gep = getelementptr nuw i8, ptr %p, i64 %idx

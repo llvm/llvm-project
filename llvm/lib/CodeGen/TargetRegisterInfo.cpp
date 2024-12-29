@@ -34,7 +34,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -120,7 +119,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
         OS << '%' << Register::virtReg2Index(Reg);
       }
     } else if (!TRI)
-      OS << '$' << "physreg" << Reg;
+      OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
       printLowerCase(TRI->getName(Reg), OS);
@@ -202,42 +201,83 @@ TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
   return nullptr;
 }
 
-/// getMinimalPhysRegClass - Returns the Register Class of a physical
-/// register of the given type, picking the most sub register class of
-/// the right type that contains this physreg.
-const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
-  assert(Register::isPhysicalRegister(reg) &&
+template <typename TypeT>
+static const TargetRegisterClass *
+getMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg,
+                       TypeT Ty) {
+  static_assert(std::is_same_v<TypeT, MVT> || std::is_same_v<TypeT, LLT>);
+  assert(Register::isPhysicalRegister(Reg) &&
          "reg must be a physical register");
 
-  // Pick the most sub register class of the right type that contains
-  // this physreg.
-  const TargetRegisterClass* BestRC = nullptr;
-  for (const TargetRegisterClass* RC : regclasses()) {
-    if ((VT == MVT::Other || isTypeLegalForClass(*RC, VT)) &&
-        RC->contains(reg) && (!BestRC || BestRC->hasSubClass(RC)))
-      BestRC = RC;
-  }
-
-  assert(BestRC && "Couldn't find the register class");
-  return BestRC;
-}
-
-const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister reg, LLT Ty) const {
-  assert(Register::isPhysicalRegister(reg) &&
-         "reg must be a physical register");
+  bool IsDefault = [&]() {
+    if constexpr (std::is_same_v<TypeT, MVT>)
+      return Ty == MVT::Other;
+    else
+      return !Ty.isValid();
+  }();
 
   // Pick the most sub register class of the right type that contains
   // this physreg.
   const TargetRegisterClass *BestRC = nullptr;
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if ((!Ty.isValid() || isTypeLegalForClass(*RC, Ty)) && RC->contains(reg) &&
+  for (const TargetRegisterClass *RC : TRI->regclasses()) {
+    if ((IsDefault || TRI->isTypeLegalForClass(*RC, Ty)) && RC->contains(Reg) &&
         (!BestRC || BestRC->hasSubClass(RC)))
       BestRC = RC;
   }
 
+  if constexpr (std::is_same_v<TypeT, MVT>)
+    assert(BestRC && "Couldn't find the register class");
   return BestRC;
+}
+
+template <typename TypeT>
+static const TargetRegisterClass *
+getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
+                             MCRegister Reg2, TypeT Ty) {
+  static_assert(std::is_same_v<TypeT, MVT> || std::is_same_v<TypeT, LLT>);
+  assert(Register::isPhysicalRegister(Reg1) &&
+         Register::isPhysicalRegister(Reg2) &&
+         "Reg1/Reg2 must be a physical register");
+
+  bool IsDefault = [&]() {
+    if constexpr (std::is_same_v<TypeT, MVT>)
+      return Ty == MVT::Other;
+    else
+      return !Ty.isValid();
+  }();
+
+  // Pick the most sub register class of the right type that contains
+  // this physreg.
+  const TargetRegisterClass *BestRC = nullptr;
+  for (const TargetRegisterClass *RC : TRI->regclasses()) {
+    if ((IsDefault || TRI->isTypeLegalForClass(*RC, Ty)) &&
+        RC->contains(Reg1, Reg2) && (!BestRC || BestRC->hasSubClass(RC)))
+      BestRC = RC;
+  }
+
+  if constexpr (std::is_same_v<TypeT, MVT>)
+    assert(BestRC && "Couldn't find the register class");
+  return BestRC;
+}
+
+const TargetRegisterClass *
+TargetRegisterInfo::getMinimalPhysRegClass(MCRegister Reg, MVT VT) const {
+  return ::getMinimalPhysRegClass(this, Reg, VT);
+}
+
+const TargetRegisterClass *TargetRegisterInfo::getCommonMinimalPhysRegClass(
+    MCRegister Reg1, MCRegister Reg2, MVT VT) const {
+  return ::getCommonMinimalPhysRegClass(this, Reg1, Reg2, VT);
+}
+
+const TargetRegisterClass *
+TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister Reg, LLT Ty) const {
+  return ::getMinimalPhysRegClass(this, Reg, Ty);
+}
+
+const TargetRegisterClass *TargetRegisterInfo::getCommonMinimalPhysRegClassLLT(
+    MCRegister Reg1, MCRegister Reg2, LLT Ty) const {
+  return ::getCommonMinimalPhysRegClass(this, Reg1, Reg2, Ty);
 }
 
 /// getAllocatableSetForRC - Toggle the bits that represent allocatable

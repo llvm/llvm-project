@@ -1480,17 +1480,13 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
-    if (context_.ShouldWarn(common::UsageWarning::ModuleFile)) {
-      Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
-          sourceFile->path());
-    }
+    Say(name, ancestorName, "File has invalid checksum: %s"_err_en_US,
+        sourceFile->path());
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    if (context_.ShouldWarn(common::UsageWarning::ModuleFile)) {
-      Say(name, ancestorName,
-          "File is not the right module file for %s"_warn_en_US,
-          "'"s + name.ToString() + "': "s + sourceFile->path());
-    }
+    Say(name, ancestorName,
+        "File is not the right module file for %s"_err_en_US,
+        "'"s + name.ToString() + "': "s + sourceFile->path());
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;
@@ -1626,8 +1622,8 @@ void SubprogramSymbolCollector::Collect() {
         // &/or derived type that it shadows may be needed.
         const Symbol *spec{generic->specific()};
         const Symbol *dt{generic->derivedType()};
-        needed = needed || (spec && useSet_.count(*spec) > 0) ||
-            (dt && useSet_.count(*dt) > 0);
+        needed = needed || (spec && useSet_.count(spec->GetUltimate()) > 0) ||
+            (dt && useSet_.count(dt->GetUltimate()) > 0);
       } else if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
         const Symbol *interface { subp->moduleInterface() };
         needed = needed || (interface && useSet_.count(*interface) > 0);

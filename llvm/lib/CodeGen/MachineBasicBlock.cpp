@@ -16,11 +16,13 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -595,7 +597,7 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
   printName(OS, 0);
 }
 
-void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {
+void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
   LiveInVector::iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   if (I == LiveIns.end())
@@ -613,7 +615,7 @@ MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
   return LiveIns.erase(LI);
 }
 
-bool MachineBasicBlock::isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) const {
+bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask).any();
@@ -1146,7 +1148,7 @@ public:
 
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-    std::vector<SparseBitVector<>> *LiveInSets) {
+    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
   assert((P || MFAM) && "Need a way to get analysis results!");
   if (!canSplitCriticalEdge(Succ))
     return nullptr;
@@ -1346,8 +1348,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (auto *MDT = GET_RESULT(MachineDominatorTree, getDomTree, ))
-    MDT->recordSplitCriticalEdge(this, Succ, NMBB);
+  if (MDTU)
+    MDTU->splitCriticalEdge(this, Succ, NMBB);
 
   if (MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info))
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {

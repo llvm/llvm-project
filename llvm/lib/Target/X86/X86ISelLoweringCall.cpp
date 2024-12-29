@@ -18,7 +18,6 @@
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86TargetMachine.h"
-#include "X86TargetObjectFile.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -124,12 +123,14 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasX87())
     return MVT::i32;
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
-    return getRegisterTypeForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+  if (isTypeLegal(MVT::f16)) {
+    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+      return getRegisterTypeForCallingConv(
+          Context, CC, VT.changeVectorElementType(MVT::f16));
 
-  if (VT == MVT::bf16)
-    return MVT::f16;
+    if (VT == MVT::bf16)
+      return MVT::f16;
+  }
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -162,7 +163,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(Context, CC,
                                          VT.changeVectorElementType(MVT::f16));
 
@@ -194,7 +196,8 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -259,20 +262,15 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
 /// function arguments in the caller parameter area. For X86, aggregates
 /// that contain SSE vectors are placed at 16-byte boundaries while the rest
 /// are at 4-byte boundaries.
-uint64_t X86TargetLowering::getByValTypeAlignment(Type *Ty,
-                                                  const DataLayout &DL) const {
-  if (Subtarget.is64Bit()) {
-    // Max of 8 and alignment of type.
-    Align TyAlign = DL.getABITypeAlign(Ty);
-    if (TyAlign > 8)
-      return TyAlign.value();
-    return 8;
-  }
+Align X86TargetLowering::getByValTypeAlignment(Type *Ty,
+                                               const DataLayout &DL) const {
+  if (Subtarget.is64Bit())
+    return std::max(DL.getABITypeAlign(Ty), Align::Constant<8>());
 
   Align Alignment(4);
   if (Subtarget.hasSSE1())
     getMaxByValAlign(Ty, Alignment);
-  return Alignment.value();
+  return Alignment;
 }
 
 /// It returns EVT::Other if the type should be determined using generic
@@ -524,8 +522,9 @@ X86TargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
 unsigned X86TargetLowering::getAddressSpace() const {
   if (Subtarget.is64Bit())
-    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? 256 : 257;
-  return 256;
+    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? X86AS::GS
+                                                                    : X86AS::FS;
+  return X86AS::GS;
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
@@ -945,7 +944,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -956,7 +955,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->uses()) {
+  for (const SDNode *U : Copy->users()) {
     if (U->getOpcode() != X86ISD::RET_GLUE)
       return false;
     // If we are returning more than one value, we can definitely
@@ -1435,14 +1434,14 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     // in their paired GPR.  So we only need to save the GPR to their home
     // slots.
     // TODO: __vectorcall will change this.
-    return std::nullopt;
+    return {};
   }
 
   bool isSoftFloat = Subtarget.useSoftFloat();
   if (isSoftFloat || !Subtarget.hasSSE1())
     // Kernel mode asks for SSE to be disabled, so there are no XMM argument
     // registers.
-    return std::nullopt;
+    return {};
 
   static const MCPhysReg XMMArgRegs64Bit[] = {
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
@@ -1903,7 +1902,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (shouldDisableArgRegFromCSR(CallConv) ||
       F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (std::pair<Register, Register> Pair : MRI.liveins())
+    for (std::pair<MCRegister, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
@@ -2413,8 +2412,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
   }
 
-  // Returns a chain & a glue for retval copy to use.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && isTailCall && !IsMustTail) {
@@ -2426,8 +2423,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(
-        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
+    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, dl, MVT::i32));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -2519,7 +2515,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, MVT::Other, Ops);
 
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -2529,6 +2525,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return Ret;
   }
 
+  // Returns a chain & a glue for retval copy to use.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   if (HasNoCfCheck && IsCFProtectionSupported && IsIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
@@ -2850,6 +2848,13 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
   }
+
+  // The stack frame of the caller cannot be replaced by the tail-callee one's
+  // if the function is required to preserve all the registers. Conservatively
+  // prevent tail optimization even if hypothetically all the registers are used
+  // for passing formal parameters or returning values.
+  if (CallerF.hasFnAttribute("no_caller_saved_registers"))
+    return false;
 
   unsigned StackArgsSize = CCInfo.getStackSize();
 

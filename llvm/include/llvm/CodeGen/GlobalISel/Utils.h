@@ -180,7 +180,7 @@ std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
                                                const MachineRegisterInfo &MRI);
 
 /// \p VReg is defined by a G_CONSTANT, return the corresponding value.
-APInt getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
+const APInt &getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
@@ -522,6 +522,13 @@ std::optional<APInt>
 isConstantOrConstantSplatVector(MachineInstr &MI,
                                 const MachineRegisterInfo &MRI);
 
+/// Determines if \p MI defines a float constant integer or a splat vector of
+/// float constant integers.
+/// \returns the float constant or std::nullopt.
+std::optional<APFloat>
+isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI);
+
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source
 /// value was undef.
@@ -541,10 +548,6 @@ bool isConstFalseVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 /// Returns an integer representing true, as defined by the
 /// TargetBooleanContents.
 int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
-
-/// Returns true if the given block should be optimized for size.
-bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
-                      BlockFrequencyInfo *BFI);
 
 using SmallInstListTy = GISelWorkList<4>;
 void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -592,6 +595,84 @@ bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
 /// Get the type back from LLT. It won't be 100 percent accurate but returns an
 /// estimate of the type.
 Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
+/// An integer-like constant.
+///
+/// It abstracts over scalar, fixed-length vectors, and scalable vectors.
+/// In the common case, it provides a common API and feels like an APInt,
+/// while still providing low-level access.
+/// It can be used for constant-folding.
+///
+/// bool isZero()
+/// abstracts over the kind.
+///
+/// switch(const.getKind())
+/// {
+/// }
+/// provides low-level access.
+class GIConstant {
+public:
+  enum class GIConstantKind { Scalar, FixedVector, ScalableVector };
+
+private:
+  GIConstantKind Kind;
+  SmallVector<APInt> Values;
+  APInt Value;
+
+public:
+  GIConstant(ArrayRef<APInt> Values)
+      : Kind(GIConstantKind::FixedVector), Values(Values) {};
+  GIConstant(const APInt &Value, GIConstantKind Kind)
+      : Kind(Kind), Value(Value) {};
+
+  /// Returns the kind of of this constant, e.g, Scalar.
+  GIConstantKind getKind() const { return Kind; }
+
+  /// Returns the value, if this constant is a scalar.
+  APInt getScalarValue() const;
+
+  static std::optional<GIConstant> getConstant(Register Const,
+                                               const MachineRegisterInfo &MRI);
+};
+
+/// An floating-point-like constant.
+///
+/// It abstracts over scalar, fixed-length vectors, and scalable vectors.
+/// In the common case, it provides a common API and feels like an APFloat,
+/// while still providing low-level access.
+/// It can be used for constant-folding.
+///
+/// bool isZero()
+/// abstracts over the kind.
+///
+/// switch(const.getKind())
+/// {
+/// }
+/// provides low-level access.
+class GFConstant {
+public:
+  enum class GFConstantKind { Scalar, FixedVector, ScalableVector };
+
+private:
+  GFConstantKind Kind;
+  SmallVector<APFloat> Values;
+
+public:
+  GFConstant(ArrayRef<APFloat> Values)
+      : Kind(GFConstantKind::FixedVector), Values(Values) {};
+  GFConstant(const APFloat &Value, GFConstantKind Kind) : Kind(Kind) {
+    Values.push_back(Value);
+  }
+
+  /// Returns the kind of of this constant, e.g, Scalar.
+  GFConstantKind getKind() const { return Kind; }
+
+  /// Returns the value, if this constant is a scalar.
+  APFloat getScalarValue() const;
+
+  static std::optional<GFConstant> getConstant(Register Const,
+                                               const MachineRegisterInfo &MRI);
+};
 
 } // End namespace llvm.
 #endif

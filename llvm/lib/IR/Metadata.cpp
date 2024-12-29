@@ -29,6 +29,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -82,7 +82,7 @@ static Metadata *canonicalizeMetadataForValue(LLVMContext &Context,
                                               Metadata *MD) {
   if (!MD)
     // !{}
-    return MDNode::get(Context, std::nullopt);
+    return MDNode::get(Context, {});
 
   // Return early if this isn't a single-operand MDNode.
   auto *N = dyn_cast<MDNode>(MD);
@@ -91,7 +91,7 @@ static Metadata *canonicalizeMetadataForValue(LLVMContext &Context,
 
   if (!N->getOperand(0))
     // !{}
-    return MDNode::get(Context, std::nullopt);
+    return MDNode::get(Context, {});
 
   if (auto *C = dyn_cast<ConstantAsMetadata>(N->getOperand(0)))
     // Look through the MDNode.
@@ -275,7 +275,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
     OwnerTy Owner = Pair.second.first;
     if (Owner.isNull())
       continue;
-    if (!Owner.is<DebugValueUser *>())
+    if (!isa<DebugValueUser *>(Owner))
       continue;
     DVRUsersWithID.push_back(&UseMap[Pair.first]);
   }
@@ -289,7 +289,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
   });
   SmallVector<DbgVariableRecord *> DVRUsers;
   for (auto UserWithID : DVRUsersWithID)
-    DVRUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
+    DVRUsers.push_back(cast<DebugValueUser *>(UserWithID->first)->getUser());
   return DVRUsers;
 }
 
@@ -397,8 +397,8 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
       continue;
     }
 
-    if (Owner.is<DebugValueUser *>()) {
-      Owner.get<DebugValueUser *>()->handleChangedValue(Pair.first, MD);
+    if (auto *DVU = dyn_cast<DebugValueUser *>(Owner)) {
+      DVU->handleChangedValue(Pair.first, MD);
       continue;
     }
 
@@ -437,7 +437,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
     auto Owner = Pair.second.first;
     if (!Owner)
       continue;
-    if (!Owner.is<Metadata *>())
+    if (!isa<Metadata *>(Owner))
       continue;
 
     // Resolve MDNodes that point at this.
@@ -1354,6 +1354,43 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   return MDNode::get(A->getContext(), MDs);
 }
 
+MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  SmallVector<ConstantRange> RangeListA, RangeListB;
+  for (unsigned I = 0, E = A->getNumOperands() / 2; I != E; ++I) {
+    auto *LowA = mdconst::extract<ConstantInt>(A->getOperand(2 * I + 0));
+    auto *HighA = mdconst::extract<ConstantInt>(A->getOperand(2 * I + 1));
+    RangeListA.push_back(ConstantRange(LowA->getValue(), HighA->getValue()));
+  }
+
+  for (unsigned I = 0, E = B->getNumOperands() / 2; I != E; ++I) {
+    auto *LowB = mdconst::extract<ConstantInt>(B->getOperand(2 * I + 0));
+    auto *HighB = mdconst::extract<ConstantInt>(B->getOperand(2 * I + 1));
+    RangeListB.push_back(ConstantRange(LowB->getValue(), HighB->getValue()));
+  }
+
+  ConstantRangeList CRLA(RangeListA);
+  ConstantRangeList CRLB(RangeListB);
+  ConstantRangeList Result = CRLA.intersectWith(CRLB);
+  if (Result.empty())
+    return nullptr;
+
+  SmallVector<Metadata *> MDs;
+  for (const ConstantRange &CR : Result) {
+    MDs.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(A->getContext(), CR.getLower())));
+    MDs.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(A->getContext(), CR.getUpper())));
+  }
+
+  return MDNode::get(A->getContext(), MDs);
+}
+
 MDNode *MDNode::getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B) {
   if (!A || !B)
     return nullptr;
@@ -1733,7 +1770,7 @@ void Instruction::setAAMetadata(const AAMDNodes &N) {
 
 void Instruction::setNoSanitizeMetadata() {
   setMetadata(llvm::LLVMContext::MD_nosanitize,
-              llvm::MDNode::get(getContext(), std::nullopt));
+              llvm::MDNode::get(getContext(), {}));
 }
 
 void Instruction::getAllMetadataImpl(

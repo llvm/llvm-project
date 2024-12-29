@@ -17,9 +17,6 @@
 #include "Utils.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObjectRegister.h"
-#include "lldb/Core/ValueObjectVariable.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/Host.h"
@@ -41,12 +38,16 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -809,7 +810,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
         Status var_error;
         variable_list = frame->GetVariableList(true, &var_error);
         if (var_error.Fail())
-          value_list.SetError(var_error);
+          value_list.SetError(std::move(var_error));
         if (variable_list) {
           const size_t num_variables = variable_list->GetSize();
           if (num_variables) {
@@ -1031,9 +1032,10 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     return EvaluateExpression(expr, options);
   } else {
     Status error;
-    error.SetErrorString("can't evaluate expressions when the "
-                           "process is running.");
-    ValueObjectSP error_val_sp = ValueObjectConstResult::Create(nullptr, error);
+    error = Status::FromErrorString("can't evaluate expressions when the "
+                                    "process is running.");
+    ValueObjectSP error_val_sp =
+        ValueObjectConstResult::Create(nullptr, std::move(error));
     result.SetSP(error_val_sp, false);
   }
   return result;
@@ -1127,15 +1129,15 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
       }
     } else {
       Status error;
-      error.SetErrorString("can't evaluate expressions when the "
-                           "process is running.");
-      expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+      error = Status::FromErrorString("can't evaluate expressions when the "
+                                      "process is running.");
+      expr_value_sp = ValueObjectConstResult::Create(nullptr, std::move(error));
       expr_result.SetSP(expr_value_sp, false);
     }
   } else {
       Status error;
-      error.SetErrorString("sbframe object is not valid.");
-      expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+      error = Status::FromErrorString("sbframe object is not valid.");
+      expr_value_sp = ValueObjectConstResult::Create(nullptr, std::move(error));
       expr_result.SetSP(expr_value_sp, false);
   }
 
@@ -1151,6 +1153,21 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
               expr_result.GetError().GetCString());
 
   return expr_result;
+}
+
+SBStructuredData SBFrame::GetLanguageSpecificData() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData sb_data;
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (!frame)
+    return sb_data;
+
+  StructuredData::ObjectSP data(frame->GetLanguageSpecificData());
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
 }
 
 bool SBFrame::IsInlined() {
@@ -1172,12 +1189,8 @@ bool SBFrame::IsInlined() const {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
-      if (frame) {
-
-        Block *block = frame->GetSymbolContext(eSymbolContextBlock).block;
-        if (block)
-          return block->GetContainingInlinedBlock() != nullptr;
-      }
+      if (frame)
+        return frame->IsInlined();
     }
   }
   return false;
@@ -1254,29 +1267,8 @@ const char *SBFrame::GetFunctionName() const {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
-      if (frame) {
-        SymbolContext sc(frame->GetSymbolContext(eSymbolContextFunction |
-                                                 eSymbolContextBlock |
-                                                 eSymbolContextSymbol));
-        if (sc.block) {
-          Block *inlined_block = sc.block->GetContainingInlinedBlock();
-          if (inlined_block) {
-            const InlineFunctionInfo *inlined_info =
-                inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetName().AsCString();
-          }
-        }
-
-        if (name == nullptr) {
-          if (sc.function)
-            name = sc.function->GetName().GetCString();
-        }
-
-        if (name == nullptr) {
-          if (sc.symbol)
-            name = sc.symbol->GetName().GetCString();
-        }
-      }
+      if (frame)
+        return frame->GetFunctionName();
     }
   }
   return name;
@@ -1297,29 +1289,8 @@ const char *SBFrame::GetDisplayFunctionName() {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
-      if (frame) {
-        SymbolContext sc(frame->GetSymbolContext(eSymbolContextFunction |
-                                                 eSymbolContextBlock |
-                                                 eSymbolContextSymbol));
-        if (sc.block) {
-          Block *inlined_block = sc.block->GetContainingInlinedBlock();
-          if (inlined_block) {
-            const InlineFunctionInfo *inlined_info =
-                inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetDisplayName().AsCString();
-          }
-        }
-
-        if (name == nullptr) {
-          if (sc.function)
-            name = sc.function->GetDisplayName().GetCString();
-        }
-
-        if (name == nullptr) {
-          if (sc.symbol)
-            name = sc.symbol->GetDisplayName().GetCString();
-        }
-      }
+      if (frame)
+        return frame->GetDisplayFunctionName();
     }
   }
   return name;

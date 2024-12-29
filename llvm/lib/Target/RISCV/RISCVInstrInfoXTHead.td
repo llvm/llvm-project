@@ -235,13 +235,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV, ActiveElementsAffectResult = 1 in
+  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
-  let RVVConstraint = WidenV, ActiveElementsAffectResult = 1 in
+  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
@@ -270,7 +270,7 @@ def TH_REVW : THRev_r<0b10010, 0b00, "th.revw">;
 
 let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "XTHeadBs",
     IsSignExtendingOpW = 1 in
-def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
+def TH_TST : THShift_ri<0b10001, 0b001, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 
 let Predicates = [HasVendorXTHeadCondMov] in {
@@ -550,9 +550,9 @@ def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
-          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i))), 2)>;
+          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy4:$i)), 2)>;
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
-          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i))), 3)>;
+          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy8:$i)), 3)>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
           (SLLI (XLenVT (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
@@ -769,7 +769,9 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
+}
 
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }

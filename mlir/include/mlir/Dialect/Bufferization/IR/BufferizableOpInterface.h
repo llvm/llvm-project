@@ -60,7 +60,8 @@ struct AliasingValue {
   bool isDefinite;
 };
 
-template <typename T> class AliasList {
+template <typename T>
+class AliasList {
 public:
   /// Create an empty list of aliases.
   AliasList() = default;
@@ -152,7 +153,7 @@ public:
   /// This function adds a DENY entry.
   void denyDialect(StringRef dialectNamespace) {
     Entry::FilterFn filterFn = [=](Operation *op) {
-      return op->getDialect()->getNamespace() == dialectNamespace;
+      return op->getName().getDialectNamespace() == dialectNamespace;
     };
     entries.push_back(Entry{filterFn, Entry::FilterType::DENY});
   }
@@ -259,7 +260,7 @@ struct BufferizationOptions {
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor -> MemRef type converter.
-  /// Parameters: Value, memory space, func op, bufferization options
+  /// Parameters: tensor type, memory space, func op, bufferization options
   using FunctionArgTypeConverterFn =
       std::function<BaseMemRefType(TensorType, Attribute memorySpace,
                                    func::FuncOp, const BufferizationOptions &)>;
@@ -344,9 +345,9 @@ struct BufferizationOptions {
   void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
 
   /// Type converter from tensors to memrefs. This type converter is used to
-  /// determine bufferized function argument types. By default, a type
-  /// converter that returns a memref type with a fully dynamic layout map is
-  /// used.
+  /// determine bufferized function argument and result types. By default, a
+  /// type converter that returns a memref type with a fully dynamic layout map
+  /// is used.
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
   FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
@@ -458,7 +459,8 @@ public:
   /// Starting from `value`, follow the use-def chain in reverse, always
   /// selecting the aliasing OpOperands. Find and return Values for which
   /// `condition` evaluates to true. OpOperands of such matching Values are not
-  /// traversed any further.
+  /// traversed any further, the visited aliasing opOperands will be preserved
+  /// through `visitedOpOperands`.
   ///
   /// When reaching the end of a chain, also return the last Value of that
   /// chain if `config.alwaysIncludeLeaves` is set.
@@ -483,7 +485,8 @@ public:
   /// `config`.
   SetVector<Value> findValueInReverseUseDefChain(
       Value value, llvm::function_ref<bool(Value)> condition,
-      TraversalConfig config = TraversalConfig()) const;
+      TraversalConfig config = TraversalConfig(),
+      llvm::DenseSet<OpOperand *> *visitedOpOperands = nullptr) const;
 
   /// Find the values that may define the contents of the given value at
   /// runtime. A block argument is always a definition. An OpResult is a

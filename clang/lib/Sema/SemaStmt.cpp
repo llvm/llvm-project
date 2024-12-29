@@ -10,17 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/IgnoreExpr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/TypeLoc.h"
@@ -34,15 +34,12 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -203,36 +200,44 @@ static bool DiagnoseUnusedComparison(Sema &S, const Expr *E) {
   return true;
 }
 
-static bool DiagnoseNoDiscard(Sema &S, const WarnUnusedResultAttr *A,
-                              SourceLocation Loc, SourceRange R1,
-                              SourceRange R2, bool IsCtor) {
+static bool DiagnoseNoDiscard(Sema &S, const NamedDecl *OffendingDecl,
+                              const WarnUnusedResultAttr *A, SourceLocation Loc,
+                              SourceRange R1, SourceRange R2, bool IsCtor) {
   if (!A)
     return false;
   StringRef Msg = A->getMessage();
 
   if (Msg.empty()) {
+    if (OffendingDecl)
+      return S.Diag(Loc, diag::warn_unused_return_type)
+             << IsCtor << A << OffendingDecl << false << R1 << R2;
     if (IsCtor)
-      return S.Diag(Loc, diag::warn_unused_constructor) << A << R1 << R2;
-    return S.Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
+      return S.Diag(Loc, diag::warn_unused_constructor)
+             << A << false << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_result) << A << false << R1 << R2;
   }
 
+  if (OffendingDecl)
+    return S.Diag(Loc, diag::warn_unused_return_type)
+           << IsCtor << A << OffendingDecl << true << Msg << R1 << R2;
   if (IsCtor)
-    return S.Diag(Loc, diag::warn_unused_constructor_msg) << A << Msg << R1
-                                                          << R2;
-  return S.Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_constructor)
+           << A << true << Msg << R1 << R2;
+  return S.Diag(Loc, diag::warn_unused_result) << A << true << Msg << R1 << R2;
 }
 
-void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
-  if (const LabelStmt *Label = dyn_cast_or_null<LabelStmt>(S))
-    return DiagnoseUnusedExprResult(Label->getSubStmt(), DiagID);
+namespace {
 
-  const Expr *E = dyn_cast_or_null<Expr>(S);
-  if (!E)
-    return;
+// Diagnoses unused expressions that call functions marked [[nodiscard]],
+// [[gnu::warn_unused_result]] and similar.
+// Additionally, a DiagID can be provided to emit a warning in additional
+// contexts (such as for an unused LHS of a comma expression)
+void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
+  bool NoDiscardOnly = !DiagID.has_value();
 
   // If we are in an unevaluated expression context, then there can be no unused
   // results because the results aren't expected to be used in the first place.
-  if (isUnevaluatedContext())
+  if (S.isUnevaluatedContext())
     return;
 
   SourceLocation ExprLoc = E->IgnoreParenImpCasts()->getExprLoc();
@@ -241,30 +246,31 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   // expression is a call to a function with the warn_unused_result attribute,
   // we warn no matter the location. Because of the order in which the various
   // checks need to happen, we factor out the macro-related test here.
-  bool ShouldSuppress =
-      SourceMgr.isMacroBodyExpansion(ExprLoc) ||
-      SourceMgr.isInSystemMacro(ExprLoc);
+  bool ShouldSuppress = S.SourceMgr.isMacroBodyExpansion(ExprLoc) ||
+                        S.SourceMgr.isInSystemMacro(ExprLoc);
 
   const Expr *WarnExpr;
   SourceLocation Loc;
   SourceRange R1, R2;
-  if (!E->isUnusedResultAWarning(WarnExpr, Loc, R1, R2, Context))
+  if (!E->isUnusedResultAWarning(WarnExpr, Loc, R1, R2, S.Context))
     return;
 
-  // If this is a GNU statement expression expanded from a macro, it is probably
-  // unused because it is a function-like macro that can be used as either an
-  // expression or statement.  Don't warn, because it is almost certainly a
-  // false positive.
-  if (isa<StmtExpr>(E) && Loc.isMacroID())
-    return;
-
-  // Check if this is the UNREFERENCED_PARAMETER from the Microsoft headers.
-  // That macro is frequently used to suppress "unused parameter" warnings,
-  // but its implementation makes clang's -Wunused-value fire.  Prevent this.
-  if (isa<ParenExpr>(E->IgnoreImpCasts()) && Loc.isMacroID()) {
-    SourceLocation SpellLoc = Loc;
-    if (findMacroSpelling(SpellLoc, "UNREFERENCED_PARAMETER"))
+  if (!NoDiscardOnly) {
+    // If this is a GNU statement expression expanded from a macro, it is
+    // probably unused because it is a function-like macro that can be used as
+    // either an expression or statement. Don't warn, because it is almost
+    // certainly a false positive.
+    if (isa<StmtExpr>(E) && Loc.isMacroID())
       return;
+
+    // Check if this is the UNREFERENCED_PARAMETER from the Microsoft headers.
+    // That macro is frequently used to suppress "unused parameter" warnings,
+    // but its implementation makes clang's -Wunused-value fire. Prevent this.
+    if (isa<ParenExpr>(E->IgnoreImpCasts()) && Loc.isMacroID()) {
+      SourceLocation SpellLoc = Loc;
+      if (S.findMacroSpelling(SpellLoc, "UNREFERENCED_PARAMETER"))
+        return;
+    }
   }
 
   // Okay, we have an unused result.  Depending on what the base expression is,
@@ -275,7 +281,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   if (const CXXBindTemporaryExpr *TempExpr = dyn_cast<CXXBindTemporaryExpr>(E))
     E = TempExpr->getSubExpr();
 
-  if (DiagnoseUnusedComparison(*this, E))
+  if (DiagnoseUnusedComparison(S, E))
     return;
 
   E = WarnExpr;
@@ -289,9 +295,10 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
     if (E->getType()->isVoidType())
       return;
 
-    if (DiagnoseNoDiscard(*this, cast_or_null<WarnUnusedResultAttr>(
-                                     CE->getUnusedResultAttr(Context)),
-                          Loc, R1, R2, /*isCtor=*/false))
+    auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
+    if (DiagnoseNoDiscard(S, OffendingDecl,
+                          cast_or_null<WarnUnusedResultAttr>(A), Loc, R1, R2,
+                          /*isCtor=*/false))
       return;
 
     // If the callee has attribute pure, const, or warn_unused_result, warn with
@@ -302,25 +309,30 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
       if (ShouldSuppress)
         return;
       if (FD->hasAttr<PureAttr>()) {
-        Diag(Loc, diag::warn_unused_call) << R1 << R2 << "pure";
+        S.Diag(Loc, diag::warn_unused_call) << R1 << R2 << "pure";
         return;
       }
       if (FD->hasAttr<ConstAttr>()) {
-        Diag(Loc, diag::warn_unused_call) << R1 << R2 << "const";
+        S.Diag(Loc, diag::warn_unused_call) << R1 << R2 << "const";
         return;
       }
     }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
     if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
+      const NamedDecl *OffendingDecl = nullptr;
       const auto *A = Ctor->getAttr<WarnUnusedResultAttr>();
-      A = A ? A : Ctor->getParent()->getAttr<WarnUnusedResultAttr>();
-      if (DiagnoseNoDiscard(*this, A, Loc, R1, R2, /*isCtor=*/true))
+      if (!A) {
+        OffendingDecl = Ctor->getParent();
+        A = OffendingDecl->getAttr<WarnUnusedResultAttr>();
+      }
+      if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
+                            /*isCtor=*/true))
         return;
     }
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     if (const TagDecl *TD = ILE->getType()->getAsTagDecl()) {
 
-      if (DiagnoseNoDiscard(*this, TD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
+      if (DiagnoseNoDiscard(S, TD, TD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
                             R2, /*isCtor=*/false))
         return;
     }
@@ -329,23 +341,24 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
 
   E = WarnExpr;
   if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(E)) {
-    if (getLangOpts().ObjCAutoRefCount && ME->isDelegateInitCall()) {
-      Diag(Loc, diag::err_arc_unused_init_message) << R1;
+    if (S.getLangOpts().ObjCAutoRefCount && ME->isDelegateInitCall()) {
+      S.Diag(Loc, diag::err_arc_unused_init_message) << R1;
       return;
     }
     const ObjCMethodDecl *MD = ME->getMethodDecl();
     if (MD) {
-      if (DiagnoseNoDiscard(*this, MD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
-                            R2, /*isCtor=*/false))
+      if (DiagnoseNoDiscard(S, nullptr, MD->getAttr<WarnUnusedResultAttr>(),
+                            Loc, R1, R2,
+                            /*isCtor=*/false))
         return;
     }
   } else if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E)) {
     const Expr *Source = POE->getSyntacticForm();
     // Handle the actually selected call of an OpenMP specialized call.
-    if (LangOpts.OpenMP && isa<CallExpr>(Source) &&
+    if (S.LangOpts.OpenMP && isa<CallExpr>(Source) &&
         POE->getNumSemanticExprs() == 1 &&
         isa<CallExpr>(POE->getSemanticExpr(0)))
-      return DiagnoseUnusedExprResult(POE->getSemanticExpr(0), DiagID);
+      return DiagnoseUnused(S, POE->getSemanticExpr(0), DiagID);
     if (isa<ObjCSubscriptRefExpr>(Source))
       DiagID = diag::warn_unused_container_subscript_expr;
     else if (isa<ObjCPropertyRefExpr>(Source))
@@ -362,17 +375,21 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
         if (!RD->getAttr<WarnUnusedAttr>())
           return;
   }
+
+  if (NoDiscardOnly)
+    return;
+
   // Diagnose "(void*) blah" as a typo for "(void) blah".
-  else if (const CStyleCastExpr *CE = dyn_cast<CStyleCastExpr>(E)) {
+  if (const CStyleCastExpr *CE = dyn_cast<CStyleCastExpr>(E)) {
     TypeSourceInfo *TI = CE->getTypeInfoAsWritten();
     QualType T = TI->getType();
 
     // We really do want to use the non-canonical type here.
-    if (T == Context.VoidPtrTy) {
+    if (T == S.Context.VoidPtrTy) {
       PointerTypeLoc TL = TI->getTypeLoc().castAs<PointerTypeLoc>();
 
-      Diag(Loc, diag::warn_unused_voidptr)
-        << FixItHint::CreateRemoval(TL.getStarLoc());
+      S.Diag(Loc, diag::warn_unused_voidptr)
+          << FixItHint::CreateRemoval(TL.getStarLoc());
       return;
     }
   }
@@ -381,16 +398,34 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   // isn't an array.
   if (E->isGLValue() && E->getType().isVolatileQualified() &&
       !E->getType()->isArrayType()) {
-    Diag(Loc, diag::warn_unused_volatile) << R1 << R2;
+    S.Diag(Loc, diag::warn_unused_volatile) << R1 << R2;
     return;
   }
 
   // Do not diagnose use of a comma operator in a SFINAE context because the
   // type of the left operand could be used for SFINAE, so technically it is
   // *used*.
-  if (DiagID != diag::warn_unused_comma_left_operand || !isSFINAEContext())
-    DiagIfReachable(Loc, S ? llvm::ArrayRef(S) : std::nullopt,
-                    PDiag(DiagID) << R1 << R2);
+  if (DiagID == diag::warn_unused_comma_left_operand && S.isSFINAEContext())
+    return;
+
+  S.DiagIfReachable(Loc, llvm::ArrayRef<const Stmt *>(E),
+                    S.PDiag(*DiagID) << R1 << R2);
+}
+} // namespace
+
+void Sema::DiagnoseDiscardedExprMarkedNodiscard(const Expr *E) {
+  DiagnoseUnused(*this, E, std::nullopt);
+}
+
+void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
+  if (const LabelStmt *Label = dyn_cast_if_present<LabelStmt>(S))
+    S = Label->getSubStmt();
+
+  const Expr *E = dyn_cast_if_present<Expr>(S);
+  if (!E)
+    return;
+
+  DiagnoseUnused(*this, E, DiagID);
 }
 
 void Sema::ActOnStartOfCompoundStmt(bool IsStmtExpr) {
@@ -887,6 +922,15 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     Diag(CalleeLoc, PD);
     Diag(MTA.getLocation(), diag::note_tail_call_required) << &MTA;
     return false;
+  }
+
+  // The lifetimes of locals and incoming function parameters must end before
+  // the call, because we can't have a stack frame to store them, so diagnose
+  // any pointers or references to them passed into the musttail call.
+  for (auto ArgExpr : CE->arguments()) {
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, ArgExpr->getType(), false);
+    checkExprLifetimeMustTailArg(*this, Entity, const_cast<Expr *>(ArgExpr));
   }
 
   return true;
@@ -3151,7 +3195,8 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
     if (ExprRes.isInvalid())
       return StmtError();
     E = ExprRes.get();
-    if (DiagnoseAssignmentResult(ConvTy, StarLoc, DestTy, ETy, E, AA_Passing))
+    if (DiagnoseAssignmentResult(ConvTy, StarLoc, DestTy, ETy, E,
+                                 AssignmentAction::Passing))
       return StmtError();
   }
 
@@ -3595,15 +3640,15 @@ namespace {
 /// others. Pretend that all local typedefs are always referenced, to not warn
 /// on this. This isn't necessary if f has internal linkage, or the typedef
 /// is private.
-class LocalTypedefNameReferencer
-    : public RecursiveASTVisitor<LocalTypedefNameReferencer> {
+class LocalTypedefNameReferencer : public DynamicRecursiveASTVisitor {
 public:
   LocalTypedefNameReferencer(Sema &S) : S(S) {}
-  bool VisitRecordType(const RecordType *RT);
+  bool VisitRecordType(RecordType *RT) override;
+
 private:
   Sema &S;
 };
-bool LocalTypedefNameReferencer::VisitRecordType(const RecordType *RT) {
+bool LocalTypedefNameReferencer::VisitRecordType(RecordType *RT) {
   auto *R = dyn_cast<CXXRecordDecl>(RT->getDecl());
   if (!R || !R->isLocalClass() || !R->isLocalClass()->isExternallyVisible() ||
       R->isDependentType())
@@ -3757,6 +3802,8 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
         << FSI->getFirstCoroutineStmtKeyword();
   }
+
+  CheckInvalidBuiltinCountedByRef(RetVal.get(), ReturnArgKind);
 
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);

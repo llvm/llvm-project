@@ -49,13 +49,12 @@ TEST(Bytecode, MultiModuleWithResource) {
   std::string buffer;
   llvm::raw_string_ostream ostream(buffer);
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
-  ostream.flush();
 
   // Create copy of buffer which is aligned to requested resource alignment.
   constexpr size_t kAlignment = 0x20;
   size_t bufferSize = buffer.size();
   buffer.reserve(bufferSize + kAlignment - 1);
-  size_t pad = ~(uintptr_t)buffer.data() + 1 & kAlignment - 1;
+  size_t pad = (~(uintptr_t)buffer.data() + 1) & (kAlignment - 1);
   buffer.insert(0, pad, ' ');
   StringRef alignedBuffer(buffer.data() + pad, bufferSize);
 
@@ -70,8 +69,8 @@ TEST(Bytecode, MultiModuleWithResource) {
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
-  auto checkResourceAttribute = [&](Operation *op) {
-    Attribute attr = roundTripModule->getDiscardableAttr("bytecode.test");
+  auto checkResourceAttribute = [](Operation *parsedModule) {
+    Attribute attr = parsedModule->getDiscardableAttr("bytecode.test");
     ASSERT_TRUE(attr);
     auto denseResourceAttr = dyn_cast<DenseI32ResourceElementsAttr>(attr);
     ASSERT_TRUE(denseResourceAttr);
@@ -139,7 +138,7 @@ TEST(Bytecode, OpWithoutProperties) {
   ASSERT_TRUE(succeeded(writeBytecodeToFile(op.get(), os)));
   std::unique_ptr<Block> block = std::make_unique<Block>();
   ASSERT_TRUE(succeeded(readBytecodeFile(
-      llvm::MemoryBufferRef(os.str(), "string-buffer"), block.get(), config)));
+      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
   Operation *roundtripped = &block->front();
   EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
   EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);

@@ -23,7 +23,9 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -346,8 +348,8 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DL, get(And), Reg).addReg(Reg).addImm(Mask);
 }
 
-// Convert MOVI to MOVQ if the target is a data register and the immediate
-// fits in a sign-extended i8, otherwise emit a plain MOV.
+// Convert MOVI to the appropriate instruction (sequence) for setting
+// the register to an immediate value.
 bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
   Register Reg = MIB->getOperand(0).getReg();
   int64_t Imm = MIB->getOperand(1).getImm();
@@ -360,18 +362,66 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
   if (AR16->contains(Reg) || AR32->contains(Reg))
     IsAddressReg = true;
 
+  // We need to assign to the full register to make IV happy
+  Register SReg =
+      MVTSize == MVT::i32
+          ? Reg
+          : Register(RI.getMatchingMegaReg(Reg, IsAddressReg ? AR32 : DR32));
+  assert(SReg && "No viable MEGA register available");
+
   LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
 
+  // Sign extention doesn't matter if we only use the bottom 8 bits
   if (MVTSize == MVT::i8 || (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
     LLVM_DEBUG(dbgs() << "MOVEQ\n");
 
-    // We need to assign to the full register to make IV happy
-    Register SReg =
-        MVTSize == MVT::i32 ? Reg : Register(RI.getMatchingMegaReg(Reg, DR32));
-    assert(SReg && "No viable MEGA register available");
-
     MIB->setDesc(get(M68k::MOVQ));
     MIB->getOperand(0).setReg(SReg);
+
+    // Counter the effects of sign-extension with a bitwise not.
+    // This is only faster and smaller for 32 bit values.
+  } else if (DR32->contains(Reg) && isUInt<8>(Imm)) {
+    LLVM_DEBUG(dbgs() << "MOVEQ and NOT\n");
+
+    MachineBasicBlock &MBB = *MIB->getParent();
+    DebugLoc DL = MIB->getDebugLoc();
+
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex8Lo);
+    assert(SubReg && "No viable SUB register available");
+
+    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOVQ), SReg).addImm(~Imm & 0xFF);
+    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::NOT8d), SubReg).addReg(SubReg);
+
+    MIB->removeFromParent();
+
+    // Special case for setting address register to NULL (0)
+  } else if (IsAddressReg && Imm == 0) {
+    LLVM_DEBUG(dbgs() << "SUBA\n");
+
+    MachineBasicBlock &MBB = *MIB->getParent();
+    DebugLoc DL = MIB->getDebugLoc();
+
+    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::SUB32ar), SReg)
+        .addReg(SReg, RegState::Undef)
+        .addReg(SReg, RegState::Undef);
+
+    MIB->removeFromParent();
+
+    // movea.w implicitly sign extends to the full register width,
+    // so exploit that if the immediate fits in the correct range.
+    //
+    // TODO: use lea imm.w, %an for further constants when 16-bit
+    // absolute addressing is implemented.
+  } else if (AR32->contains(Reg) && isUInt<16>(Imm)) {
+    LLVM_DEBUG(dbgs() << "MOVEA w/ implicit extend\n");
+
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo);
+    assert(SubReg && "No viable SUB register available");
+
+    MIB->setDesc(get(M68k::MOV16ai));
+    MIB->getOperand(0).setReg(SubReg);
+
+    // Fall back to a move with immediate
   } else {
     LLVM_DEBUG(dbgs() << "MOVE\n");
     MIB->setDesc(get(MVTSize == MVT::i16 ? M68k::MOV16ri : M68k::MOV32ri));
@@ -523,6 +573,12 @@ bool M68kInstrInfo::ExpandPUSH_POP(MachineInstrBuilder &MIB,
 }
 
 bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
+  if (MIB->getOpcode() == M68k::MOV8cd) {
+    // Promote used register to the next class
+    MachineOperand &Opd = MIB->getOperand(1);
+    Opd.setReg(getRegisterInfo().getMatchingSuperReg(
+        Opd.getReg(), M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass));
+  }
 
   // Replace the pseudo instruction with the real one
   if (IsToCCR)
@@ -530,11 +586,6 @@ bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
   else
     // FIXME M68010 or later is required
     MIB->setDesc(get(M68k::MOV16dc));
-
-  // Promote used register to the next class
-  auto &Opd = MIB->getOperand(1);
-  Opd.setReg(getRegisterInfo().getMatchingSuperReg(
-      Opd.getReg(), M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass));
 
   return true;
 }
@@ -663,7 +714,8 @@ bool M68kInstrInfo::isPCRelRegisterOperandLegal(
 void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 const DebugLoc &DL, MCRegister DstReg,
-                                MCRegister SrcReg, bool KillSrc) const {
+                                MCRegister SrcReg, bool KillSrc,
+                                bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
 
   // First deal with the normal symmetric copies.
@@ -708,13 +760,27 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool ToSR = DstReg == M68k::SR;
 
   if (FromCCR) {
-    assert(M68k::DR8RegClass.contains(DstReg) &&
-           "Need DR8 register to copy CCR");
-    Opc = M68k::MOV8dc;
+    if (M68k::DR8RegClass.contains(DstReg)) {
+      Opc = M68k::MOV8dc;
+    } else if (M68k::DR16RegClass.contains(DstReg)) {
+      Opc = M68k::MOV16dc;
+    } else if (M68k::DR32RegClass.contains(DstReg)) {
+      Opc = M68k::MOV16dc;
+    } else {
+      LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
+      llvm_unreachable("Invalid register for MOVE from CCR");
+    }
   } else if (ToCCR) {
-    assert(M68k::DR8RegClass.contains(SrcReg) &&
-           "Need DR8 register to copy CCR");
-    Opc = M68k::MOV8cd;
+    if (M68k::DR8RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV8cd;
+    } else if (M68k::DR16RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV16cd;
+    } else if (M68k::DR32RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV16cd;
+    } else {
+      LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
+      llvm_unreachable("Invalid register for MOVE to CCR");
+    }
   } else if (FromSR || ToSR)
     llvm_unreachable("Cannot emit SR copy instruction");
 

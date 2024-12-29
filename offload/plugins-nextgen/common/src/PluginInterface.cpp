@@ -17,6 +17,7 @@
 #include "ErrorReporting.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
+#include "Shared/Utils.h"
 #include "Utils/ELF.h"
 #include "omptarget.h"
 
@@ -77,7 +78,7 @@ private:
         Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
     Device->free(Addr);
     // Align Address to MaxMemoryAllocation
-    Addr = (void *)alignPtr((Addr), MaxMemoryAllocation);
+    Addr = (void *)utils::alignPtr((Addr), MaxMemoryAllocation);
     return Addr;
   }
 
@@ -210,8 +211,8 @@ public:
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
     if (const auto *TgtImageBitcode = Image.getTgtImageBitcode()) {
-      size_t Size =
-          getPtrDiff(TgtImageBitcode->ImageEnd, TgtImageBitcode->ImageStart);
+      size_t Size = utils::getPtrDiff(TgtImageBitcode->ImageEnd,
+                                      TgtImageBitcode->ImageStart);
       MemoryBufferRef MBR = MemoryBufferRef(
           StringRef((const char *)TgtImageBitcode->ImageStart, Size), "");
       OS << MBR.getBuffer();
@@ -244,10 +245,10 @@ public:
 
       int32_t NameLength = std::strlen(OffloadEntry.Name) + 1;
       memcpy(BufferPtr, OffloadEntry.Name, NameLength);
-      BufferPtr = advanceVoidPtr(BufferPtr, NameLength);
+      BufferPtr = utils::advancePtr(BufferPtr, NameLength);
 
       *((uint32_t *)(BufferPtr)) = OffloadEntry.Size;
-      BufferPtr = advanceVoidPtr(BufferPtr, sizeof(uint32_t));
+      BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
       auto Err = Plugin::success();
       {
@@ -257,11 +258,12 @@ public:
       }
       if (Err)
         report_fatal_error("Error retrieving data for global");
-      BufferPtr = advanceVoidPtr(BufferPtr, OffloadEntry.Size);
+      BufferPtr = utils::advancePtr(BufferPtr, OffloadEntry.Size);
     }
     assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
            "Buffer over/under-filled.");
-    assert(Size == getPtrDiff(BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+    assert(Size == utils::getPtrDiff(BufferPtr,
+                                     GlobalsMB->get()->getBufferStart()) &&
            "Buffer size mismatch");
 
     StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), Size);
@@ -524,20 +526,21 @@ GenericKernelTy::getKernelLaunchEnvironment(
 
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
-                                       uint32_t NumThreads,
-                                       uint64_t NumBlocks) const {
+                                       uint32_t NumThreads[3],
+                                       uint32_t NumBlocks[3]) const {
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "Launching kernel %s with %" PRIu64
-       " blocks and %d threads in %s mode\n",
-       getName(), NumBlocks, NumThreads, getExecutionModeName());
+       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
+       "%s mode\n",
+       getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
+       NumThreads[1], NumThreads[2], getExecutionModeName());
   return printLaunchInfoDetails(GenericDevice, KernelArgs, NumThreads,
                                 NumBlocks);
 }
 
 Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                               KernelArgsTy &KernelArgs,
-                                              uint32_t NumThreads,
-                                              uint64_t NumBlocks) const {
+                                              uint32_t NumThreads[3],
+                                              uint32_t NumBlocks[3]) const {
   return Plugin::success();
 }
 
@@ -564,10 +567,16 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     Args, Ptrs, *KernelLaunchEnvOrErr);
   }
 
-  uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
-  uint64_t NumBlocks =
-      getNumBlocks(GenericDevice, KernelArgs.NumTeams, KernelArgs.Tripcount,
-                   NumThreads, KernelArgs.ThreadLimit[0] > 0);
+  uint32_t NumThreads[3] = {KernelArgs.ThreadLimit[0],
+                            KernelArgs.ThreadLimit[1],
+                            KernelArgs.ThreadLimit[2]};
+  uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
+                           KernelArgs.NumTeams[2]};
+  if (!IsBareKernel) {
+    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
+    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
+                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
+  }
 
   // Record the kernel description after we modified the argument count and num
   // blocks/threads.
@@ -576,7 +585,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     RecordReplay.saveImage(getName(), getImage());
     RecordReplay.saveKernelInput(getName(), getImage());
     RecordReplay.saveKernelDescr(getName(), LaunchParams, KernelArgs.NumArgs,
-                                 NumBlocks, NumThreads, KernelArgs.Tripcount);
+                                 NumBlocks[0], NumThreads[0],
+                                 KernelArgs.Tripcount);
   }
 
   if (auto Err =
@@ -616,11 +626,10 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
-  assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
-         "Multi dimensional launch not supported yet.");
+  assert(!IsBareKernel && "bare kernel should not call this function");
 
-  if (IsBareKernel && ThreadLimitClause[0] > 0)
-    return ThreadLimitClause[0];
+  assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
+         "Multi dimensional launch not supported yet.");
 
   if (ThreadLimitClause[0] > 0 && isGenericMode())
     ThreadLimitClause[0] += GenericDevice.getWarpSize();
@@ -630,16 +639,15 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                      : PreferredNumThreads);
 }
 
-uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
+uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint32_t NumTeamsClause[3],
                                        uint64_t LoopTripCount,
                                        uint32_t &NumThreads,
                                        bool IsNumThreadsFromUser) const {
-  assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
-         "Multi dimensional launch not supported yet.");
+  assert(!IsBareKernel && "bare kernel should not call this function");
 
-  if (IsBareKernel && NumTeamsClause[0] > 0)
-    return NumTeamsClause[0];
+  assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
+         "Multi dimensional launch not supported yet.");
 
   if (NumTeamsClause[0] > 0) {
     // TODO: We need to honor any value and consequently allow more than the
@@ -842,6 +850,20 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
            DeviceMemoryPoolTracking.AllocationMax);
   }
 
+  for (auto *Image : LoadedImages) {
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    if (!Handler.hasProfilingGlobals(*this, *Image))
+      continue;
+
+    GPUProfGlobals profdata;
+    auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
+    if (!ProfOrErr)
+      return ProfOrErr.takeError();
+
+    // TODO: write data to profiling file
+    ProfOrErr->dump();
+  }
+
   // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
   if (MemoryManager)
@@ -917,7 +939,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
     size_t Bytes =
-        getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+        utils::getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(
         device_load, Plugin.getUserId(DeviceId),
         /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
@@ -1145,8 +1167,8 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
       return std::move(Err);
 
     // Return the device accessible pointer with the correct offset.
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   // No intersecting registered allocation found in the map. First, lock the
@@ -1683,7 +1705,7 @@ int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 
 int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
   StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                   target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+                   utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
@@ -1715,7 +1737,7 @@ int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
 int32_t GenericPluginTy::is_device_compatible(int32_t DeviceId,
                                               __tgt_device_image *Image) {
   StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                   target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+                   utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
@@ -2162,12 +2184,4 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
   // Note that this is not the kernel's device address.
   *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
-}
-
-bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  return true;
-#else
-  return false;
-#endif
 }

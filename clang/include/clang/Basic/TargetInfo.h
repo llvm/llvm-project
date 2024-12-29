@@ -16,6 +16,7 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -86,6 +87,7 @@ enum class FloatModeKind {
 struct TransferrableTargetInfo {
   unsigned char PointerWidth, PointerAlign;
   unsigned char BoolWidth, BoolAlign;
+  unsigned char ShortWidth, ShortAlign;
   unsigned char IntWidth, IntAlign;
   unsigned char HalfWidth, HalfAlign;
   unsigned char BFloat16Width, BFloat16Align;
@@ -261,9 +263,6 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned IsRenderScriptTarget : 1;
-
-  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -359,7 +358,14 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list_tag {
+    //    int* __va_stk;
+    //    int* __va_reg;
+    //    int __va_ndx;
+    //} va_list;
+    XtensaABIBuiltinVaList
   };
 
 protected:
@@ -487,6 +493,13 @@ public:
   /// \param AddrSpace address space of pointee in source language.
   virtual uint64_t getNullPointerValue(LangAS AddrSpace) const { return 0; }
 
+  /// Returns true if an address space can be safely converted to another.
+  /// \param A address space of target in source language.
+  /// \param B address space of source in source language.
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const {
+    return A == B;
+  }
+
   /// Return the size of '_Bool' and C++ 'bool' for this target, in bits.
   unsigned getBoolWidth() const { return BoolWidth; }
 
@@ -496,13 +509,10 @@ public:
   unsigned getCharWidth() const { return 8; } // FIXME
   unsigned getCharAlign() const { return 8; } // FIXME
 
-  /// Return the size of 'signed short' and 'unsigned short' for this
-  /// target, in bits.
-  unsigned getShortWidth() const { return 16; } // FIXME
-
-  /// Return the alignment of 'signed short' and 'unsigned short' for
-  /// this target.
-  unsigned getShortAlign() const { return 16; } // FIXME
+  /// getShortWidth/Align - Return the size of 'signed short' and
+  /// 'unsigned short' for this target, in bits.
+  unsigned getShortWidth() const { return ShortWidth; }
+  unsigned getShortAlign() const { return ShortAlign; }
 
   /// getIntWidth/Align - Return the size of 'signed int' and 'unsigned int' for
   /// this target, in bits.
@@ -1006,7 +1016,6 @@ public:
   virtual void getTargetDefines(const LangOptions &Opts,
                                 MacroBuilder &Builder) const = 0;
 
-
   /// Return information about target-specific builtins for
   /// the current primary target, and info about which builtins are non-portable
   /// across the current set of primary and secondary targets.
@@ -1031,9 +1040,6 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
-
-  /// Returns true for RenderScript.
-  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
 
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
@@ -1496,12 +1502,17 @@ public:
   /// Identify whether this target supports multiversioning of functions,
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
-    return getTriple().isX86() || getTriple().isAArch64();
+    return getTriple().isX86() || getTriple().isAArch64() ||
+           getTriple().isRISCV();
   }
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
     if (getTriple().isOSBinFormatMachO())
+      return true;
+    if (getTriple().isOSWindows() && getTriple().isAArch64())
+      return true;
+    if (getTriple().getArch() == llvm::Triple::ArchType::avr)
       return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
@@ -1520,13 +1531,9 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned multiVersionSortPriority(StringRef Name) const {
+  virtual unsigned getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
-
-  // Return the target-specific cost for feature
-  // that taken into account in priority sorting.
-  virtual unsigned multiVersionFeatureCost() const { return 0; }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
   // argument.
@@ -1726,6 +1733,13 @@ public:
   virtual bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
+  /// Get the target default CFBranchLabelScheme scheme
+  virtual CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const;
+
+  virtual bool
+  checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
+                                    DiagnosticsEngine &Diags) const;
+
   /// Check if the target supports CFProtection return.
   virtual bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
@@ -1851,15 +1865,18 @@ protected:
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
-  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const {
-    return std::nullopt;
-  }
+  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const { return {}; }
 
- private:
+private:
   // Assert the values for the fractional and integral bits for each fixed point
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+namespace targets {
+std::unique_ptr<clang::TargetInfo>
+AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
+} // namespace targets
 
 }  // end namespace clang
 

@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_PERF(double, LIBC_NAMESPACE::hypot, ::hypot,
+BINARY_OP_SINGLE_OUTPUT_PERF(double, double, LIBC_NAMESPACE::hypot, ::hypot,
                              "hypot_perf.log")

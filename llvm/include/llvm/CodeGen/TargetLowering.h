@@ -301,6 +301,7 @@ public:
     Type *Ty = nullptr;
     bool IsSExt : 1;
     bool IsZExt : 1;
+    bool IsNoExt : 1;
     bool IsInReg : 1;
     bool IsSRet : 1;
     bool IsNest : 1;
@@ -317,10 +318,11 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
-          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
-          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
-          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
+        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
+          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
+          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
+          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
+          IsCFGuardTarget(false) {}
 
     void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
@@ -453,6 +455,13 @@ public:
     return true;
   }
 
+  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
+  /// should be expanded using generic code in SelectionDAGBuilder.
+  virtual bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
+    return true;
+  }
+
   /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded
   /// using generic code in SelectionDAGBuilder.
   virtual bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const {
@@ -473,6 +482,13 @@ public:
   unsigned getBitWidthForCttzElements(Type *RetTy, ElementCount EC,
                                       bool ZeroIsPoison,
                                       const ConstantRange *VScaleRange) const;
+
+  /// Return true if the @llvm.experimental.vector.match intrinsic should be
+  /// expanded for vector type `VT' and search size `SearchSize' using generic
+  /// code in SelectionDAGBuilder.
+  virtual bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const {
+    return true;
+  }
 
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
@@ -1609,13 +1625,14 @@ public:
     return Action;
   }
 
-  /// Return true if the specified condition code is legal on this target.
+  /// Return true if the specified condition code is legal for a comparison of
+  /// the specified types on this target.
   bool isCondCodeLegal(ISD::CondCode CC, MVT VT) const {
     return getCondCodeAction(CC, VT) == Legal;
   }
 
-  /// Return true if the specified condition code is legal or custom on this
-  /// target.
+  /// Return true if the specified condition code is legal or custom for a
+  /// comparison of the specified types on this target.
   bool isCondCodeLegalOrCustom(ISD::CondCode CC, MVT VT) const {
     return getCondCodeAction(CC, VT) == Legal ||
            getCondCodeAction(CC, VT) == Custom;
@@ -1703,10 +1720,9 @@ public:
     return getValueType(DL, Ty, AllowUnknown).getSimpleVT();
   }
 
-  /// Return the desired alignment for ByVal or InAlloca aggregate function
-  /// arguments in the caller parameter area.  This is the actual alignment, not
-  /// its logarithm.
-  virtual uint64_t getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
+  /// Returns the desired alignment for ByVal or InAlloca aggregate function
+  /// arguments in the caller parameter area.
+  virtual Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
 
   /// Return the type of registers that this ValueType will eventually require.
   MVT getRegisterType(MVT VT) const {
@@ -2195,6 +2211,11 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a cmpxchg expansion using a target-specific method.
+  virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+    llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
+  }
+
   /// Perform a bit test atomicrmw using a target-specific intrinsic. This
   /// represents the combined bit test intrinsic which will be lowered at a late
   /// stage by the backend.
@@ -2270,7 +2291,7 @@ public:
   virtual void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const {}
 
   /// Returns true if arguments should be sign-extended in lib calls.
-  virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
+  virtual bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const {
     return IsSigned;
   }
 
@@ -2851,15 +2872,6 @@ public:
     return Value == 0;
   }
 
-  /// Return true if it's significantly cheaper to shift a vector by a uniform
-  /// scalar than by an amount which will vary across each lane. On x86 before
-  /// AVX2 for example, there is a "psllw" instruction for the former case, but
-  /// no simple instruction for a general "a << b" operation on vectors.
-  /// This should also apply to lowering for vector funnel shifts (rotates).
-  virtual bool isVectorShiftByScalarCheap(Type *Ty) const {
-    return false;
-  }
-
   /// Given a shuffle vector SVI representing a vector splat, return a new
   /// scalar type of size equal to SVI's scalar type if the new type is more
   /// profitable. Returns nullptr otherwise. For example under MVE float splats
@@ -2967,10 +2979,9 @@ public:
   }
 
   virtual bool isTruncateFree(EVT FromVT, EVT ToVT) const { return false; }
-  virtual bool isTruncateFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
-                              LLVMContext &Ctx) const {
-    return isTruncateFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
-                          getApproximateEVTForLLT(ToTy, DL, Ctx));
+  virtual bool isTruncateFree(LLT FromTy, LLT ToTy, LLVMContext &Ctx) const {
+    return isTruncateFree(getApproximateEVTForLLT(FromTy, Ctx),
+                          getApproximateEVTForLLT(ToTy, Ctx));
   }
 
   /// Return true if truncating the specific node Val to type VT2 is free.
@@ -3053,10 +3064,9 @@ public:
   }
 
   virtual bool isZExtFree(EVT FromTy, EVT ToTy) const { return false; }
-  virtual bool isZExtFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
-                          LLVMContext &Ctx) const {
-    return isZExtFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
-                      getApproximateEVTForLLT(ToTy, DL, Ctx));
+  virtual bool isZExtFree(LLT FromTy, LLT ToTy, LLVMContext &Ctx) const {
+    return isZExtFree(getApproximateEVTForLLT(FromTy, Ctx),
+                      getApproximateEVTForLLT(ToTy, Ctx));
   }
 
   /// Return true if zero-extending the specific node Val to type VT2 is free
@@ -3075,16 +3085,6 @@ public:
   /// Return true if this constant should be sign extended when promoting to
   /// a larger type.
   virtual bool signExtendConstant(const ConstantInt *C) const { return false; }
-
-  /// Return true if sinking I's operands to the same basic block as I is
-  /// profitable, e.g. because the operands can be folded into a target
-  /// instruction during instruction selection. After calling the function
-  /// \p Ops contains the Uses to sink ordered by dominance (dominating users
-  /// come first).
-  virtual bool shouldSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &Ops) const {
-    return false;
-  }
 
   /// Try to optimize extending or truncating conversion instructions (like
   /// zext, trunc, fptoui, uitofp) for the target.
@@ -3233,6 +3233,9 @@ public:
   /// not legal, but should return true if those types will eventually legalize
   /// to types that support FMAs. After legalization, it will only be called on
   /// types that support FMAs (via Legal or Custom actions)
+  ///
+  /// Targets that care about soft float support should return false when soft
+  /// float code is being generated (i.e. use-soft-float).
   virtual bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                           EVT) const {
     return false;
@@ -3299,7 +3302,7 @@ public:
   /// Return true if it's profitable to narrow operations of type SrcVT to
   /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
-  virtual bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
+  virtual bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const {
     return false;
   }
 
@@ -3402,7 +3405,7 @@ public:
 
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects() const { return false; }
+  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
 
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
@@ -4299,6 +4302,12 @@ public:
   /// @param Level the current DAGCombine legalization level.
   virtual bool isDesirableToCommuteWithShift(const SDNode *N,
                                              CombineLevel Level) const {
+    SDValue ShiftLHS = N->getOperand(0);
+    if (!ShiftLHS->hasOneUse())
+      return false;
+    if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+        !ShiftLHS.getOperand(0)->hasOneUse())
+      return false;
     return true;
   }
 
@@ -4707,18 +4716,18 @@ public:
     // shouldExtendTypeInLibCall can get the original type before soften.
     ArrayRef<EVT> OpsVTBeforeSoften;
     EVT RetVTBeforeSoften;
-    bool IsSExt : 1;
+    bool IsSigned : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
     bool IsPostTypeLegalization : 1;
     bool IsSoften : 1;
 
     MakeLibCallOptions()
-        : IsSExt(false), DoesNotReturn(false), IsReturnValueUsed(true),
+        : IsSigned(false), DoesNotReturn(false), IsReturnValueUsed(true),
           IsPostTypeLegalization(false), IsSoften(false) {}
 
-    MakeLibCallOptions &setSExt(bool Value = true) {
-      IsSExt = Value;
+    MakeLibCallOptions &setIsSigned(bool Value = true) {
+      IsSigned = Value;
       return *this;
     }
 
@@ -5577,9 +5586,7 @@ public:
 
   /// If this function returns true, SelectionDAGBuilder emits a
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
-  virtual bool useLoadStackGuardNode() const {
-    return false;
-  }
+  virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
   virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                       const SDLoc &DL) const {
@@ -5606,6 +5613,10 @@ public:
   virtual bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode, EVT) const {
     return true;
   }
+
+  // Expand vector operation by dividing it into smaller length operations and
+  // joining their results. SDValue() is returned when expansion did not happen.
+  SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

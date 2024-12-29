@@ -8,63 +8,63 @@
 
 #include <riscv_vector.h>
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vlseg6e16_v_bf16mf4x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vlseg6e16_v_bf16mf4x6(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @llvm.riscv.vlseg6.nxv1bf16.i64(<vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, ptr [[RS1]], i64 [[VL]])
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vlseg6.triscv.vector.tuple_nxv2i8_6t.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]]
 //
 vbfloat16mf4x6_t test_vlseg6e16_v_bf16mf4x6(const __bf16 *rs1, size_t vl) {
   return __riscv_vlseg6e16_v_bf16mf4x6(rs1, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vlseg6e16_v_bf16mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vlseg6e16_v_bf16mf2x6(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @llvm.riscv.vlseg6.nxv2bf16.i64(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, ptr [[RS1]], i64 [[VL]])
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.triscv.vector.tuple_nxv4i8_6t.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]]
 //
 vbfloat16mf2x6_t test_vlseg6e16_v_bf16mf2x6(const __bf16 *rs1, size_t vl) {
   return __riscv_vlseg6e16_v_bf16mf2x6(rs1, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vlseg6e16_v_bf16m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vlseg6e16_v_bf16m1x6(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @llvm.riscv.vlseg6.nxv4bf16.i64(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, ptr [[RS1]], i64 [[VL]])
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.triscv.vector.tuple_nxv8i8_6t.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]]
 //
 vbfloat16m1x6_t test_vlseg6e16_v_bf16m1x6(const __bf16 *rs1, size_t vl) {
   return __riscv_vlseg6e16_v_bf16m1x6(rs1, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vlseg6e16_v_bf16mf4x6_m(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vlseg6e16_v_bf16mf4x6_m(
 // CHECK-RV64-SAME: <vscale x 1 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @llvm.riscv.vlseg6.mask.nxv1bf16.i64(<vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, <vscale x 1 x bfloat> poison, ptr [[RS1]], <vscale x 1 x i1> [[VM]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv2i8_6t.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison, ptr [[RS1]], <vscale x 1 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) [[TMP0]]
 //
 vbfloat16mf4x6_t test_vlseg6e16_v_bf16mf4x6_m(vbool64_t vm, const __bf16 *rs1,
                                               size_t vl) {
   return __riscv_vlseg6e16_v_bf16mf4x6_m(vm, rs1, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vlseg6e16_v_bf16mf2x6_m(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vlseg6e16_v_bf16mf2x6_m(
 // CHECK-RV64-SAME: <vscale x 2 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @llvm.riscv.vlseg6.mask.nxv2bf16.i64(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison, ptr [[RS1]], <vscale x 2 x i1> [[VM]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[RS1]], <vscale x 2 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP0]]
 //
 vbfloat16mf2x6_t test_vlseg6e16_v_bf16mf2x6_m(vbool32_t vm, const __bf16 *rs1,
                                               size_t vl) {
   return __riscv_vlseg6e16_v_bf16mf2x6_m(vm, rs1, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vlseg6e16_v_bf16m1x6_m(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vlseg6e16_v_bf16m1x6_m(
 // CHECK-RV64-SAME: <vscale x 4 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @llvm.riscv.vlseg6.mask.nxv4bf16.i64(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison, ptr [[RS1]], <vscale x 4 x i1> [[VM]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison, ptr [[RS1]], <vscale x 4 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) [[TMP0]]
 //
 vbfloat16m1x6_t test_vlseg6e16_v_bf16m1x6_m(vbool16_t vm, const __bf16 *rs1,
                                             size_t vl) {

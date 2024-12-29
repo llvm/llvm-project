@@ -22,6 +22,8 @@ if (NOT LLVM_LINK_LLVM_DYLIB)
 endif()
 
 # Include the RPC server from the `libc` project if availible.
+include(FindLibcCommonUtils)
+target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
 	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server)
 	target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
@@ -29,19 +31,9 @@ elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   find_library(llvmlibc_rpc_server NAMES llvmlibc_rpc_server
                PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
   if(llvmlibc_rpc_server)
-		target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server})
+    target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server})
 		target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
-    # We may need to get the headers directly from the 'libc' source directory.
-    target_include_directories(PluginCommon PRIVATE
-                               ${CMAKE_SOURCE_DIR}/../libc/utils/gpu/server
-                               ${CMAKE_SOURCE_DIR}/../libc/include)
   endif()
-endif()
-
-# If we have OMPT enabled include it in the list of sources.
-if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
-  target_sources(PluginCommon PRIVATE OMPT/OmptCallback.cpp)
-  target_include_directories(PluginCommon PRIVATE OMPT)
 endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.

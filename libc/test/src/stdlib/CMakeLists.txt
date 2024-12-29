@@ -168,13 +168,17 @@ add_libc_test(
     .strtol_test_support
 )
 
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+endif()
+
 add_header_library(
   strfrom_test_support
   HDRS
-  StrfromTest.h
+    StrfromTest.h
   DEPENDS
-  libc.src.__support.CPP.type_traits
-  libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_libc_test(
@@ -186,6 +190,8 @@ add_libc_test(
   DEPENDS
     .strfrom_test_support
     libc.src.stdlib.strfromf
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
 )
 
 add_libc_test(
@@ -197,6 +203,8 @@ add_libc_test(
   DEPENDS
     .strfrom_test_support
     libc.src.stdlib.strfromd
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
 )
 
 add_libc_test(
@@ -208,6 +216,8 @@ add_libc_test(
   DEPENDS
     .strfrom_test_support
     libc.src.stdlib.strfroml
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
 )
 
 add_libc_test(
@@ -249,7 +259,7 @@ add_libc_test(
   HDRS
     DivTest.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.div_t
     libc.src.stdlib.div
 )
 
@@ -262,7 +272,7 @@ add_libc_test(
   HDRS
     DivTest.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.ldiv_t
     libc.src.stdlib.ldiv
 )
 
@@ -275,7 +285,7 @@ add_libc_test(
   HDRS
     DivTest.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.lldiv_t
     libc.src.stdlib.lldiv
 )
 
@@ -286,7 +296,7 @@ add_libc_test(
   SRCS
     bsearch_test.cpp
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.stdlib.bsearch
 )
 
@@ -333,7 +343,7 @@ add_libc_test(
   SRCS
     qsort_r_test.cpp
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.stdlib.qsort_r
 )
 
@@ -344,7 +354,6 @@ add_libc_test(
   SRCS
     rand_test.cpp
   DEPENDS
-    libc.include.stdlib
     libc.src.stdlib.rand
     libc.src.stdlib.srand
 )
@@ -360,7 +369,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       _Exit_test.cpp
     DEPENDS
-      libc.include.stdlib
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
   )
@@ -374,7 +382,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       atexit_test.cpp
     DEPENDS
-      libc.include.stdlib
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
@@ -390,6 +397,7 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       at_quick_exit_test.cpp
     DEPENDS
+      libc.src.stdlib._Exit
       libc.src.stdlib.quick_exit
       libc.src.stdlib.at_quick_exit
       libc.src.__support.CPP.array
@@ -404,7 +412,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       abort_test.cpp
     DEPENDS
-      libc.include.stdlib
       libc.include.signal
       libc.src.stdlib.abort
       libc.src.stdlib._Exit
@@ -424,8 +431,8 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.quick_exit
   )
 
-  # Only the GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_OS_IS_GPU)
+  # Only baremetal and GPU has an in-tree 'malloc' implementation.
+  if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

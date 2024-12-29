@@ -76,8 +76,9 @@ class InsertionPoint {
   /// Get contained pointer type or nullptr
   template <class T>
   T *tryGetPtr() const {
-    if (location.is<T *>())
-      return location.get<T *>();
+    // Use llvm::dyn_cast_if_present because location may be null here.
+    if (T *ptr = llvm::dyn_cast_if_present<T *>(location))
+      return ptr;
     return nullptr;
   }
 
@@ -149,8 +150,9 @@ class AllocationAnalysis
 public:
   using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
-  void visitOperation(mlir::Operation *op, const LatticePoint &before,
-                      LatticePoint *after) override;
+  mlir::LogicalResult visitOperation(mlir::Operation *op,
+                                     const LatticePoint &before,
+                                     LatticePoint *after) override;
 
   /// At an entry point, the last modifications of all memory resources are
   /// yet to be determined
@@ -159,7 +161,7 @@ public:
 protected:
   /// Visit control flow operations and decide whether to call visitOperation
   /// to apply the transfer function
-  void processOperation(mlir::Operation *op) override;
+  mlir::LogicalResult processOperation(mlir::Operation *op) override;
 };
 
 /// Drives analysis to find candidate fir.allocmem operations which could be
@@ -224,7 +226,6 @@ public:
   llvm::StringRef getDescription() const override;
 
   void runOnOperation() override;
-  void runOnFunc(mlir::Operation *func);
 
 private:
   Statistic runCount{this, "stackArraysRunCount",
@@ -329,9 +330,8 @@ std::optional<AllocationState> LatticePoint::get(mlir::Value val) const {
   return it->second;
 }
 
-void AllocationAnalysis::visitOperation(mlir::Operation *op,
-                                        const LatticePoint &before,
-                                        LatticePoint *after) {
+mlir::LogicalResult AllocationAnalysis::visitOperation(
+    mlir::Operation *op, const LatticePoint &before, LatticePoint *after) {
   LLVM_DEBUG(llvm::dbgs() << "StackArrays: Visiting operation: " << *op
                           << "\n");
   LLVM_DEBUG(llvm::dbgs() << "--Lattice in: " << before << "\n");
@@ -346,14 +346,14 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     if (attr && attr.getValue()) {
       LLVM_DEBUG(llvm::dbgs() << "--Found fir.must_be_heap: skipping\n");
       // skip allocation marked not to be moved
-      return;
+      return mlir::success();
     }
 
     auto retTy = allocmem.getAllocatedType();
     if (!mlir::isa<fir::SequenceType>(retTy)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "--Allocation is not for an array: skipping\n");
-      return;
+      return mlir::success();
     }
 
     mlir::Value result = op->getResult(0);
@@ -376,7 +376,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     }
   } else if (mlir::isa<fir::ResultOp>(op)) {
     mlir::Operation *parent = op->getParentOp();
-    LatticePoint *parentLattice = getLattice(parent);
+    LatticePoint *parentLattice = getLattice(getProgramPointAfter(parent));
     assert(parentLattice);
     mlir::ChangeResult parentChanged = parentLattice->join(*after);
     propagateIfChanged(parentLattice, parentChanged);
@@ -387,6 +387,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
 
   LLVM_DEBUG(llvm::dbgs() << "--Lattice out: " << *after << "\n");
   propagateIfChanged(after, changed);
+  return mlir::success();
 }
 
 void AllocationAnalysis::setToEntryState(LatticePoint *lattice) {
@@ -395,30 +396,33 @@ void AllocationAnalysis::setToEntryState(LatticePoint *lattice) {
 
 /// Mostly a copy of AbstractDenseLattice::processOperation - the difference
 /// being that call operations are passed through to the transfer function
-void AllocationAnalysis::processOperation(mlir::Operation *op) {
+mlir::LogicalResult AllocationAnalysis::processOperation(mlir::Operation *op) {
+  mlir::ProgramPoint *point = getProgramPointAfter(op);
   // If the containing block is not executable, bail out.
-  if (!getOrCreateFor<mlir::dataflow::Executable>(op, op->getBlock())->isLive())
-    return;
+  if (op->getBlock() != nullptr &&
+      !getOrCreateFor<mlir::dataflow::Executable>(
+           point, getProgramPointBefore(op->getBlock()))
+           ->isLive())
+    return mlir::success();
 
   // Get the dense lattice to update
-  mlir::dataflow::AbstractDenseLattice *after = getLattice(op);
+  mlir::dataflow::AbstractDenseLattice *after = getLattice(point);
 
   // If this op implements region control-flow, then control-flow dictates its
   // transfer function.
-  if (auto branch = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op))
-    return visitRegionBranchOperation(op, branch, after);
+  if (auto branch = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
+    visitRegionBranchOperation(point, branch, after);
+    return mlir::success();
+  }
 
   // pass call operations through to the transfer function
 
   // Get the dense state before the execution of the op.
-  const mlir::dataflow::AbstractDenseLattice *before;
-  if (mlir::Operation *prev = op->getPrevNode())
-    before = getLatticeFor(op, prev);
-  else
-    before = getLatticeFor(op, op->getBlock());
+  const mlir::dataflow::AbstractDenseLattice *before =
+      getLatticeFor(point, getProgramPointBefore(op));
 
   /// Invoke the operation transfer function
-  visitOperationImpl(op, *before, after);
+  return visitOperationImpl(op, *before, after);
 }
 
 llvm::LogicalResult
@@ -450,9 +454,10 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     return mlir::failure();
   }
 
-  LatticePoint point{func};
+  LatticePoint point{solver.getProgramPointAfter(func)};
   auto joinOperationLattice = [&](mlir::Operation *op) {
-    const LatticePoint *lattice = solver.lookupState<LatticePoint>(op);
+    const LatticePoint *lattice =
+        solver.lookupState<LatticePoint>(solver.getProgramPointAfter(op));
     // there will be no lattice for an unreachable block
     if (lattice)
       (void)point.join(*lattice);
@@ -731,28 +736,12 @@ void AllocMemConversion::insertStackSaveRestore(
   auto mod = oldAlloc->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder{rewriter, mod};
 
-  mlir::func::FuncOp stackSaveFn = fir::factory::getLlvmStackSave(builder);
-  mlir::SymbolRefAttr stackSaveSym =
-      builder.getSymbolRefAttr(stackSaveFn.getName());
-
   builder.setInsertionPoint(oldAlloc);
-  mlir::Value sp =
-      builder
-          .create<fir::CallOp>(oldAlloc.getLoc(),
-                               stackSaveFn.getFunctionType().getResults(),
-                               stackSaveSym, mlir::ValueRange{})
-          .getResult(0);
-
-  mlir::func::FuncOp stackRestoreFn =
-      fir::factory::getLlvmStackRestore(builder);
-  mlir::SymbolRefAttr stackRestoreSym =
-      builder.getSymbolRefAttr(stackRestoreFn.getName());
+  mlir::Value sp = builder.genStackSave(oldAlloc.getLoc());
 
   auto createStackRestoreCall = [&](mlir::Operation *user) {
     builder.setInsertionPoint(user);
-    builder.create<fir::CallOp>(user->getLoc(),
-                                stackRestoreFn.getFunctionType().getResults(),
-                                stackRestoreSym, mlir::ValueRange{sp});
+    builder.genStackRestore(user->getLoc(), sp);
   };
 
   for (mlir::Operation *user : oldAlloc->getUsers()) {
@@ -779,13 +768,7 @@ llvm::StringRef StackArraysPass::getDescription() const {
 }
 
 void StackArraysPass::runOnOperation() {
-  mlir::ModuleOp mod = getOperation();
-
-  mod.walk([this](mlir::func::FuncOp func) { runOnFunc(func); });
-}
-
-void StackArraysPass::runOnFunc(mlir::Operation *func) {
-  assert(mlir::isa<mlir::func::FuncOp>(func));
+  mlir::func::FuncOp func = getOperation();
 
   auto &analysis = getAnalysis<StackArraysAnalysisWrapper>();
   const StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
@@ -811,8 +794,8 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   patterns.insert<AllocMemConversion>(&context, *candidateOps);
-  if (mlir::failed(mlir::applyOpPatternsAndFold(opsToConvert,
-                                                std::move(patterns), config))) {
+  if (mlir::failed(mlir::applyOpPatternsGreedily(
+          opsToConvert, std::move(patterns), config))) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }

@@ -34,8 +34,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   if (!Func)
     return false;
 
-  APValue DummyResult;
-  if (!Run(Parent, Func, DummyResult))
+  if (!Run(Parent, Func))
     return false;
 
   return Func->isConstexpr();
@@ -44,13 +43,14 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
   if (Res.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return false;
   }
 
@@ -60,7 +60,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
     // InterpStack memory.
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
 #endif
   }
 
@@ -69,15 +69,18 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   return true;
 }
 
-bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
+bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
+                       ConstantExprKind Kind) {
   ++EvalID;
   bool Recursing = !Stk.empty();
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
-  auto Res = C.interpretExpr(E);
+  auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
+                             /*DestroyToplevelScope=*/true);
   if (Res.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return false;
   }
 
@@ -87,7 +90,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
     // InterpStack memory.
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
 #endif
   }
 
@@ -99,6 +102,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   bool CheckGlobalInitialized =
@@ -107,7 +111,8 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
+
     return false;
   }
 
@@ -117,7 +122,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
     // InterpStack memory.
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
 #endif
   }
 
@@ -191,6 +196,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (T->isFixedPointType())
+    return PT_FixedPoint;
+
   return std::nullopt;
 }
 
@@ -204,13 +212,13 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
   return Ctx.getFloatTypeSemantics(T);
 }
 
-bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
+bool Context::Run(State &Parent, const Function *Func) {
 
   {
     InterpState State(Parent, *P, Stk, *this);
     State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
                                     Func->getArgSize());
-    if (Interpret(State, Result)) {
+    if (Interpret(State)) {
       assert(Stk.empty());
       return true;
     }

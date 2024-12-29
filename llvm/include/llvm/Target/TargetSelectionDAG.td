@@ -118,14 +118,18 @@ def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
 ]>;
+def SDTIntShiftPairOp : SDTypeProfile<2, 3, [ // shl_parts, sra_parts, srl_parts
+  SDTCisInt<0>, SDTCisSameAs<1, 0>,
+  SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>, SDTCisInt<4>
+]>;
 def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
 ]>;
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
 ]>;
-def SDTIntBinHiLoOp : SDTypeProfile<2, 2, [ // mulhi, mullo, sdivrem, udivrem
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,SDTCisInt<0>
+def SDTIntBinHiLoOp : SDTypeProfile<2, 2, [ // smullohi, umullohi, sdivrem, udivrem
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<0>
 ]>;
 def SDTIntScaledBinOp : SDTypeProfile<1, 3, [  // smulfix, sdivfix, etc
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
@@ -157,6 +161,9 @@ def SDTFPUnaryOp  : SDTypeProfile<1, 1, [   // fneg, fsqrt, etc
 ]>;
 def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fpround
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
+]>;
+def SDTFPTruncRoundOp  : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fpextend
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
@@ -229,6 +236,10 @@ def SDTBrind : SDTypeProfile<0, 1, [        // brind
 
 def SDTCatchret : SDTypeProfile<0, 2, [     // catchret
   SDTCisVT<0, OtherVT>, SDTCisVT<1, OtherVT>
+]>;
+
+def SDTCleanupret : SDTypeProfile<0, 1, [   // cleanupret
+  SDTCisVT<0, OtherVT>
 ]>;
 
 def SDTNone : SDTypeProfile<0, 0, []>;      // ret, trap
@@ -415,6 +426,9 @@ def sra        : SDNode<"ISD::SRA"       , SDTIntShiftOp>;
 def shl        : SDNode<"ISD::SHL"       , SDTIntShiftOp>;
 def rotl       : SDNode<"ISD::ROTL"      , SDTIntShiftOp>;
 def rotr       : SDNode<"ISD::ROTR"      , SDTIntShiftOp>;
+def shl_parts  : SDNode<"ISD::SHL_PARTS" , SDTIntShiftPairOp>;
+def sra_parts  : SDNode<"ISD::SRA_PARTS" , SDTIntShiftPairOp>;
+def srl_parts  : SDNode<"ISD::SRL_PARTS" , SDTIntShiftPairOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
@@ -531,6 +545,7 @@ def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
 def fasin      : SDNode<"ISD::FASIN"      , SDTFPUnaryOp>;
 def facos      : SDNode<"ISD::FACOS"      , SDTFPUnaryOp>;
 def fatan      : SDNode<"ISD::FATAN"      , SDTFPUnaryOp>;
+def fatan2     : SDNode<"ISD::FATAN2"     , SDTFPBinOp>;
 def fsinh      : SDNode<"ISD::FSINH"      , SDTFPUnaryOp>;
 def fcosh      : SDNode<"ISD::FCOSH"      , SDTFPUnaryOp>;
 def ftanh      : SDNode<"ISD::FTANH"      , SDTFPUnaryOp>;
@@ -552,6 +567,8 @@ def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
 def lrint      : SDNode<"ISD::LRINT"      , SDTFPToIntOp>;
 def llrint     : SDNode<"ISD::LLRINT"     , SDTFPToIntOp>;
 
+def fptrunc_round : SDNode<"ISD::FPTRUNC_ROUND", SDTFPTruncRoundOp>;
+
 def fpround    : SDNode<"ISD::FP_ROUND"   , SDTFPRoundOp>;
 def fpextend   : SDNode<"ISD::FP_EXTEND"  , SDTFPExtendOp>;
 def fcopysign  : SDNode<"ISD::FCOPYSIGN"  , SDTFPSignOp>;
@@ -564,6 +581,8 @@ def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
 def fp_to_uint_sat : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntSatOp>;
+def fp_to_sint_sat_gi : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntOp>;
+def fp_to_uint_sat_gi : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntOp>;
 def f16_to_fp  : SDNode<"ISD::FP16_TO_FP" , SDTIntToFPOp>;
 def fp_to_f16  : SDNode<"ISD::FP_TO_FP16" , SDTFPToIntOp>;
 def bf16_to_fp  : SDNode<"ISD::BF16_TO_FP" , SDTIntToFPOp>;
@@ -595,6 +614,8 @@ def strict_facos      : SDNode<"ISD::STRICT_FACOS",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fatan      : SDNode<"ISD::STRICT_FATAN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fatan2     : SDNode<"ISD::STRICT_FATAN2",
+                               SDTFPBinOp, [SDNPHasChain]>;
 def strict_fsinh      : SDNode<"ISD::STRICT_FSINH",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fcosh      : SDNode<"ISD::STRICT_FCOSH",
@@ -687,7 +708,7 @@ def brind      : SDNode<"ISD::BRIND"      , SDTBrind,  [SDNPHasChain]>;
 def br         : SDNode<"ISD::BR"         , SDTBr,     [SDNPHasChain]>;
 def catchret   : SDNode<"ISD::CATCHRET"   , SDTCatchret,
                         [SDNPHasChain, SDNPSideEffect]>;
-def cleanupret : SDNode<"ISD::CLEANUPRET" , SDTNone,   [SDNPHasChain]>;
+def cleanupret : SDNode<"ISD::CLEANUPRET" , SDTCleanupret, [SDNPHasChain]>;
 
 def trap       : SDNode<"ISD::TRAP"       , SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
@@ -752,6 +773,10 @@ def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
 def atomic_load_uinc_wrap : SDNode<"ISD::ATOMIC_LOAD_UINC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_udec_wrap : SDNode<"ISD::ATOMIC_LOAD_UDEC_WRAP", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_usub_cond : SDNode<"ISD::ATOMIC_LOAD_USUB_COND", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_usub_sat : SDNode<"ISD::ATOMIC_LOAD_USUB_SAT", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,
@@ -1577,6 +1602,9 @@ def any_facos      : PatFrags<(ops node:$src),
 def any_fatan      : PatFrags<(ops node:$src),
                               [(strict_fatan node:$src),
                                (fatan node:$src)]>;
+def any_fatan2      : PatFrags<(ops node:$src1, node:$src2),
+                              [(strict_fatan2 node:$src1, node:$src2),
+                               (fatan2 node:$src1, node:$src2)]>;
 def any_fsinh      : PatFrags<(ops node:$src),
                               [(strict_fsinh node:$src),
                                (fsinh node:$src)]>;
@@ -2058,4 +2086,12 @@ class ComplexPattern<ValueType ty, int numops, string fn,
   list<SDNode> RootNodes = roots;
   list<SDNodeProperty> Properties = props;
   int Complexity = complexity;
+
+  // Set this to true if SelectFunc wants an additional argument
+  // that is the root of the matched pattern.
+  bit WantsRoot = false;
+
+  // Set this to true if SelectFunc wants an additional argument
+  // that is the parent of the matched node.
+  bit WantsParent = false;
 }

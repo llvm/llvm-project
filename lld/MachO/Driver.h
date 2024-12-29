@@ -20,6 +20,9 @@
 #include <set>
 #include <type_traits>
 
+namespace lld {
+class CommonLinkerContext;
+}
 namespace lld::macho {
 
 class DylibFile;
@@ -28,8 +31,10 @@ class InputFile;
 class MachOOptTable : public llvm::opt::GenericOptTable {
 public:
   MachOOptTable();
-  llvm::opt::InputArgList parse(ArrayRef<const char *> argv);
-  void printHelp(const char *argv0, bool showHidden) const;
+  llvm::opt::InputArgList parse(CommonLinkerContext &ctx,
+                                ArrayRef<const char *> argv);
+  void printHelp(CommonLinkerContext &ctx, const char *argv0,
+                 bool showHidden) const;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td

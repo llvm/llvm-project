@@ -181,6 +181,7 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     std::optional<std::int64_t> charLength) const {
   switch (category_) {
   case TypeCategory::Integer:
+  case TypeCategory::Unsigned:
   case TypeCategory::Real:
   case TypeCategory::Complex:
   case TypeCategory::Logical:
@@ -518,7 +519,10 @@ static bool AreSameDerivedType(
 
 bool DynamicType::IsEquivalentTo(const DynamicType &that) const {
   return category_ == that.category_ && kind_ == that.kind_ &&
-      PointeeComparison(charLengthParamValue_, that.charLengthParamValue_) &&
+      (charLengthParamValue_ == that.charLengthParamValue_ ||
+          (charLengthParamValue_ && that.charLengthParamValue_ &&
+              charLengthParamValue_->IsEquivalentInInterface(
+                  *that.charLengthParamValue_))) &&
       knownLength().has_value() == that.knownLength().has_value() &&
       (!knownLength() || *knownLength() == *that.knownLength()) &&
       AreSameDerivedType(derived_, that.derived_);
@@ -679,6 +683,14 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
       CRASH_NO_CASE;
     }
     break;
+  case TypeCategory::Unsigned:
+    switch (that.category_) {
+    case TypeCategory::Unsigned:
+      return DynamicType{TypeCategory::Unsigned, std::max(kind(), that.kind())};
+    default:
+      CRASH_NO_CASE;
+    }
+    break;
   case TypeCategory::Real:
     switch (that.category_) {
     case TypeCategory::Integer:
@@ -817,11 +829,12 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     const common::LanguageFeatureControl *features, bool checkCharLength) {
   switch (type.category()) {
   case TypeCategory::Integer:
+  case TypeCategory::Unsigned:
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return (features && features->IsEnabled(common::LanguageFeature::CUDA)) ||
-        type.kind() >= 4; // no short or half floats
+    return type.kind() >= 4 /* not a short or half float */ || !features ||
+        features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:

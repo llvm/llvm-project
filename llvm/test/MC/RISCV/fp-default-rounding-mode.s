@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin \
 # RUN:     | FileCheck -check-prefixes=CHECK-ALIAS %s
@@ -193,9 +193,12 @@ fcvt.h.lu fa0, a0
 
 # Zfbfmin instructions
 
-# CHECK-INST: fcvt.s.bf16 fa0, fa0, dyn{{$}}
+# CHECK-INST: fcvt.s.bf16 fa0, fa0{{$}}
 # CHECK-ALIAS: fcvt.s.bf16 fa0, fa0{{$}}
 fcvt.s.bf16 fa0, fa0
+# CHECK-INST: fcvt.s.bf16 fa0, fa0{{$}}
+# CHECK-ALIAS: fcvt.s.bf16 fa0, fa0{{$}}
+fcvt.s.bf16 fa0, fa0, rne
 
 # CHECK-INST: fcvt.bf16.s fa0, fa0, dyn{{$}}
 # CHECK-ALIAS: fcvt.bf16.s fa0, fa0{{$}}

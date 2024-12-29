@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
-#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -321,7 +320,6 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
       }
 
-      DisasmStream.flush();
       DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
     }
   }

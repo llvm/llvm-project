@@ -430,13 +430,17 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
 
   // Give --sysroot= preference, over the Apple specific behavior to also use
   // --isysroot as the syslibroot.
-  StringRef sysroot = C.getSysRoot();
-  if (sysroot != "") {
+  // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
+  // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
     CmdArgs.push_back("-syslibroot");
-    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
+    CmdArgs.push_back(A->getValue());
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     CmdArgs.push_back("-syslibroot");
     CmdArgs.push_back(A->getValue());
+  } else if (StringRef sysroot = C.getSysRoot(); sysroot != "") {
+    CmdArgs.push_back("-syslibroot");
+    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_twolevel__namespace);
@@ -476,6 +480,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
         llvm::sys::path::append(Path, "default.profdata");
       CmdArgs.push_back(Args.MakeArgString(Twine("--cs-profile-path=") + Path));
     }
+
+    auto *CodeGenDataGenArg =
+        Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+    if (CodeGenDataGenArg)
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("--codegen-data-generate-path=") +
+                             CodeGenDataGenArg->getValue()));
   }
 }
 
@@ -633,6 +644,32 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-enable-linkonceodr-outlining");
 
+  // Propagate codegen data flags to the linker for the LLVM backend.
+  auto *CodeGenDataGenArg =
+      Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use_EQ);
+
+  // We only allow one of them to be specified.
+  const Driver &D = getToolChain().getDriver();
+  if (CodeGenDataGenArg && CodeGenDataUseArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataGenArg->getAsString(Args)
+        << CodeGenDataUseArg->getAsString(Args);
+
+  // For codegen data gen, the output file is passed to the linker
+  // while a boolean flag is passed to the LLVM backend.
+  if (CodeGenDataGenArg) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-codegen-data-generate");
+  }
+
+  // For codegen data use, the input file is passed to the LLVM backend.
+  if (CodeGenDataUseArg) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString(Twine("-codegen-data-use-path=") +
+                                         CodeGenDataUseArg->getValue()));
+  }
+
   // Setup statistics file output.
   SmallString<128> StatsFile =
       getStatsFileName(Args, Output, Inputs[0], getToolChain().getDriver());
@@ -680,7 +717,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Additional linker set-up and flags for Fortran. This is required in order
   // to generate executables.
-  if (getToolChain().getDriver().IsFlangMode()) {
+  if (getToolChain().getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
     addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
   }
@@ -1519,6 +1557,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     const char *sanitizer = nullptr;
     if (Sanitize.needsUbsanRt()) {
       sanitizer = "UndefinedBehaviorSanitizer";
+    } else if (Sanitize.needsRtsanRt()) {
+      sanitizer = "RealtimeSanitizer";
     } else if (Sanitize.needsAsanRt()) {
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
@@ -1541,6 +1581,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
     }
+    if (Sanitize.needsRtsanRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "rtsan");
+    }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
     if (Sanitize.needsUbsanRt()) {
@@ -1555,6 +1600,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
              "Static sanitizer runtimes not supported");
       AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
     }
+    if (Sanitize.needsTysanRt())
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "tysan");
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 
@@ -3539,6 +3586,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
@@ -3555,6 +3603,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
       (isTargetMacOSBased() || isTargetIOSSimulator() ||
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
+  }
+
+  if ((IsX86_64 || IsAArch64) && isTargetMacOSBased()) {
+    Res |= SanitizerKind::Type;
   }
 
   if (IsX86_64)

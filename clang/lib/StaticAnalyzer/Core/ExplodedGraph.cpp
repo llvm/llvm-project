@@ -211,9 +211,9 @@ void ExplodedNode::NodeGroup::replaceNode(ExplodedNode *node) {
   assert(!getFlag());
 
   GroupStorage &Storage = reinterpret_cast<GroupStorage&>(P);
-  assert(Storage.is<ExplodedNode *>());
+  assert(isa<ExplodedNode *>(Storage));
   Storage = node;
-  assert(Storage.is<ExplodedNode *>());
+  assert(isa<ExplodedNode *>(Storage));
 }
 
 void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
@@ -222,7 +222,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
   GroupStorage &Storage = reinterpret_cast<GroupStorage&>(P);
   if (Storage.isNull()) {
     Storage = N;
-    assert(Storage.is<ExplodedNode *>());
+    assert(isa<ExplodedNode *>(Storage));
     return;
   }
 
@@ -230,7 +230,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
 
   if (!V) {
     // Switch from single-node to multi-node representation.
-    ExplodedNode *Old = Storage.get<ExplodedNode *>();
+    auto *Old = cast<ExplodedNode *>(Storage);
 
     BumpVectorContext &Ctx = G.getNodeAllocator();
     V = new (G.getAllocator()) ExplodedNodeVector(Ctx, 4);
@@ -238,7 +238,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
 
     Storage = V;
     assert(!getFlag());
-    assert(Storage.is<ExplodedNodeVector *>());
+    assert(isa<ExplodedNodeVector *>(Storage));
   }
 
   V->push_back(N, G.getNodeAllocator());
@@ -349,6 +349,8 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
 
 const Stmt *ExplodedNode::getNextStmtForDiagnostics() const {
   for (const ExplodedNode *N = getFirstSucc(); N; N = N->getFirstSucc()) {
+    if (N->getLocation().isPurgeKind())
+      continue;
     if (const Stmt *S = N->getStmtForDiagnostics()) {
       // Check if the statement is '?' or '&&'/'||'.  These are "merges",
       // not actual statement points.
@@ -376,7 +378,7 @@ const Stmt *ExplodedNode::getNextStmtForDiagnostics() const {
 
 const Stmt *ExplodedNode::getPreviousStmtForDiagnostics() const {
   for (const ExplodedNode *N = getFirstPred(); N; N = N->getFirstPred())
-    if (const Stmt *S = N->getStmtForDiagnostics())
+    if (const Stmt *S = N->getStmtForDiagnostics(); S && !isa<CompoundStmt>(S))
       return S;
 
   return nullptr;

@@ -37,7 +37,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstdint>
@@ -117,8 +116,9 @@ FileSystem::~FileSystem() = default;
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
-                             bool RequiresNullTerminator, bool IsVolatile) {
-  auto F = openFileForRead(Name);
+                             bool RequiresNullTerminator, bool IsVolatile,
+                             bool IsText) {
+  auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
 
@@ -279,6 +279,8 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
@@ -300,6 +302,17 @@ private:
     Path.toVector(Storage);
     sys::fs::make_absolute(WD->get().Resolved, Storage);
     return Storage;
+  }
+
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
+    SmallString<256> RealName, Storage;
+    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
+        adjustPath(Name, Storage), Flags, &RealName);
+    if (!FDOrErr)
+      return errorToErrorCode(FDOrErr.takeError());
+    return std::unique_ptr<File>(
+        new RealFile(*FDOrErr, Name.str(), RealName.str()));
   }
 
   struct WorkingDirectory {
@@ -324,13 +337,12 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
-  SmallString<256> RealName, Storage;
-  Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
-  if (!FDOrErr)
-    return errorToErrorCode(FDOrErr.takeError());
-  return std::unique_ptr<File>(
-      new RealFile(*FDOrErr, Name.str(), RealName.str()));
+  return openFileForReadWithFlags(Name, sys::fs::OF_Text);
+}
+
+ErrorOr<std::unique_ptr<File>>
+RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  return openFileForReadWithFlags(Name, sys::fs::OF_None);
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
@@ -750,7 +762,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
+  std::map<std::string, std::unique_ptr<InMemoryNode>, std::less<>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)
@@ -766,7 +778,7 @@ public:
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
   InMemoryNode *getChild(StringRef Name) const {
-    auto I = Entries.find(Name.str());
+    auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
     return nullptr;
@@ -2780,7 +2792,7 @@ bool JSONWriter::containedIn(StringRef Parent, StringRef Path) {
 StringRef JSONWriter::containedPart(StringRef Parent, StringRef Path) {
   assert(!Parent.empty());
   assert(containedIn(Parent, Path));
-  return Path.slice(Parent.size() + 1, StringRef::npos);
+  return Path.substr(Parent.size() + 1);
 }
 
 void JSONWriter::startDirectory(StringRef Path) {
@@ -2846,7 +2858,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
     if (UseOverlayRelative) {
       assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDir.size(), RPath.size());
+      RPath = RPath.substr(OverlayDir.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2879,7 +2891,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       if (UseOverlayRelative) {
         assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDir.size(), RPath.size());
+        RPath = RPath.substr(OverlayDir.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
@@ -2945,8 +2957,34 @@ recursive_directory_iterator::increment(std::error_code &EC) {
   return *this;
 }
 
+void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
+                                  unsigned IndentLevel) const {
+  printIndent(OS, IndentLevel);
+  OS << "TracingFileSystem\n";
+  if (Type == PrintType::Summary)
+    return;
+
+  printIndent(OS, IndentLevel);
+  OS << "NumStatusCalls=" << NumStatusCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumOpenFileForReadCalls=" << NumOpenFileForReadCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumDirBeginCalls=" << NumDirBeginCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumGetRealPathCalls=" << NumGetRealPathCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumExistsCalls=" << NumExistsCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumIsLocalCalls=" << NumIsLocalCalls << "\n";
+
+  if (Type == PrintType::Contents)
+    Type = PrintType::Summary;
+  getUnderlyingFS().print(OS, Type, IndentLevel + 1);
+}
+
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
+const char TracingFileSystem::ID = 0;

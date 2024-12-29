@@ -62,7 +62,6 @@ static_library("IPO") {
     "SampleProfileProbe.cpp",
     "StripDeadPrototypes.cpp",
     "StripSymbols.cpp",
-    "SyntheticCountsPropagation.cpp",
     "ThinLTOBitcodeWriter.cpp",
     "WholeProgramDevirt.cpp",
   ]

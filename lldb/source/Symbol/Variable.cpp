@@ -9,8 +9,6 @@
 #include "lldb/Symbol/Variable.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -31,6 +29,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -328,7 +328,7 @@ Status Variable::GetValuesForVariableExpressionPath(
     ValueObjectList &valobj_list) {
   Status error;
   if (!callback || variable_expr_path.empty()) {
-    error.SetErrorString("unknown error");
+    error = Status::FromErrorString("unknown error");
     return error;
   }
 
@@ -338,7 +338,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         variable_expr_path.drop_front(), scope, callback, baton, variable_list,
         valobj_list);
     if (error.Fail()) {
-      error.SetErrorString("unknown error");
+      error = Status::FromErrorString("unknown error");
       return error;
     }
     for (uint32_t i = 0; i < valobj_list.GetSize();) {
@@ -372,7 +372,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         }
       }
     } else {
-      error.SetErrorString("unknown error");
+      error = Status::FromErrorString("unknown error");
     }
     return error;
   } break;
@@ -383,13 +383,13 @@ Status Variable::GetValuesForVariableExpressionPath(
     llvm::SmallVector<llvm::StringRef, 2> matches;
     variable_list.Clear();
     if (!g_regex.Execute(variable_expr_path, &matches)) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "unable to extract a variable name from '{0}'", variable_expr_path);
       return error;
     }
     std::string variable_name = matches[1].str();
     if (!callback(baton, variable_name.c_str(), variable_list)) {
-      error.SetErrorString("unknown error");
+      error = Status::FromErrorString("unknown error");
       return error;
     }
     uint32_t i = 0;
@@ -413,7 +413,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         valobj_sp = variable_valobj_sp->GetValueForExpressionPath(
             variable_sub_expr_path);
         if (!valobj_sp) {
-          error.SetErrorStringWithFormatv(
+          error = Status::FromErrorStringWithFormatv(
               "invalid expression path '{0}' for variable '{1}'",
               variable_sub_expr_path, var_sp->GetName().GetCString());
           variable_list.RemoveVariableAtIndex(i);
@@ -434,7 +434,7 @@ Status Variable::GetValuesForVariableExpressionPath(
     }
   } break;
   }
-  error.SetErrorString("unknown error");
+  error = Status::FromErrorString("unknown error");
   return error;
 }
 

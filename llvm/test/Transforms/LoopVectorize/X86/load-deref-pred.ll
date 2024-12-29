@@ -31,21 +31,15 @@ define i32 @test_explicit_pred(i64 %len) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[STEP_ADD]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[STEP_ADD1]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[STEP_ADD1]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP8]], i32 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP8]], i32 8
@@ -63,7 +57,7 @@ define i32 @test_explicit_pred(i64 %len) {
 ; CHECK-NEXT:    [[TMP18]] = add <4 x i32> [[VEC_PHI5]], [[PREDPHI11]]
 ; CHECK-NEXT:    [[TMP19]] = add <4 x i32> [[VEC_PHI6]], [[PREDPHI12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD2]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD2]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -199,9 +193,6 @@ define i32 @test_explicit_pred_generic(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -828,9 +819,6 @@ define i32 @test_max_trip_count(i64 %len, ptr %test_base, i64 %n) {
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 2
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x i1> [[TMP63]], i1 [[TMP60]], i32 3
 ; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP65]], i32 0
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP65]], i32 4
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP65]], i32 8
@@ -991,9 +979,6 @@ define i32 @test_non_zero_start(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -1391,9 +1376,6 @@ define i32 @neg_off_by_many(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -1547,9 +1529,6 @@ define i32 @neg_off_by_one_iteration(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -1703,9 +1682,6 @@ define i32 @neg_off_by_one_byte(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -1868,9 +1844,6 @@ define i32 @test_constant_max(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 2
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x i1> [[TMP63]], i1 [[TMP60]], i32 3
 ; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP65]], i32 0
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP65]], i32 4
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP65]], i32 8
@@ -2032,9 +2005,6 @@ define i32 @test_allocsize(i64 %len, ptr %test_base) nofree nosync {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -2189,9 +2159,6 @@ define i32 @test_allocsize_array(i64 %len, ptr %test_base) nofree nosync {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
@@ -2356,9 +2323,6 @@ define i32 @test_allocsize_cond_deref(i1 %allzero, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8

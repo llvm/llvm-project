@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCCodeEmitter.h"

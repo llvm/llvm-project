@@ -29,7 +29,9 @@ add_public_tablegen_target(RISCVCommonTableGen)
 
 add_llvm_target(RISCVCodeGen
   RISCVAsmPrinter.cpp
+  RISCVCallingConv.cpp
   RISCVCodeGenPrepare.cpp
+  RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
   RISCVMakeCompressible.cpp
   RISCVExpandAtomicPseudoInsts.cpp
@@ -52,11 +54,15 @@ add_llvm_target(RISCVCodeGen
   RISCVMoveMerger.cpp
   RISCVPushPopOptimizer.cpp
   RISCVRegisterInfo.cpp
+  RISCVSelectionDAGInfo.cpp
   RISCVSubtarget.cpp
   RISCVTargetMachine.cpp
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp
+  RISCVVectorMaskDAGMutation.cpp
   RISCVVectorPeephole.cpp
+  RISCVVLOptimizer.cpp
+  RISCVZacasABIFix.cpp
   GISel/RISCVCallLowering.cpp
   GISel/RISCVInstructionSelector.cpp
   GISel/RISCVLegalizerInfo.cpp

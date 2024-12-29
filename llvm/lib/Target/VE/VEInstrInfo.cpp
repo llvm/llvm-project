@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -359,7 +358,8 @@ static void copyPhysSubRegs(MachineBasicBlock &MBB,
 void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I, const DebugLoc &DL,
                               MCRegister DestReg, MCRegister SrcReg,
-                              bool KillSrc) const {
+                              bool KillSrc, bool RenamableDest,
+                              bool RenamableSrc) const {
 
   if (IsAliasOfSX(SrcReg) && IsAliasOfSX(DestReg)) {
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)

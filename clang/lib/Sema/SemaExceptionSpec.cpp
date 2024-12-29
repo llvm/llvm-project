@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
@@ -19,8 +18,8 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include <optional>
 
 namespace clang {
@@ -717,9 +716,9 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     Qualifiers EQuals, HQuals;
     ExceptionType = Context.getUnqualifiedArrayType(
         ExceptionType->getPointeeType(), EQuals);
-    HandlerType = Context.getUnqualifiedArrayType(
-        HandlerType->getPointeeType(), HQuals);
-    if (!HQuals.compatiblyIncludes(EQuals))
+    HandlerType =
+        Context.getUnqualifiedArrayType(HandlerType->getPointeeType(), HQuals);
+    if (!HQuals.compatiblyIncludes(EQuals, getASTContext()))
       return false;
 
     if (HandlerType->isVoidType() && ExceptionType->isObjectType())
@@ -1206,15 +1205,16 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     if (DTy.isNull() || DTy->isDependentType()) {
       CT = CT_Dependent;
     } else {
-      CT = canCalleeThrow(*this, DE, DE->getOperatorDelete());
-      if (const RecordType *RT = DTy->getAs<RecordType>()) {
-        const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
-        const CXXDestructorDecl *DD = RD->getDestructor();
-        if (DD)
-          CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
+      const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
+      CT = canCalleeThrow(*this, DE, OperatorDelete);
+      if (!OperatorDelete->isDestroyingOperatorDelete()) {
+        if (const auto *RD = DTy->getAsCXXRecordDecl()) {
+          if (const CXXDestructorDecl *DD = RD->getDestructor())
+            CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
+        }
+        if (CT == CT_Can)
+          return CT;
       }
-      if (CT == CT_Can)
-        return CT;
     }
     return mergeCanThrow(CT, canSubStmtsThrow(*this, DE));
   }
@@ -1395,6 +1395,12 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::EmbedExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
+  case Expr::HLSLOutArgExprClass:
+  case Stmt::OpenACCEnterDataConstructClass:
+  case Stmt::OpenACCExitDataConstructClass:
+  case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCInitConstructClass:
+  case Stmt::OpenACCShutdownConstructClass:
     // These expressions can never throw.
     return CT_Cannot;
 
@@ -1405,6 +1411,9 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Most statements can throw if any substatement can throw.
   case Stmt::OpenACCComputeConstructClass:
   case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
+  case Stmt::OpenACCDataConstructClass:
+  case Stmt::OpenACCHostDataConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
@@ -1591,6 +1600,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   }
 
   case Stmt::SYCLUniqueStableNameExprClass:
+    return CT_Cannot;
+  case Stmt::OpenACCAsteriskSizeExprClass:
     return CT_Cannot;
   case Stmt::NoStmtClass:
     llvm_unreachable("Invalid class for statement");

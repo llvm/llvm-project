@@ -365,16 +365,19 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto boxATy = matrixABox.getType();
   auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
-  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getEleTy();
+  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getElementType();
   auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
   auto boxBTy = matrixBBox.getType();
   auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
-  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getEleTy();
+  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
   auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
 
+// Unsigned is treated as Integer when both operands are unsigned/integer
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
-  if (!func && aCat == TypeCategory::ACAT && aKind == AKIND &&                 \
-      bCat == TypeCategory::BCAT && bKind == BKIND) {                          \
+  if (!func && aKind == AKIND && bKind == BKIND &&                             \
+      ((aCat == TypeCategory::ACAT && bCat == TypeCategory::BCAT) ||           \
+       ((aCat == TypeCategory::Integer || aCat == TypeCategory::Unsigned) &&   \
+        (bCat == TypeCategory::Integer || bCat == TypeCategory::Unsigned)))) { \
     func =                                                                     \
         fir::runtime::getRuntimeFunc<ForcedMatmul##ACAT##AKIND##BCAT##BKIND>(  \
             loc, builder);                                                     \
@@ -417,11 +420,11 @@ void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto boxATy = matrixABox.getType();
   auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
-  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getEleTy();
+  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getElementType();
   auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
   auto boxBTy = matrixBBox.getType();
   auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
-  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getEleTy();
+  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
   auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
 
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \

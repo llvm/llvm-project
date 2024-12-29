@@ -2,7 +2,10 @@
 
 // CHECK: !testrec = !test.test_rec<type_to_alias, test_rec<type_to_alias>>
 // CHECK: ![[$NAME:.*]] = !test.test_rec_alias<name, !test.test_rec_alias<name>>
+// CHECK: ![[$NAME5:.*]] = !test.test_rec_alias<name5, !test.test_rec_alias<name3, !test.test_rec_alias<name4, !test.test_rec_alias<name5>>>>
 // CHECK: ![[$NAME2:.*]] = !test.test_rec_alias<name2, tuple<!test.test_rec_alias<name2>, i32>>
+// CHECK: ![[$NAME4:.*]] = !test.test_rec_alias<name4, !name5_>
+// CHECK: ![[$NAME3:.*]] = !test.test_rec_alias<name3, !name4_>
 
 // CHECK-LABEL: @roundtrip
 func.func @roundtrip() {
@@ -24,6 +27,14 @@ func.func @roundtrip() {
   // CHECK: () -> ![[$NAME2]]
   "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<name2, tuple<!test.test_rec_alias<name2>, i32>>
   "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<name2, tuple<!test.test_rec_alias<name2>, i32>>
+
+  // Mutual recursion.
+  // CHECK: () -> ![[$NAME3]]
+  // CHECK: () -> ![[$NAME4]]
+  // CHECK: () -> ![[$NAME5]]
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<name3, !test.test_rec_alias<name4, !test.test_rec_alias<name5, !test.test_rec_alias<name3>>>>
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<name4, !test.test_rec_alias<name5, !test.test_rec_alias<name3, !test.test_rec_alias<name4>>>>
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<name5, !test.test_rec_alias<name3, !test.test_rec_alias<name4, !test.test_rec_alias<name5>>>>
   return
 }
 

@@ -35,7 +35,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP11]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do collapse(2)
@@ -58,7 +57,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP16]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do
@@ -79,7 +77,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP21]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do
@@ -153,16 +150,15 @@ subroutine wsloop_variable_sub
 !CHECK:                 %[[VAL_42:.*]] = arith.addi %[[VAL_40]], %[[VAL_41]] : i64
 !CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i64) -> f32
 !CHECK:                 hlfir.assign %[[VAL_43]] to %[[VAL_21]]#0 : f32, !fir.ref<f32>
-!CHECK:                 %[[VAL_44:.*]] = arith.addi %[[VAL_37]], %[[VAL_34]] : index
+!CHECK:                 %[[VAL_44:.*]] = arith.addi %[[VAL_37]], %[[VAL_34]] overflow<nsw> : index
 !CHECK:                 %[[VAL_45:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
 !CHECK:                 %[[VAL_46:.*]] = fir.load %[[VAL_17]]#1 : !fir.ref<i64>
-!CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] : i64
+!CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] overflow<nsw> : i64
 !CHECK:                 fir.result %[[VAL_44]], %[[VAL_47]] : index, i64
 !CHECK:               }
 !CHECK:               fir.store %[[VAL_48:.*]]#1 to %[[VAL_17]]#1 : !fir.ref<i64>
 !CHECK:               omp.yield
 !CHECK:             }
-!CHECK:             omp.terminator
 !CHECK:           }
 
   !$omp do
@@ -190,11 +186,9 @@ subroutine wsloop_variable_sub
 !CHECK:               %[[VAL_56:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i8>
 !CHECK:               %[[VAL_57:.*]] = arith.cmpi eq, %[[VAL_55]], %[[VAL_56]] : i8
 !CHECK:               fir.if %[[VAL_57]] {
-!CHECK:               } else {
 !CHECK:               }
 !CHECK:               omp.yield
 !CHECK:             }
-!CHECK:             omp.terminator
 !CHECK:           }
   j1 = 5
   !$omp do

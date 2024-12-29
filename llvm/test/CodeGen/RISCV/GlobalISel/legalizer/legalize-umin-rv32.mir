@@ -12,12 +12,10 @@ body:             |
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; RV32I-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; RV32I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
+    ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND]](s32), [[AND1]]
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
-    ; RV32I-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; RV32I-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C2]]
+    ; RV32I-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C]]
     ; RV32I-NEXT: $x10 = COPY [[AND2]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
@@ -26,8 +24,7 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; RV32ZBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
+    ; RV32ZBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; RV32ZBB-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AND]], [[AND1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[UMIN]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
@@ -50,12 +47,10 @@ body:             |
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; RV32I-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; RV32I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
+    ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND]](s32), [[AND1]]
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
-    ; RV32I-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32I-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C2]]
+    ; RV32I-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C]]
     ; RV32I-NEXT: $x10 = COPY [[AND2]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
@@ -64,8 +59,7 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32ZBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
+    ; RV32ZBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; RV32ZBB-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AND]], [[AND1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[UMIN]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
@@ -113,10 +107,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY1]](s32), [[COPY3]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[ICMP2]], [[ICMP]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY1]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s32), [[ICMP]], [[ICMP1]]
     ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[SELECT]](s32), [[COPY]], [[COPY2]]
     ; CHECK-NEXT: $x10 = COPY [[SELECT1]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10

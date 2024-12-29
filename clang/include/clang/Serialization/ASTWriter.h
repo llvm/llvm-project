@@ -119,9 +119,6 @@ private:
   /// The PCM manager which manages memory buffers for pcm files.
   InMemoryModuleCache &ModuleCache;
 
-  /// The ASTContext we're writing.
-  ASTContext *Context = nullptr;
-
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
 
@@ -232,6 +229,13 @@ private:
   /// is predefined. It should be more clear and safer to query the set
   /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
   llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
+
+  /// Mapping from the main decl to related decls inside the main decls.
+  ///
+  /// These related decls have to be loaded right after the main decl they
+  /// belong to. In order to have canonical declaration for related decls from
+  /// the same module as the main decl during deserialization.
+  llvm::DenseMap<LocalDeclID, SmallVector<LocalDeclID, 4>> RelatedDeclsMap;
 
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
@@ -418,6 +422,13 @@ private:
   /// Only meaningful for reduced BMI.
   DeclUpdateMap DeclUpdatesFromGMF;
 
+  /// Mapping from decl templates and its new specialization in the
+  /// current TU.
+  using SpecializationUpdateMap =
+      llvm::MapVector<const NamedDecl *, SmallVector<const Decl *>>;
+  SpecializationUpdateMap SpecializationsUpdates;
+  SpecializationUpdateMap PartialSpecializationsUpdates;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -491,6 +502,9 @@ private:
 
   /// Mapping from a source location entry to whether it is affecting or not.
   llvm::BitVector IsSLocAffecting;
+  /// Mapping from a source location entry to whether it must be included as
+  /// input file.
+  llvm::BitVector IsSLocFileEntryAffecting;
 
   /// Mapping from \c FileID to an index into the FileID adjustment table.
   std::vector<FileID> NonAffectingFileIDs;
@@ -500,8 +514,8 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// A list of classes which need to emit the VTable in the corresponding
-  /// object file.
+  /// A list of classes in named modules which need to emit the VTable in
+  /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
 
   /// Computes input files that didn't affect compilation of the current module,
@@ -537,14 +551,13 @@ private:
   unsigned getSubmoduleID(Module *Mod);
 
   /// Write the given subexpression to the bitstream.
-  void WriteSubStmt(Stmt *S);
+  void WriteSubStmt(ASTContext &Context, Stmt *S);
 
   void WriteBlockInfoBlock();
-  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot);
+  void WriteControlBlock(Preprocessor &PP, StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
-  void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
+  void writeUnhashedControlBlock(Preprocessor &PP);
   ASTFileSignature backpatchSignature();
 
   /// Calculate hash of the pcm content.
@@ -552,40 +565,48 @@ private:
   ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
-  void WriteSourceManagerBlock(SourceManager &SourceMgr,
-                               const Preprocessor &PP);
+  void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec,
                                uint64_t MacroOffsetsBase);
-  void WriteSubmodules(Module *WritingModule);
+  void WriteSubmodules(Module *WritingModule, ASTContext *Context);
 
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
 
   unsigned TypeExtQualAbbrev = 0;
   void WriteTypeAbbrevs();
-  void WriteType(QualType T);
+  void WriteType(ASTContext &Context, QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
 
-  void GenerateNameLookupTable(const DeclContext *DC,
+  void GenerateSpecializationInfoLookupTable(
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      llvm::SmallVectorImpl<char> &LookupTable, bool IsPartial);
+  uint64_t WriteSpecializationInfoLookupTable(
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      bool IsPartial);
+  void GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
   uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
-  void WriteComments();
+  void WriteComments(ASTContext &Context);
   void WriteSelectors(Sema &SemaRef);
   void WriteReferencedSelectorsPool(Sema &SemaRef);
-  void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
+  void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver *IdResolver,
                             bool IsModule);
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
   void WriteSpecialDeclRecords(Sema &SemaRef);
-  void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
-  void WriteDeclContextVisibleUpdate(const DeclContext *DC);
+  void WriteSpecializationsUpdates(bool IsPartial);
+  void WriteDeclUpdatesBlocks(ASTContext &Context,
+                              RecordDataImpl &OffsetsRecord);
+  void WriteDeclContextVisibleUpdate(ASTContext &Context,
+                                     const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
   void WriteOpenCLExtensions(Sema &SemaRef);
   void WriteCUDAPragmas(Sema &SemaRef);
@@ -596,6 +617,7 @@ private:
   void WriteMSPointersToMembersPragmaOptions(Sema &SemaRef);
   void WritePackPragmaOptions(Sema &SemaRef);
   void WriteFloatControlPragmaOptions(Sema &SemaRef);
+  void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 
@@ -610,6 +632,9 @@ private:
   unsigned DeclEnumAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  unsigned DeclSpecializationsAbbrev = 0;
+  unsigned DeclPartialSpecializationsAbbrev = 0;
+
   unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
   unsigned DeclTemplateCXXMethodAbbrev = 0;
   unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
@@ -633,7 +658,7 @@ private:
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
-  ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
+  ASTFileSignature WriteASTCore(Sema *SemaPtr, StringRef isysroot,
                                 Module *WritingModule);
 
 public:
@@ -646,11 +671,6 @@ public:
             bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
 
-  ASTContext &getASTContext() const {
-    assert(Context && "requested AST context when not writing AST");
-    return *Context;
-  }
-
   const LangOptions &getLangOpts() const;
 
   /// Get a timestamp for output into the AST file. The actual timestamp
@@ -658,10 +678,13 @@ public:
   /// include timestamps in the output file.
   time_t getTimestampForOutput(const FileEntry *E) const;
 
-  /// Write a precompiled header for the given semantic analysis.
+  /// Write a precompiled header or a module with the AST produced by the
+  /// \c Sema object, or a dependency scanner module with the preprocessor state
+  /// produced by the \c Preprocessor object.
   ///
-  /// \param SemaRef a reference to the semantic analysis object that processed
-  /// the AST to be written into the precompiled header.
+  /// \param Subject The \c Sema object that processed the AST to be written, or
+  /// in the case of a dependency scanner module the \c Preprocessor that holds
+  /// the state.
   ///
   /// \param WritingModule The module that we are writing. If null, we are
   /// writing a precompiled header.
@@ -672,8 +695,9 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(Sema &SemaRef, StringRef OutputFile,
-                            Module *WritingModule, StringRef isysroot,
+  ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
+                            StringRef OutputFile, Module *WritingModule,
+                            StringRef isysroot,
                             bool ShouldCacheASTInMemory = false);
 
   /// Emit a token.
@@ -716,10 +740,10 @@ public:
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 
   /// Emit a reference to a type.
-  void AddTypeRef(QualType T, RecordDataImpl &Record);
+  void AddTypeRef(ASTContext &Context, QualType T, RecordDataImpl &Record);
 
   /// Force a type to be emitted and get its ID.
-  serialization::TypeID GetOrCreateTypeID(QualType T);
+  serialization::TypeID GetOrCreateTypeID(ASTContext &Context, QualType T);
 
   /// Find the first local declaration of a given local redeclarable
   /// decl.
@@ -761,6 +785,8 @@ public:
 
   /// Add a string to the given record.
   void AddString(StringRef Str, RecordDataImpl &Record);
+  void AddStringBlob(StringRef Str, RecordDataImpl &Record,
+                     SmallVectorImpl<char> &Blob);
 
   /// Convert a path from this build process into one that is appropriate
   /// for emission in the module file.
@@ -768,6 +794,8 @@ public:
 
   /// Add a path to the given record.
   void AddPath(StringRef Path, RecordDataImpl &Record);
+  void AddPathBlob(StringRef Str, RecordDataImpl &Record,
+                   SmallVectorImpl<char> &Blob);
 
   /// Emit the current record with the given path as a blob.
   void EmitRecordWithPath(unsigned Abbrev, RecordDataRef Record,
@@ -921,9 +949,9 @@ class PCHGenerator : public SemaConsumer {
   void anchor() override;
 
   Preprocessor &PP;
+  llvm::PointerUnion<Sema *, Preprocessor *> Subject;
   std::string OutputFile;
   std::string isysroot;
-  Sema *SemaPtr;
   std::shared_ptr<PCHBuffer> Buffer;
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
@@ -938,9 +966,7 @@ protected:
   bool isComplete() const { return Buffer->IsComplete; }
   PCHBuffer *getBufferPtr() { return Buffer.get(); }
   StringRef getOutputFile() const { return OutputFile; }
-  DiagnosticsEngine &getDiagnostics() const {
-    return SemaPtr->getDiagnostics();
-  }
+  DiagnosticsEngine &getDiagnostics() const;
   Preprocessor &getPreprocessor() { return PP; }
 
   virtual Module *getEmittingModule(ASTContext &Ctx);
@@ -956,7 +982,7 @@ public:
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
-  void InitializeSema(Sema &S) override { SemaPtr = &S; }
+  void InitializeSema(Sema &S) override;
   void HandleTranslationUnit(ASTContext &Ctx) override;
   void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;

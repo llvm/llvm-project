@@ -16,32 +16,32 @@
 ; EXP:      Export {
 ; EXP-NEXT:   Ordinal: 1
 ; EXP-NEXT:   Name: #mangled_data_sym
-; EXP-NEXT:   RVA: 0x3000
+; EXP-NEXT:   RVA: 0x4000
 ; EXP-NEXT: }
 ; EXP-NEXT: Export {
 ; EXP-NEXT:   Ordinal: 2
 ; EXP-NEXT:   Name: ?cxx_func@@YAHXZ
-; EXP-NEXT:   RVA: 0x1018
+; EXP-NEXT:   RVA: 0x2030
 ; EXP-NEXT: }
 ; EXP-NEXT: Export {
 ; EXP-NEXT:   Ordinal: 3
 ; EXP-NEXT:   Name: data_sym
-; EXP-NEXT:   RVA: 0x3004
+; EXP-NEXT:   RVA: 0x4004
 ; EXP-NEXT: }
 ; EXP-NEXT: Export {
 ; EXP-NEXT:   Ordinal: 4
 ; EXP-NEXT:   Name: exportas_func
-; EXP-NEXT:   RVA: 0x1010
+; EXP-NEXT:   RVA: 0x2020
 ; EXP-NEXT: }
 ; EXP-NEXT: Export {
 ; EXP-NEXT:   Ordinal: 5
 ; EXP-NEXT:   Name: mangled_func
-; EXP-NEXT:   RVA: 0x1008
+; EXP-NEXT:   RVA: 0x2010
 ; EXP-NEXT: }
 ; EXP-NEXT: Export {
 ; EXP-NEXT:   Ordinal: 6
 ; EXP-NEXT:   Name: unmangled_func
-; EXP-NEXT:   RVA: 0x1000
+; EXP-NEXT:   RVA: 0x2000
 ; EXP-NEXT: }
 
 ; RUN: llvm-nm --print-armap out.lib | FileCheck --check-prefix=IMPLIB %s

@@ -162,6 +162,12 @@ TypeSize EVT::getExtendedSizeInBits() const {
 std::string EVT::getEVTString() const {
   switch (V.SimpleTy) {
   default:
+    if (isRISCVVectorTuple()) {
+      unsigned Sz = getSizeInBits().getKnownMinValue();
+      unsigned NF = getRISCVVectorTupleNumFields();
+      unsigned MinNumElts = Sz / (NF * 8);
+      return "riscv_nxv" + utostr(MinNumElts) + "i8x" + utostr(NF);
+    }
     if (isVector())
       return (isScalableVector() ? "nxv" : "v") +
              utostr(getVectorElementCount().getKnownMinValue()) +
@@ -250,6 +256,14 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
       return MVT(MVT::aarch64svcount);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
+    if (TargetExtTy->getName() == "riscv.vector.tuple") {
+      unsigned Sz = cast<ScalableVectorType>(TargetExtTy->getTypeParameter(0))
+                        ->getMinNumElements() *
+                    8;
+      unsigned NF = TargetExtTy->getIntParameter(0);
+
+      return MVT::getRISCVVectorTupleVT(Sz * NF, NF);
+    }
     if (HandleUnknown)
       return MVT(MVT::Other);
     llvm_unreachable("Unknown target ext type!");

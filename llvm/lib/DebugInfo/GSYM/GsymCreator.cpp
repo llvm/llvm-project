@@ -189,13 +189,19 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  // Use the loader to load call site information from the YAML file.
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
+}
+
 void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   // Nothing to do if we have less than 2 functions.
   if (Funcs.size() < 2)
     return;
 
-  // Sort the function infos by address range first
-  llvm::sort(Funcs);
+  // Sort the function infos by address range first, preserving input order
+  llvm::stable_sort(Funcs);
   std::vector<FunctionInfo> TopLevelFuncs;
 
   // Add the first function info to the top level functions
@@ -375,9 +381,15 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   // Save a mapping of string offsets to the cached string reference in case
   // we need to segment the GSYM file and copy string from one string table to
   // another.
-  if (StringOffsetMap.count(StrOff) == 0)
-    StringOffsetMap.insert(std::make_pair(StrOff, CHStr));
+  StringOffsetMap.try_emplace(StrOff, CHStr);
   return StrOff;
+}
+
+StringRef GsymCreator::getString(uint32_t Offset) {
+  auto I = StringOffsetMap.find(Offset);
+  assert(I != StringOffsetMap.end() &&
+         "GsymCreator::getString expects a valid offset as parameter.");
+  return I->second.val();
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {

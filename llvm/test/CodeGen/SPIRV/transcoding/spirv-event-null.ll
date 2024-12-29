@@ -13,12 +13,31 @@
 ; CHECK-DAG: %[[#TyChar:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#TyV4:]] = OpTypeVector %[[#TyChar]] 4
 ; CHECK-DAG: %[[#TyStructV4:]] = OpTypeStruct %[[#TyV4]]
-; CHECK-DAG: %[[#TyPtrSV4_W:]] = OpTypePointer Workgroup %[[#TyStructV4]]
 ; CHECK-DAG: %[[#TyPtrSV4_CW:]] = OpTypePointer CrossWorkgroup %[[#TyStructV4]]
 ; CHECK-DAG: %[[#TyPtrV4_W:]] = OpTypePointer Workgroup %[[#TyV4]]
 ; CHECK-DAG: %[[#TyPtrV4_CW:]] = OpTypePointer CrossWorkgroup %[[#TyV4]]
+; CHECK-DAG: %[[#TyHalf:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#TyHalfV2:]] = OpTypeVector %[[#TyHalf]] 2
+; CHECK-DAG: %[[#TyHalfV2_W:]] = OpTypePointer Workgroup %[[#TyHalfV2]]
+; CHECK-DAG: %[[#TyHalfV2_CW:]] = OpTypePointer CrossWorkgroup %[[#TyHalfV2]]
 
 ; Check correct translation of __spirv_GroupAsyncCopy and target("spirv.Event") zeroinitializer
+
+; CHECK: OpFunction
+; CHECK: %[[#HalfA1:]] = OpFunctionParameter %[[#TyHalfV2_W:]]
+; CHECK: %[[#HalfA2:]] = OpFunctionParameter %[[#TyHalfV2_CW:]]
+; CHECK: OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#HalfA1]] %[[#HalfA2]] %[[#]] %[[#]] %[[#ConstEvent]]
+; CHECK: OpFunctionEnd
+
+%StructEvent = type { target("spirv.Event") }
+
+define spir_kernel void @test_half(ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2) {
+entry:
+  %r = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_mm9ocl_event(i32 2, ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2, i64 16, i64 10, target("spirv.Event") zeroinitializer)
+  ret void
+}
+
+declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_mm9ocl_event(i32 noundef, ptr addrspace(3) noundef, ptr addrspace(1) noundef, i64 noundef, i64 noundef, target("spirv.Event"))
 
 ; CHECK: OpFunction
 ; CHECK: OpFunctionParameter
@@ -29,8 +48,6 @@
 ; CHECK: %[[#CopyRes:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#Dest]] %[[#Src]] %[[#]] %[[#]] %[[#ConstEvent]]
 ; CHECK: OpStore %[[#EventVar]] %[[#CopyRes]]
 ; CHECK: OpFunctionEnd
-
-%StructEvent = type { target("spirv.Event") }
 
 define spir_kernel void @foo(ptr addrspace(1) %_arg_out_ptr, ptr addrspace(3) %_arg_local_acc) {
 entry:
@@ -50,14 +67,11 @@ declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU
 ; and %_arg_Local and %_arg are source/destination arguments in OpGroupAsyncCopy
 
 ; CHECK: OpFunction
-; CHECK: %[[#BarArg1:]] = OpFunctionParameter %[[#TyPtrSV4_W]]
+; CHECK: %[[#BarArg1:]] = OpFunctionParameter %[[#TyPtrV4_W]]
 ; CHECK: %[[#BarArg2:]] = OpFunctionParameter %[[#TyPtrSV4_CW]]
 ; CHECK: %[[#EventVarBar:]] = OpVariable %[[#TyStructPtr]] Function
 ; CHECK: %[[#EventVarBarCasted2:]] = OpBitcast %[[#TyEventPtr]] %[[#EventVarBar]]
-; CHECK: %[[#SrcBar:]] = OpInBoundsPtrAccessChain %[[#TyPtrSV4_CW]] %[[#BarArg2]] %[[#]]
-; CHECK-DAG: %[[#BarArg1Casted:]] = OpBitcast %[[#TyPtrV4_W]] %[[#BarArg1]]
-; CHECK-DAG: %[[#SrcBarCasted:]] = OpBitcast %[[#TyPtrV4_CW]] %[[#SrcBar]]
-; CHECK: %[[#ResBar:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#BarArg1Casted]] %[[#SrcBarCasted]] %[[#]] %[[#]] %[[#ConstEvent]]
+; CHECK: %[[#ResBar:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#BarArg1]] %[[#]] %[[#]] %[[#]] %[[#ConstEvent]]
 ; CHECK: %[[#EventVarBarCasted:]] = OpBitcast %[[#TyEventPtr]] %[[#EventVarBar]]
 ; CHECK: OpStore %[[#EventVarBarCasted]] %[[#ResBar]]
 ; CHECK: %[[#EventVarBarGen:]] = OpPtrCastToGeneric %[[#TyEventPtrGen]] %[[#EventVarBarCasted2]]

@@ -45,7 +45,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -892,7 +890,9 @@ void llvm::addPredicatedMveVpredROp(MachineInstrBuilder &MIB,
 void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   MCRegister SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   bool GPRDest = ARM::GPRRegClass.contains(DestReg);
   bool GPRSrc = ARM::GPRRegClass.contains(SrcReg);
 
@@ -1161,6 +1161,13 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
             .addImm(0)
             .addMemOperand(MMO)
             .add(predOps(ARMCC::AL));
+      } else if (ARM::cl_FPSCR_NZCVRegClass.hasSubClassEq(RC)) {
+        BuildMI(MBB, I, DebugLoc(), get(ARM::VSTR_FPSCR_NZCVQC_off))
+            .addReg(SrcReg, getKillRegState(isKill))
+            .addFrameIndex(FI)
+            .addImm(0)
+            .addMemOperand(MMO)
+            .add(predOps(ARMCC::AL));
       } else
         llvm_unreachable("Unknown reg class!");
       break;
@@ -1323,7 +1330,9 @@ Register ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case ARM::tSTRspi:
   case ARM::VSTRD:
   case ARM::VSTRS:
+  case ARM::VSTRH:
   case ARM::VSTR_P0_off:
+  case ARM::VSTR_FPSCR_NZCVQC_off:
   case ARM::MVE_VSTRWU32:
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
@@ -1411,6 +1420,12 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
           .add(predOps(ARMCC::AL));
     } else if (ARM::VCCRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::VLDR_P0_off), DestReg)
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO)
+          .add(predOps(ARMCC::AL));
+    } else if (ARM::cl_FPSCR_NZCVRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, I, DL, get(ARM::VLDR_FPSCR_NZCVQC_off), DestReg)
           .addFrameIndex(FI)
           .addImm(0)
           .addMemOperand(MMO)
@@ -1574,7 +1589,9 @@ Register ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case ARM::tLDRspi:
   case ARM::VLDRD:
   case ARM::VLDRS:
+  case ARM::VLDRH:
   case ARM::VLDR_P0_off:
+  case ARM::VLDR_FPSCR_NZCVQC_off:
   case ARM::MVE_VLDRWU32:
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
@@ -5871,10 +5888,11 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
   return !Live;
 }
 
-std::optional<outliner::OutlinedFunction>
+std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 ARMBaseInstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
@@ -5915,7 +5933,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     llvm::erase_if(RepeatedSequenceLocs, CantGuaranteeValueAcrossCall);
 
     // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < 2)
+    if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
   }
 
@@ -5941,7 +5959,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   else
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoBTI);
 
-  if (RepeatedSequenceLocs.size() < 2)
+  if (RepeatedSequenceLocs.size() < MinRepeats)
     return std::nullopt;
 
   // Likewise, partition the candidates according to PAC-RET enablement.
@@ -5958,7 +5976,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   else
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoPAC);
 
-  if (RepeatedSequenceLocs.size() < 2)
+  if (RepeatedSequenceLocs.size() < MinRepeats)
     return std::nullopt;
 
   // At this point, we have only "safe" candidates to outline. Figure out
@@ -6062,7 +6080,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
         RepeatedSequenceLocs.size() * Costs.CallDefault) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
-      if (RepeatedSequenceLocs.size() < 2)
+      if (RepeatedSequenceLocs.size() < MinRepeats)
         return std::nullopt;
     } else
       SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
@@ -6088,8 +6106,8 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
   }
 
-  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
-                                    NumBytesToCreateFrame, FrameID);
+  return std::make_unique<outliner::OutlinedFunction>(
+      RepeatedSequenceLocs, SequenceSize, NumBytesToCreateFrame, FrameID);
 }
 
 bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
@@ -6203,6 +6221,9 @@ void ARMBaseInstrInfo::mergeOutliningCandidateAttributes(
   const Function &CFn = C.getMF()->getFunction();
   if (CFn.hasFnAttribute("branch-target-enforcement"))
     F.addFnAttr(CFn.getFnAttribute("branch-target-enforcement"));
+
+  if (CFn.hasFnAttribute("sign-return-address"))
+    F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
 
   ARMGenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
 }
@@ -6620,10 +6641,7 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
       MBB.addLiveIn(ARM::LR);
 
     // Insert a save before the outlined region
-    bool Auth = OF.Candidates.front()
-                    .getMF()
-                    ->getInfo<ARMFunctionInfo>()
-                    ->shouldSignReturnAddress(true);
+    bool Auth = MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true);
     saveLROnStack(MBB, It, true, Auth);
 
     // Fix up the instructions in the range, since we're going to modify the
@@ -6865,15 +6883,13 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
       if (MI->isPHI() && S.getKind() == SDep::Anti) {
         Register Reg = S.getReg();
         if (Reg.isVirtual())
-          CrossIterationNeeds.insert(std::make_pair(Reg.id(), IterNeed()))
-              .first->second.set(0);
+          CrossIterationNeeds[Reg.id()].set(0);
       } else if (S.isAssignedRegDep()) {
         int OStg = SMS.stageScheduled(S.getSUnit());
         if (OStg >= 0 && OStg != Stg) {
           Register Reg = S.getReg();
           if (Reg.isVirtual())
-            CrossIterationNeeds.insert(std::make_pair(Reg.id(), IterNeed()))
-                .first->second |= ((1 << (OStg - Stg)) - 1);
+            CrossIterationNeeds[Reg.id()] |= ((1 << (OStg - Stg)) - 1);
         }
       }
   }
@@ -6922,7 +6938,6 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   RegClassInfo.runOnMachineFunction(*MF);
   RPTracker.init(MF, &RegClassInfo, nullptr, EndLoop->getParent(),
                  EndLoop->getParent()->end(), false, false);
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
   bumpCrossIterationPressure(RPTracker, CrossIterationNeeds);
 
@@ -6964,10 +6979,16 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   }
 
   auto &P = RPTracker.getPressure().MaxSetPressure;
-  for (unsigned I = 0, E = P.size(); I < E; ++I)
-    if (P[I] > TRI->getRegPressureSetLimit(*MF, I)) {
+  for (unsigned I = 0, E = P.size(); I < E; ++I) {
+    // Exclude some Neon register classes.
+    if (I == ARM::DQuad_with_ssub_0 || I == ARM::DTripleSpc_with_ssub_0 ||
+        I == ARM::DTriple_with_qsub_0_in_QPR)
+      continue;
+
+    if (P[I] > RegClassInfo.getRegPressureSetLimit(I)) {
       return true;
     }
+  }
   return false;
 }
 

@@ -46,13 +46,14 @@ define void @splat_v2i64(ptr %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a1), zero
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: splat_v2i64:
@@ -112,13 +113,14 @@ define void @splat_v4i64(ptr %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a1), zero
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: splat_v4i64:
@@ -279,9 +281,8 @@ define void @splat_zero_v2i32(ptr %p) {
 define void @splat_zero_v7i16(ptr %p) {
 ; CHECK-LABEL: splat_zero_v7i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <7 x i16> zeroinitializer, ptr %p
@@ -406,13 +407,14 @@ define void @vadd_vx_v16i64(ptr %a, i64 %b, ptr %c) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vadd.vv v8, v8, v16
 ; RV32-NEXT:    vse64.v v8, (a3)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vadd_vx_v16i64:

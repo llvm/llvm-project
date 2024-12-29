@@ -87,7 +87,7 @@ static Value unFoldOpIntResult(OpBuilder &builder, Location loc,
                                OpFoldResult ofr) {
   if (std::optional<int64_t> i = getConstantIntValue(ofr); i.has_value())
     return constantIndex(builder, loc, *i);
-  return ofr.get<Value>();
+  return cast<Value>(ofr);
 }
 
 static Value tryFoldTensors(Value t) {
@@ -524,84 +524,8 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
 std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     OpBuilder &builder, Location loc, ArrayRef<SparseIterator *> spIters,
     MutableArrayRef<Value> reduc, bool needsUniv) {
-  // NOTE: the slice driven tensor-related reduction variable must
-  // appear before normal tensors.
-
-  // The set of induction variables for the while loop.
-  SmallVector<Value> ivs;
-
-  // Construct the while-loop with a parameter for each coordinate.
-  for (SparseIterator *it : spIters) {
-    ValueRange itVals = it->getCursor();
-    ivs.append(itVals.begin(), itVals.end());
-  }
-
-  // The position where user-supplied reduction variable starts.
-  ivs.append(reduc.begin(), reduc.end());
-  // Update universal index.
-  if (needsUniv)
-    ivs.push_back(loopSeqStack.back().first);
-
-  // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
-  TypeRange types = ValueRange(ivs).getTypes();
-  auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
-
-  SmallVector<Location> locs(types.size(), loc);
-  Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
-  Block *after = builder.createBlock(&whileOp.getAfter(), {}, types, locs);
-
-  // Generates loop conditions.
-  builder.setInsertionPointToStart(before);
-  ValueRange bArgs = before->getArguments();
-  Value whileCond = nullptr; // bool values for loop condition.
-
-  for (SparseIterator *it : spIters) {
-    auto [cond, remArgs] = it->genWhileCond(builder, loc, bArgs);
-    whileCond = !whileCond ? cond : ANDI(whileCond, cond);
-    bArgs = remArgs;
-  }
-  // The remaining block arguments are user-provided reduction values and an
-  // optional universal index. Make sure their sizes match.
-  assert(bArgs.size() == reduc.size() + needsUniv);
-  builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
-
-  // Generates loop body.
-  builder.setInsertionPointToStart(after);
-  ValueRange aArgs = after->getArguments();
-  // Since some LoopCondKind might need extra checks to filter out invalid
-  // iterations, we maintains another array to hold the iteration arguments to
-  // yield if the checks fails.
-  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
-
-  for (SparseIterator *it : spIters) {
-    aArgs = it->linkNewScope(aArgs);
-    // Dereference the iterator to cache the coordinate.
-    it->deref(builder, loc);
-  }
-
-  // In-place update on reduction variable.
-  assert(aArgs.size() == reduc.size() + needsUniv);
-  for (unsigned i = 0, e = reduc.size(); i < e; i++)
-    reduc[i] = aArgs[i];
-
-  Value min;
-  // Finds the minimum coordinate
-  if (!needsUniv) {
-    for (SparseIterator *it : spIters) {
-      if (min) {
-        Value cmp = CMPI(ult, it->getCrd(), min);
-        min = SELECT(cmp, it->getCrd(), min);
-      } else {
-        min = it->getCrd();
-      }
-    }
-  } else {
-    // Otherwise, universal index is the minimal pos.
-    min = whileOp.getAfterArguments().back();
-  }
-
-  return {whileOp, min};
+  return genCoIteration(builder, loc, spIters, reduc,
+                        needsUniv ? loopSeqStack.back().first : nullptr);
 }
 
 bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
@@ -970,6 +894,100 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
 
   assert(loopStack.size() == loopSeqStack.size());
   loopStack.pop_back();
+}
+
+//===----------------------------------------------------------------------===//
+// Loop generation utils
+//===----------------------------------------------------------------------===//
+
+std::pair<Operation *, Value> sparse_tensor::genCoIteration(
+    OpBuilder &builder, Location loc, ArrayRef<SparseIterator *> spIters,
+    MutableArrayRef<Value> reduc, Value uniIdx, bool userReducFirst) {
+  // NOTE: the slice driven tensor-related reduction variable must
+  // appear before normal tensors.
+
+  // The set of induction variables for the while loop.
+  SmallVector<Value> ivs;
+
+  // TODO: remove the flag after full migration. Currently
+  // `sparse_tensor.coiterate` operation (must) put user provided reduction
+  // values at the front of the block list, while direct sparsification to scf
+  // loops put them at the end.
+  if (userReducFirst)
+    ivs.append(reduc.begin(), reduc.end());
+
+  // Construct the while-loop with a parameter for each coordinate.
+  for (SparseIterator *it : spIters) {
+    ValueRange itVals = it->getCursor();
+    ivs.append(itVals.begin(), itVals.end());
+  }
+
+  if (!userReducFirst)
+    ivs.append(reduc.begin(), reduc.end());
+
+  // Update universal index.
+  if (uniIdx)
+    ivs.push_back(uniIdx);
+
+  // Ensures all operands are valid.
+  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
+  TypeRange types = ValueRange(ivs).getTypes();
+  auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
+
+  SmallVector<Location> locs(types.size(), loc);
+  Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
+  Block *after = builder.createBlock(&whileOp.getAfter(), {}, types, locs);
+
+  // Generates loop conditions.
+  builder.setInsertionPointToStart(before);
+  ValueRange bArgs = before->getArguments();
+  Value whileCond = nullptr; // bool values for loop condition.
+
+  for (SparseIterator *it : spIters) {
+    auto [cond, remArgs] = it->genWhileCond(builder, loc, bArgs);
+    whileCond = !whileCond ? cond : ANDI(whileCond, cond);
+    bArgs = remArgs;
+  }
+  // The remaining block arguments are user-provided reduction values and an
+  // optional universal index. Make sure their sizes match.
+  assert(bArgs.size() == reduc.size() + (uniIdx ? 1 : 0));
+  builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
+
+  // Generates loop body.
+  builder.setInsertionPointToStart(after);
+  ValueRange aArgs = after->getArguments();
+  // Since some LoopCondKind might need extra checks to filter out invalid
+  // iterations, we maintains another array to hold the iteration arguments to
+  // yield if the checks fails.
+  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
+
+  for (SparseIterator *it : spIters) {
+    aArgs = it->linkNewScope(aArgs);
+    // Dereference the iterator to cache the coordinate.
+    it->deref(builder, loc);
+  }
+
+  // In-place update on reduction variable.
+  for (unsigned i = 0, e = reduc.size(); i < e; i++)
+    reduc[i] = aArgs[i];
+
+  Value min;
+  // Finds the minimum coordinate
+  if (!uniIdx) {
+    for (SparseIterator *it : spIters) {
+      if (min) {
+        Value cmp = CMPI(ult, it->getCrd(), min);
+        min = SELECT(cmp, it->getCrd(), min);
+      } else {
+        min = it->getCrd();
+      }
+    }
+  } else {
+    // Otherwise, universal index is the minimal pos.
+    min = whileOp.getAfterArguments().back();
+  }
+
+  return {whileOp, min};
 }
 
 #undef CMPI

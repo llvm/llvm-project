@@ -40,6 +40,7 @@ add_lld_library(lldMachO
   BinaryFormat
   BitReader
   BitWriter
+  CGData
   Core
   DebugInfoDWARF
   Demangle
@@ -49,7 +50,6 @@ add_lld_library(lldMachO
   Object
   Option
   Passes
-  ProfileData
   Support
   TargetParser
   TextAPI

@@ -47,9 +47,11 @@ set(sources
   mod-real.cpp
   modulo-real.cpp
   nearest.cpp
+  nearbyint.cpp
   norm2.cpp
   pow.cpp
   random.cpp
+  remainder.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp
@@ -69,6 +71,9 @@ set(sources
 
 include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/..")
 add_library(FortranFloat128MathILib INTERFACE)
+target_include_directories(FortranFloat128MathILib INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+  )
 
 if (FLANG_RUNTIME_F128_MATH_LIB)
   if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath")

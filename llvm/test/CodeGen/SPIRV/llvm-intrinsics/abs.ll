@@ -1,4 +1,8 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-linux %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] s_abs
 ; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] s_abs

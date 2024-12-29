@@ -371,35 +371,35 @@ public:
       return I == RHS.I;
     }
     const Value *operator*() const {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
+      ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                                 ? cast<ValueAsMetadata *>(I)
+                                 : *cast<ValueAsMetadata **>(I);
       return VAM->getValue();
     };
     Value *operator*() {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
+      ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                                 ? cast<ValueAsMetadata *>(I)
+                                 : *cast<ValueAsMetadata **>(I);
       return VAM->getValue();
     }
     location_op_iterator &operator++() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() + 1;
+      if (auto *VAM = dyn_cast<ValueAsMetadata *>(I))
+        I = VAM + 1;
       else
-        I = I.get<ValueAsMetadata **>() + 1;
+        I = cast<ValueAsMetadata **>(I) + 1;
       return *this;
     }
     location_op_iterator &operator--() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() - 1;
+      if (auto *VAM = dyn_cast<ValueAsMetadata *>(I))
+        I = VAM - 1;
       else
-        I = I.get<ValueAsMetadata **>() - 1;
+        I = cast<ValueAsMetadata **>(I) - 1;
       return *this;
     }
   };
 
-  bool isDbgDeclare() { return Type == LocationType::Declare; }
-  bool isDbgValue() { return Type == LocationType::Value; }
+  bool isDbgDeclare() const { return Type == LocationType::Declare; }
+  bool isDbgValue() const { return Type == LocationType::Value; }
 
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
@@ -427,6 +427,11 @@ public:
   /// Does this describe the address of a local variable. True for dbg.addr
   /// and dbg.declare, but not dbg.value, which describes its value.
   bool isAddressOfVariable() const { return Type == LocationType::Declare; }
+
+  /// Determine if this describes the value of a local variable. It is false for
+  /// dbg.declare, but true for dbg.value, which describes its value.
+  bool isValueOfVariable() const { return Type == LocationType::Value; }
+
   LocationType getType() const { return Type; }
 
   void setKillLocation();

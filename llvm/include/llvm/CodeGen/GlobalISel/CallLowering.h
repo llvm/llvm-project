@@ -409,20 +409,21 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool determineAndHandleAssignments(
-      ValueHandler &Handler, ValueAssigner &Assigner,
-      SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
-      CallingConv::ID CallConv, bool IsVarArg,
-      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+  bool
+  determineAndHandleAssignments(ValueHandler &Handler, ValueAssigner &Assigner,
+                                SmallVectorImpl<ArgInfo> &Args,
+                                MachineIRBuilder &MIRBuilder,
+                                CallingConv::ID CallConv, bool IsVarArg,
+                                ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
   /// processed these arguments to populate \p CCState and \p ArgLocs.
-  bool
-  handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
-                    CCState &CCState, SmallVectorImpl<CCValAssign> &ArgLocs,
-                    MachineIRBuilder &MIRBuilder,
-                    ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+  bool handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
+                         CCState &CCState,
+                         SmallVectorImpl<CCValAssign> &ArgLocs,
+                         MachineIRBuilder &MIRBuilder,
+                         ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be

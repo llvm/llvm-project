@@ -170,7 +170,7 @@ struct CaseBlock {
 struct JumpTable {
   /// The virtual register containing the index of the jump table entry
   /// to jump to.
-  unsigned Reg;
+  Register Reg;
   /// The JumpTableIndex for this jump table in the function.
   unsigned JTI;
   /// The MBB into which to emit the code for the indirect jump.
@@ -182,7 +182,7 @@ struct JumpTable {
   /// The debug location of the instruction this JumpTable was produced from.
   std::optional<SDLoc> SL; // For SelectionDAG
 
-  JumpTable(unsigned R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D,
+  JumpTable(Register R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D,
             std::optional<SDLoc> SL)
       : Reg(R), JTI(J), MBB(M), Default(D), SL(SL) {}
 };
@@ -218,7 +218,7 @@ struct BitTestBlock {
   APInt First;
   APInt Range;
   const Value *SValue;
-  unsigned Reg;
+  Register Reg;
   MVT RegVT;
   bool Emitted;
   bool ContiguousRange;
@@ -229,7 +229,7 @@ struct BitTestBlock {
   BranchProbability DefaultProb;
   bool FallthroughUnreachable = false;
 
-  BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT, bool E,
+  BitTestBlock(APInt F, APInt R, const Value *SV, Register Rg, MVT RgVT, bool E,
                bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
                BitTestInfo C, BranchProbability Pr)
       : First(std::move(F)), Range(std::move(R)), SValue(SV), Reg(Rg),

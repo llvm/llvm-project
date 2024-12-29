@@ -44,6 +44,7 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/Loads.h"
@@ -65,9 +66,9 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -76,7 +77,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -567,12 +567,11 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   // We want to visit children before parents. We will enqueue all the parents
   // before their children in the worklist and process the worklist in reverse
   // order.
-  SmallVector<DomTreeNode *, 16> Worklist = collectChildrenInLoop(N, CurLoop);
+  SmallVector<BasicBlock *, 16> Worklist =
+      collectChildrenInLoop(DT, N, CurLoop);
 
   bool Changed = false;
-  for (DomTreeNode *DTN : reverse(Worklist)) {
-    BasicBlock *BB = DTN->getBlock();
-    // Only need to process the contents of this block if it is not part of a
+  for (BasicBlock *BB : reverse(Worklist)) {
     // subloop (which would already have been processed).
     if (inSubLoop(BB, CurLoop, LI))
       continue;
@@ -1466,8 +1465,11 @@ static Instruction *cloneInstructionInExitBlock(
 
   if (MSSAU.getMemorySSA()->getMemoryAccess(&I)) {
     // Create a new MemoryAccess and let MemorySSA set its defining access.
+    // After running some passes, MemorySSA might be outdated, and the
+    // instruction `I` may have become a non-memory touching instruction.
     MemoryAccess *NewMemAcc = MSSAU.createMemoryAccessInBB(
-        New, nullptr, New->getParent(), MemorySSA::Beginning);
+        New, nullptr, New->getParent(), MemorySSA::Beginning,
+        /*CreationMustSucceed=*/false);
     if (NewMemAcc) {
       if (auto *MemDef = dyn_cast<MemoryDef>(NewMemAcc))
         MSSAU.insertDef(MemDef, /*RenameUses=*/true);
@@ -1603,13 +1605,14 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
   //
   const auto &BlockColors = SafetyInfo->getBlockColors();
   SmallSetVector<BasicBlock *, 8> PredBBs(pred_begin(ExitBB), pred_end(ExitBB));
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   while (!PredBBs.empty()) {
     BasicBlock *PredBB = *PredBBs.begin();
     assert(CurLoop->contains(PredBB) &&
            "Expect all predecessors are in the loop");
     if (PN->getBasicBlockIndex(PredBB) >= 0) {
       BasicBlock *NewPred = SplitBlockPredecessors(
-          ExitBB, PredBB, ".split.loop.exit", DT, LI, MSSAU, true);
+          ExitBB, PredBB, ".split.loop.exit", &DTU, LI, MSSAU, true);
       // Since we do not allow splitting EH-block with BlockColors in
       // canSplitPredecessors(), we can simply assign predecessor's color to
       // the new block.
@@ -2027,7 +2030,9 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool StoreIsGuanteedToExecute = false;
+  bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
+
   // Goes from Unknown to either Safe or Unsafe, but can't switch between them.
   enum {
     StoreSafe,
@@ -2085,6 +2090,10 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
+
+        if (!LoadIsGuaranteedToExecute)
+          LoadIsGuaranteedToExecute =
+              SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -2230,8 +2239,9 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
-                        SawUnorderedAtomic, AATags, *SafetyInfo,
-                        StoreSafety == StoreSafe);
+                        SawUnorderedAtomic,
+                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
@@ -2244,7 +2254,7 @@ bool llvm::promoteLoopAccessesToScalars(
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
     PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags)
+    if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
     MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
@@ -2420,8 +2430,8 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   } else
     return false;
 
-  auto MatchICmpAgainstInvariant = [&](Value *C, ICmpInst::Predicate &P,
-                                       Value *&LHS, Value *&RHS) {
+  auto MatchICmpAgainstInvariant = [&](Value *C, CmpPredicate &P, Value *&LHS,
+                                       Value *&RHS) {
     if (!match(C, m_OneUse(m_ICmp(P, m_Value(LHS), m_Value(RHS)))))
       return false;
     if (!LHS->getType()->isIntegerTy())
@@ -2438,12 +2448,13 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
       P = ICmpInst::getInversePredicate(P);
     return true;
   };
-  ICmpInst::Predicate P1, P2;
+  CmpPredicate P1, P2;
   Value *LHS1, *LHS2, *RHS1, *RHS2;
   if (!MatchICmpAgainstInvariant(Cond1, P1, LHS1, RHS1) ||
       !MatchICmpAgainstInvariant(Cond2, P2, LHS2, RHS2))
     return false;
-  if (P1 != P2 || LHS1 != LHS2)
+  // FIXME: Use CmpPredicate::getMatching here.
+  if (P1 != static_cast<CmpInst::Predicate>(P2) || LHS1 != LHS2)
     return false;
 
   // Everything is fine, we can do the transform.
@@ -2537,14 +2548,19 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
                      Value *InvariantRHS, ICmpInst &ICmp, Loop &L,
                      ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU,
                      AssumptionCache *AC, DominatorTree *DT) {
-  assert(ICmpInst::isSigned(Pred) && "Not supported yet!");
   assert(!L.isLoopInvariant(VariantLHS) && "Precondition.");
   assert(L.isLoopInvariant(InvariantRHS) && "Precondition.");
+
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (!match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned &&
+      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+    return false;
+  if (!IsSigned &&
+      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
@@ -2559,17 +2575,20 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // normal linear arithmetics). Overflows make things much more complicated, so
   // we want to avoid this.
   auto &DL = L.getHeader()->getDataLayout();
-  bool ProvedNoOverflowAfterReassociate =
-      computeOverflowForSignedSub(InvariantRHS, InvariantOp,
-                                  SimplifyQuery(DL, DT, AC, &ICmp)) ==
-      llvm::OverflowResult::NeverOverflows;
-  if (!ProvedNoOverflowAfterReassociate)
+  SimplifyQuery SQ(DL, DT, AC, &ICmp);
+  if (IsSigned && computeOverflowForSignedSub(InvariantRHS, InvariantOp, SQ) !=
+                      llvm::OverflowResult::NeverOverflows)
+    return false;
+  if (!IsSigned &&
+      computeOverflowForUnsignedSub(InvariantRHS, InvariantOp, SQ) !=
+          llvm::OverflowResult::NeverOverflows)
     return false;
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
   IRBuilder<> Builder(Preheader->getTerminator());
-  Value *NewCmpOp = Builder.CreateSub(InvariantRHS, InvariantOp, "invariant.op",
-                                      /*HasNUW*/ false, /*HasNSW*/ true);
+  Value *NewCmpOp =
+      Builder.CreateSub(InvariantRHS, InvariantOp, "invariant.op",
+                        /*HasNUW*/ !IsSigned, /*HasNSW*/ IsSigned);
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
@@ -2584,14 +2603,19 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
                      Value *InvariantRHS, ICmpInst &ICmp, Loop &L,
                      ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU,
                      AssumptionCache *AC, DominatorTree *DT) {
-  assert(ICmpInst::isSigned(Pred) && "Not supported yet!");
   assert(!L.isLoopInvariant(VariantLHS) && "Precondition.");
   assert(L.isLoopInvariant(InvariantRHS) && "Precondition.");
+
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (!match(VariantLHS, m_NSWSub(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned &&
+      !match(VariantLHS, m_NSWSub(m_Value(VariantOp), m_Value(InvariantOp))))
+    return false;
+  if (!IsSigned &&
+      !match(VariantLHS, m_NUWSub(m_Value(VariantOp), m_Value(InvariantOp))))
     return false;
 
   bool VariantSubtracted = false;
@@ -2613,14 +2637,24 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   // "C1 - C2" does not overflow.
   auto &DL = L.getHeader()->getDataLayout();
   SimplifyQuery SQ(DL, DT, AC, &ICmp);
-  if (VariantSubtracted) {
+  if (VariantSubtracted && IsSigned) {
     // C1 - LV < C2 --> LV > C1 - C2
     if (computeOverflowForSignedSub(InvariantOp, InvariantRHS, SQ) !=
         llvm::OverflowResult::NeverOverflows)
       return false;
-  } else {
+  } else if (VariantSubtracted && !IsSigned) {
+    // C1 - LV < C2 --> LV > C1 - C2
+    if (computeOverflowForUnsignedSub(InvariantOp, InvariantRHS, SQ) !=
+        llvm::OverflowResult::NeverOverflows)
+      return false;
+  } else if (!VariantSubtracted && IsSigned) {
     // LV - C1 < C2 --> LV < C1 + C2
     if (computeOverflowForSignedAdd(InvariantOp, InvariantRHS, SQ) !=
+        llvm::OverflowResult::NeverOverflows)
+      return false;
+  } else { // !VariantSubtracted && !IsSigned
+    // LV - C1 < C2 --> LV < C1 + C2
+    if (computeOverflowForUnsignedAdd(InvariantOp, InvariantRHS, SQ) !=
         llvm::OverflowResult::NeverOverflows)
       return false;
   }
@@ -2630,9 +2664,9 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   Value *NewCmpOp =
       VariantSubtracted
           ? Builder.CreateSub(InvariantOp, InvariantRHS, "invariant.op",
-                              /*HasNUW*/ false, /*HasNSW*/ true)
+                              /*HasNUW*/ !IsSigned, /*HasNSW*/ IsSigned)
           : Builder.CreateAdd(InvariantOp, InvariantRHS, "invariant.op",
-                              /*HasNUW*/ false, /*HasNSW*/ true);
+                              /*HasNUW*/ !IsSigned, /*HasNSW*/ IsSigned);
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
@@ -2645,13 +2679,9 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                         MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                         DominatorTree *DT) {
   using namespace PatternMatch;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *LHS, *RHS;
   if (!match(&I, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
-    return false;
-
-  // TODO: Support unsigned predicates?
-  if (!ICmpInst::isSigned(Pred))
     return false;
 
   // Put variant operand to LHS position.
@@ -2785,14 +2815,13 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
 /// Reassociate associative binary expressions of the form
 ///
 /// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)"
+/// 2. "(C1 op LV) op C2" ==> "LV op (C1 op C2)"
+/// 3. "C2 op (C1 op LV)" ==> "LV op (C1 op C2)"
+/// 4. "C2 op (LV op C1)" ==> "LV op (C1 op C2)"
 ///
-/// where op is an associative binary op, LV is a loop variant, and C1 and C2
-/// are loop invariants that we want to hoist.
-///
-/// TODO: This can be extended to more cases such as
-/// 2. "C1 op (C2 op LV)" ==> "(C1 op C2) op LV"
-/// 3. "(C1 op LV) op C2" ==> "LV op (C1 op C2)" if op is commutative
-/// 4. "C1 op (LV op C2)" ==> "(C1 op C2) op LV" if op is commutative
+/// where op is an associative BinOp, LV is a loop variant, and C1 and C2 are
+/// loop invariants that we want to hoist, noting that associativity implies
+/// commutativity.
 static bool hoistBOAssociation(Instruction &I, Loop &L,
                                ICFLoopSafetyInfo &SafetyInfo,
                                MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2801,37 +2830,46 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (!BO || !BO->isAssociative())
     return false;
 
-  // Only fold ADDs for now.
   Instruction::BinaryOps Opcode = BO->getOpcode();
-  if (Opcode != Instruction::Add)
-    return false;
-
-  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
+  bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
+  auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
       BO0->hasNUsesOrMore(3))
     return false;
 
-  // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
   Value *LV = BO0->getOperand(0);
   Value *C1 = BO0->getOperand(1);
-  Value *C2 = BO->getOperand(1);
+  Value *C2 = BO->getOperand(!LVInRHS);
 
+  assert(BO->isCommutative() && BO0->isCommutative() &&
+         "Associativity implies commutativity");
+  if (L.isLoopInvariant(LV) && !L.isLoopInvariant(C1))
+    std::swap(LV, C1);
   if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) || !L.isLoopInvariant(C2))
     return false;
 
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
 
-  auto *Inv = BinaryOperator::Create(Opcode, C1, C2, "invariant.op",
-                                     Preheader->getTerminator()->getIterator());
+  IRBuilder<> Builder(Preheader->getTerminator());
+  auto *Inv = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
+
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
 
   // Copy NUW for ADDs if both instructions have it.
   if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
       BO0->hasNoUnsignedWrap()) {
-    Inv->setHasNoUnsignedWrap(true);
+    // If `Inv` was not constant-folded, a new Instruction has been created.
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      I->setHasNoUnsignedWrap(true);
     NewBO->setHasNoUnsignedWrap(true);
+  } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
+    // Intersect FMF flags for FADD and FMUL.
+    FastMathFlags Intersect = BO->getFastMathFlags() & BO0->getFastMathFlags();
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      I->setFastMathFlags(Intersect);
+    NewBO->setFastMathFlags(Intersect);
   }
 
   BO->replaceAllUsesWith(NewBO);
