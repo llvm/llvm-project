@@ -10776,23 +10776,21 @@ public:
     }
     if (ForExtracts) {
       // No need to add vectors here, already handled them in adjustExtracts.
-      assert(
-          InVectors.size() == 1 && isa<const TreeEntry *>(InVectors.front()) &&
-          !CommonMask.empty() &&
-          all_of(enumerate(CommonMask),
-                 [&](auto P) {
-                   Value *Scalar =
-                       InVectors.front().get<const TreeEntry *>()->getOrdered(
-                           P.index());
-                   if (P.value() == PoisonMaskElem)
-                     return P.value() == Mask[P.index()] ||
-                            isa<UndefValue>(Scalar);
-                   if (isa<Constant>(V1))
-                     return true;
-                   auto *EI = cast<ExtractElementInst>(Scalar);
-                   return EI->getVectorOperand() == V1;
-                 }) &&
-          "Expected only tree entry for extractelement vectors.");
+      assert(InVectors.size() == 1 && isa<const TreeEntry *>(InVectors[0]) &&
+             !CommonMask.empty() &&
+             all_of(enumerate(CommonMask),
+                    [&](auto P) {
+                      Value *Scalar = cast<const TreeEntry *>(InVectors[0])
+                                          ->getOrdered(P.index());
+                      if (P.value() == PoisonMaskElem)
+                        return P.value() == Mask[P.index()] ||
+                               isa<UndefValue>(Scalar);
+                      if (isa<Constant>(V1))
+                        return true;
+                      auto *EI = cast<ExtractElementInst>(Scalar);
+                      return EI->getVectorOperand() == V1;
+                    }) &&
+             "Expected only tree entry for extractelement vectors.");
       return;
     }
     assert(!InVectors.empty() && !CommonMask.empty() &&
