@@ -1231,7 +1231,7 @@ static void PrintByteList(StringRef Data, raw_ostream &OS,
 void MCAsmStreamer::PrintQuotedString(StringRef Data, raw_ostream &OS) const {
   OS << '"';
 
-  if (MAI->hasPairedDoubleQuoteStringConstants()) {
+  if (MAI->isAIX()) {
     for (unsigned char C : Data) {
       if (C == '"')
         OS << "\"\"";
@@ -1285,6 +1285,25 @@ void MCAsmStreamer::emitBytes(StringRef Data) {
   if (Data.empty()) return;
 
   const auto emitAsString = [this](StringRef Data) {
+    if (MAI->isAIX()) {
+      if (isPrintableString(Data)) {
+        // For target with DoubleQuoteString constants, .string and .byte are
+        // used as replacement of .asciz and .ascii.
+        if (Data.back() == 0) {
+          OS << "\t.string\t";
+          Data = Data.substr(0, Data.size() - 1);
+        } else {
+          OS << "\t.byte\t";
+        }
+        PrintQuotedString(Data, OS);
+      } else {
+        OS << "\t.byte\t";
+        PrintByteList(Data, OS, MAI->characterLiteralSyntax());
+      }
+      EmitEOL();
+      return true;
+    }
+
     // If the data ends with 0 and the target supports .asciz, use it, otherwise
     // use .ascii or a byte-list directive
     if (MAI->getAscizDirective() && Data.back() == 0) {
@@ -1292,27 +1311,6 @@ void MCAsmStreamer::emitBytes(StringRef Data) {
       Data = Data.substr(0, Data.size() - 1);
     } else if (LLVM_LIKELY(MAI->getAsciiDirective())) {
       OS << MAI->getAsciiDirective();
-    } else if (MAI->hasPairedDoubleQuoteStringConstants() &&
-               isPrintableString(Data)) {
-      // For target with DoubleQuoteString constants, .string and .byte are used
-      // as replacement of .asciz and .ascii.
-      assert(MAI->getPlainStringDirective() &&
-             "hasPairedDoubleQuoteStringConstants target must support "
-             "PlainString Directive");
-      assert(MAI->getByteListDirective() &&
-             "hasPairedDoubleQuoteStringConstants target must support ByteList "
-             "Directive");
-      if (Data.back() == 0) {
-        OS << MAI->getPlainStringDirective();
-        Data = Data.substr(0, Data.size() - 1);
-      } else {
-        OS << MAI->getByteListDirective();
-      }
-    } else if (MAI->getByteListDirective()) {
-      OS << MAI->getByteListDirective();
-      PrintByteList(Data, OS, MAI->characterLiteralSyntax());
-      EmitEOL();
-      return true;
     } else {
       return false;
     }
@@ -1495,7 +1493,7 @@ void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
     return;
 
   if (const char *ZeroDirective = MAI->getZeroDirective()) {
-    if (MAI->doesZeroDirectiveSupportNonZeroValue() || FillValue == 0) {
+    if (!MAI->isAIX() || FillValue == 0) {
       // FIXME: Emit location directives
       OS << ZeroDirective;
       NumBytes.print(OS, MAI);
@@ -1531,7 +1529,7 @@ void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
                                            std::optional<int64_t> Value,
                                            unsigned ValueSize,
                                            unsigned MaxBytesToEmit) {
-  if (MAI->useDotAlignForAlignment()) {
+  if (MAI->isAIX()) {
     if (!isPowerOf2_64(ByteAlignment))
       report_fatal_error("Only power-of-two alignments are supported "
                          "with .align.");
@@ -1635,7 +1633,7 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename,
                                       StringRef CompilerVersion,
                                       StringRef TimeStamp,
                                       StringRef Description) {
-  assert(MAI->hasFourStringsDotFile());
+  assert(MAI->isAIX());
   OS << "\t.file\t";
   PrintQuotedString(Filename, OS);
   bool useTimeStamp = !TimeStamp.empty();
@@ -1706,8 +1704,7 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
 
   // Return early if this file is already emitted before or if target doesn't
   // support .file directive.
-  if (NumFiles == Table.getMCDwarfFiles().size() ||
-      !MAI->usesDwarfFileAndLocDirectives())
+  if (NumFiles == Table.getMCDwarfFiles().size() || MAI->isAIX())
     return FileNo;
 
   SmallString<128> Str;
@@ -1736,7 +1733,7 @@ void MCAsmStreamer::emitDwarfFile0Directive(
                                       Source);
 
   // Target doesn't support .loc/.file directives, return early.
-  if (!MAI->usesDwarfFileAndLocDirectives())
+  if (MAI->isAIX())
     return;
 
   SmallString<128> Str;
@@ -1756,7 +1753,7 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           StringRef FileName) {
   // If target doesn't support .loc/.file directive, we need to record the lines
   // same way like we do in object mode.
-  if (!MAI->usesDwarfFileAndLocDirectives()) {
+  if (MAI->isAIX()) {
     // In case we see two .loc directives in a row, make sure the
     // first one gets a line entry.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
@@ -2456,7 +2453,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  if (!MAI->usesDwarfFileAndLocDirectives() && CurFrag)
+  if (MAI->isAIX() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
@@ -2559,7 +2556,7 @@ void MCAsmStreamer::finishImpl() {
 
   // Now it is time to emit debug line sections if target doesn't support .loc
   // and .line directives.
-  if (!MAI->usesDwarfFileAndLocDirectives()) {
+  if (MAI->isAIX()) {
     MCDwarfLineTable::emit(this, getAssembler().getDWARFLinetableParams());
     return;
   }
@@ -2584,7 +2581,7 @@ void MCAsmStreamer::emitDwarfUnitLength(uint64_t Length, const Twine &Comment) {
   // the debug section headers. In such cases, any label we placed occurs
   // after the implied length field. We need to adjust the reference here
   // to account for the offset introduced by the inserted length field.
-  if (!MAI->needsDwarfSectionSizeInHeader())
+  if (MAI->isAIX())
     return;
   MCStreamer::emitDwarfUnitLength(Length, Comment);
 }
@@ -2597,7 +2594,7 @@ MCSymbol *MCAsmStreamer::emitDwarfUnitLength(const Twine &Prefix,
   // the debug section headers. In such cases, any label we placed occurs
   // after the implied length field. We need to adjust the reference here
   // to account for the offset introduced by the inserted length field.
-  if (!MAI->needsDwarfSectionSizeInHeader())
+  if (MAI->isAIX())
     return getContext().createTempSymbol(Prefix + "_end");
   return MCStreamer::emitDwarfUnitLength(Prefix, Comment);
 }
@@ -2610,7 +2607,7 @@ void MCAsmStreamer::emitDwarfLineStartLabel(MCSymbol *StartSym) {
   // after the implied length field. We need to adjust the reference here
   // to account for the offset introduced by the inserted length field.
   MCContext &Ctx = getContext();
-  if (!MAI->needsDwarfSectionSizeInHeader()) {
+  if (MAI->isAIX()) {
     MCSymbol *DebugLineSymTmp = Ctx.createTempSymbol("debug_line_");
     // Emit the symbol which does not contain the unit length field.
     emitLabel(DebugLineSymTmp);
@@ -2637,7 +2634,7 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
   // we currently use the .text end label as any section end. This will not
   // impact the debugability as we will jump to the caller of the last function
   // in the section before we come into the .text end address.
-  assert(!MAI->usesDwarfFileAndLocDirectives() &&
+  assert(MAI->isAIX() &&
          ".loc should not be generated together with raw data!");
 
   MCContext &Ctx = getContext();
@@ -2660,7 +2657,7 @@ void MCAsmStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                                              const MCSymbol *LastLabel,
                                              const MCSymbol *Label,
                                              unsigned PointerSize) {
-  assert(!MAI->usesDwarfFileAndLocDirectives() &&
+  assert(MAI->isAIX() &&
          ".loc/.file don't need raw data in debug line section!");
 
   // Set to new address.
@@ -2697,9 +2694,7 @@ void MCAsmStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
   // Emit section end. This is used to tell the debug line section where the end
   // is for a text section if we don't use .loc to represent the debug line.
-  if (MAI->usesDwarfFileAndLocDirectives())
-    return;
-
+  assert(MAI->isAIX());
   switchSectionNoPrint(Section);
 
   MCSymbol *Sym = getCurrentSectionOnly()->getEndSymbol(getContext());

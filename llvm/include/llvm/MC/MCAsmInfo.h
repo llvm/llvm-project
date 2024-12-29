@@ -94,9 +94,7 @@ protected:
   /// constants into comdat sections.
   bool HasCOFFComdatConstants = false;
 
-  /// True if this is an XCOFF target that supports visibility attributes as
-  /// part of .global, .weak, .extern, and .comm. Default is false.
-  bool HasVisibilityOnlyWithLinkage = false;
+  bool IsAIX = false;
 
   // True if using the HLASM dialect on z/OS.
   bool IsHLASM = false;
@@ -202,10 +200,6 @@ protected:
   /// instead.
   bool UseDataRegionDirectives = false;
 
-  /// True if .align is to be used for alignment. Only power-of-two
-  /// alignment is supported.
-  bool UseDotAlignForAlignment = false;
-
   /// True if the target supports LEB128 directives.
   bool HasLEB128Directives = true;
 
@@ -220,11 +214,6 @@ protected:
   /// "\t.zero\t"
   const char *ZeroDirective;
 
-  /// This should be set to true if the zero directive supports a value to emit
-  /// other than zero. If this is set to false, the Data*bitsDirective's will be
-  /// used to emit these bytes. Defaults to true.
-  bool ZeroDirectiveSupportsNonZeroValue = true;
-
   /// This directive allows emission of an ascii string with the standard C
   /// escape characters embedded into it.  If a target doesn't support this, it
   /// can be set to null. Defaults to "\t.ascii\t"
@@ -234,16 +223,6 @@ protected:
   /// on this target.  This is commonly supported as ".asciz".  If a target
   /// doesn't support this, it can be set to null.  Defaults to "\t.asciz\t"
   const char *AscizDirective;
-
-  /// This directive accepts a comma-separated list of bytes for emission as a
-  /// string of bytes.  For targets that do not support this, it shall be set to
-  /// null.  Defaults to null.
-  const char *ByteListDirective = nullptr;
-
-  /// This directive allows emission of a zero-terminated ascii string without
-  /// the standard C escape characters embedded into it.  If a target doesn't
-  /// support this, it can be set to null. Defaults to null.
-  const char *PlainStringDirective = nullptr;
 
   /// Form used for character literals in the assembly syntax.  Useful for
   /// producing strings as byte lists.  If a target does not use or support
@@ -325,16 +304,6 @@ protected:
   /// argument and how it is interpreted.  Defaults to NoAlignment.
   LCOMM::LCOMMType LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 
-  /// True if the target only has basename for .file directive. False if the
-  /// target also needs the directory along with the basename. Defaults to true.
-  bool HasBasenameOnlyForFileDirective = true;
-
-  /// True if the target represents string constants as mostly raw characters in
-  /// paired double quotation with paired double quotation marks as the escape
-  /// mechanism to represent a double quotation mark within the string. Defaults
-  /// to false.
-  bool HasPairedDoubleQuoteStringConstants = false;
-
   // True if the target allows .align directives on functions. This is true for
   // most targets, so defaults to true.
   bool HasFunctionAlignment = true;
@@ -346,10 +315,6 @@ protected:
   /// True if the target has a single parameter .file directive, this is true
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
-
-  /// True if the target has a four strings .file directive, strings separated
-  /// by comma. Defaults to false.
-  bool HasFourStringsDotFile = false;
 
   /// True if the target has a .ident directive, this is true for ELF targets.
   /// Defaults to false.
@@ -417,10 +382,6 @@ protected:
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
 
-  /// True if the target supports generating the DWARF line table through using
-  /// the .loc/.file directives. Defaults to true.
-  bool UsesDwarfFileAndLocDirectives = true;
-
   /// True if DWARF `.file directory' directive syntax is used by
   /// default.
   bool EnableDwarfFileDirectoryDefault = true;
@@ -483,9 +444,6 @@ protected:
 
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
-
-  // If true, emit function descriptor symbol on AIX.
-  bool NeedsFunctionDescriptors = false;
 
 public:
   explicit MCAsmInfo();
@@ -567,13 +525,11 @@ public:
 
   // Accessors.
 
+  bool isAIX() const { return IsAIX; }
   bool isHLASM() const { return IsHLASM; }
   bool isMachO() const { return HasSubsectionsViaSymbols; }
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
-  bool hasVisibilityOnlyWithLinkage() const {
-    return HasVisibilityOnlyWithLinkage;
-  }
 
   /// Returns the maximum possible encoded instruction size in bytes. If \p STI
   /// is null, this should be the maximum size for any subtarget.
@@ -630,23 +586,14 @@ public:
     return UseDataRegionDirectives;
   }
 
-  bool useDotAlignForAlignment() const {
-    return UseDotAlignForAlignment;
-  }
-
   bool hasLEB128Directives() const { return HasLEB128Directives; }
 
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
 
   const char *getZeroDirective() const { return ZeroDirective; }
-  bool doesZeroDirectiveSupportNonZeroValue() const {
-    return ZeroDirectiveSupportsNonZeroValue;
-  }
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
-  const char *getByteListDirective() const { return ByteListDirective; }
-  const char *getPlainStringDirective() const { return PlainStringDirective; }
   AsmCharLiteralSyntax characterLiteralSyntax() const {
     return CharacterLiteralSyntax;
   }
@@ -666,16 +613,9 @@ public:
     return LCOMMDirectiveAlignmentType;
   }
 
-  bool hasBasenameOnlyForFileDirective() const {
-    return HasBasenameOnlyForFileDirective;
-  }
-  bool hasPairedDoubleQuoteStringConstants() const {
-    return HasPairedDoubleQuoteStringConstants;
-  }
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
-  bool hasFourStringsDotFile() const { return HasFourStringsDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
   const char *getWeakDirective() const { return WeakDirective; }
@@ -742,13 +682,7 @@ public:
     return SupportsExtendedDwarfLocDirective;
   }
 
-  bool usesDwarfFileAndLocDirectives() const {
-    return UsesDwarfFileAndLocDirectives;
-  }
-
-  bool needsDwarfSectionSizeInHeader() const {
-    return DwarfSectionSizeRequired;
-  }
+  bool usesDwarfFileAndLocDirectives() const { return !IsAIX; }
 
   bool enableDwarfFileDirectoryDefault() const {
     return EnableDwarfFileDirectoryDefault;
@@ -798,7 +732,6 @@ public:
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
   bool hasMipsExpressions() const { return HasMipsExpressions; }
-  bool needsFunctionDescriptors() const { return NeedsFunctionDescriptors; }
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
 };
 
