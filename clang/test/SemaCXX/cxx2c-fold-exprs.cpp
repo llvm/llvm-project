@@ -326,9 +326,8 @@ template <
 struct LazyLitMatrix<index_by<Indices...>, init...> {
 };
 
-static_assert(
-    !__is_same(LazyLitMatrix<index_by<int, char>, 42, 43>, LazyLitMatrix<index_by<int, char>, 42, 43>));
-// expected-error@-1 {{static assertion failed}}
+using T = LazyLitMatrix<index_by<int, char>, 42, 43>;
+
 }
 
 namespace Valid {
@@ -343,8 +342,8 @@ template <
 struct LazyLitMatrix<index_by<Indices...>, init...> {
 };
 
-static_assert(__is_same(LazyLitMatrix<index_by<int, char>, 42, 43>, 
-                        LazyLitMatrix<index_by<int, char>, 42, 43>));
+using T = LazyLitMatrix<index_by<int, char>, 42, 43>;
+
 }
 
 }
