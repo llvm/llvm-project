@@ -1075,6 +1075,18 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
 
+  T = Triple("arm-oemllib32-linux-gnueabi");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::OpenEmbedded, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
+
+  T = Triple("x86_64-oemllibx32-linux-gnux32");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::OpenEmbedded, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUX32, T.getEnvironment());
+
   T = Triple("aarch64-oe-linux");
   EXPECT_EQ(Triple::aarch64, T.getArch());
   EXPECT_EQ(Triple::OpenEmbedded, T.getVendor());

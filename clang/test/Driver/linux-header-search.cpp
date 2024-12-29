@@ -309,6 +309,28 @@
 // CHECK-OE-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../include/c++/6.3.0"
 // CHECK-OE-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../include/c++/6.3.0/backward"
 
+// Check header search on OpenEmbedded multilib lib32.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=arm-oemllib32-linux-gnueabi -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/openembedded_arm_multilib_lib32_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-ARM-MULTILIB-LIB32 %s
+
+// CHECK-OE-ARM-MULTILIB-LIB32: "-cc1"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-internal-isystem" "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0/../../../include/c++/9.5.0"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-internal-isystem" "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0/../../../include/c++/9.5.0/backward"
+
+// Check header search on OpenEmbedded multilib libx32.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-oemllibx32-linux-gnux32 -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/openembedded_x86_64_multilib_libx32_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-X86_64-MULTILIB-LIBX32 %s
+
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-cc1"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-internal-isystem" "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0/../../../include/c++/14.2.0"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-internal-isystem" "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0/../../../include/c++/14.2.0/backward"
+
 // Check header search with Cray's gcc package.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \

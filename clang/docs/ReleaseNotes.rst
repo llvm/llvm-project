@@ -759,6 +759,8 @@ Bug Fixes in This Version
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
+- OpenEmbedded multilib oemllib32 and oemllibx32 are now recognised in
+  target triples.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
