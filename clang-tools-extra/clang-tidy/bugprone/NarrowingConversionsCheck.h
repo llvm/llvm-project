@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_NARROWING_CONVERSIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_NARROWING_CONVERSIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cppcoreguidelines {
+namespace clang::tidy::bugprone {
 
 /// Checks for narrowing conversions, e.g:
 ///   int i = 0;
 ///   i += 0.1;
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/narrowing-conversions.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/narrowing-conversions.html
 class NarrowingConversionsCheck : public ClangTidyCheck {
 public:
   NarrowingConversionsCheck(StringRef Name, ClangTidyContext *Context);
@@ -104,6 +104,6 @@ private:
   const bool PedanticMode;
 };
 
-} // namespace clang::tidy::cppcoreguidelines
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_NARROWING_CONVERSIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H

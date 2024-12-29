@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
+// RUN: %check_clang_tidy %s bugprone-narrowing-conversions %t \
 // RUN:   -std=c++17 -- -target x86_64-unknown-linux
 
 #define CHAR_BITS 8
@@ -31,7 +31,7 @@ struct CompleteBitfield {
 };
 
 int example_warning(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+1]]:10: warning: narrowing conversion from 'unsigned int' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES: :[[@LINE+1]]:10: warning: narrowing conversion from 'unsigned int' to signed type 'int' is implementation-defined [bugprone-narrowing-conversions]
   return x;
 }
 
