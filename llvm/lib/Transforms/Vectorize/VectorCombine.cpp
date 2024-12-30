@@ -139,10 +139,17 @@ private:
 
   void eraseInstruction(Instruction &I) {
     LLVM_DEBUG(dbgs() << "VC: Erasing: " << I << '\n');
-    for (Value *Op : I.operands())
-      Worklist.pushValue(Op);
+    SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
     I.eraseFromParent();
+
+    // Push remaining users and then the operand itself - allows further folds
+    // that were hindered by OneUse limits.
+    for (Value *Op : Ops)
+      if (auto *OpI = dyn_cast<Instruction>(Op)) {
+        Worklist.pushUsersToWorkList(*OpI);
+        Worklist.pushValue(OpI);
+      }
   }
 };
 } // namespace
