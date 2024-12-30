@@ -595,8 +595,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R3BB1 = Plan.createVPBasicBlock("R3BB1");
     VPRegionBlock *R3 = Plan.createVPRegionBlock(R3BB1, R3BB1, "R3");
 
-    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock(""
-                                                  "R2BB1");
+    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R3, "R2");
     R3->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R3);
