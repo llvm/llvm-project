@@ -819,22 +819,22 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-    VPValue DummyValue;
+  VPValue DummyValue;
 
-    for (auto *VPB : CreatedBlocks) {
-      if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
-        // Replace all operands of recipes and all VPValues defined in VPBB with
-        // DummyValue so the block can be deleted.
-        for (VPRecipeBase &R : *VPBB) {
-          for (auto *Def : R.definedValues())
-            Def->replaceAllUsesWith(&DummyValue);
+  for (auto *VPB : CreatedBlocks) {
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
+      // Replace all operands of recipes and all VPValues defined in VPBB with
+      // DummyValue so the block can be deleted.
+      for (VPRecipeBase &R : *VPBB) {
+        for (auto *Def : R.definedValues())
+          Def->replaceAllUsesWith(&DummyValue);
 
-          for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-            R.setOperand(I, &DummyValue);
-        }
+        for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+          R.setOperand(I, &DummyValue);
       }
-      delete VPB;
     }
+    delete VPB;
+  }
   for (VPValue *VPV : VPLiveInsToFree)
     delete VPV;
   if (BackedgeTakenCount)
