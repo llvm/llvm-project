@@ -293,14 +293,20 @@ void explain_unary_operation_single_output_different_type_error(
 
   mpfr::MPFRNumber mpfr_result(real, precision, rounding.Rrnd);
   mpfr::MPFRNumber mpfrLibcResult(libc_result, precision, rounding.Rrnd);
-  mpfr::MPFRNumber mpfrInputReal(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision, rounding.Rrnd);
-  mpfr::MPFRNumber mpfrInputImag(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).imag, precision, rounding.Irnd);
+  mpfr::MPFRNumber mpfrInputReal(
+      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision,
+      rounding.Rrnd);
+  mpfr::MPFRNumber mpfrInputImag(
+      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).imag, precision,
+      rounding.Irnd);
 
   cpp::array<char, 2048> msg_buf;
   cpp::StringStream msg(msg_buf);
   msg << "Match value not within tolerance value of MPFR result:\n"
-      << "  Input: " << mpfrInputReal.str() << " + " << mpfrInputImag.str() << "i" << '\n';
-  msg << "  Rounding mode: " << str(rounding.Rrnd) << " , " << str(rounding.Irnd) << '\n';
+      << "  Input: " << mpfrInputReal.str() << " + " << mpfrInputImag.str()
+      << "i" << '\n';
+  msg << "  Rounding mode: " << str(rounding.Rrnd) << " , "
+      << str(rounding.Irnd) << '\n';
   msg << "    Libc: " << mpfrLibcResult.str() << '\n';
   msg << "    MPFR: " << mpfr_result.str() << '\n';
   msg << '\n';
