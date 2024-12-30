@@ -4041,9 +4041,9 @@ public:
   VPIRBasicBlock *createEmptyVPIRBasicBlock(BasicBlock *IRBB);
 
   /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
-  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
-  /// The returned block is owned by the VPlan and deleted once the VPlan is
-  /// destroyed.
+  /// instructions in \p IRBB, except its terminator which is managed by the
+  /// successors of the block in VPlan. The returned block is owned by the VPlan
+  /// and deleted once the VPlan is destroyed.
   VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
 };
 

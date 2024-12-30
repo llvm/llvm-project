@@ -823,7 +823,7 @@ VPlan::~VPlan() {
 
     for (auto *VPB : CreatedBlocks) {
       if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
-        // Replace all operands of recipes and all VPValues define in VPBB with
+        // Replace all operands of recipes and all VPValues defined in VPBB with
         // DummyValue so the block can be deleted.
         for (VPRecipeBase &R : *VPBB) {
           for (auto *Def : R.definedValues())
@@ -960,6 +960,7 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   }
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+  // VPBB is now dead and will be cleaned up when the plan gets destroyed.
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.

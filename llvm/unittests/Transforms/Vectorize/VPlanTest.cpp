@@ -472,12 +472,9 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
     VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB3, "R1");
 
-    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock(""
-                                                  "R2BB1");
-    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock(""
-                                                  "R2BB2");
-    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock(""
-                                                  "R2BB3");
+    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
+    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
+    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
     VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB3, "R2");
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
