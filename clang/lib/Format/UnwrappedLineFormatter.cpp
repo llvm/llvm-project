@@ -631,6 +631,7 @@ private:
                              unsigned Limit) {
     if (Limit == 0)
       return 0;
+
     assert(I[1]);
     const auto &L1 = *I[1];
     if (L1.InPPDirective != (*I)->InPPDirective ||

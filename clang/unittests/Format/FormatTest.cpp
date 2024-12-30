@@ -28321,12 +28321,10 @@ TEST_F(FormatTest, KeepFormFeed) {
 }
 
 TEST_F(FormatTest, ShortNamespacesOption) {
-  auto BaseStyle = getLLVMStyle();
-  BaseStyle.AllowShortNamespacesOnASingleLine = true;
-  BaseStyle.FixNamespaceComments = false;
-  BaseStyle.CompactNamespaces = true;
-
-  auto Style = BaseStyle;
+  auto Style = getLLVMStyle();
+  Style.AllowShortNamespacesOnASingleLine = true;
+  Style.CompactNamespaces = true;
+  Style.FixNamespaceComments = false;
 
   // Basic functionality.
   verifyFormat("namespace foo { class bar; }", Style);
@@ -28358,7 +28356,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
   verifyFormat("namespace foo { namespace bar { class baz; } }", Style);
 
   // Without CompactNamespaces, we won't merge consecutive namespace
-  // declarations
+  // declarations.
   Style.CompactNamespaces = false;
   verifyFormat("namespace foo {\n"
                "namespace bar { class baz; }\n"
@@ -28371,7 +28369,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "}",
                Style);
 
-  Style = BaseStyle;
+  Style.CompactNamespaces = true;
 
   // Varying inner content.
   verifyFormat("namespace foo {\n"
@@ -28419,9 +28417,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
   // too long to fit within the ColumnLimit, reducing the how likely the line
   // will still fit on a single line. The recommendation for now is to use the
   // concatenated namespace syntax instead. e.g. 'namespace foo::bar'
-  Style = BaseStyle;
   Style.FixNamespaceComments = true;
-
   verifyFormat(
       "namespace foo { namespace bar { namespace baz {\n"
       "class qux;\n"
