@@ -3087,7 +3087,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 private:
   static void addComdat(mlir::LLVM::GlobalOp &global,
                         mlir::ConversionPatternRewriter &rewriter,
-                        mlir::ModuleOp &module) {
+                        mlir::ModuleOp module) {
     const char *comdatName = "__llvm_comdat";
     mlir::LLVM::ComdatOp comdatOp =
         module.lookupSymbol<mlir::LLVM::ComdatOp>(comdatName);

@@ -392,8 +392,9 @@ public:
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
-        Folded(NumConditions, false), IndependencePairs(NumConditions),
-        ExecVectors(ExecVectorsByCond[false]), IsVersion11(IsVersion11) {}
+        Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
+        IndependencePairs(NumConditions), ExecVectors(ExecVectorsByCond[false]),
+        IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -485,7 +486,6 @@ public:
   /// location is also tracked, as well as whether it is constant folded (in
   /// which case it is excuded from the metric).
   MCDCRecord processMCDCRecord() {
-    unsigned I = 0;
     MCDCRecord::CondIDMap PosToID;
     MCDCRecord::LineColPairMap CondLoc;
 
@@ -499,11 +499,12 @@ public:
     //   visualize where the condition is.
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
-    for (const auto *B : Branches) {
+    for (auto [I, B] : enumerate(Branches)) {
       const auto &BranchParams = B->getBranchParams();
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
-      Folded[I++] = (B->Count.isZero() || B->FalseCount.isZero());
+      Folded[false][I] = B->FalseCount.isZero();
+      Folded[true][I] = B->Count.isZero();
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
@@ -805,7 +806,6 @@ Error CoverageMapping::loadFunctionRecord(
   else
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
 
-  bool SingleByteCoverage = ProfileReader.hasSingleByteCoverage();
   CounterMappingContext Ctx(Record.Expressions);
 
   std::vector<uint64_t> Counts;
@@ -871,10 +871,7 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    Function.pushRegion(
-        Region, (SingleByteCoverage && *ExecutionCount ? 1 : *ExecutionCount),
-        (SingleByteCoverage && *AltExecutionCount ? 1 : *AltExecutionCount),
-        SingleByteCoverage);
+    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
 
     // Record ExpansionRegion.
     if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
@@ -936,6 +933,9 @@ Error CoverageMapping::loadFunctionRecord(
 Error CoverageMapping::loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage) {
+  assert(!Coverage.SingleByteCoverage ||
+         *Coverage.SingleByteCoverage == ProfileReader.hasSingleByteCoverage());
+  Coverage.SingleByteCoverage = ProfileReader.hasSingleByteCoverage();
   for (const auto &CoverageReader : CoverageReaders) {
     for (auto RecordOrErr : *CoverageReader) {
       if (Error E = RecordOrErr.takeError())
@@ -1296,14 +1296,8 @@ class SegmentBuilder {
       // value for that area.
       // We add counts of the regions of the same kind as the active region
       // to handle the both situations.
-      if (I->Kind == Active->Kind) {
-        assert(I->HasSingleByteCoverage == Active->HasSingleByteCoverage &&
-               "Regions are generated in different coverage modes");
-        if (I->HasSingleByteCoverage)
-          Active->ExecutionCount = Active->ExecutionCount || I->ExecutionCount;
-        else
-          Active->ExecutionCount += I->ExecutionCount;
-      }
+      if (I->Kind == Active->Kind)
+        Active->ExecutionCount += I->ExecutionCount;
     }
     return Regions.drop_back(std::distance(++Active, End));
   }
@@ -1396,7 +1390,8 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
 }
 
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
-  CoverageData FileCoverage(Filename);
+  assert(SingleByteCoverage);
+  CoverageData FileCoverage(*SingleByteCoverage, Filename);
   std::vector<CountedRegion> Regions;
 
   // Look up the function records in the given file. Due to hash collisions on
@@ -1460,7 +1455,9 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
   if (!MainFileID)
     return CoverageData();
 
-  CoverageData FunctionCoverage(Function.Filenames[*MainFileID]);
+  assert(SingleByteCoverage);
+  CoverageData FunctionCoverage(*SingleByteCoverage,
+                                Function.Filenames[*MainFileID]);
   std::vector<CountedRegion> Regions;
   for (const auto &CR : Function.CountedRegions)
     if (CR.FileID == *MainFileID) {
@@ -1487,8 +1484,9 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
 
 CoverageData CoverageMapping::getCoverageForExpansion(
     const ExpansionRecord &Expansion) const {
+  assert(SingleByteCoverage);
   CoverageData ExpansionCoverage(
-      Expansion.Function.Filenames[Expansion.FileID]);
+      *SingleByteCoverage, Expansion.Function.Filenames[Expansion.FileID]);
   std::vector<CountedRegion> Regions;
   for (const auto &CR : Expansion.Function.CountedRegions)
     if (CR.FileID == Expansion.FileID) {

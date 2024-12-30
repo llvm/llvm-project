@@ -1305,8 +1305,6 @@ def EmitC_IfOp : EmitC_Op<"if",
       Block* body = getBody(1);
       return OpBuilder::atBlockEnd(body, listener);
     }
-    Block* thenBlock();
-    Block* elseBlock();
   }];
   let hasCustomAssemblyFormat = 1;
 }

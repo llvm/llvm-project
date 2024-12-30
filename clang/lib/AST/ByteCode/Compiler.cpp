@@ -3427,6 +3427,38 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  const Type *TypeInfoType = E->getType().getTypePtr();
+
+  if (!E->isPotentiallyEvaluated()) {
+    if (DiscardResult)
+      return true;
+
+    if (E->isTypeOperand())
+      return this->emitGetTypeid(
+          E->getTypeOperand(Ctx.getASTContext()).getTypePtr(), TypeInfoType, E);
+    return this->emitGetTypeid(E->getExprOperand()->getType().getTypePtr(),
+                               TypeInfoType, E);
+  }
+
+  // Otherwise, we need to evaluate the expression operand.
+  assert(E->getExprOperand());
+  assert(E->getExprOperand()->isLValue());
+
+  if (!Ctx.getLangOpts().CPlusPlus20 && !this->emitDiagTypeid(E))
+    return false;
+
+  if (!this->visit(E->getExprOperand()))
+    return false;
+
+  if (!this->emitGetTypeidPtr(TypeInfoType, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);

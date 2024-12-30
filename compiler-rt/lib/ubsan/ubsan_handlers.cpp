@@ -899,10 +899,7 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
 
 namespace __ubsan {
 
-#ifdef UBSAN_CAN_USE_CXXABI
-
 #ifdef _WIN32
-
 extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
                                                     ValueHandle Vtable,
                                                     bool ValidVtable,
@@ -911,20 +908,17 @@ extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
 }
 
 WIN_WEAK_ALIAS(__ubsan_handle_cfi_bad_type, __ubsan_handle_cfi_bad_type_default)
-#else
-SANITIZER_WEAK_ATTRIBUTE
-#endif
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts);
-
 #else
+SANITIZER_WEAK_ATTRIBUTE
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts) {
   Die();
 }
 #endif
 
-}  // namespace __ubsan
+} // namespace __ubsan
 
 void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
                                             ValueHandle Value,
