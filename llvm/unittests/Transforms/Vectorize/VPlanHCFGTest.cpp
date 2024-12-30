@@ -17,7 +17,7 @@
 namespace llvm {
 namespace {
 
-class VPlanHCFGTest : public VPlanTestBase {};
+class VPlanHCFGTest : public VPlanTestIRBase {};
 
 TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   const char *ModuleString =

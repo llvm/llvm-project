@@ -27,9 +27,16 @@ using namespace llvm;
 namespace {
 
 class XtensaDAGToDAGISel : public SelectionDAGISel {
+  const XtensaSubtarget *Subtarget = nullptr;
+
 public:
-  XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
+  explicit XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(TM, OptLevel) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    Subtarget = &MF.getSubtarget<XtensaSubtarget>();
+    return SelectionDAGISel::runOnMachineFunction(MF);
+  }
 
   void Select(SDNode *Node) override;
 

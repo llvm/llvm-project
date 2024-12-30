@@ -531,6 +531,11 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("float (C::*const p)(int);", Style);
   verifyFormat("float (C::*p)(int) const;", Style);
   verifyFormat("float const (C::*p)(int);", "const float (C::*p)(int);", Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("auto foo() -> T const { return bar; }",
+               "auto foo() -> const T { return bar; }", Style);
 }
 
 TEST_F(QualifierFixerTest, LeftQualifier) {

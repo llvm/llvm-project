@@ -2021,28 +2021,10 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   // ThisPtr may be null if the member function has an explicit 'this'
   // parameter.
   if (!ThisPtr.isNull()) {
-    const CXXRecordDecl *RD = ThisPtr->getPointeeCXXRecordDecl();
-    if (isa<ClassTemplateSpecializationDecl>(RD)) {
-      // Create pointer type directly in this case.
-      const PointerType *ThisPtrTy = cast<PointerType>(ThisPtr);
-      uint64_t Size = CGM.getContext().getTypeSize(ThisPtrTy);
-      auto Align = getTypeAlignIfRequired(ThisPtrTy, CGM.getContext());
-      llvm::DIType *PointeeType =
-          getOrCreateType(ThisPtrTy->getPointeeType(), Unit);
-      llvm::DIType *ThisPtrType =
-          DBuilder.createPointerType(PointeeType, Size, Align);
-      TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-      // TODO: This and the artificial type below are misleading, the
-      // types aren't artificial the argument is, but the current
-      // metadata doesn't represent that.
-      ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
-      Elts.push_back(ThisPtrType);
-    } else {
-      llvm::DIType *ThisPtrType = getOrCreateType(ThisPtr, Unit);
-      TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-      ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
-      Elts.push_back(ThisPtrType);
-    }
+    llvm::DIType *ThisPtrType = getOrCreateType(ThisPtr, Unit);
+    TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
+    ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
+    Elts.push_back(ThisPtrType);
   }
 
   // Copy rest of the arguments.

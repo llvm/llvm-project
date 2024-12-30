@@ -29,10 +29,7 @@ void SPIRVOpenMPToolChain::addClangTargetOptions(
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
-  std::string GpuArch =
-      Twine(getTriple().getArchName() + "-" + getTriple().getVendorName())
-          .str();
-  addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch, getTriple(),
+  addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, "", getTriple(),
                      HostTC);
 }
 } // namespace clang::driver::toolchains

@@ -95,7 +95,7 @@ findEntryForIntegerType(IntegerType intType,
   std::map<unsigned, DataLayoutEntryInterface> sortedParams;
   for (DataLayoutEntryInterface entry : params) {
     sortedParams.insert(std::make_pair(
-        entry.getKey().get<Type>().getIntOrFloatBitWidth(), entry));
+        cast<Type>(entry.getKey()).getIntOrFloatBitWidth(), entry));
   }
   auto iter = sortedParams.lower_bound(intType.getWidth());
   if (iter == sortedParams.end())
@@ -315,9 +315,9 @@ DataLayoutEntryInterface
 mlir::detail::filterEntryForIdentifier(DataLayoutEntryListRef entries,
                                        StringAttr id) {
   const auto *it = llvm::find_if(entries, [id](DataLayoutEntryInterface entry) {
-    if (!entry.getKey().is<StringAttr>())
-      return false;
-    return entry.getKey().get<StringAttr>() == id;
+    if (auto attr = dyn_cast<StringAttr>(entry.getKey()))
+      return attr == id;
+    return false;
   });
   return it == entries.end() ? DataLayoutEntryInterface() : *it;
 }
@@ -691,7 +691,7 @@ void DataLayoutSpecInterface::bucketEntriesByType(
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey()))
       types[type.getTypeID()].push_back(entry);
     else
-      ids[entry.getKey().get<StringAttr>()] = entry;
+      ids[llvm::cast<StringAttr>(entry.getKey())] = entry;
   }
 }
 
@@ -709,7 +709,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
   spec.bucketEntriesByType(types, ids);
 
   for (const auto &kvp : types) {
-    auto sampleType = kvp.second.front().getKey().get<Type>();
+    auto sampleType = cast<Type>(kvp.second.front().getKey());
     if (isa<IndexType>(sampleType)) {
       assert(kvp.second.size() == 1 &&
              "expected one data layout entry for non-parametric 'index' type");
@@ -763,7 +763,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
   }
 
   for (const auto &kvp : ids) {
-    StringAttr identifier = kvp.second.getKey().get<StringAttr>();
+    StringAttr identifier = cast<StringAttr>(kvp.second.getKey());
     Dialect *dialect = identifier.getReferencedDialect();
 
     // Ignore attributes that belong to an unknown dialect, the dialect may
@@ -816,7 +816,7 @@ mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
         // targetDeviceSpec does not support Type as a key.
         return failure();
       } else {
-        deviceDescKeys[entry.getKey().get<StringAttr>()] = entry;
+        deviceDescKeys[cast<StringAttr>(entry.getKey())] = entry;
       }
     }
   }
