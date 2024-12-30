@@ -120,5 +120,7 @@ temporary object into ``this`` (needs a move assignment operator):
 
 .. option:: WarnOnlyIfThisHasSuspiciousField
 
-  When `true`, the check will warn only if the container class of the copy assignment operator
-  has any suspicious fields (pointer or C array). This option is set to `true` by default.
+  When `true`, the check will warn only if the container class of the copy
+  assignment operator has any suspicious fields (pointer, C array and C++ smart
+  pointer).
+  This option is set to `true` by default.
