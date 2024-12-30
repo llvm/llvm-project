@@ -217,7 +217,7 @@ static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
 // is connected to a successor replicate region with the same predicate by a
 // single, empty VPBasicBlock.
 static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
-  SetVector<VPRegionBlock *> DeletedRegions;
+  SmallPtrSet<VPRegionBlock *, 4> TransformedRegions;
 
   // Collect replicate regions followed by an empty block, followed by another
   // replicate region with matching masks to process front. This is to avoid
@@ -248,7 +248,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
 
   // Move recipes from Region1 to its successor region, if both are triangles.
   for (VPRegionBlock *Region1 : WorkList) {
-    if (DeletedRegions.contains(Region1))
+    if (TransformedRegions.contains(Region1))
       continue;
     auto *MiddleBasicBlock = cast<VPBasicBlock>(Region1->getSingleSuccessor());
     auto *Region2 = cast<VPRegionBlock>(MiddleBasicBlock->getSingleSuccessor());
@@ -294,12 +294,10 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       VPBlockUtils::connectBlocks(Pred, MiddleBasicBlock);
     }
     VPBlockUtils::disconnectBlocks(Region1, MiddleBasicBlock);
-    DeletedRegions.insert(Region1);
+    TransformedRegions.insert(Region1);
   }
 
-  for (VPRegionBlock *ToDelete : DeletedRegions)
-    delete ToDelete;
-  return !DeletedRegions.empty();
+  return !TransformedRegions.empty();
 }
 
 static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
@@ -310,7 +308,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   assert(Instr->getParent() && "Predicated instruction not in any basic block");
   auto *BlockInMask = PredRecipe->getMask();
   auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
-  auto *Entry = new VPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
+  auto *Entry =
+      Plan.createVPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
 
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
@@ -318,7 +317,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->getUnderlyingInstr(),
       make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
       PredRecipe->isUniform());
-  auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
+  auto *Pred =
+      Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
   VPPredInstPHIRecipe *PHIRecipe = nullptr;
   if (PredRecipe->getNumUsers() != 0) {
@@ -328,8 +328,10 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
     PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
   PredRecipe->eraseFromParent();
-  auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
-  VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
+  auto *Exiting =
+      Plan.createVPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
+  VPRegionBlock *Region =
+      Plan.createVPRegionBlock(Entry, Exiting, RegionName, true);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
@@ -396,7 +398,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
       VPBlockUtils::disconnectBlocks(VPBB, Succ);
       VPBlockUtils::connectBlocks(PredVPBB, Succ);
     }
-    delete VPBB;
+    // VPBB is now dead and will be cleaned up when the plan gets destroyed.
   }
   return !WorkList.empty();
 }
@@ -1898,7 +1900,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   if (OrigLoop->getUniqueExitBlock()) {
     VPEarlyExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
   } else {
-    VPEarlyExitBlock = VPIRBasicBlock::fromBasicBlock(
+    VPEarlyExitBlock = Plan.createVPIRBasicBlock(
         !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
   }
 
@@ -1908,7 +1910,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
-  VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
+  VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
   VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
   VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
   NewMiddle->swapSuccessors();
