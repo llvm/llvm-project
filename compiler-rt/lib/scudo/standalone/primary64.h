@@ -57,9 +57,11 @@ public:
                 "Group size shouldn't be greater than the region size");
   static const uptr GroupScale = GroupSizeLog - CompactPtrScale;
   typedef SizeClassAllocator64<Config> ThisT;
-  typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef TransferBatch<ThisT> TransferBatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
+  using CacheT = typename Conditional<Config::getEnableCache(),
+                                      SizeClassAllocatorLocalCache<ThisT>,
+                                      NoCache<ThisT>>::type;
 
   // BachClass is used to store internal metadata so it needs to be at least as
   // large as the largest data structure.
