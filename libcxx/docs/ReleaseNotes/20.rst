@@ -120,6 +120,8 @@ Improvements and New Features
 
 - Added :ref:`hardening mode <hardening>` support for ``forward_list`` and ``bitset``.
 
+- The performance of ``std::getline`` has been improved, resulting in a performance uplift of up to 10x.
+
 Deprecations and Removals
 -------------------------
 
