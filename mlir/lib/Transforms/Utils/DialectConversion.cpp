@@ -137,10 +137,12 @@ namespace {
 struct ValueVectorMapInfo {
   static ValueVector getEmptyKey() { return ValueVector{}; }
   static ValueVector getTombstoneKey() { return ValueVector{}; }
-  static ::llvm::hash_code getHashValue(ValueVector val) {
+  static ::llvm::hash_code getHashValue(const ValueVector &val) {
     return ::llvm::hash_combine_range(val.begin(), val.end());
   }
-  static bool isEqual(ValueVector LHS, ValueVector RHS) { return LHS == RHS; }
+  static bool isEqual(const ValueVector &LHS, const ValueVector &RHS) {
+    return LHS == RHS;
+  }
 };
 
 /// This class wraps a IRMapping to provide recursive lookup
@@ -159,20 +161,18 @@ struct ConversionValueMapping {
   /// - If there is no mapping to the desired types, also return the most
   ///   recently mapped values.
   /// - If there is no mapping for the given values at all, return the given
-  ///   values.
-  ValueVector lookupOrDefault(ValueVector from,
-                              TypeRange desiredTypes = {}) const;
+  ///   value.
+  ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {}) const;
 
-  /// Lookup the given values within the map, or return an empty vector if the
-  /// values are not mapped. If they are mapped, this follows the same behavior
+  /// Lookup the given value within the map, or return an empty vector if the
+  /// value is not mapped. If it is mapped, this follows the same behavior
   /// as `lookupOrDefault`.
-  ValueVector lookupOrNull(const ValueVector &from,
-                           TypeRange desiredTypes = {}) const;
+  ValueVector lookupOrNull(Value from, TypeRange desiredTypes = {}) const;
 
   template <typename T>
   struct IsValueVector : std::is_same<std::decay_t<T>, ValueVector> {};
 
-  /// Map a value to the one provided.
+  /// Map a value vector to the one provided.
   template <typename OldVal, typename NewVal>
   std::enable_if_t<IsValueVector<OldVal>{} && IsValueVector<NewVal>{}>
   map(OldVal &&oldVal, NewVal &&newVal) {
@@ -192,6 +192,7 @@ struct ConversionValueMapping {
     mapping[std::forward<OldVal>(oldVal)] = std::forward<NewVal>(newVal);
   }
 
+  /// Map a value vector or single value to the one provided.
   template <typename OldVal, typename NewVal>
   std::enable_if_t<!IsValueVector<OldVal>{} || !IsValueVector<NewVal>{}>
   map(OldVal &&oldVal, NewVal &&newVal) {
@@ -217,19 +218,20 @@ private:
 } // namespace
 
 ValueVector
-ConversionValueMapping::lookupOrDefault(ValueVector from,
+ConversionValueMapping::lookupOrDefault(Value from,
                                         TypeRange desiredTypes) const {
   // Try to find the deepest values that have the desired types. If there is no
   // such mapping, simply return the deepest values.
   ValueVector desiredValue;
+  ValueVector current{from};
   do {
     // Store the current value if the types match.
-    if (desiredTypes.empty() || TypeRange(from) == desiredTypes)
-      desiredValue = from;
+    if (TypeRange(current) == desiredTypes)
+      desiredValue = current;
 
     // If possible, Replace each value with (one or multiple) mapped values.
     ValueVector next;
-    for (Value v : from) {
+    for (Value v : current) {
       auto it = mapping.find({v});
       if (it != mapping.end()) {
         llvm::append_range(next, it->second);
@@ -237,33 +239,35 @@ ConversionValueMapping::lookupOrDefault(ValueVector from,
         next.push_back(v);
       }
     }
-    if (next != from) {
+    if (next != current) {
       // If at least one value was replaced, continue the lookup from there.
-      from = std::move(next);
+      current = std::move(next);
       continue;
     }
 
     // Otherwise: Check if there is a mapping for the entire vector. Such
     // mappings are materializations. (N:M mapping are not supported for value
     // replacements.)
-    auto it = mapping.find(from);
+    auto it = mapping.find(current);
     if (it == mapping.end()) {
       // No mapping found: The lookup stops here.
       break;
     }
-    from = it->second;
+    current = it->second;
   } while (true);
 
   // If the desired values were found use them, otherwise default to the leaf
   // values.
-  return !desiredValue.empty() ? desiredValue : from;
+  // Note: If `desiredTypes` is empty, this function always returns `current`.
+  return !desiredValue.empty() ? desiredValue : current;
 }
 
-ValueVector ConversionValueMapping::lookupOrNull(const ValueVector &from,
+ValueVector ConversionValueMapping::lookupOrNull(Value from,
                                                  TypeRange desiredTypes) const {
   ValueVector result = lookupOrDefault(from, desiredTypes);
   TypeRange resultTypes(result);
-  if (result == from || (!desiredTypes.empty() && resultTypes != desiredTypes))
+  if (result == ValueVector{from} ||
+      (!desiredTypes.empty() && resultTypes != desiredTypes))
     return {};
   return result;
 }
@@ -1261,7 +1265,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       // The current pattern does not have a type converter. I.e., it does not
       // distinguish between legal and illegal types. For each operand, simply
       // pass through the most recently mapped values.
-      remapped.push_back(mapping.lookupOrDefault({operand}));
+      remapped.push_back(mapping.lookupOrDefault(operand));
       continue;
     }
 
@@ -1280,7 +1284,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       continue;
     }
 
-    ValueVector repl = mapping.lookupOrDefault({operand}, legalTypes);
+    ValueVector repl = mapping.lookupOrDefault(operand, legalTypes);
     if (!repl.empty() && TypeRange(repl) == legalTypes) {
       // Mapped values have the correct type or there is an existing
       // materialization. Or the operand is not mapped at all and has the
@@ -1290,7 +1294,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     }
 
     // Create a materialization for the most recently mapped values.
-    repl = mapping.lookupOrDefault({operand});
+    repl = mapping.lookupOrDefault(operand);
     ValueRange castValues = buildUnresolvedMaterialization(
         MaterializationKind::Target, computeInsertPoint(repl), operandLoc,
         /*valuesToMap=*/repl, /*inputs=*/repl, /*outputTypes=*/legalTypes,
@@ -1428,10 +1432,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       continue;
     }
 
-    // This is a 1->1+ mapping. 1->N mappings are not fully supported in the
-    // dialect conversion. Therefore, we need an argument materialization to
-    // turn the replacement block arguments into a single SSA value that can be
-    // used as a replacement.
+    // This is a 1->1+ mapping.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
     ValueVector replArgVals = llvm::to_vector_of<Value, 1>(replArgs);
@@ -1487,7 +1488,7 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
 Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
     Value value, const TypeConverter *converter) {
   // Find a replacement value with the same type.
-  ValueVector repl = mapping.lookupOrNull({value}, value.getType());
+  ValueVector repl = mapping.lookupOrNull(value, value.getType());
   if (!repl.empty())
     return repl.front();
 
@@ -1503,7 +1504,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // No replacement value was found. Get the latest replacement value
   // (regardless of the type) and build a source materialization to the
   // original type.
-  repl = mapping.lookupOrNull({value});
+  repl = mapping.lookupOrNull(value);
   if (repl.empty()) {
     // No replacement value is registered in the mapping. This means that the
     // value is dropped and no longer needed. (If the value were still needed,
@@ -1742,7 +1743,7 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
   });
   impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from,
                                               impl->currentTypeConverter);
-  impl->mapping.map(impl->mapping.lookupOrDefault({from}), to);
+  impl->mapping.map(impl->mapping.lookupOrDefault(from), to);
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
