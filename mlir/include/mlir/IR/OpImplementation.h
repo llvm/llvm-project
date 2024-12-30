@@ -1604,7 +1604,8 @@ public:
     size_t typeSize = llvm::range_size(types);
     if (operandSize != typeSize)
       return emitError(loc)
-             << operandSize << " operands present, but expected " << typeSize;
+             << "number of operands and types do not match: got " << operandSize
+             << " operands and " << typeSize << " types";
 
     for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))

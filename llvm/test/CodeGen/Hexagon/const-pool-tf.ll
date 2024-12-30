@@ -1,4 +1,4 @@
-; RUN: opt -relocation-model pic -march=hexagon -mcpu=hexagonv60 -O2 -S < %s | llc -march=hexagon -mcpu=hexagonv60 -relocation-model pic
+; RUN: opt -relocation-model pic -mtriple=hexagon -mcpu=hexagonv60 -O2 -S < %s | llc -mcpu=hexagonv60 -relocation-model pic
 
 ; CHECK: jumpr
 

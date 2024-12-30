@@ -128,15 +128,9 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
 
 void InputSectionBase::decompress() const {
   Ctx &ctx = getCtx();
-  uint8_t *uncompressedBuf;
-  {
-    static std::mutex mu;
-    std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = ctx.bAlloc.Allocate<uint8_t>(size);
-  }
-
-  invokeELFT(decompressAux, ctx, *this, uncompressedBuf, size);
-  content_ = uncompressedBuf;
+  uint8_t *buf = makeThreadLocalN<uint8_t>(size);
+  invokeELFT(decompressAux, ctx, *this, buf, size);
+  content_ = buf;
   compressed = false;
 }
 
@@ -529,7 +523,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
         addend = target.getImplicitAddend(bufLoc, type);
 
       if (ctx.arg.emachine == EM_MIPS &&
-          target.getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
+          target.getRelExpr(type, sym, bufLoc) == RE_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But
         // relocatable files produced by a compiler or a linker
@@ -661,7 +655,7 @@ static uint64_t getARMStaticBase(const Symbol &sym) {
   return os->ptLoad->firstSec->addr;
 }
 
-// For R_RISCV_PC_INDIRECT (R_RISCV_PCREL_LO12_{I,S}), the symbol actually
+// For RE_RISCV_PC_INDIRECT (R_RISCV_PCREL_LO12_{I,S}), the symbol actually
 // points the corresponding R_RISCV_PCREL_HI20 relocation, and the target VA
 // is calculated using PCREL_HI20's symbol.
 //
@@ -778,25 +772,26 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
-  case R_AARCH64_AUTH:
-  case R_RISCV_ADD:
-  case R_RISCV_LEB128:
+  case RE_AARCH64_AUTH:
+  case RE_RISCV_ADD:
+  case RE_RISCV_LEB128:
     return r.sym->getVA(ctx, a);
   case R_ADDEND:
     return a;
   case R_RELAX_HINT:
     return 0;
-  case R_ARM_SBREL:
+  case RE_ARM_SBREL:
     return r.sym->getVA(ctx, a) - getARMStaticBase(*r.sym);
   case R_GOT:
+  case RE_AARCH64_AUTH_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return r.sym->getGotVA(ctx) + a;
-  case R_LOONGARCH_GOT:
+  case RE_LOONGARCH_GOT:
     // The LoongArch TLS GD relocs reuse the R_LARCH_GOT_PC_LO12 reloc r.type
     // for their page offsets. The arithmetics are different in the TLS case
     // so we have to duplicate some logic here.
     if (r.sym->hasFlag(NEEDS_TLSGD) && r.type != R_LARCH_TLS_IE_PC_LO12)
-      // Like R_LOONGARCH_TLSGD_PAGE_PC but taking the absolute value.
+      // Like RE_LOONGARCH_TLSGD_PAGE_PC but taking the absolute value.
       return ctx.in.got->getGlobalDynAddr(*r.sym) + a;
     return r.sym->getGotVA(ctx) + a;
   case R_GOTONLY_PC:
@@ -804,7 +799,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLTONLY_PC:
     return ctx.in.gotPlt->getVA() + a - p;
   case R_GOTREL:
-  case R_PPC64_RELAX_TOC:
+  case RE_PPC64_RELAX_TOC:
     return r.sym->getVA(ctx, a) - ctx.in.got->getVA();
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();
@@ -815,29 +810,31 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOT_OFF:
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
-  case R_AARCH64_GOT_PAGE_PC:
-  case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
+  case RE_AARCH64_GOT_PAGE_PC:
+  case RE_AARCH64_AUTH_GOT_PAGE_PC:
+  case RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
-  case R_AARCH64_GOT_PAGE:
+  case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
+  case RE_AARCH64_AUTH_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
     return r.sym->getGotPltVA(ctx) + a - ctx.in.got->getVA();
   case R_GOTPLT_PC:
     return r.sym->getGotPltVA(ctx) + a - p;
-  case R_LOONGARCH_GOT_PAGE_PC:
+  case RE_LOONGARCH_GOT_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);
     return getLoongArchPageDelta(r.sym->getGotVA(ctx) + a, p, r.type);
-  case R_MIPS_GOTREL:
+  case RE_MIPS_GOTREL:
     return r.sym->getVA(ctx, a) - ctx.in.mipsGot->getGp(file);
-  case R_MIPS_GOT_GP:
+  case RE_MIPS_GOT_GP:
     return ctx.in.mipsGot->getGp(file) + a;
-  case R_MIPS_GOT_GP_PC: {
-    // R_MIPS_LO16 expression has R_MIPS_GOT_GP_PC r.type iif the target
+  case RE_MIPS_GOT_GP_PC: {
+    // R_MIPS_LO16 expression has RE_MIPS_GOT_GP_PC r.type iif the target
     // is _gp_disp symbol. In that case we should use the following
     // formula for calculation "AHL + GP - P + 4". For details see p. 4-19 at
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
@@ -851,43 +848,43 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
       v -= 1;
     return v;
   }
-  case R_MIPS_GOT_LOCAL_PAGE:
+  case RE_MIPS_GOT_LOCAL_PAGE:
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
     return ctx.in.mipsGot->getVA() +
            ctx.in.mipsGot->getPageEntryOffset(file, *r.sym, a) -
            ctx.in.mipsGot->getGp(file);
-  case R_MIPS_GOT_OFF:
-  case R_MIPS_GOT_OFF32:
+  case RE_MIPS_GOT_OFF:
+  case RE_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression r.type.
     return ctx.in.mipsGot->getVA() +
            ctx.in.mipsGot->getSymEntryOffset(file, *r.sym, a) -
            ctx.in.mipsGot->getGp(file);
-  case R_MIPS_TLSGD:
+  case RE_MIPS_TLSGD:
     return ctx.in.mipsGot->getVA() +
            ctx.in.mipsGot->getGlobalDynOffset(file, *r.sym) -
            ctx.in.mipsGot->getGp(file);
-  case R_MIPS_TLSLD:
+  case RE_MIPS_TLSLD:
     return ctx.in.mipsGot->getVA() + ctx.in.mipsGot->getTlsIndexOffset(file) -
            ctx.in.mipsGot->getGp(file);
-  case R_AARCH64_PAGE_PC: {
+  case RE_AARCH64_PAGE_PC: {
     uint64_t val = r.sym->isUndefWeak() ? p + a : r.sym->getVA(ctx, a);
     return getAArch64Page(val) - getAArch64Page(p);
   }
-  case R_RISCV_PC_INDIRECT: {
+  case RE_RISCV_PC_INDIRECT: {
     if (const Relocation *hiRel = getRISCVPCRelHi20(ctx, this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
     return 0;
   }
-  case R_LOONGARCH_PAGE_PC:
+  case RE_LOONGARCH_PAGE_PC:
     return getLoongArchPageDelta(r.sym->getVA(ctx, a), p, r.type);
   case R_PC:
-  case R_ARM_PCA: {
+  case RE_ARM_PCA: {
     uint64_t dest;
-    if (r.expr == R_ARM_PCA)
+    if (r.expr == RE_ARM_PCA)
       // Some PC relative ARM (Thumb) relocations align down the place.
       p = p & 0xfffffffc;
     if (r.sym->isUndefined()) {
@@ -915,20 +912,20 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_PLT:
     return r.sym->getPltVA(ctx) + a;
   case R_PLT_PC:
-  case R_PPC64_CALL_PLT:
+  case RE_PPC64_CALL_PLT:
     return r.sym->getPltVA(ctx) + a - p;
-  case R_LOONGARCH_PLT_PAGE_PC:
+  case RE_LOONGARCH_PLT_PAGE_PC:
     return getLoongArchPageDelta(r.sym->getPltVA(ctx) + a, p, r.type);
   case R_PLT_GOTPLT:
     return r.sym->getPltVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_PLT_GOTREL:
     return r.sym->getPltVA(ctx) + a - ctx.in.got->getVA();
-  case R_PPC32_PLTREL:
+  case RE_PPC32_PLTREL:
     // R_PPC_PLTREL24 uses the addend (usually 0 or 0x8000) to indicate r30
     // stores _GLOBAL_OFFSET_TABLE_ or .got2+0x8000. The addend is ignored for
     // target VA computation.
     return r.sym->getPltVA(ctx) - p;
-  case R_PPC64_CALL: {
+  case RE_PPC64_CALL: {
     uint64_t symVA = r.sym->getVA(ctx, a);
     // If we have an undefined weak symbol, we might get here with a symbol
     // address of zero. That could overflow, but the code must be unreachable,
@@ -945,10 +942,10 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return symVA - p +
            getPPC64GlobalEntryToLocalEntryOffset(ctx, r.sym->stOther);
   }
-  case R_PPC64_TOCBASE:
+  case RE_PPC64_TOCBASE:
     return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
-  case R_PPC64_RELAX_GOT_PC:
+  case RE_PPC64_RELAX_GOT_PC:
     return r.sym->getVA(ctx, a) - p;
   case R_RELAX_TLS_GD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:
@@ -974,10 +971,10 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - p;
   case R_TLSDESC_GOTPLT:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - ctx.in.gotPlt->getVA();
-  case R_AARCH64_TLSDESC_PAGE:
+  case RE_AARCH64_TLSDESC_PAGE:
     return getAArch64Page(ctx.in.got->getTlsDescAddr(*r.sym) + a) -
            getAArch64Page(p);
-  case R_LOONGARCH_TLSDESC_PAGE_PC:
+  case RE_LOONGARCH_TLSDESC_PAGE_PC:
     return getLoongArchPageDelta(ctx.in.got->getTlsDescAddr(*r.sym) + a, p,
                                  r.type);
   case R_TLSGD_GOT:
@@ -986,7 +983,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return ctx.in.got->getGlobalDynAddr(*r.sym) + a - ctx.in.gotPlt->getVA();
   case R_TLSGD_PC:
     return ctx.in.got->getGlobalDynAddr(*r.sym) + a - p;
-  case R_LOONGARCH_TLSGD_PAGE_PC:
+  case RE_LOONGARCH_TLSGD_PAGE_PC:
     return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                  r.type);
   case R_TLSLD_GOTPLT:
@@ -1120,7 +1117,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
     // sections.
     if (LLVM_LIKELY(expr == R_ABS) || expr == R_DTPREL || expr == R_GOTPLTREL ||
-        expr == R_RISCV_ADD || expr == R_ARM_SBREL) {
+        expr == RE_RISCV_ADD || expr == RE_ARM_SBREL) {
       target.relocateNoSym(bufLoc, type,
                            SignExtend64<bits>(sym.getVA(ctx, addend)));
       continue;

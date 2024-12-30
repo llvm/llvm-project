@@ -181,24 +181,3 @@ add_libc_unittest(
     libc.hdr.fcntl_macros
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-
-add_libc_unittest(
-  process_mrelease_test
-  SUITE
-    libc_sys_mman_unittests
-  SRCS
-    process_mrelease_test.cpp
-  DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.errno.errno
-    libc.src.sys.mman.process_mrelease
-    libc.src.unistd.close
-    libc.src.signal.kill
-    libc.include.signal
-    libc.src.stdlib.exit
-    libc.src.signal.raise
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.sleep
-    libc.test.UnitTest.ErrnoSetterMatcher
-)

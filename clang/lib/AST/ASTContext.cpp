@@ -112,6 +112,27 @@ enum FloatingRank {
   Ibm128Rank
 };
 
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
+  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
+
+  static FoldingSetNodeID getTombstoneKey() {
+    FoldingSetNodeID id;
+    for (size_t i = 0; i < sizeof(id) / sizeof(unsigned); ++i) {
+      id.AddInteger(std::numeric_limits<unsigned>::max());
+    }
+    return id;
+  }
+
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.ComputeHash();
+  }
+
+  static bool isEqual(const FoldingSetNodeID &LHS,
+                      const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+
 /// \returns The locations that are relevant when searching for Doc comments
 /// related to \p D.
 static SmallVector<SourceLocation, 2>
@@ -899,7 +920,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
+      DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
@@ -6294,12 +6315,14 @@ QualType ASTContext::getAutoTypeInternal(
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
-  void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, *this, DeducedType, Keyword, IsDependent,
-                    TypeConstraintConcept, TypeConstraintArgs);
-  if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(AT, 0);
+  bool IsDeducedDependent =
+      !DeducedType.isNull() && DeducedType->isDependentType();
+  AutoType::Profile(ID, *this, DeducedType, Keyword,
+                    IsDependent || IsDeducedDependent, TypeConstraintConcept,
+                    TypeConstraintArgs);
+  if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
+    return QualType(AT_iter->getSecond(), 0);
 
   QualType Canon;
   if (!IsCanon) {
@@ -6314,10 +6337,6 @@ QualType ASTContext::getAutoTypeInternal(
         Canon =
             getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
                                 CanonicalConcept, CanonicalConceptArgs, true);
-        // Find the insert position again.
-        [[maybe_unused]] auto *Nothing =
-            AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
-        assert(!Nothing && "canonical type broken");
       }
     }
   }
@@ -6331,8 +6350,13 @@ QualType ASTContext::getAutoTypeInternal(
                    : TypeDependence::None) |
           (IsPack ? TypeDependence::UnexpandedPack : TypeDependence::None),
       Canon, TypeConstraintConcept, TypeConstraintArgs);
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID InsertedID;
+  AT->Profile(InsertedID, *this);
+  assert(InsertedID == ID && "ID does not match");
+#endif
   Types.push_back(AT);
-  AutoTypes.InsertNode(AT, InsertPos);
+  AutoTypes.try_emplace(ID, AT);
   return QualType(AT, 0);
 }
 
@@ -9727,6 +9751,43 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
+static TypedefDecl *
+CreateXtensaABIBuiltinVaListDecl(const ASTContext *Context) {
+  // typedef struct __va_list_tag {
+  RecordDecl *VaListTagDecl = Context->buildImplicitRecord("__va_list_tag");
+
+  VaListTagDecl->startDefinition();
+
+  // int* __va_stk;
+  // int* __va_reg;
+  // int __va_ndx;
+  constexpr size_t NumFields = 3;
+  QualType FieldTypes[NumFields] = {Context->getPointerType(Context->IntTy),
+                                    Context->getPointerType(Context->IntTy),
+                                    Context->IntTy};
+  const char *FieldNames[NumFields] = {"__va_stk", "__va_reg", "__va_ndx"};
+
+  // Create fields
+  for (unsigned i = 0; i < NumFields; ++i) {
+    FieldDecl *Field = FieldDecl::Create(
+        *Context, VaListTagDecl, SourceLocation(), SourceLocation(),
+        &Context->Idents.get(FieldNames[i]), FieldTypes[i], /*TInfo=*/nullptr,
+        /*BitWidth=*/nullptr,
+        /*Mutable=*/false, ICIS_NoInit);
+    Field->setAccess(AS_public);
+    VaListTagDecl->addDecl(Field);
+  }
+  VaListTagDecl->completeDefinition();
+  Context->VaListTagDecl = VaListTagDecl;
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
+
+  // } __va_list_tag;
+  TypedefDecl *VaListTagTypedefDecl =
+      Context->buildImplicitTypedef(VaListTagType, "__builtin_va_list");
+
+  return VaListTagTypedefDecl;
+}
+
 static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
                                      TargetInfo::BuiltinVaListKind Kind) {
   switch (Kind) {
@@ -9748,6 +9809,8 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
     return CreateSystemZBuiltinVaListDecl(Context);
   case TargetInfo::HexagonBuiltinVaList:
     return CreateHexagonBuiltinVaListDecl(Context);
+  case TargetInfo::XtensaABIBuiltinVaList:
+    return CreateXtensaABIBuiltinVaListDecl(Context);
   }
 
   llvm_unreachable("Unhandled __builtin_va_list type kind");

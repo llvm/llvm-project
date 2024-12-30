@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
-#define _LIBCPP___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
+#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
+#define _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/array.h>
@@ -58,4 +58,4 @@ concept __pair_like_no_subrange = __tuple_like_no_subrange<_Tp> && tuple_size<re
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
+#endif // _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H

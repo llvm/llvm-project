@@ -998,14 +998,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   //
 }
 
-static void appendOneArg(InputArgList &Args, const Arg *Opt,
-                         const Arg *BaseArg) {
+static void appendOneArg(InputArgList &Args, const Arg *Opt) {
   // The args for config files or /clang: flags belong to different InputArgList
   // objects than Args. This copies an Arg from one of those other InputArgLists
   // to the ownership of Args.
   unsigned Index = Args.MakeIndex(Opt->getSpelling());
-  Arg *Copy = new llvm::opt::Arg(Opt->getOption(), Args.getArgString(Index),
-                                 Index, BaseArg);
+  Arg *Copy = new Arg(Opt->getOption(), Args.getArgString(Index), Index);
   Copy->getValues() = Opt->getValues();
   if (Opt->isClaimed())
     Copy->claim();
@@ -1041,38 +1039,59 @@ bool Driver::readConfigFile(StringRef FileName,
   }
 
   // Try reading the given file.
-  SmallVector<const char *, 32> NewCfgArgs;
-  if (llvm::Error Err = ExpCtx.readConfigFile(FileName, NewCfgArgs)) {
+  SmallVector<const char *, 32> NewCfgFileArgs;
+  if (llvm::Error Err = ExpCtx.readConfigFile(FileName, NewCfgFileArgs)) {
     Diag(diag::err_drv_cannot_read_config_file)
         << FileName << toString(std::move(Err));
     return true;
   }
 
+  // Populate head and tail lists. The tail list is used only when linking.
+  SmallVector<const char *, 32> NewCfgHeadArgs, NewCfgTailArgs;
+  for (const char *Opt : NewCfgFileArgs) {
+    // An $-prefixed option should go to the tail list.
+    if (Opt[0] == '$' && Opt[1])
+      NewCfgTailArgs.push_back(Opt + 1);
+    else
+      NewCfgHeadArgs.push_back(Opt);
+  }
+
   // Read options from config file.
   llvm::SmallString<128> CfgFileName(FileName);
   llvm::sys::path::native(CfgFileName);
-  bool ContainErrors;
-  std::unique_ptr<InputArgList> NewOptions = std::make_unique<InputArgList>(
-      ParseArgStrings(NewCfgArgs, /*UseDriverMode=*/true, ContainErrors));
+  bool ContainErrors = false;
+  auto NewHeadOptions = std::make_unique<InputArgList>(
+      ParseArgStrings(NewCfgHeadArgs, /*UseDriverMode=*/true, ContainErrors));
+  if (ContainErrors)
+    return true;
+  auto NewTailOptions = std::make_unique<InputArgList>(
+      ParseArgStrings(NewCfgTailArgs, /*UseDriverMode=*/true, ContainErrors));
   if (ContainErrors)
     return true;
 
   // Claim all arguments that come from a configuration file so that the driver
   // does not warn on any that is unused.
-  for (Arg *A : *NewOptions)
+  for (Arg *A : *NewHeadOptions)
+    A->claim();
+  for (Arg *A : *NewTailOptions)
     A->claim();
 
-  if (!CfgOptions)
-    CfgOptions = std::move(NewOptions);
+  if (!CfgOptionsHead)
+    CfgOptionsHead = std::move(NewHeadOptions);
   else {
     // If this is a subsequent config file, append options to the previous one.
-    for (auto *Opt : *NewOptions) {
-      const Arg *BaseArg = &Opt->getBaseArg();
-      if (BaseArg == Opt)
-        BaseArg = nullptr;
-      appendOneArg(*CfgOptions, Opt, BaseArg);
-    }
+    for (auto *Opt : *NewHeadOptions)
+      appendOneArg(*CfgOptionsHead, Opt);
   }
+
+  if (!CfgOptionsTail)
+    CfgOptionsTail = std::move(NewTailOptions);
+  else {
+    // If this is a subsequent config file, append options to the previous one.
+    for (auto *Opt : *NewTailOptions)
+      appendOneArg(*CfgOptionsTail, Opt);
+  }
+
   ConfigFiles.push_back(std::string(CfgFileName));
   return false;
 }
@@ -1146,6 +1165,34 @@ bool Driver::loadConfigFiles() {
   return false;
 }
 
+static bool findTripleConfigFile(llvm::cl::ExpansionContext &ExpCtx,
+                                 SmallString<128> &ConfigFilePath,
+                                 llvm::Triple Triple, std::string Suffix) {
+  // First, try the full unmodified triple.
+  if (ExpCtx.findConfigFile(Triple.str() + Suffix, ConfigFilePath))
+    return true;
+
+  // Don't continue if we didn't find a parsable version in the triple.
+  VersionTuple OSVersion = Triple.getOSVersion();
+  if (!OSVersion.getMinor().has_value())
+    return false;
+
+  std::string BaseOSName = Triple.getOSTypeName(Triple.getOS()).str();
+
+  // Next try strip the version to only include the major component.
+  // e.g. arm64-apple-darwin23.6.0 -> arm64-apple-darwin23
+  if (OSVersion.getMajor() != 0) {
+    Triple.setOSName(BaseOSName + llvm::utostr(OSVersion.getMajor()));
+    if (ExpCtx.findConfigFile(Triple.str() + Suffix, ConfigFilePath))
+      return true;
+  }
+
+  // Finally, try without any version suffix at all.
+  // e.g. arm64-apple-darwin23.6.0 -> arm64-apple-darwin
+  Triple.setOSName(BaseOSName);
+  return ExpCtx.findConfigFile(Triple.str() + Suffix, ConfigFilePath);
+}
+
 bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   // Disable default config if CLANG_NO_DEFAULT_CONFIG is set to a non-empty
   // value.
@@ -1157,7 +1204,7 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
     return false;
 
   std::string RealMode = getExecutableForDriverMode(Mode);
-  std::string Triple;
+  llvm::Triple Triple;
 
   // If name prefix is present, no --target= override was passed via CLOptions
   // and the name prefix is not a valid triple, force it for backwards
@@ -1168,15 +1215,13 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
     llvm::Triple PrefixTriple{ClangNameParts.TargetPrefix};
     if (PrefixTriple.getArch() == llvm::Triple::UnknownArch ||
         PrefixTriple.isOSUnknown())
-      Triple = PrefixTriple.str();
+      Triple = PrefixTriple;
   }
 
   // Otherwise, use the real triple as used by the driver.
-  if (Triple.empty()) {
-    llvm::Triple RealTriple =
-        computeTargetTriple(*this, TargetTriple, *CLOptions);
-    Triple = RealTriple.str();
-    assert(!Triple.empty());
+  if (Triple.str().empty()) {
+    Triple = computeTargetTriple(*this, TargetTriple, *CLOptions);
+    assert(!Triple.str().empty());
   }
 
   // Search for config files in the following order:
@@ -1191,21 +1236,21 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
 
   // Try loading <triple>-<mode>.cfg, and return if we find a match.
   SmallString<128> CfgFilePath;
-  std::string CfgFileName = Triple + '-' + RealMode + ".cfg";
-  if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+  if (findTripleConfigFile(ExpCtx, CfgFilePath, Triple,
+                           "-" + RealMode + ".cfg"))
     return readConfigFile(CfgFilePath, ExpCtx);
 
   bool TryModeSuffix = !ClangNameParts.ModeSuffix.empty() &&
                        ClangNameParts.ModeSuffix != RealMode;
   if (TryModeSuffix) {
-    CfgFileName = Triple + '-' + ClangNameParts.ModeSuffix + ".cfg";
-    if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+    if (findTripleConfigFile(ExpCtx, CfgFilePath, Triple,
+                             "-" + ClangNameParts.ModeSuffix + ".cfg"))
       return readConfigFile(CfgFilePath, ExpCtx);
   }
 
   // Try loading <mode>.cfg, and return if loading failed.  If a matching file
   // was not found, still proceed on to try <triple>.cfg.
-  CfgFileName = RealMode + ".cfg";
+  std::string CfgFileName = RealMode + ".cfg";
   if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath)) {
     if (readConfigFile(CfgFilePath, ExpCtx))
       return true;
@@ -1217,8 +1262,7 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   }
 
   // Try loading <triple>.cfg and return if we find a match.
-  CfgFileName = Triple + ".cfg";
-  if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+  if (findTripleConfigFile(ExpCtx, CfgFilePath, Triple, ".cfg"))
     return readConfigFile(CfgFilePath, ExpCtx);
 
   // If we were unable to find a config file deduced from executable name,
@@ -1249,21 +1293,17 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Try parsing configuration file.
   if (!ContainsError)
     ContainsError = loadConfigFiles();
-  bool HasConfigFile = !ContainsError && (CfgOptions.get() != nullptr);
+  bool HasConfigFileHead = !ContainsError && CfgOptionsHead;
+  bool HasConfigFileTail = !ContainsError && CfgOptionsTail;
 
   // All arguments, from both config file and command line.
-  InputArgList Args = std::move(HasConfigFile ? std::move(*CfgOptions)
-                                              : std::move(*CLOptions));
+  InputArgList Args =
+      HasConfigFileHead ? std::move(*CfgOptionsHead) : std::move(*CLOptions);
 
-  if (HasConfigFile)
-    for (auto *Opt : *CLOptions) {
-      if (Opt->getOption().matches(options::OPT_config))
-        continue;
-      const Arg *BaseArg = &Opt->getBaseArg();
-      if (BaseArg == Opt)
-        BaseArg = nullptr;
-      appendOneArg(Args, Opt, BaseArg);
-    }
+  if (HasConfigFileHead)
+    for (auto *Opt : *CLOptions)
+      if (!Opt->getOption().matches(options::OPT_config))
+        appendOneArg(Args, Opt);
 
   // In CL mode, look for any pass-through arguments
   if (IsCLMode() && !ContainsError) {
@@ -1281,9 +1321,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
                           ContainsError));
 
       if (!ContainsError)
-        for (auto *Opt : *CLModePassThroughOptions) {
-          appendOneArg(Args, Opt, nullptr);
-        }
+        for (auto *Opt : *CLModePassThroughOptions)
+          appendOneArg(Args, Opt);
     }
   }
 
@@ -1552,6 +1591,15 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
+  if (HasConfigFileTail && Inputs.size()) {
+    Arg *FinalPhaseArg;
+    if (getFinalPhase(*TranslatedArgs, &FinalPhaseArg) == phases::Link) {
+      DerivedArgList TranslatedLinkerIns(*CfgOptionsTail);
+      for (Arg *A : *CfgOptionsTail)
+        TranslatedLinkerIns.append(A);
+      BuildInputs(C->getDefaultToolChain(), TranslatedLinkerIns, Inputs);
+    }
+  }
 
   // Populate the tool chains for the offloading devices, if any.
   CreateOffloadingDeviceToolChains(*C, Inputs);
@@ -4527,7 +4575,13 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         ToolChain::getOpenMPTriple(Arg->getValue(0)) == TC->getTriple()) {
       Arg->claim();
       unsigned Index = Args.getBaseArgs().MakeIndex(Arg->getValue(1));
+      unsigned Prev = Index;
       ExtractedArg = getOpts().ParseOneArg(Args, Index);
+      if (!ExtractedArg || Index > Prev + 1) {
+        TC->getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << Arg->getAsString(Args);
+        continue;
+      }
       Arg = ExtractedArg.get();
     }
 
@@ -5786,15 +5840,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     }
   } else {
     if (UnbundlingResults.empty())
-      T->ConstructJob(
-          C, *JA, Result, InputInfos,
-          C.getArgsForToolChain(TC, BoundArch, JA->getOffloadingDeviceKind()),
-          LinkingOutput);
+      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
     else
-      T->ConstructJobMultipleOutputs(
-          C, *JA, UnbundlingResults, InputInfos,
-          C.getArgsForToolChain(TC, BoundArch, JA->getOffloadingDeviceKind()),
-          LinkingOutput);
+      T->ConstructJobMultipleOutputs(C, *JA, UnbundlingResults, InputInfos,
+                                     Args, LinkingOutput);
   }
   return {Result};
 }

@@ -2522,8 +2522,9 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   for (auto &MatchClassName : Table)
     OS << "      " << MatchClassName << ",\n";
   OS << "    };\n\n";
-  OS << "    MatchClassKind OpKind = "
-        "(MatchClassKind)Table[Operand.getReg().id()];\n";
+  OS << "    unsigned RegID = Operand.getReg().id();\n";
+  OS << "    MatchClassKind OpKind = MCRegister::isPhysicalRegister(RegID) ? "
+        "(MatchClassKind)Table[RegID] : InvalidMatchClass;\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
      << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
      << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";

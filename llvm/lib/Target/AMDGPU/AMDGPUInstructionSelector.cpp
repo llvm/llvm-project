@@ -3764,10 +3764,15 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   if (!Subtarget->hasBitOp3Insts())
     return false;
 
+  Register DstReg = MI.getOperand(0).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
+  if (!IsVALU)
+    return false;
+
   SmallVector<Register, 3> Src;
   uint8_t TTbl;
   unsigned NumOpcodes;
-  Register DstReg = MI.getOperand(0).getReg();
 
   std::tie(NumOpcodes, TTbl) = BitOp3_Op(DstReg, Src, *MRI);
 
@@ -3776,13 +3781,10 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   if (NumOpcodes < 2 || Src.empty())
     return false;
 
-  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
-  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
-
   // For a uniform case threshold should be higher to account for moves between
   // VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be in SGPRs
   // and a readtfirstlane after.
-  if (NumOpcodes < 4 && !IsVALU)
+  if (NumOpcodes < 4)
     return false;
 
   bool IsB32 = MRI->getType(DstReg) == LLT::scalar(32);
