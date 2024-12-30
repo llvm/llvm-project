@@ -88,6 +88,7 @@ class Builtin {
   // On some platforms, some functions are actually macros. In that case we need
   // to #undef them.
   bit RequiresUndef = 0;
+  bit BuiltinPrefixedAliasIsConstexpr = 0;
 }
 
 class CustomEntry {
@@ -103,7 +104,7 @@ class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Header = header;
   string Languages = languages;
   bit AddBuiltinPrefixedAlias = 0;
-  bit OnlyBuiltinPrefixedAliasIsConstexpr = 0;
+  bit BuiltinPrefixedAliasIsConstexpr = 0;
 }
 
 class MSLibBuiltin<string header> : LibBuiltin<header, "ALL_MS_LANGUAGES">;

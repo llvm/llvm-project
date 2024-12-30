@@ -15383,6 +15383,16 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
 
   return true;
 }
+//  Checks that the value x is in the range (-1;-0.5], [0.5; 1)
+static bool isInFrexpResultRange(const llvm::APFloat &x) {
+  llvm::APFloat AbsX = abs(x);
+
+  llvm::APFloat half(x.getSemantics(), "0.5");
+  llvm::APFloat one(x.getSemantics(), "1.0");
+
+  return (AbsX.compare(half) != llvm::APFloat::cmpLessThan &&
+          AbsX.compare(one) == llvm::APFloat::cmpLessThan);
+}
 
 bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
@@ -15391,6 +15401,36 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   switch (E->getBuiltinCallee()) {
   default:
     return false;
+
+  case Builtin::BIfrexp:
+  case Builtin::BIfrexpf:
+  case Builtin::BIfrexpl:
+  case Builtin::BI__builtin_frexp:
+  case Builtin::BI__builtin_frexpf:
+  case Builtin::BI__builtin_frexpl:
+  case Builtin::BI__builtin_frexpf16:
+  case Builtin::BI__builtin_frexpf128: {
+    const auto *FDecl = E->getDirectCallee();
+    clang::LangStandard::Kind ConstExprSinceVersion =
+        FDecl->getConstexprBuiltinSinceVersion();
+    if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
+      return false;
+    LValue Pointer;
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluatePointer(E->getArg(1), Pointer, Info))
+      return false;
+    int FrexpExp;
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    Result = llvm::frexp(Result, FrexpExp, RM);
+    assert((Result.isZero() || Result.isNaN() || Result.isInfinity() ||
+            isInFrexpResultRange(Result)) &&
+           "The value is not in the expected range for frexp.");
+    APValue ExpVal{Result};
+    if (!handleAssignment(Info, E, Pointer,
+                          E->getArg(1)->getType()->getPointeeType(), ExpVal))
+      return false;
+    return true;
+  }
 
   case Builtin::BI__builtin_huge_val:
   case Builtin::BI__builtin_huge_valf:
@@ -15465,12 +15505,20 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmax:
+  case Builtin::BIfmaxf:
+  case Builtin::BIfmaxl:
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxf128: {
     // TODO: Handle sNaN.
+    const auto *FDecl = E->getDirectCallee();
+    clang::LangStandard::Kind ConstExprSinceVersion =
+        FDecl->getConstexprBuiltinSinceVersion();
+    if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
+      return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
@@ -15483,12 +15531,20 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmin:
+  case Builtin::BIfminf:
+  case Builtin::BIfminl:
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128: {
     // TODO: Handle sNaN.
+    const auto *FDecl = E->getDirectCallee();
+    clang::LangStandard::Kind ConstExprSinceVersion =
+        FDecl->getConstexprBuiltinSinceVersion();
+    if (ConstExprSinceVersion > Info.Ctx.getLangOpts().LangStd)
+      return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))

@@ -2309,6 +2309,7 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
       Type->isFunctionProtoType(), ConstexprKind);
   New->setImplicit();
   New->addAttr(BuiltinAttr::CreateImplicit(Context, ID));
+  New->setConstexprBuiltinSinceVersion(II);
 
   // Create Decl objects for each parameter, adding them to the
   // FunctionDecl.

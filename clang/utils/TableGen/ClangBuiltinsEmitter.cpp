@@ -223,7 +223,7 @@ void PrintAttributes(const Record *Builtin, BuiltinType BT, raw_ostream &OS) {
       OS << 'f';
     } else {
       OS << 'F';
-      if (Builtin->getValueAsBit("OnlyBuiltinPrefixedAliasIsConstexpr"))
+      if (Builtin->getValueAsBit("BuiltinPrefixedAliasIsConstexpr"))
         OS << 'E';
     }
   }

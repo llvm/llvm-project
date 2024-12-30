@@ -2039,6 +2039,10 @@ private:
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
 
+  /// Represents the language version since this function has been declared
+  /// constexpr.
+  clang::LangStandard::Kind ConstexprSinceVersion;
+
   /// Specify that this function declaration is actually a function
   /// template specialization.
   ///
@@ -2153,6 +2157,20 @@ public:
   void setRangeEnd(SourceLocation E) { EndRangeLoc = E; }
 
   void setDeclarationNameLoc(DeclarationNameLoc L) { DNLoc = L; }
+
+  /// Set the language standard version at which this builtin became constexpr.
+  void setConstexprBuiltinSinceVersion(IdentifierInfo *builtinIdentifier);
+
+  /// Get the language standard version at which this builtin became constexpr.
+  clang::LangStandard::Kind getConstexprBuiltinSinceVersion() const {
+    return ConstexprSinceVersion;
+  }
+
+  /// Set the version of the language standard at which this declaration became
+  /// constexpr.
+  void setConstexprSinceVersion(clang::LangStandard::Kind LangVersion) {
+    ConstexprSinceVersion = LangVersion;
+  }
 
   /// Returns the location of the ellipsis of a variadic function.
   SourceLocation getEllipsisLoc() const {
