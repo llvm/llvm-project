@@ -29,7 +29,6 @@ void SPIRVOpenMPToolChain::addClangTargetOptions(
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
-  addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, "", getTriple(),
-                     HostTC);
+  addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, "", getTriple(), HostTC);
 }
 } // namespace clang::driver::toolchains
