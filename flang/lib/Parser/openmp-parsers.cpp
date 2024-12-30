@@ -157,8 +157,8 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
 
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
 
-TYPE_PARSER(construct<OmpAlignModifier>( //
-    "ALIGN" >> parenthesized(scalarIntExpr)))
+TYPE_PARSER(
+    construct<OmpAlignModifier>("ALIGN"_tok >> parenthesized(scalarIntExpr)))
 
 TYPE_PARSER(construct<OmpAllocatorComplexModifier>(
     "ALLOCATOR" >> parenthesized(scalarIntExpr)))
