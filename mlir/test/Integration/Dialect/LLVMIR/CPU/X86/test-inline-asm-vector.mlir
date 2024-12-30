@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts |  \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -convert-arith-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts |  \
 // RUN: mlir-cpu-runner -e entry_point_with_all_constants -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils
 

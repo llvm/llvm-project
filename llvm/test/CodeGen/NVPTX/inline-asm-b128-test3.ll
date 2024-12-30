@@ -21,7 +21,7 @@ define void @test_b128_in_loop() {
 ; CHECK-NEXT:  // %bb.1: // %BB1
 ; CHECK-NEXT:    ld.global.u64 %rd13, [x+8];
 ; CHECK-NEXT:    ld.global.u64 %rd12, [x];
-; CHECK-NEXT:    mov.u64 %rd14, 0;
+; CHECK-NEXT:    mov.b64 %rd14, 0;
 ; CHECK-NEXT:  $L__BB0_2: // %BB2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov.b128 %rq1, {%rd12, %rd13};

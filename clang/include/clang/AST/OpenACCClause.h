@@ -619,6 +619,20 @@ public:
                                     SourceLocation EndLoc);
 };
 
+class OpenACCDeviceNumClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCDeviceNumClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                     Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DeviceNum;
+  }
+  static OpenACCDeviceNumClause *Create(const ASTContext &C,
+                                        SourceLocation BeginLoc,
+                                        SourceLocation LParenLoc, Expr *IntExpr,
+                                        SourceLocation EndLoc);
+};
+
 /// Represents a 'collapse' clause on a 'loop' construct. This clause takes an
 /// integer constant expression 'N' that represents how deep to collapse the
 /// construct. It also takes an optional 'force' tag that permits intervening

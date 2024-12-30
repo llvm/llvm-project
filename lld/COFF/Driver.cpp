@@ -2548,7 +2548,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
     symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
-    if (isArm64EC(ctx.config.machine)) {
+    if (symtab.isEC()) {
       symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
       symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
       symtab.addAbsolute("__arm64x_redirection_metadata", 0);
@@ -2727,8 +2727,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
-  while (ctx.symtab.resolveRemainingUndefines())
-    run();
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    while (symtab.resolveRemainingUndefines())
+      run();
+  });
 
   if (errorCount())
     return;
@@ -2822,6 +2824,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (ctx.symtabEC)
     ctx.symtabEC->initializeECThunks();
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {
