@@ -38,7 +38,7 @@
 
 # RUN: llvm-mc -triple x86_64-windows-msvc %t/loadcfg-misaligned2.s -filetype=obj -o %t/loadcfg-misaligned2.obj
 # RUN: lld-link %t/main.obj %t/loadcfg-misaligned2.obj -guard:cf,longjmp,ehcont -out:%t-misaligned2.exe -entry:main %basename_t-exp.lib 2>&1 | FileCheck %s --check-prefix=WARN_ALIGN2
-# WARN_ALIGN2: warning: '_load_config_used' is misaligned (RVA is 0x{{[0-9A-F]*}}2 not aligned to 8 bytes)
+# WARN_ALIGN2: warning: '_load_config_used' is misaligned (section offset is 0x{{[0-9A-F]*}}2 not aligned to 8 bytes)
 
 # RUN: llvm-mc -triple x86_64-windows-msvc %t/loadcfg-full.s -filetype=obj -o %t/loadcfg-full.obj
 # RUN: lld-link %t/main.obj %t/loadcfg-full.obj -guard:cf,longjmp,ehcont -out:%t.exe -entry:main %basename_t-exp.lib 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty

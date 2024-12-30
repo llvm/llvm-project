@@ -3196,9 +3196,6 @@ TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
                  has(callExpr(has(dependentScopeDeclRefExpr())))))))));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Type, DependentNameType>
-    dependentNameType;
-
 TEST_P(ImportExpr, DependentNameType) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> struct declToImport {"

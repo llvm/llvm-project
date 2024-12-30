@@ -138,6 +138,10 @@ public:
       callback(pair.second);
   }
 
+  DefinedRegular *loadConfigSym = nullptr;
+  uint32_t loadConfigSize = 0;
+  void initializeLoadConfig();
+
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
   /// with the "__imp_" prefix, if it exists.
