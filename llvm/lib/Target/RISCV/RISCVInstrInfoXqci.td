@@ -139,6 +139,7 @@ class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
   let Inst{31-25} = {funct2, imm{6-2}};
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
     : RVInstRBase<funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                   (ins GPRNoX0:$rd, GPRNoX0:$rs1, InTyRs2:$rs2, simm5:$simm),
@@ -254,7 +255,6 @@ let Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm" in {
 } // Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm"
 
 let Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli" in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">;
   def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">;
   def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">;
@@ -268,7 +268,6 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">;
   def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">;
   def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">;
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli"
 
 //===----------------------------------------------------------------------===//
