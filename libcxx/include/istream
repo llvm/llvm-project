@@ -1260,46 +1260,85 @@ operator>>(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _
   return __is;
 }
 
+template <class _CharT, class _Traits>
+struct __bump_stream_t {
+  _CharT& __1buf_;
+  basic_streambuf<_CharT, _Traits>& __buffer_;
+
+  const _CharT*& __first_;
+
+  _LIBCPP_HIDE_FROM_ABI
+  __bump_stream_t(_CharT& __1buf, basic_streambuf<_CharT, _Traits>& __buffer, const _CharT*& __first)
+      : __1buf_(__1buf), __buffer_(__buffer), __first_(__first) {}
+
+  _LIBCPP_HIDE_FROM_ABI void operator()(ptrdiff_t __diff) {
+    if (__first_ == &__1buf_) {
+      _LIBCPP_ASSERT_INTERNAL(__diff == 1, "trying to bump stream further than buffer size");
+      __buffer_.sbumpc();
+    } else {
+      __buffer_.__gbump_ptrdiff(__diff);
+    }
+  }
+};
+
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is, basic_string<_CharT, _Traits, _Allocator>& __str, _CharT __dlm) {
   ios_base::iostate __state = ios_base::goodbit;
   typename basic_istream<_CharT, _Traits>::sentry __sen(__is, true);
-  if (__sen) {
+  if (!__sen)
+    return __is;
 #    if _LIBCPP_HAS_EXCEPTIONS
-    try {
+  try {
 #    endif
-      __str.clear();
-      streamsize __extr = 0;
-      while (true) {
-        typename _Traits::int_type __i = __is.rdbuf()->sbumpc();
-        if (_Traits::eq_int_type(__i, _Traits::eof())) {
-          __state |= ios_base::eofbit;
-          break;
-        }
-        ++__extr;
-        _CharT __ch = _Traits::to_char_type(__i);
-        if (_Traits::eq(__ch, __dlm))
-          break;
-        __str.push_back(__ch);
-        if (__str.size() == __str.max_size()) {
+    __str.clear();
+
+    auto& __buffer = *__is.rdbuf();
+
+    auto __next = __buffer.sgetc();
+    for (; !_Traits::eq_int_type(__next, _Traits::eof()); __next = __buffer.sgetc()) {
+      const auto* __first = __buffer.gptr();
+      const auto* __last  = __buffer.egptr();
+      _CharT __1buf;
+
+      if (__first == __last) {
+        __1buf = __next;
+        __first = &__1buf;
+        __last = &__1buf + 1;
+      }
+
+      __bump_stream_t<_CharT, _Traits> __bump_stream(__1buf, __buffer, __first);
+
+      const auto* __match = _Traits::find(__first, __last - __first, __dlm);
+      if (__match) {
+        if (auto __cap = __str.max_size() - __str.size(); __cap > static_cast<size_t>(__match - __first)) {
+          __str.append(__first, __match);
+          __bump_stream(__match - __first + 1);
+        } else {
+          __str.append(__first, __cap);
+          __bump_stream(__cap);
           __state |= ios_base::failbit;
-          break;
         }
+        break;
       }
-      if (__extr == 0)
-        __state |= ios_base::failbit;
-#    if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __state |= ios_base::badbit;
-      __is.__setstate_nothrow(__state);
-      if (__is.exceptions() & ios_base::badbit) {
-        throw;
-      }
+
+      __str.append(__first, __last);
+      __bump_stream(__last - __first);
     }
-#    endif
-    __is.setstate(__state);
+
+    if (_Traits::eq_int_type(__next, _Traits::eof()))
+      __state |= ios_base::eofbit | (__str.empty() ? ios_base::failbit : ios_base::goodbit);
+
+#    if _LIBCPP_HAS_EXCEPTIONS
+  } catch (...) {
+    __state |= ios_base::badbit;
+    __is.__setstate_nothrow(__state);
+    if (__is.exceptions() & ios_base::badbit) {
+      throw;
+    }
   }
+#    endif
+  __is.setstate(__state);
   return __is;
 }
 
