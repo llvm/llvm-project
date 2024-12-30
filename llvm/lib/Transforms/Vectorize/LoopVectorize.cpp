@@ -8803,8 +8803,13 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
     return std::nullopt;
 
   Value *Op = Update->getOperand(0);
-  if (Op == PHI)
+  Value *PhiOp = Update->getOperand(1);
+  if (Op == PHI) {
     Op = Update->getOperand(1);
+    PhiOp = Update->getOperand(0);
+  }
+  if (PhiOp != PHI)
+    return std::nullopt;
 
   auto *BinOp = dyn_cast<BinaryOperator>(Op);
   if (!BinOp || !BinOp->hasOneUse())
