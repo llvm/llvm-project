@@ -63,7 +63,6 @@
 // OBJDUMP-NEXT: 0170 3f000c40 80000000 00040000 00000000
 
 .text
-// ASM: .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"

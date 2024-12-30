@@ -2730,6 +2730,54 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInstSB);
     return;
   }
+  case AArch64::TLSDESC_AUTH_CALLSEQ: {
+    /// lower this to:
+    ///    adrp  x0, :tlsdesc_auth:var
+    ///    ldr   x16, [x0, #:tlsdesc_auth_lo12:var]
+    ///    add   x0, x0, #:tlsdesc_auth_lo12:var
+    ///    blraa x16, x0
+    ///    (TPIDR_EL0 offset now in x0)
+    const MachineOperand &MO_Sym = MI->getOperand(0);
+    MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
+    MCOperand SymTLSDescLo12, SymTLSDesc;
+    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
+    MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
+    MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
+    MCInstLowering.lowerOperand(MO_TLSDESC, SymTLSDesc);
+
+    MCInst Adrp;
+    Adrp.setOpcode(AArch64::ADRP);
+    Adrp.addOperand(MCOperand::createReg(AArch64::X0));
+    Adrp.addOperand(SymTLSDesc);
+    EmitToStreamer(*OutStreamer, Adrp);
+
+    MCInst Ldr;
+    Ldr.setOpcode(AArch64::LDRXui);
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    Ldr.addOperand(MCOperand::createReg(AArch64::X0));
+    Ldr.addOperand(SymTLSDescLo12);
+    Ldr.addOperand(MCOperand::createImm(0));
+    EmitToStreamer(*OutStreamer, Ldr);
+
+    MCInst Add;
+    Add.setOpcode(AArch64::ADDXri);
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(SymTLSDescLo12);
+    Add.addOperand(MCOperand::createImm(AArch64_AM::getShiftValue(0)));
+    EmitToStreamer(*OutStreamer, Add);
+
+    // Authenticated TLSDESC accesses are not relaxed.
+    // Thus, do not emit .tlsdesccall for AUTH TLSDESC.
+
+    MCInst Blraa;
+    Blraa.setOpcode(AArch64::BLRAA);
+    Blraa.addOperand(MCOperand::createReg(AArch64::X16));
+    Blraa.addOperand(MCOperand::createReg(AArch64::X0));
+    EmitToStreamer(*OutStreamer, Blraa);
+
+    return;
+  }
   case AArch64::TLSDESC_CALLSEQ: {
     /// lower this to:
     ///    adrp  x0, :tlsdesc:var

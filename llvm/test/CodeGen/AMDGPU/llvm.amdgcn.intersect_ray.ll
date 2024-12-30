@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX1030 %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
@@ -27,17 +27,11 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_
 ; PRE-GFX12-NEXT:    s_waitcnt vmcnt(0)
 ; PRE-GFX12-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: image_bvh_intersect_ray:
-; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[5:7], v[8:10]], s[0:3]
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: image_bvh_intersect_ray:
-; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[5:7], v[8:10]], s[0:3]
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: image_bvh_intersect_ray:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[5:7], v[8:10]], s[0:3]
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
@@ -151,17 +145,11 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray(<2 x i32> %node_ptr_vec,
 ; PRE-GFX12-NEXT:    s_waitcnt vmcnt(0)
 ; PRE-GFX12-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: image_bvh64_intersect_ray:
-; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[0:3]
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: image_bvh64_intersect_ray:
-; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[0:3]
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: image_bvh64_intersect_ray:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[0:3]
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %node_ptr = bitcast <2 x i32> %node_ptr_vec to i64
   %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0

@@ -209,20 +209,33 @@ define amdgpu_vs half @fmac_f16_with_mov(half inreg %a, half inreg %b, half inre
 
 ; Regression test for crash in SIFoldOperands
 define amdgpu_ps float @_amdgpu_ps_main() {
-; CHECK-LABEL: _amdgpu_ps_main:
-; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_mov_b32 s2, s0
-; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0
+; GFX1150-LABEL: _amdgpu_ps_main:
+; GFX1150:       ; %bb.0: ; %bb
+; GFX1150-NEXT:    s_mov_b32 s0, 0
+; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1150-NEXT:    s_mov_b32 s1, s0
+; GFX1150-NEXT:    s_mov_b32 s2, s0
+; GFX1150-NEXT:    s_mov_b32 s3, s0
+; GFX1150-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0
 ; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1150-NEXT:    s_fmamk_f32 s0, s1, 0x40800000, s0
+; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1150-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: _amdgpu_ps_main:
+; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_mov_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_mov_b32 s1, s0
+; GFX12-NEXT:    s_mov_b32 s2, s0
+; GFX12-NEXT:    s_mov_b32 s3, s0
+; GFX12-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_fmamk_f32 s0, s1, 0x40800000, s0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
+; GFX12-NEXT:    s_fmamk_f32 s0, s1, 0x40800000, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
 bb:
   %i = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)
   %i1 = bitcast i32 %i to float
