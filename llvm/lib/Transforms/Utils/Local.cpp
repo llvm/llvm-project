@@ -3379,6 +3379,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
+      case LLVMContext::MD_memprof:
+      case LLVMContext::MD_callsite:
+        // Preserve !memprof and !callsite metadata on K.
+        break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
         break;
@@ -3442,7 +3446,9 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_nontemporal,
                          LLVMContext::MD_noundef,
                          LLVMContext::MD_mmra,
-                         LLVMContext::MD_noalias_addrspace};
+                         LLVMContext::MD_noalias_addrspace,
+                         LLVMContext::MD_memprof,
+                         LLVMContext::MD_callsite};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
