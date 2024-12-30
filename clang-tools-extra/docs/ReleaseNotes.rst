@@ -232,6 +232,10 @@ Changes in existing checks
   `bsl::optional` and `bdlb::NullableValue` from
   <https://github.com/bloomberg/bde>_.
 
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by fixing smart
+  pointer check against std::unique_ptr type.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
