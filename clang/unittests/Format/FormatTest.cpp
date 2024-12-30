@@ -4476,6 +4476,7 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                "int k; } // namespace out",
                Style);
 
+  Style.ColumnLimit = 41;
   verifyFormat("namespace A { namespace B { namespace C {\n"
                "}}} // namespace A::B::C",
                "namespace A { namespace B {\n"
