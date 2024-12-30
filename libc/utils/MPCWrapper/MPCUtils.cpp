@@ -71,6 +71,24 @@ static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
   __builtin_unreachable();
 }
 
+static inline cpp::string str(RoundingMode mode) {
+  switch (mode) {
+  case RoundingMode::Upward:
+    return "MPFR_RNDU";
+    break;
+  case RoundingMode::Downward:
+    return "MPFR_RNDD";
+    break;
+  case RoundingMode::TowardZero:
+    return "MPFR_RNDZ";
+    break;
+  case RoundingMode::Nearest:
+    return "MPFR_RNDN";
+    break;
+  }
+  __builtin_unreachable();
+}
+
 template <typename T> struct MPCComplex {
   T real;
   T imag;
@@ -273,15 +291,22 @@ void explain_unary_operation_single_output_different_type_error(
   mpfr_init2(real, precision);
   mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
 
-  mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfr_result(real, precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfrLibcResult(libc_result, precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfrInputReal(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfrInputImag(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).imag, precision, rounding.Irnd);
 
-  double ulp_real = mpfr_real.ulp(libc_result);
-
-  if (ulp_real > ulp_tolerance) {
-    cpp::array<char, 1024> msg_buf;
-    cpp::StringStream msg(msg_buf);
-    // TODO: Add information to the error message.
-  }
+  cpp::array<char, 2048> msg_buf;
+  cpp::StringStream msg(msg_buf);
+  msg << "Match value not within tolerance value of MPFR result:\n"
+      << "  Input: " << mpfrInputReal.str() << " + " << mpfrInputImag.str() << "i" << '\n';
+  msg << "  Rounding mode: " << str(rounding.Rrnd) << " , " << str(rounding.Irnd) << '\n';
+  msg << "    Libc: " << mpfrLibcResult.str() << '\n';
+  msg << "    MPFR: " << mpfr_result.str() << '\n';
+  msg << '\n';
+  msg << "  ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
+      << '\n';
+  tlog << msg.str();
 }
 
 template void explain_unary_operation_single_output_different_type_error(

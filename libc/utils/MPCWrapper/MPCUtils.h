@@ -133,6 +133,10 @@ public:
     return match(input, match_value);
   }
 
+  void explainError() override { // NOLINT
+    explain_error(input, match_value);
+  }
+
 private:
   template <typename InType, typename OutType>
   bool match(InType in, OutType out) {
