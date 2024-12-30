@@ -44,16 +44,7 @@ struct LoadConfig {
   unsigned Size;
   const TargetRegisterClass *RegClass;
   unsigned Opcode;
-  Register LoadReg;
-
-  // Constructor for the static config array
-  constexpr LoadConfig(unsigned S, const TargetRegisterClass *RC, unsigned Op)
-      : Size(S), RegClass(RC), Opcode(Op), LoadReg(AMDGPU::NoRegister) {}
-
-  // Constructor for the return value
-  constexpr LoadConfig(unsigned S, const TargetRegisterClass *RC, unsigned Op,
-                       Register Reg)
-      : Size(S), RegClass(RC), Opcode(Op), LoadReg(Reg) {}
+  Register LoadReg = Register();
 };
 
 class AMDGPUPreloadKernArgProlog {
@@ -162,7 +153,7 @@ void AMDGPUPreloadKernArgProlog::createBackCompatBlock(
   PadMBB->addSuccessor(&*KernelEntryMBB);
 }
 
-// Find the largest possible load size that fits with SGRP alignment
+/// Find the largest possible load size that fits with SGPR alignment
 static LoadConfig getLoadParameters(const TargetRegisterInfo &TRI,
                                     Register KernArgPreloadSGPR,
                                     unsigned NumKernArgPreloadSGPRs) {
@@ -175,14 +166,17 @@ static LoadConfig getLoadParameters(const TargetRegisterInfo &TRI,
     if (NumKernArgPreloadSGPRs >= Config.Size) {
       Register LoadReg = TRI.getMatchingSuperReg(KernArgPreloadSGPR,
                                                  AMDGPU::sub0, Config.RegClass);
-      if (LoadReg != AMDGPU::NoRegister)
-        return LoadConfig(Config.Size, Config.RegClass, Config.Opcode, LoadReg);
+      if (LoadReg) {
+        LoadConfig C(Config);
+        C.LoadReg = LoadReg;
+        return C;
+      }
     }
   }
 
   // Fallback to a single register
-  return LoadConfig(1, &AMDGPU::SReg_32RegClass, AMDGPU::S_LOAD_DWORD_IMM,
-                    KernArgPreloadSGPR);
+  return LoadConfig{1, &AMDGPU::SReg_32RegClass, AMDGPU::S_LOAD_DWORD_IMM,
+                    KernArgPreloadSGPR};
 }
 
 void AMDGPUPreloadKernArgProlog::addBackCompatLoads(

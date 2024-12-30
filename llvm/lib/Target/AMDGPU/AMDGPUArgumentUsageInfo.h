@@ -163,7 +163,7 @@ struct AMDGPUFunctionArgInfo {
   // Map the index of preloaded kernel arguments to its descriptor.
   SmallDenseMap<int, KernArgPreloadDescriptor> PreloadKernArgs{};
   // The first user SGPR allocated for kernarg preloading.
-  Register FirstKernArgPreloadReg = AMDGPU::NoRegister;
+  Register FirstKernArgPreloadReg;
 
   std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
   getPreloadedValue(PreloadedValue Value) const;
