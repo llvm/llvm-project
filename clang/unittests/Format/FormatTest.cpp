@@ -28320,7 +28320,7 @@ TEST_F(FormatTest, KeepFormFeed) {
                "void f();",
                Style);
 }
-  
+
 TEST_F(FormatTest, DisableLine) {
   verifyFormat("int  a  =  1; // clang-format off-line\n"
                "int b = 1;",
