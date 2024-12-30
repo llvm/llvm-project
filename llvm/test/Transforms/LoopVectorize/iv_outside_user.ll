@@ -502,3 +502,279 @@ exit:
   %iv.2.lcssa = phi i32 [ %iv.2, %loop ]
   ret i32 %iv.2.lcssa
 }
+
+define i32 @postinc_sub(i32 %k)  {
+; CHECK-LABEL: define i32 @postinc_sub(
+; CHECK-SAME: i32 [[K:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[K]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[K]], [[N_VEC]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[K]], %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INC]] = sub nsw i32 [[INC_PHI]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], %[[FOR_BODY]] ], [ [[TMP0]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[INC_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %inc.phi = phi i32 [ %k, %entry ], [ %inc, %for.body ]
+  %inc = sub nsw i32 %inc.phi, 1
+  %cmp = icmp eq i32 %inc, 0
+  br i1 %cmp, label %for.end, label %for.body
+
+for.end:
+  ret i32 %inc
+}
+
+define i32 @postinc_swapped_ops(i32 %k)  {
+; CHECK-LABEL: define i32 @postinc_swapped_ops(
+; CHECK-SAME: i32 [[K:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[K]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INC]] = add nsw i32 1, [[INC_PHI]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], %[[FOR_BODY]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[INC_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nsw i32 1, %inc.phi
+  %cmp = icmp eq i32 %inc, %k
+  br i1 %cmp, label %for.end, label %for.body
+
+for.end:
+  ret i32 %inc
+}
+
+define i32 @postinc_not_iv_backedge_value(i32 %k)  {
+; VEC-LABEL: define i32 @postinc_not_iv_backedge_value(
+; VEC-SAME: i32 [[K:%.*]]) {
+; VEC-NEXT:  [[ENTRY:.*]]:
+; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VEC:       [[VECTOR_PH]]:
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[K]], 2
+; VEC-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC:       [[VECTOR_BODY]]:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; VEC-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[MIDDLE_BLOCK]]:
+; VEC-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; VEC:       [[SCALAR_PH]]:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VEC-NEXT:    br label %[[FOR_BODY:.*]]
+; VEC:       [[FOR_BODY]]:
+; VEC-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; VEC-NEXT:    [[INC]] = add nsw i32 [[INC_PHI]], 1
+; VEC-NEXT:    [[INC_2:%.*]] = add i32 [[INC_PHI]], 2
+; VEC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]
+; VEC-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[FOR_END]]:
+; VEC-NEXT:    [[INC_2_LCSSA:%.*]] = phi i32 [ [[INC_2]], %[[FOR_BODY]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    ret i32 [[INC_2_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nsw i32 %inc.phi, 1
+  %inc.2 = add i32 %inc.phi, 2
+  %cmp = icmp eq i32 %inc, %k
+  br i1 %cmp, label %for.end, label %for.body
+
+for.end:
+  ret i32 %inc.2
+}
+
+define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N, float %fpinc) {
+; VEC-LABEL: define float @fp_postinc_use_fadd(
+; VEC-SAME: float [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {
+; VEC-NEXT:  [[ENTRY:.*]]:
+; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VEC:       [[VECTOR_PH]]:
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
+; VEC-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
+; VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
+; VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[FPINC]], i64 0
+; VEC-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[DOTSPLAT2]]
+; VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <2 x float> [[DOTSPLAT]], [[TMP2]]
+; VEC-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], 2.000000e+00
+; VEC-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
+; VEC-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC:       [[VECTOR_BODY]]:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x float> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
+; VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
+; VEC-NEXT:    store <2 x float> [[VEC_IND]], ptr [[TMP6]], align 4
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VEC-NEXT:    [[VEC_IND_NEXT]] = fadd fast <2 x float> [[VEC_IND]], [[DOTSPLAT4]]
+; VEC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[MIDDLE_BLOCK]]:
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VEC:       [[SCALAR_PH]]:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC-NEXT:    br label %[[LOOP:.*]]
+; VEC:       [[LOOP]]:
+; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; VEC-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
+; VEC-NEXT:    [[ADD]] = fadd fast float [[FP_IV]], [[FPINC]]
+; VEC-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VEC-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VEC-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[EXIT]]:
+; VEC-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[LOOP]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    ret float [[ADD_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fp.iv = phi float [ %init, %entry ], [ %add, %loop ]
+  %gep.A = getelementptr inbounds float, ptr %A, i64 %iv
+  store float %fp.iv, ptr %gep.A, align 4
+  %add = fadd fast float %fp.iv, %fpinc
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %add
+}
+
+define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N, float %fpinc) {
+; VEC-LABEL: define float @fp_postinc_use_fsub(
+; VEC-SAME: float [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {
+; VEC-NEXT:  [[ENTRY:.*]]:
+; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VEC:       [[VECTOR_PH]]:
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
+; VEC-NEXT:    [[TMP1:%.*]] = fsub fast float [[INIT]], [[TMP0]]
+; VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
+; VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[FPINC]], i64 0
+; VEC-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[DOTSPLAT2]]
+; VEC-NEXT:    [[INDUCTION:%.*]] = fsub fast <2 x float> [[DOTSPLAT]], [[TMP2]]
+; VEC-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], 2.000000e+00
+; VEC-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
+; VEC-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC:       [[VECTOR_BODY]]:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x float> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
+; VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
+; VEC-NEXT:    store <2 x float> [[VEC_IND]], ptr [[TMP6]], align 4
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VEC-NEXT:    [[VEC_IND_NEXT]] = fsub fast <2 x float> [[VEC_IND]], [[DOTSPLAT4]]
+; VEC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[MIDDLE_BLOCK]]:
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VEC:       [[SCALAR_PH]]:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC-NEXT:    br label %[[LOOP:.*]]
+; VEC:       [[LOOP]]:
+; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; VEC-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
+; VEC-NEXT:    [[ADD]] = fsub fast float [[FP_IV]], [[FPINC]]
+; VEC-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VEC-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VEC-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[EXIT]]:
+; VEC-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[LOOP]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    ret float [[ADD_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fp.iv = phi float [ %init, %entry ], [ %add, %loop ]
+  %gep.A = getelementptr inbounds float, ptr %A, i64 %iv
+  store float %fp.iv, ptr %gep.A, align 4
+  %add = fsub fast float %fp.iv, %fpinc
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %add
+}
