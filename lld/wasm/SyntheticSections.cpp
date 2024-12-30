@@ -567,20 +567,11 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
   if (sym->hasTableIndex() || sym->isStub)
     return;
 
-  uint32_t padding = 0;
-  uint64_t alignment = 1;
-
-  if (indirectFunctions.size() == 0 && padding > 0) {
-    for (uint32_t i=0; i<padding; i++) {
-      indirectFunctions.push_back(nullptr);
-    }
-  }
-
   sym->setTableIndex(config->tableBase + indirectFunctions.size());
   indirectFunctions.emplace_back(sym);
 
-  if (alignment > 1) {
-    for (uint32_t i=0; i<alignment-1; i++) {
+  if (config->functionPointerAlignment > 1) {
+    for (uint32_t i=0; i<config->functionPointerAlignment-1; i++) {
       indirectFunctions.push_back(nullptr);
     }
   }

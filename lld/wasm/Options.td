@@ -251,6 +251,9 @@ def stack_first: FF<"stack-first">,
 def table_base: JJ<"table-base=">,
   HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
 
+def function_pointer_alignment: JJ<"function-pointer-alignment=">,
+  HelpText<"Align function pointers at a given value (Defaults to 1)">;
+
 defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",
     "Do not force load of all members in a static library (default)">;

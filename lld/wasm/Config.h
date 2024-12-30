@@ -93,6 +93,7 @@ struct Config {
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
   uint64_t tableBase;
+  uint64_t functionPointerAlignment;
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;

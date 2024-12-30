@@ -638,6 +638,7 @@ static void readConfigs(opt::InputArgList &args) {
   LLVM_DEBUG(errorHandler().verbose = true);
 
   config->tableBase = args::getInteger(args, OPT_table_base, 0);
+  config->functionPointerAlignment = args::getInteger(args, OPT_function_pointer_alignment, 0);
   config->globalBase = args::getInteger(args, OPT_global_base, 0);
   config->initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
