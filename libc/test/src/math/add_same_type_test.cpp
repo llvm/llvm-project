@@ -20,3 +20,6 @@ LIST_ADD_SAME_TYPE_TESTS(LongDouble, long double, long double,
 #ifdef LIBC_TYPES_HAS_FLOAT16
 LIST_ADD_SAME_TYPE_TESTS(Float16, float16, float16, ADD_FUNC(float16))
 #endif
+#ifdef LIBC_TYPES_HAS_FLOAT128
+LIST_ADD_SAME_TYPE_TESTS(Float128, float128, float128, ADD_FUNC(float128))
+#endif
