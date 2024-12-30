@@ -249,7 +249,7 @@ czhengsz@cn.ibm.com (email), [chenzheng1030](https://github.com/chenzheng1030) (
 #### RISCV backend
 
 Alex Bradbury \
-asb@igalia.com (email), [asb](https://github.com/asb) (GitHub)
+asb@igalia.com (email), [asb](https://github.com/asb) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
 Philip Reames \
