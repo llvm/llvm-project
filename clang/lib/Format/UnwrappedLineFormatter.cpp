@@ -183,9 +183,9 @@ private:
   unsigned Indent = 0;
 };
 
-const FormatToken *getMatchingNamespaceToken(
-    const AnnotatedLine *Line,
-    const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
+const FormatToken *
+getMatchingNamespaceToken(const AnnotatedLine *Line,
+                          const ArrayRef<AnnotatedLine *> &AnnotatedLines) {
   if (!Line->startsWith(tok::r_brace))
     return nullptr;
   size_t StartLineIndex = Line->MatchingOpeningBlockLineIndex;
@@ -200,9 +200,9 @@ StringRef getNamespaceTokenText(const AnnotatedLine *Line) {
   return NamespaceToken ? NamespaceToken->TokenText : StringRef();
 }
 
-StringRef getMatchingNamespaceTokenText(
-    const AnnotatedLine *Line,
-    const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
+StringRef
+getMatchingNamespaceTokenText(const AnnotatedLine *Line,
+                              const ArrayRef<AnnotatedLine *> &AnnotatedLines) {
   const FormatToken *NamespaceToken =
       getMatchingNamespaceToken(Line, AnnotatedLines);
   return NamespaceToken ? NamespaceToken->TokenText : StringRef();
@@ -241,8 +241,8 @@ private:
   /// Calculates how many lines can be merged into 1 starting at \p I.
   unsigned
   tryFitMultipleLinesInOne(LevelIndentTracker &IndentTracker,
-                           SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                           SmallVectorImpl<AnnotatedLine *>::const_iterator E) {
+                           ArrayRef<AnnotatedLine *>::const_iterator I,
+                           ArrayRef<AnnotatedLine *>::const_iterator E) {
     const unsigned Indent = IndentTracker.getIndent();
 
     // Can't join the last line with anything.
@@ -614,8 +614,8 @@ private:
   }
 
   unsigned
-  tryMergeSimplePPDirective(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                            SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+  tryMergeSimplePPDirective(ArrayRef<AnnotatedLine *>::const_iterator I,
+                            ArrayRef<AnnotatedLine *>::const_iterator E,
                             unsigned Limit) {
     if (Limit == 0)
       return 0;
@@ -626,8 +626,8 @@ private:
     return 1;
   }
 
-  unsigned tryMergeNamespace(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                             SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+  unsigned tryMergeNamespace(ArrayRef<AnnotatedLine *>::const_iterator I,
+                             ArrayRef<AnnotatedLine *>::const_iterator E,
                              unsigned Limit) {
     if (Limit == 0)
       return 0;
@@ -692,9 +692,10 @@ private:
     return 2;
   }
 
-  unsigned tryMergeSimpleControlStatement(
-      SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-      SmallVectorImpl<AnnotatedLine *>::const_iterator E, unsigned Limit) {
+  unsigned
+  tryMergeSimpleControlStatement(ArrayRef<AnnotatedLine *>::const_iterator I,
+                                 ArrayRef<AnnotatedLine *>::const_iterator E,
+                                 unsigned Limit) {
     if (Limit == 0)
       return 0;
     if (Style.BraceWrapping.AfterControlStatement ==
@@ -734,10 +735,9 @@ private:
     return 1;
   }
 
-  unsigned
-  tryMergeShortCaseLabels(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                          SmallVectorImpl<AnnotatedLine *>::const_iterator E,
-                          unsigned Limit) {
+  unsigned tryMergeShortCaseLabels(ArrayRef<AnnotatedLine *>::const_iterator I,
+                                   ArrayRef<AnnotatedLine *>::const_iterator E,
+                                   unsigned Limit) {
     if (Limit == 0 || I + 1 == E ||
         I[1]->First->isOneOf(tok::kw_case, tok::kw_default)) {
       return 0;
@@ -768,7 +768,7 @@ private:
       if (Line->First->is(tok::comment)) {
         if (Level != Line->Level)
           return 0;
-        SmallVectorImpl<AnnotatedLine *>::const_iterator J = I + 2 + NumStmts;
+        const auto *J = I + 2 + NumStmts;
         for (; J != E; ++J) {
           Line = *J;
           if (Line->InPPDirective != InPPDirective)
@@ -789,10 +789,9 @@ private:
     return NumStmts;
   }
 
-  unsigned
-  tryMergeSimpleBlock(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                      SmallVectorImpl<AnnotatedLine *>::const_iterator E,
-                      unsigned Limit) {
+  unsigned tryMergeSimpleBlock(ArrayRef<AnnotatedLine *>::const_iterator I,
+                               ArrayRef<AnnotatedLine *>::const_iterator E,
+                               unsigned Limit) {
     // Don't merge with a preprocessor directive.
     if (I[1]->Type == LT_PreprocessorDirective)
       return 0;
@@ -974,10 +973,9 @@ private:
 
   /// Returns the modified column limit for \p I if it is inside a macro and
   /// needs a trailing '\'.
-  unsigned
-  limitConsideringMacros(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                         SmallVectorImpl<AnnotatedLine *>::const_iterator E,
-                         unsigned Limit) {
+  unsigned limitConsideringMacros(ArrayRef<AnnotatedLine *>::const_iterator I,
+                                  ArrayRef<AnnotatedLine *>::const_iterator E,
+                                  unsigned Limit) {
     if (I[0]->InPPDirective && I + 1 != E &&
         !I[1]->First->HasUnescapedNewline && I[1]->First->isNot(tok::eof)) {
       return Limit < 2 ? 0 : Limit - 2;
@@ -985,15 +983,15 @@ private:
     return Limit;
   }
 
-  bool nextTwoLinesFitInto(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
+  bool nextTwoLinesFitInto(ArrayRef<AnnotatedLine *>::const_iterator I,
                            unsigned Limit) {
     if (I[1]->First->MustBreakBefore || I[2]->First->MustBreakBefore)
       return false;
     return 1 + I[1]->Last->TotalLength + 1 + I[2]->Last->TotalLength <= Limit;
   }
 
-  bool nextNLinesFitInto(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
-                         SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+  bool nextNLinesFitInto(ArrayRef<AnnotatedLine *>::const_iterator I,
+                         ArrayRef<AnnotatedLine *>::const_iterator E,
                          unsigned Limit) {
     unsigned JoinedLength = 0;
     for (const auto *J = I + 1; J != E; ++J) {
@@ -1034,9 +1032,9 @@ private:
 
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
-  const SmallVectorImpl<AnnotatedLine *>::const_iterator End;
+  const ArrayRef<AnnotatedLine *>::const_iterator End;
 
-  SmallVectorImpl<AnnotatedLine *>::const_iterator Next;
+  ArrayRef<AnnotatedLine *>::const_iterator Next;
   const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines;
 };
 
