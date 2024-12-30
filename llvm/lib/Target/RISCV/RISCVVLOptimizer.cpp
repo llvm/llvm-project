@@ -415,6 +415,11 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VASUBU_VX:
   case RISCV::VASUB_VV:
   case RISCV::VASUB_VX:
+  // Vector Single-Width Fractional Multiply with Rounding and Saturation
+  // EEW=SEW. EMUL=LMUL. The instruction produces 2*SEW product internally but
+  // saturates to fit into SEW bits.
+  case RISCV::VSMUL_VV:
+  case RISCV::VSMUL_VX:
   // Vector Single-Width Scaling Shift Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VSSRL_VI:
