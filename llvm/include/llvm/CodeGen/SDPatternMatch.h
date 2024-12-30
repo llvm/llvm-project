@@ -566,8 +566,8 @@ template <typename T0, typename T1, typename T2> struct SDShuffle_match {
   }
 };
 struct m_Mask {
-  ArrayRef<int> MaskRef;
-  m_Mask(ArrayRef<int> MaskRef) : MaskRef(MaskRef) {}
+  ArrayRef<int> &MaskRef;
+  m_Mask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
   bool match(ArrayRef<int> Mask) {
     MaskRef = Mask;
     return true;
