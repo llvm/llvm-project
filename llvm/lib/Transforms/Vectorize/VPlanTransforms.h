@@ -137,6 +137,10 @@ struct VPlanTransforms {
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
+
+  static void
+  optimizeInductionExitUsers(VPlan &Plan,
+                             DenseMap<VPValue *, VPValue *> &EndValues);
 };
 
 } // namespace llvm

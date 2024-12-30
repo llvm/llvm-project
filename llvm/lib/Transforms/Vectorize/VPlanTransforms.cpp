@@ -624,6 +624,127 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   }
 }
 
+VPWidenInductionRecipe *isIVUse(VPValue *Incoming) {
+  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Incoming);
+  if (WideIV) {
+    auto *WideIntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
+    if (WideIntOrFpIV && WideIntOrFpIV->getTruncInst())
+      return nullptr;
+    return WideIV;
+  }
+
+  VPRecipeBase *IncomingDef = Incoming->getDefiningRecipe();
+  if (!IncomingDef || IncomingDef->getNumOperands() != 2)
+    return nullptr;
+
+  WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef->getOperand(0));
+  if (!WideIV)
+    WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef->getOperand(1));
+  if (!WideIV)
+    return nullptr;
+
+  auto IsWideIVInc = [&]() {
+    using namespace VPlanPatternMatch;
+    auto &ID = WideIV->getInductionDescriptor();
+    switch (ID.getInductionOpcode()) {
+    case Instruction::Add:
+      return match(Incoming,
+                   m_c_Binary<Instruction::Add>(
+                       m_VPValue(), m_Specific(WideIV->getStepValue())));
+    case Instruction::FAdd:
+      return match(Incoming,
+                   m_c_Binary<Instruction::FAdd>(
+                       m_VPValue(), m_Specific(WideIV->getStepValue())));
+    case Instruction::FSub:
+      return match(Incoming,
+                   m_Binary<Instruction::FSub>(
+                       m_VPValue(), m_Specific(WideIV->getStepValue())));
+    case Instruction::Sub: {
+      VPValue *Step;
+      return match(Incoming,
+                   m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) &&
+             Step->isLiveIn() && WideIV->getStepValue()->isLiveIn() &&
+             (cast<ConstantInt>(Step->getLiveInIRValue())->getValue() +
+              cast<ConstantInt>(WideIV->getStepValue()->getLiveInIRValue())
+                  ->getValue())
+                 .isZero();
+    }
+    default:
+      return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
+             match(Incoming,
+                   m_GetElementPtr(m_VPValue(),
+                                   m_Specific(WideIV->getStepValue())));
+    }
+    llvm_unreachable("should have been covered by switch above");
+  };
+  return IsWideIVInc() ? WideIV : nullptr;
+}
+
+void VPlanTransforms::optimizeInductionExitUsers(
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues) {
+  using namespace VPlanPatternMatch;
+  SmallVector<VPIRBasicBlock *> ExitVPBBs(Plan.getExitBlocks());
+  if (ExitVPBBs.size() != 1)
+    return;
+
+  VPIRBasicBlock *ExitVPBB = ExitVPBBs[0];
+  VPBlockBase *PredVPBB = ExitVPBB->getSinglePredecessor();
+  if (!PredVPBB)
+    return;
+  assert(PredVPBB == Plan.getMiddleBlock() &&
+         "predecessor must be the middle block");
+
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPBuilder B(Plan.getMiddleBlock()->getTerminator());
+  for (VPRecipeBase &R : *ExitVPBB) {
+    auto *ExitIRI = cast<VPIRInstruction>(&R);
+    if (!isa<PHINode>(ExitIRI->getInstruction()))
+      break;
+
+    VPValue *Incoming;
+    if (!match(ExitIRI->getOperand(0),
+               m_VPInstruction<VPInstruction::ExtractFromEnd>(
+                   m_VPValue(Incoming), m_SpecificInt(1))))
+      continue;
+
+    auto *WideIV = isIVUse(Incoming);
+    if (!WideIV)
+      continue;
+    VPValue *EndValue = EndValues.lookup(WideIV);
+    if (!EndValue)
+      continue;
+
+    if (Incoming != WideIV) {
+      ExitIRI->setOperand(0, EndValue);
+      continue;
+    }
+
+    VPValue *Escape = nullptr;
+    VPValue *Step = WideIV->getStepValue();
+    Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
+    if (ScalarTy->isIntegerTy()) {
+      Escape =
+          B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
+    } else if (ScalarTy->isPointerTy()) {
+      auto *Zero = Plan.getOrAddLiveIn(
+          ConstantInt::get(Step->getLiveInIRValue()->getType(), 0));
+      Escape = B.createPtrAdd(EndValue,
+                              B.createNaryOp(Instruction::Sub, {Zero, Step}),
+                              {}, "ind.escape");
+    } else if (ScalarTy->isFloatingPointTy()) {
+      const auto &ID = WideIV->getInductionDescriptor();
+      Escape = B.createNaryOp(
+          ID.getInductionBinOp()->getOpcode() == Instruction::FAdd
+              ? Instruction::FSub
+              : Instruction::FAdd,
+          {EndValue, Step}, {ID.getInductionBinOp()->getFastMathFlags()});
+    } else {
+      llvm_unreachable("all possible induction types must be handled");
+    }
+    ExitIRI->setOperand(0, Escape);
+  }
+}
+
 /// Remove redundant EpxandSCEVRecipes in \p Plan's entry block by replacing
 /// them with already existing recipes expanding the same SCEV expression.
 static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {

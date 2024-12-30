@@ -311,9 +311,9 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastDef = get(Def, LastLane);
+  auto *LastValue = get(Def, LastLane);
   auto OldIP = Builder.saveIP();
-  if (auto *LastInst = dyn_cast<Instruction>(LastDef)) {
+  if (auto *LastInst = dyn_cast<Instruction>(LastValue)) {
     // TODO: Remove once VPDerivedIVReicpe can be simplified, which requires
     // vector trip count being modeled in VPlan.
     // Set the insert point after the last scalarized instruction or after the
@@ -339,7 +339,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   } else {
     // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(VectorType::get(LastDef->getType(), VF));
+    Value *Undef = PoisonValue::get(VectorType::get(LastValue->getType(), VF));
     set(Def, Undef);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
       packScalarIntoVectorValue(Def, Lane);
