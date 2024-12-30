@@ -1178,7 +1178,7 @@ class VIMAGE_Atomic<int op, string opcode, RegisterClass DataRC, dag RsrcIns,
   : VIMAGE<op, (outs DataRC:$vdst), num_addrs, gfxGen.AssemblerPredicate, encoding, !if(enableDisasm, gfxGen.DecoderNamespace, "")> {
 #else /* LLPC_BUILD_NPI */
 class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
-                          int num_addrs, bit enableDisasm = 0>
+                          int num_addrs, string renamed, bit enableDisasm = 0>
   : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdst), num_addrs,
                   !if(enableDisasm, "GFX12", "")> {
 #endif /* LLPC_BUILD_NPI */
@@ -1193,10 +1193,10 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
 #endif /* LLPC_BUILD_NPI */
                                  CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe));
+#ifdef LLPC_BUILD_NPI
   let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 }
 
-#ifdef LLPC_BUILD_NPI
 class VIMAGE_Atomic_gfx12<mimgopc op, string opcode,
                           RegisterClass DataRC, int num_addrs,
                           bit enableDisasm=0>
@@ -1216,13 +1216,11 @@ class AMDGPUMnemonicAliasMIMG<string asm, string alias, Predicate Pred>
   bit IsAtomicRet; // Unused
   MIMGBaseOpcode BaseOpcode; // Unused
   int VDataDwords; // Unused
-}
 #else /* LLPC_BUILD_NPI */
-class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string renamed,
-                                  RegisterClass DataRC, int num_addrs,
-                                  bit enableDisasm = 0>
-  : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>;
+  let AsmString = !if(!empty(renamed), opcode, renamed)#" $vdata, "#AddrAsm#
+                  ", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 #endif /* LLPC_BUILD_NPI */
+}
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
@@ -1262,10 +1260,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       if op.HAS_GFX13 then {
         def _V1_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 1>;
 #else /* LLPC_BUILD_NPI */
-        if !empty(renamed) then
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1>;
-        else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1>;
+        def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, renamed>;
 #endif /* LLPC_BUILD_NPI */
       }
     }
@@ -1294,10 +1289,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       if op.HAS_GFX13 then {
         def _V2_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 2>;
 #else /* LLPC_BUILD_NPI */
-        if !empty(renamed) then
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, 0>;
-        else
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 2, 0>;
+        def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, renamed>;
 #endif /* LLPC_BUILD_NPI */
       }
     }
@@ -1326,10 +1318,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       if op.HAS_GFX13 then {
         def _V3_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 3>;
 #else /* LLPC_BUILD_NPI */
-        if !empty(renamed) then
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, 0>;
-        else
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 3, 0>;
+        def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, renamed>;
 #endif /* LLPC_BUILD_NPI */
       }
     }
@@ -1358,10 +1347,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       if op.HAS_GFX13 then {
         def _V4_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 4, enableDasm>;
 #else /* LLPC_BUILD_NPI */
-        if !empty(renamed) then
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, enableDasm>;
-        else
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 4, enableDasm>;
+        def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, renamed, enableDasm>;
 #endif /* LLPC_BUILD_NPI */
       }
     }
