@@ -2812,10 +2812,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /call-graph-ordering-file and /call-graph-profile-sort (default on).
   if (config->callGraphProfileSort) {
     llvm::TimeTraceScope timeScope("Call graph");
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       parseCallGraphFile(arg->getValue());
-    }
-    readCallGraphsFromObjectFiles(ctx);
+    else
+      readCallGraphsFromObjectFiles(ctx);
   }
 
   // Handle /print-symbol-order.
