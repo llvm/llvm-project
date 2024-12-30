@@ -222,6 +222,10 @@ namespace options {
   static std::string cs_profile_path;
   static bool cs_pgo_gen = false;
 
+  // When true, MergeFunctions pass is used
+  // in LTO link pipeline.
+  static bool merge_functions = false;
+
   // Time trace options.
   static std::string time_trace_file;
   static unsigned time_trace_granularity = 500;
@@ -288,6 +292,8 @@ namespace options {
       sample_profile = std::string(opt);
     } else if (opt == "cs-profile-generate") {
       cs_pgo_gen = true;
+    } else if (opt == "merge-functions") {
+      merge_functions = true;
     } else if (opt.consume_front("cs-profile-path=")) {
       cs_profile_path = std::string(opt);
     } else if (opt == "new-pass-manager") {
@@ -893,6 +899,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.OptLevel = options::OptLevel;
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
   Conf.PTO.SLPVectorization = options::OptLevel > 1;
+  Conf.PTO.MergeFunctions = options::merge_functions;
   Conf.AlwaysEmitRegularLTOObj = !options::obj_path.empty();
 
   if (options::thinlto_index_only) {
