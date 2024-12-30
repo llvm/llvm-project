@@ -2,8 +2,7 @@
 
 # GCN-LABEL: name: test_machine_cse_op_sel
 # GCN: %2:vgpr_32 = V_ADD_NC_U16_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
-# GCN: %3:vgpr_32 = V_ADD_NC_U16_e64 0, %1, 0, %0, 1, 0, implicit $mode, implicit $exec
-# GCN: DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %3, 0, 1, 0, implicit $exec
+# GCN: DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %2, 0, 1, 0, implicit $exec
 ---
 name: test_machine_cse_op_sel
 body: |
