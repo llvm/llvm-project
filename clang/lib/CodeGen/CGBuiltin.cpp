@@ -2764,6 +2764,81 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
   return RValue::get(CGF->Builder.CreateCall(UBF, Args));
 }
 
+enum SpecialRegisterAccessKind {
+  NormalRead,
+  VolatileRead,
+  Write,
+};
+
+// Generates the IR for the read/write special register builtin,
+// ValueType is the type of the value that is to be written or read,
+// RegisterType is the type of the register being written to or read from.
+static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
+                                         const CallExpr *E,
+                                         llvm::Type *RegisterType,
+                                         llvm::Type *ValueType,
+                                         SpecialRegisterAccessKind AccessKind,
+                                         StringRef SysReg = "") {
+  // write and register intrinsics only support 32, 64 and 128 bit operations.
+  assert((RegisterType->isIntegerTy(32) || RegisterType->isIntegerTy(64) ||
+          RegisterType->isIntegerTy(128)) &&
+         "Unsupported size for register.");
+
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+  LLVMContext &Context = CGM.getLLVMContext();
+
+  if (SysReg.empty()) {
+    const Expr *SysRegStrExpr = E->getArg(0)->IgnoreParenCasts();
+    SysReg = cast<clang::StringLiteral>(SysRegStrExpr)->getString();
+  }
+
+  llvm::Metadata *Ops[] = {llvm::MDString::get(Context, SysReg)};
+  llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+  llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+
+  llvm::Type *Types[] = {RegisterType};
+
+  bool MixedTypes = RegisterType->isIntegerTy(64) && ValueType->isIntegerTy(32);
+  assert(!(RegisterType->isIntegerTy(32) && ValueType->isIntegerTy(64)) &&
+         "Can't fit 64-bit value in 32-bit register");
+
+  if (AccessKind != Write) {
+    assert(AccessKind == NormalRead || AccessKind == VolatileRead);
+    llvm::Function *F = CGM.getIntrinsic(
+        AccessKind == VolatileRead ? llvm::Intrinsic::read_volatile_register
+                                   : llvm::Intrinsic::read_register,
+        Types);
+    llvm::Value *Call = Builder.CreateCall(F, Metadata);
+
+    if (MixedTypes)
+      // Read into 64 bit register and then truncate result to 32 bit.
+      return Builder.CreateTrunc(Call, ValueType);
+
+    if (ValueType->isPointerTy())
+      // Have i32/i64 result (Call) but want to return a VoidPtrTy (i8*).
+      return Builder.CreateIntToPtr(Call, ValueType);
+
+    return Call;
+  }
+
+  llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::write_register, Types);
+  llvm::Value *ArgValue = CGF.EmitScalarExpr(E->getArg(1));
+  if (MixedTypes) {
+    // Extend 32 bit write value to 64 bit to pass to write.
+    ArgValue = Builder.CreateZExt(ArgValue, RegisterType);
+    return Builder.CreateCall(F, {Metadata, ArgValue});
+  }
+
+  if (ValueType->isPointerTy()) {
+    // Have VoidPtrTy ArgValue but want to return an i32/i64.
+    ArgValue = Builder.CreatePtrToInt(ArgValue, RegisterType);
+    return Builder.CreateCall(F, {Metadata, ArgValue});
+  }
+
+  return Builder.CreateCall(F, {Metadata, ArgValue});
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -4781,6 +4856,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                    getContext().UnsignedIntTy);
     Function *F = CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy);
     return RValue::get(Builder.CreateCall(F, Depth));
+  }
+  case Builtin::BI__builtin_stack_address: {
+    switch (getTarget().getTriple().getArch()) {
+    case Triple::x86:
+      return RValue::get(EmitSpecialRegisterBuiltin(
+          *this, E, Int32Ty, VoidPtrTy, NormalRead, "esp"));
+    case Triple::x86_64:
+      return RValue::get(EmitSpecialRegisterBuiltin(
+          *this, E, Int64Ty, VoidPtrTy, NormalRead, "rsp"));
+    default:
+      ErrorUnsupported(E, "__builtin_stack_address");
+      return GetUndefRValue(E->getType());
+    }
   }
   case Builtin::BI__builtin_extract_return_addr: {
     Value *Address = EmitScalarExpr(E->getArg(0));
@@ -8897,12 +8985,6 @@ Value *CodeGenFunction::GetValueForARMHint(unsigned BuiltinID) {
                             llvm::ConstantInt::get(Int32Ty, Value));
 }
 
-enum SpecialRegisterAccessKind {
-  NormalRead,
-  VolatileRead,
-  Write,
-};
-
 // Generates the IR for __builtin_read_exec_*.
 // Lowers the builtin to amdgcn_ballot intrinsic.
 static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
@@ -8921,75 +9003,6 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
   }
 
   return Call;
-}
-
-// Generates the IR for the read/write special register builtin,
-// ValueType is the type of the value that is to be written or read,
-// RegisterType is the type of the register being written to or read from.
-static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
-                                         const CallExpr *E,
-                                         llvm::Type *RegisterType,
-                                         llvm::Type *ValueType,
-                                         SpecialRegisterAccessKind AccessKind,
-                                         StringRef SysReg = "") {
-  // write and register intrinsics only support 32, 64 and 128 bit operations.
-  assert((RegisterType->isIntegerTy(32) || RegisterType->isIntegerTy(64) ||
-          RegisterType->isIntegerTy(128)) &&
-         "Unsupported size for register.");
-
-  CodeGen::CGBuilderTy &Builder = CGF.Builder;
-  CodeGen::CodeGenModule &CGM = CGF.CGM;
-  LLVMContext &Context = CGM.getLLVMContext();
-
-  if (SysReg.empty()) {
-    const Expr *SysRegStrExpr = E->getArg(0)->IgnoreParenCasts();
-    SysReg = cast<clang::StringLiteral>(SysRegStrExpr)->getString();
-  }
-
-  llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysReg) };
-  llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
-  llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
-
-  llvm::Type *Types[] = { RegisterType };
-
-  bool MixedTypes = RegisterType->isIntegerTy(64) && ValueType->isIntegerTy(32);
-  assert(!(RegisterType->isIntegerTy(32) && ValueType->isIntegerTy(64))
-            && "Can't fit 64-bit value in 32-bit register");
-
-  if (AccessKind != Write) {
-    assert(AccessKind == NormalRead || AccessKind == VolatileRead);
-    llvm::Function *F = CGM.getIntrinsic(
-        AccessKind == VolatileRead ? llvm::Intrinsic::read_volatile_register
-                                   : llvm::Intrinsic::read_register,
-        Types);
-    llvm::Value *Call = Builder.CreateCall(F, Metadata);
-
-    if (MixedTypes)
-      // Read into 64 bit register and then truncate result to 32 bit.
-      return Builder.CreateTrunc(Call, ValueType);
-
-    if (ValueType->isPointerTy())
-      // Have i32/i64 result (Call) but want to return a VoidPtrTy (i8*).
-      return Builder.CreateIntToPtr(Call, ValueType);
-
-    return Call;
-  }
-
-  llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::write_register, Types);
-  llvm::Value *ArgValue = CGF.EmitScalarExpr(E->getArg(1));
-  if (MixedTypes) {
-    // Extend 32 bit write value to 64 bit to pass to write.
-    ArgValue = Builder.CreateZExt(ArgValue, RegisterType);
-    return Builder.CreateCall(F, { Metadata, ArgValue });
-  }
-
-  if (ValueType->isPointerTy()) {
-    // Have VoidPtrTy ArgValue but want to return an i32/i64.
-    ArgValue = Builder.CreatePtrToInt(ArgValue, RegisterType);
-    return Builder.CreateCall(F, { Metadata, ArgValue });
-  }
-
-  return Builder.CreateCall(F, { Metadata, ArgValue });
 }
 
 /// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
