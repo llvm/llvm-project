@@ -1756,7 +1756,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
             &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
         BuildMIAction &IDMIBuilder =
             *static_cast<BuildMIAction *>(InsertPt->get());
-        IDMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+        IDMIBuilder.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
         DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
       } else {
         DstMIBuilder.addRenderer<AddRegisterRenderer>(Target, Def);
