@@ -2,7 +2,16 @@ header: link.h
 standards:
   - Linux
 macros: []
-types: []
+types:
+  - type_name: struct_dl_phdr_info
+  - type_name: __dl_iterate_phdr_callback_t
 enums: []
 objects: []
-functions: []
+functions:
+  - name: dl_iterate_phdr
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: __dl_iterate_phdr_callback_t
+      - type: void *

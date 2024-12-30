@@ -18,10 +18,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper
 
     # dlfcn.h entrypoints
+    libc.src.dlfcn.dladdr
     libc.src.dlfcn.dlclose
     libc.src.dlfcn.dlerror
     libc.src.dlfcn.dlopen
     libc.src.dlfcn.dlsym
+
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
 
     # errno.h entrypoints
     libc.src.errno.errno
