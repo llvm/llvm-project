@@ -1617,8 +1617,68 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                             std::move(ValuesToRelease));
 
-    if (!R.IsSigned) {
-      for (Value *V : NewVariables) {
+    // Add range information from attributes and metadata.
+    for (auto *V : NewVariables) {
+      if (V->getType()->getScalarSizeInBits() >= 64)
+        continue;
+      std::optional<ConstantRange> CR;
+      if (const auto *Arg = dyn_cast<Argument>(V)) {
+        CR = Arg->getRange();
+      } else if (const auto *CB = dyn_cast<CallBase>(V)) {
+        CR = CB->getRange();
+      } else if (const auto *I = dyn_cast<Instruction>(V)) {
+        if (auto *Range = I->getMetadata(LLVMContext::MD_range))
+          CR = getConstantRangeFromMetadata(*Range);
+      }
+      if (CR) {
+        if (R.IsSigned) {
+          int64_t MaxVal = CR->getSignedMax().getSExtValue();
+          int64_t MinVal = CR->getSignedMin().getSExtValue();
+          if (MaxVal != MaxConstraintValue) {
+            ConstraintTy VarPos(
+                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), true, false,
+                false);
+            VarPos.Coefficients[0] = MaxVal;
+            VarPos.Coefficients[Value2Index[V]] = 1;
+            CSToUse.addVariableRow(VarPos.Coefficients);
+            DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                                    SmallVector<Value *, 2>());
+          }
+          if (MinVal != MinSignedConstraintValue) {
+            ConstraintTy VarPos(
+                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), true, false,
+                false);
+            VarPos.Coefficients[0] = -MinVal;
+            VarPos.Coefficients[Value2Index[V]] = -1;
+            CSToUse.addVariableRow(VarPos.Coefficients);
+            DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                                    SmallVector<Value *, 2>());
+          }
+        } else {
+          uint64_t MaxVal = CR->getUnsignedMax().getZExtValue();
+          uint64_t MinVal = CR->getUnsignedMin().getZExtValue();
+          if (MaxVal < static_cast<uint64_t>(MaxConstraintValue)) {
+            ConstraintTy VarPos(
+                SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), false,
+                false, false);
+            VarPos.Coefficients[0] = MaxVal;
+            VarPos.Coefficients[Value2Index[V]] = 1;
+            CSToUse.addVariableRow(VarPos.Coefficients);
+            DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                                    SmallVector<Value *, 2>());
+          }
+          MinVal =
+              std::min(MinVal, static_cast<uint64_t>(MaxConstraintValue - 1));
+          ConstraintTy VarPos(
+              SmallVector<int64_t, 8>(Value2Index.size() + 1, 0), false, false,
+              false);
+          VarPos.Coefficients[0] = -MinVal;
+          VarPos.Coefficients[Value2Index[V]] = -1;
+          CSToUse.addVariableRow(VarPos.Coefficients);
+          DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                                  SmallVector<Value *, 2>());
+        }
+      } else if (!R.IsSigned) {
         ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
                             false, false, false);
         VarPos.Coefficients[Value2Index[V]] = -1;
