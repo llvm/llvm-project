@@ -73,6 +73,157 @@ private:
   BaseIterator fmtIter;
 };
 
+// Given the scopeLoc of an operation, extract src locations of the input and
+// output type
+std::pair<SmallVector<llvm::SMRange>, SmallVector<llvm::SMRange>>
+getOpTypeLoc(llvm::SMRange op_loc) {
+  SmallVector<llvm::SMRange> inputTypeRanges;
+  SmallVector<llvm::SMRange> outputTypeRanges;
+
+  // Extract the string from the range
+  const char *startPtr = op_loc.Start.getPointer();
+  const char *endPtr = op_loc.End.getPointer();
+  StringRef opString(startPtr, endPtr - startPtr);
+
+  // Find the position of the last ':' in the string
+  size_t colonPos = opString.rfind(':');
+  if (colonPos == StringRef::npos) {
+    // No ':' found, return empty vectors
+    return {inputTypeRanges, outputTypeRanges};
+  }
+
+  // Extract the type definition substring
+  StringRef typeDefStr = opString.substr(colonPos + 1).trim();
+
+  // Check if the type definition substring contains '->' (input -> output
+  // types)
+  size_t arrowPos = typeDefStr.find("->");
+
+  if (arrowPos != StringRef::npos) {
+    // Split into input and output type strings
+    StringRef inputTypeStr = typeDefStr.substr(0, arrowPos).trim();
+    StringRef outputTypeStr = typeDefStr.substr(arrowPos + 2).trim();
+
+    // Parse input type ranges (if any)
+    if (!inputTypeStr.empty() && inputTypeStr != "()") {
+      SmallVector<StringRef> inputTypeParts;
+      inputTypeStr
+          .drop_front() // Remove '('
+          .drop_back()  // Remove ')'
+          .split(inputTypeParts, ',');
+
+      for (const auto &typeStr : inputTypeParts) {
+        const char *start = typeStr.trim().data();
+        const char *end = start + typeStr.trim().size();
+        inputTypeRanges.push_back(
+            llvm::SMRange(llvm::SMLoc::getFromPointer(start),
+                          llvm::SMLoc::getFromPointer(end)));
+      }
+    }
+
+    // Parse output type ranges (if any)
+    if (!outputTypeStr.empty() && outputTypeStr != "()") {
+      SmallVector<StringRef> outputTypeParts;
+      outputTypeStr.split(outputTypeParts, ',');
+
+      for (const auto &typeStr : outputTypeParts) {
+        const char *start = typeStr.trim().data();
+        const char *end = start + typeStr.trim().size();
+        outputTypeRanges.push_back(
+            llvm::SMRange(llvm::SMLoc::getFromPointer(start),
+                          llvm::SMLoc::getFromPointer(end)));
+      }
+    }
+  } else {
+    // Single type definition (no '->'), assume it's an output type
+    SmallVector<StringRef> typeParts;
+    typeDefStr.split(typeParts, ',');
+
+    for (const auto &typeStr : typeParts) {
+      const char *start = typeStr.trim().data();
+      const char *end = start + typeStr.trim().size();
+      outputTypeRanges.push_back(
+          llvm::SMRange(llvm::SMLoc::getFromPointer(start),
+                        llvm::SMLoc::getFromPointer(end)));
+    }
+  }
+
+  return {inputTypeRanges, outputTypeRanges};
+}
+
+llvm::SMRange getSMRangeFromString(const std::string &str) {
+  const char *startPtr = str.data();
+  const char *endPtr = startPtr + str.size();
+  return llvm::SMRange(llvm::SMLoc::getFromPointer(startPtr),
+                       llvm::SMLoc::getFromPointer(endPtr));
+}
+
+void replaceTypesInString(std::string &formattedStr,
+                          const SmallVector<llvm::SMRange> &inputTypes,
+                          const SmallVector<llvm::SMRange> &outputTypes) {
+  // Get type locations from the formatted string
+  llvm::SMRange formattedLoc = getSMRangeFromString(formattedStr);
+  auto formattedTypes = getOpTypeLoc(formattedLoc);
+
+  // Ensure the number of types matches
+  if (inputTypes.size() != formattedTypes.first.size() ||
+      outputTypes.size() != formattedTypes.second.size()) {
+    llvm::errs() << "Error: Mismatched number of input/output types in "
+                    "replacement operation.\n";
+    return;
+  }
+
+  // Perform input type replacements backwards to avoid index issues
+  for (size_t i = inputTypes.size(); i-- > 0;) {
+    const llvm::SMRange &formattedRange = formattedTypes.first[i];
+    const llvm::SMRange &inputRange = inputTypes[i];
+
+    const char *formattedStart = formattedRange.Start.getPointer();
+    const char *formattedEnd = formattedRange.End.getPointer();
+
+    const char *inputStart = inputRange.Start.getPointer();
+    const char *inputEnd = inputRange.End.getPointer();
+
+    llvm::StringRef formattedType(formattedStart,
+                                  formattedEnd - formattedStart);
+    llvm::StringRef inputType(inputStart, inputEnd - inputStart);
+
+    // Replace in the formatted string
+    size_t pos = formattedStr.find(formattedType.str());
+    if (pos != std::string::npos) {
+      formattedStr.replace(pos, formattedType.size(), inputType.str());
+    } else {
+      llvm::errs() << "Warning: Input type not found in formatted string: "
+                   << formattedType << "\n";
+    }
+  }
+
+  // Perform output type replacements backwards to avoid index issues
+  for (size_t i = outputTypes.size(); i-- > 0;) {
+    const llvm::SMRange &formattedRange = formattedTypes.second[i];
+    const llvm::SMRange &outputRange = outputTypes[i];
+
+    const char *formattedStart = formattedRange.Start.getPointer();
+    const char *formattedEnd = formattedRange.End.getPointer();
+
+    const char *outputStart = outputRange.Start.getPointer();
+    const char *outputEnd = outputRange.End.getPointer();
+
+    llvm::StringRef formattedType(formattedStart,
+                                  formattedEnd - formattedStart);
+    llvm::StringRef outputType(outputStart, outputEnd - outputStart);
+
+    // Replace in the formatted string
+    size_t pos = formattedStr.find(formattedType.str());
+    if (pos != std::string::npos) {
+      formattedStr.replace(pos, formattedType.size(), outputType.str());
+    } else {
+      llvm::errs() << "Warning: Output type not found in formatted string: "
+                   << formattedType << "\n";
+    }
+  }
+}
+
 // Function to find the character before the previous comma
 const char *findPrevComma(const char *start, const char *stop_point) {
   if (!start) {
@@ -256,13 +407,11 @@ void Formatter::formatOps() {
   ParserConfig parseConfig(&context, /*verifyAfterParse=*/true,
                            &fallbackResourceMap);
 
-  // Write the rewriteBuffer to a stream, that we can then parse
   std::string bufferContent;
   llvm::raw_string_ostream stream(bufferContent);
   rewriteBuffer.write(stream);
   stream.flush();
 
-  // Print the bufferContent to llvm::outs() for debugging.
   fmtSourceMgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBufferCopy(bufferContent), SMLoc());
 
@@ -285,67 +434,93 @@ void Formatter::formatOps() {
       continue;
 
     // Print the fmtDef op and store as a string.
-    // Replace the opDef with this formatted string.
     std::string formattedStr;
     llvm::raw_string_ostream stream(formattedStr);
     fmtDef.op->print(stream);
 
-    // Replacing the range:
+    // Use the original type aliases
+    auto orig_types = getOpTypeLoc(opDef.scopeLoc);
+    replaceTypesInString(formattedStr, orig_types.first, orig_types.second);
+
+    // Replace the opDef with this formatted string.
     replaceRangeFmt({startOp, endOp}, formattedStr);
+
+    // Write the updated buffer to llvm::outs()
+    writeFmt(llvm::outs());
   }
 
-  // Write the updated buffer to llvm::outs()
-  writeFmt(llvm::outs());
-}
+  std::string getNamedLoc(
+      const OperationDefinition::ResultGroupDefinition &resultGroup) {
+    auto sm_range = resultGroup.definition.loc;
+    const char *start = sm_range.Start.getPointer();
+    const int len = sm_range.End.getPointer() - start;
 
-void markNames(Formatter &formatState, raw_ostream &os) {
-  // Get the operation definitions from the AsmParserState.
-  for (OperationDefinition &it : formatState.getOpDefs()) {
-    auto [startOp, endOp] = getOpRange(it);
-    // loop through the resultgroups
-    for (auto &resultGroup : it.resultGroups) {
-      auto def = resultGroup.definition;
-      auto sm_range = def.loc;
-      const char *start = sm_range.Start.getPointer();
-      int len = sm_range.End.getPointer() - start;
-      // Drop the % prefix, and put in new string with  `loc("name")` format.
-      auto name = StringRef(start + 1, len - 1);
+    // Drop the '%' prefix and construct the `loc("name")` string
+    auto name = llvm::StringRef(start + 1,
+                                len - 1); // Assumes the '%' is always present
+    std::string formattedStr = " loc(\"" + name.str() + "\")";
 
-      // Add loc("{name}") to the end of the op
-      std::string formattedStr = " loc(\"" + name.str() + "\")";
-      StringRef namedLoc(formattedStr);
-      formatState.insertText(endOp, namedLoc);
-    }
+    return formattedStr;
   }
 
-  // Insert the NameLocs for the block arguments
-  for (BlockDefinition &block : formatState.getBlockDefs()) {
-    for (size_t i = 0; i < block.arguments.size(); ++i) {
-      SMDefinition &arg = block.arguments[i];
+  // To handle ops with multiple result groups, create a dummy "alias" op
+  // so that we can each group its own NameLoc
+  void insertAliasOp() {}
 
-      // Find where to insert the NameLoc.  Either before the next argument,
-      // or at the end of the arg list
-      const char *insertPointPtr;
-      const char *arg_end = arg.loc.End.getPointer();
-      SMDefinition *nextArg =
-          (i + 1 < block.arguments.size()) ? &block.arguments[i + 1] : nullptr;
-      if (nextArg) {
-        const char *nextStart = nextArg->loc.Start.getPointer();
-        insertPointPtr = findPrevComma(nextStart, arg_end);
+  LogicalResult markNames(Formatter & formatState, raw_ostream & os) {
+    // Get the operation definitions from the AsmParserState.
+    for (OperationDefinition &it : formatState.getOpDefs()) {
+      auto [startOp, endOp] = getOpRange(it);
+
+      if (it.resultGroups.size() == 1) {
+        // Simple case, where we have only one result group for the op,
+        // e.g., `%v = op` or `%v:2 = op`
+        auto resultGroup = it.resultGroups[0];
+        auto nameLoc = getNamedLoc(resultGroup);
+        formatState.insertText(endOp, StringRef(nameLoc));
       } else {
-        insertPointPtr = findNextCloseParenth(arg.loc.End.getPointer());
+        // Complex case, where we have more than one result group, e.g.,
+        // `%x, %y = op` or `%xs:2, %ys:3 = op`.
+        // In this case we need insert some aliasing ops.
+        for (auto &resultGroup : it.resultGroups) {
+          auto nameLoc = getNamedLoc(resultGroup);
+          // StringRef namedLoc(getNamedLoc(resultGroup));
+          llvm::errs() << "Not implemented yet\n";
+          return failure();
+        }
       }
-
-      // Drop the % prefix, and put in new string with  `loc("name")` format.
-      const char *start = arg.loc.Start.getPointer();
-      const int len = arg_end - start;
-      auto name = StringRef(start + 1, len - 1);
-      std::string formattedStr = " loc(\"" + name.str() + "\")";
-      StringRef namedLoc(formattedStr);
-      formatState.insertText(SMLoc::getFromPointer(insertPointPtr), namedLoc);
     }
+
+    // Insert the NameLocs for the block arguments
+    for (BlockDefinition &block : formatState.getBlockDefs()) {
+      for (size_t i = 0; i < block.arguments.size(); ++i) {
+        SMDefinition &arg = block.arguments[i];
+
+        // Find where to insert the NameLoc.  Either before the next argument,
+        // or at the end of the arg list
+        const char *insertPointPtr;
+        const char *arg_end = arg.loc.End.getPointer();
+        SMDefinition *nextArg = (i + 1 < block.arguments.size())
+                                    ? &block.arguments[i + 1]
+                                    : nullptr;
+        if (nextArg) {
+          const char *nextStart = nextArg->loc.Start.getPointer();
+          insertPointPtr = findPrevComma(nextStart, arg_end);
+        } else {
+          insertPointPtr = findNextCloseParenth(arg.loc.End.getPointer());
+        }
+
+        // Drop the % prefix, and put in new string with  `loc("name")` format.
+        const char *start = arg.loc.Start.getPointer();
+        const int len = arg_end - start;
+        auto name = StringRef(start + 1, len - 1);
+        std::string formattedStr = " loc(\"" + name.str() + "\")";
+        StringRef namedLoc(formattedStr);
+        formatState.insertText(SMLoc::getFromPointer(insertPointPtr), namedLoc);
+      }
+    }
+    return success();
   }
-}
 } // namespace mlir
 
 int main(int argc, char **argv) {
@@ -370,7 +545,9 @@ int main(int argc, char **argv) {
   auto f = Formatter::init(inputFilename, outputFilename);
 
   // Append the SSA names as NameLocs
-  markNames(*f, llvm::outs());
+  LogicalResult result = markNames(*f, llvm::outs());
+  if (!succeeded(result))
+    return mlir::asMainReturnCode(mlir::failure());
 
   if (nameLocOnly) {
     // Return the original buffer with NameLocs appended to ops
