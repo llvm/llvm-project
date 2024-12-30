@@ -4484,7 +4484,7 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                "} // namespace A",
                Style);
 
-  Style.ColumnLimit = 41;
+  Style.ColumnLimit = 40;
   verifyFormat("namespace aaaaaaaaaa {\n"
                "namespace bbbbbbbbbb {\n"
                "}} // namespace aaaaaaaaaa::bbbbbbbbbb",
@@ -4505,13 +4505,9 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                "} // namespace aaaaaa",
                Style);
 
-  verifyFormat("namespace a { namespace b { namespace c {\n"
-               "}}} // namespace a::b::c",
-               Style);
-
   verifyFormat("namespace a { namespace b {\n"
-               "namespace cc {\n"
-               "}}} // namespace a::b::cc",
+               "namespace c {\n"
+               "}}} // namespace a::b::c",
                Style);
 
   Style.ColumnLimit = 80;

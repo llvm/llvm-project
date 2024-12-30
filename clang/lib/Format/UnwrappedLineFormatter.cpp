@@ -631,11 +631,19 @@ private:
                              unsigned Limit) {
     if (Limit == 0)
       return 0;
-    if (I[1]->InPPDirective != (*I)->InPPDirective ||
-        (I[1]->InPPDirective && I[1]->First->HasUnescapedNewline)) {
+    assert(I[1]);
+    const auto &L1 = *I[1];
+    if (L1.InPPDirective != (*I)->InPPDirective ||
+        (L1.InPPDirective && L1.First->HasUnescapedNewline)) {
       return 0;
     }
-    if (I + 2 == E || I[2]->Type == LT_Invalid)
+
+    if (std::distance(I, E) <= 2)
+      return 0;
+
+    assert(I[2]);
+    const auto &L2 = *I[2];
+    if (L2.Type == LT_Invalid)
       return 0;
 
     Limit = limitConsideringMacros(I + 1, E, Limit);
@@ -645,13 +653,13 @@ private:
 
     // Check if it's a namespace inside a namespace, and call recursively if so.
     // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
-    if (I[1]->First->is(tok::kw_namespace)) {
-      if (I[1]->Last->is(tok::comment) || !Style.CompactNamespaces)
+    if (L1.First->is(tok::kw_namespace)) {
+      if (L1.Last->is(tok::comment) || !Style.CompactNamespaces)
         return 0;
 
-      assert(Limit >= I[1]->Last->TotalLength + 3);
-      const unsigned InnerLimit = Limit - I[1]->Last->TotalLength - 3;
-      const unsigned MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
+      assert(Limit >= L1.Last->TotalLength + 3);
+      const auto InnerLimit = Limit - L1.Last->TotalLength - 3;
+      const auto MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
       if (MergedLines == 0)
         return 0;
       const auto N = MergedLines + 2;
@@ -672,11 +680,11 @@ private:
     // line.
 
     // The line which is in the namespace should end with semicolon.
-    if (I[1]->Last->isNot(tok::semi))
+    if (L1.Last->isNot(tok::semi))
       return 0;
 
     // Last, check that the third line starts with a closing brace.
-    if (I[2]->First->isNot(tok::r_brace) || I[2]->First->MustBreakBefore)
+    if (L2.First->isNot(tok::r_brace) || L2.First->MustBreakBefore)
       return 0;
 
     // If so, merge all three lines.
@@ -987,7 +995,7 @@ private:
                          SmallVectorImpl<AnnotatedLine *>::const_iterator E,
                          unsigned Limit) {
     unsigned JoinedLength = 0;
-    for (auto J = I + 1; J != E; ++J) {
+    for (const auto *J = I + 1; J != E; ++J) {
       if ((*J)->First->MustBreakBefore)
         return false;
 
