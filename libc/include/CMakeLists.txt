@@ -750,19 +750,6 @@ add_header_macro(
     .llvm-libc-types.struct_lconv
 )
 
-if(LIBC_TARGET_OS_IS_GPU)
-  file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
-
-  add_header_macro(
-    gpu_rpc
-    ../libc/hdrgen/yaml/gpu/rpc.yaml
-    gpu/rpc.h.def
-    gpu/rpc.h
-    DEPENDS
-      .llvm_libc_common_h
-  )
-endif()
-
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()

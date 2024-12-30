@@ -2994,11 +2994,11 @@ def TestOpWithProperties : TEST_Op<"with_properties"> {
     `flag` `=` $flag `,`
     `array` `=` $array attr-dict}];
   let arguments = (ins
-    I64Property:$a,
+    I64Prop:$a,
     StrAttr:$b, // Attributes can directly be used here.
-    StringProperty:$c,
-    BoolProperty:$flag,
-    IntArrayProperty<"int64_t">:$array // example of an array
+    StringProp:$c,
+    BoolProp:$flag,
+    IntArrayProp<I64Prop>:$array // example of an array
   );
 }
 
@@ -3006,7 +3006,7 @@ def TestOpWithPropertiesAndAttr
   : TEST_Op<"with_properties_and_attr"> {
   let assemblyFormat = "$lhs prop-dict attr-dict";
 
-  let arguments = (ins I32Attr:$lhs, IntProperty<"int64_t">:$rhs);
+  let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs);
 }
 
 def TestOpWithPropertiesAndInferredType
@@ -3015,7 +3015,7 @@ def TestOpWithPropertiesAndInferredType
   ]> {
   let assemblyFormat = "$lhs prop-dict attr-dict";
 
-  let arguments = (ins I32Attr:$lhs, IntProperty<"int64_t">:$rhs);
+  let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs);
   let results = (outs AnyType:$result);
 }
 
@@ -3040,15 +3040,15 @@ def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
 
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
-  let arguments = (ins IntArrayProperty<"int64_t">:$prop);
+  let arguments = (ins IntArrayProp<I64Prop>:$prop);
 }
 
 def TestOpUsingPropertyInCustomAndOther
   : TEST_Op<"using_property_in_custom_and_other"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) prop-dict attr-dict";
   let arguments = (ins
-    IntArrayProperty<"int64_t">:$prop,
-    IntProperty<"int64_t">:$other
+    IntArrayProp<I64Prop>:$prop,
+    I64Prop:$other
   );
 }
 
@@ -3063,7 +3063,7 @@ def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
 
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
-  let arguments = (ins IntProperty<"int64_t">:$first, IntProperty<"int64_t">:$second);
+  let arguments = (ins IntProp<"int64_t">:$first, IntProp<"int64_t">:$second);
 }
 
 def IntPropertyWithWorseBytecode : Property<"int64_t"> {
@@ -3200,9 +3200,9 @@ def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"
     attr-dict
   }];
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a,
-    DefaultValuedProperty<StringProperty, "\"\"">:$b,
-    DefaultValuedProperty<IntProperty<"int32_t">, "-1">:$c,
-    UnitProperty:$unit);
+    DefaultValuedProp<StringProp, "\"\"">:$b,
+    DefaultValuedProp<IntProp<"int32_t">, "-1">:$c,
+    UnitProp:$unit);
 }
 
 def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
@@ -3219,15 +3219,15 @@ def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   }];
   let arguments = (ins
     OptionalAttr<I32Attr>:$anAttr,
-    OptionalProperty<I64Property>:$simple,
-    OptionalProperty<StringProperty>:$nonTrivialStorage,
+    OptionalProp<I64Prop>:$simple,
+    OptionalProp<StringProp>:$nonTrivialStorage,
     // Confirm that properties with default values now default to nullopt and have
     // the long syntax.
-    OptionalProperty<DefaultValuedProperty<I64Property, "0">>:$hasDefault,
-    OptionalProperty<OptionalProperty<I64Property>>:$nested,
-    OptionalProperty<StringProperty, 0>:$longSyntax,
-    UnitProperty:$hasUnit,
-    OptionalProperty<UnitProperty>:$maybeUnit);
+    OptionalProp<DefaultValuedProp<I64Prop, "0">>:$hasDefault,
+    OptionalProp<OptionalProp<I64Prop>>:$nested,
+    OptionalProp<StringProp, 0>:$longSyntax,
+    UnitProp:$hasUnit,
+    OptionalProp<UnitProp>:$maybeUnit);
 }
 
 def TestOpWithArrayProperties : TEST_Op<"with_array_properties"> {
@@ -3242,15 +3242,39 @@ def TestOpWithArrayProperties : TEST_Op<"with_array_properties"> {
     attr-dict
   }];
   let arguments = (ins
-    ArrayProperty<I64Property>:$ints,
-    ArrayProperty<StringProperty>:$strings,
-    ArrayProperty<ArrayProperty<I32Property>>:$nested,
-    OptionalProperty<ArrayProperty<I32Property>>:$opt,
-    ArrayProperty<OptionalProperty<I64Property>>:$explicitOptions,
-    ArrayProperty<UnitProperty>:$explicitUnits,
-    DefaultValuedProperty<ArrayProperty<I64Property>,
+    ArrayProp<I64Prop>:$ints,
+    ArrayProp<StringProp>:$strings,
+    ArrayProp<ArrayProp<I32Prop>>:$nested,
+    OptionalProp<ArrayProp<I32Prop>>:$opt,
+    ArrayProp<OptionalProp<I64Prop>>:$explicitOptions,
+    ArrayProp<UnitProp>:$explicitUnits,
+    DefaultValuedProp<ArrayProp<I64Prop>,
       "::llvm::ArrayRef<int64_t>{}", "::llvm::SmallVector<int64_t>{}">:$hasDefault
   );
+}
+
+def NonNegativeI64Prop : ConfinedProp<I64Prop,
+  CPred<"$_self >= 0">, "non-negative int64_t">;
+
+class NonEmptyArray<Property p> : ConfinedProp
+    <ArrayProp<p>, Neg<CPred<"$_self.empty()">>,
+    "non-empty array of " # p.summary>;
+
+def OpWithPropertyPredicates : TEST_Op<"op_with_property_predicates"> {
+  let arguments = (ins
+    NonNegativeI64Prop:$scalar,
+    OptionalProp<NonNegativeI64Prop>:$optional,
+    DefaultValuedProp<NonNegativeI64Prop, "0">:$defaulted,
+    ConfinedProp<NonNegativeI64Prop,
+      CPred<"$_self <= 5">, "between 0 and 5">:$more_constrained,
+    ArrayProp<NonNegativeI64Prop>:$array,
+    NonEmptyArray<I64Prop>:$non_empty_unconstrained,
+    NonEmptyArray<NonNegativeI64Prop>:$non_empty_constrained,
+    // Test applying predicates when the fromStorage() on the optional<> isn't trivial.
+    OptionalProp<NonEmptyArray<NonNegativeI64Prop>>:$non_empty_optional,
+    I64Prop:$unconstrained
+  );
+  let assemblyFormat = "attr-dict prop-dict";
 }
 
 //===----------------------------------------------------------------------===//

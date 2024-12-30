@@ -217,7 +217,7 @@ static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
 // is connected to a successor replicate region with the same predicate by a
 // single, empty VPBasicBlock.
 static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
-  SetVector<VPRegionBlock *> DeletedRegions;
+  SmallPtrSet<VPRegionBlock *, 4> TransformedRegions;
 
   // Collect replicate regions followed by an empty block, followed by another
   // replicate region with matching masks to process front. This is to avoid
@@ -248,7 +248,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
 
   // Move recipes from Region1 to its successor region, if both are triangles.
   for (VPRegionBlock *Region1 : WorkList) {
-    if (DeletedRegions.contains(Region1))
+    if (TransformedRegions.contains(Region1))
       continue;
     auto *MiddleBasicBlock = cast<VPBasicBlock>(Region1->getSingleSuccessor());
     auto *Region2 = cast<VPRegionBlock>(MiddleBasicBlock->getSingleSuccessor());
@@ -294,12 +294,10 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       VPBlockUtils::connectBlocks(Pred, MiddleBasicBlock);
     }
     VPBlockUtils::disconnectBlocks(Region1, MiddleBasicBlock);
-    DeletedRegions.insert(Region1);
+    TransformedRegions.insert(Region1);
   }
 
-  for (VPRegionBlock *ToDelete : DeletedRegions)
-    delete ToDelete;
-  return !DeletedRegions.empty();
+  return !TransformedRegions.empty();
 }
 
 static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
@@ -310,7 +308,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   assert(Instr->getParent() && "Predicated instruction not in any basic block");
   auto *BlockInMask = PredRecipe->getMask();
   auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
-  auto *Entry = new VPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
+  auto *Entry =
+      Plan.createVPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
 
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
@@ -318,17 +317,21 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->getUnderlyingInstr(),
       make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
       PredRecipe->isUniform());
-  auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
+  auto *Pred =
+      Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
   VPPredInstPHIRecipe *PHIRecipe = nullptr;
   if (PredRecipe->getNumUsers() != 0) {
-    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask);
+    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
+                                        RecipeWithoutMask->getDebugLoc());
     PredRecipe->replaceAllUsesWith(PHIRecipe);
     PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
   PredRecipe->eraseFromParent();
-  auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
-  VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
+  auto *Exiting =
+      Plan.createVPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
+  VPRegionBlock *Region =
+      Plan.createVPRegionBlock(Entry, Exiting, RegionName, true);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
@@ -395,7 +398,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
       VPBlockUtils::disconnectBlocks(VPBB, Succ);
       VPBlockUtils::connectBlocks(PredVPBB, Succ);
     }
-    delete VPBB;
+    // VPBB is now dead and will be cleaned up when the plan gets destroyed.
   }
   return !WorkList.empty();
 }
@@ -527,11 +530,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     VPValue *StartV, VPValue *Step, VPBuilder &Builder) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = CanonicalIV;
-  if (!CanonicalIV->isCanonical(Kind, StartV, Step)) {
-    BaseIV = Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step,
-                                     "offset.idx");
-  }
+  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
+      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
 
   // Truncate base induction if needed.
   Type *CanonicalIVType = CanonicalIV->getScalarType();
@@ -1063,6 +1063,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   if (match(&R, m_Not(m_Not(m_VPValue(A)))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+  // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
+  if ((match(&R,
+             m_DerivedIV(m_SpecificInt(0), m_VPValue(A), m_SpecificInt(1))) ||
+       match(&R,
+             m_DerivedIV(m_SpecificInt(0), m_SpecificInt(0), m_VPValue()))) &&
+      TypeInfo.inferScalarType(R.getOperand(1)) ==
+          TypeInfo.inferScalarType(R.getVPSingleValue()))
+    return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
@@ -1251,11 +1260,11 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   simplifyRecipes(Plan);
   legalizeAndOptimizeInductions(Plan);
+  removeRedundantExpandSCEVRecipes(Plan);
+  simplifyRecipes(Plan);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
-
-  removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
   licm(Plan);
 }
@@ -1442,13 +1451,95 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
+/// Try to convert \p CurRecipe to a corresponding EVL-based recipe. Returns
+/// nullptr if no EVL-based recipe could be created.
+/// \p HeaderMask  Header Mask.
+/// \p CurRecipe   Recipe to be transform.
+/// \p TypeInfo    VPlan-based type analysis.
+/// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
+/// \p EVL         The explicit vector length parameter of vector-predication
+/// intrinsics.
+static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
+                                     VPRecipeBase &CurRecipe,
+                                     VPTypeAnalysis &TypeInfo,
+                                     VPValue &AllOneMask, VPValue &EVL) {
+  using namespace llvm::VPlanPatternMatch;
+  auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
+    assert(OrigMask && "Unmasked recipe when folding tail");
+    return HeaderMask == OrigMask ? nullptr : OrigMask;
+  };
+
+  return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
+      .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
+      })
+      .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
+        VPValue *NewMask = GetNewMask(S->getMask());
+        return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
+      })
+      .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
+        unsigned Opcode = W->getOpcode();
+        if (!Instruction::isBinaryOp(Opcode) && !Instruction::isUnaryOp(Opcode))
+          return nullptr;
+        return new VPWidenEVLRecipe(*W, EVL);
+      })
+      .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
+        VPValue *NewMask = GetNewMask(Red->getCondOp());
+        return new VPReductionEVLRecipe(*Red, EVL, NewMask);
+      })
+      .Case<VPWidenIntrinsicRecipe, VPWidenCastRecipe>(
+          [&](auto *CR) -> VPRecipeBase * {
+            Intrinsic::ID VPID;
+            if (auto *CallR = dyn_cast<VPWidenIntrinsicRecipe>(CR)) {
+              VPID =
+                  VPIntrinsic::getForIntrinsic(CallR->getVectorIntrinsicID());
+            } else {
+              auto *CastR = cast<VPWidenCastRecipe>(CR);
+              VPID = VPIntrinsic::getForOpcode(CastR->getOpcode());
+            }
+            assert(VPID != Intrinsic::not_intrinsic && "Expected VP intrinsic");
+            assert(VPIntrinsic::getMaskParamPos(VPID) &&
+                   VPIntrinsic::getVectorLengthParamPos(VPID) &&
+                   "Expected VP intrinsic");
+
+            SmallVector<VPValue *> Ops(CR->operands());
+            Ops.push_back(&AllOneMask);
+            Ops.push_back(&EVL);
+            return new VPWidenIntrinsicRecipe(
+                VPID, Ops, TypeInfo.inferScalarType(CR), CR->getDebugLoc());
+          })
+      .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
+        SmallVector<VPValue *> Ops(Sel->operands());
+        Ops.push_back(&EVL);
+        return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
+                                          TypeInfo.inferScalarType(Sel),
+                                          Sel->getDebugLoc());
+      })
+      .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
+        VPValue *LHS, *RHS;
+        // Transform select with a header mask condition
+        //   select(header_mask, LHS, RHS)
+        // into vector predication merge.
+        //   vp.merge(all-true, LHS, RHS, EVL)
+        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
+                                 m_VPValue(RHS))))
+          return nullptr;
+        // Use all true as the condition because this transformation is
+        // limited to selects whose condition is a header mask.
+        return new VPWidenIntrinsicRecipe(
+            Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
+            TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
+      })
+      .Default([&](VPRecipeBase *R) { return nullptr; });
+}
+
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
-  using namespace llvm::VPlanPatternMatch;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
-  SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+  VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
 
   for (VPUser *U : Plan.getVF().users()) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
@@ -1460,111 +1551,22 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
-      auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
-        assert(OrigMask && "Unmasked recipe when folding tail");
-        return HeaderMask == OrigMask ? nullptr : OrigMask;
-      };
-
-      VPRecipeBase *NewRecipe =
-          TypeSwitch<VPRecipeBase *, VPRecipeBase *>(CurRecipe)
-              .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
-                VPValue *NewMask = GetNewMask(L->getMask());
-                return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
-              })
-              .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
-                VPValue *NewMask = GetNewMask(S->getMask());
-                return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
-              })
-              .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
-                unsigned Opcode = W->getOpcode();
-                if (!Instruction::isBinaryOp(Opcode) &&
-                    !Instruction::isUnaryOp(Opcode))
-                  return nullptr;
-                return new VPWidenEVLRecipe(*W, EVL);
-              })
-              .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
-                VPValue *NewMask = GetNewMask(Red->getCondOp());
-                return new VPReductionEVLRecipe(*Red, EVL, NewMask);
-              })
-              .Case<VPWidenIntrinsicRecipe>(
-                  [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
-                    auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
-                    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
-                        CI->getCalledFunction()->getIntrinsicID());
-                    if (VPID == Intrinsic::not_intrinsic)
-                      return nullptr;
-
-                    SmallVector<VPValue *> Ops(CInst->operands());
-                    assert(VPIntrinsic::getMaskParamPos(VPID) &&
-                           VPIntrinsic::getVectorLengthParamPos(VPID) &&
-                           "Expected VP intrinsic");
-                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                        IntegerType::getInt1Ty(CI->getContext())));
-                    Ops.push_back(Mask);
-                    Ops.push_back(&EVL);
-                    return new VPWidenIntrinsicRecipe(
-                        *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
-                        CInst->getDebugLoc());
-                  })
-              .Case<VPWidenCastRecipe>(
-                  [&](VPWidenCastRecipe *CastR) -> VPRecipeBase * {
-                    Intrinsic::ID VPID =
-                        VPIntrinsic::getForOpcode(CastR->getOpcode());
-                    assert(VPID != Intrinsic::not_intrinsic &&
-                           "Expected vp.casts Instrinsic");
-
-                    SmallVector<VPValue *> Ops(CastR->operands());
-                    assert(VPIntrinsic::getMaskParamPos(VPID) &&
-                           VPIntrinsic::getVectorLengthParamPos(VPID) &&
-                           "Expected VP intrinsic");
-                    VPValue *Mask =
-                        Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-                    Ops.push_back(Mask);
-                    Ops.push_back(&EVL);
-                    return new VPWidenIntrinsicRecipe(
-                        VPID, Ops, TypeInfo.inferScalarType(CastR),
-                        CastR->getDebugLoc());
-                  })
-              .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
-                SmallVector<VPValue *> Ops(Sel->operands());
-                Ops.push_back(&EVL);
-                return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
-                                                  TypeInfo.inferScalarType(Sel),
-                                                  Sel->getDebugLoc());
-              })
-              .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-                VPValue *LHS, *RHS;
-                // Transform select with a header mask condition
-                //   select(header_mask, LHS, RHS)
-                // into vector predication merge.
-                //   vp.merge(all-true, LHS, RHS, EVL)
-                if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                         m_VPValue(RHS))))
-                  return nullptr;
-                // Use all true as the condition because this transformation is
-                // limited to selects whose condition is a header mask.
-                VPValue *AllTrue =
-                    Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-                return new VPWidenIntrinsicRecipe(
-                    Intrinsic::vp_merge, {AllTrue, LHS, RHS, &EVL},
-                    TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
-              })
-              .Default([&](VPRecipeBase *R) { return nullptr; });
-
-      if (!NewRecipe)
+      VPRecipeBase *EVLRecipe =
+          createEVLRecipe(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+      if (!EVLRecipe)
         continue;
 
-      [[maybe_unused]] unsigned NumDefVal = NewRecipe->getNumDefinedValues();
+      [[maybe_unused]] unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
       assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
              "New recipe must define the same number of values as the "
              "original.");
       assert(
           NumDefVal <= 1 &&
           "Only supports recipes with a single definition or without users.");
-      NewRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(NewRecipe)) {
+      EVLRecipe->insertBefore(CurRecipe);
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
-        CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
+        CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
       // Defer erasing recipes till the end so that we don't invalidate the
       // VPTypeAnalysis cache.
@@ -1898,7 +1900,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   if (OrigLoop->getUniqueExitBlock()) {
     VPEarlyExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
   } else {
-    VPEarlyExitBlock = VPIRBasicBlock::fromBasicBlock(
+    VPEarlyExitBlock = Plan.createVPIRBasicBlock(
         !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
   }
 
@@ -1908,7 +1910,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
-  VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
+  VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
   VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
   VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
   NewMiddle->swapSuccessors();

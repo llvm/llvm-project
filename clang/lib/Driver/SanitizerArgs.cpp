@@ -27,9 +27,9 @@ using namespace llvm::opt;
 
 static const SanitizerMask NeedsUbsanRt =
     SanitizerKind::Undefined | SanitizerKind::Integer |
-    SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
-    SanitizerKind::CFI | SanitizerKind::FloatDivideByZero |
-    SanitizerKind::ObjCCast;
+    SanitizerKind::LocalBounds | SanitizerKind::ImplicitConversion |
+    SanitizerKind::Nullability | SanitizerKind::CFI |
+    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask NeedsUbsanCxxRt =
     SanitizerKind::Vptr | SanitizerKind::CFI;
 static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
@@ -68,7 +68,9 @@ static const SanitizerMask TrappingSupported =
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::LocalBounds | SanitizerKind::CFI |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
-static const SanitizerMask TrappingDefault = SanitizerKind::CFI;
+static const SanitizerMask MergeDefault = SanitizerKind::Undefined;
+static const SanitizerMask TrappingDefault =
+    SanitizerKind::CFI | SanitizerKind::LocalBounds;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
     SanitizerKind::CFIMFCall | SanitizerKind::CFIDerivedCast |
@@ -334,6 +336,14 @@ bool SanitizerArgs::needsUbsanRt() const {
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
          CoverageFeatures;
+}
+
+bool SanitizerArgs::needsUbsanCXXRt() const {
+  // Link UBSAN C++ runtime very selectively, as it's needed in only very
+  // specific cases, but forces the program to depend on C++ ABI. UBSAN C++
+  // runtime is not included with other sanitizers.
+  return static_cast<bool>(Sanitizers.Mask & NeedsUbsanCxxRt &
+                           ~TrapSanitizers.Mask);
 }
 
 bool SanitizerArgs::needsCfiRt() const {
@@ -695,6 +705,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   TrappingKinds &= Kinds;
   RecoverableKinds &= ~TrappingKinds;
+
+  // Parse -f(no-)?sanitize-nonmerged-handlers flags
+  SanitizerMask MergeKinds =
+      parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, {}, {},
+                        options::OPT_fsanitize_merge_handlers_EQ,
+                        options::OPT_fno_sanitize_merge_handlers_EQ);
+  MergeKinds &= Kinds;
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
@@ -1098,8 +1115,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                    options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
 
   // Parse -link-cxx-sanitizer flag.
-  LinkCXXRuntimes =
-      D.CCCIsCXX() && !Args.hasArg(clang::driver::options::OPT_nostdlibxx);
+  LinkCXXRuntimes = D.CCCIsCXX();
   LinkCXXRuntimes =
       Args.hasFlag(options::OPT_fsanitize_link_cxx_runtime,
                    options::OPT_fno_sanitize_link_cxx_runtime, LinkCXXRuntimes);
@@ -1114,6 +1130,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   TrapSanitizers.Mask |= TrappingKinds;
   assert(!(RecoverableKinds & TrappingKinds) &&
          "Overlap between recoverable and trapping sanitizers");
+
+  MergeHandlers.Mask |= MergeKinds;
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {
@@ -1274,6 +1292,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (!TrapSanitizers.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-trap=" + toString(TrapSanitizers)));
+
+  if (!MergeHandlers.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1442,13 +1464,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                              bool DiagnoseErrors) {
-  assert((A->getOption().matches(options::OPT_fsanitize_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) &&
-         "Invalid argument in parseArgValues!");
+  assert(
+      (A->getOption().matches(options::OPT_fsanitize_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ)) &&
+      "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);

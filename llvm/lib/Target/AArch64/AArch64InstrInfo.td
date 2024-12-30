@@ -381,9 +381,6 @@ def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
-def UseUnaryUndefPseudos
-  : Predicate<"!(Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))">;
-
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;
@@ -886,6 +883,9 @@ def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
                                     [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
+def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
+                                    SDT_AArch64TLSDescCallSeq,
+                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;
@@ -3315,8 +3315,16 @@ def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
              [(AArch64tlsdesc_callseq tglobaltlsaddr:$sym)]>,
       Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
+let isCall = 1, Defs = [NZCV, LR, X0, X16], hasSideEffects = 1, Size = 16,
+    isCodeGenOnly = 1 in
+def TLSDESC_AUTH_CALLSEQ
+    : Pseudo<(outs), (ins i64imm:$sym),
+             [(AArch64tlsdesc_auth_callseq tglobaltlsaddr:$sym)]>,
+      Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
 def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
           (TLSDESC_CALLSEQ texternalsym:$sym)>;
+def : Pat<(AArch64tlsdesc_auth_callseq texternalsym:$sym),
+          (TLSDESC_AUTH_CALLSEQ texternalsym:$sym)>;
 
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
@@ -6977,6 +6985,12 @@ def : Pat<(v4f32 (AArch64duplane32 (v4f32 V128:$Rn), VectorIndexS:$imm)),
 def : Pat<(v2f64 (AArch64duplane64 (v2f64 V128:$Rn), VectorIndexD:$imm)),
           (DUPv2i64lane V128:$Rn, VectorIndexD:$imm)>;
 
+// Also covers DUP (truncate i64 to i32)
+def : Pat<(v2i32 (AArch64dup (i32 (extractelt (v4i32 V128:$Rn), imm:$idx)))),
+          (DUPv2i32lane V128:$Rn, imm:$idx)>;
+def : Pat<(v4i32 (AArch64dup (i32 (extractelt (v4i32 V128:$Rn), imm:$idx)))),
+          (DUPv4i32lane V128:$Rn, imm:$idx)>;
+
 // If there's an (AArch64dup (vector_extract ...) ...), we can use a duplane
 // instruction even if the types don't match: we just have to remap the lane
 // carefully. N.b. this trick only applies to truncations.
@@ -6990,44 +7004,20 @@ def VecIndex_x8 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(8 * N->getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
-multiclass DUPWithTruncPats<ValueType ResVT, ValueType Src64VT,
-                            ValueType Src128VT, ValueType ScalVT,
-                            Instruction DUP, SDNodeXForm IdxXFORM> {
-  def : Pat<(ResVT (AArch64dup (ScalVT (vector_extract (Src128VT V128:$Rn),
-                                                     imm:$idx)))),
-            (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
+class DUPWithTruncPat<ValueType ResVT, ValueType SrcVT, ValueType ScalVT,
+           Instruction DUP, SDNodeXForm IdxXFORM>
+  : Pat<(ResVT (AArch64dup (ScalVT (vector_extract (SrcVT V128:$Rn), imm:$idx)))),
+        (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
 
-  def : Pat<(ResVT (AArch64dup (ScalVT (vector_extract (Src64VT V64:$Rn),
-                                                     imm:$idx)))),
-            (DUP (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), (IdxXFORM imm:$idx))>;
-}
-
-defm : DUPWithTruncPats<v8i8,   v4i16, v8i16, i32, DUPv8i8lane,  VecIndex_x2>;
-defm : DUPWithTruncPats<v8i8,   v2i32, v4i32, i32, DUPv8i8lane,  VecIndex_x4>;
-defm : DUPWithTruncPats<v4i16,  v2i32, v4i32, i32, DUPv4i16lane, VecIndex_x2>;
-
-defm : DUPWithTruncPats<v16i8,  v4i16, v8i16, i32, DUPv16i8lane, VecIndex_x2>;
-defm : DUPWithTruncPats<v16i8,  v2i32, v4i32, i32, DUPv16i8lane, VecIndex_x4>;
-defm : DUPWithTruncPats<v8i16,  v2i32, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
-
-multiclass DUPWithTrunci64Pats<ValueType ResVT, Instruction DUP,
-                               SDNodeXForm IdxXFORM> {
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v2i64 V128:$Rn),
-                                                         imm:$idx))))),
-            (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
-
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v1i64 V64:$Rn),
-                                                       imm:$idx))))),
-            (DUP (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), (IdxXFORM imm:$idx))>;
-}
-
-defm : DUPWithTrunci64Pats<v8i8,  DUPv8i8lane,   VecIndex_x8>;
-defm : DUPWithTrunci64Pats<v4i16, DUPv4i16lane,  VecIndex_x4>;
-defm : DUPWithTrunci64Pats<v2i32, DUPv2i32lane,  VecIndex_x2>;
-
-defm : DUPWithTrunci64Pats<v16i8, DUPv16i8lane, VecIndex_x8>;
-defm : DUPWithTrunci64Pats<v8i16, DUPv8i16lane, VecIndex_x4>;
-defm : DUPWithTrunci64Pats<v4i32, DUPv4i32lane, VecIndex_x2>;
+// DUP (truncate i16 to i8)
+def : DUPWithTruncPat<v8i8,  v8i16, i32, DUPv8i8lane,  VecIndex_x2>;
+def : DUPWithTruncPat<v16i8, v8i16, i32, DUPv16i8lane, VecIndex_x2>;
+// DUP (truncate i32/64 to i8)
+def : DUPWithTruncPat<v8i8,  v4i32, i32, DUPv8i8lane,  VecIndex_x4>;
+def : DUPWithTruncPat<v16i8, v4i32, i32, DUPv16i8lane, VecIndex_x4>;
+// DUP (truncate i32/i64 to i16)
+def : DUPWithTruncPat<v4i16, v4i32, i32, DUPv4i16lane, VecIndex_x2>;
+def : DUPWithTruncPat<v8i16, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
 
 // SMOV and UMOV definitions, with some extra patterns for convenience
 defm SMOV : SMov;
