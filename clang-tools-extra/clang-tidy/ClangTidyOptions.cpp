@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
@@ -298,12 +299,11 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
   if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
-    assert(FS && "FS must be set.");
 
-    llvm::SmallString<128> AbsoluteFilePath(FileName);
-
-    if (!FS->makeAbsolute(AbsoluteFilePath)) {
-      addRawFileOptions(AbsoluteFilePath, RawOptions);
+    llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+        getNormalizedAbsolutePath(FileName);
+    if (AbsoluteFilePath) {
+      addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
     }
   }
   RawOptions.emplace_back(ConfigOptions,
@@ -333,6 +333,17 @@ FileOptionsBaseProvider::FileOptionsBaseProvider(
                              std::move(DefaultOptions)),
       OverrideOptions(std::move(OverrideOptions)),
       ConfigHandlers(std::move(ConfigHandlers)) {}
+
+llvm::ErrorOr<llvm::SmallString<128>>
+FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
+  assert(FS && "FS must be set.");
+  llvm::SmallString<128> NormalizedAbsolutePath = {Path};
+  std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
+  if (Err)
+    return Err;
+  llvm::sys::path::remove_dots(NormalizedAbsolutePath, /*remove_dot_dot=*/true);
+  return NormalizedAbsolutePath;
+}
 
 void FileOptionsBaseProvider::addRawFileOptions(
     llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
@@ -396,16 +407,15 @@ std::vector<OptionsSource>
 FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
-  assert(FS && "FS must be set.");
 
-  llvm::SmallString<128> AbsoluteFilePath(FileName);
-
-  if (FS->makeAbsolute(AbsoluteFilePath))
+  llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+      getNormalizedAbsolutePath(FileName);
+  if (!AbsoluteFilePath)
     return {};
 
   std::vector<OptionsSource> RawOptions =
-      DefaultOptionsProvider::getRawOptions(AbsoluteFilePath.str());
-  addRawFileOptions(AbsoluteFilePath, RawOptions);
+      DefaultOptionsProvider::getRawOptions(AbsoluteFilePath->str());
+  addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
   OptionsSource CommandLineOptions(OverrideOptions,
                                    OptionsSourceTypeCheckCommandLineOption);
 

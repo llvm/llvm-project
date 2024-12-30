@@ -117,6 +117,9 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy` by accepting parameters file in command line.
 
+- Improved :program:`clang-tidy` by fixing incorrect configuration file path
+  resolving when file paths contain ``..``.
+
 - Removed :program:`clang-tidy`'s global options for most of checks. All options
   are changed to local options except `IncludeStyle`, `StrictMode` and
   `IgnoreMacros`.
