@@ -89,7 +89,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
         "Failed to fill in header and directory "
         "sections. Written / Expected (%" PRIx64 " / %" PRIx64 ")",
         new_offset, m_saved_data_size);
-  return error;
+
   if (error.Fail())
     return error;
 
