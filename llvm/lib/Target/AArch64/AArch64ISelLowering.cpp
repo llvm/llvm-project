@@ -2669,6 +2669,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CSINC)
     MAKE_CASE(AArch64ISD::THREAD_POINTER)
     MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
+    MAKE_CASE(AArch64ISD::TLSDESC_AUTH_CALLSEQ)
     MAKE_CASE(AArch64ISD::PROBED_ALLOCA)
     MAKE_CASE(AArch64ISD::ABDS_PRED)
     MAKE_CASE(AArch64ISD::ABDU_PRED)
@@ -10127,8 +10128,11 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   SDValue Chain = DAG.getEntryNode();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  Chain =
-      DAG.getNode(AArch64ISD::TLSDESC_CALLSEQ, DL, NodeTys, {Chain, SymAddr});
+  unsigned Opcode =
+      DAG.getMachineFunction().getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+          ? AArch64ISD::TLSDESC_AUTH_CALLSEQ
+          : AArch64ISD::TLSDESC_CALLSEQ;
+  Chain = DAG.getNode(Opcode, DL, NodeTys, {Chain, SymAddr});
   SDValue Glue = Chain.getValue(1);
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
@@ -10140,8 +10144,12 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   assert(Subtarget->isTargetELF() && "This function expects an ELF target");
 
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  AArch64FunctionInfo *MFI =
+      DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
 
-  TLSModel::Model Model = getTargetMachine().getTLSModel(GA->getGlobal());
+  TLSModel::Model Model = MFI->hasELFSignedGOT()
+                              ? TLSModel::GeneralDynamic
+                              : getTargetMachine().getTLSModel(GA->getGlobal());
 
   if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
     if (Model == TLSModel::LocalDynamic)
@@ -10178,8 +10186,6 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
     // calculation.
 
     // These accesses will need deduplicating if there's more than one.
-    AArch64FunctionInfo *MFI =
-        DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
     MFI->incNumLocalDynamicTLSAccesses();
 
     // The call needs a relocation too for linker relaxation. It doesn't make
