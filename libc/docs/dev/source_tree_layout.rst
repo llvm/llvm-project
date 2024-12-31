@@ -15,7 +15,6 @@ directories::
         - examples
         - fuzzing
         - hdr
-        - hdrgen
         - include
         - lib
         - src
@@ -29,8 +28,7 @@ The ``benchmarks`` directory
 ----------------------------
 
 The ``benchmarks`` directory contains LLVM-libc's benchmarking utilities. These
-are mostly used for the memory functions. This also includes the automemcpy
-subdirectory for automatic generation of optimized memory functions.
+are mostly used for the memory functions.
 
 The ``config`` directory
 ------------------------
@@ -88,15 +86,6 @@ The ``lib`` directory
 
 This directory contains a ``CMakeLists.txt`` file listing the targets for the
 public libraries ``libc.a``, ``libm.a`` etc.
-
-The ``hdrgen`` directory
----------------------------
-
-This directory contains the sources and specifications for the types, macros
-and entrypoint functions. These definitions are organized in the ``yaml``
-subdirectory and match the organization of the ``*.h.def`` files. This folder
-also contains the python sources for headergen, which is what generates the
-headers.
 
 The ``src`` directory
 ---------------------

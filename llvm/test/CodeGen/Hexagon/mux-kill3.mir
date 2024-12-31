@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-gen-mux -o - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-gen-mux -o - %s -verify-machineinstrs | FileCheck %s
 # Make sure this verifies correctly.
 # CHECK: PS_jmpret killed $r31, implicit-def $pc
 ---

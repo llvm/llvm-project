@@ -2241,6 +2241,15 @@ float4 trunc(float4);
 // Wave* builtins
 //===----------------------------------------------------------------------===//
 
+/// \brief Returns true if the expression is true in all active lanes in the
+/// current wave.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return True if the expression is true in all lanes.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_true)
+__attribute__((convergent)) bool WaveActiveAllTrue(bool Val);
+
 /// \brief Returns true if the expression is true in any active lane in the
 /// current wave.
 ///

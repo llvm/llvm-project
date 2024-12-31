@@ -55,6 +55,8 @@ static constexpr unsigned GFX12 = 1;
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
+enum class FPType { None, FP4, FP8 };
+
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
 
@@ -885,7 +887,7 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
-bool isFP8DstSelInst(unsigned Opc);
+FPType getFPDstSelType(unsigned Opc);
 
 LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
@@ -932,6 +934,19 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired = false);
+
+/// \returns A pair of integer values requested using \p F's \p Name attribute
+/// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
+/// is false).
+///
+/// \returns \p std::nullopt if attribute is not present.
+///
+/// \returns \p std::nullopt and emits error if one of the requested values
+/// cannot be converted to integer, or \p OnlyFirstRequired is false and
+/// "second" value is not present.
+std::optional<std::pair<unsigned, std::optional<unsigned>>>
+getIntegerPairAttribute(const Function &F, StringRef Name,
                         bool OnlyFirstRequired = false);
 
 /// \returns Generate a vector of integer values requested using \p F's \p Name

@@ -10,6 +10,8 @@
 
 // void fill(const T& u);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <array>
 #include <cassert>
 

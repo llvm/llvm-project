@@ -783,6 +783,69 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
   ret i64 %1
 }
 
+; Check passing of coerced integer arrays
+
+define i64 @callee_small_coerced_struct([2 x i64] %a.coerce) nounwind {
+  ; RV64I-LABEL: name: callee_small_coerced_struct
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[COPY1]]
+  ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
+  ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %1 = extractvalue [2 x i64] %a.coerce, 0
+  %2 = extractvalue [2 x i64] %a.coerce, 1
+  %3 = icmp eq i64 %1, %2
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}
+
+define i64 @caller_small_coerced_struct() nounwind {
+  ; LP64-LABEL: name: caller_small_coerced_struct
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_small_coerced_struct
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_small_coerced_struct
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_small_coerced_struct([2 x i64] [i64 1, i64 2])
+  ret i64 %1
+}
+
 ; Check return of 2x xlen scalars
 
 define i128 @callee_small_scalar_ret() nounwind {

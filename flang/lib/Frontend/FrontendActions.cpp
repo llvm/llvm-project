@@ -149,7 +149,7 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
          (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
-static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
+static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   const std::vector<std::string> &libs =
       ci.getInvocation().getCodeGenOpts().DependentLibs;
   if (libs.empty()) {
@@ -171,7 +171,7 @@ static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
 // Add to MLIR code target specific items which are dependent on target
 // configuration specified by the user.
 // Clang equivalent function: AMDGPUTargetCodeGenInfo::emitTargetGlobals
-static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
+static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp mlirModule,
                                        CompilerInstance &ci) {
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
@@ -269,7 +269,7 @@ bool CodeGenAction::beginSourceFileAction() {
       return false;
     }
 
-    mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
+    mlirModule = std::move(module);
     const llvm::DataLayout &dl = targetMachine.createDataLayout();
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
@@ -303,20 +303,20 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getFrontendOpts().features, targetMachine,
       ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
-  // Fetch module from lb, so we can set
-  mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
-
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(*mlirModule,
+    setOffloadModuleInterfaceAttributes(lb.getModule(),
                                         ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(*mlirModule,
+    setOpenMPVersionAttribute(lb.getModule(),
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getSemanticsContext());
+
+  // Fetch module from lb, so we can set
+  mlirModule = lb.getModuleAndRelease();
 
   // Add target specific items like dependent libraries, target specific
   // constants etc.
@@ -836,8 +836,8 @@ void CodeGenAction::generateLLVMIR() {
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
-  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
-    config.NSWOnLoopVarInc = true;
+  if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+    config.NSWOnLoopVarInc = false;
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -961,6 +961,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
+
+  // Cleanup
+  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
@@ -1043,6 +1046,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
+
+  // Cleanup
+  delete tlii;
 }
 
 // This class handles optimization remark messages requested if

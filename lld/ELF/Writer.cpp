@@ -297,8 +297,9 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
+    sym->isExported = sym->includeInDynsym(ctx);
     if (ctx.arg.hasDynSymTab)
-      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
   }
 }
 
@@ -844,11 +845,15 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     ctx.sym.globalOffsetTable->section = sec;
   }
 
-  // .rela_iplt_{start,end} mark the start and the end of .rel[a].dyn.
-  if (ctx.sym.relaIpltStart && ctx.mainPart->relaDyn->isNeeded()) {
-    ctx.sym.relaIpltStart->section = ctx.mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->section = ctx.mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->value = ctx.mainPart->relaDyn->getSize();
+  // .rela_iplt_{start,end} mark the start and the end of the section containing
+  // IRELATIVE relocations.
+  if (ctx.sym.relaIpltStart) {
+    auto &dyn = getIRelativeSection(ctx);
+    if (dyn.isNeeded()) {
+      ctx.sym.relaIpltStart->section = &dyn;
+      ctx.sym.relaIpltEnd->section = &dyn;
+      ctx.sym.relaIpltEnd->value = dyn.getSize();
+    }
   }
 
   PhdrEntry *last = nullptr;
@@ -1444,6 +1449,40 @@ static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
   }
 }
 
+static bool canInsertPadding(OutputSection *sec) {
+  StringRef s = sec->name;
+  return s == ".bss" || s == ".data" || s == ".data.rel.ro" || s == ".lbss" ||
+         s == ".ldata" || s == ".lrodata" || s == ".ltext" || s == ".rodata" ||
+         s.starts_with(".text");
+}
+
+static void randomizeSectionPadding(Ctx &ctx) {
+  std::mt19937 g(*ctx.arg.randomizeSectionPadding);
+  PhdrEntry *curPtLoad = nullptr;
+  for (OutputSection *os : ctx.outputSections) {
+    if (!canInsertPadding(os))
+      continue;
+    for (SectionCommand *bc : os->commands) {
+      if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
+        SmallVector<InputSection *, 0> tmp;
+        if (os->ptLoad != curPtLoad) {
+          tmp.push_back(make<RandomizePaddingSection>(
+              ctx, g() % ctx.arg.maxPageSize, os));
+          curPtLoad = os->ptLoad;
+        }
+        for (InputSection *isec : isd->sections) {
+          // Probability of inserting padding is 1 in 16.
+          if (g() % 16 == 0)
+            tmp.push_back(
+                make<RandomizePaddingSection>(ctx, isec->addralign, os));
+          tmp.push_back(isec);
+        }
+        isd->sections = std::move(tmp);
+      }
+    }
+  }
+}
+
 // We need to generate and finalize the content that depends on the address of
 // InputSections. As the generation of the content may also alter InputSection
 // addresses we must converge to a fixed point. We do that here. See the comment
@@ -1469,6 +1508,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // Converts call x@GDPLT to call __tls_get_addr
   if (ctx.arg.emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(ctx);
+
+  if (ctx.arg.randomizeSectionPadding)
+    randomizeSectionPadding(ctx);
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
@@ -1884,9 +1926,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      if (sym->includeInDynsym(ctx)) {
+      // computeBinding might localize a linker-synthesized hidden symbol
+      // (e.g. __global_pointer$) that was considered exported.
+      if (sym->isExported && !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
-        if (auto *file = dyn_cast_or_null<SharedFile>(sym->file))
+        if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
             addVerneed(ctx, *sym);
       }
@@ -2360,6 +2404,11 @@ Writer<ELFT>::createPhdrs(Partition &part) {
       perm |= PF_X;
     addHdr(PT_GNU_STACK, perm)->p_memsz = ctx.arg.zStackSize;
   }
+
+  // PT_OPENBSD_NOBTCFI is an OpenBSD-specific header to mark that the
+  // executable is expected to violate branch-target CFI checks.
+  if (ctx.arg.zNoBtCfi)
+    addHdr(PT_OPENBSD_NOBTCFI, PF_X);
 
   // PT_OPENBSD_WXNEEDED is a OpenBSD-specific header to mark the executable
   // is expected to perform W^X violations, such as calling mprotect(2) or

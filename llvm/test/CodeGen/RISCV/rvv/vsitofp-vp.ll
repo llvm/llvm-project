@@ -7,10 +7,10 @@
 define <vscale x 2 x bfloat> @vsitofp_nxv2bf16_nxv2i7(<vscale x 2 x i7> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv2bf16_nxv2i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v9, v8, v0.t
 ; CHECK-NEXT:    vfwcvt.f.x.v v10, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -140,10 +140,10 @@ define <vscale x 2 x half> @vsitofp_nxv2f16_nxv2i7(<vscale x 2 x i7> %va, <vscal
 ;
 ; ZVFHMIN-LABEL: vsitofp_nxv2f16_nxv2i7:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vadd.vv v8, v8, v8
 ; ZVFHMIN-NEXT:    vsra.vi v8, v8, 1
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vsext.vf2 v9, v8, v0.t
 ; ZVFHMIN-NEXT:    vfwcvt.f.x.v v10, v9, v0.t
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -508,11 +508,11 @@ declare <vscale x 32 x half> @llvm.vp.sitofp.nxv32f16.nxv32i32(<vscale x 32 x i3
 define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vsitofp_nxv32f16_nxv32i32:
 ; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; ZVFH-NEXT:    vmv1r.v v24, v0
 ; ZVFH-NEXT:    csrr a1, vlenb
 ; ZVFH-NEXT:    srli a2, a1, 2
 ; ZVFH-NEXT:    slli a1, a1, 1
-; ZVFH-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; ZVFH-NEXT:    vslidedown.vx v0, v0, a2
 ; ZVFH-NEXT:    sub a2, a0, a1
 ; ZVFH-NEXT:    sltu a3, a0, a2
@@ -532,11 +532,11 @@ define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ;
 ; ZVFHMIN-LABEL: vsitofp_nxv32f16_nxv32i32:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
 ; ZVFHMIN-NEXT:    slli a1, a1, 1
-; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v0, a2
 ; ZVFHMIN-NEXT:    sub a2, a0, a1
 ; ZVFHMIN-NEXT:    sltu a3, a0, a2
@@ -566,11 +566,11 @@ declare <vscale x 32 x float> @llvm.vp.sitofp.nxv32f32.nxv32i32(<vscale x 32 x i
 define <vscale x 32 x float> @vsitofp_nxv32f32_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv32f32_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:    sltu a3, a0, a2

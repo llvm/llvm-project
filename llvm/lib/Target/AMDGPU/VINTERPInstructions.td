@@ -181,8 +181,42 @@ multiclass VInterpF16Pat <SDPatternOperator op, Instruction inst,
   def : VInterpF16Pat<op, inst, dst_type, 1, high_pat>;
 }
 
+class VInterpF16Pat_t16 <SDPatternOperator op, Instruction inst,
+                     ValueType dstVT, bit high, bit isP2> : GCNPat <
+   (dstVT (op
+      (VINTERPMods f32:$src0, i32:$src0_modifiers),
+      (VINTERPMods f32:$src1, i32:$src1_modifiers),
+      (VINTERPMods f32:$src2, i32:$src2_modifiers),
+      !if(high, (i1 -1), (i1 0)))),
+    (inst $src0_modifiers,
+          (f16 (EXTRACT_SUBREG VGPR_32:$src0, !if(high, hi16, lo16))),
+          $src1_modifiers, VGPR_32:$src1,
+          $src2_modifiers,
+          !if(isP2, (f32 VGPR_32:$src2),
+                    (f16 (EXTRACT_SUBREG VGPR_32:$src2, !if(high, hi16, lo16)))),
+          0, /* clamp */
+          7) /* wait_exp */
+>;
+
+multiclass VInterpF16Pat_t16 <SDPatternOperator op, Instruction inst,
+                          ValueType dstVT, bit isP2> {
+  def : VInterpF16Pat_t16<op, inst, dstVT, 0, isP2>;
+  def : VInterpF16Pat_t16<op, inst, dstVT, 1, isP2>;
+}
+
 def : VInterpF32Pat<int_amdgcn_interp_inreg_p10, V_INTERP_P10_F32_inreg>;
 def : VInterpF32Pat<int_amdgcn_interp_inreg_p2, V_INTERP_P2_F32_inreg>;
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : VInterpF16Pat_t16<int_amdgcn_interp_inreg_p10_f16,
+                     V_INTERP_P10_F16_F32_inreg_t16, f32, 0>;
+defm : VInterpF16Pat_t16<int_amdgcn_interp_inreg_p2_f16,
+                     V_INTERP_P2_F16_F32_inreg_t16, f16, 1>;
+defm : VInterpF16Pat_t16<int_amdgcn_interp_p10_rtz_f16,
+                     V_INTERP_P10_RTZ_F16_F32_inreg_t16, f32, 0>;
+defm : VInterpF16Pat_t16<int_amdgcn_interp_p2_rtz_f16,
+                     V_INTERP_P2_RTZ_F16_F32_inreg_t16, f16, 1>;
+}
 
 let True16Predicate = UseFakeTrue16Insts in {
 defm : VInterpF16Pat<int_amdgcn_interp_inreg_p10_f16,
@@ -238,3 +272,6 @@ defm V_INTERP_P10_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x002,
 defm V_INTERP_P2_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x003, "v_interp_p2_f16_f32">;
 defm V_INTERP_P10_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x004, "v_interp_p10_rtz_f16_f32">;
 defm V_INTERP_P2_RTZ_F16_F32_inreg : VINTERP_Real_t16_and_fake16_gfx11_gfx12<0x005, "v_interp_p2_rtz_f16_f32">;
+
+let AssemblerPredicate = isGFX11Plus in
+def : AMDGPUMnemonicAlias<"v_interp_p2_new_f32", "v_interp_p2_f32">;

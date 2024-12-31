@@ -1,17 +1,4 @@
 add_entrypoint_object(
-  time
-  SRCS
-    time.cpp
-  HDRS
-    ../time_func.h
-  DEPENDS
-    libc.hdr.time_macros
-    libc.hdr.types.time_t
-    libc.src.__support.time.linux.clock_gettime
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   timespec_get
   SRCS
     timespec_get.cpp
@@ -20,7 +7,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.time_macros
     libc.hdr.types.struct_timespec
-    libc.src.__support.time.linux.clock_gettime
+    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
 )
 
@@ -34,7 +21,7 @@ add_entrypoint_object(
     libc.hdr.time_macros
     libc.hdr.types.clock_t
     libc.src.__support.time.units
-    libc.src.__support.time.linux.clock_gettime
+    libc.src.__support.time.clock_gettime
     libc.src.__support.CPP.limits
     libc.src.errno.errno
 )
@@ -62,7 +49,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.clockid_t
     libc.hdr.types.struct_timespec
-    libc.src.__support.time.linux.clock_gettime
+    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
 )
 
@@ -75,7 +62,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.time_macros
     libc.hdr.types.suseconds_t
-    libc.src.__support.time.linux.clock_gettime
+    libc.src.__support.time.clock_gettime
     libc.src.__support.time.units
     libc.src.errno.errno
 )

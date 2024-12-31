@@ -267,7 +267,6 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_HI20:
   case R_RISCV_LO12_I:
   case R_RISCV_LO12_S:
-  case R_RISCV_RVC_LUI:
     return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
@@ -370,19 +369,6 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     insn |= imm11 | imm4 | imm9_8 | imm10 | imm6 | imm7 | imm3_1 | imm5;
 
     write16le(loc, insn);
-    return;
-  }
-
-  case R_RISCV_RVC_LUI: {
-    int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(ctx, loc, imm, 6, rel);
-    if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
-      write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
-    } else {
-      uint16_t imm17 = extractBits(val + 0x800, 17, 17) << 12;
-      uint16_t imm16_12 = extractBits(val + 0x800, 16, 12) << 2;
-      write16le(loc, (read16le(loc) & 0xEF83) | imm17 | imm16_12);
-    }
     return;
   }
 

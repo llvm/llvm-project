@@ -33,6 +33,7 @@ class RawPtrRefCallArgsChecker
   mutable BugReporter *BR;
 
   TrivialFunctionAnalysis TFA;
+  EnsureFunctionAnalysis EFA;
 
 public:
   RawPtrRefCallArgsChecker(const char *description)
@@ -140,7 +141,7 @@ public:
 
   bool isPtrOriginSafe(const Expr *Arg) const {
     return tryToFindPtrOrigin(Arg, /*StopAtFirstRefCountedObj=*/true,
-                              [](const clang::Expr *ArgOrigin, bool IsSafe) {
+                              [&](const clang::Expr *ArgOrigin, bool IsSafe) {
                                 if (IsSafe)
                                   return true;
                                 if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
@@ -153,6 +154,8 @@ public:
                                   return true;
                                 }
                                 if (isASafeCallArg(ArgOrigin))
+                                  return true;
+                                if (EFA.isACallToEnsureFn(ArgOrigin))
                                   return true;
                                 return false;
                               });

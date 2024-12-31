@@ -73,6 +73,9 @@ public:
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
+  ClangdLSPServer(const ClangdLSPServer &other) = delete;
+  ClangdLSPServer &operator=(const ClangdLSPServer &other) = delete;
+
   /// Run LSP server loop, communicating with the Transport provided in the
   /// constructor. This method must not be executed more than once.
   ///

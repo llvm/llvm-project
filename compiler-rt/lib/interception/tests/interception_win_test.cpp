@@ -852,6 +852,8 @@ const struct InstructionSizeData {
     { 2, {0x8B, 0xC1}, 0, "8B C1 : mov eax, ecx"},
     { 2, {0x8B, 0xEC}, 0, "8B EC : mov ebp, esp"},
     { 2, {0x8B, 0xFF}, 0, "8B FF : mov edi, edi"},
+    { 3, {0x83, 0xE4, 0x72}, 0, "83 E4 XX : and esp, XX"},
+    { 3, {0x83, 0xEC, 0x72}, 0, "83 EC XX : sub esp, XX"},
     { 3, {0xc2, 0x71, 0x72}, 0, "C2 XX XX : ret XX (needed for registering weak functions)"},
     { 5, {0x68, 0x71, 0x72, 0x73, 0x74}, 0, "68 XX XX XX XX : push imm32"},
     { 5, {0xb8, 0x71, 0x72, 0x73, 0x74}, 0, "b8 XX XX XX XX : mov eax, XX XX XX XX"},
@@ -927,6 +929,7 @@ const struct InstructionSizeData {
     { 3, {0x4d, 0x85, 0xed}, 0, "4d 85 ed : test r13, r13"},
     { 3, {0x4d, 0x85, 0xf6}, 0, "4d 85 f6 : test r14, r14"},
     { 3, {0x4d, 0x85, 0xff}, 0, "4d 85 ff : test r15, r15"},
+    { 3, {0xf6, 0xc1, 0x72}, 0, "f6 c1 XX : test cl, XX"},
     { 4, {0x44, 0x0f, 0xb6, 0x1a}, 0, "44 0f b6 1a : movzx r11d, BYTE PTR [rdx]"},
     { 4, {0x44, 0x8d, 0x42, 0x73}, 0, "44 8d 42 XX : lea r8d , [rdx + XX]"},
     { 4, {0x48, 0x83, 0xec, 0x73}, 0, "48 83 ec XX : sub rsp, XX"},
@@ -989,6 +992,7 @@ const struct InstructionSizeData {
     { 8, {0x41, 0x81, 0x7f, 0x73, 0x74, 0x75, 0x76, 0x77}, 0, "41 81 7f YY XX XX XX XX : cmp DWORD PTR [r15+YY], XX XX XX XX"},
     { 8, {0x81, 0x7c, 0x24, 0x73, 0x74, 0x75, 0x76, 0x77}, 0, "81 7c 24 YY XX XX XX XX : cmp DWORD PTR [rsp+YY], XX XX XX XX"},
     { 8, {0xc7, 0x44, 0x24, 0x73, 0x74, 0x75, 0x76, 0x77}, 0, "C7 44 24 XX YY YY YY YY : mov dword ptr [rsp + XX], YYYYYYYY"},
+    { 9, {0x41, 0x81, 0x7c, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78}, 0, "41 81 7c ZZ YY XX XX XX XX : cmp DWORD PTR [reg+reg*n+YY], XX XX XX XX"},
     { 9, {0xA1, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78}, 0, "A1 XX XX XX XX XX XX XX XX : movabs eax, dword ptr ds:[XXXXXXXX]"},
 #else
     // sorted list
