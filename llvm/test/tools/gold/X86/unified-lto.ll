@@ -11,6 +11,17 @@
 ; RUN:    -o %t-out
 ; RUN: llvm-dis %t-out.0.5.precodegen.bc -o - | FileCheck %s
 
+; Check thin LTO as well
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:    -m elf_x86_64 \
+; RUN:    -plugin-opt=unifiedlto \
+; RUN:    -plugin-opt=thinlto \
+; RUN:    -plugin-opt=save-temps \
+; RUN:    -u main \
+; RUN:    %t.bc %t-foo.bc \
+; RUN:    -o %t-out
+; RUN: llvm-dis %t.bc.5.precodegen.bc -o - | FileCheck %s --check-prefix=THIN
+
 ; Constant propagation is not supported by thin LTO.
 ; With full LTO we fold argument into constant 43
 ; CHECK:       define dso_local noundef i32 @main()
@@ -19,6 +30,10 @@
 
 ; CHECK:       define internal fastcc void @foo()
 ; CHECK-NEXT:    store i32 43, ptr @_g, align 4
+
+; ThinLTO doesn't import foo, because the latter has noinline attribute
+; THIN:      define dso_local i32 @main()
+; THIN-NEXT:   %1 = tail call i32 @foo(i32 noundef 1)
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
