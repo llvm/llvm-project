@@ -4837,18 +4837,97 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
         // Already a constant
         newMixedTileSizes.push_back(std::get<1>(it));
       } else {
-        int64_t tileSize = getConstantIntValue(std::get<1>(it)).value();
-        assert(tileSize == shape && "tile size and dim size don't match!");
-        (void)tileSize;
+        assert(getConstantIntValue(std::get<1>(it)).value() == shape &&
+               "tile size and dim size don't match!");
         newMixedTileSizes.push_back(
             (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
       }
     }
 
     // Clone op.
+    // TODO: Strictly speaking, discardable attributes should be _discarded_ at
+    // this point. However, in practice, we use them for things that we'd like
+    // to preserve. Implement a better abstraction.
     PackOp newOp = rewriter.create<PackOp>(
         op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
         newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+
+    // Replace op.
+    Value oldResult = op.getResult();
+    Value newResult = newOp.getResult();
+    Value replacement = (newResult.getType() != oldResult.getType())
+                            ? rewriter.create<tensor::CastOp>(
+                                  op->getLoc(), oldResult.getType(), newResult)
+                            : newResult;
+
+    rewriter.replaceOp(op, {replacement});
+
+    return success();
+  }
+};
+
+/// Folds a tensor.cast op into a consuming tensor::UnPackOp op if the
+/// `tensor.cast` has source that is more static than the consuming op.
+///
+/// Example:
+/// ```mlir
+///   %1 = tensor.cast %0 : tensor<1x1x8x1xi32> to tensor<1x1x?x1xi32>
+///   %2 = tensor.unpack %1 ... : tensor<1x1x8x1xi32> -> tensor<7x?xi32>
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %2 = tensor.unpack %0  ... tensor<1x1x8x1xi32> -> tensor<7x?xi32>
+/// ```
+struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(UnPackOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!foldTensorCastPrecondition(op))
+      return failure();
+
+    SmallVector<Type> newResultTypes(op->getResultTypes());
+    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+    Value sourceTensor = newOperands[0];
+
+    // Get the updated mixed-tile-sizes attribute.
+    SmallVector<OpFoldResult> newMixedTileSizes;
+    for (auto it : llvm::zip(cast<ShapedType>(sourceTensor.getType())
+                                 .getShape()
+                                 .take_back(op.getMixedTiles().size()),
+                             op.getMixedTiles())) {
+      int64_t shape = std::get<0>(it);
+      // If the current source shape is dynamic, just preserve this mixed
+      // size.
+      if (shape == ShapedType::kDynamic) {
+        newMixedTileSizes.push_back(std::get<1>(it));
+        continue;
+      }
+
+      // If the current source is static, update the dynamic mixed-size
+      // (provided the original value is dynamic).
+      if (Attribute attr =
+              llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
+        // Already a constant
+        newMixedTileSizes.push_back(std::get<1>(it));
+      } else {
+        assert(getConstantIntValue(std::get<1>(it)).value() == shape &&
+               "tile size and dim size don't match!");
+        newMixedTileSizes.push_back(
+            (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+      }
+    }
+
+    // Clone op.
+    // TODO: Strictly speaking, discardable attributes should be _discarded_ at
+    // this point. However, in practice, we use them for things that we'd like
+    // to preserve. Implement a better abstraction.
+    UnPackOp newOp = rewriter.create<UnPackOp>(
+        op.getLoc(), sourceTensor, newOperands[1], op.getInnerDimsPos(),
+        newMixedTileSizes, op.getOuterDimsPerm());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
@@ -4890,7 +4969,8 @@ struct FoldTensorCastProducerOp
                                 PatternRewriter &rewriter) const override {
 
     // Reject tensor::PackOp - there's dedicated pattern for that instead.
-    if (!foldTensorCastPrecondition(op) || dyn_cast<tensor::PackOp>(*op))
+    if (!foldTensorCastPrecondition(op) ||
+        isa<tensor::PackOp, tensor::UnPackOp>(*op))
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
@@ -4923,6 +5003,7 @@ struct FoldTensorCastProducerOp
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
   results.add<FoldTensorCastPackOp>(getContext());
+  results.add<FoldTensorCastUnPackOp>(getContext());
   results.add<FoldTensorCastProducerOp>(getContext());
 }
 
