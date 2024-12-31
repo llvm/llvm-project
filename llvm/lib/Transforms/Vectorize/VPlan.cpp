@@ -216,9 +216,10 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan,
-                                   Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(CanonicalIVTy) {}
+      CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
+      TypeAnalysis(CanonicalIVTy) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -501,8 +502,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     // Register NewBB in its loop. In innermost loops its the same for all
     // BB's.
-    if (State->CurrentVectorLoop)
-      State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
+    if (State->CurrentParentLoop)
+      State->CurrentParentLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
 
     State->CFG.PrevBB = NewBB;
@@ -712,17 +713,17 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   if (!isReplicator()) {
     // Create and register the new vector loop.
-    Loop *PrevLoop = State->CurrentVectorLoop;
-    State->CurrentVectorLoop = State->LI->AllocateLoop();
+    Loop *PrevLoop = State->CurrentParentLoop;
+    State->CurrentParentLoop = State->LI->AllocateLoop();
     BasicBlock *VectorPH = State->CFG.VPBB2IRBB[getPreheaderVPBB()];
     Loop *ParentLoop = State->LI->getLoopFor(VectorPH);
 
     // Insert the new loop into the loop nest and register the new basic blocks
     // before calling any utilities such as SCEV that require valid LoopInfo.
     if (ParentLoop)
-      ParentLoop->addChildLoop(State->CurrentVectorLoop);
+      ParentLoop->addChildLoop(State->CurrentParentLoop);
     else
-      State->LI->addTopLevelLoop(State->CurrentVectorLoop);
+      State->LI->addTopLevelLoop(State->CurrentParentLoop);
 
     // Visit the VPBlocks connected to "this", starting from it.
     for (VPBlockBase *Block : RPOT) {
@@ -730,7 +731,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
       Block->execute(State);
     }
 
-    State->CurrentVectorLoop = PrevLoop;
+    State->CurrentParentLoop = PrevLoop;
     return;
   }
 

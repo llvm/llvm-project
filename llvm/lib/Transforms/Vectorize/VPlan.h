@@ -236,7 +236,8 @@ public:
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan, Type *CanonicalIVTy);
+                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                   Loop *CurrentParentLoop, Type *CanonicalIVTy);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -373,8 +374,8 @@ struct VPTransformState {
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
 
-  /// The loop object for the current parent region, or nullptr.
-  Loop *CurrentVectorLoop = nullptr;
+  /// The parent loop object for the current scope, or nullptr.
+  Loop *CurrentParentLoop = nullptr;
 
   /// LoopVersioning.  It's only set up (non-null) if memchecks were
   /// used.
