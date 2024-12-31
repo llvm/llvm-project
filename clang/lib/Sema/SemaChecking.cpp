@@ -10608,14 +10608,20 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
       // on Windows where unfixed enums always use an underlying type of 'int'.
       unsigned DiagID = 0;
       if (SignedEnum && !SignedBitfield) {
-        DiagID = diag::warn_unsigned_bitfield_assigned_signed_enum;
+        DiagID =
+            PTAttr == nullptr
+                ? diag::warn_unsigned_bitfield_assigned_signed_enum
+                : diag::
+                      warn_preferred_type_unsigned_bitfield_assigned_signed_enum;
       } else if (SignedBitfield && !SignedEnum &&
                  ED->getNumPositiveBits() == FieldWidth) {
-        DiagID = diag::warn_signed_bitfield_enum_conversion;
+        DiagID =
+            PTAttr == nullptr
+                ? diag::warn_signed_bitfield_enum_conversion
+                : diag::warn_preferred_type_signed_bitfield_enum_conversion;
       }
-      unsigned PreferredTypeDiagIndex = PTAttr != nullptr;
       if (DiagID) {
-        S.Diag(InitLoc, DiagID) << Bitfield << PreferredTypeDiagIndex << ED;
+        S.Diag(InitLoc, DiagID) << Bitfield << ED;
         TypeSourceInfo *TSI = Bitfield->getTypeSourceInfo();
         SourceRange TypeRange =
             TSI ? TSI->getTypeLoc().getSourceRange() : SourceRange();
@@ -10636,8 +10642,11 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
       // Check the bitwidth.
       if (BitsNeeded > FieldWidth) {
         Expr *WidthExpr = Bitfield->getBitWidth();
-        S.Diag(InitLoc, diag::warn_bitfield_too_small_for_enum)
-            << Bitfield << PreferredTypeDiagIndex << ED;
+        auto DiagID =
+            PTAttr == nullptr
+                ? diag::warn_bitfield_too_small_for_enum
+                : diag::warn_preferred_type_bitfield_too_small_for_enum;
+        S.Diag(InitLoc, DiagID) << Bitfield << ED;
         S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
             << BitsNeeded << ED << WidthExpr->getSourceRange();
         if (PTAttr)
