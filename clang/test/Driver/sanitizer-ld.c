@@ -1,9 +1,13 @@
 // Test sanitizers ld flags.
 
-// Match all libclang_rt, excluding platform-inconsistent libs, like
-// libclang_rt.builtins, libclang_rt.osx etc.
-
-// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt.{{([^.]+san|scudo|cfi|safestack|stats|fuzzer|undefined)}}"
+// Match all sanitizer related libclang_rt, we are not interested in
+// libclang_rt.builtins, libclang_rt.osx, libclang_rt.ios, libclang_rt.watchos
+// etc.
+//
+// If we need to add sanitizer with name starting with excluded laters, e.g.
+// `bsan`, we can extend expression like this: `([^iow]|b[^u])`.
+//
+// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt.{{([^biow])}}"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=address \
