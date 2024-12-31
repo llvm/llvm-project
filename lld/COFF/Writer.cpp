@@ -282,7 +282,8 @@ private:
   uint32_t getSizeOfInitializedData();
 
   void prepareLoadConfig();
-  template <typename T> void prepareLoadConfig(T *loadConfig);
+  template <typename T>
+  void prepareLoadConfig(SymbolTable &symtab, T *loadConfig);
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
@@ -2637,22 +2638,25 @@ void Writer::fixTlsAlignment() {
 }
 
 void Writer::prepareLoadConfig() {
-  if (!ctx.symtab.loadConfigSym)
-    return;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (!symtab.loadConfigSym)
+      return;
 
-  OutputSection *sec =
-      ctx.getOutputSection(ctx.symtab.loadConfigSym->getChunk());
-  uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
-  uint8_t *symBuf =
-      secBuf + (ctx.symtab.loadConfigSym->getRVA() - sec->getRVA());
+    OutputSection *sec = ctx.getOutputSection(symtab.loadConfigSym->getChunk());
+    uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
+    uint8_t *symBuf = secBuf + (symtab.loadConfigSym->getRVA() - sec->getRVA());
 
-  if (ctx.config.is64())
-    prepareLoadConfig(reinterpret_cast<coff_load_configuration64 *>(symBuf));
-  else
-    prepareLoadConfig(reinterpret_cast<coff_load_configuration32 *>(symBuf));
+    if (ctx.config.is64())
+      prepareLoadConfig(symtab,
+                        reinterpret_cast<coff_load_configuration64 *>(symBuf));
+    else
+      prepareLoadConfig(symtab,
+                        reinterpret_cast<coff_load_configuration32 *>(symBuf));
+  });
 }
 
-template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
+template <typename T>
+void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
   size_t loadConfigSize = loadConfig->Size;
 
 #define RETURN_IF_NOT_CONTAINS(field)                                          \
@@ -2665,12 +2669,12 @@ template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
   if (loadConfigSize >= offsetof(T, field) + sizeof(T::field))
 
 #define CHECK_VA(field, sym)                                                   \
-  if (auto *s = dyn_cast<DefinedSynthetic>(ctx.symtab.findUnderscore(sym)))    \
+  if (auto *s = dyn_cast<DefinedSynthetic>(symtab.findUnderscore(sym)))        \
     if (loadConfig->field != ctx.config.imageBase + s->getRVA())               \
       Warn(ctx) << #field " not set correctly in '_load_config_used'";
 
 #define CHECK_ABSOLUTE(field, sym)                                             \
-  if (auto *s = dyn_cast<DefinedAbsolute>(ctx.symtab.findUnderscore(sym)))     \
+  if (auto *s = dyn_cast<DefinedAbsolute>(symtab.findUnderscore(sym)))         \
     if (loadConfig->field != s->getVA())                                       \
       Warn(ctx) << #field " not set correctly in '_load_config_used'";
 
