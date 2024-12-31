@@ -49,25 +49,38 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
         return false;
       break;
     case '*': {
-      while (++I < EOP && Pattern[I] == '*') { // Skip consecutive stars.
+      const bool MaybeGlobstar = I == 0 || Pattern[I - 1] == Separator;
+      int StarCount = 1;
+      for (; ++I < EOP && Pattern[I] == '*'; ++StarCount) {
+        // Skip consecutive stars.
       }
       const auto K = FilePath.find(Separator, J); // Index of next `Separator`.
       const bool NoMoreSeparatorsInFilePath = K == StringRef::npos;
+      bool Globstar = MaybeGlobstar && StarCount == 2;
       if (I == EOP) // `Pattern` ends with a star.
-        return NoMoreSeparatorsInFilePath;
-      // `Pattern` ends with a lone backslash.
-      if (Pattern[I] == '\\' && ++I == EOP)
-        return false;
+        return Globstar || NoMoreSeparatorsInFilePath;
+      if (Pattern[I] != Separator) {
+        Globstar = false;
+        // `Pattern` ends with a lone backslash.
+        if (Pattern[I] == '\\' && ++I == EOP)
+          return false;
+      }
       // The star is followed by a (possibly escaped) `Separator`.
       if (Pattern[I] == Separator) {
-        if (NoMoreSeparatorsInFilePath)
-          return false;
-        J = K; // Skip to next `Separator` in `FilePath`.
-        break;
+        if (!Globstar) {
+          if (NoMoreSeparatorsInFilePath)
+            return false;
+          J = K; // Skip to next `Separator` in `FilePath`.
+          break;
+        }
+        if (I + 1 < EOP &&
+            matchFilePath(Pattern.substr(I + 1), FilePath.substr(J))) {
+          return true;
+        }
       }
       // Recurse.
-      for (auto Pat = Pattern.substr(I); J < End && FilePath[J] != Separator;
-           ++J) {
+      for (auto Pat = Pattern.substr(I);
+           J < End && (Globstar || FilePath[J] != Separator); ++J) {
         if (matchFilePath(Pat, FilePath.substr(J)))
           return true;
       }
