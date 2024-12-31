@@ -3365,7 +3365,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
                           : VectorType::get(StartV->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
-  assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
+  assert(State.CurrentParentLoop->getHeader() == HeaderBB &&
          "recipe must be in the vector loop header");
   auto *Phi = PHINode::Create(VecTy, 2, "vec.phi");
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());
