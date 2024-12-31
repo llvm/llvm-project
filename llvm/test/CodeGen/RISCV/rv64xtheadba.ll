@@ -966,12 +966,18 @@ define signext i32 @mulw576(i32 signext %a) {
 }
 
 define i64 @add4104(i64 %a) {
-; CHECK-LABEL: add4104:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1
-; CHECK-NEXT:    addiw a1, a1, 8
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: add4104:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: add4104:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    li a1, 1026
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV64XTHEADBA-NEXT:    ret
   %c = add i64 %a, 4104
   ret i64 %c
 }
@@ -988,12 +994,18 @@ define i64 @add4104_2(i64 %a) {
 }
 
 define i64 @add8208(i64 %a) {
-; CHECK-LABEL: add8208:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 2
-; CHECK-NEXT:    addiw a1, a1, 16
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: add8208:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 2
+; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: add8208:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    li a1, 1026
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 3
+; RV64XTHEADBA-NEXT:    ret
   %c = add i64 %a, 8208
   ret i64 %c
 }
