@@ -156,7 +156,7 @@ static BitVector markLives(ValueRange values,
 /// into the given set. A value is considered "non-live" if the corresponding
 /// index in the `nonLive` bit vector is set.
 static void collectNonLiveValues(DenseSet<Value> &deletionSet, ValueRange range,
-                       const BitVector &nonLive) {
+                                 const BitVector &nonLive) {
   for (auto [index, result] : llvm::enumerate(range)) {
     if (!nonLive[index])
       continue;
@@ -224,12 +224,13 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 /// function-like op, a call-like op, a region branch op, a branch op, a region
 /// branch terminator op, or return-like.
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
-                          DenseSet<Value> &deletionSet, CleanupList &cl) {
+                            DenseSet<Value> &deletionSet, CleanupList &cl) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), deletionSet, la))
     return;
 
   cl.operations.push_back(op);
-  collectNonLiveValues(deletionSet, op->getResults(), BitVector(op->getNumResults(), true));
+  collectNonLiveValues(deletionSet, op->getResults(),
+                       BitVector(op->getNumResults(), true));
 }
 
 /// Clean a function-like op `funcOp`, given the liveness information in `la`
@@ -243,8 +244,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   (6) Erasing these return values
 /// iff it is not public or external.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
-                          RunLivenessAnalysis &la,
-                          DenseSet<Value> &deletionSet, CleanupList &cl) {
+                          RunLivenessAnalysis &la, DenseSet<Value> &deletionSet,
+                          CleanupList &cl) {
   if (funcOp.isPublic() || funcOp.isExternal())
     return;
 
@@ -351,7 +352,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 /// inputs).
 static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   RunLivenessAnalysis &la,
-                                  DenseSet<Value> &deletionSet, CleanupList &cl) {
+                                  DenseSet<Value> &deletionSet,
+                                  CleanupList &cl) {
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
     liveResults = markLives(regionBranchOp->getResults(), deletionSet, la);
@@ -598,7 +600,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                               "implementing `RegionBranchOpInterface`");
     BitVector argsToRemove = argsToKeep[&region].flip();
     cl.blocks.push_back({&region.front(), argsToRemove});
-    collectNonLiveValues(deletionSet, region.front().getArguments(), argsToRemove);
+    collectNonLiveValues(deletionSet, region.front().getArguments(),
+                         argsToRemove);
   }
 
   // Do (2.c).
@@ -611,7 +614,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // Do (3) and (4).
   BitVector resultsToRemove = resultsToKeep.flip();
   collectNonLiveValues(deletionSet, regionBranchOp.getOperation()->getResults(),
-                    resultsToRemove);
+                       resultsToRemove);
   cl.results.push_back({regionBranchOp.getOperation(), resultsToRemove});
 }
 
@@ -645,7 +648,7 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
     BitVector successorNonLive =
         markLives(operandValues, deletionSet, la).flip();
     collectNonLiveValues(deletionSet, successorBlock->getArguments(),
-                      successorNonLive);
+                         successorNonLive);
     cl.blocks.push_back({successorBlock, successorNonLive});
     cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
   }
@@ -716,10 +719,12 @@ void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
 
-  // Tracks values eligible for erasure - complements liveness analysis to identify "droppable" values.
+  // Tracks values eligible for erasure - complements liveness analysis to
+  // identify "droppable" values.
   DenseSet<Value> deletionSet;
 
-  // Maintains a list of Ops, values, branches, etc., slated for cleanup at the end of this pass.
+  // Maintains a list of Ops, values, branches, etc., slated for cleanup at the
+  // end of this pass.
   CleanupList cl;
 
   module->walk([&](Operation *op) {
