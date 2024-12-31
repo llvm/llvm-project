@@ -273,8 +273,8 @@ public:
         if constexpr (common_range<prev_view>) {
           it_.emplace<__N - 1>(ranges::end(std::get<__N - 1>(parent_->__views_)));
         } else {
-          it_.emplace<__N - 1>(
-              ranges::__next(ranges::begin(std::get<__N - 1>(parent_->__views_)), ranges::size(std::get<__N - 1>(parent_->__views_))));
+          it_.emplace<__N - 1>(ranges::__next(
+              ranges::begin(std::get<__N - 1>(parent_->__views_)), ranges::size(std::get<__N - 1>(parent_->__views_))));
         }
         prev<__N - 1>();
       } else {
@@ -576,17 +576,18 @@ public:
     size_t ix = x.it_.index();
     std::visit(
         [&](auto& it_x) {
-          it_x.apply_fn_with_const_index<std::tuple_size_v<decltype(x.parent_->__views_)>>(ix, [&](auto index_constant) {
-            constexpr size_t index_x = index_constant.value;
-            auto dx                  = ranges::__distance(ranges::begin(std::get<index_x>(x.parent_->__views_)), it_x);
+          it_x.apply_fn_with_const_index<std::tuple_size_v<decltype(x.parent_->__views_)>>(
+              ix, [&](auto index_constant) {
+                constexpr size_t index_x = index_constant.value;
+                auto dx = ranges::__distance(ranges::begin(std::get<index_x>(x.parent_->__views_)), it_x);
 
-            difference_type s = 0;
-            for (size_t idx = 0; idx < index_x; idx++) {
-              s += ranges::size(std::get<idx>(x.parent_->__views_));
-            }
+                difference_type s = 0;
+                for (size_t idx = 0; idx < index_x; idx++) {
+                  s += ranges::size(std::get<idx>(x.parent_->__views_));
+                }
 
-            return -(dx + s);
-          });
+                return -(dx + s);
+              });
         },
         x.it_);
   }
@@ -604,8 +605,8 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <class... _Views>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const
-      noexcept(noexcept(concat_view(std::forward<_Views>(views)...))) -> decltype(concat_view(std::forward<_Views>(views)...)) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const noexcept(
+      noexcept(concat_view(std::forward<_Views>(views)...))) -> decltype(concat_view(std::forward<_Views>(views)...)) {
     return concat_view(std::forward<_Views>(views)...);
   }
 };
