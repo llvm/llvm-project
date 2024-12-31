@@ -3691,7 +3691,7 @@ def fopenmp_runtimelib_EQ : Joined<["-"], "fopenmp-runtimelib=">, Group<f_Group>
 def fopenmp_gpu_threads_per_team_EQ : Joined<["-"], "fopenmp-gpu-threads-per-team=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_target_xteam_reduction_blocksize_EQ : Joined<["-"], "fopenmp-target-xteam-reduction-blocksize=">, Group<f_Group>,
-  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>;
 def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">, Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>;
 def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">, Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>;
 def fopenmp_target_ignore_env_vars : Flag<["-"], "fopenmp-target-ignore-env-vars">, Group<f_Group>, 
