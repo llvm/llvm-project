@@ -22,4 +22,3 @@
 void f() {
   std::atomic<const int> a; // expected-error@*:* {{std::atomic<T> requires that 'T' be a cv-unqualified type}}
 }
-
