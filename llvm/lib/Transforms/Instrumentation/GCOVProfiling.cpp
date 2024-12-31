@@ -973,8 +973,13 @@ bool GCOVProfiler::emitProfileNotes(
         out.write(Tmp, 4);
       }
       write(Stamp);
-      if (Version >= 90)
-        writeString(""); // unuseful current_working_directory
+      if (Version >= 90) {
+        SmallString<256> CWD;
+        llvm::sys::fs::current_path(CWD);
+        // the current_working_directory is used by gcov
+        // if the source file is relative path
+        writeString(CWD);
+      }
       if (Version >= 80)
         write(0); // unuseful has_unexecuted_blocks
 
