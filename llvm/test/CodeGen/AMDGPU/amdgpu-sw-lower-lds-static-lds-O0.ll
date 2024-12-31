@@ -50,9 +50,9 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
+; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
 ; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress(i32 0)
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[TMP25]] to i64
-; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP27]], i64 [[TMP26]])
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:

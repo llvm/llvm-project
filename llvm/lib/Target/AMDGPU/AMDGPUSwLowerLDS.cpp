@@ -353,9 +353,11 @@ void AMDGPUSwLowerLDS::buildSwLDSGlobal(Function *Func) {
       M, IRB.getPtrTy(), false, GlobalValue::InternalLinkage,
       PoisonValue::get(IRB.getPtrTy()), "llvm.amdgcn.sw.lds." + Func->getName(),
       nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS, false);
-  GlobalValue::SanitizerMetadata MD;
-  MD.NoAddress = true;
-  LDSParams.SwLDS->setSanitizerMetadata(MD);
+  if (AsanInstrumentLDS) {
+    GlobalValue::SanitizerMetadata MD;
+    MD.NoAddress = true;
+    LDSParams.SwLDS->setSanitizerMetadata(MD);
+  }
 }
 
 void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
@@ -371,9 +373,11 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
       "llvm.amdgcn." + Func->getName() + ".dynlds", nullptr,
       GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS, false);
   markUsedByKernel(Func, LDSParams.SwDynLDS);
-  GlobalValue::SanitizerMetadata MD;
-  MD.NoAddress = true;
-  LDSParams.SwDynLDS->setSanitizerMetadata(MD);
+  if (AsanInstrumentLDS) {
+    GlobalValue::SanitizerMetadata MD;
+    MD.NoAddress = true;
+    LDSParams.SwDynLDS->setSanitizerMetadata(MD);
+  }
 }
 
 void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
@@ -436,8 +440,8 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
           Constant *ItemStartOffset = ConstantInt::get(Int32Ty, MallocSize);
           Constant *SizeInBytesConst = ConstantInt::get(Int32Ty, SizeInBytes);
           // Get redzone size corresponding a size.
-          const uint64_t RightRedzoneSize =
-              AMDGPU::getRedzoneSizeForGlobal(AsanScale, SizeInBytes);
+          const uint64_t RightRedzoneSize = AsanInstrumentLDS ?
+              AMDGPU::getRedzoneSizeForGlobal(AsanScale, SizeInBytes) : 0;
           // Update MallocSize with current size and redzone size.
           MallocSize += SizeInBytes;
           if (!AMDGPU::isDynamicLDS(*GV))
@@ -489,9 +493,11 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
   LDSParams.SwLDS->setAlignment(MaxAlignment);
   if (LDSParams.SwDynLDS)
     LDSParams.SwDynLDS->setAlignment(MaxAlignment);
-  GlobalValue::SanitizerMetadata MD;
-  MD.NoAddress = true;
-  LDSParams.SwLDSMetadata->setSanitizerMetadata(MD);
+  if (AsanInstrumentLDS) {
+    GlobalValue::SanitizerMetadata MD;
+    MD.NoAddress = true;
+    LDSParams.SwLDSMetadata->setSanitizerMetadata(MD);
+  }
 }
 
 void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
@@ -869,22 +875,34 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   // Create a call to malloc function which does device global memory allocation
   // with size equals to all LDS global accesses size in this kernel.
-  Value *ReturnAddress =
-      IRB.CreateIntrinsic(Intrinsic::returnaddress, {IRB.getInt32(0)});
-  FunctionCallee MallocFunc = M.getOrInsertFunction(
+  Value *MallocPtr;
+  if (AsanInstrumentLDS) {
+    Value *ReturnAddress =
+      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, {IRB.getInt32(0)});
+    FunctionCallee MallocFunc = M.getOrInsertFunction(
       StringRef("__asan_malloc_impl"),
       FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false));
-  Value *RAPtrToInt = IRB.CreatePtrToInt(ReturnAddress, Int64Ty);
-  Value *MallocCall = IRB.CreateCall(MallocFunc, {CurrMallocSize, RAPtrToInt});
-
-  Value *MallocPtr =
+    Value *RAPtrToInt = IRB.CreatePtrToInt(ReturnAddress, Int64Ty);
+    Value *MallocCall = IRB.CreateCall(MallocFunc, {CurrMallocSize, RAPtrToInt});
+    MallocPtr =
       IRB.CreateIntToPtr(MallocCall, IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS));
+  }
+  else {
+    Type *PtrTy = IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS);
+    FunctionCallee MallocFunc = M.getOrInsertFunction(
+      StringRef("__ockl_dm_alloc"),
+      FunctionType::get(PtrTy, {Int64Ty}, false));
+    Value *MallocCall = IRB.CreateCall(MallocFunc, {CurrMallocSize});
+    MallocPtr =
+      IRB.CreateIntToPtr(MallocCall, IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS));
+  }
 
   // Create store of malloc to new global
   IRB.CreateStore(MallocPtr, SwLDS);
 
   // Create calls to __asan_poison_region to poison redzones.
-  poisonRedzones(Func, MallocPtr);
+  if (AsanInstrumentLDS)
+    poisonRedzones(Func, MallocPtr);
 
   // Create branch to PrevEntryBlock
   IRB.CreateBr(PrevEntryBlock);
@@ -932,14 +950,22 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   IRB.SetInsertPoint(FreeBlock, FreeBlock->begin());
 
   // Free the previously allocate device global memory.
-  FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
+  Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
+  if (AsanInstrumentLDS) {
+    FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr =
-      IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
-  Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
-  Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
-  IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
+    Value *ReturnAddr =
+      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
+    Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
+    IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
+  }
+  else {
+    FunctionCallee FreeFunc = M.getOrInsertFunction(
+      StringRef("__ockl_dm_dealloc"),
+      FunctionType::get(IRB.getVoidTy(), {Int64Ty}, false));
+    IRB.CreateCall(FreeFunc, {MallocPtrToInt});
+  }
 
   IRB.CreateBr(EndBlock);
 
@@ -1013,9 +1039,11 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
       M, AllKernelsOffsetsType, true, GlobalValue::InternalLinkage, init,
       "llvm.amdgcn.sw.lds.base.table", nullptr, GlobalValue::NotThreadLocal,
       AMDGPUAS::GLOBAL_ADDRESS);
-  GlobalValue::SanitizerMetadata MD;
-  MD.NoAddress = true;
-  NKLDSParams.LDSBaseTable->setSanitizerMetadata(MD);
+  if (AsanInstrumentLDS) {
+    GlobalValue::SanitizerMetadata MD;
+    MD.NoAddress = true;
+    NKLDSParams.LDSBaseTable->setSanitizerMetadata(MD);
+  }
 }
 
 void AMDGPUSwLowerLDS::buildNonKernelLDSOffsetTable(
@@ -1051,9 +1079,11 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSOffsetTable(
       M, AllKernelsOffsetsType, true, GlobalValue::InternalLinkage, Init,
       "llvm.amdgcn.sw.lds.offset.table", nullptr, GlobalValue::NotThreadLocal,
       AMDGPUAS::GLOBAL_ADDRESS);
-  GlobalValue::SanitizerMetadata MD;
-  MD.NoAddress = true;
-  NKLDSParams.LDSOffsetTable->setSanitizerMetadata(MD);
+  if (AsanInstrumentLDS) {
+    GlobalValue::SanitizerMetadata MD;
+    MD.NoAddress = true;
+    NKLDSParams.LDSOffsetTable->setSanitizerMetadata(MD);
+  }
 }
 
 void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
