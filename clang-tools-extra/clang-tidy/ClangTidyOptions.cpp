@@ -337,33 +337,34 @@ FileOptionsBaseProvider::FileOptionsBaseProvider(
 void FileOptionsBaseProvider::addRawFileOptions(
     llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
   auto CurSize = CurOptions.size();
-
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
-  StringRef Path = llvm::sys::path::parent_path(AbsolutePath);
-  for (StringRef CurrentPath = Path; !CurrentPath.empty();
-       CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
-    std::optional<OptionsSource> Result;
-
-    auto Iter = CachedOptions.find(CurrentPath);
-    if (Iter != CachedOptions.end())
-      Result = Iter->second;
-
-    if (!Result)
-      Result = tryReadConfigFile(CurrentPath);
-
-    if (Result) {
-      // Store cached value for all intermediate directories.
-      while (Path != CurrentPath) {
+  StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
+  auto MemorizedConfigFile =
+      [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
+    auto Iter = CachedOptions.Memorized.find(CurrentPath);
+    if (Iter != CachedOptions.Memorized.end())
+      return CachedOptions.Storage[Iter->second];
+    std::optional<OptionsSource> OptionsSource = tryReadConfigFile(CurrentPath);
+    if (OptionsSource) {
+      const size_t Index = CachedOptions.Storage.size();
+      CachedOptions.Storage.emplace_back(OptionsSource.value());
+      while (RootPath != CurrentPath) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "Caching configuration for path " << Path << ".\n");
-        if (!CachedOptions.count(Path))
-          CachedOptions[Path] = *Result;
-        Path = llvm::sys::path::parent_path(Path);
+                   << "Caching configuration for path " << RootPath << ".\n");
+        CachedOptions.Memorized[RootPath] = Index;
+        RootPath = llvm::sys::path::parent_path(RootPath);
       }
-      CachedOptions[Path] = *Result;
-
-      CurOptions.push_back(*Result);
+      CachedOptions.Memorized[CurrentPath] = Index;
+      RootPath = llvm::sys::path::parent_path(CurrentPath);
+    }
+    return OptionsSource;
+  };
+  for (StringRef CurrentPath = RootPath; !CurrentPath.empty();
+       CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
+    if (std::optional<OptionsSource> Result =
+            MemorizedConfigFile(CurrentPath)) {
+      CurOptions.emplace_back(Result.value());
       if (!Result->first.InheritParentConfig.value_or(false))
         break;
     }
