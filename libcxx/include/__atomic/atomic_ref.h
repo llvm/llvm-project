@@ -29,7 +29,12 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/has_unique_object_representation.h>
+#include <__type_traits/is_const.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_cv.h>
+#include <__type_traits/remove_pointer.h>
 #include <cstdint>
 #include <cstring>
 
@@ -110,7 +115,7 @@ private:
   static constexpr size_t __min_alignment = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
 
 public:
-  using value_type = _Tp;
+  using value_type = __remove_cv_t<_Tp>;
 
   static constexpr size_t required_alignment = alignof(_Tp) > __min_alignment ? alignof(_Tp) : __min_alignment;
 
@@ -123,43 +128,50 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return __atomic_is_lock_free(sizeof(_Tp), __ptr_); }
 
-  _LIBCPP_HIDE_FROM_ABI void store(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept
-      _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
+  _LIBCPP_HIDE_FROM_ABI void store(value_type __desired, memory_order __order = memory_order::seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::release || __order == memory_order::seq_cst,
         "atomic_ref: memory order argument to atomic store operation is invalid");
     __atomic_store(__ptr_, __clear_padding(__desired), std::__to_gcc_order(__order));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI value_type operator=(value_type __desired) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
     store(__desired);
     return __desired;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __order = memory_order::seq_cst) const noexcept
+  _LIBCPP_HIDE_FROM_ABI value_type load(memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__order) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
         "atomic_ref: memory order argument to atomic load operation is invalid");
-    alignas(_Tp) byte __mem[sizeof(_Tp)];
-    auto* __ret = reinterpret_cast<_Tp*>(__mem);
+    alignas(value_type) byte __mem[sizeof(value_type)];
+    auto* __ret = reinterpret_cast<value_type*>(__mem);
     __atomic_load(__ptr_, __ret, std::__to_gcc_order(__order));
     return *__ret;
   }
 
-  _LIBCPP_HIDE_FROM_ABI operator _Tp() const noexcept { return load(); }
+  _LIBCPP_HIDE_FROM_ABI operator value_type() const noexcept { return load(); }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp exchange(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
-    alignas(_Tp) byte __mem[sizeof(_Tp)];
-    auto* __ret = reinterpret_cast<_Tp*>(__mem);
+  _LIBCPP_HIDE_FROM_ABI value_type
+  exchange(value_type __desired, memory_order __order = memory_order::seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    alignas(value_type) byte __mem[sizeof(value_type)];
+    auto* __ret = reinterpret_cast<value_type*>(__mem);
     __atomic_exchange(__ptr_, __clear_padding(__desired), __ret, std::__to_gcc_order(__order));
     return *__ret;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool
-  compare_exchange_weak(_Tp& __expected, _Tp __desired, memory_order __success, memory_order __failure) const noexcept
-      _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
+  _LIBCPP_HIDE_FROM_ABI bool compare_exchange_weak(
+      value_type& __expected, value_type __desired, memory_order __success, memory_order __failure) const noexcept
+    requires(!is_const_v<_Tp>)
+  _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
@@ -172,9 +184,10 @@ public:
         std::__to_gcc_order(__success),
         std::__to_gcc_order(__failure));
   }
-  _LIBCPP_HIDE_FROM_ABI bool
-  compare_exchange_strong(_Tp& __expected, _Tp __desired, memory_order __success, memory_order __failure) const noexcept
-      _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
+  _LIBCPP_HIDE_FROM_ABI bool compare_exchange_strong(
+      value_type& __expected, value_type __desired, memory_order __success, memory_order __failure) const noexcept
+    requires(!is_const_v<_Tp>)
+  _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __failure == memory_order::relaxed || __failure == memory_order::consume ||
             __failure == memory_order::acquire || __failure == memory_order::seq_cst,
@@ -188,8 +201,10 @@ public:
         std::__to_gcc_order(__failure));
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool
-  compare_exchange_weak(_Tp& __expected, _Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI bool compare_exchange_weak(
+      value_type& __expected, value_type __desired, memory_order __order = memory_order::seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
     return __compare_exchange(
         __ptr_,
         std::addressof(__expected),
@@ -198,8 +213,10 @@ public:
         std::__to_gcc_order(__order),
         std::__to_gcc_failure_order(__order));
   }
-  _LIBCPP_HIDE_FROM_ABI bool
-  compare_exchange_strong(_Tp& __expected, _Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI bool compare_exchange_strong(
+      value_type& __expected, value_type __desired, memory_order __order = memory_order::seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
     return __compare_exchange(
         __ptr_,
         std::addressof(__expected),
@@ -209,7 +226,7 @@ public:
         std::__to_gcc_failure_order(__order));
   }
 
-  _LIBCPP_HIDE_FROM_ABI void wait(_Tp __old, memory_order __order = memory_order::seq_cst) const noexcept
+  _LIBCPP_HIDE_FROM_ABI void wait(value_type __old, memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_WAIT_MEMORY_ORDER(__order) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
@@ -217,8 +234,16 @@ public:
         "atomic_ref: memory order argument to atomic wait operation is invalid");
     std::__atomic_wait(*this, __old, __order);
   }
-  _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__atomic_notify_one(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    std::__atomic_notify_one(*this);
+  }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    std::__atomic_notify_all(*this);
+  }
 
 protected:
   using _Aligned_Tp [[__gnu__::__aligned__(required_alignment)]] = _Tp;
@@ -243,6 +268,8 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
 
   using __base = __atomic_ref_base<_Tp>;
 
+  static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
+
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
@@ -251,17 +278,24 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
+  _LIBCPP_HIDE_FROM_ABI __base::value_type operator=(__base::value_type __desired) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return __base::operator=(__desired);
+  }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
 };
 
 template <class _Tp>
-  requires(std::integral<_Tp> && !std::same_as<bool, _Tp>)
+  requires(std::integral<_Tp> && !std::same_as<bool, __remove_cv_t<_Tp>>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
+  static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
+
   using difference_type = __base::value_type;
+  using value_type      = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -271,35 +305,90 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
+  _LIBCPP_HIDE_FROM_ABI value_type operator=(value_type __desired) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return __base::operator=(__desired);
+  }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_add(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<value_type>)
+  {
     return __atomic_fetch_add(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_sub(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<value_type>)
+  {
     return __atomic_fetch_sub(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_and(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_and(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<value_type>)
+  {
     return __atomic_fetch_and(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_or(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_or(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<value_type>)
+  {
     return __atomic_fetch_or(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_xor(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_xor(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<value_type>)
+  {
     return __atomic_fetch_xor(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator++(int) const noexcept { return fetch_add(_Tp(1)); }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator--(int) const noexcept { return fetch_sub(_Tp(1)); }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator++() const noexcept { return fetch_add(_Tp(1)) + _Tp(1); }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator--() const noexcept { return fetch_sub(_Tp(1)) - _Tp(1); }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __arg) const noexcept { return fetch_sub(__arg) - __arg; }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator&=(_Tp __arg) const noexcept { return fetch_and(__arg) & __arg; }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator|=(_Tp __arg) const noexcept { return fetch_or(__arg) | __arg; }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator^=(_Tp __arg) const noexcept { return fetch_xor(__arg) ^ __arg; }
+  _LIBCPP_HIDE_FROM_ABI value_type operator++(int) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(value_type(1));
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator--(int) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(value_type(1));
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator++() const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(value_type(1)) + value_type(1);
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator--() const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(value_type(1)) - value_type(1);
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator+=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(__arg) + __arg;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator-=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(__arg) - __arg;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator&=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_and(__arg) & __arg;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator|=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_or(__arg) | __arg;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator^=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_xor(__arg) ^ __arg;
+  }
 };
 
 template <class _Tp>
@@ -307,7 +396,10 @@ template <class _Tp>
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
+  static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
+
   using difference_type = __base::value_type;
+  using value_type      = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -317,56 +409,112 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
+  _LIBCPP_HIDE_FROM_ABI value_type operator=(value_type __desired) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return __base::operator=(__desired);
+  }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    _Tp __old = this->load(memory_order_relaxed);
-    _Tp __new = __old + __arg;
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_add(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    value_type __old = this->load(memory_order_relaxed);
+    value_type __new = __old + __arg;
     while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
       __new = __old + __arg;
     }
     return __old;
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    _Tp __old = this->load(memory_order_relaxed);
-    _Tp __new = __old - __arg;
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_sub(value_type __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    value_type __old = this->load(memory_order_relaxed);
+    value_type __new = __old - __arg;
     while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
       __new = __old - __arg;
     }
     return __old;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __arg) const noexcept { return fetch_sub(__arg) - __arg; }
+  _LIBCPP_HIDE_FROM_ABI value_type operator+=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(__arg) + __arg;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator-=(value_type __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(__arg) - __arg;
+  }
 };
 
 template <class _Tp>
-struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
-  using __base = __atomic_ref_base<_Tp*>;
+  requires(std::is_pointer_v<_Tp>)
+struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
+  using __base = __atomic_ref_base<_Tp>;
 
   using difference_type = ptrdiff_t;
+  using value_type      = typename __base::value_type;
 
-  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __ptr) : __base(__ptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
+  _LIBCPP_HIDE_FROM_ABI value_type operator=(value_type __desired) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return __base::operator=(__desired);
+  }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_add(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    return __atomic_fetch_add(this->__ptr_, __arg * sizeof(_Tp), std::__to_gcc_order(__order));
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_add(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return __atomic_fetch_add(
+        this->__ptr_, __arg * sizeof(__remove_pointer_t<value_type>), std::__to_gcc_order(__order));
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    return __atomic_fetch_sub(this->__ptr_, __arg * sizeof(_Tp), std::__to_gcc_order(__order));
+  _LIBCPP_HIDE_FROM_ABI value_type
+  fetch_sub(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return __atomic_fetch_sub(
+        this->__ptr_, __arg * sizeof(__remove_pointer_t<value_type>), std::__to_gcc_order(__order));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) const noexcept { return fetch_add(1); }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) const noexcept { return fetch_sub(1); }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator++() const noexcept { return fetch_add(1) + 1; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator--() const noexcept { return fetch_sub(1) - 1; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator+=(ptrdiff_t __arg) const noexcept { return fetch_add(__arg) + __arg; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator-=(ptrdiff_t __arg) const noexcept { return fetch_sub(__arg) - __arg; }
+  _LIBCPP_HIDE_FROM_ABI value_type operator++(int) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(1);
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator--(int) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(1);
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator++() const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(1) + 1;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator--() const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(1) - 1;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator+=(ptrdiff_t __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_add(__arg) + __arg;
+  }
+  _LIBCPP_HIDE_FROM_ABI value_type operator-=(ptrdiff_t __arg) const noexcept
+    requires(!is_const_v<_Tp>)
+  {
+    return fetch_sub(__arg) - __arg;
+  }
 };
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(atomic_ref);
