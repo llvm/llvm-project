@@ -48,17 +48,17 @@ int main() {
 
   // Positive infinity
   if (test_truncxfhf2(UINT16_C(0x7fff), UINT64_C(0x8000000000000000),
-                      UINT16_C(0x7c00U)))
+                      UINT16_C(0x7c00)))
     return 1;
 
   // Negative infinity
   if (test_truncxfhf2(UINT16_C(0xffff), UINT64_C(0x8000000000000000),
-                      UINT16_C(0xfc00U)))
+                      UINT16_C(0xfc00)))
     return 1;
 
   // NaN
   if (test_truncxfhf2(UINT16_C(0x7fff), UINT64_C(0xc000000000000000),
-                      UINT16_C(0x7e00U)))
+                      UINT16_C(0x7e00)))
     return 1;
 
   return 0;
