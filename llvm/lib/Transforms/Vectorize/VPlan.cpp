@@ -521,13 +521,6 @@ VPBasicBlock *VPBasicBlock::clone() {
   return NewBlock;
 }
 
-VPBasicBlock *VPBasicBlock::clone() {
-  auto *NewBlock = getPlan()->createVPBasicBlock(getName());
-  for (VPRecipeBase &R : *this)
-    NewBlock->appendRecipe(R.clone());
-  return NewBlock;
-}
-
 void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
   LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
                     << " in BB:" << BB->getName() << '\n');

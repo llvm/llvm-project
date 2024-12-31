@@ -74,7 +74,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
 ; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + ir<[[VTC]]> * ir<-1>
 ; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + ir<[[VTC]]> * ir<1>
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   vp<[[STEPS1:%.+]]> = SCALAR-STEPS ir<0>, ir<1>

@@ -667,8 +667,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          PredicatedScalarEvolution &PSE) {
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
-  VPBasicBlock *ExitingVPBB =
-      Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   // Try to simplify the branch condition if TC <= VF * UF when preparing to
   // execute the plan for the main vector loop. We only do this if the
@@ -692,9 +692,9 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
 
-  SmallVector<VPValue *> PossiblyDead(Term->operands());
   Term->eraseFromParent();
-  auto *Header = cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getEntry());
+  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
+  auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
   if (any_of(Header->phis(),
              IsaPred<VPWidenIntOrFpInductionRecipe, VPReductionPHIRecipe>)) {
     LLVMContext &Ctx = SE.getContext();
@@ -709,27 +709,25 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
       P->eraseFromParent();
     }
 
-    VPBlockBase *Preheader = Plan.getVectorLoopRegion()->getSinglePredecessor();
-    auto *Exiting =
-        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
-
-    auto *LoopRegion = Plan.getVectorLoopRegion();
-    VPBlockBase *Middle = LoopRegion->getSingleSuccessor();
-    VPBlockUtils::disconnectBlocks(Preheader, LoopRegion);
-    VPBlockUtils::disconnectBlocks(LoopRegion, Middle);
+    VPBlockBase *Preheader = Plan.getVectorPreheader();
+    VPBlockBase *Middle = Plan.getMiddleBlock();
+    VPBlockUtils::disconnectBlocks(Preheader, VectorRegion);
+    VPBlockUtils::disconnectBlocks(VectorRegion, Middle);
 
     Header->setParent(nullptr);
-    Exiting->setParent(nullptr);
+    ExitingVPBB->setParent(nullptr);
 
-    for (VPBlockBase *B : vp_depth_first_shallow(LoopRegion->getEntry())) {
+    for (VPBlockBase *B : vp_depth_first_shallow(VectorRegion->getEntry())) {
       if (isa<VPRegionBlock>(B))
         B->setParent(nullptr);
     }
     VPBlockUtils::connectBlocks(Preheader, Header);
-    VPBlockUtils::connectBlocks(Exiting, Middle);
+    VPBlockUtils::connectBlocks(ExitingVPBB, Middle);
+    simplifyRecipes(Plan, CanIVTy);
   }
-  for (VPValue *Op : PossiblyDead)
-    recursivelyDeleteDeadRecipes(Op);
+
+  VPlanTransforms::removeDeadRecipes(Plan);
+
   Plan.setVF(BestVF);
   Plan.setUF(BestUF);
   // TODO: Further simplifications are possible
