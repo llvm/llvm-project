@@ -28458,9 +28458,7 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesNever) {
 
   // Removing empty lines.
   verifyFormat("namespace N {\n"
-               "\n"
                "int a = 1;\n"
-               "\n"
                "}",
                "namespace N {\n"
                "\n"

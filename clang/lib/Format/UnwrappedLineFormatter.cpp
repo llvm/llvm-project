@@ -1599,6 +1599,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
       else if (!PreviousLine->startsWith(TT_NamespaceRBrace))
         Newlines = std::max(Newlines, 2u);
     }
+  }
 
   // Insert or remove empty line before access specifiers.
   if (PreviousLine && RootToken.isAccessSpecifier()) {
