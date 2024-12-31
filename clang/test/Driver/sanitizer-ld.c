@@ -1,6 +1,8 @@
 // Test sanitizers ld flags.
 
-// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt"
+// Match all libclang_rt, excluding platform-inconsistent builtins.
+
+// DEFINE: %{filecheck} = FileCheck %s --implicit-check-not="libclang_rt.{{([^b]..|.[^u].|..[^i]).*}}"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=address \
@@ -250,8 +252,6 @@
 // CHECK-ASAN-ANDROID-NOT: "-lresolv"
 // CHECK-ASAN-ANDROID: libclang_rt.asan.so"
 // CHECK-ASAN-ANDROID: libclang_rt.asan_static.a"
-// CHECK-ASAN-ANDROID: libclang_rt.builtins.a
-// CHECK-ASAN-ANDROID: libclang_rt.builtins.a
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-NOT: "-lresolv"
 
@@ -272,8 +272,6 @@
 // CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan_static.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan.a"
-// CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.builtins.a"
-// CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.builtins.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
@@ -290,8 +288,6 @@
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-NOT: "-lresolv"
 // CHECK-UBSAN-ANDROID: libclang_rt.ubsan_standalone.so"
-// CHECK-UBSAN-ANDROID: libclang_rt.builtins.a"
-// CHECK-UBSAN-ANDROID: libclang_rt.builtins.a"
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-NOT: "-lresolv"
 
@@ -304,8 +300,6 @@
 //
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone.a"
-// CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.builtins.a"
-// CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.builtins.a"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
@@ -324,8 +318,6 @@
 // CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
 // CHECK-ASAN-ANDROID-X86: libclang_rt.asan.so"
 // CHECK-ASAN-ANDROID-X86: libclang_rt.asan_static.a"
-// CHECK-ASAN-ANDROID-X86: libclang_rt.builtins.a"
-// CHECK-ASAN-ANDROID-X86: libclang_rt.builtins.a"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
 //
@@ -338,8 +330,6 @@
 // CHECK-ASAN-ANDROID-SHARED-LIBASAN-NOT: argument unused during compilation: '-shared-libsan'
 // CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.asan.so"
 // CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.asan_static.a"
-// CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.builtins.a"
-// CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.builtins.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
@@ -352,8 +342,6 @@
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lc"
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan.so"
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan_static.a"
-// CHECK-ASAN-ANDROID-SHARED: libclang_rt.builtins.a"
-// CHECK-ASAN-ANDROID-SHARED: libclang_rt.builtins.a"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lresolv"
 
@@ -829,8 +817,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-ANDROID
 // CHECK-CFI-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
-// CHECK-CFI-CROSS-DSO-ANDROID: libclang_rt.builtins.a
-// CHECK-CFI-CROSS-DSO-ANDROID: libclang_rt.builtins.a
 
 // Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
 // RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso -### %s 2>&1 \
@@ -842,8 +828,6 @@
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone.so"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
-// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: libclang_rt.builtins.a
-// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: libclang_rt.builtins.a
 
 // RUN: %clangxx -fsanitize=address -### %s 2>&1 \
 // RUN:     -mmacos-version-min=10.6 \
@@ -896,7 +880,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ELF-RISCV32
 // CHECK-SHADOWCALLSTACK-ELF-RISCV32-NOT: error:
 // CHECK-SHADOWCALLSTACK-ELF-RISCV32: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SHADOWCALLSTACK-ELF-RISCV32: libclang_rt.builtins.a
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=riscv64-unknown-linux -fuse-ld=ld \
@@ -908,15 +891,12 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ANDROID-RISCV64
 // CHECK-SHADOWCALLSTACK-ANDROID-RISCV64-NOT: error:
 // CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: libclang_rt.builtins.a
-// CHECK-SHADOWCALLSTACK-ANDROID-RISCV64: libclang_rt.builtins.a
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=riscv64-unknown-fuchsia -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64
 // CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64-NOT: error:
 // CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SHADOWCALLSTACK-FUCHSIA-RISCV64: libclang_rt.builtins.a
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=aarch64-unknown-linux -fuse-ld=ld -ffixed-x18 \
@@ -932,8 +912,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID-NOT: error:
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: libclang_rt.builtins.a
-// CHECK-SHADOWCALLSTACK-LINUX-AARCH64-X18-ANDROID: libclang_rt.builtins.a
 
 // RUN: not %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=x86-unknown-linux -fuse-ld=ld \
@@ -1001,8 +979,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-ANDROID-ARM
 //
 // CHECK-SAFESTACK-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SAFESTACK-ANDROID-ARM: libclang_rt.builtins.a
-// CHECK-SAFESTACK-ANDROID-ARM: libclang_rt.builtins.a
 
 // RUN: %clang -### %s -shared 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=safe-stack \
@@ -1010,8 +986,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-SHARED-ANDROID-ARM
 //
 // CHECK-SAFESTACK-SHARED-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SAFESTACK-SHARED-ANDROID-ARM: libclang_rt.builtins.a
-// CHECK-SAFESTACK-SHARED-ANDROID-ARM: libclang_rt.builtins.a
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=aarch64-linux-android -fuse-ld=ld -fsanitize=safe-stack \
@@ -1019,8 +993,6 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-ANDROID-AARCH64
 //
 // CHECK-SAFESTACK-ANDROID-AARCH64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-SAFESTACK-ANDROID-AARCH64: libclang_rt.builtins.a
-// CHECK-SAFESTACK-ANDROID-AARCH64: libclang_rt.builtins.a
 
 // RUN: not %clang -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-scei-ps4 -fuse-ld=ld \
@@ -1129,8 +1101,6 @@
 // CHECK-SCUDO-ANDROID: libclang_rt.scudo_standalone.so"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-NOT: "-lresolv"
-// CHECK-SCUDO-ANDROID: libclang_rt.builtins.a"
-// CHECK-SCUDO-ANDROID: libclang_rt.builtins.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=scudo \
@@ -1144,7 +1114,6 @@
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lrt"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lresolv"
-// CHECK-SCUDO-ANDROID-STATIC: "{{.*}}libclang_rt.builtins.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \
