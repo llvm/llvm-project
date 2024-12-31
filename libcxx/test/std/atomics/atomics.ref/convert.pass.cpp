@@ -19,22 +19,42 @@
 #include "test_helper.h"
 #include "test_macros.h"
 
-template <typename T>
+template <typename U>
 struct TestConvert {
   void operator()() const {
+    static_assert(std::is_nothrow_convertible_v<std::atomic_ref<U>, U>);
+    do_test<U>();
+    do_test_atomic<U>();
+    static_assert(std::is_nothrow_convertible_v<std::atomic_ref<U const>, U>);
+    do_test<U const>();
+    if constexpr (std::atomic_ref<U>::is_always_lock_free) {
+      static_assert(std::is_nothrow_convertible_v<std::atomic_ref<U volatile>, U>);
+      do_test<U volatile>();
+      do_test_atomic<U volatile>();
+      static_assert(std::is_nothrow_convertible_v<std::atomic_ref<U const volatile>, U>);
+      do_test<U const volatile>();
+    }
+  }
+
+  template <class T>
+  void do_test() const {
     T x(T(1));
 
-    T copy = x;
+    T copy = const_cast<std::remove_cv_t<T> const&>(x);
     std::atomic_ref<T> const a(copy);
 
-    T converted = a;
-    assert(converted == x);
+    std::remove_cv_t<T> converted = a;
+    assert(converted == const_cast<std::remove_cv_t<T> const&>(x));
 
     ASSERT_NOEXCEPT(T(a));
-    static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
+  }
 
-    auto store = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val); };
-    auto load  = [](std::atomic_ref<T> const& y) { return static_cast<T>(y); };
+  template <class T>
+  void do_test_atomic() const {
+    auto store = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+      y.store(const_cast<std::remove_cv_t<T> const&>(new_val));
+    };
+    auto load = [](std::atomic_ref<T> const& y) { return static_cast<std::remove_cv_t<T>>(y); };
     test_seq_cst<T>(store, load);
   }
 };

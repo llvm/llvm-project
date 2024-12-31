@@ -19,27 +19,49 @@
 #include "test_helper.h"
 #include "test_macros.h"
 
-template <typename T>
+template <typename T, typename U>
+concept has_store = requires { std::declval<T>().store(std::declval<U>()); };
+
+template <typename U>
 struct TestStore {
   void operator()() const {
+    static_assert(has_store<std::atomic_ref<U>, U>);
+    do_test<U>();
+    do_test_atomic<U>();
+    static_assert(!has_store<std::atomic_ref<U const>, U>);
+    if constexpr (std::atomic_ref<U>::is_always_lock_free) {
+      static_assert(has_store<std::atomic_ref<U volatile>, U>);
+      do_test<U volatile>();
+      do_test_atomic<U volatile>();
+      static_assert(!has_store<std::atomic_ref<U const volatile>, U>);
+    }
+  }
+
+  template <typename T>
+  void do_test() const {
     T x(T(1));
     std::atomic_ref<T> const a(x);
 
     a.store(T(2));
-    assert(x == T(2));
+    assert(const_cast<std::remove_cv_t<T> const&>(x) == std::remove_cv_t<T>(2));
     ASSERT_NOEXCEPT(a.store(T(1)));
 
     a.store(T(3), std::memory_order_seq_cst);
-    assert(x == T(3));
+    assert(const_cast<std::remove_cv_t<T> const&>(x) == std::remove_cv_t<T>(3));
     ASSERT_NOEXCEPT(a.store(T(0), std::memory_order_seq_cst));
+  }
 
+  template <typename T>
+  void do_test_atomic() const {
     // TODO memory_order::relaxed
 
     // memory_order::seq_cst
     {
-      auto store_no_arg     = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val); };
-      auto store_with_order = [](std::atomic_ref<T> const& y, T, T new_val) {
-        y.store(new_val, std::memory_order::seq_cst);
+      auto store_no_arg = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+        y.store(const_cast<std::remove_cv_t<T> const&>(new_val));
+      };
+      auto store_with_order = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+        y.store(const_cast<std::remove_cv_t<T> const&>(new_val), std::memory_order::seq_cst);
       };
       auto load = [](std::atomic_ref<T> const& y) { return y.load(); };
       test_seq_cst<T>(store_no_arg, load);
@@ -48,8 +70,10 @@ struct TestStore {
 
     // memory_order::release
     {
-      auto store = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val, std::memory_order::release); };
-      auto load  = [](std::atomic_ref<T> const& y) { return y.load(std::memory_order::acquire); };
+      auto store = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+        y.store(const_cast<std::remove_cv_t<T> const&>(new_val), std::memory_order::release);
+      };
+      auto load = [](std::atomic_ref<T> const& y) { return y.load(std::memory_order::acquire); };
       test_acquire_release<T>(store, load);
     }
   }
