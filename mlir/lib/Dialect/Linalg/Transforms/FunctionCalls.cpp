@@ -1,4 +1,4 @@
-//===- LinalgToStandard.cpp - conversion from Linalg to Standard dialect --===//
+//===- LinalgToFunctionCalls.cpp - Linalg to function calls conversion ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
-
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTLINALGTOSTANDARD
-#include "mlir/Conversion/Passes.h.inc"
+#define GEN_PASS_DEF_CONVERTLINALGTOFUNCTIONCALLSPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
@@ -123,8 +122,7 @@ LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
   return success();
 }
 
-/// Populate the given list with patterns that convert from Linalg to Standard.
-void mlir::linalg::populateLinalgToStandardConversionPatterns(
+void mlir::linalg::populateLinalgToFunctionCallsConversionPatterns(
     RewritePatternSet &patterns) {
   // TODO: ConvOp conversion needs to export a descriptor with relevant
   // attribute values such as kernel striding and dilation.
@@ -132,13 +130,14 @@ void mlir::linalg::populateLinalgToStandardConversionPatterns(
 }
 
 namespace {
-struct ConvertLinalgToStandardPass
-    : public impl::ConvertLinalgToStandardBase<ConvertLinalgToStandardPass> {
+struct ConvertLinalgToFunctionCallsPass
+    : public impl::ConvertLinalgToFunctionCallsPassBase<
+          ConvertLinalgToFunctionCallsPass> {
   void runOnOperation() override;
 };
 } // namespace
 
-void ConvertLinalgToStandardPass::runOnOperation() {
+void ConvertLinalgToFunctionCallsPass::runOnOperation() {
   auto module = getOperation();
   ConversionTarget target(getContext());
   target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
@@ -146,12 +145,7 @@ void ConvertLinalgToStandardPass::runOnOperation() {
                          scf::SCFDialect>();
   target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp>();
   RewritePatternSet patterns(&getContext());
-  populateLinalgToStandardConversionPatterns(patterns);
+  populateLinalgToFunctionCallsConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertLinalgToStandardPass() {
-  return std::make_unique<ConvertLinalgToStandardPass>();
 }

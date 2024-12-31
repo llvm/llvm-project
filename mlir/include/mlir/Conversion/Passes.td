@@ -714,17 +714,6 @@ def ConvertIndexToSPIRVPass : Pass<"convert-index-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
-// LinalgToStandard
-//===----------------------------------------------------------------------===//
-
-def ConvertLinalgToStandard : Pass<"convert-linalg-to-std", "ModuleOp"> {
-  let summary = "Convert the operations from the linalg dialect into the "
-                "Standard dialect";
-  let constructor = "mlir::createConvertLinalgToStandardPass()";
-  let dependentDialects = ["func::FuncDialect", "memref::MemRefDialect"];
-}
-
-//===----------------------------------------------------------------------===//
 // MathToLibm
 //===----------------------------------------------------------------------===//
 

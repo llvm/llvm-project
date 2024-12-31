@@ -22,33 +22,10 @@ class OperationPass;
 
 namespace linalg {
 
-//===----------------------------------------------------------------------===//
-// Patterns to convert a LinalgOp to func.call @external library implementation.
-//===----------------------------------------------------------------------===//
-// These patterns are exposed individually because they are expected to be
-// typically used individually.
-
-// Create a new call to the type-canonicalized `LinalgOp::getLibraryCallName()`
-// function. The implementation of the function can be either in the same module
-// or in an externally linked library.
-// This is a generic entry point for all LinalgOp, except for CopyOp, for which
-// more specialized patterns are provided.
-class LinalgOpToLibraryCallRewrite
-    : public OpInterfaceRewritePattern<LinalgOp> {
-public:
-  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
-
-  LogicalResult matchAndRewrite(LinalgOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Populate the given list with patterns that convert from Linalg to Standard.
-void populateLinalgToStandardConversionPatterns(RewritePatternSet &patterns);
-
-} // namespace linalg
-
 /// Create a pass to convert Linalg operations to the Standard dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertLinalgToStandardPass();
+
+} // namespace linalg
 
 } // namespace mlir
 
