@@ -748,6 +748,12 @@ public:
     if (!emitc::isSupportedFloatType(operandType))
       return rewriter.notifyMatchFailure(castOp,
                                          "unsupported cast source type");
+    if (auto roundingModeOp =
+            dyn_cast<arith::ArithRoundingModeInterface>(*castOp)) {
+      // Only supporting default rounding mode as of now.
+      if (roundingModeOp.getRoundingModeAttr())
+        return rewriter.notifyMatchFailure(castOp, "unsupported rounding mode");
+    }
 
     Type dstType = this->getTypeConverter()->convertType(castOp.getType());
     if (!dstType)
