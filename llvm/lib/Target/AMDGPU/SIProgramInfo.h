@@ -60,7 +60,7 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
     uint32_t LdsSize = 0;
     uint32_t EXCPEnable = 0;
 
-    const MCExpr *ComputePGMRSrc3GFX90A = nullptr;
+    const MCExpr *ComputePGMRSrc3 = nullptr;
 
     const MCExpr *NumVGPR = nullptr;
     const MCExpr *NumArchVGPR = nullptr;
@@ -78,6 +78,9 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
 
     // Number of VGPRs that meets number of waves per execution unit request.
     const MCExpr *NumVGPRsForWavesPerEU = nullptr;
+
+    // Number of named barriers used by the kernel.
+    const MCExpr *NamedBarCnt = nullptr;
 
     // Final occupancy.
     const MCExpr *Occupancy = nullptr;
