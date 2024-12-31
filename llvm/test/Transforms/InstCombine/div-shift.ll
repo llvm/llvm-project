@@ -1294,3 +1294,100 @@ entry:
   %div = sdiv i32 %add, %add2
   ret i32 %div
 }
+
+define i8 @udiv_if_power_of_two(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_if_power_of_two(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = phi i8 [ [[TMP3]], [[BB1]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[_0_SROA_0_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %y)
+  %cmp = icmp eq i8 %ctpop, 1
+  br i1 %cmp, label %bb1, label %bb3
+
+bb1:
+  %div = udiv i8 %x, %y
+  br label %bb3
+
+bb3:
+  %result = phi i8 [ %div, %bb1 ], [ 0, %start ]
+  ret i8 %result
+}
+
+define i8 @udiv_exact_assume_power_of_two(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_exact_assume_power_of_two(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[_0:%.*]] = udiv exact i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i8 [[_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %y)
+  %cond = icmp eq i8 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv exact i8 %x, %y
+  ret i8 %div
+}
+
+define i7 @udiv_assume_power_of_two_illegal_type(i7 %x, i7 %y) {
+; CHECK-LABEL: @udiv_assume_power_of_two_illegal_type(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i7 1, 8) i7 @llvm.ctpop.i7(i7 [[Y:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i7 [[TMP0]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[_0:%.*]] = udiv i7 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i7 [[_0]]
+;
+start:
+  %ctpop = tail call i7 @llvm.ctpop.i7(i7 %y)
+  %cond = icmp eq i7 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv i7 %x, %y
+  ret i7 %div
+}
+
+define i8 @udiv_assume_power_of_two_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_assume_power_of_two_multiuse(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[_0:%.*]] = udiv i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    call void @use(i8 [[_0]])
+; CHECK-NEXT:    ret i8 [[_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %y)
+  %cond = icmp eq i8 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv i8 %x, %y
+  call void @use(i8 %div)
+  ret i8 %div
+}
+
+define i8 @udiv_power_of_two_negative(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_power_of_two_negative(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[Z:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[CTPOP]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[_0:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[_0]]
+;
+start:
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %z)
+  %cond = icmp eq i8 %ctpop, 1
+  tail call void @llvm.assume(i1 %cond)
+  %div = udiv i8 %x, %y
+  ret i8 %div
+}
