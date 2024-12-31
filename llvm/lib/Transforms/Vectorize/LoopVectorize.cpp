@@ -8953,14 +8953,65 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
   }
 }
 
+static bool isIVUse(VPValue *Incoming) {
+  VPRecipeBase *IncomingDef = Incoming->getDefiningRecipe();
+  if (!IncomingDef)
+    return false;
+  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef);
+  if (WideIV) {
+    return isa<VPWidenPointerInductionRecipe>(WideIV) || !cast<VPWidenIntOrFpInductionRecipe>(WideIV)->getTruncInst();
+  }
+
+  if (IncomingDef->getNumOperands() != 2)
+    return false;
+  WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef->getOperand(0));
+  if (!WideIV)
+    WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef->getOperand(1));
+  if (!WideIV)
+    return false;
+
+  using namespace VPlanPatternMatch;
+  auto &ID = WideIV->getInductionDescriptor();
+  switch (ID.getInductionOpcode()) {
+  case Instruction::Add:
+    return match(Incoming,
+                 m_c_Binary<Instruction::Add>(
+                     m_VPValue(), m_Specific(WideIV->getStepValue())));
+  case Instruction::FAdd:
+    return match(Incoming,
+                 m_c_Binary<Instruction::FAdd>(
+                     m_VPValue(), m_Specific(WideIV->getStepValue())));
+  case Instruction::FSub:
+    return match(Incoming,
+                 m_Binary<Instruction::FSub>(
+                     m_VPValue(), m_Specific(WideIV->getStepValue())));
+  case Instruction::Sub: {
+    VPValue *Step;
+    return match(Incoming,
+                 m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) &&
+           Step->isLiveIn() && WideIV->getStepValue()->isLiveIn() &&
+           (cast<ConstantInt>(Step->getLiveInIRValue())->getValue() +
+            cast<ConstantInt>(WideIV->getStepValue()->getLiveInIRValue())
+                ->getValue())
+               .isZero();
+  }
+  default:
+    return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
+      match(
+          Incoming,
+          m_GetElementPtr(m_VPValue(), m_Specific(WideIV->getStepValue())));
+  }
+  llvm_unreachable("should have been covered by switch above");
+}
+
 // Collect VPIRInstructions for phis in the exit blocks that are modeled
 // in VPlan and add the exiting VPValue as operand. Some exiting values are not
 // modeled explicitly yet and won't be included. Those are un-truncated
 // VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
 // increments.
 static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
-    Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
-    const MapVector<PHINode *, InductionDescriptor> &Inductions) {
+    Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan
+    ) {
   auto *MiddleVPBB = Plan.getMiddleBlock();
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
@@ -8985,18 +9036,8 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
         // Exit values for inductions are computed and updated outside of VPlan
         // and independent of induction recipes.
         // TODO: Compute induction exit values in VPlan.
-        if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
-             !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-            isa<VPWidenPointerInductionRecipe>(V) ||
-            (isa<Instruction>(IncomingValue) &&
-             OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
-             any_of(IncomingValue->users(), [&Inductions](User *U) {
-               auto *P = dyn_cast<PHINode>(U);
-               return P && Inductions.contains(P);
-             }))) {
-          if (ExitVPBB->getSinglePredecessor() == MiddleVPBB)
-            continue;
-        }
+        if (isIVUse(V) && ExitVPBB->getSinglePredecessor() == MiddleVPBB)
+          continue;
         ExitUsersToFix.insert(ExitIRI);
         ExitIRI->addOperand(V);
       }
@@ -9332,7 +9373,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   }
   addScalarResumePhis(RecipeBuilder, *Plan);
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
-      OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
+      OrigLoop, RecipeBuilder, *Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
     reportVectorizationFailure(

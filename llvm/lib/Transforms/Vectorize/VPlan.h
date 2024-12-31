@@ -2095,6 +2095,15 @@ public:
            R->getVPDefID() == VPDef::VPWidenPointerInductionSC;
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
+  }
+
   virtual void execute(VPTransformState &State) override = 0;
 
   /// Returns the step value of the induction.
