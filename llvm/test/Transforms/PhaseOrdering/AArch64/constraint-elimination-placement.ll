@@ -105,29 +105,20 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:      i64 17, label [[IF_END_I31:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I_I:%.*]] = trunc i32 [[CALL8_I_I]] to i8
-; CHECK-NEXT:    [[CALL1_I1_I:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I]])
+; CHECK-NEXT:    [[CALL1_I1_I:%.*]] = tail call i1 @test2_fn4(i8 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CALL1_I1_I]], true
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       test2_fn2.exit12:
-; CHECK-NEXT:    [[CALL8_I_I8:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I_I9:%.*]] = trunc i32 [[CALL8_I_I8]] to i8
-; CHECK-NEXT:    [[CALL1_I1_I10:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I9]])
+; CHECK-NEXT:    [[CALL1_I1_I10:%.*]] = tail call i1 @test2_fn4(i8 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CALL1_I1_I10]], true
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
-; CHECK-NEXT:    [[CMP4_I11:%.*]] = icmp eq i32 [[CALL8_I_I8]], 0
-; CHECK-NEXT:    br i1 [[CMP4_I11]], label [[TEST2_FN2_EXIT24:%.*]], label [[COMMON_RET]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       test2_fn2.exit24:
 ; CHECK-NEXT:    store i8 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       if.end.i31:
-; CHECK-NEXT:    [[CALL8_I_I32:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I_I33:%.*]] = trunc i32 [[CALL8_I_I32]] to i8
-; CHECK-NEXT:    [[CALL1_I1_I34:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I33]])
+; CHECK-NEXT:    [[CALL1_I1_I34:%.*]] = tail call i1 @test2_fn4(i8 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[CALL1_I1_I34]], true
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -162,16 +153,12 @@ define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i64 [[CALL]], [[COND_I]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL8_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I:%.*]] = trunc i32 [[CALL8_I]] to i8
-; CHECK-NEXT:    [[CALL1_I1:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I]])
+; CHECK-NEXT:    [[CALL1_I1:%.*]] = tail call i1 @test2_fn4(i8 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CALL1_I1]], true
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[CALL8_I]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP4]], [[IF_END]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i1 [[RETVAL_0]]
+; CHECK-NEXT:    ret i1 [[CMP2_NOT]]
 ;
 entry:
   %call = call i64 @strlen(ptr %__rhs)
@@ -231,11 +218,6 @@ entry:
 }
 
 define internal i32 @test2_fn6() {
-; CHECK-LABEL: define internal fastcc noundef i32 @test2_fn6(
-; CHECK-SAME: ) unnamed_addr #[[ATTR5]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 0
-;
 entry:
   %call = call i32 @memcmp(ptr @.str.79, ptr @.str.79, i64 2)
   ret i32 %call

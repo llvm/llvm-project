@@ -1253,6 +1253,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   else
     MPM.addPass(buildInlinerPipeline(Level, Phase));
 
+  MPM.addPass(IPSCCPPass(
+              IPSCCPOptions(/*AllowFuncSpec=*/
+                            Level != OptimizationLevel::Os &&
+                            Level != OptimizationLevel::Oz &&
+                            !isLTOPreLink(Phase))));
+
   // Remove any dead arguments exposed by cleanups, constant folding globals,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
