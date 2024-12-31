@@ -11,20 +11,18 @@
 #define _LIBCPP___BIT_REFERENCE
 
 #include <__algorithm/copy_n.h>
-#include <__algorithm/fill_n.h>
 #include <__algorithm/min.h>
 #include <__bit/countr.h>
-#include <__bit/invert_if.h>
-#include <__bit/popcount.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__utility/swap.h>
-#include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

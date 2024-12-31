@@ -1619,13 +1619,16 @@ gentbl(
 
 cc_library(
     name = "FrontendAtomic",
+    srcs = glob([
+        "lib/Frontend/Atomic/*.cpp",
+    ]),
     hdrs = glob([
         "include/llvm/Frontend/Atomic/*.h",
     ]),
     copts = llvm_copts,
     deps = [
+        ":Core",
         ":Support",
-        ":ir_headers",
     ],
 )
 
@@ -2800,6 +2803,7 @@ cc_library(
         ":MC",
         ":MCDisassembler",
         ":Object",
+        ":OrcShared",
         ":OrcTargetProcess",
         ":Passes",
         ":Support",
@@ -2937,6 +2941,8 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Shared/*.h",
+    ] + [
+        "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
     ]),
     copts = llvm_copts,
     deps = [

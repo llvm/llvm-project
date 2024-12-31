@@ -1647,10 +1647,8 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
   if (getObjectUnderConstruction(State, BTE, LC)) {
-    TempDtorBuilder.markInfeasible(false);
     TempDtorBuilder.generateNode(State, true, Pred);
   } else {
-    TempDtorBuilder.markInfeasible(true);
     TempDtorBuilder.generateNode(State, false, Pred);
   }
 }
@@ -1827,6 +1825,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCComputeConstructClass:
     case Stmt::OpenACCLoopConstructClass:
     case Stmt::OpenACCCombinedConstructClass:
+    case Stmt::OpenACCDataConstructClass:
+    case Stmt::OpenACCEnterDataConstructClass:
+    case Stmt::OpenACCExitDataConstructClass:
+    case Stmt::OpenACCHostDataConstructClass:
+    case Stmt::OpenACCWaitConstructClass:
+    case Stmt::OpenACCInitConstructClass:
+    case Stmt::OpenACCShutdownConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
@@ -2770,7 +2775,6 @@ void ExprEngine::processBranch(const Stmt *Condition,
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
     BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);
-    NullCondBldr.markInfeasible(false);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2790,40 +2794,25 @@ void ExprEngine::processBranch(const Stmt *Condition,
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder Builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     if (PredN->isSink())
       continue;
 
     ProgramStateRef PrevState = PredN->getState();
 
-    ProgramStateRef StTrue, StFalse;
+    ProgramStateRef StTrue = PrevState, StFalse = PrevState;
     if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN))
       std::tie(StTrue, StFalse) = *KnownCondValueAssumption;
-    else {
-      assert(!isa<ObjCForCollectionStmt>(Condition));
-      builder.generateNode(PrevState, true, PredN);
-      builder.generateNode(PrevState, false, PredN);
-      continue;
-    }
+
     if (StTrue && StFalse)
       assert(!isa<ObjCForCollectionStmt>(Condition));
 
-    // Process the true branch.
-    if (builder.isFeasible(true)) {
-      if (StTrue)
-        builder.generateNode(StTrue, true, PredN);
-      else
-        builder.markInfeasible(true);
-    }
+    if (StTrue)
+      Builder.generateNode(StTrue, true, PredN);
 
-    // Process the false branch.
-    if (builder.isFeasible(false)) {
-      if (StFalse)
-        builder.generateNode(StFalse, false, PredN);
-      else
-        builder.markInfeasible(false);
-    }
+    if (StFalse)
+      Builder.generateNode(StFalse, false, PredN);
   }
   currBldrCtx = nullptr;
 }
@@ -2845,14 +2834,13 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder builder(Pred, Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Pred, Dst, BuilderCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
   }
 
-  builder.generateNode(state, initHasRun, Pred);
-  builder.markInfeasible(!initHasRun);
+  Builder.generateNode(state, initHasRun, Pred);
 
   currBldrCtx = nullptr;
 }

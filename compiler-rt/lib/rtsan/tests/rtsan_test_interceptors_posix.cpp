@@ -47,6 +47,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 
@@ -352,6 +353,31 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
+TEST_F(RtsanFileTest, OpenMemstreamDiesWhenRealtime) {
+  char *buffer;
+  size_t size;
+  auto Func = [&buffer, &size]() {
+    FILE *f = open_memstream(&buffer, &size);
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "open_memstream");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, FmemOpenDiesWhenRealtime) {
+  char buffer[1024];
+  auto Func = [&buffer]() {
+    FILE *f = fmemopen(&buffer, sizeof(buffer), "w");
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fmemopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 class RtsanOpenedFileTest : public RtsanFileTest {
 protected:
   void SetUp() override {
@@ -388,6 +414,26 @@ TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
   ioctl(GetOpenFd(), FIONREAD, &arg);
 
   EXPECT_THAT(arg, Ge(0));
+}
+
+TEST_F(RtsanOpenedFileTest, FdopenDiesWhenRealtime) {
+  auto Func = [&]() {
+    FILE *f = fdopen(GetOpenFd(), "w");
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fdopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FreopenDiesWhenRealtime) {
+  auto Func = [&]() {
+    FILE *newfile = freopen(GetTemporaryFilePath(), "w", GetOpenFile());
+    EXPECT_THAT(newfile, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("freopen"));
+  ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
@@ -859,6 +905,16 @@ TEST(TestRtsanInterceptors, AcceptingASocketDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_ACCEPT4
+TEST(TestRtsanInterceptors, Accepting4ASocketDiesWhenRealtime) {
+  auto Func = []() {
+    EXPECT_LT(accept4(kNotASocketFd, nullptr, nullptr, 0), 0);
+  };
+  ExpectRealtimeDeath(Func, "accept4");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST(TestRtsanInterceptors, ConnectingASocketDiesWhenRealtime) {
   auto Func = []() { EXPECT_NE(connect(kNotASocketFd, nullptr, 0), 0); };
   ExpectRealtimeDeath(Func, "connect");
@@ -1025,6 +1081,21 @@ TEST_F(EpollTest, EpollPWaitDiesWhenRealtime) {
 }
 #endif // SANITIZER_INTERCEPT_EPOLL
 
+#if SANITIZER_INTERCEPT_PPOLL
+TEST(TestRtsanInterceptors, PpollDiesWhenRealtime) {
+  struct pollfd fds[1];
+  fds[0].fd = 0;
+  fds[0].events = POLLIN;
+
+  timespec ts = {0, 0};
+
+  auto Func = [&fds, &ts]() { ppoll(fds, 1, &ts, nullptr); };
+
+  ExpectRealtimeDeath(Func, "ppoll");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 #if SANITIZER_INTERCEPT_KQUEUE
 TEST(TestRtsanInterceptors, KqueueDiesWhenRealtime) {
   auto Func = []() { kqueue(); };
@@ -1089,5 +1160,21 @@ TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "pipe");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+TEST(TestRtsanInterceptors, SyscallDiesWhenRealtime) {
+  auto Func = []() { syscall(SYS_getpid); };
+  ExpectRealtimeDeath(Func, "syscall");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, GetPidReturnsSame) {
+  int pid = syscall(SYS_getpid);
+  EXPECT_THAT(pid, Ne(-1));
+
+  EXPECT_THAT(getpid(), Eq(pid));
+}
+#pragma clang diagnostic pop
 
 #endif // SANITIZER_POSIX

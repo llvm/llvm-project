@@ -1842,9 +1842,12 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
   if (DstInt && DstInt->hasSubRanges() && DstReg != SrcReg) {
     for (MachineOperand &MO : MRI->reg_operands(DstReg)) {
-      unsigned SubReg = MO.getSubReg();
-      if (SubReg == 0 || MO.isUndef())
+      if (MO.isUndef())
         continue;
+      unsigned SubReg = MO.getSubReg();
+      if (SubReg == 0 && MO.isDef())
+        continue;
+
       MachineInstr &MI = *MO.getParent();
       if (MI.isDebugInstr())
         continue;

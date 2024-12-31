@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
@@ -127,28 +128,29 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
-/// A helper function for converting Scalar types to vector types. If
-/// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
-    return Scalar;
-  return VectorType::get(Scalar, EC);
-}
-
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
-}
-
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
 /// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
+///
+/// Note: isTriviallyVectorizable implies isTriviallyScalarizable.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
+/// Identify if the intrinsic is trivially scalarizable.
+/// This method returns true following the same predicates of
+/// isTriviallyVectorizable.
+
+/// Note: There are intrinsics where implementing vectorization for the
+/// intrinsic is redundant, but we want to implement scalarization of the
+/// vector. To prevent the requirement that an intrinsic also implements
+/// vectorization we provide this seperate function.
+bool isTriviallyScalarizable(Intrinsic::ID ID, const TargetTransformInfo *TTI);
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                        unsigned ScalarOpdIdx);
+/// \p TTI is used to consider target specific intrinsics, if no target specific
+/// intrinsics will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
+                                        const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
@@ -158,9 +160,11 @@ bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                             const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
-/// overloaded at the struct element index \p RetIdx.
-bool isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
-                                                      int RetIdx);
+/// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
+/// consider target specific intrinsics, if no target specific intrinsics
+/// will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns

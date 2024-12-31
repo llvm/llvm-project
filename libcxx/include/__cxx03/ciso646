@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CISO646
-#define _LIBCPP_CISO646
+#ifndef _LIBCPP___CXX03_CISO646
+#define _LIBCPP___CXX03_CISO646
 
 /*
     ciso646 synopsis
@@ -21,4 +21,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CISO646
+#endif // _LIBCPP___CXX03_CISO646
