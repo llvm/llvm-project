@@ -444,8 +444,6 @@ public:
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
                                 unsigned PointerSize) override;
-
-  void doFinalizationAtSectionEnd(MCSection *Section) override;
 };
 
 } // end anonymous namespace.
@@ -2689,18 +2687,6 @@ void MCAsmStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
   emitIntValue(dwarf::DW_LNS_advance_line, 1);
   emitSLEB128IntValue(LineDelta);
   emitIntValue(dwarf::DW_LNS_copy, 1);
-}
-
-void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
-  // Emit section end. This is used to tell the debug line section where the end
-  // is for a text section if we don't use .loc to represent the debug line.
-  assert(MAI->isAIX());
-  switchSectionNoPrint(Section);
-
-  MCSymbol *Sym = getCurrentSectionOnly()->getEndSymbol(getContext());
-
-  if (!Sym->isInSection())
-    emitLabel(Sym);
 }
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
