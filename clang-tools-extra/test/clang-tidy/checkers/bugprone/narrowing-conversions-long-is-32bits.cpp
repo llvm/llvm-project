@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
+// RUN: %check_clang_tidy %s bugprone-narrowing-conversions %t \
 // RUN: -- -- -target x86_64-unknown-linux -m32
 
 static_assert(sizeof(int) * 8 == 32, "int is 32-bits");
@@ -16,8 +16,8 @@ void narrow_integer_to_signed_integer_is_not_ok() {
 
   i = l;  // int and long are the same type.
   i = ll; // int64_t does not fit in an int32_t
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: narrowing conversion from 'long long' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: narrowing conversion from 'long long' to signed type 'int' is implementation-defined [bugprone-narrowing-conversions]
   ll = ul;  // uint32_t fits into int64_t
   ll = ull; // uint64_t does not fit in an int64_t
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: narrowing conversion from 'unsigned long long' to signed type 'long long' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: narrowing conversion from 'unsigned long long' to signed type 'long long' is implementation-defined [bugprone-narrowing-conversions]
 }

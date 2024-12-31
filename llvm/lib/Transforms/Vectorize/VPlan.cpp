@@ -469,10 +469,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
 }
 
 VPIRBasicBlock *VPIRBasicBlock::clone() {
-  auto *NewBlock = getPlan()->createVPIRBasicBlock(IRBB);
-  for (VPRecipeBase &R : make_early_inc_range(*NewBlock))
-    R.eraseFromParent();
-
+  auto *NewBlock = getPlan()->createEmptyVPIRBasicBlock(IRBB);
   for (VPRecipeBase &R : Recipes)
     NewBlock->appendRecipe(R.clone());
   return NewBlock;
@@ -517,14 +514,11 @@ void VPBasicBlock::execute(VPTransformState *State) {
   executeRecipes(State, NewBB);
 }
 
-void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
-  for (VPRecipeBase &R : Recipes) {
-    for (auto *Def : R.definedValues())
-      Def->replaceAllUsesWith(NewValue);
-
-    for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-      R.setOperand(I, NewValue);
-  }
+VPBasicBlock *VPBasicBlock::clone() {
+  auto *NewBlock = getPlan()->createVPBasicBlock(getName());
+  for (VPRecipeBase &R : *this)
+    NewBlock->appendRecipe(R.clone());
+  return NewBlock;
 }
 
 VPBasicBlock *VPBasicBlock::clone() {
@@ -719,13 +713,6 @@ VPRegionBlock *VPRegionBlock::clone() {
   return NewRegion;
 }
 
-void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
-  for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
-    // Drop all references in VPBasicBlocks and replace all uses with
-    // DummyValue.
-    Block->dropAllReferences(NewValue);
-}
-
 void VPRegionBlock::execute(VPTransformState *State) {
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
       RPOT(Entry);
@@ -838,15 +825,21 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-  if (Entry) {
-    VPValue DummyValue;
+  VPValue DummyValue;
 
-    for (auto *VPB : reverse(CreatedBlocks))
-      VPB->dropAllReferences(&DummyValue);
+  for (auto *VPB : CreatedBlocks) {
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
+      // Replace all operands of recipes and all VPValues defined in VPBB with
+      // DummyValue so the block can be deleted.
+      for (VPRecipeBase &R : *VPBB) {
+        for (auto *Def : R.definedValues())
+          Def->replaceAllUsesWith(&DummyValue);
 
-    for (auto *VPB : reverse(CreatedBlocks)) {
-      delete VPB;
+        for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+          R.setOperand(I, &DummyValue);
+      }
     }
+    delete VPB;
   }
   for (VPValue *VPV : VPLiveInsToFree)
     delete VPV;
@@ -972,6 +965,7 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   }
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+  // VPBB is now dead and will be cleaned up when the plan gets destroyed.
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.
@@ -1231,7 +1225,7 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 }
 
 VPlan *VPlan::duplicate() {
-  unsigned CreatedBlockSize = CreatedBlocks.size();
+  unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
   const auto &[NewEntry, __] = cloneFrom(Entry);
 
@@ -1273,20 +1267,28 @@ VPlan *VPlan::duplicate() {
          "TripCount must have been added to Old2NewVPValues");
   NewPlan->TripCount = Old2NewVPValues[TripCount];
 
-  // Transfer cloned blocks to new VPlan.
-  for (unsigned I : seq<unsigned>(CreatedBlockSize, CreatedBlocks.size()))
-    NewPlan->CreatedBlocks.push_back(CreatedBlocks[I]);
-  CreatedBlocks.truncate(CreatedBlockSize);
+  // Transfer all cloned blocks (the second half of all current blocks) from
+  // current to new VPlan.
+  unsigned NumBlocksAfterCloning = CreatedBlocks.size();
+  for (unsigned I :
+       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning))
+    NewPlan->CreatedBlocks.push_back(this->CreatedBlocks[I]);
+  CreatedBlocks.truncate(NumBlocksBeforeCloning);
 
   return NewPlan;
 }
 
-VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
+VPIRBasicBlock *VPlan::createEmptyVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = new VPIRBasicBlock(IRBB);
+  CreatedBlocks.push_back(VPIRBB);
+  return VPIRBB;
+}
+
+VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
+  auto *VPIRBB = createEmptyVPIRBasicBlock(IRBB);
   for (Instruction &I :
        make_range(IRBB->begin(), IRBB->getTerminator()->getIterator()))
     VPIRBB->appendRecipe(new VPIRInstruction(I));
-  CreatedBlocks.push_back(VPIRBB);
   return VPIRBB;
 }
 

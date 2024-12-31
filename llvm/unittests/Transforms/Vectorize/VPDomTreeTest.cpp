@@ -175,9 +175,9 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
     VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB3, "R1");
 
-    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
-    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("");
+    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
+    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
+    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB#");
     VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB3, "R2");
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
@@ -193,8 +193,7 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
     VPBlockUtils::connectBlocks(VPBB1, R1);
-    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock(""
-                                                  "VPBB2");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
     VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
