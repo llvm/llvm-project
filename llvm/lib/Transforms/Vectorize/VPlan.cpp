@@ -555,7 +555,7 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
 template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
   if (P && P->isReplicator()) {
     P = P->getParent();
-    assert(!cast<VPRegionBlock>(P)->isReplicator() &&
+    assert((!P || !cast<VPRegionBlock>(P)->isReplicator()) &&
            "unexpected nested replicate regions");
   }
   return P;
