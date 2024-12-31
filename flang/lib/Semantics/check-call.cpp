@@ -703,12 +703,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
     std::optional<parser::MessageFixedText> undefinableMessage;
-    if (dummy.intent == common::Intent::Out) {
-      undefinableMessage =
-          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
-    } else if (dummy.intent == common::Intent::InOut) {
+    DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
+    if (dummy.intent == common::Intent::InOut) {
+      flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
       undefinableMessage =
           "Actual argument associated with INTENT(IN OUT) %s is not definable"_err_en_US;
+    } else if (dummy.intent == common::Intent::Out) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
     } else if (context.ShouldWarn(common::LanguageFeature::
                        UndefinableAsynchronousOrVolatileActual)) {
       if (dummy.attrs.test(
@@ -722,7 +724,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (undefinableMessage) {
-      DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
       if (isElemental) { // 15.5.2.4(21)
         flags.set(DefinabilityFlag::VectorSubscriptIsOk);
       }
