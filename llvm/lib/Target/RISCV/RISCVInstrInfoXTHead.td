@@ -553,10 +553,6 @@ def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy4:$i)), 2)>;
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy8:$i)), 3)>;
-
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
-          (SLLI (XLenVT (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
-                                  (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)), 3)>;
 } // Predicates = [HasVendorXTHeadBa]
 
 let Predicates = [HasVendorXTHeadBb] in {
