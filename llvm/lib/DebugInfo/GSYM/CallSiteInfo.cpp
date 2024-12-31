@@ -151,7 +151,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionYAML)
 
 Error CallSiteInfoLoader::loadYAML(StringRef YAMLFile) {
   // Step 1: Read YAML file
-  auto BufferOrError = MemoryBuffer::getFile(YAMLFile);
+  auto BufferOrError = MemoryBuffer::getFile(YAMLFile, /*IsText=*/true);
   if (!BufferOrError)
     return errorCodeToError(BufferOrError.getError());
 
