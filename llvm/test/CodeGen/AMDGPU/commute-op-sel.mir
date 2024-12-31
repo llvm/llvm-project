@@ -1,11 +1,11 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=machine-cse -verify-machineinstrs %s -o - 2>&1 | FileCheck --check-prefix=GCN %s
 
-# GCN-LABEL: name: test_machine_cse_op_sel
-# GCN: %2:vgpr_32 = V_ADD_NC_U16_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
-# GCN: DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %2, 0, 1, 0, implicit $exec
 ---
 name: test_machine_cse_op_sel
 body: |
+  ; GCN-LABEL: name: test_machine_cse_op_sel
+  ; GCN: %2:vgpr_32 = V_ADD_NC_U16_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %2, 0, 1, 0, implicit $exec
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
@@ -14,3 +14,14 @@ body: |
     DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %3, 0, 1, 0, implicit $exec
 ...
 
+---
+name: test_machine_cse_op_inline_const
+body: |
+  ; GCN-LABEL: name: test_machine_cse_op_inline_const
+  ; GCN: %0:vgpr_32 = V_ADD_NC_U16_e64 0, 64, 0, -3, 1, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %2:vgpr_32, %0, %0, 0, 1, 0, implicit $exec
+  bb.0:
+    %1:vgpr_32 = V_ADD_NC_U16_e64 0, 64, 0, -3, 1, 0, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_ADD_NC_U16_e64 0, -3, 0, 64, 1, 0, implicit $mode, implicit $exec
+    DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %1, %2, 0, 1, 0, implicit $exec
+...
