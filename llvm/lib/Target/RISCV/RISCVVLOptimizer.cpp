@@ -50,7 +50,9 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  bool checkUsers(const MachineOperand *&CommonVL, MachineInstr &MI);
+  /// Returns the largest common VL MachineOperand that may be used to optimize
+  /// MI. Returns std::nullopt if it failed to find a suitable VL.
+  std::optional<const MachineOperand> checkUsers(MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -1045,15 +1047,15 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-static MachineOperand One = MachineOperand::CreateImm(1);
-
-bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
-                                  MachineInstr &MI) {
+std::optional<const MachineOperand>
+RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
   // along lines of an instcombine style worklist which integrates the outer
   // pass.
   bool CanReduceVL = true;
+  const MachineOperand *CommonVL = nullptr;
+  const MachineOperand One = MachineOperand::CreateImm(1);
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
@@ -1139,7 +1141,9 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
       break;
     }
   }
-  return CanReduceVL;
+  return CanReduceVL && CommonVL
+             ? std::make_optional<const MachineOperand>(*CommonVL)
+             : std::nullopt;
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
@@ -1151,12 +1155,11 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     MachineInstr &MI = *Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-    const MachineOperand *CommonVL = nullptr;
-    bool CanReduceVL = true;
-    if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
-      CanReduceVL = checkUsers(CommonVL, MI);
+    if (!isVectorRegClass(MI.getOperand(0).getReg(), MRI))
+      continue;
 
-    if (!CanReduceVL || !CommonVL)
+    auto CommonVL = checkUsers(MI);
+    if (!CommonVL)
       continue;
 
     assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
