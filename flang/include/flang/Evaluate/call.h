@@ -250,6 +250,7 @@ public:
 
   std::optional<Expr<SubscriptInteger>> LEN() const;
   int Rank() const;
+  static constexpr int Corank() { return 0; } // TODO
   bool IsElemental() const { return proc_.IsElemental(); }
   bool hasAlternateReturns() const { return hasAlternateReturns_; }
 

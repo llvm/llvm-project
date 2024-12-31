@@ -48,6 +48,7 @@ add_flang_library(FIRBuilder
   FIRDialect
   FIRDialectSupport
   FIRSupport
+  FortranEvaluate
   HLFIRDialect
   ${dialect_libs}
   ${extension_libs}

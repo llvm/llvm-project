@@ -65,6 +65,7 @@ public:
   ~ConstantBounds();
   const ConstantSubscripts &shape() const { return shape_; }
   int Rank() const { return GetRank(shape_); }
+  static constexpr int Corank() { return 0; }
   Constant<SubscriptInteger> SHAPE() const;
 
   // It is possible in this representation for a constant array to have

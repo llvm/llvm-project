@@ -937,6 +937,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (!call.arguments().empty()) {
         return (*this)(call.arguments()[0]);
       }
+    } else if (intrinsic->name == "lcobound" || intrinsic->name == "ucobound") {
+      if (call.arguments().size() == 3 && !call.arguments().at(1).has_value()) {
+        return Shape(1, ExtentExpr{GetCorank(call.arguments().at(0))});
+      }
     } else if (intrinsic->name == "matmul") {
       if (call.arguments().size() == 2) {
         if (auto ashape{(*this)(call.arguments()[0])}) {
@@ -1075,6 +1079,11 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             }
           }
         }
+      }
+    } else if (intrinsic->name == "this_image") {
+      if (call.arguments().size() == 2) {
+        // THIS_IMAGE(coarray, no DIM, [TEAM])
+        return Shape(1, ExtentExpr{GetCorank(call.arguments().at(0))});
       }
     } else if (intrinsic->name == "transpose") {
       if (call.arguments().size() >= 1) {
