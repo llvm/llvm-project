@@ -143,7 +143,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
     // %3 = tensor.insert_slice %2 into ...
     config.followSameTypeOrCastsOnly = true;
     SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
-        source.get(), /*condition=*/
+        &source, /*condition=*/
         [&](Value val) { return val.getDefiningOp<tensor::EmptyOp>(); }, config,
         &visitedOpOperands);
 
@@ -155,10 +155,8 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
           visitedOpOperands, [&emptyTensorOp](OpOperand *opOperand) {
             return llvm::count(emptyTensorOp->getUses(), *opOperand);
           });
-      // This could be achieved when a use of `emptyTensorOp` is being
-      // consumed by `SubsetInsertionOpInterface`'s source directly.
-      if (iter == visitedOpOperands.end())
-        continue;
+
+      assert(iter != visitedOpOperands.end() && "could not find use");
       OpOperand *useToBeReplaced = *iter;
       Operation *user = useToBeReplaced->getOwner();
       auto replacement = subsetsExtractionFn(rewriter, op, emptyTensorOp, user);
