@@ -40,6 +40,7 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__ranges/zip_view.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -72,15 +73,11 @@ struct __extract_last<_Tp> {
 };
 
 template <class _Tp, class... _Tail>
-struct __derived_from_pack {
-  constexpr static bool value =
-      __derived_from_pack<_Tp, typename __extract_last<_Tail...>::type>::value && __derived_from_pack<_Tail...>::value;
-};
+constexpr bool __derived_from_pack =
+    __derived_from_pack<_Tp, typename __extract_last<_Tail...>::type> && __derived_from_pack<_Tail...>;
 
 template <class _Tp, class _IterCategory>
-struct __derived_from_pack<_Tp, _IterCategory> {
-  constexpr static bool value = derived_from<_Tp, _IterCategory>;
-};
+constexpr bool __derived_from_pack<_Tp, _IterCategory> = derived_from<_Tp, _IterCategory>;
 
 template <class _View, class... _Views>
 struct __last_view : __last_view<_Views...> {};
@@ -133,7 +130,7 @@ concept __concat_is_bidirectional =
 template <bool _Const, class... _Views>
 concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
 
-template <bool _Const, class... Ts>
+template <bool _Const, class... _Tp>
 struct __apply_drop_first;
 
 template <bool _Const, class Head, class... Tail>
@@ -195,23 +192,23 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires(sized_range<_Views> && ...)
   {
-    return apply(
+    return std::apply(
         [](auto... sizes) {
           using CT = make_unsigned_t<common_type_t<decltype(sizes)...>>;
           return (CT(sizes) + ...);
         },
-        tuple_transform(ranges::size, __views_));
+        ranges::__tuple_transform(ranges::size, __views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(sized_range<const _Views> && ...)
   {
-    return apply(
+    return std::apply(
         [](auto... sizes) {
           using CT = make_unsigned_t<common_type_t<decltype(sizes)...>>;
           return (CT(sizes) + ...);
         },
-        tuple_transform(ranges::size, __views_));
+        ranges::__tuple_transform(ranges::size, __views_));
   }
 };
 
@@ -225,13 +222,13 @@ class concat_view<_Views...>::__iterator {
 public:
   constexpr static bool derive_pack_random_iterator =
       __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                          random_access_iterator_tag>::value;
+                          random_access_iterator_tag>;
   constexpr static bool derive_pack_bidirectional_iterator =
       __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                          bidirectional_iterator_tag>::value;
+                          bidirectional_iterator_tag>;
   constexpr static bool derive_pack_forward_iterator =
       __derived_from_pack<typename iterator_traits< iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                          forward_iterator_tag>::value;
+                          forward_iterator_tag>;
   using iterator_category =
       _If<!is_reference_v<__concat_reference_t<__maybe_const<_Const, _Views>...>>,
           input_iterator_tag,
@@ -326,17 +323,17 @@ public:
     apply_fn_with_const_index(index, std::forward<_Func>(func), std::make_index_sequence<__N>{});
   }
 
-  template <class... Args>
-  explicit constexpr __iterator(__maybe_const<_Const, concat_view>* parent, Args&&... args)
-    requires constructible_from<base_iter, Args&&...>
-      : it_(std::forward<Args>(args)...), parent_(parent) {}
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr __iterator(__maybe_const<_Const, concat_view>* __parent, _Args&&... __args)
+    requires constructible_from<base_iter, _Args&&...>
+      : it_(std::forward<_Args>(__args)...), parent_(__parent) {}
 
 public:
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> i)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && (convertible_to<iterator_t<_Views>, iterator_t<const _Views>> && ...)
-      : it_(base_iter(in_place_index<i.index()>, std::get<i.index()>(std::move(i.it_)))), parent_(i.parent_) {}
+      : it_(base_iter(in_place_index<__i.index()>, std::get<__i.index()>(std::move(__i.it_)))), parent_(__i.parent_) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
     using reference = __concat_reference_t<__maybe_const<_Const, _Views>...>;
