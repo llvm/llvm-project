@@ -2655,6 +2655,15 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       return nullptr;
     }
 
+    if (BaseType.hasQualifiers() && !isa<SubstTemplateTypeParmType>(BaseType)) {
+      auto Quals =
+          BaseType.getQualifiers().getAsString(Context.getPrintingPolicy());
+      Diag(BaseLoc, diag::warn_qual_base_type)
+          << Quals << std::count(Quals.begin(), Quals.end(), ' ') + 1
+          << BaseType;
+      Diag(BaseLoc, diag::note_base_class_specified_here) << BaseType;
+    }
+
     // For the MS ABI, propagate DLL attributes to base class templates.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
         Context.getTargetInfo().getTriple().isPS()) {
