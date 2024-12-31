@@ -313,24 +313,26 @@ template <typename...Ts> struct index_by;
 template <typename T, typename Indices>
 concept InitFunc = true;
 
-namespace Invalid {
+namespace ExpandsBoth {
 
 template <typename Indices, InitFunc<Indices> auto... init>
-struct LazyLitMatrix;
+struct LazyLitMatrix; // expected-note {{here}}
 
 template <
     typename...Indices,
     InitFunc<index_by<Indices>> auto... init
-    // expected-error@-1 {{type constraint contains unexpanded parameter pack 'Indices'}}
 >
 struct LazyLitMatrix<index_by<Indices...>, init...> {
 };
 
-using T = LazyLitMatrix<index_by<int, char>, 42, 43>;
+// FIXME: Explain why we didn't pick up the partial specialization - pack sizes don't match.
+template struct LazyLitMatrix<index_by<int, char>, 42>;
+// expected-error@-1 {{instantiation of undefined template}}
+template struct LazyLitMatrix<index_by<int, char>, 42, 43>;
 
 }
 
-namespace Valid {
+namespace ExpandsRespectively {
 
 template <typename Indices, InitFunc<Indices> auto... init>
 struct LazyLitMatrix;
@@ -342,7 +344,42 @@ template <
 struct LazyLitMatrix<index_by<Indices...>, init...> {
 };
 
-using T = LazyLitMatrix<index_by<int, char>, 42, 43>;
+template struct LazyLitMatrix<index_by<int, char>, 42>;
+template struct LazyLitMatrix<index_by<int, char>, 42, 43>;
+
+}
+
+namespace TypeParameter {
+
+template <typename Indices, InitFunc<Indices>... init>
+struct LazyLitMatrix; // expected-note {{here}}
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices>>... init
+>
+struct LazyLitMatrix<index_by<Indices...>, init...> {
+};
+
+// FIXME: Explain why we didn't pick up the partial specialization - pack sizes don't match.
+template struct LazyLitMatrix<index_by<int, char>, float>;
+// expected-error@-1 {{instantiation of undefined template}}
+template struct LazyLitMatrix<index_by<int, char>, unsigned, float>;
+
+}
+
+namespace Invalid {
+
+template <typename Indices, InitFunc<Indices>... init>
+struct LazyLitMatrix;
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices>> init
+    // expected-error@-1 {{unexpanded parameter pack 'Indices'}}
+>
+struct LazyLitMatrix<index_by<Indices...>, init> {
+};
 
 }
 
