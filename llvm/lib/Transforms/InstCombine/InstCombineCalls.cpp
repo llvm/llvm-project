@@ -1050,6 +1050,20 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   if (Mask == Known.KnownFPClasses)
     return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
 
+  // If the number of set bits in the mask is greater than the number of the
+  // unset bits, it's more efficient to inverse the mask and the intrinsic
+  // result:
+  // if.fpclass(x, mask) -> !if.fpclass(x, ~mask)
+  //
+  auto InverseMask = ~Mask & fcAllFlags;
+  if (popcount<unsigned>(Mask) > popcount<unsigned>(InverseMask)) {
+    auto *NewII =
+        Builder.CreateIntrinsic(Intrinsic::is_fpclass, {Src0->getType()},
+                                {Src0, Builder.getInt32(InverseMask)});
+    auto *Not = Builder.CreateNot(NewII);
+    return replaceInstUsesWith(II, Not);
+  }
+
   return nullptr;
 }
 

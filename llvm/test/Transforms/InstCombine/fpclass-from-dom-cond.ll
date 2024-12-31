@@ -324,7 +324,8 @@ define i1 @test1_no_dominating(float %x, i1 %c) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 783)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 240)
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[TMP0]], true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry0:

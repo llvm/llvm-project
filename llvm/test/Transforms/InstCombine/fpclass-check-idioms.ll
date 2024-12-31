@@ -42,7 +42,8 @@ define i1 @f32_not_fcnan_fcinf(float %a) {
 define i1 @f32_not_fcnan_fcinf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_not_fcnan_fcinf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 519)
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -401,7 +402,8 @@ define i1 @f32_fcnan_fcinf_wrong_pred(float %a) {
 define i1 @f32_fcnan_fcinf_wrong_pred_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_wrong_pred_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 519)
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32

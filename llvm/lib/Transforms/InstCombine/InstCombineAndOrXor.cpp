@@ -1522,9 +1522,21 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       if (ClassValLHS == ClassValRHS) {
         unsigned CombinedMask = IsAnd ? (ClassMaskLHS & ClassMaskRHS)
                                       : (ClassMaskLHS | ClassMaskRHS);
-        return Builder.CreateIntrinsic(
-            Intrinsic::is_fpclass, {ClassValLHS->getType()},
-            {ClassValLHS, Builder.getInt32(CombinedMask)});
+        unsigned InverseCombinedMask = ~CombinedMask & fcAllFlags;
+
+        // If the number of bits set in the combined mask is greater than the
+        // number of the unset bits, it is more efficient to use the inverse
+        // mask and invert the result.
+        bool IsInverse = popcount(CombinedMask) > popcount(InverseCombinedMask);
+        auto *MaskVal =
+            Builder.getInt32(IsInverse ? InverseCombinedMask : CombinedMask);
+
+        auto *II = Builder.CreateIntrinsic(Intrinsic::is_fpclass,
+                                           {ClassValLHS->getType()},
+                                           {ClassValLHS, MaskVal});
+        if (IsInverse)
+          return Builder.CreateNot(II);
+        return II;
       }
     }
   }
@@ -1610,10 +1622,25 @@ Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
   bool IsRHSClass =
       match(Op1, m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
                      m_Value(ClassVal1), m_ConstantInt(ClassMask1))));
-  if ((((IsLHSClass || matchIsFPClassLikeFCmp(Op0, ClassVal0, ClassMask0)) &&
-        (IsRHSClass || matchIsFPClassLikeFCmp(Op1, ClassVal1, ClassMask1)))) &&
+
+  bool IsLHSInverseClass =
+      match(Op0, m_OneUse(m_Not(m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
+                     m_Value(ClassVal0), m_ConstantInt(ClassMask0))))));
+  bool IsRHSInverseClass =
+      match(Op1, m_OneUse(m_Not(m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
+                     m_Value(ClassVal1), m_ConstantInt(ClassMask1))))));
+
+  if ((((IsLHSClass || IsLHSInverseClass ||
+         matchIsFPClassLikeFCmp(Op0, ClassVal0, ClassMask0)) &&
+        (IsRHSClass || IsRHSInverseClass ||
+         matchIsFPClassLikeFCmp(Op1, ClassVal1, ClassMask1)))) &&
       ClassVal0 == ClassVal1) {
     unsigned NewClassMask;
+    if (IsLHSInverseClass)
+      ClassMask0 = ~ClassMask0 & fcAllFlags;
+    if (IsRHSInverseClass)
+      ClassMask1 = ~ClassMask1 & fcAllFlags;
+
     switch (BO.getOpcode()) {
     case Instruction::And:
       NewClassMask = ClassMask0 & ClassMask1;
@@ -4651,10 +4678,17 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 
     if (II->getIntrinsicID() == Intrinsic::is_fpclass) {
       ConstantInt *ClassMask = cast<ConstantInt>(II->getArgOperand(1));
-      II->setArgOperand(
-          1, ConstantInt::get(ClassMask->getType(),
-                              ~ClassMask->getZExtValue() & fcAllFlags));
-      return replaceInstUsesWith(I, II);
+      auto ClassMaskValue = ClassMask->getZExtValue();
+      auto InverseMaskValue = ~ClassMaskValue & fcAllFlags;
+
+      // If the number of set bits in the class mask is less than the number of
+      // set bits in the inverse mask, it's more efficient to keep the "not"
+      // instruction instead of inverting the class mask.
+      if (popcount(ClassMaskValue) > popcount(InverseMaskValue)) {
+        II->setArgOperand(
+            1, ConstantInt::get(ClassMask->getType(), InverseMaskValue));
+        return replaceInstUsesWith(I, II);
+      }
     }
   }
 
