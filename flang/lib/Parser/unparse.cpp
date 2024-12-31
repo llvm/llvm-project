@@ -2648,9 +2648,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpBeginAssumesDirective &x) {
+  void Unparse(const OmpAssumesDirective &x) {
     BeginOpenMP();
-    Word("!$OMP BEGIN ASSUMES");
+    Word("!$OMP ASSUMES");
     Walk(std::get<OmpClauseList>(x.t), ", ");
     Put("\n");
     EndOpenMP();
@@ -2713,6 +2713,12 @@ public:
   }
   bool Pre(const OpenMPAssumesConstruct &x) {
     BeginOpenMP();
+    Word("!$OMP ASSUMES ");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
+  bool Pre(const OpenMPDeclarativeAssumes &x) {
     Word("!$OMP ASSUMES ");
     Walk(std::get<OmpClauseList>(x.t));
     Put("\n");

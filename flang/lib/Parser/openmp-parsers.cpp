@@ -1296,14 +1296,14 @@ TYPE_PARSER(
     lookAhead(endOmpLine / !statement(allocateStmt)))
 
 // Assumes Construct
-TYPE_PARSER(sourced(construct<OpenMPAssumesConstruct>(
+TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
     verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
 
 // Declarative constructs
 TYPE_PARSER(startOmpLine >>
     withMessage("expected OpenMP construct"_err_en_US,
         sourced(construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPAssumesConstruct>{}) ||
+                Parser<OpenMPDeclarativeAssumes>{}) ||
             construct<OpenMPDeclarativeConstruct>(
                 Parser<OpenMPDeclareReductionConstruct>{}) ||
             construct<OpenMPDeclarativeConstruct>(
@@ -1327,17 +1327,17 @@ TYPE_PARSER(sourced(construct<OpenMPAssumeConstruct>(
                         verbatim("ASSUME"_tok), Parser<OmpClauseList>{}) /
     endOmpLine))
 
-TYPE_PARSER(sourced(construct<OmpBeginAssumesDirective>(
-    "BEGIN"_tok >> verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(construct<OmpAssumesDirective>(
+    verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(sourced(construct<OmpEndAssumesDirective>(
     verbatim(startOmpLine >> "END ASSUMES"_tok))))
 
-TYPE_PARSER(construct<OpenMPAssumesPartConstruct>(block))
+TYPE_PARSER(construct<OmpAssumesPartConstruct>(block))
 
-TYPE_PARSER(sourced(construct<OpenMPBeginAssumesConstruct>(
-    Parser<OmpBeginAssumesDirective>{} / endOmpLine,
-    Parser<OpenMPAssumesPartConstruct>{},
+TYPE_PARSER(sourced(construct<OpenMPAssumesConstruct>(
+    Parser<OmpAssumesDirective>{} / endOmpLine,
+    Parser<OmpAssumesPartConstruct>{},
     Parser<OmpEndAssumesDirective>{} / endOmpLine)))
 
 // Block Construct
@@ -1387,8 +1387,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
-                construct<OpenMPConstruct>(
-                    Parser<OpenMPBeginAssumesConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAssumesConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
 
