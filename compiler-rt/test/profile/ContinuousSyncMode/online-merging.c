@@ -1,4 +1,4 @@
-// REQUIRES: target={{.*(darwin|aix).*}}
+// REQUIRES: continuous-mode
 
 // Test the online merging mode (%m) along with continuous mode (%c).
 //
