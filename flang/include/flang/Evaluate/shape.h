@@ -117,6 +117,14 @@ MaybeExtentExpr GetExtent(const Subscript &, const NamedEntity &, int dimension,
 MaybeExtentExpr GetExtent(FoldingContext &, const Subscript &,
     const NamedEntity &, int dimension, bool invariantOnly = true);
 
+// Similar analyses for coarrays
+MaybeExtentExpr GetLCOBOUND(
+    const Symbol &, int dimension, bool invariantOnly = true);
+MaybeExtentExpr GetUCOBOUND(
+    const Symbol &, int dimension, bool invariantOnly = true);
+Shape GetLCOBOUNDs(const Symbol &, bool invariantOnly = true);
+Shape GetUCOBOUNDs(const Symbol &, bool invariantOnly = true);
+
 // Compute an element count for a triplet or trip count for a DO.
 ExtentExpr CountTrips(
     ExtentExpr &&lower, ExtentExpr &&upper, ExtentExpr &&stride);
