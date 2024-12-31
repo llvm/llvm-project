@@ -1854,6 +1854,28 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     }
   }
 
+  if (Context.getTargetInfo().getTriple().isAArch64()) {
+    const auto *Attr = NewFD->getAttr<ArmNewAttr>();
+    bool LocallyStreaming = NewFD->hasAttr<ArmLocallyStreamingAttr>();
+    llvm::StringMap<bool> FeatureMap;
+    Context.getFunctionFeatureMap(FeatureMap, NewFD);
+    if (!FeatureMap.contains("sme") && LocallyStreaming) {
+      Diag(NewFD->getLocation(),
+           diag::err_sme_definition_using_sm_in_non_sme_target);
+      return false;
+    }
+    if (Attr && Attr->isNewZA() && !FeatureMap.contains("sme")) {
+      Diag(NewFD->getLocation(),
+           diag::err_sme_definition_using_za_in_non_sme_target);
+      return false;
+    }
+    if (Attr && Attr->isNewZT0() && !FeatureMap.contains("sme2")) {
+      Diag(NewFD->getLocation(),
+           diag::err_sme_definition_using_zt0_in_non_sme2_target);
+      return false;
+    }
+  }
+
   // - each of its parameter types shall be a literal type; (removed in C++23)
   if (!getLangOpts().CPlusPlus23 &&
       !CheckConstexprParameterTypes(*this, NewFD, Kind))
