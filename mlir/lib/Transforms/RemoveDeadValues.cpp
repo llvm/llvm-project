@@ -82,14 +82,9 @@ struct CleanupFunction {
   BitVector nonLiveRets;
 };
 
-struct CleanupOperands {
+struct CleanupOperation {
   Operation *op;
-  BitVector nonLiveOperands;
-};
-
-struct CleanupResults {
-  Operation *op;
-  BitVector nonLiveResults;
+  BitVector nonLive;
 };
 
 struct CleanupBlockArgs {
@@ -99,7 +94,7 @@ struct CleanupBlockArgs {
 
 struct CleanupSuccessorOperands {
   BranchOpInterface branch;
-  unsigned index;
+  unsigned successorIndex;
   BitVector nonLiveOperands;
 };
 
@@ -107,8 +102,8 @@ struct CleanupList {
   SmallVector<Operation *> operations;
   SmallVector<Value> values;
   SmallVector<CleanupFunction> functions;
-  SmallVector<CleanupOperands> operands;
-  SmallVector<CleanupResults> results;
+  SmallVector<CleanupOperation> operands;
+  SmallVector<CleanupOperation> results;
   SmallVector<CleanupBlockArgs> blocks;
   SmallVector<CleanupSuccessorOperands> successorOperands;
 };
@@ -157,19 +152,16 @@ static BitVector markLives(ValueRange values,
   return lives;
 }
 
-// DeletionSet is used to track the Values that are scheduled for removal
-void updateDeletionSet(DenseSet<Value> &deletionSet, ValueRange range,
+/// Collects values marked as "non-live" in the provided range and inserts them
+/// into the given set. A value is considered "non-live" if the corresponding
+/// index in the `nonLive` bit vector is set.
+static void collectNonLiveValues(DenseSet<Value> &deletionSet, ValueRange range,
                        const BitVector &nonLive) {
   for (auto [index, result] : llvm::enumerate(range)) {
     if (!nonLive[index])
       continue;
     deletionSet.insert(result);
   }
-}
-
-void updateDeletionSet(DenseSet<Value> &deletionSet, Operation *op,
-                       const BitVector &nonLive) {
-  updateDeletionSet(deletionSet, op->getResults(), nonLive);
 }
 
 /// Drop the uses of the i-th result of `op` and then erase it iff toErase[i]
@@ -231,28 +223,28 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 /// It is assumed that `op` is simple. Here, a simple op is one which isn't a
 /// function-like op, a call-like op, a region branch op, a branch op, a region
 /// branch terminator op, or return-like.
-static void cleanSimpleOp(CleanupList &cl, DenseSet<Value> &deletionSet,
-                          Operation *op, RunLivenessAnalysis &la) {
+static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
+                          DenseSet<Value> &deletionSet, CleanupList &cl) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), deletionSet, la))
     return;
 
   cl.operations.push_back(op);
-  updateDeletionSet(deletionSet, op, BitVector(op->getNumResults(), true));
+  collectNonLiveValues(deletionSet, op->getResults(), BitVector(op->getNumResults(), true));
 }
 
 /// Clean a function-like op `funcOp`, given the liveness information in `la`
 /// and the IR in `module`. Here, cleaning means:
 ///   (1) Dropping the uses of its unnecessary (non-live) arguments,
 ///   (2) Erasing their corresponding operands from its callers,
-///   (3) Erasing these arguments,
-///   (4) Erasing its unnecessary terminator operands (return values that are
+///   (3) Erasing its unnecessary terminator operands (return values that are
 ///   non-live across all callers),
+///   (4) Erasing these arguments,
 ///   (5) Dropping the uses of these return values from its callers, AND
 ///   (6) Erasing these return values
 /// iff it is not public or external.
-static void cleanFuncOp(CleanupList &cl, DenseSet<Value> &deletionSet,
-                        FunctionOpInterface funcOp, Operation *module,
-                        RunLivenessAnalysis &la) {
+static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
+                          RunLivenessAnalysis &la,
+                          DenseSet<Value> &deletionSet, CleanupList &cl) {
   if (funcOp.isPublic() || funcOp.isExternal())
     return;
 
@@ -283,6 +275,7 @@ static void cleanFuncOp(CleanupList &cl, DenseSet<Value> &deletionSet,
     cl.operands.push_back({callOp, nonLiveCallOperands});
   }
 
+  // Do (3).
   // Get the list of unnecessary terminator operands (return values that are
   // non-live across all callers) in `nonLiveRets`. There is a very important
   // subtlety here. Unnecessary terminator operands are NOT the operands of the
@@ -315,7 +308,7 @@ static void cleanFuncOp(CleanupList &cl, DenseSet<Value> &deletionSet,
     nonLiveRets &= liveCallRets.flip();
   }
 
-  // Do (3).
+  // Do (4).
   // Note that in the absence of control flow ops forcing the control to go from
   // the entry (first) block to the other blocks, the control never reaches any
   // block other than the entry block, because every block has a terminator.
@@ -331,7 +324,7 @@ static void cleanFuncOp(CleanupList &cl, DenseSet<Value> &deletionSet,
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     cl.results.push_back({callOp, nonLiveRets});
-    updateDeletionSet(deletionSet, callOp, nonLiveRets);
+    collectNonLiveValues(deletionSet, callOp->getResults(), nonLiveRets);
   }
 }
 
@@ -356,9 +349,9 @@ static void cleanFuncOp(CleanupList &cl, DenseSet<Value> &deletionSet,
 /// It is important to note that values in this op flow from operands and
 /// terminator operands (successor operands) to arguments and results (successor
 /// inputs).
-static void cleanRegionBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
-                                RegionBranchOpInterface regionBranchOp,
-                                RunLivenessAnalysis &la) {
+static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
+                                  RunLivenessAnalysis &la,
+                                  DenseSet<Value> &deletionSet, CleanupList &cl) {
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
     liveResults = markLives(regionBranchOp->getResults(), deletionSet, la);
@@ -605,7 +598,7 @@ static void cleanRegionBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
                               "implementing `RegionBranchOpInterface`");
     BitVector argsToRemove = argsToKeep[&region].flip();
     cl.blocks.push_back({&region.front(), argsToRemove});
-    updateDeletionSet(deletionSet, region.front().getArguments(), argsToRemove);
+    collectNonLiveValues(deletionSet, region.front().getArguments(), argsToRemove);
   }
 
   // Do (2.c).
@@ -617,7 +610,7 @@ static void cleanRegionBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
 
   // Do (3) and (4).
   BitVector resultsToRemove = resultsToKeep.flip();
-  updateDeletionSet(deletionSet, regionBranchOp.getOperation(),
+  collectNonLiveValues(deletionSet, regionBranchOp.getOperation()->getResults(),
                     resultsToRemove);
   cl.results.push_back({regionBranchOp.getOperation(), resultsToRemove});
 }
@@ -631,8 +624,8 @@ static void cleanRegionBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
 //    c. Mark each operand as live or dead based on the analysis.
 // 3. Remove dead operands from the branch operation and arguments accordingly
 
-static void cleanBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
-                          BranchOpInterface branchOp, RunLivenessAnalysis &la) {
+static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
+                            DenseSet<Value> &deletionSet, CleanupList &cl) {
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
   // Do (1)
@@ -651,36 +644,42 @@ static void cleanBranchOp(CleanupList &cl, DenseSet<Value> &deletionSet,
     // Do (3)
     BitVector successorNonLive =
         markLives(operandValues, deletionSet, la).flip();
-    updateDeletionSet(deletionSet, successorBlock->getArguments(),
+    collectNonLiveValues(deletionSet, successorBlock->getArguments(),
                       successorNonLive);
     cl.blocks.push_back({successorBlock, successorNonLive});
     cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
   }
 }
 
-void cleanup(CleanupList &cl) {
+static void cleanUpDeadVals(CleanupList &cl) {
+  // 1. Operations
   for (auto &op : cl.operations) {
     op->dropAllUses();
     op->erase();
   }
 
+  // 2. Values
   for (auto &v : cl.values) {
     v.dropAllUses();
   }
 
+  // 3. Functions
   for (auto &f : cl.functions) {
     f.funcOp.eraseArguments(f.nonLiveArgs);
     f.funcOp.eraseResults(f.nonLiveRets);
   }
 
+  // 4. Operands
   for (auto &o : cl.operands) {
-    o.op->eraseOperands(o.nonLiveOperands);
+    o.op->eraseOperands(o.nonLive);
   }
 
+  // 5. Results
   for (auto &r : cl.results) {
-    dropUsesAndEraseResults(r.op, r.nonLiveResults);
+    dropUsesAndEraseResults(r.op, r.nonLive);
   }
 
+  // 6. Blocks
   for (auto &b : cl.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
@@ -692,9 +691,11 @@ void cleanup(CleanupList &cl) {
       b.b->eraseArgument(i);
     }
   }
+
+  // 7. Successor Operands
   for (auto &op : cl.successorOperands) {
     SuccessorOperands successorOperands =
-        op.branch.getSuccessorOperands(op.index);
+        op.branch.getSuccessorOperands(op.successorIndex);
     // blocks that are accessed via multiple codepaths processed once
     if (successorOperands.size() != op.nonLiveOperands.size())
       continue;
@@ -714,16 +715,20 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
+
+  // Tracks values eligible for erasure - complements liveness analysis to identify "droppable" values.
   DenseSet<Value> deletionSet;
+
+  // Maintains a list of Ops, values, branches, etc., slated for cleanup at the end of this pass.
   CleanupList cl;
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      cleanFuncOp(cl, deletionSet, funcOp, module, la);
+      processFuncOp(funcOp, module, la, deletionSet, cl);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      cleanRegionBranchOp(cl, deletionSet, regionBranchOp, la);
+      processRegionBranchOp(regionBranchOp, la, deletionSet, cl);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
-      cleanBranchOp(cl, deletionSet, branchOp, la);
+      processBranchOp(branchOp, la, deletionSet, cl);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
@@ -731,11 +736,11 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
     } else {
-      cleanSimpleOp(cl, deletionSet, op, la);
+      processSimpleOp(op, la, deletionSet, cl);
     }
   });
 
-  cleanup(cl);
+  cleanUpDeadVals(cl);
 }
 
 std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
