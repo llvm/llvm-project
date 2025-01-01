@@ -21,7 +21,7 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
 
 TEST(LlvmLibcAsctime, Nullptr) {
   char *result;
-  result = asctime(nullptr);
+  result = LIBC_NAMESPACE::asctime(nullptr);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
