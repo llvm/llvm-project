@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/libc_errno.h"
+#include "src/time/asctime.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
@@ -15,7 +16,7 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
                                  int yday) {
   LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
       tm_data, year, month, mday, hour, min, sec, wday, yday);
-  return asctime(tm_data);
+  return LIBC_NAMESPACE::asctime(tm_data);
 }
 
 TEST(LlvmLibcAsctime, Nullptr) {
@@ -51,7 +52,7 @@ TEST(LlvmLibcAsctime, InvalidWday) {
                0,    // sec
                7,    // wday
                0);   // yday
-  // ASSERT_ERRNO_EQ(EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
 }
 
 // Months are from January to December. Test passing invalid value in month.
