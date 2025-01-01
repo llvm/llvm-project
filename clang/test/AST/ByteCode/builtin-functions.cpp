@@ -1244,6 +1244,15 @@ namespace BuiltinMemcpy {
   }
   static_assert(cpyptr());
 
+#ifndef __AVR__
+  constexpr int test_memmove(int a, int b, int n) {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memmove(arr + a, arr + b, n); // both-note {{destination is not a contiguous array of at least 3 elements of type 'int'}}
+    return result(arr);
+  }
+  static_assert(test_memmove(2, 0, 12) == 4234); // both-error {{constant}} \
+                                                 // both-note {{in call}}
+#endif
 }
 
 namespace Memcmp {
