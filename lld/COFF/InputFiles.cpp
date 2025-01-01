@@ -1412,5 +1412,5 @@ void DLLFile::makeImport(DLLFile::Symbol *s) {
   memcpy(p, s->dllName.data(), s->dllName.size());
   MemoryBufferRef mbref = MemoryBufferRef(StringRef(buf, size), s->dllName);
   ImportFile *impFile = make<ImportFile>(symtab.ctx, mbref);
-  symtab.addFile(impFile);
+  symtab.ctx.driver.addFile(impFile);
 }
