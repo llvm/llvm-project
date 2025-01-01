@@ -2,8 +2,10 @@ add_entrypoint_object(
   timespec_get
   SRCS
     timespec_get.cpp
+    localtime.cpp
   HDRS
     ../timespec_get.h
+    ../localtime.h
   DEPENDS
     libc.hdr.time_macros
     libc.hdr.types.struct_timespec

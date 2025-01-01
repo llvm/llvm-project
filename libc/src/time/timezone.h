@@ -44,6 +44,8 @@ typedef struct {
   int64_t *tzh_timecnt_indices;
   size_t tzh_timecnt_number_transitions;
   int64_t *tz;
+  int8_t global_offset;
+  int8_t global_isdst;
 } tzset;
 
 tzset *get_tzset(int fd, size_t filesize);

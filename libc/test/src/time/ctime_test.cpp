@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/time/ctime.h"
 #include "test/UnitTest/Test.h"
-#include "test/src/time/TmHelper.h"
+
+extern char **environ;
+
+void set_env_var(char *env) {
+    environ[0] = env;
+    environ[1] = "\0";
+}
 
 TEST(LlvmLibcCtime, NULL) {
   char *result;
@@ -18,6 +23,8 @@ TEST(LlvmLibcCtime, NULL) {
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp0) {
+  set_env_var("TZ=Europe/Paris");
+
   time_t t;
   char *result;
   t = 0;
@@ -26,6 +33,8 @@ TEST(LlvmLibcCtime, ValidUnixTimestamp0) {
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
+  set_env_var("TZ=Europe/Berlin");
+
   time_t t;
   char *result;
   t = 2147483647;
