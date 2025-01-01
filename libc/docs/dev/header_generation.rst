@@ -44,14 +44,14 @@ To add through the command line:
 
    .. code-block:: none
 
-     python3 libc/utils/hdrgen/spec/_to_classes.py
+     python3 libc/utils/hdrgen/spec/yaml_to_classes.py
      libc/utils/hdrgen/spec//[yaml_file.yaml] --add_function "<return_type>" <function_name> "<function_arg1, function_arg2>" <standard> <guard> <attribute>
 
    Example:
 
    .. code-block:: none
 
-      python3 libc/utils/hdrgen/spec/_to_classes.py
+      python3 libc/utils/hdrgen/spec/yaml_to_classes.py
       libc/utils/hdrgen/spec//ctype.yaml --add_function "char" example_function
       "int, void, const void" stdc example_float example_attribute
 
@@ -90,7 +90,7 @@ Common Errors
 
    .. code-block:: none
 
-      "/llvm-project/libc/utils/hdrgen/spec/_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
+      "/llvm-project/libc/utils/hdrgen/spec/yaml_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
 
    If you receive this error or any error pertaining to
    ``function_data[function_specific_component]`` while building the headers
@@ -118,7 +118,7 @@ Common Errors
    missing. Ensure the correct style and required files are present:
 
    | ``[header_name]``
-   | ``[../libc/utils/hdrgen/spec//[yaml_file.yaml]``
+   | ``[../libc/utils/hdrgen/spec/[yaml_file.yaml]``
    | ``[header_name.h.def]``
    | ``[header_name.h]``
    | ``DEPENDS``
