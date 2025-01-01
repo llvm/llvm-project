@@ -6477,6 +6477,39 @@ struct AADenormalFPMath
   static const char ID;
 };
 
+/// An abstract attribute for converting out arguments into struct elements.
+struct AAConvertOutArgument
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AAConvertOutArgument(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAConvertOutArgument &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAConvertOutArgument"; }
+
+  /// Return true if convertible is assumed.
+  bool isAssumedConvertible() const { return getAssumed(); }
+
+  /// Return true if convertible is known.
+  bool isKnownConvertible() const { return getKnown(); }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AADenormalFPMath.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 raw_ostream &operator<<(raw_ostream &, const AAPointerInfo::Access &);
 
 /// Run options, used by the pass manager.
