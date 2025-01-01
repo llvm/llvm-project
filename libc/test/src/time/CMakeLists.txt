@@ -91,6 +91,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.time
     libc.hdr.types.time_t
+    libc.src.time.io
     libc.src.time.timezone
     libc.src.time.localtime
     libc.src.time.time_utils
