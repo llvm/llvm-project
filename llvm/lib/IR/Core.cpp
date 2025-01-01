@@ -1402,6 +1402,11 @@ LLVMNamedMDNodeRef LLVMGetOrInsertNamedMetadata(LLVMModuleRef M,
   return wrap(unwrap(M)->getOrInsertNamedMetadata({Name, NameLen}));
 }
 
+void LLVMEraseNamedMetadata(LLVMModuleRef M, LLVMNamedMDNodeRef NMD) {
+  NamedMDNode *NamedNode = unwrap(NMD);
+  unwrap(M)->eraseNamedMetadata(NamedNode);
+}
+
 const char *LLVMGetNamedMetadataName(LLVMNamedMDNodeRef NMD, size_t *NameLen) {
   NamedMDNode *NamedNode = unwrap(NMD);
   *NameLen = NamedNode->getName().size();

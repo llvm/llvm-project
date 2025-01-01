@@ -44,6 +44,8 @@ static void print_usage(void) {
   fprintf(stderr, "    Read lines of triple, hex ascii machine code from stdin "
                   "- print disassembly\n\n");
   fprintf(stderr, "  * --calc\n");
+  fprintf(stderr, "  * --erase-named-metadata\n"
+                  "    Run test for erasing named metadata\n");
   fprintf(
       stderr,
       "    Read lines of name, rpn from stdin - print generated module\n\n");
@@ -93,6 +95,8 @@ int main(int argc, char **argv) {
     return llvm_add_named_metadata_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
     return llvm_set_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--erase-named-metadata")) {
+    return llvm_erase_named_metadata();
   } else if (argc == 2 && !strcmp(argv[1], "--get-di-tag")) {
     return llvm_get_di_tag();
   } else if (argc == 2 && !strcmp(argv[1], "--di-type-get-name")) {

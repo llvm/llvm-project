@@ -47,6 +47,21 @@ int llvm_set_metadata(void) {
   return 0;
 }
 
+int llvm_erase_named_metadata(void) {
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+
+  const char Name[] = "foo";
+  LLVMNamedMDNodeRef MD = LLVMGetOrInsertNamedMetadata(M, Name, strlen(Name));
+  assert(LLVMGetFirstNamedMetadata(M));
+
+  LLVMEraseNamedMetadata(M, MD);
+  assert(!LLVMGetFirstNamedMetadata(M));
+
+  LLVMDisposeModule(M);
+
+  return 0;
+}
+
 int llvm_replace_md_operand(void) {
   LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
   LLVMContextRef Context = LLVMGetModuleContext(M);

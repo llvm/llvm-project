@@ -1,0 +1,1 @@
+; RUN: llvm-c-test --erase-named-metadata < /dev/null

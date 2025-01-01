@@ -1095,6 +1095,13 @@ LLVMNamedMDNodeRef LLVMGetOrInsertNamedMetadata(LLVMModuleRef M,
                                                 size_t NameLen);
 
 /**
+ * Remove the given NamedMDNode from this module and delete it.
+ *
+ * @see llvm::Module::eraseNamedMetadata()
+ */
+void LLVMEraseNamedMetadata(LLVMModuleRef M, LLVMNamedMDNodeRef NMD);
+
+/**
  * Retrieve the name of a NamedMDNode.
  *
  * @see llvm::NamedMDNode::getName()

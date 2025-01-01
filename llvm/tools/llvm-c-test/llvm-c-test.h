@@ -43,6 +43,7 @@ int llvm_di_type_get_name(void);
 // metadata.c
 int llvm_add_named_metadata_operand(void);
 int llvm_set_metadata(void);
+int llvm_erase_named_metadata(void);
 int llvm_replace_md_operand(void);
 int llvm_is_a_value_as_metadata(void);
 
