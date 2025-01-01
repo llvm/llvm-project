@@ -954,15 +954,14 @@ void VPlan::execute(VPTransformState *State) {
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
-  BasicBlock *VectorPreHeader = State->CFG.PrevBB;
-  //State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
+  BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
-   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
+  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');
   setName("Final VPlan");
   LLVM_DEBUG(dump());
@@ -970,8 +969,8 @@ void VPlan::execute(VPTransformState *State) {
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
   // execution.
- BasicBlock *MiddleBB = State->CFG.ExitBB;
- BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
+  BasicBlock *MiddleBB = State->CFG.ExitBB;
+  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();
