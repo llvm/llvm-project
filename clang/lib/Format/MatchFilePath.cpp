@@ -49,14 +49,15 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
         return false;
       break;
     case '*': {
-      const bool MaybeGlobstar = I == 0 || Pattern[I - 1] == Separator;
+      bool Globstar = I == 0 || Pattern[I - 1] == Separator;
       int StarCount = 1;
       for (; ++I < EOP && Pattern[I] == '*'; ++StarCount) {
         // Skip consecutive stars.
       }
+      if (StarCount != 2)
+        Globstar = false;
       const auto K = FilePath.find(Separator, J); // Index of next `Separator`.
       const bool NoMoreSeparatorsInFilePath = K == StringRef::npos;
-      bool Globstar = MaybeGlobstar && StarCount == 2;
       if (I == EOP) // `Pattern` ends with a star.
         return Globstar || NoMoreSeparatorsInFilePath;
       if (Pattern[I] != Separator) {
