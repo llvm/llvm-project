@@ -196,8 +196,10 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories( "include")
-include_directories( ${MLIR_INCLUDE_DIR})
+include_directories(BEFORE
+  "include"
+  ${MLIR_INCLUDE_DIR}
+  )
 
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
