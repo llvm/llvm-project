@@ -1082,7 +1082,7 @@ bool ToolChain::isThreadModelSupported(const StringRef Model) const {
            Triple.getArch() == llvm::Triple::armeb ||
            Triple.getArch() == llvm::Triple::thumb ||
            Triple.getArch() == llvm::Triple::thumbeb || Triple.isWasm();
-  } else if (Model == "posix")
+  } else if (Model == "posix" || (Model == "win32" && Triple.isOSWindows()))
     return true;
 
   return false;

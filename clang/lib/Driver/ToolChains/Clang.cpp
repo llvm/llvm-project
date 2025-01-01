@@ -5792,7 +5792,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Model = A->getValue();
     } else
       Model = TC.getThreadModel();
-    if (Model != "posix") {
+    if (Model != "posix" && Model != "win32") {
       CmdArgs.push_back("-mthread-model");
       CmdArgs.push_back(Args.MakeArgString(Model));
     }
