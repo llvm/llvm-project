@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t_ptr, char *buffer)) {
     return nullptr;
   }
 
-  return time_utils::asctime(time_utils::localtime(t_ptr), buffer,
+  return time_utils::asctime(localtime_r(t_ptr, &tm_out), buffer,
                              TimeConstants::ASCTIME_MAX_BYTES);
 }
 
