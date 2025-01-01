@@ -1866,9 +1866,17 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
   // PseudoLA_*_LARGE nodes.
   SDValue Tmp = DAG.getConstant(0, DL, Ty);
   SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
-  SDValue Offset = Large
+
+  // Only IE needs an extra argument for large code model.
+  SDValue Offset = Opc == LoongArch::PseudoLA_TLS_IE_LARGE
                        ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
                        : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+
+  // If it is LE for normal/medium code model, the add tp operation will occur
+  // during the pseudo-instruction expansion.
+  if (Opc == LoongArch::PseudoLA_TLS_LE && !Large)
+    return Offset;
+
   if (UseGOT) {
     // Mark the load instruction as invariant to enable hoisting in MachineLICM.
     MachineFunction &MF = DAG.getMachineFunction();
@@ -1989,7 +1997,7 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     //
     // This node doesn't need an extra argument for the large code model.
     return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE,
-                            /*UseGOT=*/false);
+                            /*UseGOT=*/false, Large);
   }
 
   return getTLSDescAddr(N, DAG,
@@ -5340,7 +5348,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
   if (!N->hasNUsesOfValue(1, 0))
     return false;
 
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() != ISD::CopyToReg)
     return false;
 
@@ -5351,7 +5359,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
 
   // The copy must be used by a LoongArchISD::RET, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != LoongArchISD::RET)
       return false;
     HasRet = true;
