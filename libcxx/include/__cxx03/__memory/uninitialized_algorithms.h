@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
-#define _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
+#ifndef _LIBCPP___CXX03___MEMORY_UNINITIALIZED_ALGORITHMS_H
+#define _LIBCPP___CXX03___MEMORY_UNINITIALIZED_ALGORITHMS_H
 
 #include <__cxx03/__algorithm/copy.h>
 #include <__cxx03/__algorithm/move.h>
@@ -650,4 +650,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
+#endif // _LIBCPP___CXX03___MEMORY_UNINITIALIZED_ALGORITHMS_H

@@ -109,20 +109,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 }
 
 // NOPs.  These are again variants of the conditional branches, with the
-// condition mask set to "never".  NOP_bare can't be an InstAlias since it
-// would need R0D hard coded which is not part of ADDR64BitRegClass.
-def NOP : NeverCondBranchRX<"nop", 0x47>;
-let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
-  def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-def NOPR : NeverCondBranchRR<"nopr", 0x07>;
-def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
-
-// An alias of BRC 0, label
-def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
-
-// An alias of BRCL 0, label
-// jgnop on gnu ; jlnop on hlasm
-def JGNOP : InstAlias<"{jgnop|jlnop}\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
+// condition mask set to "never".
+defm NOP  : NeverCondBranchRX<"nop", 0x47>;
+defm NOPR : NeverCondBranchRR<"nopr", 0x07>;
+def JNOP  : NeverCondBranchRI<"jnop", 0xA74>;
+def JGNOP : NeverCondBranchRIL<"j{g|l}nop", 0xC04>;
 
 // Fused compare-and-branch instructions.
 //
@@ -960,10 +951,10 @@ def IILL : BinaryRI<"iill", 0xA53, insertll, GR32, imm32ll16>;
 def IILH : BinaryRI<"iilh", 0xA52, insertlh, GR32, imm32lh16>;
 def IIHL : BinaryRI<"iihl", 0xA51, insertll, GRH32, imm32ll16>;
 def IIHH : BinaryRI<"iihh", 0xA50, insertlh, GRH32, imm32lh16>;
-def IILL64 : BinaryAliasRI<insertll, GR64, imm64ll16>;
-def IILH64 : BinaryAliasRI<insertlh, GR64, imm64lh16>;
-def IIHL64 : BinaryAliasRI<inserthl, GR64, imm64hl16>;
-def IIHH64 : BinaryAliasRI<inserthh, GR64, imm64hh16>;
+def IILL64 : BinaryAliasRI<insertll64, GR64, imm64ll16>;
+def IILH64 : BinaryAliasRI<insertlh64, GR64, imm64lh16>;
+def IIHL64 : BinaryAliasRI<inserthl64, GR64, imm64hl16>;
+def IIHH64 : BinaryAliasRI<inserthh64, GR64, imm64hh16>;
 
 // ...likewise for 32-bit immediates.  For GR32s this is a general
 // full-width move.  (We use IILF rather than something like LLILF
@@ -1868,6 +1859,23 @@ let mayLoad = 1, mayStore = 1, Defs = [CC] in {
   let isAsmParserOnly = 1 in {
     defm CUUTF : SideEffectTernaryMemMemRRFcOpt<"cuutf", 0xB2A6, GR128, GR128>;
     defm CUTFU : SideEffectTernaryMemMemRRFcOpt<"cutfu", 0xB2A7, GR128, GR128>;
+  }
+}
+
+//--------------------------------------------------------------------------
+// Setjmp/Longjmp.
+//--------------------------------------------------------------------------
+let isBarrier = 1,  hasNoSchedulingInfo = 1 in {
+  let hasSideEffects = 1, usesCustomInserter = 1 in {
+    def EH_SjLj_SetJmp : Pseudo<(outs GR32:$dst), (ins ADDR64:$R2), 
+                        [(set GR32:$dst, (z_eh_sjlj_setjmp ADDR64:$R2))]>;
+    let isTerminator = 1 in {
+      def EH_SjLj_LongJmp : Pseudo<(outs), (ins ADDR64:$R2), 
+                           [(z_eh_sjlj_longjmp  ADDR64:$R2)]>;
+    }
+  }
+  let isTerminator = 1, isCodeGenOnly = 1, Size = 0 in {
+    def EH_SjLj_Setup : Pseudo<(outs), (ins brtarget32:$dst), []>;
   }
 }
 

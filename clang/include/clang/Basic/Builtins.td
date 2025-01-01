@@ -1270,7 +1270,7 @@ def ElementwiseATan2 : Builtin {
 
 def ElementwiseBitreverse : Builtin {
   let Spellings = ["__builtin_elementwise_bitreverse"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1354,7 +1354,7 @@ def ElementwiseLog10 : Builtin {
 
 def ElementwisePopcount : Builtin {
   let Spellings = ["__builtin_elementwise_popcount"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1450,25 +1450,25 @@ def ElementwiseFma : Builtin {
 
 def ElementwiseAddSat : Builtin {
   let Spellings = ["__builtin_elementwise_add_sat"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseSubSat : Builtin {
   let Spellings = ["__builtin_elementwise_sub_sat"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceMin : Builtin {
   let Spellings = ["__builtin_reduce_min"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -4738,6 +4738,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getpointer"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
@@ -4754,6 +4760,12 @@ def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_asdouble"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLWaveActiveAllTrue : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_all_true"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
 }
 
 def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
@@ -4922,6 +4934,12 @@ def HLSLClip: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
 }
 
 // Builtins for XRay.

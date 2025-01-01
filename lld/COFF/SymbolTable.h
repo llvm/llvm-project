@@ -47,7 +47,9 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  SymbolTable(COFFLinkerContext &c) : ctx(c) {}
+  SymbolTable(COFFLinkerContext &c,
+              llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN)
+      : ctx(c), machine(machine) {}
 
   void addFile(InputFile *file);
 
@@ -119,6 +121,11 @@ public:
                        SectionChunk *newSc = nullptr,
                        uint32_t newSectionOffset = 0);
 
+  COFFLinkerContext &ctx;
+  llvm::COFF::MachineTypes machine;
+
+  bool isEC() const { return machine == ARM64EC; }
+
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
@@ -130,6 +137,10 @@ public:
     for (auto &pair : symMap)
       callback(pair.second);
   }
+
+  DefinedRegular *loadConfigSym = nullptr;
+  uint32_t loadConfigSize = 0;
+  void initializeLoadConfig();
 
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
@@ -147,8 +158,6 @@ private:
   bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
-
-  COFFLinkerContext &ctx;
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

@@ -828,7 +828,7 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
   );
 
   let results = (outs
-    Tosa_Tensor:$z
+    Tosa_Tensor:$output
   );
 }
 
@@ -1698,7 +1698,8 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                 AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator";
 
   let description = [{
@@ -1869,22 +1870,23 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
   let description = [{
     Rescale quantized values into a new domain. Supported rescalings are:
 
-    | Mode                   | Input | Output |
-    |------------------------|-------|--------|
-    | signed 8 to 8          | int8  | int8   |
-    | signed 8 to 16         | int8  | int16  |
-    | signed 8 to 32         | int8  | int32  |
-    | signed 16 to 8         | int16 | int8   |
-    | signed 16 to 16        | int16 | int16  |
-    | signed 16 to 32        | int16 | int32  |
-    | signed 32 to 8         | int32 | int8   |
-    | signed 32 to 16        | int32 | int16  |
-    | signed 32 to 32        | int32 | int32  |
-    | signed 48 to 8         | int48 | int8   |
-    | signed 48 to 16        | int48 | int16  |
-    | signed 48 to 32        | int48 | int32  |
-    | unsigned 8 to signed 8 | uint8 | int8   |
-    | signed 8 to unsigned 8 | int8  | uint8  |
+    | Mode                   | Input | Output | Unsigned | Unsigned |
+    |                        |       |        |  input   |  output  |
+    |------------------------|-------|--------|----------|----------|
+    | signed 8 to 8          | int8  | int8   |  false   |  false   |
+    | signed 8 to 16         | int8  | int16  |  false   |  false   |
+    | signed 8 to 32         | int8  | int32  |  false   |  false   |
+    | signed 16 to 8         | int16 | int8   |  false   |  false   |
+    | signed 16 to 16        | int16 | int16  |  false   |  false   |
+    | signed 16 to 32        | int16 | int32  |  false   |  false   |
+    | signed 32 to 8         | int32 | int8   |  false   |  false   |
+    | signed 32 to 16        | int32 | int16  |  false   |  false   |
+    | signed 32 to 32        | int32 | int32  |  false   |  false   |
+    | signed 48 to 8         | int48 | int8   |  false   |  false   |
+    | signed 48 to 16        | int48 | int16  |  false   |  false   |
+    | signed 48 to 32        | int48 | int32  |  false   |  false   |
+    | unsigned 8 to signed 8 | uint8 | int8   |  true    |  false   |
+    | signed 8 to unsigned 8 | int8  | uint8  |  false   |  true    |
   }];
 
   let arguments = (ins
@@ -1895,7 +1897,9 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     DenseI8ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
-    BoolAttr:$per_channel
+    BoolAttr:$per_channel,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$input_unsigned,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$output_unsigned
   );
 
   let results = (outs
@@ -1992,9 +1996,9 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     `implementation_attrs` is a string which is a backend and identifier specific
     set of attributes to the custom operator.
 
-    `inputs` is the set of tensor inputs to the custom operator.
+    `input_list` is the set of tensor inputs to the custom operator.
 
-    `outputs is the list of tensors returned by the operator. The number of operators
+    `output_list` is the list of tensors returned by the operator. The number of operators
     is backend specific.
 
     Example:
@@ -2010,11 +2014,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     StrAttr:$operator_name,
     StrAttr:$domain_name,
     StrAttr:$implementation_attrs,
-    Variadic<Tosa_Tensor>:$inputs
+    Variadic<Tosa_Tensor>:$input_list
   );
 
   let results = (outs
-    Variadic<Tosa_Tensor>:$outputs
+    Variadic<Tosa_Tensor>:$output_list
   );
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";

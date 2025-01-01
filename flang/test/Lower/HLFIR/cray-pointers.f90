@@ -381,12 +381,12 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_craypointer_captureEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i64 {bindc_name = "cray_pointer", uniq_name = "_QFtest_craypointer_captureEcray_pointer"}
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_craypointer_captureEcray_pointer"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_craypointer_captureEcray_pointer"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[VAL_6]] : i32
 ! CHECK:           %[[VAL_8:.*]] = arith.select %[[VAL_7]], %[[VAL_5]], %[[VAL_6]] : i32
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_craypointer_captureEcray_pointee"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, i32) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<pointer, internal_assoc>, uniq_name = "_QFtest_craypointer_captureEcray_pointee"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, i32) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
 ! CHECK:           %[[VAL_10:.*]] = fir.zero_bits !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_10]] typeparams %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>, i32) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK:           fir.store %[[VAL_11]] to %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>

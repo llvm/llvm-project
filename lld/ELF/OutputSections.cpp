@@ -155,9 +155,9 @@ void OutputSection::commitSection(InputSection *isec) {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
       ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
-                     << isec << ": 0x" << utohexstr(isec->flags)
+                     << isec << ": 0x" << utohexstr(isec->flags, true)
                      << "\n>>> output section " << name << ": 0x"
-                     << utohexstr(flags);
+                     << utohexstr(flags, true);
   }
 
   isec->parent = this;
@@ -253,8 +253,20 @@ void OutputSection::finalizeInputSections() {
     for (InputSection *s : isd->sections)
       commitSection(s);
   }
-  for (auto *ms : mergeSections)
+  for (auto *ms : mergeSections) {
+    // Merging may have increased the alignment of a spillable section. Update
+    // the alignment of potential spill sections and their containing output
+    // sections.
+    if (auto it = script->potentialSpillLists.find(ms);
+        it != script->potentialSpillLists.end()) {
+      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
+        s->addralign = std::max(s->addralign, ms->addralign);
+        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
+      }
+    }
+
     ms->finalizeContents();
+  }
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,

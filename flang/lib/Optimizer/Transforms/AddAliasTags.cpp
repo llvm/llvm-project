@@ -209,12 +209,11 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   state.processFunctionScopes(func);
 
   fir::DummyScopeOp scopeOp;
-  if (auto declVal = source.origin.instantiationPoint) {
+  if (auto declOp = source.origin.instantiationPoint) {
     // If the source is a dummy argument within some fir.dummy_scope,
     // then find the corresponding innermost scope to be used for finding
     // the right TBAA tree.
-    auto declareOp =
-        mlir::dyn_cast_or_null<fir::DeclareOp>(declVal.getDefiningOp());
+    auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
     assert(declareOp && "Instantiation point must be fir.declare");
     if (auto dummyScope = declareOp.getDummyScope())
       scopeOp = mlir::cast<fir::DummyScopeOp>(dummyScope.getDefiningOp());
@@ -228,7 +227,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
-    std::string name = getFuncArgName(source.origin.u.get<mlir::Value>());
+    std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
     if (!name.empty())
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .dummyArgDataTree.getTag(name);
@@ -241,7 +240,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableGlobals &&
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              !source.isBoxData()) {
-    mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
+    mlir::SymbolRefAttr glbl = llvm::cast<mlir::SymbolRefAttr>(source.origin.u);
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
                                       << " at " << *op << "\n");
@@ -251,8 +250,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableDirect &&
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              source.isBoxData()) {
-    if (source.origin.u.is<mlir::SymbolRefAttr>()) {
-      mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
+    if (auto glbl = llvm::dyn_cast<mlir::SymbolRefAttr>(source.origin.u)) {
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
@@ -270,7 +268,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
     mlir::Operation *sourceOp =
-        source.origin.u.get<mlir::Value>().getDefiningOp();
+        llvm::cast<mlir::Value>(source.origin.u).getDefiningOp();
     if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
       name = alloc.getUniqName();
     else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
