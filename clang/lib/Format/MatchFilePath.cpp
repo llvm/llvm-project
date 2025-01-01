@@ -25,9 +25,11 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
   assert(!Pattern.empty());
   assert(!FilePath.empty());
 
+  const auto FilePathBack = FilePath.back();
+
   // No match if `Pattern` ends with a non-meta character not equal to the last
   // character of `FilePath`.
-  if (const auto C = Pattern.back(); !strchr("?*]", C) && C != FilePath.back())
+  if (const auto C = Pattern.back(); !strchr("?*]", C) && C != FilePathBack)
     return false;
 
   constexpr auto Separator = '/';
@@ -74,10 +76,8 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
           J = K; // Skip to next `Separator` in `FilePath`.
           break;
         }
-        if (I + 1 < EOP &&
-            matchFilePath(Pattern.substr(I + 1), FilePath.substr(J))) {
-          return true;
-        }
+        if (++I == EOP)
+          return FilePathBack == Separator;
       }
       // Recurse.
       for (auto Pat = Pattern.substr(I);
