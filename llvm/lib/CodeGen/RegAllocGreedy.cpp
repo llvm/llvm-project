@@ -242,8 +242,6 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<LiveDebugVariablesAnalysis>();
   PA.preserve<LiveStacksAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserve<VirtRegMapAnalysis>();
   PA.preserve<LiveRegMatrixAnalysis>();
   return PA;
@@ -269,7 +267,7 @@ bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<SpillPlacementWrapperLegacy>().getResult();
   Analyses.DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
   Analyses.EvictProvider =
-      getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider().get();
+      &getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider();
   Analyses.PriorityProvider =
       &getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getProvider();
 
