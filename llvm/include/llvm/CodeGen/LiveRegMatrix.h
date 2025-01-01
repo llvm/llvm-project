@@ -59,7 +59,8 @@ class LiveRegMatrix {
   unsigned RegMaskVirtReg = 0;
   BitVector RegMaskUsable;
 
-  LiveRegMatrix() : LIUAlloc(new LiveIntervalUnion::Allocator()) {};
+  LiveRegMatrix()
+      : LIUAlloc(std::make_unique<LiveIntervalUnion::Allocator>()) {};
   void releaseMemory();
 
 public:
