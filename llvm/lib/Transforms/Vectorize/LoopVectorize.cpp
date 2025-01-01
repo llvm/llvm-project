@@ -479,7 +479,9 @@ public:
         AC(AC), ORE(ORE), VF(VecWidth),
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
-        PSI(PSI), RTChecks(RTChecks), Plan(Plan) {
+        PSI(PSI), RTChecks(RTChecks), Plan(Plan),
+        VectorPHVPBB(
+            cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor())) {
     // Query this against the original loop and save it here because the profile
     // of the original loop header may change as the transformation happens.
     OptForSizeBasedOnProfile = llvm::shouldOptimizeForSize(
@@ -676,6 +678,8 @@ protected:
   BasicBlock *AdditionalBypassBlock = nullptr;
 
   VPlan &Plan;
+
+  VPBasicBlock *VectorPHVPBB;
 };
 
 /// Encapsulate information regarding vectorization of a loop and its epilogue.
@@ -2446,11 +2450,11 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 /// Introduces a new VPIRBasicBlock for \p CheckIRBB to \p Plan between the
 /// vector preheader and its predecessor, also connecting the new block to the
 /// scalar preheader.
-static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
+static void introduceCheckBlockInVPlan(VPlan &Plan, VPBlockBase *VectorPH,
+                                       BasicBlock *CheckIRBB) {
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   // FIXME: Cannot get the vector preheader at the moment if the vector loop
   // region has been removed.
-  VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   if (PreVectorPH->getNumSuccessors() != 1) {
     assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
@@ -2546,7 +2550,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(TCCheckBlock);
 
   // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
-  introduceCheckBlockInVPlan(Plan, TCCheckBlock);
+  introduceCheckBlockInVPlan(Plan, VectorPHVPBB, TCCheckBlock);
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -2564,7 +2568,7 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(SCEVCheckBlock);
   AddedSafetyChecks = true;
 
-  introduceCheckBlockInVPlan(Plan, SCEVCheckBlock);
+  introduceCheckBlockInVPlan(Plan, VectorPHVPBB, SCEVCheckBlock);
   return SCEVCheckBlock;
 }
 
@@ -7963,7 +7967,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  introduceCheckBlockInVPlan(Plan, TCCheckBlock);
+  introduceCheckBlockInVPlan(Plan, VectorPHVPBB, TCCheckBlock);
   return TCCheckBlock;
 }
 
@@ -8103,7 +8107,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   Plan.setEntry(NewEntry);
   // OldEntry is now dead and will be cleaned up when the plan gets destroyed.
 
-  introduceCheckBlockInVPlan(Plan, Insert);
+  introduceCheckBlockInVPlan(Plan, VectorPHVPBB, Insert);
   return Insert;
 }
 
