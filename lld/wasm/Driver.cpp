@@ -44,7 +44,6 @@ using namespace llvm::sys;
 using namespace llvm::wasm;
 
 namespace lld::wasm {
-ConfigWrapper config;
 Ctx ctx;
 
 void errorOrWarn(const llvm::Twine &msg) {
@@ -54,7 +53,7 @@ void errorOrWarn(const llvm::Twine &msg) {
     error(msg);
 }
 
-Ctx::Ctx() : arg(config.c) {}
+Ctx::Ctx() {}
 
 void Ctx::reset() {
   arg.~Config();

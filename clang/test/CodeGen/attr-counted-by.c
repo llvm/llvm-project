@@ -1043,7 +1043,7 @@ int test12_a, test12_b;
 // NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BAZ]]) #[[ATTR11:[0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [6 x i32], ptr [[BAZ]], i64 0, i64 [[IDXPROM]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [6 x i32], ptr [[BAZ]], i64 0, i64 [[IDXPROM]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[TMP0]], ptr @test12_b, align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @test12_foo, i64 4), align 4, !tbaa [[TBAA2]]
@@ -1085,7 +1085,7 @@ int test12_a, test12_b;
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BAZ]]) #[[ATTR9:[0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [6 x i32], ptr [[BAZ]], i64 0, i64 [[IDXPROM]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [6 x i32], ptr [[BAZ]], i64 0, i64 [[IDXPROM]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 [[TMP0]], ptr @test12_b, align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @test12_foo, i64 4), align 4, !tbaa [[TBAA2]]

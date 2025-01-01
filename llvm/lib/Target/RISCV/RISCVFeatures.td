@@ -316,6 +316,7 @@ def FeatureStdExtZfa
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
                    AssemblerPredicate<(all_of FeatureStdExtZfa),
                                       "'Zfa' (Additional Floating-Point)">;
+def NoStdExtZfa : Predicate<"!Subtarget->hasStdExtZfa()">;
 
 def FeatureStdExtZfinx
     : RISCVExtension<1, 0, "Float in Integer", [FeatureStdExtZicsr]>;
@@ -1272,6 +1273,14 @@ def HasVendorXqcilsm
     : Predicate<"Subtarget->hasVendorXqcilsm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilsm),
                          "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
+
+def FeatureVendorXqciac
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load-Store Address Calculation Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqciac
+    : Predicate<"Subtarget->hasVendorXqciac()">,
+      AssemblerPredicate<(all_of FeatureVendorXqciac),
+                         "'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

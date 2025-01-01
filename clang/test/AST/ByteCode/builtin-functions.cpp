@@ -1222,6 +1222,37 @@ namespace BuiltinMemcpy {
   static_assert(test_memcpy(1, 2, sizeof(int)) == 1334);
   static_assert(test_memcpy(0, 1, sizeof(int) * 2) == 2334); // both-error {{not an integral constant expression}} \
                                                              // both-note {{in call}}
+
+  /// Both memcpy and memmove must support pointers.
+  constexpr bool moveptr() {
+    int a = 0;
+    void *x = &a;
+    void *z = nullptr;
+
+    __builtin_memmove(&z, &x, sizeof(void*));
+    return z == x;
+  }
+  static_assert(moveptr());
+
+  constexpr bool cpyptr() {
+    int a = 0;
+    void *x = &a;
+    void *z = nullptr;
+
+    __builtin_memcpy(&z, &x, sizeof(void*));
+    return z == x;
+  }
+  static_assert(cpyptr());
+
+#ifndef __AVR__
+  constexpr int test_memmove(int a, int b, int n) {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memmove(arr + a, arr + b, n); // both-note {{destination is not a contiguous array of at least 3 elements of type 'int'}}
+    return result(arr);
+  }
+  static_assert(test_memmove(2, 0, 12) == 4234); // both-error {{constant}} \
+                                                 // both-note {{in call}}
+#endif
 }
 
 namespace Memcmp {
