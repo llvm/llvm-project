@@ -219,7 +219,7 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 ///   1. Adding the operation to a list for future removal, and
 ///   2. Marking all its results as non-live values
 ///
-/// The operation `op` is assumed to be simple. 
+/// The operation `op` is assumed to be simple.
 /// A simple operation is one that is NOT:
 ///   - Function-like
 ///   - Call-like
@@ -237,14 +237,15 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                        BitVector(op->getNumResults(), true));
 }
 
-/// Process a function-like operation `funcOp` using the liveness analysis `la` 
+/// Process a function-like operation `funcOp` using the liveness analysis `la`
 /// and the IR in `module`. If it is not public or external:
 ///   1. Adding its non-live arguments to a list for future removal.
 ///   2. Marking their corresponding operands in its callers for removal.
-///   3. Identifying and enqueueing unnecessary terminator operands 
+///   3. Identifying and enqueueing unnecessary terminator operands
 ///      (return values that are non-live across all callers) for removal.
 ///   4. Enqueueing the non-live arguments themselves for removal.
-///   5. Collecting the uses of these return values in its callers for future removal.
+///   5. Collecting the uses of these return values in its callers for future
+///   removal.
 ///   6. Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &deletionSet,
@@ -332,29 +333,34 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   }
 }
 
-/// Process a region branch operation `regionBranchOp` using the liveness information in `la`. 
-/// The processing involves two scenarios:
+/// Process a region branch operation `regionBranchOp` using the liveness
+/// information in `la`. The processing involves two scenarios:
 ///
-/// Scenario 1: If the operation has no memory effects and none of its results are live:
+/// Scenario 1: If the operation has no memory effects and none of its results
+/// are live:
 ///   1. Enqueue all its uses for deletion.
 ///   2. Enqueue the branch itself for deletion.
 ///
 /// Scenario 2: Otherwise:
-///   1. Collect its unnecessary operands (operands forwarded to unnecessary results or arguments).
+///   1. Collect its unnecessary operands (operands forwarded to unnecessary
+///   results or arguments).
 ///   2. Process each of its regions.
-///   3. Collect the uses of its unnecessary results (results forwarded from unnecessary operands 
+///   3. Collect the uses of its unnecessary results (results forwarded from
+///   unnecessary operands
 ///      or terminator operands).
 ///   4. Add these results to the deletion list.
 ///
 /// Processing a region includes:
-///   a. Collecting the uses of its unnecessary arguments (arguments forwarded from unnecessary operands 
+///   a. Collecting the uses of its unnecessary arguments (arguments forwarded
+///   from unnecessary operands
 ///      or terminator operands).
 ///   b. Collecting these unnecessary arguments.
-///   c. Collecting its unnecessary terminator operands (terminator operands forwarded to unnecessary results 
+///   c. Collecting its unnecessary terminator operands (terminator operands
+///   forwarded to unnecessary results
 ///      or arguments).
 ///
 /// Value Flow Note: In this operation, values flow as follows:
-/// - From operands and terminator operands (successor operands) 
+/// - From operands and terminator operands (successor operands)
 /// - To arguments and results (successor inputs).
 static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   RunLivenessAnalysis &la,
@@ -627,9 +633,9 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
 /// Steps to process a `BranchOpInterface` operation:
 /// 1. Iterate through each successor block of the operation.
-/// 2. For each successor block, gather all operands from all successors 
+/// 2. For each successor block, gather all operands from all successors
 ///    along with their associated liveness analysis data.
-/// 3. Identify and collect the dead operands from the branch operation 
+/// 3. Identify and collect the dead operands from the branch operation
 ///    as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
