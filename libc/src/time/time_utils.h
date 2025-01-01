@@ -24,8 +24,10 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "time_constants.h"
+#include "src/errno/libc_errno.h"
 #include "src/time/mktime.h"
 #include "src/time/timezone.h"
+#include "timezone.h"
 
 #include <stdint.h>
 
@@ -104,9 +106,9 @@ struct TimeConstants {
 extern int calculate_dst(struct tm *tm);
 extern void set_dst(struct tm *tm);
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local);
+extern timezone::tzset *get_localtime(struct tm *tm);
 extern unsigned char is_dst(struct tm *tm);
 extern char *get_env_var(const char *var_name);
-extern timezone::tzset *get_tzset(int fd, size_t filesize);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
@@ -170,34 +172,29 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
-  static struct tm result;
-  int64_t time = *t_ptr;
+LIBC_INLINE struct tm *localtime_internal(const time_t *timer, struct tm *buf) {
+  if (timer == nullptr) {
+    invalid_value();
+    return nullptr;
+  }
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(time, &result) < 0) {
+  if (update_from_seconds(static_cast<int64_t>(*timer), buf) < 0) {
     out_of_range();
     return nullptr;
   }
 
-  return &result;
-}
+  #ifdef LIBC_TARGET_ARCH_IS_X86_64
+  timezone::tzset *ptr = get_localtime(buf);
+  buf->tm_hour += ptr->global_offset;
+  buf->tm_isdst += ptr->global_isdst;
+  #endif
 
-LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
-                                          struct tm *input) {
-  int64_t t = *t_ptr;
-
-  // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(t, input) < 0) {
-    out_of_range();
-    return nullptr;
-  }
-
-  return input;
+  return buf;
 }
 
 // for windows only, implemented on gnu/linux for compatibility reasons
-LIBC_INLINE int localtime_s(const time_t *t_ptr, struct tm *input) {
+LIBC_INLINE int localtime_s_internal(const time_t *t_ptr, struct tm *input) {
   if (input == NULL)
     return -1;
 

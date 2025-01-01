@@ -7,13 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/localtime_s.h"
-#include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
-#include "test/src/time/TmHelper.h"
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
+extern char **environ;
 
-/*TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp0) {
+void set_env_var(char *env) {
+    environ[0] = env;
+    environ[1] = "\0";
+}
+
+TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp0) {
+  set_env_var("TZ=Europe/Paris");
+
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
                                 .tm_hour = 0,
@@ -36,9 +41,11 @@ using LIBC_NAMESPACE::time_utils::TimeConstants;
   ASSERT_EQ(4, input.tm_wday);
   ASSERT_EQ(0, input.tm_yday);
   ASSERT_EQ(0, input.tm_isdst);
-}*/
+}
 
-/*TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
+TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
+  set_env_var("TZ=Europe/Paris");
+
   time_t t_ptr = 2147483647;
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
@@ -61,9 +68,11 @@ using LIBC_NAMESPACE::time_utils::TimeConstants;
   ASSERT_EQ(2, input.tm_wday);
   ASSERT_EQ(18, input.tm_yday);
   ASSERT_EQ(0, input.tm_isdst);
-}*/
+}
 
-/*TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
+TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
+  set_env_var("TZ=Europe/Paris");
+
   time_t t_ptr = 1627225465;
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
@@ -86,7 +95,7 @@ using LIBC_NAMESPACE::time_utils::TimeConstants;
   ASSERT_EQ(0, input.tm_wday);
   ASSERT_EQ(205, input.tm_yday);
   ASSERT_EQ(1, input.tm_isdst);
-}*/
+}
 
 TEST(LlvmLibcLocaltimeS, InvalidUnixTimestamp) {
   time_t t_ptr = -1;

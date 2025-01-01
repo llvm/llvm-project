@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_TIME_LOCALTIME_H
 #define LLVM_LIBC_SRC_TIME_LOCALTIME_H
 
+#include "hdr/types/time_t.h"
 #include "src/__support/macros/config.h"
 #include <time.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-struct tm *localtime(const time_t *t_ptr);
+struct tm *localtime(const time_t *timer, struct tm *buf);
 
 } // namespace LIBC_NAMESPACE_DECL
 

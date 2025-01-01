@@ -1,4 +1,4 @@
-//===-- Implementation of localtime function ------------------------------===//
+//===-- Implementation of localtime_s function ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "localtime.h"
-#include "src/__support/CPP/limits.h"
+#include "src/time/localtime_s.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "time_utils.h"
+#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
-
-LLVM_LIBC_FUNCTION(struct tm *, localtime, (const time_t *t_ptr)) {
-  if (t_ptr == nullptr) {
-    return nullptr;
-  }
-
-  return time_utils::localtime(t_ptr);
+// windows only, implemented in gnu/linux for compatibility reasons
+LLVM_LIBC_FUNCTION(int, localtime_s, (const time_t *timer, struct tm *input)) {
+  return time_utils::localtime_s_internal(timer, input);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

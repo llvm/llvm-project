@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // windows only, implemented in gnu/linux for compatibility reasons
-int localtime_s(const time_t *t_ptr, struct tm *input);
+int localtime_s(const time_t *timer, struct tm *buf);
 
 } // namespace LIBC_NAMESPACE_DECL
 

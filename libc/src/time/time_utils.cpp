@@ -11,10 +11,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/time/time_constants.h"
-#include "src/__support/CPP/string_view.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include "src/time/timezone.h"
 
 #include <stdint.h>
@@ -145,21 +141,21 @@ void acquire_file(char *filename) {
   }
 }
 
-char *get_env_var(const char *var_name) {
-  for (char **env = environ; *env != NULL; ++env) {
-    char *env_var = *env;
+char *get_env_var(const char *input) {
+    for (char **env = environ; *env != NULL; ++env) {
+        char *env_var = *env;
 
-    int i = 0;
-    while (var_name[i] != '\0' && env_var[i] == var_name[i]) {
-      i++;
+        int i = 0;
+        while (input[i] != '\0' && env_var[i] == input[i]) {
+            i++;
+        }
+
+        if (input[i] == '\0' && env_var[i] == '=') {
+            return env_var + i + 1;
+        }
     }
 
-    if (var_name[i] == '\0' && env_var[i] == '=') {
-      return env_var + i + 1;
-    }
-  }
-
-  return NULL;
+    return NULL;
 }
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
@@ -299,23 +295,11 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   return 0;
 }
 
-struct tm *get_localtime(time_t *t_ptr) {
-  struct tm *tm;
-  int offset;
-  int dst;
-
-  tm = nullptr;
-  offset = 0;
-  dst = is_dst(tm);
-  update_from_seconds(*t_ptr, tm);
+timezone::tzset *get_localtime(struct tm *tm) {
   char *tz_filename = get_env_var("TZ");
-  if (tz_filename[0] == '\0') {
-    char localtime[15] = "/etc/localtime";
-    size_t i = 0;
-    while (localtime[i] != '\0') {
-      tz_filename[i] = localtime[i];
-      i++;
-    }
+  if ((tz_filename == nullptr) == 1 || tz_filename[0] == '\0') {
+    static char localtime[] = "/etc/localtime";
+    tz_filename = localtime;
   } else {
     char tmp[64];
     char prefix[21] = "/usr/share/zoneinfo/";
@@ -356,36 +340,32 @@ struct tm *get_localtime(time_t *t_ptr) {
   }
 
   for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
-    if (dst == ptr_tzset->ttinfo[i].tt_isdst) {
-      offset = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
+    if (is_dst(tm) == ptr_tzset->ttinfo[i].tt_isdst) {
+      ptr_tzset->global_offset = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
+      ptr_tzset->global_isdst = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_isdst);
     }
   }
-
-  tm->tm_hour += offset;
-  tm->tm_isdst = dst;
 
   if (file_usage == 1) {
     release_file(fd);
   }
 
-  return tm;
+  return ptr_tzset;
 }
 
 unsigned char is_dst(struct tm *tm) {
-  int dst;
-  int sunday;
+  unsigned int dst;
 
   dst = 0;
-  sunday = tm->tm_mday - tm->tm_wday;
 
   if (tm->tm_mon < 3 || tm->tm_mon > 11) {
     dst = 0;
   } else if (tm->tm_mon > 3 && tm->tm_mon < 11) {
     dst = 1;
   } else if (tm->tm_mon == 3) {
-    dst = sunday >= 8;
+    dst = (tm->tm_mday - tm->tm_wday) >= 8;
   } else {
-    dst = sunday <= 0;
+    dst = (tm->tm_mday - tm->tm_wday) <= 0;
   }
 
   return static_cast<unsigned char>(dst);

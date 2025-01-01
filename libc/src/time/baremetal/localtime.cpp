@@ -1,4 +1,4 @@
-//===-- Implementation of localtime_r function ----------------------------===//
+//===-- Implementation of localtime for baremetal -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/localtime_r.h"
+#include "src/time/localtime.h"
+#include "hdr/time_macros.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(struct tm *, localtime_r,
-                   (const time_t *t_ptr, struct tm *input)) {
-  return time_utils::localtime_internal(t_ptr, input);
+extern "C" bool __llvm_libc_localtime_utc(struct timespec *ts);
+
+LLVM_LIBC_FUNCTION(int, localtime, (struct timespec * ts, int base)) {
+    (void)ts;
+    return base;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
