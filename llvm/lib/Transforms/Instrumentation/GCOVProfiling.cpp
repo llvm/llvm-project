@@ -973,8 +973,10 @@ bool GCOVProfiler::emitProfileNotes(
         out.write(Tmp, 4);
       }
       write(Stamp);
+      // getcwd() breaks local determinism and is not easy to adjust with
+      // -ffile-prefix-map. Just write "." to appease GCC's gcov.
       if (Version >= 90)
-        writeString(""); // unuseful current_working_directory
+        writeString(".");
       if (Version >= 80)
         write(0); // unuseful has_unexecuted_blocks
 
