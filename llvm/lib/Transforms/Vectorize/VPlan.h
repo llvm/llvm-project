@@ -3843,8 +3843,12 @@ public:
   const VPBasicBlock *getEntry() const { return Entry; }
 
   /// Returns the preheader of the vector loop region.
-  VPBasicBlock *getVectorPreheader();
-  VPBasicBlock *getVectorPreheader() const;
+  VPBasicBlock *getVectorPreheader() {
+    VPRegionBlock *VectorRegion = getVectorLoopRegion();
+    return VectorRegion
+               ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
+               : nullptr;
+  }
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion();

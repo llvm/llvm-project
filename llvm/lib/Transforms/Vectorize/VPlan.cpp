@@ -1044,28 +1044,19 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   return getVectorLoopRegion()->cost(VF, Ctx);
 }
 
-VPBasicBlock *VPlan::getVectorPreheader() {
-  VPBlockBase *Current = getEntry()->getSuccessors().back();
-  while (Current->getNumSuccessors() == 2)
-    Current = Current->getSuccessors().back();
-  return cast<VPBasicBlock>(Current);
-}
-
-VPBasicBlock *VPlan::getVectorPreheader() const {
-  VPBlockBase *Current = getEntry()->getSuccessors().back();
-  while (Current->getNumSuccessors() == 2)
-    Current = Current->getSuccessors().back();
-  return cast<VPBasicBlock>(Current);
-}
-
 VPRegionBlock *VPlan::getVectorLoopRegion() {
   // TODO: Cache if possible.
-  return dyn_cast<VPRegionBlock>(getVectorPreheader()->getSingleSuccessor());
-  ;
+  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R->isReplicator() ? nullptr : R;
+  return nullptr;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {
-  return dyn_cast<VPRegionBlock>(getVectorPreheader()->getSingleSuccessor());
+  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R->isReplicator() ? nullptr : R;
+  return nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
