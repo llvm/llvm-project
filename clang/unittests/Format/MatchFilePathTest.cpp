@@ -196,7 +196,7 @@ TEST_F(MatchFilePathTest, Globstar) {
   EXPECT_TRUE(match("a/x/y/b", "a/**/b"));
 
   EXPECT_FALSE(match("a/x/b", "a**/b"));
-  EXPECT_FALSE(match("a/x/y/b", "a/**b"));
+  EXPECT_FALSE(match("a/x/b", "a/**b"));
 }
 
 } // namespace
