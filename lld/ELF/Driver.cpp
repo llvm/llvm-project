@@ -757,14 +757,17 @@ static void setUnresolvedSymbolPolicy(Ctx &ctx, opt::InputArgList &args) {
         break;
       arg->claim();
       break;
-    case OPT_allow_shlib_undefined:
-      diagShlib = false;
-      break;
-    case OPT_no_allow_shlib_undefined:
-      diagShlib = true;
-      break;
     }
   }
+
+  opt::Arg *allow_shlib = args.getLastArg(OPT_allow_shlib_undefined);
+  opt::Arg *no_allow_shlib = args.getLastArg(OPT_no_allow_shlib_undefined);
+
+  if (allow_shlib != nullptr && no_allow_shlib != nullptr)
+    diagShlib =
+        allow_shlib->getIndex() < no_allow_shlib->getIndex() ? true : false;
+  else if (allow_shlib != nullptr || no_allow_shlib != nullptr)
+    diagShlib = no_allow_shlib != nullptr ? true : false;
 
   ctx.arg.unresolvedSymbols =
       diagRegular ? errorOrWarn : UnresolvedPolicy::Ignore;
