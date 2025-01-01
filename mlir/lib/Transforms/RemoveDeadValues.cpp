@@ -228,7 +228,8 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 ///   - A region branch terminator
 ///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
-                            DenseSet<Value> &deletionSet, RDVFinalCleanupList &cl) {
+                            DenseSet<Value> &deletionSet,
+                            RDVFinalCleanupList &cl) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), deletionSet, la))
     return;
 
@@ -639,7 +640,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 ///    as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
-                            DenseSet<Value> &deletionSet, RDVFinalCleanupList &cl) {
+                            DenseSet<Value> &deletionSet,
+                            RDVFinalCleanupList &cl) {
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
   // Do (1)
@@ -742,7 +744,8 @@ void RemoveDeadValues::runOnOperation() {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       processFuncOp(funcOp, module, la, deadVals, finalRDVFinalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      processRegionBranchOp(regionBranchOp, la, deadVals, finalRDVFinalCleanupList);
+      processRegionBranchOp(regionBranchOp, la, deadVals,
+                            finalRDVFinalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
       processBranchOp(branchOp, la, deadVals, finalRDVFinalCleanupList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
