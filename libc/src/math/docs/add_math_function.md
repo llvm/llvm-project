@@ -18,7 +18,7 @@ together with its specifications:
 ```
 - Add function specs to the file:
 ```
-  libc/hdrgen/spec/math.yaml
+  libc/utils/hdrgen/spec/math.yaml
 ```
 
 ## Implementation

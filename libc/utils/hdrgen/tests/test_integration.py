@@ -9,19 +9,19 @@ import sys
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
         self.output_dir = Path(
-            args.output_dir if args.output_dir else "libc/hdrgen/tests/output"
+            args.output_dir if args.output_dir else "libc/utils/hdrgen/tests/output"
         )
 
         self.maxDiff = None
 
-        self.source_dir = Path(__file__).resolve().parent.parent.parent.parent
+        self.source_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
 
     def run_script(self, yaml_file, h_def_file, output_dir, entry_points):
         yaml_file = self.source_dir / yaml_file
         h_def_file = self.source_dir / h_def_file
         command = [
             "python3",
-            str(self.source_dir / "libc/hdrgen/yaml_to_classes.py"),
+            str(self.source_dir / "libc/utils/hdrgen/yaml_to_classes.py"),
             str(yaml_file),
             "--h_def_file",
             str(h_def_file),
@@ -51,10 +51,10 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.assertEqual(gen_content, exp_content)
 
     def test_generate_header(self):
-        yaml_file = "libc/hdrgen/tests/input/test_small.yaml"
-        h_def_file = "libc/hdrgen/tests/input/test_small.h.def"
+        yaml_file = "libc/utils/hdrgen/tests/input/test_small.yaml"
+        h_def_file = "libc/utils/hdrgen/tests/input/test_small.h.def"
         expected_output_file = (
-            self.source_dir / "libc/hdrgen/tests/expected_output/test_header.h"
+            self.source_dir / "libc/utils/hdrgen/tests/expected_output/test_header.h"
         )
         output_file = self.output_dir / "test_small.h"
         entry_points = {"func_b", "func_a", "func_c", "func_d", "func_e"}
