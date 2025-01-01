@@ -93,7 +93,7 @@ public:
 
   // global locale objects:
   static locale global(const locale&);
-  static const locale& classic();
+  [[__gnu__::__const__]] static const locale& classic();
 
 private:
   class __imp;
@@ -105,8 +105,8 @@ private:
 
   void __install_ctor(const locale&, facet*, long);
   static locale& __global();
-  bool has_facet(id&) const;
-  const facet* use_facet(id&) const;
+  [[__gnu__::__pure__]] bool has_facet(id&) const;
+  [[__gnu__::__pure__]] const facet* use_facet(id&) const;
 
   template <class _Facet>
   friend bool has_facet(const locale&) _NOEXCEPT;
