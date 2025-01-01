@@ -305,3 +305,19 @@ template <class... Args> struct mdispatch_ {
 mdispatch_<int, int> d;
 
 } // namespace GH116105
+
+namespace GH121242 {
+    // Non-dependent type pack access
+    template <int...x>
+    int y = x...[0];
+
+    struct X {};
+
+    template <X...x>
+    X z = x...[0];
+
+    void foo() {
+        (void)y<0>;
+        (void)z<X{}>;
+    }
+} // namespace GH121242
