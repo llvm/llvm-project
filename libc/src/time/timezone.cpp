@@ -17,33 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-tzset *get_tzset(int fd, size_t filesize) {
-  unsigned char hdr[filesize];
-  size_t t;
-
-  t = 0;
-  while (t < sizeof(hdr)) {
-    size_t r;
-
-    r = read(fd, hdr + t, sizeof(hdr) - t);
-
-    if (r < 0) {
-      close(fd);
-      return nullptr;
-    }
-
-    if (r == 0) {
-      break;
-    }
-
-    t += r;
-  }
-
-  if (t != sizeof(hdr)) {
-    close(fd);
-    return nullptr;
-  }
-
+tzset *get_tzset(File *file) {
+  unsigned char hdr[TIMEZONE_HDR_SIZE + 4096];
   int64_t magic;
   unsigned char version;
   __int128_t reserved;
@@ -55,6 +30,8 @@ tzset *get_tzset(int fd, size_t filesize) {
   uint32_t tzh_charcnt;
   __uint128_t tmp;
   size_t i;
+
+  file->read(hdr, TIMEZONE_HDR_SIZE + 4096);
 
   // these locations are defined in documentation
   // for `tzfile` and should be 44 bytes
@@ -210,8 +187,6 @@ tzset *get_tzset(int fd, size_t filesize) {
   }
 
   result.ttinfo = ttinfo;
-
-  close(fd);
 
   return &result;
 }
