@@ -76,23 +76,23 @@ namespace {
 // This is done to separate analysis and tree modification phases,
 // otherwise analysis is operating on half-deleted tree which is incorrect.
 
-struct CleanupFunction {
+struct FunctionToCleanUp {
   FunctionOpInterface funcOp;
   BitVector nonLiveArgs;
   BitVector nonLiveRets;
 };
 
-struct CleanupOperation {
+struct OperationToCleanup {
   Operation *op;
   BitVector nonLive;
 };
 
-struct CleanupBlockArgs {
+struct BlockArgsToCleanup {
   Block *b;
   BitVector nonLiveArgs;
 };
 
-struct CleanupSuccessorOperands {
+struct SuccessorOperandsToCleanup {
   BranchOpInterface branch;
   unsigned successorIndex;
   BitVector nonLiveOperands;
@@ -101,11 +101,11 @@ struct CleanupSuccessorOperands {
 struct CleanupList {
   SmallVector<Operation *> operations;
   SmallVector<Value> values;
-  SmallVector<CleanupFunction> functions;
-  SmallVector<CleanupOperation> operands;
-  SmallVector<CleanupOperation> results;
-  SmallVector<CleanupBlockArgs> blocks;
-  SmallVector<CleanupSuccessorOperands> successorOperands;
+  SmallVector<FunctionToCleanUp> functions;
+  SmallVector<OperationToCleanup> operands;
+  SmallVector<OperationToCleanup> results;
+  SmallVector<BlockArgsToCleanup> blocks;
+  SmallVector<SuccessorOperandsToCleanup> successorOperands;
 };
 
 // Some helper functions...
@@ -214,15 +214,19 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
   return opOperands;
 }
 
-/// Clean a simple op `op`, given the liveness analysis information in `la`.
-/// Here, cleaning means:
-///   (1) Dropping all its uses, AND
-///   (2) Erasing it
-/// iff it has no memory effects and none of its results are live.
+/// Process a simple operation `op` using the liveness analysis `la`.
+/// If the operation has no memory effects and none of its results are live:
+///   1. Adding the operation to a list for future removal, and
+///   2. Marking all its results as non-live values
 ///
-/// It is assumed that `op` is simple. Here, a simple op is one which isn't a
-/// function-like op, a call-like op, a region branch op, a branch op, a region
-/// branch terminator op, or return-like.
+/// The operation `op` is assumed to be simple. 
+/// A simple operation is one that is NOT:
+///   - Function-like
+///   - Call-like
+///   - A region branch operation
+///   - A branch operation
+///   - A region branch terminator
+///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &deletionSet, CleanupList &cl) {
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), deletionSet, la))
@@ -233,16 +237,15 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                        BitVector(op->getNumResults(), true));
 }
 
-/// Clean a function-like op `funcOp`, given the liveness information in `la`
-/// and the IR in `module`. Here, cleaning means:
-///   (1) Dropping the uses of its unnecessary (non-live) arguments,
-///   (2) Erasing their corresponding operands from its callers,
-///   (3) Erasing its unnecessary terminator operands (return values that are
-///   non-live across all callers),
-///   (4) Erasing these arguments,
-///   (5) Dropping the uses of these return values from its callers, AND
-///   (6) Erasing these return values
-/// iff it is not public or external.
+/// Process a function-like operation `funcOp` using the liveness analysis `la` 
+/// and the IR in `module`. If it is not public or external:
+///   1. Adding its non-live arguments to a list for future removal.
+///   2. Marking their corresponding operands in its callers for removal.
+///   3. Identifying and enqueueing unnecessary terminator operands 
+///      (return values that are non-live across all callers) for removal.
+///   4. Enqueueing the non-live arguments themselves for removal.
+///   5. Collecting the uses of these return values in its callers for future removal.
+///   6. Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &deletionSet,
                           CleanupList &cl) {
@@ -329,27 +332,30 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   }
 }
 
-/// Clean a region branch op `regionBranchOp`, given the liveness information in
-/// `la`. Here, cleaning means:
-///   (1') Dropping all its uses, AND
-///   (2') Erasing it
-/// if it has no memory effects and none of its results are live, AND
-///   (1) Erasing its unnecessary operands (operands that are forwarded to
-///   unneccesary results and arguments),
-///   (2) Cleaning each of its regions,
-///   (3) Dropping the uses of its unnecessary results (results that are
-///   forwarded from unnecessary operands and terminator operands), AND
-///   (4) Erasing these results
-/// otherwise.
-/// Note that here, cleaning a region means:
-///   (2.a) Dropping the uses of its unnecessary arguments (arguments that are
-///   forwarded from unneccesary operands and terminator operands),
-///   (2.b) Erasing these arguments, AND
-///   (2.c) Erasing its unnecessary terminator operands (terminator operands
-///   that are forwarded to unneccesary results and arguments).
-/// It is important to note that values in this op flow from operands and
-/// terminator operands (successor operands) to arguments and results (successor
-/// inputs).
+/// Process a region branch operation `regionBranchOp` using the liveness information in `la`. 
+/// The processing involves two scenarios:
+///
+/// Scenario 1: If the operation has no memory effects and none of its results are live:
+///   1. Enqueue all its uses for deletion.
+///   2. Enqueue the branch itself for deletion.
+///
+/// Scenario 2: Otherwise:
+///   1. Collect its unnecessary operands (operands forwarded to unnecessary results or arguments).
+///   2. Process each of its regions.
+///   3. Collect the uses of its unnecessary results (results forwarded from unnecessary operands 
+///      or terminator operands).
+///   4. Add these results to the deletion list.
+///
+/// Processing a region includes:
+///   a. Collecting the uses of its unnecessary arguments (arguments forwarded from unnecessary operands 
+///      or terminator operands).
+///   b. Collecting these unnecessary arguments.
+///   c. Collecting its unnecessary terminator operands (terminator operands forwarded to unnecessary results 
+///      or arguments).
+///
+/// Value Flow Note: In this operation, values flow as follows:
+/// - From operands and terminator operands (successor operands) 
+/// - To arguments and results (successor inputs).
 static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   RunLivenessAnalysis &la,
                                   DenseSet<Value> &deletionSet,
@@ -546,7 +552,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         }
       };
 
-  // Do (1') and (2'). This is the only case where the entire `regionBranchOp`
+  // Scenario 1. This is the only case where the entire `regionBranchOp`
   // is removed. It will not happen in any other scenario. Note that in this
   // case, a non-forwarded operand of `regionBranchOp` could be live/non-live.
   // It could never be live because of this op but its liveness could have been
@@ -557,6 +563,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
     return;
   }
 
+  // Scenario 2.
   // At this point, we know that every non-forwarded operand of `regionBranchOp`
   // is live.
 
@@ -618,14 +625,12 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   cl.results.push_back({regionBranchOp.getOperation(), resultsToRemove});
 }
 
-// 1. Iterate over each successor block of the given BranchOpInterface
-//    operation.
-// 2. For each successor block:
-//    a. Retrieve the operands passed to the successor.
-//    b. Use the provided liveness analysis (`RunLivenessAnalysis`) to determine
-//       which operands are live in the successor block.
-//    c. Mark each operand as live or dead based on the analysis.
-// 3. Remove dead operands from the branch operation and arguments accordingly
+/// Steps to process a `BranchOpInterface` operation:
+/// 1. Iterate through each successor block of the operation.
+/// 2. For each successor block, gather all operands from all successors 
+///    along with their associated liveness analysis data.
+/// 3. Identify and collect the dead operands from the branch operation 
+///    as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &deletionSet, CleanupList &cl) {
@@ -654,36 +659,36 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
   }
 }
 
-static void cleanUpDeadVals(CleanupList &cl) {
+static void cleanUpDeadVals(CleanupList &cleanupList) {
   // 1. Operations
-  for (auto &op : cl.operations) {
+  for (auto &op : cleanupList.operations) {
     op->dropAllUses();
     op->erase();
   }
 
   // 2. Values
-  for (auto &v : cl.values) {
+  for (auto &v : cleanupList.values) {
     v.dropAllUses();
   }
 
   // 3. Functions
-  for (auto &f : cl.functions) {
+  for (auto &f : cleanupList.functions) {
     f.funcOp.eraseArguments(f.nonLiveArgs);
     f.funcOp.eraseResults(f.nonLiveRets);
   }
 
   // 4. Operands
-  for (auto &o : cl.operands) {
+  for (auto &o : cleanupList.operands) {
     o.op->eraseOperands(o.nonLive);
   }
 
   // 5. Results
-  for (auto &r : cl.results) {
+  for (auto &r : cleanupList.results) {
     dropUsesAndEraseResults(r.op, r.nonLive);
   }
 
   // 6. Blocks
-  for (auto &b : cl.blocks) {
+  for (auto &b : cleanupList.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
       continue;
@@ -696,7 +701,7 @@ static void cleanUpDeadVals(CleanupList &cl) {
   }
 
   // 7. Successor Operands
-  for (auto &op : cl.successorOperands) {
+  for (auto &op : cleanupList.successorOperands) {
     SuccessorOperands successorOperands =
         op.branch.getSuccessorOperands(op.successorIndex);
     // blocks that are accessed via multiple codepaths processed once
@@ -721,19 +726,19 @@ void RemoveDeadValues::runOnOperation() {
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
-  DenseSet<Value> deletionSet;
+  DenseSet<Value> deadVals;
 
   // Maintains a list of Ops, values, branches, etc., slated for cleanup at the
   // end of this pass.
-  CleanupList cl;
+  CleanupList finalCleanUpList;
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deletionSet, cl);
+      processFuncOp(funcOp, module, la, deadVals, finalCleanUpList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      processRegionBranchOp(regionBranchOp, la, deletionSet, cl);
+      processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanUpList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
-      processBranchOp(branchOp, la, deletionSet, cl);
+      processBranchOp(branchOp, la, deadVals, finalCleanUpList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
@@ -741,11 +746,11 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
     } else {
-      processSimpleOp(op, la, deletionSet, cl);
+      processSimpleOp(op, la, deadVals, finalCleanUpList);
     }
   });
 
-  cleanUpDeadVals(cl);
+  cleanUpDeadVals(finalCleanUpList);
 }
 
 std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
