@@ -50,7 +50,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -2532,7 +2530,6 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
   bool RetVal = false;
 
   DenseMap<MachineInstr *, unsigned> MI2LocMap;
-  using MapIt = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>::iterator;
   using Base2InstMap = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>;
   using BaseVec = SmallVector<unsigned, 4>;
   Base2InstMap Base2LdsMap;
@@ -2571,9 +2568,9 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       int Offset = getMemoryOpOffset(MI);
       bool StopHere = false;
       auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
-        MapIt BI = Base2Ops.find(Base);
-        if (BI == Base2Ops.end()) {
-          Base2Ops[Base].push_back(&MI);
+        auto [BI, Inserted] = Base2Ops.try_emplace(Base);
+        if (Inserted) {
+          BI->second.push_back(&MI);
           Bases.push_back(Base);
           return;
         }

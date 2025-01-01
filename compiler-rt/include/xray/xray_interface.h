@@ -93,8 +93,8 @@ enum XRayPatchingStatus {
   FAILED = 3,
 };
 
-/// This tells XRay to patch the instrumentation points in all currently loaded objects. See XRayPatchingStatus
-/// for possible result values.
+/// This tells XRay to patch the instrumentation points in all currently loaded
+/// objects. See XRayPatchingStatus for possible result values.
 extern XRayPatchingStatus __xray_patch();
 
 /// This tells XRay to patch the instrumentation points in the given object.
@@ -105,8 +105,8 @@ extern XRayPatchingStatus __xray_patch_object(int32_t ObjId);
 /// result values.
 extern XRayPatchingStatus __xray_unpatch();
 
-/// Reverses the effect of __xray_patch_object. See XRayPatchingStatus for possible
-/// result values.
+/// Reverses the effect of __xray_patch_object. See XRayPatchingStatus for
+/// possible result values.
 extern XRayPatchingStatus __xray_unpatch_object(int32_t ObjId);
 
 /// This unpacks the given (packed) function id and patches
@@ -114,8 +114,8 @@ extern XRayPatchingStatus __xray_unpatch_object(int32_t ObjId);
 /// result values.
 extern XRayPatchingStatus __xray_patch_function(int32_t FuncId);
 
-/// This patches a specific function in the given object. See XRayPatchingStatus for possible
-/// result values.
+/// This patches a specific function in the given object. See XRayPatchingStatus
+/// for possible result values.
 extern XRayPatchingStatus __xray_patch_function_in_object(int32_t FuncId,
                                                           int32_t ObjId);
 
@@ -129,26 +129,29 @@ extern XRayPatchingStatus __xray_unpatch_function(int32_t FuncId);
 extern XRayPatchingStatus __xray_unpatch_function_in_object(int32_t FuncId,
                                                             int32_t ObjId);
 
-/// This function unpacks the given (packed) function id and returns the address of the corresponding function. We return 0 if we encounter any error, even if 0 may be a valid function
-/// address.
+/// This function unpacks the given (packed) function id and returns the address
+/// of the corresponding function. We return 0 if we encounter any error, even
+/// if 0 may be a valid function address.
 extern uintptr_t __xray_function_address(int32_t FuncId);
 
-/// This function returns the address of the function in the given object provided valid function and object
-/// ids. We return 0 if we encounter any error, even if 0 may be a valid function
-/// address.
+/// This function returns the address of the function in the given object
+/// provided valid function and object ids. We return 0 if we encounter any
+/// error, even if 0 may be a valid function address.
 extern uintptr_t __xray_function_address_in_object(int32_t FuncId,
                                                    int32_t ObjId);
 
-/// This function returns the maximum valid function id for the main executable (object id = 0). Returns 0 if we
-/// encounter errors (when there are no instrumented functions, etc.).
+/// This function returns the maximum valid function id for the main executable
+/// (object id = 0). Returns 0 if we encounter errors (when there are no
+/// instrumented functions, etc.).
 extern size_t __xray_max_function_id();
 
-/// This function returns the maximum valid function id for the given object. Returns 0 if we
-/// encounter errors (when there are no instrumented functions, etc.).
+/// This function returns the maximum valid function id for the given object.
+/// Returns 0 if we encounter errors (when there are no instrumented functions,
+/// etc.).
 extern size_t __xray_max_function_id_in_object(int32_t ObjId);
 
-/// This function returns the number of previously registered objects (executable + loaded DSOs).
-/// Returns 0 if XRay has not been initialized.
+/// This function returns the number of previously registered objects
+/// (executable + loaded DSOs). Returns 0 if XRay has not been initialized.
 extern size_t __xray_num_objects();
 
 /// Unpacks the function id from the given packed id.
@@ -158,7 +161,8 @@ extern int32_t __xray_unpack_function_id(int32_t PackedId);
 extern int32_t __xray_unpack_object_id(int32_t PackedId);
 
 /// Creates and returns a packed id from the given function and object ids.
-/// If the ids do not fit within the reserved number of bits for each part, the high bits are truncated.
+/// If the ids do not fit within the reserved number of bits for each part, the
+/// high bits are truncated.
 extern int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId);
 
 /// Initialize the required XRay data structures. This is useful in cases where

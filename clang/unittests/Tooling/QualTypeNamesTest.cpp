@@ -11,12 +11,12 @@
 using namespace clang;
 
 namespace {
-struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
+struct TypeNameVisitor : TestVisitor {
   llvm::StringMap<std::string> ExpectedQualTypeNames;
   bool WithGlobalNsPrefix = false;
 
   // ValueDecls are the least-derived decl with both a qualtype and a name.
-  bool VisitValueDecl(const ValueDecl *VD) {
+  bool VisitValueDecl(ValueDecl *VD) override {
     std::string ExpectedName =
         ExpectedQualTypeNames.lookup(VD->getNameAsString());
     if (ExpectedName != "") {

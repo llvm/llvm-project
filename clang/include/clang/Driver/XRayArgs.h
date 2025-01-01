@@ -36,9 +36,7 @@ public:
                llvm::opt::ArgStringList &CmdArgs, types::ID InputType) const;
 
   bool needsXRayRt() const { return XRayInstrument && XRayRT; }
-  bool needsXRayDSORt() const {
-    return XRayInstrument && XRayRT && XRayShared;
-  }
+  bool needsXRayDSORt() const { return XRayInstrument && XRayRT && XRayShared; }
   llvm::ArrayRef<std::string> modeList() const { return Modes; }
   XRayInstrSet instrumentationBundle() const { return InstrumentationBundle; }
 };

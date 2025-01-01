@@ -77,8 +77,10 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -93,21 +95,31 @@ using namespace llvm;
 
 namespace {
 
+/// Used the by the ReportedErrors class to guarantee only one error is reported
+/// at one time.
+static ManagedStatic<sys::SmartMutex<true>> ReportedErrorsLock;
+
 struct MachineVerifier {
   MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
-                  raw_ostream *OS)
-      : MFAM(&MFAM), OS(OS ? *OS : nulls()), Banner(b) {}
+                  raw_ostream *OS, bool AbortOnError = true)
+      : MFAM(&MFAM), OS(OS ? *OS : nulls()), Banner(b),
+        ReportedErrs(AbortOnError) {}
 
-  MachineVerifier(Pass *pass, const char *b, raw_ostream *OS)
-      : PASS(pass), OS(OS ? *OS : nulls()), Banner(b) {}
+  MachineVerifier(Pass *pass, const char *b, raw_ostream *OS,
+                  bool AbortOnError = true)
+      : PASS(pass), OS(OS ? *OS : nulls()), Banner(b),
+        ReportedErrs(AbortOnError) {}
 
   MachineVerifier(const char *b, LiveVariables *LiveVars,
                   LiveIntervals *LiveInts, LiveStacks *LiveStks,
-                  SlotIndexes *Indexes, raw_ostream *OS)
+                  SlotIndexes *Indexes, raw_ostream *OS,
+                  bool AbortOnError = true)
       : OS(OS ? *OS : nulls()), Banner(b), LiveVars(LiveVars),
-        LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes) {}
+        LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes),
+        ReportedErrs(AbortOnError) {}
 
-  unsigned verify(const MachineFunction &MF);
+  /// \returns true if no problems were found.
+  bool verify(const MachineFunction &MF);
 
   MachineFunctionAnalysisManager *MFAM = nullptr;
   Pass *const PASS = nullptr;
@@ -119,8 +131,6 @@ struct MachineVerifier {
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   const RegisterBankInfo *RBI = nullptr;
-
-  unsigned foundErrors = 0;
 
   // Avoid querying the MachineFunctionProperties for each operand.
   bool isFunctionRegBankSelected = false;
@@ -231,6 +241,44 @@ struct MachineVerifier {
   LiveStacks *LiveStks = nullptr;
   SlotIndexes *Indexes = nullptr;
 
+  /// A class to track the number of reported error and to guarantee that only
+  /// one error is reported at one time.
+  class ReportedErrors {
+    unsigned NumReported = 0;
+    bool AbortOnError;
+
+  public:
+    /// \param AbortOnError -- If set, abort after printing the first error.
+    ReportedErrors(bool AbortOnError) : AbortOnError(AbortOnError) {}
+
+    ~ReportedErrors() {
+      if (!hasError())
+        return;
+      if (AbortOnError)
+        report_fatal_error("Found " + Twine(NumReported) +
+                           " machine code errors.");
+      // Since we haven't aborted, release the lock to allow other threads to
+      // report errors.
+      ReportedErrorsLock->unlock();
+    }
+
+    /// Increment the number of reported errors.
+    /// \returns true if this is the first reported error.
+    bool increment() {
+      // If this is the first error this thread has encountered, grab the lock
+      // to prevent other threads from reporting errors at the same time.
+      // Otherwise we assume we already have the lock.
+      if (!hasError())
+        ReportedErrorsLock->lock();
+      ++NumReported;
+      return NumReported == 1;
+    }
+
+    /// \returns true if an error was reported.
+    bool hasError() { return NumReported; }
+  };
+  ReportedErrors ReportedErrs;
+
   // This is calculated only when trying to verify convergence control tokens.
   // Similar to the LLVM IR verifier, we calculate this locally instead of
   // relying on the pass manager.
@@ -321,7 +369,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addUsedIfAvailable<LiveStacks>();
+    AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
@@ -337,11 +385,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
             MachineFunctionProperties::Property::FailsVerification))
       return false;
 
-    unsigned FoundErrors =
-        MachineVerifier(this, Banner.c_str(), &errs()).verify(MF);
-    if (FoundErrors)
-      report_fatal_error("Found " + Twine(FoundErrors) +
-                         " machine code errors.");
+    MachineVerifier(this, Banner.c_str(), &errs()).verify(MF);
     return false;
   }
 };
@@ -357,10 +401,7 @@ MachineVerifierPass::run(MachineFunction &MF,
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailsVerification))
     return PreservedAnalyses::all();
-  unsigned FoundErrors =
-      MachineVerifier(MFAM, Banner.c_str(), &errs()).verify(MF);
-  if (FoundErrors)
-    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  MachineVerifier(MFAM, Banner.c_str(), &errs()).verify(MF);
   return PreservedAnalyses::all();
 }
 
@@ -380,31 +421,20 @@ void llvm::verifyMachineFunction(const std::string &Banner,
   // LiveIntervals *LiveInts;
   // LiveStacks *LiveStks;
   // SlotIndexes *Indexes;
-  unsigned FoundErrors =
-      MachineVerifier(nullptr, Banner.c_str(), &errs()).verify(MF);
-  if (FoundErrors)
-    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  MachineVerifier(nullptr, Banner.c_str(), &errs()).verify(MF);
 }
 
 bool MachineFunction::verify(Pass *p, const char *Banner, raw_ostream *OS,
-                             bool AbortOnErrors) const {
-  MachineFunction &MF = const_cast<MachineFunction&>(*this);
-  unsigned FoundErrors = MachineVerifier(p, Banner, OS).verify(MF);
-  if (AbortOnErrors && FoundErrors)
-    report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
-  return FoundErrors == 0;
+                             bool AbortOnError) const {
+  return MachineVerifier(p, Banner, OS, AbortOnError).verify(*this);
 }
 
 bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
                              const char *Banner, raw_ostream *OS,
-                             bool AbortOnErrors) const {
-  MachineFunction &MF = const_cast<MachineFunction &>(*this);
-  unsigned FoundErrors =
-      MachineVerifier(Banner, nullptr, LiveInts, nullptr, Indexes, OS)
-          .verify(MF);
-  if (AbortOnErrors && FoundErrors)
-    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
-  return FoundErrors == 0;
+                             bool AbortOnError) const {
+  return MachineVerifier(Banner, /*LiveVars=*/nullptr, LiveInts,
+                         /*LiveStks=*/nullptr, Indexes, OS, AbortOnError)
+      .verify(*this);
 }
 
 void MachineVerifier::verifySlotIndexes() const {
@@ -430,9 +460,7 @@ void MachineVerifier::verifyProperties(const MachineFunction &MF) {
     report("Function has NoVRegs property but there are VReg operands", &MF);
 }
 
-unsigned MachineVerifier::verify(const MachineFunction &MF) {
-  foundErrors = 0;
-
+bool MachineVerifier::verify(const MachineFunction &MF) {
   this->MF = &MF;
   TM = &MF.getTarget();
   TII = MF.getSubtarget().getInstrInfo();
@@ -447,7 +475,7 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   // it's expected that the MIR is somewhat broken but that's ok since we'll
   // reset it and clear the FailedISel attribute in ResetMachineFunctions.
   if (isFunctionFailedISel)
-    return foundErrors;
+    return true;
 
   isFunctionRegBankSelected = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::RegBankSelected);
@@ -463,7 +491,8 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
     auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
     if (!LiveInts)
       LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
-    LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
+    auto *LSWrapper = PASS->getAnalysisIfAvailable<LiveStacksWrapperLegacy>();
+    LiveStks = LSWrapper ? &LSWrapper->getLS() : nullptr;
     auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   }
@@ -544,13 +573,13 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   regMasks.clear();
   MBBInfoMap.clear();
 
-  return foundErrors;
+  return !ReportedErrs.hasError();
 }
 
 void MachineVerifier::report(const char *msg, const MachineFunction *MF) {
   assert(MF);
   OS << '\n';
-  if (!foundErrors++) {
+  if (ReportedErrs.increment()) {
     if (Banner)
       OS << "# " << Banner << '\n';
 
@@ -1459,7 +1488,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(NumDsts).getReg());
     if (DstTy.isVector()) {
       // This case is the converse of G_CONCAT_VECTORS.
-      if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
+      if (!SrcTy.isVector() ||
+          (SrcTy.getScalarType() != DstTy.getScalarType() &&
+           !SrcTy.isPointerVector()) ||
           SrcTy.isScalableVector() != DstTy.isScalableVector() ||
           SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
         report("G_UNMERGE_VALUES source operand does not match vector "
@@ -1559,9 +1590,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_UCMP: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
 
-    if (SrcTy.isPointerOrPointerVector() || SrcTy2.isPointerOrPointerVector()) {
+    if (SrcTy.isPointerOrPointerVector()) {
       report("Generic scmp/ucmp does not support pointers as operands", MI);
       break;
     }
@@ -1571,15 +1601,15 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    if (DstTy.getScalarSizeInBits() < 2) {
+      report("Result type must be at least 2 bits wide", MI);
+      break;
+    }
+
     if ((DstTy.isVector() != SrcTy.isVector()) ||
         (DstTy.isVector() &&
          DstTy.getElementCount() != SrcTy.getElementCount())) {
       report("Generic vector scmp/ucmp must preserve number of lanes", MI);
-      break;
-    }
-
-    if (SrcTy != SrcTy2) {
-      report("Generic scmp/ucmp must have same input types", MI);
       break;
     }
 
@@ -1697,6 +1727,36 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     if (MI->getOperand(1).getCImm()->isZero()) {
       report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_STEP_VECTOR: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("operand must be cimm", MI);
+      break;
+    }
+
+    if (!MI->getOperand(1).getCImm()->getValue().isStrictlyPositive()) {
+      report("step must be > 0", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (!DstTy.isScalableVector()) {
+      report("Destination type must be a scalable vector", MI);
+      break;
+    }
+
+    // <vscale x 2 x p0>
+    if (!DstTy.getElementType().isScalar()) {
+      report("Destination element type must be scalar", MI);
+      break;
+    }
+
+    if (MI->getOperand(1).getCImm()->getBitWidth() !=
+        DstTy.getElementType().getScalarSizeInBits()) {
+      report("step bitwidth differs from result type element bitwidth", MI);
       break;
     }
     break;
@@ -2973,7 +3033,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!MOP.getReg().isPhysical())
               continue;
 
-            if (llvm::is_contained(TRI->subregs(MOP.getReg()), Reg))
+            if (MOP.getReg() != Reg &&
+                all_of(TRI->regunits(Reg), [&](const MCRegUnit RegUnit) {
+                  return llvm::is_contained(TRI->regunits(MOP.getReg()),
+                                            RegUnit);
+                }))
               Bad = false;
           }
         }

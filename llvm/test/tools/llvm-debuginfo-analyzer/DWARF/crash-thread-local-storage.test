@@ -1,0 +1,51 @@
+; REQUIRES: x86-registered-target
+
+; For the given test case:
+
+; // ThreadLocalStorage.cpp
+; 1 thread_local int TGlobal = 0;
+; 2 int NGlobal = 1;
+; 3 void test() {
+; 4   thread_local int TLocal = 0;
+; 5   TGlobal = 1;
+; 6
+; 7   int NLocal = 0;
+; 8   NGlobal = 2;
+; 9 }
+
+; The llvm-debuginfo-analyzer crashes when producing a logical view for
+; the object file generated using the following commands:
+;
+; clang++ -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes
+;         -fno-discard-value-names -emit-llvm -S -g -O0
+;         ThreadLocalStorage.cpp -o ThreadLocalStorage.ll
+; llc --filetype=obj ThreadLocalStorage.ll -o ThreadLocalStorage.o
+;
+; llvm-debuginfo-analyzer --attribute=location --print=symbols
+;                         ThreadLocalStorage.o
+
+; RUN: llc --filetype=obj \
+; RUN:     %p/Inputs/ThreadLocalStorage.ll -o %t.ThreadLocalStorage.o
+
+; RUN: llvm-debuginfo-analyzer --attribute=location \
+; RUN:                         --print=symbols \
+; RUN:                         %t.ThreadLocalStorage.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace %s
+
+; CHECK: Logical View:
+; CHECK:            {File} '{{.*}}threadlocalstorage.o'
+; CHECK-EMPTY:
+; CHECK:              {CompileUnit} 'threadlocalstorage.cpp'
+; CHECK:      1         {Variable} extern 'TGlobal' -> 'int'
+; CHECK:                  {Location}
+; CHECK:                    {Entry} const_u 0, gnu_push_tls_address
+; CHECK:      2         {Variable} extern 'NGlobal' -> 'int'
+; CHECK:                  {Location}
+; CHECK:                    {Entry} addrx 0
+; CHECK:      3         {Function} extern not_inlined 'test' -> 'void'
+; CHECK:      4           {Variable} 'TLocal' -> 'int'
+; CHECK:                    {Location}
+; CHECK:                      {Entry} const_u 0, gnu_push_tls_address
+; CHECK:      7           {Variable} 'NLocal' -> 'int'
+; CHECK:                    {Location}
+; CHECK:                      {Entry} fbreg -4

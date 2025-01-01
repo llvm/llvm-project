@@ -193,6 +193,43 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
     const void *old_container_beg, const void *old_container_end,
     const void *new_container_beg, const void *new_container_end);
 
+/// Copies memory annotations from a source storage region to a destination
+/// storage region. After the operation, the destination region has the same
+/// memory annotations as the source region, as long as sanitizer limitations
+/// allow it (more bytes may be unpoisoned than in the source region, resulting
+/// in more false negatives, but never false positives). If the source and
+/// destination regions overlap, only the minimal required changes are made to
+/// preserve the correct annotations. Old storage bytes that are not in the new
+/// storage should have the same annotations, as long as sanitizer limitations
+/// allow it.
+///
+/// This function is primarily designed to be used when moving trivially
+/// relocatable objects that may have poisoned memory, making direct copying
+/// problematic under sanitizer. However, this function does not move memory
+/// content itself, only annotations.
+///
+/// A contiguous container is a container that keeps all of its elements in a
+/// contiguous region of memory. The container owns the region of memory
+/// <c>[src_begin, src_end)</c> and <c>[dst_begin, dst_end)</c>. The memory
+/// within these regions may be alternately poisoned and non-poisoned, with
+/// possibly smaller poisoned and unpoisoned regions.
+///
+/// If this function fully poisons a granule, it is marked as "container
+/// overflow".
+///
+/// Argument requirements: The destination container must have the same size as
+/// the source container, which is inferred from the beginning and end of the
+/// source region. Addresses may be granule-unaligned, but this may affect
+/// performance.
+///
+/// \param src_begin Begin of the source container region.
+/// \param src_end End of the source container region.
+/// \param dst_begin Begin of the destination container region.
+/// \param dst_end End of the destination container region.
+void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
+    const void *src_begin, const void *src_end, const void *dst_begin,
+    const void *dst_end);
+
 /// Returns true if the contiguous container <c>[beg, end)</c> is properly
 /// poisoned.
 ///

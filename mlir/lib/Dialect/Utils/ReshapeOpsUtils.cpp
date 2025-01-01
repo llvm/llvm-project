@@ -47,7 +47,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceDim < sourceShape.size() &&
+    while (sourceDim < (sourceShape.size() - 1) &&
            sourceShape[sourceDim] != ShapedType::kDynamic &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];

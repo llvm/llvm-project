@@ -35,10 +35,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper_l
 
     # string.h entrypoints
-    libc.src.string.bcmp
-    libc.src.string.bcopy
-    libc.src.string.bzero
-    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -48,10 +44,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
-    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
-    libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
@@ -66,7 +60,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
-    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -81,6 +74,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok_r
     libc.src.string.strxfrm
     libc.src.string.strxfrm_l
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.index
+    libc.src.strings.rindex
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
@@ -255,6 +257,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # time.h entrypoints
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.timespec_get
     libc.src.time.nanosleep
 
     # wchar.h entrypoints
@@ -268,9 +271,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.locale.newlocale
     libc.src.locale.setlocale
     libc.src.locale.uselocale
-
-    # gpu/rpc.h entrypoints
-    libc.src.gpu.rpc_host_call
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -521,7 +521,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.coshf16
     libc.src.math.exp10f16
+    libc.src.math.exp10m1f16
     libc.src.math.exp2f16
     libc.src.math.expf16
     libc.src.math.f16add
@@ -565,7 +567,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
+    libc.src.math.log10f16
+    libc.src.math.log2f16
     libc.src.math.logbf16
+    libc.src.math.logf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
     libc.src.math.modff16
@@ -584,6 +589,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinhf16
+    libc.src.math.sqrtf16
+    libc.src.math.tanhf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16

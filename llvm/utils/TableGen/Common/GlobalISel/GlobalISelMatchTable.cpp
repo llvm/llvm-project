@@ -842,7 +842,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
 
   ComplexSubOperands[SymbolicName] =
       std::tuple(ComplexPattern, RendererID, SubOperandID);
-  ComplexSubOperandsParentName[SymbolicName] = ParentName;
+  ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();
 }
@@ -1993,10 +1993,13 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
   // TODO: This is encoded as a 64-bit element, but only 16 or 32-bits are
   // really needed for a physical register reference. We can pack the
   // register and flags in a single field.
-  if (IsDef)
-    Table << MatchTable::NamedValue(2, "RegState::Define");
-  else
+  if (IsDef) {
+    Table << MatchTable::NamedValue(
+        2, IsDead ? "RegState::Define | RegState::Dead" : "RegState::Define");
+  } else {
+    assert(!IsDead && "A use cannot be dead");
     Table << MatchTable::IntValue(2, 0);
+  }
   Table << MatchTable::LineBreak;
 }
 

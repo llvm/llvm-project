@@ -14,6 +14,13 @@ host_arch_compatible = config.target_arch == config.host_arch
 
 if config.host_arch == "x86_64h" and config.target_arch == "x86_64":
     host_arch_compatible = True
+if host_arch_compatible:
+    config.available_features.add("host-arch-compatible")
+
+# If the target OS hasn't been set then assume host.
+if not config.target_os:
+    config.target_os = config.host_os
+
 config.test_target_is_host_executable = (
     config.target_os == config.host_os and host_arch_compatible
 )
@@ -71,9 +78,10 @@ config.substitutions.append(
         (lli + " -jit-kind=orc -jit-linker=jitlink -orc-runtime=" + orc_rt_path),
     )
 )
+config.substitutions.append(("%ar", "ar"))
 
 # Default test suffixes.
-config.suffixes = [".c", ".cpp", ".S", ".ll", ".test"]
+config.suffixes = [".c", ".cpp", ".m", ".S", ".ll", ".test"]
 
 # Exclude Inputs directories.
 config.excludes = ["Inputs"]

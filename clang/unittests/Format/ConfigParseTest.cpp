@@ -159,32 +159,34 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
+  CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
+  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
   CHECK_PARSE_BOOL(IndentAccessModifiers);
-  CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
+  CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentGotoLabels);
-  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentRequiresClause);
+  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(InsertBraces);
   CHECK_PARSE_BOOL(InsertNewlineAtEOF);
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtEndOfFile, "KeepEmptyLinesAtEOF");
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtStartOfBlock,
                          "KeepEmptyLinesAtTheStartOfBlocks");
+  CHECK_PARSE_BOOL(KeepFormFeed);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
-  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
-  CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
+  CHECK_PARSE_BOOL(RemoveEmptyLinesInUnwrappedLines);
   CHECK_PARSE_BOOL(RemoveSemicolon);
   CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
@@ -380,6 +382,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::PAS_Right);
   CHECK_PARSE("PointerBindsToType: Middle", PointerAlignment,
               FormatStyle::PAS_Middle);
+
+  Style.ReflowComments = FormatStyle::RCS_Always;
+  CHECK_PARSE("ReflowComments: Never", ReflowComments, FormatStyle::RCS_Never);
+  CHECK_PARSE("ReflowComments: IndentOnly", ReflowComments,
+              FormatStyle::RCS_IndentOnly);
+  CHECK_PARSE("ReflowComments: Always", ReflowComments,
+              FormatStyle::RCS_Always);
+  // For backward compatibility:
+  CHECK_PARSE("ReflowComments: false", ReflowComments, FormatStyle::RCS_Never);
+  CHECK_PARSE("ReflowComments: true", ReflowComments, FormatStyle::RCS_Always);
 
   Style.Standard = FormatStyle::LS_Auto;
   CHECK_PARSE("Standard: c++03", Standard, FormatStyle::LS_Cpp03);

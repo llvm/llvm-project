@@ -304,7 +304,7 @@ def testPadOpNoArgs(target):
     # CHECK: transform.sequence
     # CHECK: transform.structured.pad
     # CHECK-NOT: copy_back_op
-    # CHECK-NOT: pack_paddings
+    # CHECK-NOT: nofold_flags
     # CHECK-NOT: pad_to_multiple_of
     # CHECK-NOT: padding_dimensions
     # CHECK-NOT: padding_values
@@ -319,7 +319,7 @@ def testPadOpArgs(target):
         pad_to_multiple_of=[128],
         padding_values=[FloatAttr.get_f32(42.0), StringAttr.get("0")],
         padding_dimensions=Attribute.parse("[1]"),
-        pack_paddings=[0],
+        nofold_flags=[0],
         transpose_paddings=[[1, Attribute.parse("0")], Attribute.parse("[0, 1]")],
         copy_back_op="linalg.copy",
     )
@@ -328,7 +328,7 @@ def testPadOpArgs(target):
     # CHECK: transform.structured.pad
     # CHECK-DAG: pad_to_multiple_of [128]
     # CHECK-DAG: copy_back_op = "linalg.copy"
-    # CHECK-DAG: pack_paddings = [0]
+    # CHECK-DAG: nofold_flags = [0]
     # CHECK-DAG: padding_dimensions = [1]
     # CHECK-DAG: padding_values = [4.200000e+01 : f32, "0"]
     # CHECK-DAG: transpose_paddings = {{\[}}[1, 0], [0, 1]]
@@ -361,11 +361,15 @@ def testScalarize(target):
 @run
 @create_sequence
 def testSplit(target):
-    split = structured.SplitOp(target, dimension=1, chunk_sizes=42)
+    handle = structured.SplitOp(target, dimension=1, chunk_sizes=42)
+    split = transform.SplitHandleOp(
+        [transform.AnyOpType.get(), transform.AnyOpType.get()], handle
+    )
     structured.SplitOp(split.results[0], dimension=3, chunk_sizes=split.results[1])
     # CHECK-LABEL: TEST: testSplit
-    # CHECK: %[[F:.+]], %[[S:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
-    # CHECK: transform.structured.split %[[F]] after %[[S]] {dimension = 3
+    # CHECK: %[[G:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
+    # CHECK: %[[F:.+]]:2 = split_handle %[[G]]
+    # CHECK: transform.structured.split %[[F]]#0 after %[[F]]#1 {dimension = 3
 
 
 @run

@@ -10,6 +10,9 @@ group("lib") {
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/lib/ubsan_minimal" ]
   }
+  if (current_os == "android" && current_cpu == "arm64") {
+    deps += [ "//compiler-rt/lib/hwasan" ]
+  }
   if (current_os != "baremetal") {
     deps += [
       "//compiler-rt/lib/asan",

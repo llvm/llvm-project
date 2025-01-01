@@ -16,7 +16,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -53,7 +52,15 @@ offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
   auto *Str =
       new GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
                          GlobalValue::InternalLinkage, AddrName, Prefix);
+  StringRef SectionName = ".llvm.rodata.offloading";
   Str->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  Str->setSection(SectionName);
+  Str->setAlignment(Align(1));
+
+  // Make a metadata node for these constants so it can be queried from IR.
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("llvm.offloading.symbols");
+  Metadata *MDVals[] = {ConstantAsMetadata::get(Str)};
+  MD->addOperand(llvm::MDNode::get(M.getContext(), MDVals));
 
   // Construct the offloading entry.
   Constant *EntryData[] = {

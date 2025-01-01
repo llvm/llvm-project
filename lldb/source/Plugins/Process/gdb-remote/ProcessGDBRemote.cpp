@@ -5323,9 +5323,8 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
         uint32_t prev_used_usec = 0;
         std::map<uint64_t, uint32_t>::iterator iterator =
             m_thread_id_to_used_usec_map.find(thread_id);
-        if (iterator != m_thread_id_to_used_usec_map.end()) {
-          prev_used_usec = m_thread_id_to_used_usec_map[thread_id];
-        }
+        if (iterator != m_thread_id_to_used_usec_map.end())
+          prev_used_usec = iterator->second;
 
         uint32_t real_used_usec = curr_used_usec - prev_used_usec;
         // A good first time record is one that runs for at least 0.25 sec

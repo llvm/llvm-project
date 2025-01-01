@@ -15,14 +15,12 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -586,7 +584,7 @@ static bool CheckConstraintSatisfaction(
   ArrayRef<TemplateArgument> TemplateArgs =
       TemplateArgsLists.getNumSubstitutedLevels() > 0
           ? TemplateArgsLists.getOutermost()
-          : ArrayRef<TemplateArgument> {};
+          : ArrayRef<TemplateArgument>{};
   Sema::InstantiatingTemplate Inst(S, TemplateIDRange.getBegin(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
       const_cast<NamedDecl *>(Template), TemplateArgs, TemplateIDRange);
@@ -979,7 +977,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   std::optional<LocalInstantiationScope> ScopeForParameters;
   if (const NamedDecl *ND = DeclInfo.getDecl();
       ND && ND->isFunctionOrFunctionTemplate()) {
-    ScopeForParameters.emplace(S);
+    ScopeForParameters.emplace(S, /*CombineWithOuterScope=*/true);
     const FunctionDecl *FD = ND->getAsFunction();
     for (auto *PVD : FD->parameters()) {
       if (!PVD->isParameterPack()) {
@@ -1386,8 +1384,7 @@ static void diagnoseUnsatisfiedConstraintExpr(
     return;
   }
 
-  diagnoseWellFormedUnsatisfiedConstraintExpr(S,
-      Record.template get<Expr *>(), First);
+  diagnoseWellFormedUnsatisfiedConstraintExpr(S, cast<Expr *>(Record), First);
 }
 
 void
@@ -1559,12 +1556,12 @@ NormalizedConstraint::NormalizedConstraint(ASTContext &C,
 
 NormalizedConstraint &NormalizedConstraint::getLHS() const {
   assert(isCompound() && "getLHS called on a non-compound constraint.");
-  return Constraint.get<CompoundConstraint>().getPointer()->LHS;
+  return cast<CompoundConstraint>(Constraint).getPointer()->LHS;
 }
 
 NormalizedConstraint &NormalizedConstraint::getRHS() const {
   assert(isCompound() && "getRHS called on a non-compound constraint.");
-  return Constraint.get<CompoundConstraint>().getPointer()->RHS;
+  return cast<CompoundConstraint>(Constraint).getPointer()->RHS;
 }
 
 std::optional<NormalizedConstraint>
@@ -1961,3 +1958,21 @@ concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T) :
     Value(T),
     Status(T->getType()->isInstantiationDependentType() ? SS_Dependent
                                                         : SS_Satisfied) {}
+
+NormalizedConstraint::CompoundConstraintKind
+NormalizedConstraint::getCompoundKind() const {
+  assert(isCompound() && "getCompoundKind on a non-compound constraint..");
+  return cast<CompoundConstraint>(Constraint).getInt();
+}
+
+AtomicConstraint *NormalizedConstraint::getAtomicConstraint() const {
+  assert(isAtomic() && "getAtomicConstraint called on non-atomic constraint.");
+  return cast<AtomicConstraint *>(Constraint);
+}
+
+FoldExpandedConstraint *
+NormalizedConstraint::getFoldExpandedConstraint() const {
+  assert(isFoldExpanded() &&
+         "getFoldExpandedConstraint called on non-fold-expanded constraint.");
+  return cast<FoldExpandedConstraint *>(Constraint);
+}

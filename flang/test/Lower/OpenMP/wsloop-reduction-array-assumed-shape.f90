@@ -103,7 +103,6 @@ end program
 ! CHECK:                 hlfir.assign %[[VAL_18]] to %[[VAL_21]] : f64, !fir.ref<f64>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

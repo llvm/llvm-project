@@ -124,6 +124,10 @@ struct Config {
     // declarations, always spell out the whole name (with or without leading
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
+
+    // List of matcher functions for inserting certain headers with <> or "".
+    std::vector<std::function<bool(llvm::StringRef)>> QuotedHeaders;
+    std::vector<std::function<bool(llvm::StringRef)>> AngledHeaders;
   } Style;
 
   /// controls the completion options for argument lists.
@@ -162,6 +166,7 @@ struct Config {
     bool DeducedTypes = true;
     bool Designators = true;
     bool BlockEnd = false;
+    bool DefaultArguments = false;
     // Limit the length of type names in inlay hints. (0 means no limit)
     uint32_t TypeNameLimit = 32;
   } InlayHints;

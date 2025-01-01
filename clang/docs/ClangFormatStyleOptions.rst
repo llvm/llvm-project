@@ -2088,6 +2088,11 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, ``while (true) continue;`` can be put on a single
   line.
 
+.. _AllowShortNamespacesOnASingleLine:
+
+**AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
+  If ``true``, ``namespace a { class b; }`` can be put on a single line.
+
 .. _AlwaysBreakAfterDefinitionReturnType:
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlwaysBreakAfterDefinitionReturnType>`
@@ -2259,7 +2264,7 @@ the configuration (without a prefix: ``Auto``).
 **BraceWrapping** (``BraceWrappingFlags``) :versionbadge:`clang-format 3.8` :ref:`¶ <BraceWrapping>`
   Control of individual brace wrapping cases.
 
-  If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
+  If ``BreakBeforeBraces`` is set to ``Custom``, use this to specify how
   each individual brace case should be handled. Otherwise, this is ignored.
 
   .. code-block:: yaml
@@ -3759,9 +3764,9 @@ the configuration (without a prefix: ``Auto``).
   lists.
 
   Important differences:
-  - No spaces inside the braced list.
-  - No line break before the closing brace.
-  - Indentation with the continuation indent, not with the block indent.
+  * No spaces inside the braced list.
+  * No line break before the closing brace.
+  * Indentation with the continuation indent, not with the block indent.
 
   Fundamentally, C++11 braced lists are formatted exactly like function
   calls would be formatted in their place. If the braced list follows a name
@@ -4104,10 +4109,10 @@ the configuration (without a prefix: ``Auto``).
   When guessing whether a #include is the "main" include (to assign
   category 0, see above), use this regex of allowed suffixes to the header
   stem. A partial match is done, so that:
-  - "" means "arbitrary suffix"
-  - "$" means "no suffix"
+  * ``""`` means "arbitrary suffix"
+  * ``"$"`` means "no suffix"
 
-  For example, if configured to "(_test)?$", then a header a.h would be seen
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
   as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
@@ -4662,6 +4667,14 @@ the configuration (without a prefix: ``Auto``).
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
   This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+
+.. _KeepFormFeed:
+
+**KeepFormFeed** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <KeepFormFeed>`
+  Keep the form feed character if it's immediately preceded and followed by
+  a newline. Multiple form feeds and newlines within a whitespace range are
+  replaced with a single newline and form feed followed by the remaining
+  newlines.
 
 .. _LambdaBodyIndentation:
 
@@ -5305,21 +5318,21 @@ the configuration (without a prefix: ``Auto``).
 
 **QualifierOrder** (``List of Strings``) :versionbadge:`clang-format 14` :ref:`¶ <QualifierOrder>`
   The order in which the qualifiers appear.
-  Order is an array that can contain any of the following:
+  The order is an array that can contain any of the following:
 
-    * const
-    * inline
-    * static
-    * friend
-    * constexpr
-    * volatile
-    * restrict
-    * type
+    * ``const``
+    * ``inline``
+    * ``static``
+    * ``friend``
+    * ``constexpr``
+    * ``volatile``
+    * ``restrict``
+    * ``type``
 
 
   .. note::
 
-   It **must** contain ``type``.
+   It must contain ``type``.
 
   Items to the left of ``type`` will be placed to the left of the type and
   aligned in the order supplied. Items to the right of ``type`` will be
@@ -5406,22 +5419,46 @@ the configuration (without a prefix: ``Auto``).
 
 .. _ReflowComments:
 
-**ReflowComments** (``Boolean``) :versionbadge:`clang-format 3.8` :ref:`¶ <ReflowComments>`
-  If ``true``, clang-format will attempt to re-flow comments. That is it
-  will touch a comment and *reflow* long comments into new lines, trying to
-  obey the ``ColumnLimit``.
+**ReflowComments** (``ReflowCommentsStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <ReflowComments>`
+  Comment reformatting style.
 
-  .. code-block:: c++
+  Possible values:
 
-     false:
-     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+  * ``RCS_Never`` (in configuration: ``Never``)
+    Leave comments untouched.
 
-     true:
-     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-     // information
-     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-      * information */
+    .. code-block:: c++
+
+       // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+       /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+       /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+            * and a misaligned second line */
+
+  * ``RCS_IndentOnly`` (in configuration: ``IndentOnly``)
+    Only apply indentation rules, moving comments left or right, without
+    changing formatting inside the comments.
+
+    .. code-block:: c++
+
+       // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+       /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+       /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+        * and a misaligned second line */
+
+  * ``RCS_Always`` (in configuration: ``Always``)
+    Apply indentation rules and reflow long comments into new lines, trying
+    to obey the ``ColumnLimit``.
+
+    .. code-block:: c++
+
+       // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+       // information
+       /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+        * information */
+       /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+        * information and a misaligned second line */
+
+
 
 .. _RemoveBracesLLVM:
 
@@ -5479,6 +5516,31 @@ the configuration (without a prefix: ``Auto``).
       } else {                                   e();
         e();
       }
+    }
+
+.. _RemoveEmptyLinesInUnwrappedLines:
+
+**RemoveEmptyLinesInUnwrappedLines** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <RemoveEmptyLinesInUnwrappedLines>`
+  Remove empty lines within unwrapped lines.
+
+  .. code-block:: c++
+
+    false:                            true:
+
+    int c                  vs.        int c = a + b;
+
+        = a + b;
+
+    enum : unsigned        vs.        enum : unsigned {
+                                        AA = 0,
+    {                                   BB
+      AA = 0,                         } myEnum;
+      BB
+    } myEnum;
+
+    while (                vs.        while (true) {
+                                      }
+        true) {
     }
 
 .. _RemoveParentheses:
@@ -6588,12 +6650,11 @@ the configuration (without a prefix: ``Auto``).
 .. _StatementMacros:
 
 **StatementMacros** (``List of Strings``) :versionbadge:`clang-format 8` :ref:`¶ <StatementMacros>`
-  A vector of macros that should be interpreted as complete
-  statements.
+  A vector of macros that should be interpreted as complete statements.
 
-  Typical macros are expressions, and require a semi-colon to be
-  added; sometimes this is not the case, and this allows to make
-  clang-format aware of such cases.
+  Typical macros are expressions and require a semicolon to be added.
+  Sometimes this is not the case, and this allows to make clang-format aware
+  of such cases.
 
   For example: Q_UNUSED
 

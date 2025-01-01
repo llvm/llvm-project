@@ -91,6 +91,13 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Type llvmI32 = this->typeConverter->convertType(i32);
     Type llvmI16 = this->typeConverter->convertType(rewriter.getI16Type());
 
+    auto toI32 = [&](Value val) -> Value {
+      if (val.getType() == llvmI32)
+        return val;
+
+      return rewriter.create<LLVM::TruncOp>(loc, llvmI32, val);
+    };
+
     int64_t elementByteWidth = memrefType.getElementTypeBitWidth() / 8;
     Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
 
@@ -98,15 +105,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bits, use a scalar load and bitcast it. Similarly, if bitsize(T) < 32
     // and the total load size is >= 32, use a vector load of N / (bitsize(T) /
     // 32) x i32 and bitcast. Also, the CAS intrinsic requires integer operands,
-    // so bitcast any floats to integers. On top of all this, cast bfloat
-    // (vectors) to i16 since the backend doesn't currently support bfloat on
-    // these operations.
+    // so bitcast any floats to integers.
     Type llvmBufferValType = llvmWantedDataType;
-    if (wantedDataType.isBF16())
-      llvmBufferValType = rewriter.getI16Type();
-    if (auto wantedVecType = dyn_cast<VectorType>(wantedDataType))
-      if (wantedVecType.getElementType().isBF16())
-        llvmBufferValType = wantedVecType.clone(rewriter.getI16Type());
     if (atomicCmpData) {
       if (auto floatType = dyn_cast<FloatType>(wantedDataType))
         llvmBufferValType = this->getTypeConverter()->convertType(
@@ -173,22 +173,22 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value stride = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI16, rewriter.getI16IntegerAttr(0));
     Value numRecords;
-    if (memrefType.hasStaticShape()) {
+    if (memrefType.hasStaticShape() && memrefType.getLayout().isIdentity()) {
       numRecords = createI32Constant(
           rewriter, loc,
           static_cast<int32_t>(memrefType.getNumElements() * elementByteWidth));
     } else {
       Value maxIndex;
       for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
-        Value size = memrefDescriptor.size(rewriter, loc, i);
-        Value stride = memrefDescriptor.stride(rewriter, loc, i);
+        Value size = toI32(memrefDescriptor.size(rewriter, loc, i));
+        Value stride = toI32(memrefDescriptor.stride(rewriter, loc, i));
         stride = rewriter.create<LLVM::MulOp>(loc, stride, byteWidthConst);
         Value maxThisDim = rewriter.create<LLVM::MulOp>(loc, size, stride);
         maxIndex = maxIndex ? rewriter.create<LLVM::MaximumOp>(loc, maxIndex,
                                                                maxThisDim)
                             : maxThisDim;
       }
-      numRecords = rewriter.create<LLVM::TruncOp>(loc, llvmI32, maxIndex);
+      numRecords = maxIndex;
     }
 
     // Flag word:
@@ -225,7 +225,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       Value strideOp;
       if (ShapedType::isDynamic(strides[i])) {
         strideOp = rewriter.create<LLVM::MulOp>(
-            loc, memrefDescriptor.stride(rewriter, loc, i), byteWidthConst);
+            loc, toI32(memrefDescriptor.stride(rewriter, loc, i)),
+            byteWidthConst);
       } else {
         strideOp =
             createI32Constant(rewriter, loc, strides[i] * elementByteWidth);
@@ -247,7 +248,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       sgprOffset = createI32Constant(rewriter, loc, 0);
     if (ShapedType::isDynamic(offset))
       sgprOffset = rewriter.create<LLVM::AddOp>(
-          loc, memrefDescriptor.offset(rewriter, loc), sgprOffset);
+          loc, toI32(memrefDescriptor.offset(rewriter, loc)), sgprOffset);
     else if (offset > 0)
       sgprOffset = rewriter.create<LLVM::AddOp>(
           loc, sgprOffset, createI32Constant(rewriter, loc, offset));

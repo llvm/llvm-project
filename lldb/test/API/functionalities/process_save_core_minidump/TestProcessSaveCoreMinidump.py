@@ -117,14 +117,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_number_of_threads = process.GetNumThreads()
             expected_threads = []
             stacks_to_sp_map = {}
-            stakcs_to_registers_map = {}
+            stacks_to_registers_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
-                stakcs_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(
                     0
                 ).GetRegisters()
 
@@ -138,7 +138,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
@@ -149,7 +149,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
@@ -160,7 +160,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -178,7 +178,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -195,7 +195,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
@@ -214,7 +214,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
-                stakcs_to_registers_map,
+                stacks_to_registers_map,
             )
 
             self.assertSuccess(process.Kill())

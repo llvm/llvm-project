@@ -276,8 +276,16 @@ void ProcessMinidump::RefreshStateAfterStop() {
         // No stop.
         return;
       }
+      const char *description = nullptr;
+      if (exception_stream.ExceptionRecord.ExceptionFlags ==
+          llvm::minidump::Exception::LLDB_FLAG)
+        description = reinterpret_cast<const char *>(
+            exception_stream.ExceptionRecord.ExceptionInformation);
 
-      stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo);
+      llvm::StringRef description_str(description,
+                                      Exception::MaxParameterBytes);
+      stop_info = StopInfo::CreateStopReasonWithSignal(
+          *stop_thread, signo, description_str.str().c_str());
     } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
       stop_info = StopInfoMachException::CreateStopReasonWithMachException(
           *stop_thread, exception_stream.ExceptionRecord.ExceptionCode, 2,
@@ -344,6 +352,22 @@ DataExtractor ProcessMinidump::GetAuxvData() {
 
   return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
                        GetAddressByteSize(), GetAddressByteSize());
+}
+
+bool ProcessMinidump::IsLLDBMinidump() {
+  std::optional<llvm::ArrayRef<uint8_t>> lldb_generated_section =
+      m_minidump_parser->GetRawStream(StreamType::LLDBGenerated);
+  return lldb_generated_section.has_value();
+}
+
+DynamicLoader *ProcessMinidump::GetDynamicLoader() {
+  // This is a workaround for the dynamic loader not playing nice in issue
+  // #119598. The specific reason we use the dynamic loader is to get the TLS
+  // info sections, which we can assume are not being written to the minidump
+  // unless it's an LLDB generate minidump.
+  if (IsLLDBMinidump())
+    return PostMortemProcess::GetDynamicLoader();
+  return nullptr;
 }
 
 void ProcessMinidump::BuildMemoryRegions() {

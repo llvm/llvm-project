@@ -48,8 +48,8 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -154,10 +154,10 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 3, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE45]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT6]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE44]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT9:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 3, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -225,12 +225,12 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 1, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i64> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1]] = sub nsw <2 x i64> zeroinitializer, [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], <i64 4, i64 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 36
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
@@ -277,4 +277,80 @@ exit:
   %.lcssa = phi double [ %l.B, %loop ]
   store double %.lcssa, ptr %C
   ret i64 %.in.lcssa
+}
+
+; Test for https://github.com/llvm/llvm-project/issues/106523.
+; %for.2 requires no code motion, as its previous (%or) precedes its (first)
+; user (store). Furthermore, its user cannot sink, being a store.
+;
+; %for.1 requires code motion, as its previous (%trunc) follows its (first)
+; user (%or). Sinking %or past %trunc seems possible, as %or has no uses
+; (except for feeding %for.2; worth strengthening VPlan's dce?). However, %or
+; is both the user of %for.1 and the previous of %for.2, and we refrain from
+; sinking instructions that act as previous because they (may) serve points to
+; sink after.
+
+; Instead, %for.1 can be reconciled by hoisting its previous above its user
+; %or, as this user %trunc depends only on %iv.
+define void @for_iv_trunc_optimized(ptr %dst) {
+; CHECK-LABEL: @for_iv_trunc_optimized(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 1>, [[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 1, i32 2, i32 3, i32 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP0]], splat (i32 3)
+; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP1]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 336
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 337, [[MIDDLE_BLOCK]] ], [ 1, [[BB:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[BB]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT3]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT4]], [[SCALAR_PH]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 3
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    [[TRUNC]] = trunc i64 [[IV]] to i32
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %bb ], [ %add, %loop ]
+  %for.1 = phi i32 [ 1, %bb ], [ %trunc, %loop ]
+  %for.2 = phi i32 [ 0, %bb ], [ %or, %loop ]
+  %or = or i32 %for.1, 3
+  %add = add i64 %iv, 1
+  store i32 %for.2, ptr %dst, align 4
+  %icmp = icmp ult i64 %iv, 337
+  %trunc = trunc i64 %iv to i32
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
 }

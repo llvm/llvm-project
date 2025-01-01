@@ -59,7 +59,7 @@ class SharedLibTestCase(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         thread = process.GetSelectedThread()
-        stack_frames = lldbutil.get_stack_frames(thread)
+        stack_frames = thread.frames
         self.assertGreater(len(stack_frames), 2)
 
         leaf_frame = stack_frames[0]
@@ -97,7 +97,7 @@ class SharedLibTestCase(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         thread = process.GetSelectedThread()
-        stack_frames = lldbutil.get_stack_frames(thread)
+        stack_frames = thread.frames
         self.assertGreater(len(stack_frames), 2)
 
         leaf_frame = stack_frames[0]

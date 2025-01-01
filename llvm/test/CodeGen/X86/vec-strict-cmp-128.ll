@@ -6040,9 +6040,153 @@ define <2 x i64> @test_v2f64_uno_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
   ret <2 x i64> %res
 }
 
+define <2 x double> @test_v4f64_ogt2_s(<2 x double> %a, <2 x double> %b) #0 {
+; SSE-32-LABEL: test_v4f64_ogt2_s:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    maxpd %xmm1, %xmm0
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: test_v4f64_ogt2_s:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    maxpd %xmm1, %xmm0
+; SSE-64-NEXT:    retq
+;
+; AVX-32-LABEL: test_v4f64_ogt2_s:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_v4f64_ogt2_s:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX-64-NEXT:    retq
+;
+; AVX512-32-LABEL: test_v4f64_ogt2_s:
+; AVX512-32:       # %bb.0:
+; AVX512-32-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX512-32-NEXT:    retl
+;
+; AVX512-64-LABEL: test_v4f64_ogt2_s:
+; AVX512-64:       # %bb.0:
+; AVX512-64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ogt2_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ogt2_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; AVX512F-64-NEXT:    retq
+  %cond = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(
+                                               <2 x double> %a, <2 x double> %b, metadata !"ogt",
+                                               metadata !"fpexcept.strict") #0
+  %res = select <2 x i1> %cond, <2 x double> %a, <2 x double> %b
+  ret <2 x double> %res
+}
+
+define <2 x float> @test_v2f32_ogt2_s(<2 x float> %a, <2 x float> %b) #0 {
+; SSE-32-LABEL: test_v2f32_ogt2_s:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    maxps %xmm1, %xmm0
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: test_v2f32_ogt2_s:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    maxps %xmm1, %xmm0
+; SSE-64-NEXT:    retq
+;
+; AVX-32-LABEL: test_v2f32_ogt2_s:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_v2f32_ogt2_s:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX-64-NEXT:    retq
+;
+; AVX512-32-LABEL: test_v2f32_ogt2_s:
+; AVX512-32:       # %bb.0:
+; AVX512-32-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX512-32-NEXT:    retl
+;
+; AVX512-64-LABEL: test_v2f32_ogt2_s:
+; AVX512-64:       # %bb.0:
+; AVX512-64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v2f32_ogt2_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v2f32_ogt2_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; AVX512F-64-NEXT:    retq
+  %cond = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(
+                                               <2 x float> %a, <2 x float> %b, metadata !"ogt",
+                                               metadata !"fpexcept.strict")
+  %res = select <2 x i1> %cond, <2 x float> %a, <2 x float> %b
+  ret <2 x float> %res
+}
+
+define <2 x float> @test_v2f32_ule2_s(<2 x float> %a, <2 x float> %b) #0 {
+; SSE-32-LABEL: test_v2f32_ule2_s:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    minps %xmm0, %xmm1
+; SSE-32-NEXT:    movaps %xmm1, %xmm0
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: test_v2f32_ule2_s:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    minps %xmm0, %xmm1
+; SSE-64-NEXT:    movaps %xmm1, %xmm0
+; SSE-64-NEXT:    retq
+;
+; AVX-32-LABEL: test_v2f32_ule2_s:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vminps %xmm0, %xmm1, %xmm0
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: test_v2f32_ule2_s:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vminps %xmm0, %xmm1, %xmm0
+; AVX-64-NEXT:    retq
+;
+; AVX512-32-LABEL: test_v2f32_ule2_s:
+; AVX512-32:       # %bb.0:
+; AVX512-32-NEXT:    vminps %xmm0, %xmm1, %xmm0
+; AVX512-32-NEXT:    retl
+;
+; AVX512-64-LABEL: test_v2f32_ule2_s:
+; AVX512-64:       # %bb.0:
+; AVX512-64-NEXT:    vminps %xmm0, %xmm1, %xmm0
+; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v2f32_ule2_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vminps %xmm0, %xmm1, %xmm0
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v2f32_ule2_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vminps %xmm0, %xmm1, %xmm0
+; AVX512F-64-NEXT:    retq
+  %cond = call <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(
+                                               <2 x float> %a, <2 x float> %b, metadata !"ule",
+                                               metadata !"fpexcept.strict")
+  %res = select <2 x i1> %cond, <2 x float> %a, <2 x float> %b
+  ret <2 x float> %res
+}
+
 attributes #0 = { strictfp nounwind }
 
 declare <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x i1> @llvm.experimental.constrained.fcmps.v2f32(<2 x float>, <2 x float>, metadata, metadata)
 declare <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double>, <2 x double>, metadata, metadata)

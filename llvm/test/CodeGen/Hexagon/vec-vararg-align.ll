@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Check that the stack is aligned according to the outgoing function arguments.
 ; CHECK: r29 = and(r29,#-64)

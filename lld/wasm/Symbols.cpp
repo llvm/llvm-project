@@ -310,12 +310,11 @@ uint32_t DefinedFunction::getExportedFunctionIndex() const {
   return function->getFunctionIndex();
 }
 
-uint64_t DefinedData::getVA() const {
+uint64_t DefinedData::getVA(bool absolute) const {
   LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
-  // In the shared memory case, TLS symbols are relative to the start of the TLS
-  // output segment (__tls_base).  When building without shared memory, TLS
-  // symbols absolute, just like non-TLS.
-  if (isTLS() && config->sharedMemory)
+  // TLS symbols (by default) are relative to the start of the TLS output
+  // segment (__tls_base).
+  if (isTLS() && !absolute)
     return getOutputSegmentOffset();
   if (segment)
     return segment->getVA(value);

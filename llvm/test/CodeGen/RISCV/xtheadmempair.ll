@@ -174,10 +174,10 @@ define void @swd(ptr %a, i32 %b, i32%c) {
 define void @sdd(ptr %a, i64 %b, i64%c) {
 ; RV32XTHEADMEMPAIR-LABEL: sdd:
 ; RV32XTHEADMEMPAIR:       # %bb.0:
-; RV32XTHEADMEMPAIR-NEXT:    sw a2, 36(a0)
 ; RV32XTHEADMEMPAIR-NEXT:    sw a1, 32(a0)
-; RV32XTHEADMEMPAIR-NEXT:    sw a4, 44(a0)
+; RV32XTHEADMEMPAIR-NEXT:    sw a2, 36(a0)
 ; RV32XTHEADMEMPAIR-NEXT:    sw a3, 40(a0)
+; RV32XTHEADMEMPAIR-NEXT:    sw a4, 44(a0)
 ; RV32XTHEADMEMPAIR-NEXT:    ret
 ;
 ; RV64XTHEADMEMPAIR-LABEL: sdd:

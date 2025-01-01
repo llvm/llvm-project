@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "xray_interface_internal.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #include <cinttypes>
 #include <cstdio>
@@ -58,6 +57,10 @@ static const int16_t cSledLength = 64;
 static const int16_t cSledLength = 8;
 #elif defined(__hexagon__)
 static const int16_t cSledLength = 20;
+#elif defined(__riscv) && (__riscv_xlen == 64)
+static const int16_t cSledLength = 68;
+#elif defined(__riscv) && (__riscv_xlen == 32)
+static const int16_t cSledLength = 52;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
@@ -154,8 +157,8 @@ namespace {
 
 bool isObjectLoaded(int32_t ObjId) {
   SpinMutexLock Guard(&XRayInstrMapMutex);
-  if (ObjId < 0 ||
-      ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
+  if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                       atomic_load(&XRayNumObjects, memory_order_acquire)) {
     return false;
   }
   return XRayInstrMaps[ObjId].Loaded;
@@ -166,28 +169,24 @@ bool patchSled(const XRaySledEntry &Sled, bool Enable, int32_t FuncId,
   bool Success = false;
   switch (Sled.Kind) {
   case XRayEntryType::ENTRY:
-    Success =
-        patchFunctionEntry(Enable, FuncId, Sled, Trampolines.EntryTrampoline);
+    Success = patchFunctionEntry(Enable, FuncId, Sled, Trampolines,
+                                 /*LogArgs=*/false);
     break;
   case XRayEntryType::EXIT:
-    Success =
-        patchFunctionExit(Enable, FuncId, Sled, Trampolines.ExitTrampoline);
+    Success = patchFunctionExit(Enable, FuncId, Sled, Trampolines);
     break;
   case XRayEntryType::TAIL:
-    Success = patchFunctionTailExit(Enable, FuncId, Sled,
-                                    Trampolines.TailExitTrampoline);
+    Success = patchFunctionTailExit(Enable, FuncId, Sled, Trampolines);
     break;
   case XRayEntryType::LOG_ARGS_ENTRY:
-    Success =
-        patchFunctionEntry(Enable, FuncId, Sled, Trampolines.LogArgsTrampoline);
+    Success = patchFunctionEntry(Enable, FuncId, Sled, Trampolines,
+                                 /*LogArgs=*/true);
     break;
   case XRayEntryType::CUSTOM_EVENT:
-    Success = patchCustomEvent(Enable, FuncId, Sled,
-                               Trampolines.CustomEventTrampoline);
+    Success = patchCustomEvent(Enable, FuncId, Sled);
     break;
   case XRayEntryType::TYPED_EVENT:
-    Success =
-        patchTypedEvent(Enable, FuncId, Sled, Trampolines.TypedEventTrampoline);
+    Success = patchTypedEvent(Enable, FuncId, Sled);
     break;
   default:
     Report("Unsupported sled kind '%" PRIu64 "' @%04x\n", Sled.Address,
@@ -236,8 +235,8 @@ XRayPatchingStatus patchFunction(int32_t FuncId, int32_t ObjId,
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    if (ObjId < 0 ||
-        ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
+    if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                         atomic_load(&XRayNumObjects, memory_order_acquire)) {
       Report("Unable to patch function: invalid sled map index: %d", ObjId);
       return XRayPatchingStatus::FAILED;
     }
@@ -296,8 +295,8 @@ XRayPatchingStatus controlPatchingObjectUnchecked(bool Enable, int32_t ObjId) {
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    if (ObjId < 0 ||
-        ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
+    if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                         atomic_load(&XRayNumObjects, memory_order_acquire)) {
       Report("Unable to patch functions: invalid sled map index: %d\n", ObjId);
       return XRayPatchingStatus::FAILED;
     }
@@ -411,9 +410,7 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
         CombinedStatus = NOT_INITIALIZED;
       break;
     case ONGOING:
-      llvm_unreachable("Status ONGOING should not appear at this point");
-    default:
-      llvm_unreachable("Unhandled patching status");
+      UNREACHABLE("Status ONGOING should not appear at this point");
     }
   }
   return CombinedStatus;
@@ -442,8 +439,8 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId, int32_t ObjId,
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    if (ObjId < 0 ||
-        ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
+    if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                         atomic_load(&XRayNumObjects, memory_order_acquire)) {
       Report("Unable to patch function: invalid sled map index: %d\n", ObjId);
       return XRayPatchingStatus::FAILED;
     }
@@ -637,7 +634,7 @@ uintptr_t __xray_function_address_in_object(int32_t FuncId, int32_t ObjId)
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
     auto count = atomic_load(&XRayNumObjects, memory_order_acquire);
-    if (ObjId < 0 || ObjId >= count) {
+    if (ObjId < 0 || static_cast<uint32_t>(ObjId) >= count) {
       Report("Unable to determine function address: invalid sled map index %d "
              "(size is %d)\n",
              ObjId, (int)count);
@@ -667,7 +664,8 @@ size_t __xray_max_function_id() XRAY_NEVER_INSTRUMENT {
 
 size_t __xray_max_function_id_in_object(int32_t ObjId) XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Guard(&XRayInstrMapMutex);
-  if (ObjId < 0 || ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire))
+  if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                       atomic_load(&XRayNumObjects, memory_order_acquire))
     return 0;
   return XRayInstrMaps[ObjId].Functions;
 }
