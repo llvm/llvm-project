@@ -84,6 +84,7 @@ add_entrypoint_object(
     .timezone
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -99,6 +100,7 @@ add_entrypoint_object(
     .timezone
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -113,6 +115,7 @@ add_entrypoint_object(
     .timezone
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -127,6 +130,7 @@ add_entrypoint_object(
     .timezone
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -141,6 +145,7 @@ add_entrypoint_object(
     .timezone
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(

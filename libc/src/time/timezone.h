@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIMEZONE_H
 #define LLVM_LIBC_SRC_TIME_TIMEZONE_H
 
+#include "src/__support/File/file.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "stddef.h"
@@ -48,7 +49,7 @@ typedef struct {
   int8_t global_isdst;
 } tzset;
 
-tzset *get_tzset(int fd, size_t filesize);
+tzset *get_tzset(File *file);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
