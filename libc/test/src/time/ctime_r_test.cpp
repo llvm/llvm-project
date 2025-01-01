@@ -19,8 +19,8 @@ using LIBC_NAMESPACE::time_utils::TimeConstants;
 extern char **environ;
 
 void set_env_var(char *env) {
-    environ[0] = env;
-    environ[1] = "\0";
+  environ[0] = env;
+  environ[1] = "\0";
 }
 
 TEST(LlvmLibcCtimeR, Nullptr) {

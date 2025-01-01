@@ -142,20 +142,20 @@ void acquire_file(char *filename) {
 }
 
 char *get_env_var(const char *input) {
-    for (char **env = environ; *env != NULL; ++env) {
-        char *env_var = *env;
+  for (char **env = environ; *env != NULL; ++env) {
+    char *env_var = *env;
 
-        int i = 0;
-        while (input[i] != '\0' && env_var[i] == input[i]) {
-            i++;
-        }
-
-        if (input[i] == '\0' && env_var[i] == '=') {
-            return env_var + i + 1;
-        }
+    int i = 0;
+    while (input[i] != '\0' && env_var[i] == input[i]) {
+      i++;
     }
 
-    return NULL;
+    if (input[i] == '\0' && env_var[i] == '=') {
+      return env_var + i + 1;
+    }
+  }
+
+  return NULL;
 }
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
@@ -341,8 +341,10 @@ timezone::tzset *get_localtime(struct tm *tm) {
 
   for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
     if (is_dst(tm) == ptr_tzset->ttinfo[i].tt_isdst) {
-      ptr_tzset->global_offset = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
-      ptr_tzset->global_isdst = static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_isdst);
+      ptr_tzset->global_offset =
+          static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
+      ptr_tzset->global_isdst =
+          static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_isdst);
     }
   }
 

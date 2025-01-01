@@ -184,11 +184,11 @@ LIBC_INLINE struct tm *localtime_internal(const time_t *timer, struct tm *buf) {
     return nullptr;
   }
 
-  #ifdef LIBC_TARGET_ARCH_IS_X86_64
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
   timezone::tzset *ptr = get_localtime(buf);
   buf->tm_hour += ptr->global_offset;
   buf->tm_isdst += ptr->global_isdst;
-  #endif
+#endif
 
   return buf;
 }
