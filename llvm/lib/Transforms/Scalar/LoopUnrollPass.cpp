@@ -338,7 +338,7 @@ struct PragmaInfo {
 /// Helper type to estimate per-iteration cost savings coming from fully
 /// unrolling a loop.
 ///
-/// The analysis maintains a set of "known instructions" inside the loop (i.e.,
+/// The analysis maintains a set of foldable instructions inside the loop (i.e.,
 /// instructions whose result will be statically known after loop unrolling)
 /// that we assume will be entirely removable if the loop is fully unrolled.
 /// These instructions' cost can be deducted from the unrolled cost when
@@ -346,39 +346,36 @@ struct PragmaInfo {
 struct FullUnrollCostSavings {
   FullUnrollCostSavings(const Loop *L) : L(L) {}
 
-  /// Returns whether the instruction is known.
-  inline bool isKnown(const Instruction *I) const {
-    return KnownVals.contains(I);
+  /// Returns whether the instruction is foldable.
+  inline bool isFoldable(const Instruction *I) const {
+    return Foldable.contains(I);
   }
 
-  /// If the value is an instruction, returns whether that instruction is known,
-  /// false otherwise.
-  bool isKnown(const Value *V) const {
+  /// If the value is an instruction, returns whether that instruction is
+  /// foldable, false otherwise.
+  bool isFoldable(const Value *V) const {
     if (const Instruction *I = dyn_cast<Instruction>(V))
-      return isKnown(I);
+      return isFoldable(I);
     return false;
   }
 
-  /// Adds an instruction to the known set and re-evaluates unknown instructions
-  /// in the loop to determine whether their result can now be known.
-  void addToKnown(const Instruction *I) {
-    if (!KnownVals.insert(I).second)
+  /// Adds an instruction to the foldable set and re-evaluates instructions in
+  /// the loop to determine whether they are now foldable.
+  void addFoldable(const Instruction *I) {
+    if (!Foldable.insert(I).second)
       return;
 
-    // Every time we assume knowledge of an additional instruction result, we
+    // Every time we assume foldability of an additional instruction, we
     // potentially need to revisit instructions that were previously seen as
-    // unoptimizable.
+    // unfoldable.
     Evaluated.clear();
 
     addUsersToExploreSet(I);
-    while (ToEvaluate.size()) {
-      const Instruction *I = ToEvaluate.back();
-      ToEvaluate.pop_back();
-      evalInstruction(I);
-    }
+    while (ToEvaluate.size())
+      evalInstruction(ToEvaluate.pop_back_val());
   }
 
-  /// Returns savings incurred by all known instructions, according to the \p
+  /// Returns savings incurred by all foldable instructions, according to the \p
   /// TTI.
   InstructionCost computeSavings(const TargetTransformInfo &TTI) const {
     TargetTransformInfo::TargetCostKind CostKind =
@@ -387,19 +384,19 @@ struct FullUnrollCostSavings {
             : TargetTransformInfo::TCK_SizeAndLatency;
 
     InstructionCost CostSavings;
-    for (const Value *Val : KnownVals)
+    for (const Value *Val : Foldable)
       CostSavings += TTI.getInstructionCost(cast<Instruction>(Val), CostKind);
     return CostSavings;
   }
 
 private:
-  /// The set of instruction inside the loop whose results are considered known.
-  SmallPtrSet<const Instruction *, 4> KnownVals;
+  /// The set of instruction inside the loop which we consider foldable.
+  SmallPtrSet<const Instruction *, 4> Foldable;
   /// Caches the set of instructions we have already evaluated when adding a new
-  /// instruction to the known set.
+  /// instruction to the foldable set.
   SmallPtrSet<const Instruction *, 4> Evaluated;
   /// Stack of instructions to evaluate when adding a new instruction to the
-  /// known set.
+  /// foldable set.
   SmallVector<const Instruction *, 4> ToEvaluate;
   /// The loop under consideration.
   const Loop *L;
@@ -414,28 +411,46 @@ private:
     }
   }
 
-  /// Evaluates an instruction to determine whether its result is "known", and
-  /// returns if that is the case. This may recurse on operands that are the
-  /// resul of yet unevaluated instructions inside the loop.
+  /// Evaluates an instruction to determine whether it is foldable, and returns
+  /// if that is the case. This may recurse on operands that are the result of
+  /// yet unevaluated instructions inside the loop.
   bool evalInstruction(const Instruction *I) {
     Evaluated.insert(I);
-    if (isKnown(I))
+    if (isFoldable(I))
       return true;
-    if (!isa<BinaryOperator, CastInst, CmpInst>(I))
+    if (I->mayHaveSideEffects() || I->isTerminator() || isa<PHINode>(I))
       return false;
-    bool Known = llvm::all_of(I->operand_values(), [&](const Value *Val) {
-      if (isa<Constant>(Val) || isKnown(Val))
-        return true;
-      const Instruction *ValInstr = dyn_cast<Instruction>(Val);
-      if (!ValInstr || Evaluated.contains(ValInstr) || !L->contains(ValInstr))
-        return false;
-      return evalInstruction(ValInstr);
-    });
-    if (Known) {
-      KnownVals.insert(I);
+    bool IsFoldable;
+    if (isa<SelectInst>(I)) {
+      // Special case a select instruction; if the select operand is constant
+      // the result equals one of the other operands so the instruction is
+      // foldable.
+      IsFoldable = valWillBeConstant(I->getOperand(0));
+    } else {
+      IsFoldable = true;
+      // All instruction operands must end up as constants for the instruction
+      // to be foldable.
+      for (const Value *Val : I->operand_values()) {
+        if (!valWillBeConstant(Val)) {
+          IsFoldable = false;
+          break;
+        }
+      }
+    }
+    if (IsFoldable) {
+      Foldable.insert(I);
       addUsersToExploreSet(I);
     }
-    return Known;
+    return IsFoldable;
+  }
+
+  bool valWillBeConstant(const Value *Val) {
+    if (isa<Constant>(Val) || isFoldable(Val))
+      return true;
+    const Instruction *ValInstr = dyn_cast<Instruction>(Val);
+    if (!ValInstr || Evaluated.contains(ValInstr) || !L->contains(ValInstr))
+      return false;
+    return evalInstruction(ValInstr);
   }
 };
 
@@ -450,9 +465,9 @@ private:
 static InstructionCost analyzeFullUnrollCostSavings(
     const Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
     const TargetTransformInfo::UnrollingPreferences &UP) {
-  // Cost savings analysis is all based on unrolling making some values
-  // statically known; if we cannot identify the loop's IV then there is nothing
-  // we can do.
+  // Cost savings analysis is all based on unrolling making some instructions
+  // foldable; if we cannot identify the loop's IV then there is nothing we can
+  // do.
   PHINode *IV = L->getInductionVariable(SE);
   if (!IV)
     return {};
@@ -460,7 +475,7 @@ static InstructionCost analyzeFullUnrollCostSavings(
 
   // If we were to unroll the loop, everything that is only dependent on the IV
   // and constants will get simplified away.
-  Savings.addToKnown(IV);
+  Savings.addFoldable(IV);
 
   // Look for subloops whose trip count would go from runtime-dependent to
   // runtime-independent if we were to unroll the loop. These subloops are
@@ -483,7 +498,7 @@ static InstructionCost analyzeFullUnrollCostSavings(
     auto IsValKnown = [&](const Value *Val) -> bool {
       if (isa<Constant>(Val))
         return true;
-      if (Savings.isKnown(Val)) {
+      if (Savings.isFoldable(Val)) {
         SubBoundsDependsOnIV = true;
         return true;
       }
@@ -504,14 +519,16 @@ static InstructionCost analyzeFullUnrollCostSavings(
       // conservatively assume that the inner loop will only execute once per
       // outer loop iteration. This also reduces our cost savings estimation
       // mistake in the case where the subloop does not end up being unrolled.
-      Savings.addToKnown(SubIV);
+      Savings.addFoldable(SubIV);
       ++NumUnrollableSubloops;
 
-      LLVM_DEBUG(
-          dbgs() << "  Trip count of subloop %"
-                 << SubLoop->getHeader()->getName()
-                 << " will become runtime-independent by fully unrolling loop %"
-                 << L->getHeader()->getName() << "\n");
+      LLVM_DEBUG({
+        dbgs() << "  Trip count of subloop ";
+        SubLoop->getHeader()->printAsOperand(dbgs(), false);
+        dbgs() << " will become runtime-independent by fully unrolling loop ";
+        L->getHeader()->printAsOperand(dbgs(), false);
+        dbgs() << '\n';
+      });
     }
   }
 
@@ -521,7 +538,7 @@ static InstructionCost analyzeFullUnrollCostSavings(
   for (const BasicBlock *BB : L->getBlocks()) {
     const Instruction *TermInstr = BB->getTerminator();
     if (const BranchInst *Br = dyn_cast<BranchInst>(TermInstr)) {
-      if (Br->isConditional() && Savings.isKnown(Br->getCondition())) {
+      if (Br->isConditional() && Savings.isFoldable(Br->getCondition())) {
         // The branch condition will be statically determined at each iteration
         // of the loop.
         BasicBlock *FalseSucc = Br->getSuccessor(0),
@@ -550,10 +567,13 @@ static InstructionCost analyzeFullUnrollCostSavings(
           // one of the two blocks at each iteration of the outer loop. Only the
           // branch represents a cost saving, since one successor block will
           // still be executed.
-          Savings.addToKnown(Br);
-          LLVM_DEBUG(dbgs() << "  Conditional branch will be removed by fully "
-                               "unrolling loop %"
-                            << L->getHeader()->getName() << "\n");
+          Savings.addFoldable(Br);
+          LLVM_DEBUG({
+            dbgs() << "  Conditional branch will be removed by fully "
+                      "unrolling loop ";
+            L->getHeader()->printAsOperand(dbgs(), false);
+            dbgs() << '\n';
+          });
         }
       }
     }
@@ -1093,7 +1113,7 @@ shouldFullUnroll(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
       return true;
   } else {
     InstructionCost Savings = analyzeFullUnrollCostSavings(L, SE, TTI, UP);
-    if (!(Savings.isValid() && *Savings.getValue()))
+    if (!Savings.isValid() || !*Savings.getValue())
       return false;
     // Savings for one loop iteration are those estimated by the analaysis plus
     // the loop backedge's branch.
@@ -1778,7 +1798,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   if (!Changed)
     return PreservedAnalyses::all();
 
-    // The parent must not be damaged by unrolling!
+  // The parent must not be damaged by unrolling!
 #ifndef NDEBUG
   if (ParentL)
     ParentL->verifyLoop();
