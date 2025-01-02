@@ -219,8 +219,7 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 ///   1. Add the operation to a list for future removal, and
 ///   2. Mark all its results as non-live values
 ///
-/// The operation `op` is assumed to be simple.
-/// A simple operation is one that is NOT:
+/// The operation `op` is assumed to be simple. A simple operation is one that is NOT:
 ///   - Function-like
 ///   - Call-like
 ///   - A region branch operation
