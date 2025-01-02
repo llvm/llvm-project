@@ -7071,20 +7071,15 @@ bool CombinerHelper::matchSimplifyNegMinMax(MachineInstr &MI,
   if (!isLegal({TargetOpcode::G_SUB, {DestTy}}))
     return false;
 
-  // GISel doesn't have m_Deferred at this moment, so we have to
-  // match this pattern in two phases.
-  Register X, Y;
+  Register X;
   Register Sub0;
+  auto NegPattern = m_all_of(m_Neg(m_DeferredReg(X)), m_Reg(Sub0));
   if (mi_match(DestReg, MRI,
-               m_Neg(m_OneUse(m_any_of(
-                   m_GSMin(m_Reg(X), m_Reg(Y)), m_GSMax(m_Reg(X), m_Reg(Y)),
-                   m_BinOp(TargetOpcode::G_UMIN, m_Reg(X), m_Reg(Y)),
-                   m_BinOp(TargetOpcode::G_UMAX, m_Reg(X), m_Reg(Y)))))) &&
-      (mi_match(Y, MRI, m_all_of(m_Neg(m_SpecificReg(X)), m_Reg(Sub0))) ||
-       mi_match(X, MRI, m_all_of(m_Neg(m_SpecificReg(Y)), m_Reg(Sub0))))) {
+               m_Neg(m_OneUse(m_any_of(m_GSMin(m_Reg(X), NegPattern),
+                                       m_GSMax(m_Reg(X), NegPattern),
+                                       m_GUMin(m_Reg(X), NegPattern),
+                                       m_GUMax(m_Reg(X), NegPattern)))))) {
     MachineInstr *MinMaxMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-    MachineInstr *Sub0MI = MRI.getVRegDef(Sub0);
-    X = Sub0MI->getOperand(2).getReg();
     unsigned NewOpc = getInverseGMinMaxOpcode(MinMaxMI->getOpcode());
     if (isLegal({NewOpc, {DestTy}})) {
       MatchInfo = [=](MachineIRBuilder &B) {
