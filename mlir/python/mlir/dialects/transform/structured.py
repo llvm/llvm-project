@@ -158,7 +158,8 @@ class FuseOp(FuseOp):
 
     def __init__(
         self,
-        loop_types_or_target: Union[Type, Sequence[Type], Operation, OpView, Value],
+        loop_types_or_target: Union[Type, Sequence[Type], Operation, OpView,
+                                    Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
         tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,

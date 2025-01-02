@@ -104,11 +104,14 @@ def testFuseIntoContainingOpCompact(target):
 @run
 @create_sequence
 def testFuseOpCompact(target):
-    structured.FuseOp(target, tile_sizes=[4, 8], tile_interchange=[0, 1])
+    structured.FuseOp(target,
+                      tile_sizes=[4, 8],
+                      tile_interchange=[0, 1],
+                      apply_cleanup=True)
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
     # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
-    # CHECK-SAME: interchange [0, 1]
+    # CHECK-SAME: interchange [0, 1] apply_cleanup = true
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
 
