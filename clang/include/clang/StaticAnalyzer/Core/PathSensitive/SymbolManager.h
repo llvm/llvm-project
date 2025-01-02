@@ -43,15 +43,16 @@ class StoreManager;
 class SymbolRegionValue : public SymbolData {
   const TypedValueRegion *R;
 
-public:
+  friend class SymExprAllocator;
   SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
       : SymbolData(SymbolRegionValueKind, sym), R(r) {
     assert(r);
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
+public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const TypedValueRegion* getRegion() const { return R; }
+  const TypedValueRegion *getRegion() const { return R; }
 
   static void Profile(llvm::FoldingSetNodeID& profile, const TypedValueRegion* R) {
     profile.AddInteger((unsigned) SymbolRegionValueKind);
@@ -84,7 +85,7 @@ class SymbolConjured : public SymbolData {
   const LocationContext *LCtx;
   const void *SymbolTag;
 
-public:
+  friend class SymExprAllocator;
   SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
                  QualType t, unsigned count, const void *symbolTag)
       : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
@@ -98,6 +99,7 @@ public:
     assert(isValidTypeForSymbol(t));
   }
 
+public:
   /// It might return null.
   const Stmt *getStmt() const { return S; }
   unsigned getCount() const { return Count; }
@@ -137,7 +139,7 @@ class SymbolDerived : public SymbolData {
   SymbolRef parentSymbol;
   const TypedValueRegion *R;
 
-public:
+  friend class SymExprAllocator;
   SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
       : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {
     assert(parent);
@@ -145,6 +147,7 @@ public:
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
+public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   SymbolRef getParentSymbol() const { return parentSymbol; }
   LLVM_ATTRIBUTE_RETURNS_NONNULL
@@ -180,12 +183,13 @@ public:
 class SymbolExtent : public SymbolData {
   const SubRegion *R;
 
-public:
+  friend class SymExprAllocator;
   SymbolExtent(SymbolID sym, const SubRegion *r)
       : SymbolData(SymbolExtentKind, sym), R(r) {
     assert(r);
   }
 
+public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const SubRegion *getRegion() const { return R; }
 
@@ -222,7 +226,7 @@ class SymbolMetadata : public SymbolData {
   unsigned Count;
   const void *Tag;
 
-public:
+  friend class SymExprAllocator;
   SymbolMetadata(SymbolID sym, const MemRegion* r, const Stmt *s, QualType t,
                  const LocationContext *LCtx, unsigned count, const void *tag)
       : SymbolData(SymbolMetadataKind, sym), R(r), S(s), T(t), LCtx(LCtx),
@@ -234,6 +238,7 @@ public:
       assert(tag);
     }
 
+  public:
     LLVM_ATTRIBUTE_RETURNS_NONNULL
     const MemRegion *getRegion() const { return R; }
 
@@ -286,7 +291,7 @@ class SymbolCast : public SymExpr {
   /// The type of the result.
   QualType ToTy;
 
-public:
+  friend class SymExprAllocator;
   SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
       : SymExpr(SymbolCastKind, Sym), Operand(In), FromTy(From), ToTy(To) {
     assert(In);
@@ -295,6 +300,7 @@ public:
     // Otherwise, 'To' should also be a valid type.
   }
 
+public:
   unsigned computeComplexity() const override {
     if (Complexity == 0)
       Complexity = 1 + Operand->computeComplexity();
@@ -332,7 +338,7 @@ class UnarySymExpr : public SymExpr {
   UnaryOperator::Opcode Op;
   QualType T;
 
-public:
+  friend class SymExprAllocator;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
       : SymExpr(UnarySymExprKind, Sym), Operand(In), Op(Op), T(T) {
@@ -346,6 +352,7 @@ public:
     assert(!Loc::isLocType(T) && "unary symbol should be nonloc");
   }
 
+public:
   unsigned computeComplexity() const override {
     if (Complexity == 0)
       Complexity = 1 + Operand->computeComplexity();
@@ -426,7 +433,7 @@ class BinarySymExprImpl : public BinarySymExpr {
   LHSTYPE LHS;
   RHSTYPE RHS;
 
-public:
+  friend class SymExprAllocator;
   BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
                     RHSTYPE rhs, QualType t)
       : BinarySymExpr(Sym, ClassKind, op, t), LHS(lhs), RHS(rhs) {
@@ -434,6 +441,7 @@ public:
     assert(getPointer(rhs));
   }
 
+public:
   void dumpToStream(raw_ostream &os) const override {
     dumpToStreamImpl(os, LHS);
     dumpToStreamImpl(os, getOpcode());
@@ -479,6 +487,21 @@ using IntSymExpr = BinarySymExprImpl<APSIntPtr, const SymExpr *,
 using SymSymExpr = BinarySymExprImpl<const SymExpr *, const SymExpr *,
                                      SymExpr::Kind::SymSymExprKind>;
 
+class SymExprAllocator {
+  SymbolID NextSymbolID = 0;
+  llvm::BumpPtrAllocator &Alloc;
+
+public:
+  explicit SymExprAllocator(llvm::BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
+
+  template <class SymT, typename... ArgsT> SymT *make(ArgsT &&...Args) {
+    return new (Alloc) SymT(nextID(), std::forward<ArgsT>(Args)...);
+  }
+
+private:
+  SymbolID nextID() { return NextSymbolID++; }
+};
+
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
   using SymbolDependTy =
@@ -490,15 +513,14 @@ class SymbolManager {
   /// alive as long as the key is live.
   SymbolDependTy SymbolDependencies;
 
-  unsigned SymbolCounter = 0;
-  llvm::BumpPtrAllocator& BPAlloc;
+  SymExprAllocator Alloc;
   BasicValueFactory &BV;
   ASTContext &Ctx;
 
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
-                llvm::BumpPtrAllocator& bpalloc)
-      : SymbolDependencies(16), BPAlloc(bpalloc), BV(bv), Ctx(ctx) {}
+                llvm::BumpPtrAllocator &bpalloc)
+      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx) {}
 
   static bool canSymbolicate(QualType T);
 
