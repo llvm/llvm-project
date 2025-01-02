@@ -350,6 +350,9 @@ static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
       LLVMContext::MD_noalias,      LLVMContext::MD_invariant_group,
       LLVMContext::MD_access_group, LLVMContext::MD_prof,
       LLVMContext::MD_memprof,      LLVMContext::MD_callsite};
+  // FIXME: https://github.com/llvm/llvm-project/issues/121495
+  // Use custom AA metadata combining handling instead of combineMetadata, which
+  // is meant for CSE and will drop any metadata not in the KnownIDs list.
   combineMetadata(ReplInst, I, KnownIDs, true);
 }
 
