@@ -127,8 +127,7 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
 
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
-static BitVector markLives(ValueRange values,
-                           const DenseSet<Value> &nonLiveSet,
+static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
                            RunLivenessAnalysis &la) {
   BitVector lives(values.size(), true);
 
