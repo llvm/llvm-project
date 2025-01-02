@@ -8499,10 +8499,10 @@ static void CheckFormatString(
       Type == Sema::FST_Syslog) {
     bool IsObjC = Type == Sema::FST_NSString || Type == Sema::FST_OSTrace;
     if (ReferenceFormatString == nullptr) {
-      CheckPrintfHandler H(
-          S, FExpr, OrigFormatExpr, Type, firstDataArg, numDataArgs, IsObjC, Str,
-          APK, Args, format_idx, inFunctionCall, CallType, CheckedVarArgs,
-          UncoveredArg);
+      CheckPrintfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
+                           numDataArgs, IsObjC, Str, APK, Args, format_idx,
+                           inFunctionCall, CallType, CheckedVarArgs,
+                           UncoveredArg);
 
       if (!analyze_format_string::ParsePrintfString(
               H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
