@@ -7068,8 +7068,6 @@ bool CombinerHelper::matchSimplifyNegMinMax(MachineInstr &MI,
   assert(MI.getOpcode() == TargetOpcode::G_SUB);
   Register DestReg = MI.getOperand(0).getReg();
   LLT DestTy = MRI.getType(DestReg);
-  if (!isLegal({TargetOpcode::G_SUB, {DestTy}}))
-    return false;
 
   Register X;
   Register Sub0;
