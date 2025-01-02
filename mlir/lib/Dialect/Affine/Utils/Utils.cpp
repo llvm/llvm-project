@@ -51,12 +51,14 @@ public:
         loc(loc) {}
 
   template <typename OpTy>
-  Value buildBinaryExpr(AffineBinaryOpExpr expr) {
+  Value buildBinaryExpr(AffineBinaryOpExpr expr,
+                        arith::IntegerOverflowFlags overflowFlags =
+                            arith::IntegerOverflowFlags::none) {
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
     if (!lhs || !rhs)
       return nullptr;
-    auto op = builder.create<OpTy>(loc, lhs, rhs);
+    auto op = builder.create<OpTy>(loc, lhs, rhs, overflowFlags);
     return op.getResult();
   }
 
@@ -65,7 +67,8 @@ public:
   }
 
   Value visitMulExpr(AffineBinaryOpExpr expr) {
-    return buildBinaryExpr<arith::MulIOp>(expr);
+    return buildBinaryExpr<arith::MulIOp>(expr,
+                                          arith::IntegerOverflowFlags::nsw);
   }
 
   /// Euclidean modulo operation: negative RHS is not allowed.
