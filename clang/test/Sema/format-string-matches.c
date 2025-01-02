@@ -9,9 +9,6 @@ int printf(const char *fmt, ...);
 __attribute__((format(printf, 1, 0)))
 int vprintf(const char *fmt, va_list);
 
-__attribute__((format(scanf, 1, 2)))
-int scanf(const char *fmt, ...);
-
 // MARK: -
 // Calling printf with a format from format_matches(printf) diagnoses with
 // that format string
@@ -42,30 +39,6 @@ void vformat(const char *fmt, ...) {
 }
 
 // MARK: -
-// Calling scanf
-__attribute__((format_matches(scanf, 1, "%hhi %g"))) // expected-note 3{{comparing with this specifier}}
-void scan(const char *fmt) {
-    char i;
-    float g;
-    scanf(fmt, &i, &g);
-}
-
-__attribute__((format_matches(scanf, 1, "%hhi %g"))) // expected-note{{format string is defined here}}
-void scan2(const char *fmt) {
-    char i;
-    double g;
-    scanf(fmt, &i, &g); // expected-warning{{format specifies type 'float *' but the argument has type 'double *'}}
-}
-
-void call_scan(void) {
-    scan("%hhd %e");
-    scan("%hd %Le"); // \
-        expected-warning{{format specifier 'hd' is incompatible with 'hhi'}} \
-        expected-warning{{format specifier 'Le' is incompatible with 'g'}}
-    scan("%s %p"); // expected-warning{{format specifier 'p' is incompatible with 'g'}}
-}
-
-// MARK: -
 // Calling a function with format_matches diagnoses for incompatible formats.
 
 void cvt_percent(const char *c) __attribute__((format_matches(printf, 1, "%%"))); // expected-note{{comparing with this format string}}
@@ -75,7 +48,8 @@ void cvt_at(const char *c) __attribute__((format_matches(NSString, 1, "%@"))); /
     expected-note{{comparing with this format string}}
 void cvt_c(const char *c) __attribute__((format_matches(printf, 1, "%c"))); // expected-note{{comparing with this specifier}}
 void cvt_u(const char *c) __attribute__((format_matches(printf, 1, "%u"))); // expected-note{{comparing with this specifier}}
-void cvt_i(const char *c) __attribute__((format_matches(printf, 1, "%i"))); // expected-note 2{{comparing with this specifier}}
+void cvt_hhi(const char *c) __attribute__((format_matches(printf, 1, "%hhi")));  // expected-note 3{{comparing with this specifier}}
+void cvt_i(const char *c) __attribute__((format_matches(printf, 1, "%i"))); // expected-note 4{{comparing with this specifier}}
 void cvt_p(const char *c) __attribute__((format_matches(printf, 1, "%p")));
 void cvt_s(const char *c) __attribute__((format_matches(printf, 1, "%s"))); // expected-note{{comparing with this specifier}}
 void cvt_n(const char *c) __attribute__((format_matches(printf, 1, "%n"))); // expected-note{{comparing with this specifier}}
@@ -86,8 +60,14 @@ void test_compatibility(void) {
     cvt_c("%u"); // expected-warning{{signedness of format specifier 'u' is incompatible with 'c'}}
     cvt_u("%c"); // expected-warning{{signedness of format specifier 'c' is incompatible with 'u'}}
 
+    cvt_i("%hi"); // expected-warning{{format specifier 'hi' is incompatible with 'i'}}
+    cvt_i("%hhi"); // expected-warning{{format specifier 'hhi' is incompatible with 'i'}}
     cvt_i("%lli"); // expected-warning{{format specifier 'lli' is incompatible with 'i'}}
     cvt_i("%p"); // expected-warning{{format specifier 'p' is incompatible with 'i'}}
+    cvt_hhi("%hhi");
+    cvt_hhi("%hi"); // expected-warning{{format specifier 'hi' is incompatible with 'hhi'}} 
+    cvt_hhi("%i"); // expected-warning{{format specifier 'i' is incompatible with 'hhi'}} 
+    cvt_hhi("%li"); // expected-warning{{format specifier 'li' is incompatible with 'hhi'}} 
     cvt_n("%s"); // expected-warning{{format specifier 's' is incompatible with 'n'}}
     cvt_s("%hhn"); // expected-warning{{format specifier 'hhn' is incompatible with 's'}}
     

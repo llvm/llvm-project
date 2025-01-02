@@ -3903,20 +3903,23 @@ other. For instance:
   static int wind_speed;
 
   void say_hi(const char *fmt) {
-    printf(fmt, first_name, todays_temperature); // warning: format string is not a string literal
-    printf(fmt, first_name, wind_speed); // warning: format string is not a string literal
+    printf(fmt, first_name, todays_temperature);
+        // ^ warning: format string is not a string literal
+    printf(fmt, first_name, wind_speed);
+        // ^ warning: format string is not a string literal
   }
 
   int main() {
     say_hi("hello %s, it is %g degrees outside");
-    say_hi("hello %s, it is %d degrees outside!"); // no diagnostic
+    say_hi("hello %s, it is %d degrees outside!");
+                          // ^ no diagnostic, but %d cannot format doubles
   }
 
 In this example, ``fmt`` is expected to format a ``const char *`` and a
 ``double``, but these values are not passed to ``say_hi``. Without the
 ``format`` attribute (which cannot apply in this case), the -Wformat-nonliteral
-diagnostic triggers in the body of ``say_hi``, and incorrect ``say_hi`` call
-sites do not trigger a diagnostic.
+diagnostic unnecessarily triggers in the body of ``say_hi``, and incorrect
+``say_hi`` call sites do not trigger a diagnostic.
 
 To complement the ``format`` attribute, Clang also defines the
 ``format_matches`` attribute. Its syntax is similar to the ``format``
@@ -3946,9 +3949,30 @@ The third argument to ``format_matches`` is expected to evaluate to a **C string
 literal** even when the format string would normally be a different type for the
 given flavor, like a ``CFStringRef`` or a ``NSString *``.
 
+The only requirement on the format string literal is that it has specifiers
+that are compatible with the arguments that will be used. It can contain
+arbitrary non-format characters. For instance, for the purposes of compile-time
+validation, ``"%s scored %g%% on her test"`` and ``"%s%g"`` are interchangeable
+as the format string argument. As a means of self-documentation, users may
+prefer the former when it provides a useful example of an expected format
+string.
+
 In the implementation of a function with the ``format_matches`` attribute,
 format verification works as if the format string was identical to the one
 specified in the attribute.
+
+.. code-block:: c
+
+  __attribute__((__format_matches__(printf, 1, "%s %g")))
+  void say_hi(const char *fmt) {
+    printf(fmt, "person", 546);
+                       // ^ warning: format specifies type 'double' but the
+                       //   argument has type 'int'
+    // note: format string is defined here:
+    // __attribute__((__format_matches__(printf, 1, "%s %g")))
+    //                                                  ^~
+  }
+
 
 At the call sites of functions with the ``format_matches`` attribute, format
 verification instead compares the two format strings to evaluate their
@@ -3960,15 +3984,14 @@ a negative example, ``%ld`` is incompatible with ``%d``.
 
 Do note the following un-obvious cases:
 
-* Passing ``NULL`` as the format string is accepted without diagnostics.
+* Passing ``NULL`` as the format string does not trigger format diagnostics.
 * When the format string is not NULL, it cannot _miss_ specifiers, even in
   trailing positions. For instance, ``%d`` is not accepted when the required
   format is ``%d %d %d``.
-* Specifiers for integers as small or smaller than ``int`` (such as ``%hhd``)
-  are all mutually compatible because standard argument promotion ensures that
-  integers are at least the size of ``int`` when passed as variadic arguments.
-  With ``-Wformat-signedness``, mixing specifier for types with a different
-  signedness still results in a diagnostic.
+* While checks for the ``format`` attribute tolerate sone size mismatches
+  that standard argument promotion renders immaterial (such as formatting an
+  ``int`` with ``%hhd``, which specifies a ``char``-sized integer), checks for
+  ``format_matches`` require specified argument sizes to match exactly.
 * Format strings expecting a variable modifier (such as ``%*s``) are
   incompatible with format strings that would itemize the variable modifiers
   (such as ``%i %s``), even if the two specify ABI-compatible argument lists.
@@ -3979,6 +4002,12 @@ Do note the following un-obvious cases:
   is compatible with ``%s``, since the difference only exists in modifier flags.
   This is not overridable with ``-Wformat-pedantic`` or its inverse, which
   control similar behavior in ``-Wformat``.
+
+At this time, clang implements ``format_matches`` only for format types in the
+``printf`` family. This includes variants such as Apple's NSString format and
+the FreeBSD ``kprintf``, but excludes ``scanf``. Using a known but unsupported
+format silently fails in order to be compatible with other implementations that
+would support these formats.
 
   }];
 }

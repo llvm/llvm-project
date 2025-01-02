@@ -7273,9 +7273,11 @@ void EquatableFormatArgument::VerifyCompatible(
 
   switch (ArgType.matchesArgType(S.Context, Other.ArgType)) {
   case MK::Match:
-  case MK::MatchPromotion:
     break;
 
+  case MK::MatchPromotion:
+    // Per consensus reached at https://discourse.llvm.org/t/-/83076/12,
+    // MatchPromotion is treated as a failure by format_matches.
   case MK::NoMatch:
   case MK::NoMatchTypeConfusion:
   case MK::NoMatchPromotionTypeConfusion:
@@ -8264,36 +8266,6 @@ public:
   void HandleIncompleteScanList(const char *start, const char *end) override;
 };
 
-class DecomposeScanfHandler : public CheckScanfHandler {
-  llvm::SmallVectorImpl<EquatableFormatArgument> &Specs;
-  bool HadError;
-
-  DecomposeScanfHandler(Sema &s, const FormatStringLiteral *fexpr,
-                        const Expr *origFormatExpr, Sema::FormatStringType type,
-                        unsigned firstDataArg, unsigned numDataArgs,
-                        const char *beg, Sema::FormatArgumentPassingKind APK,
-                        ArrayRef<const Expr *> Args, unsigned formatIdx,
-                        bool inFunctionCall, Sema::VariadicCallType CallType,
-                        llvm::SmallBitVector &CheckedVarArgs,
-                        UncoveredArgHandler &UncoveredArg,
-                        llvm::SmallVectorImpl<EquatableFormatArgument> &Specs)
-      : CheckScanfHandler(s, fexpr, origFormatExpr, type, firstDataArg,
-                          numDataArgs, beg, APK, Args, formatIdx,
-                          inFunctionCall, CallType, CheckedVarArgs,
-                          UncoveredArg),
-        Specs(Specs), HadError(false) {}
-
-public:
-  static bool
-  GetSpecifiers(Sema &S, const FormatStringLiteral *FSL,
-                Sema::FormatStringType type, bool InFunctionCall,
-                llvm::SmallVectorImpl<EquatableFormatArgument> &Args);
-
-  bool HandleScanfSpecifier(const analyze_scanf::ScanfSpecifier &FS,
-                            const char *startSpecifier,
-                            unsigned specifierLen) override;
-};
-
 } // namespace
 
 void CheckScanfHandler::HandleIncompleteScanList(const char *start,
@@ -8440,53 +8412,6 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   return true;
 }
 
-bool DecomposeScanfHandler::GetSpecifiers(
-    Sema &S, const FormatStringLiteral *FSL, Sema::FormatStringType Type,
-    bool InFunctionCall, llvm::SmallVectorImpl<EquatableFormatArgument> &Args) {
-  StringRef Data = FSL->getString();
-  const char *Str = Data.data();
-  llvm::SmallBitVector BV;
-  UncoveredArgHandler UA;
-  DecomposeScanfHandler H(S, FSL, FSL->getFormatString(), Type, 0, 0, Str,
-                          Sema::FAPK_Elsewhere, {FSL->getFormatString()}, 0,
-                          InFunctionCall, Sema::VariadicDoesNotApply, BV, UA,
-                          Args);
-
-  if (!analyze_format_string::ParseScanfString(H, Str, Str + Data.size(),
-                                               S.getLangOpts(),
-                                               S.Context.getTargetInfo()))
-    H.DoneProcessing();
-  if (H.HadError)
-    return false;
-
-  std::sort(
-      Args.begin(), Args.end(),
-      [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
-        return A.getPosition() < B.getPosition();
-      });
-  return true;
-}
-
-bool DecomposeScanfHandler::HandleScanfSpecifier(
-    const analyze_scanf::ScanfSpecifier &FS, const char *startSpecifier,
-    unsigned specifierLen) {
-  if (!CheckScanfHandler::HandleScanfSpecifier(FS, startSpecifier,
-                                               specifierLen)) {
-    HadError = true;
-    return false;
-  }
-
-  const auto &CS = FS.getConversionSpecifier();
-  Specs.emplace_back(
-      getSpecifierRange(startSpecifier, specifierLen),
-      getLocationOfByte(CS.getStart()), FS.getLengthModifier().getKind(),
-      CS.getCharacters(), FS.getArgType(S.Context),
-      EquatableFormatArgument::FAR_Data, EquatableFormatArgument::SS_None,
-      FS.usesPositionalArg() ? FS.getPositionalArgIndex() - 1 : Specs.size(),
-      0);
-  return true;
-}
-
 static void CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
                                     ArrayRef<EquatableFormatArgument> RefArgs,
                                     const StringLiteral *Fmt,
@@ -8595,26 +8520,13 @@ static void CheckFormatString(
       }
     }
   } else if (Type == Sema::FST_Scanf) {
-    if (ReferenceFormatString == nullptr) {
-      CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
-                          numDataArgs, Str, APK, Args, format_idx,
-                          inFunctionCall, CallType, CheckedVarArgs,
-                          UncoveredArg);
+    CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
+                        numDataArgs, Str, APK, Args, format_idx, inFunctionCall,
+                        CallType, CheckedVarArgs, UncoveredArg);
 
-      if (!analyze_format_string::ParseScanfString(
-              H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo()))
-        H.DoneProcessing();
-    } else {
-      llvm::SmallVector<EquatableFormatArgument, 9> RefArgs, FmtArgs;
-      FormatStringLiteral RefLit = ReferenceFormatString;
-      if (DecomposeScanfHandler::GetSpecifiers(S, &RefLit, Type, inFunctionCall,
-                                               RefArgs) &&
-          DecomposeScanfHandler::GetSpecifiers(S, FExpr, Type, inFunctionCall,
-                                               FmtArgs)) {
-        CompareFormatSpecifiers(S, ReferenceFormatString, RefArgs,
-                                FExpr->getFormatString(), FmtArgs);
-      }
-    }
+    if (!analyze_format_string::ParseScanfString(
+            H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo()))
+      H.DoneProcessing();
   } // TODO: handle other formats
 }
 
