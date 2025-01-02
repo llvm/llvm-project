@@ -53,8 +53,8 @@ private:
   SymbolAndOffset Resolve(const SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
   // Returns amount of padding that was needed for alignment
-  std::size_t DoSymbol(Symbol &,
-                       std::optional<const size_t> newAlign = std::nullopt);
+  std::size_t DoSymbol(
+      Symbol &, std::optional<const size_t> newAlign = std::nullopt);
   SizeAndAlignment GetSizeAndAlignment(const Symbol &, bool entire);
   std::size_t Align(std::size_t, std::size_t);
   std::optional<size_t> CompAlignment(const Symbol &);
@@ -72,8 +72,8 @@ private:
 
 static bool isReal8OrLarger(const Fortran::semantics::DeclTypeSpec *type) {
   return ((type->IsNumeric(common::TypeCategory::Real) ||
-           type->IsNumeric(common::TypeCategory::Complex)) &&
-          evaluate::ToInt64(type->numericTypeSpec().kind()) > 4);
+              type->IsNumeric(common::TypeCategory::Complex)) &&
+      evaluate::ToInt64(type->numericTypeSpec().kind()) > 4);
 }
 
 std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
@@ -175,8 +175,8 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
 
       std::optional<size_t> newAlign{std::nullopt};
       // Handle special alignment requirement for AIX
-      auto triple{llvm::Triple(llvm::Triple::normalize(
-         llvm::sys::getDefaultTargetTriple()))};
+      auto triple{llvm::Triple(
+          llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()))};
       if (triple.getOS() == llvm::Triple::OSType::AIX) {
         newAlign = HasSpecialAlign(*symbol, scope);
       }
@@ -380,8 +380,8 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
   return result;
 }
 
-std::size_t ComputeOffsetsHelper::DoSymbol(Symbol &symbol,
-                                           std::optional<const size_t> newAlign) {
+std::size_t ComputeOffsetsHelper::DoSymbol(
+    Symbol &symbol, std::optional<const size_t> newAlign) {
   if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
     return 0;
   }
