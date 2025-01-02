@@ -954,6 +954,12 @@ func.func @test_bitcast_scalable_vector1(%arg0 : vector<[8]xf32>) -> vector<[8]x
   return %0 : vector<[8]xi32>
 }
 
+// CHECK-LABEL: test_bitcast_index
+func.func @test_bitcast_index(%arg0 : i64) -> index {
+  %0 = arith.bitcast %arg0 : i64 to index
+  return %0 : index
+}
+
 // CHECK-LABEL: test_cmpi
 func.func @test_cmpi(%arg0 : i64, %arg1 : i64) -> i1 {
   %0 = arith.cmpi ne, %arg0, %arg1 : i64
