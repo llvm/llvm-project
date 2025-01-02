@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-struct tm *localtime(const time_t *timer, struct tm *buf);
+struct tm *localtime(const time_t *timer);
 
 } // namespace LIBC_NAMESPACE_DECL
 
