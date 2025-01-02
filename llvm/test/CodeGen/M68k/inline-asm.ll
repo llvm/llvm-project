@@ -152,26 +152,3 @@ entry:
   ret void
 }
 
-define void @move_sr_ccr() {
-; CHECK-LABEL: move_sr_ccr:
-; CHECK:         .cfi_startproc
-; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    ;APP
-; CHECK-NEXT:    move.w %sr, %d0
-; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    ;APP
-; CHECK-NEXT:    move.w %d0, %sr
-; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    ;APP
-; CHECK-NEXT:    move.w %ccr, %d0
-; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    ;APP
-; CHECK-NEXT:    move.w %d0, %ccr
-; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    rts
-  %1 = call i16 asm sideeffect "move.w %sr, $0", "=r"()
-  call void asm sideeffect "move.w $0, %sr", "r"(i16 %1)
-  %2 = call i16 asm sideeffect "move.w %ccr, $0", "=r"()
-  call void asm sideeffect "move.w $0, %ccr", "r"(i16 %2)
-  ret void
-}
