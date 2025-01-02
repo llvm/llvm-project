@@ -536,6 +536,15 @@ public:
                            EltCnt.divideCoefficientBy(2));
   }
 
+  static VectorType *getOneNthElementsVectorType(VectorType *VTy,
+                                                 unsigned Denominator) {
+    auto EltCnt = VTy->getElementCount();
+    assert(EltCnt.isKnownMultipleOf(Denominator) &&
+           "Cannot take one-nth of a vector");
+    return VectorType::get(VTy->getScalarType(),
+                           EltCnt.divideCoefficientBy(Denominator));
+  }
+
   /// This static method returns a VectorType with twice as many elements as the
   /// input type and the same element type.
   static VectorType *getDoubleElementsVectorType(VectorType *VTy) {
