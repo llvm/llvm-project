@@ -996,9 +996,14 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
     std::unique_ptr<TaskDispatcher> Dispatcher;
     if (MaterializationThreads == 0)
       Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
-    else
+    else {
+#if LLVM_ENABLE_THREADS
       Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
           MaterializationThreads);
+#else
+      llvm_unreachable("MaterializationThreads should be 0");
+#endif
+    }
 
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
@@ -1628,15 +1633,24 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
     }
   }
 
+#if LLVM_ENABLE_THREADS
   if (MaterializationThreads == std::numeric_limits<size_t>::max()) {
     if (auto HC = std::thread::hardware_concurrency())
       MaterializationThreads = HC;
     else {
       errs() << "Warning: std::thread::hardware_concurrency() returned 0, "
-                "defaulting to -threads=1.\n";
+                "defaulting to -num-threads=1.\n";
       MaterializationThreads = 1;
     }
   }
+#else
+  if (MaterializationThreads.getNumOccurrences() &&
+      MaterializationThreads != 0) {
+    errs() << "Warning: -num-threads was set, but LLVM was built with threads "
+              "disabled. Resetting to -num-threads=0\n";
+  }
+  MaterializationThreads = 0;
+#endif
 
   if (!!OutOfProcessExecutor.getNumOccurrences() ||
       !!OutOfProcessExecutorConnect.getNumOccurrences()) {
