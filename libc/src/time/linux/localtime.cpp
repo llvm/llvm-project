@@ -12,15 +12,14 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(struct tm *, localtime,
-                   (const time_t *timer, struct tm *buf)) {
-  static struct tm *buf;
+LLVM_LIBC_FUNCTION(struct tm *, localtime, (const time_t *timer)) {
+  static struct tm buf;
 
   if (timer == nullptr) {
     return nullptr;
   }
 
-  return time_utils::localtime_internal(timer, buf);
+  return time_utils::localtime_internal(timer, &buf);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
