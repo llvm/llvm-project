@@ -2792,6 +2792,16 @@ private:
       return true;
     }
 
+    auto IsNonVariableTemplate = [](const FormatToken &Tok) {
+      if (Tok.isNot(TT_TemplateCloser))
+        return false;
+      const auto *Less = Tok.MatchingParen;
+      if (!Less)
+        return false;
+      const auto *BeforeLess = Less->getPreviousNonComment();
+      return BeforeLess && BeforeLess->isNot(TT_VariableTemplate);
+    };
+
     // Heuristically try to determine whether the parentheses contain a type.
     auto IsQualifiedPointerOrReference = [](const FormatToken *T,
                                             const LangOptions &LangOpts) {
@@ -2825,10 +2835,11 @@ private:
       }
       return T && T->is(TT_PointerOrReference);
     };
-    bool ParensAreType =
-        BeforeRParen->isOneOf(TT_TemplateCloser, TT_TypeDeclarationParen) ||
-        BeforeRParen->isTypeName(LangOpts) ||
-        IsQualifiedPointerOrReference(BeforeRParen, LangOpts);
+
+    bool ParensAreType = IsNonVariableTemplate(*BeforeRParen) ||
+                         BeforeRParen->is(TT_TypeDeclarationParen) ||
+                         BeforeRParen->isTypeName(LangOpts) ||
+                         IsQualifiedPointerOrReference(BeforeRParen, LangOpts);
     bool ParensCouldEndDecl =
         AfterRParen->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
     if (ParensAreType && !ParensCouldEndDecl)

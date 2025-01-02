@@ -2603,6 +2603,21 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
   return MemCheckBlock;
 }
 
+/// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
+/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
+/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
+/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
+static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
+  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
+  for (auto &R : make_early_inc_range(*VPBB)) {
+    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
+    R.moveBefore(*IRVPBB, IRVPBB->end());
+  }
+
+  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+  // VPBB is now dead and will be cleaned up when the plan gets destroyed.
+}
+
 void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
   assert(LoopVectorPreHeader && "Invalid loop structure");
@@ -2613,9 +2628,11 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopMiddleBlock =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "middle.block");
+  replaceVPBBWithIRVPBB(Plan.getMiddleBlock(), LoopMiddleBlock);
   LoopScalarPreHeader =
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -2961,22 +2978,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   PSE.getSE()->forgetLoop(OrigLoop);
   PSE.getSE()->forgetBlockAndLoopDispositions();
 
-  // When dealing with uncountable early exits we create middle.split blocks
-  // between the vector loop region and the exit block. These blocks need
-  // adding to any outer loop.
-  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
-  Loop *OuterLoop = OrigLoop->getParentLoop();
-  if (Legal->hasUncountableEarlyExit() && OuterLoop) {
-    VPBasicBlock *MiddleVPBB = State.Plan->getMiddleBlock();
-    VPBlockBase *PredVPBB = MiddleVPBB->getSinglePredecessor();
-    while (PredVPBB && PredVPBB != VectorRegion) {
-      BasicBlock *MiddleSplitBB =
-          State.CFG.VPBB2IRBB[cast<VPBasicBlock>(PredVPBB)];
-      OuterLoop->addBasicBlockToLoop(MiddleSplitBB, *LI);
-      PredVPBB = PredVPBB->getSinglePredecessor();
-    }
-  }
-
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
   // looked through single-entry phis.
@@ -3007,6 +3008,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
+  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = VectorRegion->getEntryBasicBlock();
   BasicBlock *HeaderBB = State.CFG.VPBB2IRBB[HeaderVPBB];
 
@@ -3489,10 +3491,10 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
-  // For scalable vectors, the only interleave factor currently supported
-  // must be power of 2 since we require the (de)interleave2 intrinsics
-  // instead of shufflevectors.
-  if (VF.isScalable() && !isPowerOf2_32(InterleaveFactor))
+  // We currently only know how to emit interleave/deinterleave with
+  // Factor=2 for scalable vectors. This is purely an implementation
+  // limit.
+  if (VF.isScalable() && InterleaveFactor != 2)
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -7715,7 +7717,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
-                         &BestVPlan, Legal->getWidestInductionType());
+                         &BestVPlan, OrigLoop->getParentLoop(),
+                         Legal->getWidestInductionType());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -7723,11 +7726,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
-  if (!BestVPlan.getEntry()->empty()) {
-    State.CFG.PrevBB = OrigLoop->getLoopPreheader();
-    State.Builder.SetInsertPoint(OrigLoop->getLoopPreheader()->getTerminator());
+  if (!BestVPlan.getEntry()->empty())
     BestVPlan.getEntry()->execute(&State);
-  }
+
   if (!ILV.getTripCount())
     ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
   else
@@ -7773,6 +7774,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BestVPlan.prepareToExecute(
       ILV.getTripCount(),
       ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
+  replaceVPBBWithIRVPBB(BestVPlan.getVectorPreheader(), State.CFG.PrevBB);
 
   BestVPlan.execute(&State);
 
@@ -9193,9 +9195,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
       // For scalable vectors, the only interleave factor currently supported
-      // must be power of 2 since we require the (de)interleave2 intrinsics
-      // instead of shufflevectors.
-      assert((!Result || !VF.isScalable() || isPowerOf2_32(IG->getFactor())) &&
+      // is 2 since we require the (de)interleave2 intrinsics instead of
+      // shufflevectors.
+      assert((!Result || !VF.isScalable() || IG->getFactor() == 2) &&
              "Unsupported interleave factor for scalable vectors");
       return Result;
     };

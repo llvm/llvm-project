@@ -139,17 +139,10 @@ private:
 
   void eraseInstruction(Instruction &I) {
     LLVM_DEBUG(dbgs() << "VC: Erasing: " << I << '\n');
-    SmallVector<Value *> Ops(I.operands());
+    for (Value *Op : I.operands())
+      Worklist.pushValue(Op);
     Worklist.remove(&I);
     I.eraseFromParent();
-
-    // Push remaining users and then the operand itself - allows further folds
-    // that were hindered by OneUse limits.
-    for (Value *Op : Ops)
-      if (auto *OpI = dyn_cast<Instruction>(Op)) {
-        Worklist.pushUsersToWorkList(*OpI);
-        Worklist.pushValue(OpI);
-      }
   }
 };
 } // namespace
@@ -1367,8 +1360,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
 
-  auto *VecTy = cast<VectorType>(I.getType());
   auto *LI = cast<LoadInst>(&I);
+  auto *VecTy = cast<VectorType>(LI->getType());
   if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
@@ -1408,7 +1401,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       LastCheckedInst = UI;
     }
 
-    auto ScalarIdx = canScalarizeAccess(VecTy, UI->getOperand(1), &I, AC, DT);
+    auto ScalarIdx =
+        canScalarizeAccess(VecTy, UI->getIndexOperand(), LI, AC, DT);
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
@@ -1416,7 +1410,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       ScalarIdx.discard();
     }
 
-    auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
+    auto *Index = dyn_cast<ConstantInt>(UI->getIndexOperand());
     OriginalCost +=
         TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
                                Index ? Index->getZExtValue() : -1);
@@ -1432,7 +1426,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
-    Value *Idx = EI->getOperand(1);
+    Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
     auto It = NeedFreeze.find(EI);
