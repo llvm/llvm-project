@@ -2752,7 +2752,6 @@ static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
 static MachineInstr *swapInlineConstOperands(MachineInstr &MI,
                                              MachineOperand &NonRegOp1,
                                              MachineOperand &NonRegOp2) {
-
   auto TargetFlags = NonRegOp1.getTargetFlags();
   auto NonRegVal = NonRegOp1.getImm();
 
