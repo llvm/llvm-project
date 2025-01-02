@@ -45,14 +45,14 @@ To add through the command line:
    .. code-block:: none
 
      python3 libc/utils/hdrgen/yaml_to_classes.py
-     libc/utils/hdrgen/yaml/[yaml_file.yaml] --add_function "<return_type>" <function_name> "<function_arg1, function_arg2>" <standard> <guard> <attribute>
+     libc/include/[yaml_file.yaml] --add_function "<return_type>" <function_name> "<function_arg1, function_arg2>" <standard> <guard> <attribute>
 
    Example:
 
    .. code-block:: none
 
       python3 libc/utils/hdrgen/yaml_to_classes.py
-      libc/utils/hdrgen/yaml/ctype.yaml --add_function "char" example_function
+      libc/include/ctype.yaml --add_function "char" example_function
       "int, void, const void" stdc example_float example_attribute
 
    Keep in mind only the return_type and arguments have quotes around them. If
@@ -118,7 +118,7 @@ Common Errors
    missing. Ensure the correct style and required files are present:
 
    | ``[header_name]``
-   | ``[../libc/utils/hdrgen/yaml/[yaml_file.yaml]``
+   | ``[../libc/include/[yaml_file.yaml]``
    | ``[header_name.h.def]``
    | ``[header_name.h]``
    | ``DEPENDS``
