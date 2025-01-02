@@ -4034,7 +4034,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   // pointer when other instructions are using the stack.
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
-  SDValue Size = Op.getValue(1).getOperand(1);
+  SDValue Size = Op.getOperand(1);
   SDValue BaseAddr = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Align Alignment = cast<ConstantSDNode>(Op.getOperand(2))->getAlignValue();
 
@@ -4056,7 +4056,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
   assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
   SDValue NewSP;
-  if (isa<ConstantSDNode>(Op.getOperand(1))) {
+  if (isa<ConstantSDNode>(Size)) {
     // For constant sized alloca, scale alloca size by wave-size
     SDValue ScaledSize = DAG.getNode(
         ISD::SHL, dl, VT, Size,
