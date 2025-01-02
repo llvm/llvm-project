@@ -2561,7 +2561,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   if (!ST->enableUnalignedScalarMem())
     return Options;
 
-  if (!(ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp))
+  if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;
 
   Options.AllowOverlappingLoads = true;
