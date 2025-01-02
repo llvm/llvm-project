@@ -129,7 +129,7 @@ def testDialectLoadOnCreate():
     with Context(load_on_create_dialects=[]) as ctx:
         ctx.emit_error_diagnostics = True
         ctx.allow_unregistered_dialects = True
-        
+
         def callback(d):
             # CHECK: DIAGNOSTIC
             # CHECK-SAME: op created with unregistered dialect
@@ -139,13 +139,21 @@ def testDialectLoadOnCreate():
         handler = ctx.attach_diagnostic_handler(callback)
         loc = Location.unknown(ctx)
         try:
-          op = Operation.create("arith.addi", loc=loc)
-          ctx.allow_unregistered_dialects = False
-          op.verify()
+            op = Operation.create("arith.addi", loc=loc)
+            ctx.allow_unregistered_dialects = False
+            op.verify()
         except MLIRError as e:
-          pass
-  
-    with Context(load_on_create_dialects=["func"]) as ctx:
-      loc = Location.unknown(ctx)
-      fn = Operation.create("func.func", loc=loc)
+            pass
 
+    with Context(load_on_create_dialects=["func"]) as ctx:
+        loc = Location.unknown(ctx)
+        fn = Operation.create("func.func", loc=loc)
+
+    # TODO: This may require an update if a site wide policy is set.
+    # CHECK: Load on create: []
+    print(f"Load on create: {get_load_on_create_dialects()}")
+    append_load_on_create_dialect("func")
+    # CHECK: Load on create:
+    # CHECK-SAME: func
+    print(f"Load on create: {get_load_on_create_dialects()}")
+    print(get_load_on_create_dialects())

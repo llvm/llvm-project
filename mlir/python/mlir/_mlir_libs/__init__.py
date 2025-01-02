@@ -156,16 +156,23 @@ def _site_initialize():
             if not disable_multithreading:
                 self.enable_multithreading(True)
             if load_on_create_dialects is not None:
-                logger.debug("Loading all dialects from load_on_create_dialects arg %r", _load_on_create_dialects)
+                logger.debug(
+                    "Loading all dialects from load_on_create_dialects arg %r",
+                    load_on_create_dialects,
+                )
                 for dialect in load_on_create_dialects:
-                    # Load dialect.
+                    # This triggers loading the dialect into the context.
                     _ = self.dialects[dialect]
             else:
                 if disable_load_all_available_dialects:
-                    if _load_on_create_dialects:
-                        logger.debug("Loading all dialects from global load_on_create_dialects %r", _load_on_create_dialects)
-                        for dialect in _load_on_create_dialects:
-                            # Load dialect.
+                    dialects = get_load_on_create_dialects()
+                    if dialects:
+                        logger.debug(
+                            "Loading all dialects from global load_on_create_dialects %r",
+                            dialects,
+                        )
+                        for dialect in dialects:
+                            # This triggers loading the dialect into the context.
                             _ = self.dialects[dialect]
                 else:
                     logger.debug("Loading all available dialects")
