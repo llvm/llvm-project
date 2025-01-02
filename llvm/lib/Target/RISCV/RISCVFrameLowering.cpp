@@ -1727,6 +1727,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     if ((unsigned)FrameIdx > MaxCSFrameIndex)
       MaxCSFrameIndex = FrameIdx;
     CS.setFrameIdx(FrameIdx);
+    if (RISCVRegisterInfo::isRVVRegClass(RC))
+      MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
   }
 
   // Allocate a fixed object that covers the full push or libcall size.

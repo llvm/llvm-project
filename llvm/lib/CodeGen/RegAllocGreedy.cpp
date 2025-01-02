@@ -376,6 +376,12 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
   return Prio;
 }
 
+unsigned DummyPriorityAdvisor::getPriority(const LiveInterval &LI) const {
+  // Prioritize by virtual register number, lowest first.
+  Register Reg = LI.reg();
+  return ~Reg.virtRegIndex();
+}
+
 const LiveInterval *RAGreedy::dequeue() { return dequeue(Queue); }
 
 const LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
@@ -2427,7 +2433,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     } else
       return PhysReg;
   }
-  // Non emtpy NewVRegs means VirtReg has been split.
+  // Non empty NewVRegs means VirtReg has been split.
   if (!NewVRegs.empty())
     return 0;
 

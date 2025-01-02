@@ -9,7 +9,6 @@ void Test() {
   ;
 #pragma acc enter data copyin(I) async(I)
 #pragma acc exit data copyout(I) async(I)
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'host_data' directive}}
 #pragma acc host_data use_device(I) async(I)
   ;
@@ -21,7 +20,6 @@ void Test() {
 #pragma acc enter data copyin(NC) async(NC)
   // expected-error@+1{{OpenACC clause 'async' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc exit data copyout(NC) async(NC)
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC clause 'async' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc host_data use_device(NC) async(NC)
   ;

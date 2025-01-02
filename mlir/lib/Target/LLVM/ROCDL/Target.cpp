@@ -97,17 +97,15 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     : ModuleToObject(module, target.getTriple(), target.getChip(),
                      target.getFeatures(), target.getO()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
-      fileList(targetOptions.getLinkFiles()) {
+      librariesToLink(targetOptions.getLibrariesToLink()) {
 
   // If `targetOptions` has an empty toolkitPath use `getROCMPath`
   if (toolkitPath.empty())
     toolkitPath = getROCMPath();
 
   // Append the files in the target attribute.
-  if (ArrayAttr files = target.getLink())
-    for (Attribute attr : files.getValue())
-      if (auto file = dyn_cast<StringAttr>(attr))
-        fileList.push_back(file.str());
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 }
 
 void SerializeGPUModuleBase::init() {
@@ -128,8 +126,8 @@ ROCDLTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
 
 StringRef SerializeGPUModuleBase::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
-  return fileList;
+ArrayRef<Attribute> SerializeGPUModuleBase::getLibrariesToLink() const {
+  return librariesToLink;
 }
 
 LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
@@ -160,7 +158,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
                                   << " does not exist or is not a file";
       return true;
     }
-    fileList.push_back(pathRef.str());
+    librariesToLink.push_back(StringAttr::get(target.getContext(), pathRef));
     path.truncate(baseSize);
     return false;
   };
@@ -178,13 +176,13 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   // Return if there are no libs to load.
-  if (deviceLibs == AMDGCNLibraries::None && fileList.empty())
+  if (deviceLibs == AMDGCNLibraries::None && librariesToLink.empty())
     return SmallVector<std::unique_ptr<llvm::Module>>();
   if (failed(appendStandardLibs(deviceLibs)))
     return std::nullopt;
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
-                                      true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), librariesToLink,
+                                      bcFiles, true)))
     return std::nullopt;
   return std::move(bcFiles);
 }

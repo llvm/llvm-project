@@ -988,6 +988,10 @@ struct FormatStyle {
   /// \version 3.7
   bool AllowShortLoopsOnASingleLine;
 
+  /// If ``true``, ``namespace a { class b; }`` can be put on a single line.
+  /// \version 20
+  bool AllowShortNamespacesOnASingleLine;
+
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle : int8_t {
@@ -5099,6 +5103,15 @@ struct FormatStyle {
   /// \version 3.7
   UseTabStyle UseTab;
 
+  /// A vector of non-keyword identifiers that should be interpreted as variable
+  /// template names.
+  ///
+  /// A ``)`` after a variable template instantiation is **not** annotated as
+  /// the closing parenthesis of C-style cast operator.
+  ///
+  /// \version 20
+  std::vector<std::string> VariableTemplates;
+
   /// For Verilog, put each port on its own line in module instantiations.
   /// \code
   ///    true:
@@ -5168,6 +5181,8 @@ struct FormatStyle {
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
+           AllowShortNamespacesOnASingleLine ==
+               R.AllowShortNamespacesOnASingleLine &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
@@ -5308,7 +5323,7 @@ struct FormatStyle {
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
            TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

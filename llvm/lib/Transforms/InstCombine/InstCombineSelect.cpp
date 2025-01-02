@@ -1781,6 +1781,46 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+/// `A == MIN_INT ? B != MIN_INT : A < B` --> `A < B`
+/// `A == MAX_INT ? B != MAX_INT : A > B` --> `A > B`
+static Instruction *foldSelectWithExtremeEqCond(Value *CmpLHS, Value *CmpRHS,
+                                                Value *TrueVal,
+                                                Value *FalseVal) {
+  Type *Ty = CmpLHS->getType();
+
+  if (Ty->isPtrOrPtrVectorTy())
+    return nullptr;
+
+  CmpPredicate Pred;
+  Value *B;
+
+  if (!match(FalseVal, m_c_ICmp(Pred, m_Specific(CmpLHS), m_Value(B))))
+    return nullptr;
+
+  Value *TValRHS;
+  if (!match(TrueVal, m_SpecificICmp(ICmpInst::ICMP_NE, m_Specific(B),
+                                     m_Value(TValRHS))))
+    return nullptr;
+
+  APInt C;
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  if (ICmpInst::isLT(Pred)) {
+    C = CmpInst::isSigned(Pred) ? APInt::getSignedMinValue(BitWidth)
+                                : APInt::getMinValue(BitWidth);
+  } else if (ICmpInst::isGT(Pred)) {
+    C = CmpInst::isSigned(Pred) ? APInt::getSignedMaxValue(BitWidth)
+                                : APInt::getMaxValue(BitWidth);
+  } else {
+    return nullptr;
+  }
+
+  if (!match(CmpRHS, m_SpecificInt(C)) || !match(TValRHS, m_SpecificInt(C)))
+    return nullptr;
+
+  return new ICmpInst(Pred, CmpLHS, B);
+}
+
 static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
                                      InstCombinerImpl &IC) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -1794,6 +1834,10 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 
   if (Pred == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
+
+  if (Instruction *Res =
+          foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
+    return Res;
 
   // Transform (X == C) ? X : Y -> (X == C) ? C : Y
   // specific handling for Bitwise operation.
@@ -3725,22 +3769,9 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
   if (!SIFOp || !SIFOp->hasNoSignedZeros() || !SIFOp->hasNoNaNs())
     return nullptr;
 
-  // select((fcmp Pred, X, 0), (fadd X, C), C)
-  //      => fadd((select (fcmp Pred, X, 0), X, 0), C)
-  //
-  // Pred := OGT, OGE, OLT, OLE, UGT, UGE, ULT, and ULE
-  Instruction *FAdd;
-  Constant *C;
-  Value *X, *Z;
-  CmpPredicate Pred;
-
-  // Note: OneUse check for `Cmp` is necessary because it makes sure that other
-  // InstCombine folds don't undo this transformation and cause an infinite
-  // loop. Furthermore, it could also increase the operation count.
-  if (match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
-                          m_OneUse(m_Instruction(FAdd)), m_Constant(C))) ||
-      match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
-                          m_Constant(C), m_OneUse(m_Instruction(FAdd))))) {
+  auto TryFoldIntoAddConstant =
+      [&Builder, &SI](CmpInst::Predicate Pred, Value *X, Value *Z,
+                      Instruction *FAdd, Constant *C, bool Swapped) -> Value * {
     // Only these relational predicates can be transformed into maxnum/minnum
     // intrinsic.
     if (!CmpInst::isRelational(Pred) || !match(Z, m_AnyZeroFP()))
@@ -3749,7 +3780,8 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
     if (!match(FAdd, m_FAdd(m_Specific(X), m_Specific(C))))
       return nullptr;
 
-    Value *NewSelect = Builder.CreateSelect(SI.getCondition(), X, Z, "", &SI);
+    Value *NewSelect = Builder.CreateSelect(SI.getCondition(), Swapped ? Z : X,
+                                            Swapped ? X : Z, "", &SI);
     NewSelect->takeName(&SI);
 
     Value *NewFAdd = Builder.CreateFAdd(NewSelect, C);
@@ -3764,7 +3796,27 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
     cast<Instruction>(NewSelect)->setFastMathFlags(NewFMF);
 
     return NewFAdd;
-  }
+  };
+
+  // select((fcmp Pred, X, 0), (fadd X, C), C)
+  //      => fadd((select (fcmp Pred, X, 0), X, 0), C)
+  //
+  // Pred := OGT, OGE, OLT, OLE, UGT, UGE, ULT, and ULE
+  Instruction *FAdd;
+  Constant *C;
+  Value *X, *Z;
+  CmpPredicate Pred;
+
+  // Note: OneUse check for `Cmp` is necessary because it makes sure that other
+  // InstCombine folds don't undo this transformation and cause an infinite
+  // loop. Furthermore, it could also increase the operation count.
+  if (match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
+                          m_OneUse(m_Instruction(FAdd)), m_Constant(C))))
+    return TryFoldIntoAddConstant(Pred, X, Z, FAdd, C, /*Swapped=*/false);
+
+  if (match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
+                          m_Constant(C), m_OneUse(m_Instruction(FAdd)))))
+    return TryFoldIntoAddConstant(Pred, X, Z, FAdd, C, /*Swapped=*/true);
 
   return nullptr;
 }
@@ -3800,6 +3852,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                           ConstantInt::getFalse(CondType), SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(SI, 2, S);
+
+    if (replaceInInstruction(TrueVal, CondVal,
+                             ConstantInt::getTrue(CondType)) ||
+        replaceInInstruction(FalseVal, CondVal,
+                             ConstantInt::getFalse(CondType)))
+      return &SI;
   }
 
   if (Instruction *R = foldSelectOfBools(SI))

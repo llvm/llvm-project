@@ -60,7 +60,7 @@ jobs:
       - name: Test Container
         run: |
           for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
-            podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+            podman run --rm -it $image /usr/bin/bash -x -c 'cd $HOME && printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
           done
 
   push-ci-container:

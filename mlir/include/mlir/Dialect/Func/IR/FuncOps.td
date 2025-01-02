@@ -352,7 +352,7 @@ def ReturnOp : Func_Op<"return", [Pure, HasParent<"FuncOp">,
     Example:
 
     ```mlir
-    func.func @foo() : (i32, f8) {
+    func.func @foo() -> (i32, f8) {
       ...
       return %0, %1 : i32, f8
     }

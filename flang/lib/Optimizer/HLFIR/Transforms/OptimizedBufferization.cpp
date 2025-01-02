@@ -463,15 +463,19 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   match.array = match.assign.getLhs();
   mlir::Type arrayType = mlir::dyn_cast<fir::SequenceType>(
       fir::unwrapPassByRefType(match.array.getType()));
-  if (!arrayType)
+  if (!arrayType) {
+    LLVM_DEBUG(llvm::dbgs() << "AssignOp's result is not an array\n");
     return std::nullopt;
+  }
 
   // require that the array elements are trivial
   // TODO: this is just to make the pass easier to think about. Not an inherent
   // limitation
   mlir::Type eleTy = hlfir::getFortranElementType(arrayType);
-  if (!fir::isa_trivial(eleTy))
+  if (!fir::isa_trivial(eleTy)) {
+    LLVM_DEBUG(llvm::dbgs() << "AssignOp's data type is not trivial\n");
     return std::nullopt;
+  }
 
   // The array must have the same shape as the elemental.
   //
@@ -485,8 +489,10 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // there is no reallocation of the lhs due to the assignment.
   // We can probably try generating multiple versions of the code
   // with checking for the shape match, length parameters match, etc.
-  if (match.assign.getRealloc())
+  if (match.assign.isAllocatableAssignment()) {
+    LLVM_DEBUG(llvm::dbgs() << "AssignOp may involve (re)allocation of LHS\n");
     return std::nullopt;
+  }
 
   // the transformation wants to apply the elemental in a do-loop at the
   // hlfir.assign, check there are no effects which make this unsafe
@@ -1366,7 +1372,7 @@ public:
     // patterns.insert<ReductionMaskConversion<hlfir::MaxvalOp>>(context);
     // patterns.insert<ReductionMaskConversion<hlfir::MinvalOp>>(context);
 
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+    if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR optimized bufferization");

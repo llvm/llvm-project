@@ -563,13 +563,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2s16; },
           1, s32)
       .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
-          s64)
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1].isPointerVector();
+          },
+          0, s64)
       .moreElementsToNextPow2(1)
       .clampNumElements(1, v8s8, v16s8)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
+      .clampNumElements(1, v2p0, v2p0)
       .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
@@ -1035,7 +1038,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({s32, s64, v8s8, v16s8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
-      .clampScalar(0, s32, s64);
+      .clampScalar(0, s32, s64)
+      .lower();
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
@@ -1058,10 +1062,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return llvm::is_contained(
             {v2s64, v2s32, v4s32, v4s16, v16s8, v8s8, v8s16}, DstTy);
       })
-      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
-      // just want those lowered into G_BUILD_VECTOR
+      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors) or scalar
+      // destinations, we just want those lowered into G_BUILD_VECTOR or
+      // G_EXTRACT_ELEMENT.
       .lowerIf([=](const LegalityQuery &Query) {
-        return !Query.Types[1].isVector();
+        return !Query.Types[0].isVector() || !Query.Types[1].isVector();
       })
       .moreElementsIf(
           [](const LegalityQuery &Query) {
