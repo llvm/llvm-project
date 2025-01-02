@@ -415,6 +415,11 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VASUBU_VX:
   case RISCV::VASUB_VV:
   case RISCV::VASUB_VX:
+  // Vector Single-Width Fractional Multiply with Rounding and Saturation
+  // EEW=SEW. EMUL=LMUL. The instruction produces 2*SEW product internally but
+  // saturates to fit into SEW bits.
+  case RISCV::VSMUL_VV:
+  case RISCV::VSMUL_VX:
   // Vector Single-Width Scaling Shift Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VSSRL_VI:
@@ -973,13 +978,13 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
     assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
            "Did not expect X0 VL");
 
-    if (!CommonVL) {
+    // Use the largest VL among all the users. If we cannot determine this
+    // statically, then we cannot optimize the VL.
+    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, VLOp)) {
       CommonVL = &VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!CommonVL->isIdenticalTo(VLOp)) {
-      // FIXME: This check requires all users to have the same VL. We can relax
-      // this and get the largest VL amongst all users.
-      LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
+    } else if (!RISCV::isVLKnownLE(VLOp, *CommonVL)) {
+      LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
       CanReduceVL = false;
       break;
     }

@@ -2405,6 +2405,11 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     addHdr(PT_GNU_STACK, perm)->p_memsz = ctx.arg.zStackSize;
   }
 
+  // PT_OPENBSD_NOBTCFI is an OpenBSD-specific header to mark that the
+  // executable is expected to violate branch-target CFI checks.
+  if (ctx.arg.zNoBtCfi)
+    addHdr(PT_OPENBSD_NOBTCFI, PF_X);
+
   // PT_OPENBSD_WXNEEDED is a OpenBSD-specific header to mark the executable
   // is expected to perform W^X violations, such as calling mprotect(2) or
   // mmap(2) with PROT_WRITE | PROT_EXEC, which is prohibited by default on

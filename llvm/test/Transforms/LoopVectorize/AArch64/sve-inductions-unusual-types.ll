@@ -16,10 +16,10 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i7
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP40:%.*]] = mul i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP40]], 2
+; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i7
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = trunc <vscale x 2 x i64> [[DOTSPLAT_]] to <vscale x 2 x i7>
@@ -72,7 +72,7 @@ for.end:                                          ; preds = %for.body
 
 ; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i3 %indvars.iv1294, 1
 ; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
-; DEBUG: Cost of Invalid for VF vscale x 1: WIDEN-CAST ir<%zexti3> = zext  ir<%indvars.iv1294> to i64
+; DEBUG: Cost of Invalid for VF vscale x 1: WIDEN-CAST ir<%zexti3> = zext ir<%indvars.iv1294> to i64
 
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i3_zext(
@@ -82,10 +82,10 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i3
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP40:%.*]] = mul i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP40]], 2
+; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i3
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = trunc <vscale x 2 x i64> [[DOTSPLAT_]] to <vscale x 2 x i3>

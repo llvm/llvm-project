@@ -17,8 +17,12 @@
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#pragma push_macro("V79")
+#define V79 "v79"
+#pragma push_macro("V75")
+#define V75 "v75|" V79
 #pragma push_macro("V73")
-#define V73 "v73"
+#define V73 "v73|" V75
 #pragma push_macro("V71")
 #define V71 "v71|" V73
 #pragma push_macro("V69")
@@ -40,8 +44,12 @@
 #pragma push_macro("V5")
 #define V5 "v5|" V55
 
+#pragma push_macro("HVXV79")
+#define HVXV79 "hvxv79"
+#pragma push_macro("HVXV75")
+#define HVXV75 "hvxv75|" HVXV79
 #pragma push_macro("HVXV73")
-#define HVXV73 "hvxv73"
+#define HVXV73 "hvxv73|" HVXV75
 #pragma push_macro("HVXV71")
 #define HVXV71 "hvxv71|" HVXV73
 #pragma push_macro("HVXV69")
@@ -143,6 +151,8 @@ TARGET_BUILTIN(__builtin_HEXAGON_V6_vrmpyub_rtt_acc_128B,"V64iV64iV32iLLi","", "
 #pragma pop_macro("HVXV69")
 #pragma pop_macro("HVXV71")
 #pragma pop_macro("HVXV73")
+#pragma pop_macro("HVXV75")
+#pragma pop_macro("HVXV79")
 
 #pragma pop_macro("V5")
 #pragma pop_macro("V55")
@@ -155,6 +165,8 @@ TARGET_BUILTIN(__builtin_HEXAGON_V6_vrmpyub_rtt_acc_128B,"V64iV64iV32iLLi","", "
 #pragma pop_macro("V69")
 #pragma pop_macro("V71")
 #pragma pop_macro("V73")
+#pragma pop_macro("V75")
+#pragma pop_macro("V79")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

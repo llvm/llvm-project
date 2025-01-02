@@ -59,6 +59,7 @@ constexpr Parser<IntegerTypeSpec> integerTypeSpec; // R705
 constexpr Parser<KindSelector> kindSelector; // R706
 constexpr Parser<SignedIntLiteralConstant> signedIntLiteralConstant; // R707
 constexpr Parser<IntLiteralConstant> intLiteralConstant; // R708
+constexpr Parser<UnsignedLiteralConstant> unsignedLiteralConstant;
 constexpr Parser<KindParam> kindParam; // R709
 constexpr Parser<RealLiteralConstant> realLiteralConstant; // R714
 constexpr Parser<CharLength> charLength; // R723

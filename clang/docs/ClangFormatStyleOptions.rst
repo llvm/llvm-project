@@ -2088,6 +2088,11 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, ``while (true) continue;`` can be put on a single
   line.
 
+.. _AllowShortNamespacesOnASingleLine:
+
+**AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
+  If ``true``, ``namespace a { class b; }`` can be put on a single line.
+
 .. _AlwaysBreakAfterDefinitionReturnType:
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlwaysBreakAfterDefinitionReturnType>`
@@ -6792,6 +6797,15 @@ the configuration (without a prefix: ``Auto``).
     one tab stop to the next one.
 
 
+
+.. _VariableTemplates:
+
+**VariableTemplates** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <VariableTemplates>`
+  A vector of non-keyword identifiers that should be interpreted as variable
+  template names.
+
+  A ``)`` after a variable template instantiation is **not** annotated as
+  the closing parenthesis of C-style cast operator.
 
 .. _VerilogBreakBetweenInstancePorts:
 
