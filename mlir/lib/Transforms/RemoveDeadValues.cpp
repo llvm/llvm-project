@@ -239,14 +239,17 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
 /// and the IR in `module`. If it is not public or external:
-///   1. Adding its non-live arguments to a list for future removal.
-///   2. Marking their corresponding operands in its callers for removal.
-///   3. Identifying and enqueueing unnecessary terminator operands
+/// Process a function-like op `funcOp`, given the liveness information in `la`
+/// and the IR in `module`. Here, processing means:
+///   (1) Adding its non-live arguments to a list for future removal.
+///   (2) Marking their corresponding operands in its callers for removal.
+///   (3) Identifying and enqueueing unnecessary terminator operands
 ///      (return values that are non-live across all callers) for removal.
-///   4. Enqueueing the non-live arguments themselves for removal.
-///   5. Collecting the uses of these return values in its callers for future
+///   (4) Enqueueing the non-live arguments themselves for removal.
+///   (5) Collecting the uses of these return values in its callers for future
 ///   removal.
 ///   6. Marking all its results as non-live values.
+/// iff it is not public or external.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &deletionSet,
                           RDVFinalCleanupList &cl) {
