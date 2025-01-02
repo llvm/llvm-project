@@ -60832,3 +60832,24 @@ Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
   return TargetLowering::getPrefLoopAlignment();
 }
+
+bool X86TargetLowering::shouldSimplifyDemandedVectorElts(
+    SDValue Op, const TargetLoweringOpt &TLO) const {
+  if (Op.getOpcode() == ISD::VECTOR_SHUFFLE) {
+    SDValue V0 = peekThroughBitcasts(Op.getOperand(0));
+    SDValue V1 = peekThroughBitcasts(Op.getOperand(1));
+
+    if (V0.getOpcode() == ISD::MUL || V1.getOpcode() == ISD::MUL) {
+      SDNode *Mul = V0.getOpcode() == ISD::MUL ? V0.getNode() : V1.getNode();
+      SelectionDAG &DAG = TLO.DAG;
+      const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
+      const SDLoc DL(Mul);
+
+      if (SDValue V = combineMulToPMULDQ(Mul, DL, DAG, Subtarget)) {
+        DAG.ReplaceAllUsesWith(Mul, V.getNode());
+        return false;
+      }
+    }
+  }
+  return true;
+}

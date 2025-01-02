@@ -1207,6 +1207,9 @@ namespace llvm {
 
     bool hasBitTest(SDValue X, SDValue Y) const override;
 
+    bool shouldSimplifyDemandedVectorElts(
+        SDValue Op, const TargetLoweringOpt &TLO) const override;
+
     bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
         SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
