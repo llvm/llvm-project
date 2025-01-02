@@ -81,12 +81,8 @@ genAllocateClause(lower::AbstractConverter &converter,
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  using SimpleModifier = Allocate::AllocatorSimpleModifier;
   using ComplexModifier = Allocate::AllocatorComplexModifier;
-  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
-    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
-    allocatorOperands.append(objects.size(), operand);
-  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+  if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
@@ -157,10 +153,13 @@ genDependKindAttr(lower::AbstractConverter &converter,
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
   case omp::clause::DependenceType::Mutexinoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependmutexinoutset;
+    break;
   case omp::clause::DependenceType::Inoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependinoutset;
+    break;
   case omp::clause::DependenceType::Depobj:
-    TODO(currentLocation,
-         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    TODO(currentLocation, "DEPOBJ dependence-type");
     break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
@@ -223,6 +222,10 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
+}
 
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
@@ -457,6 +460,16 @@ bool ClauseProcessor::processPriority(
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
     result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDetach(mlir::omp::DetachClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Detach>()) {
+    semantics::Symbol *sym = clause->v.sym();
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    result.eventHandle = symVal;
     return true;
   }
   return false;
@@ -744,6 +757,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
@@ -1000,7 +1014,7 @@ bool ClauseProcessor::processMap(
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
+    const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     // If the map type is specified, then process it else Tofrom is the
@@ -1029,13 +1043,11 @@ bool ClauseProcessor::processMap(
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
     }
 
-    auto &modTypeMods =
-        std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
-    if (modTypeMods) {
-      if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+    if (typeMods) {
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Always))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
       // Diagnose unimplemented map-type-modifiers.
-      if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
+      if (llvm::any_of(*typeMods, [](Map::MapTypeModifier m) {
             return m != Map::MapTypeModifier::Always;
           })) {
         TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
@@ -1043,9 +1055,13 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+    if (iterator) {
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
+    }
+    if (mappers) {
+      TODO(currentLocation,
+           "Support for mapper modifiers is not implemented yet");
     }
 
     processMapObjects(stmtCtx, clauseLocation,

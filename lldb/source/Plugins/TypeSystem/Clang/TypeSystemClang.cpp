@@ -6734,12 +6734,12 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           llvm::StringRef field_name = field->getName();
           if (field_name.empty()) {
             CompilerType field_type = GetType(field->getType());
+            std::vector<uint32_t> save_indices = child_indexes;
             child_indexes.push_back(child_idx);
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
-            child_indexes.pop_back();
-
+            child_indexes = std::move(save_indices);
           } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
@@ -8534,7 +8534,7 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
   bool is_signed = false;
   underlying_type.IsIntegerType(is_signed);
 
-  llvm::APSInt value(enum_value_bit_size, is_signed);
+  llvm::APSInt value(enum_value_bit_size, !is_signed);
   value = enum_value;
 
   return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);

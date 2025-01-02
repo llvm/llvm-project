@@ -82,9 +82,7 @@ public:
   Boolean truncate(unsigned TruncBits) const { return *this; }
 
   static Boolean bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
-    // Boolean width is currently always 8 for all supported targets. If this
-    // changes we need to get the bool width from the target info.
-    assert(BitWidth == 8);
+    // Just load the first byte.
     bool Val = static_cast<bool>(*Buff);
     return Boolean(Val);
   }

@@ -682,6 +682,19 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "CORE-V SIMD extensions custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
                         "CORE-V Immediate Branching custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicsr, DecoderTableXqcicsr32,
+                        "Qualcomm uC CSR custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcisls, DecoderTableXqcisls32,
+                        "Qualcomm uC Scaled Load Store custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcia, DecoderTableXqcia32,
+                        "Qualcomm uC Arithmetic custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcics, DecoderTableXqcics32,
+                        "Qualcomm uC Conditional Select custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilsm, DecoderTableXqcilsm32,
+                        "Qualcomm uC Load Store Multiple custom opcode table");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqciac, DecoderTableXqciac32,
+      "Qualcomm uC Load-Store Address Calculation custom opcode table");
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
   return MCDisassembler::Fail;
@@ -708,6 +721,9 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
       "Zcmp table (16-bit Push/Pop & Double Move Instructions)");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqciac, DecoderTableXqciac16,
+      "Qualcomm uC Load-Store Address Calculation custom 16bit opcode table");
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
                            DecoderTableXwchc16,
                            "WCH QingKe XW custom opcode table");

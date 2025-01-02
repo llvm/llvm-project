@@ -4476,6 +4476,7 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                "int k; } // namespace out",
                Style);
 
+  Style.ColumnLimit = 41;
   verifyFormat("namespace A { namespace B { namespace C {\n"
                "}}} // namespace A::B::C",
                "namespace A { namespace B {\n"
@@ -4504,6 +4505,12 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                "} // namespace bbbbbb\n"
                "} // namespace aaaaaa",
                Style);
+
+  verifyFormat("namespace a { namespace b {\n"
+               "namespace c {\n"
+               "}}} // namespace a::b::c",
+               Style);
+
   Style.ColumnLimit = 80;
 
   // Extra semicolon after 'inner' closing brace prevents merging
@@ -5724,6 +5731,24 @@ TEST_F(FormatTest, HashInMacroDefinition) {
                getLLVMStyleWithColumns(22));
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
+
+#if 0
+  // FIXME: The correct format is:
+  verifyFormat("{\n"
+               "  {\n"
+               "#define GEN_ID(_x) char *_x{#_x}\n"
+               "    GEN_ID(one);\n"
+               "  }\n"
+               "}");
+#endif
+  verifyFormat("{\n"
+               "  {\n"
+               "#define GEN_ID(_x) \\\n"
+               "  char *_x { #_x }\n"
+               "    GEN_ID(one);\n"
+               "  }\n"
+               "}",
+               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -9441,6 +9466,15 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("void foo(\n"
+               "    void (*foobarpntr)(\n"
+               "        aaaaaaaaaaaaaaaaaa *,\n"
+               "        bbbbbbbbbbbbbb *,\n"
+               "        cccccccccccccccccccc *,\n"
+               "        dddddddddddddddddd *\n"
+               "    )\n"
+               ");",
+               Style);
   verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
                "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
                "};",
@@ -13664,6 +13698,10 @@ TEST_F(FormatTest, FormatsArrays) {
       "                                  .aaaaaaaaaaaaaaaaaaaaaa();");
   verifyFormat("a[::b::c];");
 
+  verifyFormat("{\n"
+               "  (*a)[0] = 1;\n"
+               "}");
+
   verifyNoCrash("a[,Y?)]", getLLVMStyleWithColumns(10));
 
   FormatStyle NoColumnLimit = getLLVMStyleWithColumns(0);
@@ -14476,10 +14514,13 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
   FormatStyle DoNotMergeNoColumnLimit = NoColumnLimit;
   DoNotMergeNoColumnLimit.AllowShortFunctionsOnASingleLine =
       FormatStyle::SFS_None;
-  verifyFormat("A()\n"
-               "    : b(0) {\n"
+  verifyFormat("A() : b(0) {\n"
                "}",
-               "A():b(0){}", DoNotMergeNoColumnLimit);
+               DoNotMergeNoColumnLimit);
+  verifyNoChange("A()\n"
+                 "    : b(0) {\n"
+                 "}",
+                 DoNotMergeNoColumnLimit);
   verifyFormat("A()\n"
                "    : b(0) {\n"
                "}",
@@ -27386,6 +27427,13 @@ TEST_F(FormatTest, RemoveSemicolon) {
                Style);
 #endif
 
+  verifyFormat("auto sgf = [] {\n"
+               "  ogl = {\n"
+               "      a, b, c, d, e,\n"
+               "  };\n"
+               "};",
+               Style);
+
   Style.TypenameMacros.push_back("STRUCT");
   verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
@@ -28271,6 +28319,112 @@ TEST_F(FormatTest, KeepFormFeed) {
                "\f\n"
                "void f();",
                Style);
+}
+
+TEST_F(FormatTest, ShortNamespacesOption) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortNamespacesOnASingleLine = true;
+  Style.CompactNamespaces = true;
+  Style.FixNamespaceComments = false;
+
+  // Basic functionality.
+  verifyFormat("namespace foo { class bar; }", Style);
+  verifyFormat("namespace foo::bar { class baz; }", Style);
+  verifyFormat("namespace { class bar; }", Style);
+  verifyFormat("namespace foo {\n"
+               "class bar;\n"
+               "class baz;\n"
+               "}",
+               Style);
+
+  // Trailing comments prevent merging.
+  verifyFormat("namespace foo { namespace baz {\n"
+               "class qux;\n"
+               "} // comment\n"
+               "}",
+               Style);
+
+  // Make sure code doesn't walk too far on unbalanced code.
+  verifyFormat("namespace foo {", Style);
+  verifyFormat("namespace foo {\n"
+               "class baz;",
+               Style);
+  verifyFormat("namespace foo {\n"
+               "namespace bar { class baz; }",
+               Style);
+
+  // Nested namespaces.
+  verifyFormat("namespace foo { namespace bar { class baz; } }", Style);
+
+  // Without CompactNamespaces, we won't merge consecutive namespace
+  // declarations.
+  Style.CompactNamespaces = false;
+  verifyFormat("namespace foo {\n"
+               "namespace bar { class baz; }\n"
+               "}",
+               Style);
+
+  verifyFormat("namespace foo {\n"
+               "namespace bar { class baz; }\n"
+               "namespace qux { class quux; }\n"
+               "}",
+               Style);
+
+  Style.CompactNamespaces = true;
+
+  // Varying inner content.
+  verifyFormat("namespace foo {\n"
+               "int f() { return 5; }\n"
+               "}",
+               Style);
+  verifyFormat("namespace foo { template <T> struct bar; }", Style);
+  verifyFormat("namespace foo { constexpr int num = 42; }", Style);
+
+  // Validate nested namespace wrapping scenarios around the ColumnLimit.
+  Style.ColumnLimit = 64;
+
+  // Validate just under the ColumnLimit.
+  verifyFormat(
+      "namespace foo { namespace bar { namespace baz { class qux; } } }",
+      Style);
+
+  // Validate just over the ColumnLimit.
+  verifyFormat("namespace foo { namespace baar { namespace baaz {\n"
+               "class quux;\n"
+               "}}}",
+               Style);
+
+  verifyFormat(
+      "namespace foo { namespace bar { namespace baz { namespace qux {\n"
+      "class quux;\n"
+      "}}}}",
+      Style);
+
+  // Validate that the ColumnLimit logic accounts for trailing content as well.
+  verifyFormat("namespace foo { namespace bar { class qux; } } // extra",
+               Style);
+
+  verifyFormat("namespace foo { namespace bar { namespace baz {\n"
+               "class qux;\n"
+               "}}} // extra",
+               Style);
+
+  // FIXME: Ideally AllowShortNamespacesOnASingleLine would disable the trailing
+  // namespace comment from 'FixNamespaceComments', as it's not really necessary
+  // in this scenario, but the two options work at very different layers of the
+  // formatter, so I'm not sure how to make them interact.
+  //
+  // As it stands, the trailing comment will be added and likely make the line
+  // too long to fit within the ColumnLimit, reducing the how likely the line
+  // will still fit on a single line. The recommendation for now is to use the
+  // concatenated namespace syntax instead. e.g. 'namespace foo::bar'
+  Style.FixNamespaceComments = true;
+  verifyFormat(
+      "namespace foo { namespace bar { namespace baz {\n"
+      "class qux;\n"
+      "}}} // namespace foo::bar::baz",
+      "namespace foo { namespace bar { namespace baz { class qux; } } }",
+      Style);
 }
 
 } // namespace

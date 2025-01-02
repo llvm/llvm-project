@@ -27,7 +27,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
+static bool RetValue(InterpState &S, CodePtr &Pt) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
 
@@ -1154,6 +1154,53 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   return false;
 }
 
+static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                     uint32_t Off) {
+  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
+      !CheckNull(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
+    return true;
+  }
+
+  if (!Ptr.isBlockPointer()) {
+    // FIXME: The only time we (seem to) get here is when trying to access a
+    // field of a typeid pointer. In that case, we're supposed to diagnose e.g.
+    // `typeid(int).name`, but we currently diagnose `&typeid(int)`.
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (Off > Ptr.block()->getSize())
+    return false;
+
+  S.Stk.push<Pointer>(Ptr.atField(Off));
+  return true;
+}
+
+bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  return getField(S, OpPC, Ptr, Off);
+}
+
+bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  return getField(S, OpPC, Ptr, Off);
+}
+
 static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
                              const Pointer &ThisPtr) {
   assert(Func->isConstructor());
@@ -1205,11 +1252,10 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S, CallResult)) {
+  if (Interpret(S)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
@@ -1270,11 +1316,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
-  APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S, CallResult)) {
+  if (Interpret(S)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
@@ -1362,7 +1407,10 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID) {
-  if (S.checkingPotentialConstantExpression())
+  // A little arbitrary, but the current interpreter allows evaluation
+  // of builtin functions in this mode, with some exceptions.
+  if (BuiltinID == Builtin::BI__builtin_operator_new &&
+      S.checkingPotentialConstantExpression())
     return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
@@ -1481,10 +1529,11 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
-  const auto &Loc = S.Current->getSource(OpPC);
 
   if (S.getLangOpts().CPlusPlus26)
     return true;
+
+  const auto &Loc = S.Current->getSource(OpPC);
 
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
@@ -1593,11 +1642,46 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
   return false;
 }
 
+bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
+               const Type *TypeInfoType) {
+  S.Stk.push<Pointer>(TypePtr, TypeInfoType);
+  return true;
+}
+
+bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
+  const auto &P = S.Stk.pop<Pointer>();
+
+  if (!P.isBlockPointer())
+    return false;
+
+  if (P.isDummy()) {
+    QualType StarThisType =
+        S.getASTContext().getLValueReferenceType(P.getType());
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_polymorphic_unknown_dynamic_type)
+        << AK_TypeId
+        << P.toAPValue(S.getASTContext())
+               .getAsString(S.getASTContext(), StarThisType);
+    return false;
+  }
+
+  S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
+  return true;
+}
+
+bool DiagTypeid(InterpState &S, CodePtr OpPC) {
+  const auto *E = cast<CXXTypeidExpr>(S.Current->getExpr(OpPC));
+  S.CCEDiag(E, diag::note_constexpr_typeid_polymorphic)
+      << E->getExprOperand()->getType()
+      << E->getExprOperand()->getSourceRange();
+  return false;
+}
+
 // https://github.com/llvm/llvm-project/issues/102513
 #if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
 #pragma optimize("", off)
 #endif
-bool Interpret(InterpState &S, APValue &Result) {
+bool Interpret(InterpState &S) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
   // to return from this function and thus terminate
