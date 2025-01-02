@@ -1763,7 +1763,8 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
+Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
+                                             bool AllowMultipleUses) {
   unsigned NumPHIValues = PN->getNumIncomingValues();
   if (NumPHIValues == 0)
     return nullptr;
@@ -1771,7 +1772,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // We normally only transform phis with a single use.  However, if a PHI has
   // multiple uses and they are all the same operation, we can fold *all* of the
   // uses into the PHI.
-  if (!PN->hasOneUse()) {
+  bool OneUse = PN->hasOneUse();
+  bool IdenticalUsers = false;
+  if (!AllowMultipleUses && !OneUse) {
     // Walk the use list for the instruction, comparing them to I.
     for (User *U : PN->users()) {
       Instruction *UI = cast<Instruction>(U);
@@ -1779,6 +1782,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
         return nullptr;
     }
     // Otherwise, we can replace *all* users with the new PHI we form.
+    IdenticalUsers = true;
   }
 
   // Check that all operands are phi-translatable.
@@ -1828,6 +1832,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       NewPhiValues.push_back(nullptr);
       continue;
     }
+
+    if (!OneUse && !IdenticalUsers)
+      return nullptr;
 
     if (SeenNonSimplifiedInVal)
       return nullptr; // More than one non-simplified value.
@@ -1890,17 +1897,22 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   for (unsigned i = 0; i != NumPHIValues; ++i)
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
-  for (User *U : make_early_inc_range(PN->users())) {
-    Instruction *User = cast<Instruction>(U);
-    if (User == &I)
-      continue;
-    replaceInstUsesWith(*User, NewPN);
-    eraseInstFromFunction(*User);
+  if (IdenticalUsers) {
+    for (User *U : make_early_inc_range(PN->users())) {
+      Instruction *User = cast<Instruction>(U);
+      if (User == &I)
+        continue;
+      replaceInstUsesWith(*User, NewPN);
+      eraseInstFromFunction(*User);
+    }
+    OneUse = true;
   }
 
-  replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
-                        const_cast<PHINode &>(*NewPN),
-                        const_cast<PHINode &>(*PN), DT);
+  if (OneUse) {
+    replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
+                          const_cast<PHINode &>(*NewPN),
+                          const_cast<PHINode &>(*PN), DT);
+  }
   return replaceInstUsesWith(I, NewPN);
 }
 
@@ -3119,26 +3131,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  // The single (non-zero) index of an inbounds GEP of a base object cannot
-  // be negative.
-  auto HasOneNonZeroIndex = [&]() {
-    bool FoundNonZero = false;
-    for (Value *Idx : GEP.indices()) {
-      auto *C = dyn_cast<Constant>(Idx);
-      if (C && C->isNullValue())
-        continue;
-      if (FoundNonZero)
-        return false;
-      FoundNonZero = true;
-    }
-    return true;
-  };
-  if (GEP.isInBounds() && !GEP.hasNoUnsignedWrap() && isBaseOfObject(PtrOp) &&
-      HasOneNonZeroIndex()) {
-    GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
-    return &GEP;
-  }
-
   // nusw + nneg -> nuw
   if (GEP.hasNoUnsignedSignedWrap() && !GEP.hasNoUnsignedWrap() &&
       all_of(GEP.indices(), [&](Value *Idx) {
@@ -3478,7 +3470,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // Validate the rest of constraint #1 by matching on the pred branch.
   Instruction *TI = PredBB->getTerminator();
   BasicBlock *TrueBB, *FalseBB;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (!match(TI, m_Br(m_ICmp(Pred,
                              m_CombineOr(m_Specific(Op),
                                          m_Specific(Op->stripPointerCasts())),
@@ -3759,7 +3751,7 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return replaceOperand(BI, 0, ConstantInt::getFalse(Cond->getType()));
 
   // Canonicalize, for example, fcmp_one -> fcmp_oeq.
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(Cond, m_OneUse(m_FCmp(Pred, m_Value(), m_Value()))) &&
       !isCanonicalPredicate(Pred)) {
     // Swap destinations and condition.
@@ -3820,7 +3812,7 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
   if (CstBB != SI.getDefaultDest())
     return nullptr;
   Value *X = Select->getOperand(3 - CstOpIdx);
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *RHSC;
   if (!match(Select->getCondition(),
              m_ICmp(Pred, m_Specific(X), m_APInt(RHSC))))

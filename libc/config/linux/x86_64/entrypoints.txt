@@ -45,10 +45,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_yield
 
     # string.h entrypoints
-    libc.src.string.bcmp
-    libc.src.string.bcopy
-    libc.src.string.bzero
-    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -59,10 +55,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memrchr
     libc.src.string.memset
     libc.src.string.memset_explicit
-    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
-    libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
@@ -77,7 +71,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
-    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -92,6 +85,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
     libc.src.string.strxfrm
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.index
+    libc.src.strings.rindex
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -368,6 +370,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.conj
     libc.src.complex.conjf
     libc.src.complex.conjl
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
     
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
@@ -619,17 +624,23 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
-if(LIBC_TYPES_HAS_FLOAT16)
+if(LIBC_TYPES_HAS_CFLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float16 entrypoints
     libc.src.complex.crealf16
     libc.src.complex.cimagf16
     libc.src.complex.conjf16
+    libc.src.complex.cprojf16
+  )
+endif()
 
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.cosf16
     libc.src.math.coshf16
     libc.src.math.cospif16
     libc.src.math.exp10f16
@@ -729,13 +740,18 @@ if(LIBC_TYPES_HAS_FLOAT16)
   endif()
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_CFLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float128 entrypoints
-    # libc.src.complex.crealf128
-    # libc.src.complex.cimagf128
-    # libc.src.complex.conjf128
-    
+    libc.src.complex.crealf128
+    libc.src.complex.cimagf128
+    libc.src.complex.conjf128
+    libc.src.complex.cprojf128
+  )
+endif()
+
+if(LIBC_TYPES_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS    
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
@@ -893,11 +909,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.opendir
     libc.src.dirent.readdir
 
-    # network.h entrypoints
-    libc.src.network.htonl
-    libc.src.network.htons
-    libc.src.network.ntohl
-    libc.src.network.ntohs
+    # arpa/inet.h entrypoints
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.ntohl
+    libc.src.arpa.inet.ntohs
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork

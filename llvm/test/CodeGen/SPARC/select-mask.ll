@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc < %s
+; RUN: llc -mtriple=sparc < %s
 
 ;; getBooleanContents on Sparc used to claim that no bits mattered
 ;; other than the first for SELECT. Thus, the 'trunc' got eliminated

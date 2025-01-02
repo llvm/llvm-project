@@ -1207,4 +1207,132 @@ namespace BuiltinMemcpy {
   }
   static_assert(memcpyTypeRem() == 12); // both-error {{not an integral constant expression}} \
                                         // both-note {{in call to}}
+
+  template<typename T>
+  constexpr T result(T (&arr)[4]) {
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+
+  constexpr int test_memcpy(int a, int b, int n) {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memcpy(arr + a, arr + b, n); // both-note {{overlapping memory regions}}
+    return result(arr);
+  }
+
+  static_assert(test_memcpy(1, 2, sizeof(int)) == 1334);
+  static_assert(test_memcpy(0, 1, sizeof(int) * 2) == 2334); // both-error {{not an integral constant expression}} \
+                                                             // both-note {{in call}}
+
+  /// Both memcpy and memmove must support pointers.
+  constexpr bool moveptr() {
+    int a = 0;
+    void *x = &a;
+    void *z = nullptr;
+
+    __builtin_memmove(&z, &x, sizeof(void*));
+    return z == x;
+  }
+  static_assert(moveptr());
+
+  constexpr bool cpyptr() {
+    int a = 0;
+    void *x = &a;
+    void *z = nullptr;
+
+    __builtin_memcpy(&z, &x, sizeof(void*));
+    return z == x;
+  }
+  static_assert(cpyptr());
+
+#ifndef __AVR__
+  constexpr int test_memmove(int a, int b, int n) {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memmove(arr + a, arr + b, n); // both-note {{destination is not a contiguous array of at least 3 elements of type 'int'}}
+    return result(arr);
+  }
+  static_assert(test_memmove(2, 0, 12) == 4234); // both-error {{constant}} \
+                                                 // both-note {{in call}}
+#endif
+
+  struct Trivial { char k; short s; constexpr bool ok() { return k == 3 && s == 4; } };
+  constexpr bool test_trivial() {
+    Trivial arr[3] = {{1, 2}, {3, 4}, {5, 6}};
+    __builtin_memcpy(arr, arr+1, sizeof(Trivial));
+    __builtin_memmove(arr+1, arr, 2 * sizeof(Trivial));
+
+    return arr[0].ok() && arr[1].ok() && arr[2].ok();
+  }
+  static_assert(test_trivial());
+
+  // Check that an incomplete array is rejected.
+  constexpr int test_incomplete_array_type() { // both-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(arr, arr, 4 * sizeof(arr[0]));
+    // both-note@-1 2{{'memmove' not supported: source is not a contiguous array of at least 4 elements of type 'int'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_incomplete_array_type() == 1234); // both-error {{constant}} both-note {{in call}}
+}
+
+namespace Memcmp {
+  constexpr unsigned char ku00fe00[] = {0x00, 0xfe, 0x00};
+  constexpr unsigned char ku00feff[] = {0x00, 0xfe, 0xff};
+  constexpr signed char ks00fe00[] = {0, -2, 0};
+  constexpr signed char ks00feff[] = {0, -2, -1};
+  static_assert(__builtin_memcmp(ku00feff, ks00fe00, 2) == 0);
+  static_assert(__builtin_memcmp(ku00feff, ks00fe00, 99) == 1);
+  static_assert(__builtin_memcmp(ku00fe00, ks00feff, 99) == -1);
+  static_assert(__builtin_memcmp(ks00feff, ku00fe00, 2) == 0);
+  static_assert(__builtin_memcmp(ks00feff, ku00fe00, 99) == 1);
+  static_assert(__builtin_memcmp(ks00fe00, ku00feff, 99) == -1);
+  static_assert(__builtin_memcmp(ks00fe00, ks00feff, 2) == 0);
+  static_assert(__builtin_memcmp(ks00feff, ks00fe00, 99) == 1);
+  static_assert(__builtin_memcmp(ks00fe00, ks00feff, 99) == -1);
+
+  struct Bool3Tuple { bool bb[3]; };
+  constexpr Bool3Tuple kb000100 = {{false, true, false}};
+  static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 1) == 0); // both-error {{constant}} \
+                                                                                        // both-note {{not supported}}
+
+  constexpr char a = 'a';
+  constexpr char b = 'a';
+  static_assert(__builtin_memcmp(&a, &b, 1) == 0);
+
+  extern struct Incomplete incomplete;
+  static_assert(__builtin_memcmp(&incomplete, "", 0u) == 0);
+  static_assert(__builtin_memcmp("", &incomplete, 0u) == 0);
+  static_assert(__builtin_memcmp(&incomplete, "", 1u) == 42); // both-error {{not an integral constant}} \
+                                                              // both-note {{not supported}}
+  static_assert(__builtin_memcmp("", &incomplete, 1u) == 42); // both-error {{not an integral constant}} \
+                                                              // both-note {{not supported}}
+
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0banana", 100) == 0); // both-error {{not an integral constant}} \
+                                                                                 // both-note {{dereferenced one-past-the-end}}
+
+  static_assert(__builtin_bcmp("abaa", "abba", 3) != 0);
+  static_assert(__builtin_bcmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_bcmp("a\203", "a", 2) != 0);
+  static_assert(__builtin_bcmp("a\203", "a\003", 2) != 0);
+  static_assert(__builtin_bcmp(0, 0, 0) == 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0banana", 100) == 0); // both-error {{not an integral constant}}\
+                                                                           // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 100) != 0); // FIXME: Should we reject this?
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 7) != 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 6) != 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 5) == 0);
+
+
+  static_assert(__builtin_wmemcmp(L"abaa", L"abba", 3) == -1);
+  static_assert(__builtin_wmemcmp(L"abaa", L"abba", 2) == 0);
+  static_assert(__builtin_wmemcmp(0, 0, 0) == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wmemcmp(L"a\x83838383", L"aa", 2) ==
+                (wchar_t)-1U >> 31);
+#endif
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0banana", 100) == 0); // both-error {{not an integral constant}} \
+                                                                                // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 100) == -1); // FIXME: Should we reject this?
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 7) == -1);
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 6) == -1);
+  static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 5) == 0);
 }

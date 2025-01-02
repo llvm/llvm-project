@@ -15,7 +15,8 @@ export module m; // #1
 
 // Import errors are fatal, so we test them in isolation.
 #if IMPORT_ERROR == 1
-import x = {}; // expected-error {{module 'x' not found}}
+import x = {}; // expected-error {{expected ';' after module name}}
+               // expected-error@-1 {{module 'x' not found}}
 
 #elif IMPORT_ERROR == 2
 struct X;

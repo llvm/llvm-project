@@ -126,14 +126,14 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
   Width = adjustOpTypeIntWidth(Width);
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (ST.canUseExtension(
-          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
-    MIRBuilder.buildInstr(SPIRV::OpExtension)
-        .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
-    MIRBuilder.buildInstr(SPIRV::OpCapability)
-        .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
-  }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
+      MIRBuilder.buildInstr(SPIRV::OpExtension)
+          .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
+      MIRBuilder.buildInstr(SPIRV::OpCapability)
+          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
+    }
     return MIRBuilder.buildInstr(SPIRV::OpTypeInt)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width)
@@ -157,28 +157,52 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
   });
 }
 
+void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
+  // TODO:
+  // - take into account duplicate tracker case which is a known issue,
+  // - review other data structure wrt. possible issues related to removal
+  //   of a machine instruction during instruction selection.
+  const MachineFunction *MF = MI->getParent()->getParent();
+  auto It = LastInsertedTypeMap.find(MF);
+  if (It == LastInsertedTypeMap.end())
+    return;
+  if (It->second == MI)
+    LastInsertedTypeMap.erase(MF);
+}
+
 SPIRVType *SPIRVGlobalRegistry::createOpType(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
+  MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
   auto LastInsertedType = LastInsertedTypeMap.find(CurMF);
   if (LastInsertedType != LastInsertedTypeMap.end()) {
     auto It = LastInsertedType->second->getIterator();
-    auto NewMBB = MIRBuilder.getMF().begin();
-    MIRBuilder.setInsertPt(*NewMBB, It->getNextNode()
-                                        ? It->getNextNode()->getIterator()
-                                        : NewMBB->end());
+    // It might happen that this instruction was removed from the first MBB,
+    // hence the Parent's check.
+    MachineBasicBlock::iterator InsertAt;
+    if (It->getParent() != NewMBB)
+      InsertAt = oldInsertPoint->getParent() == NewMBB
+                     ? oldInsertPoint
+                     : getInsertPtValidEnd(NewMBB);
+    else if (It->getNextNode())
+      InsertAt = It->getNextNode()->getIterator();
+    else
+      InsertAt = getInsertPtValidEnd(NewMBB);
+    MIRBuilder.setInsertPt(*NewMBB, InsertAt);
   } else {
-    MIRBuilder.setInsertPt(*MIRBuilder.getMF().begin(),
-                           MIRBuilder.getMF().begin()->begin());
+    MIRBuilder.setInsertPt(*NewMBB, NewMBB->begin());
     auto Result = LastInsertedTypeMap.try_emplace(CurMF, nullptr);
     assert(Result.second);
     LastInsertedType = Result.first;
   }
 
   MachineInstr *Type = Op(MIRBuilder);
+  // We expect all users of this function to insert definitions at the insertion
+  // point set above that is always the first MBB.
+  assert(Type->getParent() == NewMBB);
   LastInsertedType->second = Type;
 
   MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);

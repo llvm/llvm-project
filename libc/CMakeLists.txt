@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc")
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
+    "Builds should be rooted in the runtimes directory instead. "
+    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+endif()
+
 # Include LLVM's cmake policies.
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -57,8 +63,6 @@ if(LIBC_BUILD_GPU_LOADER OR ((NOT LLVM_RUNTIMES_BUILD) AND LLVM_LIBC_GPU_BUILD))
   add_subdirectory(utils/gpu)
   return()
 endif()
-
-add_subdirectory(hdrgen)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
@@ -323,7 +327,6 @@ endif()
 
 option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
 
-include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
 include(CheckCompilerFeatures)
 include(LLVMLibCRules)

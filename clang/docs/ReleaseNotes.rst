@@ -61,6 +61,8 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now rejects ``_Complex _BitInt`` types.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -270,6 +272,8 @@ C++23 Feature Support
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+  
+- ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -318,6 +322,11 @@ Resolutions to C++ Defect Reports
 
 - Fix name lookup for a dependent base class that is the current instantiation.
   (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
+
+- Clang now allows calling explicit object member functions directly with prvalues
+  instead of always materializing a temporary, meaning by-value explicit object parameters
+  do not need to move from a temporary.
+  (`CWG2813: Class member access with prvalues <https://cplusplus.github.io/CWG/issues/2813.html>`_).
 
 C Language Changes
 ------------------
@@ -412,7 +421,14 @@ Non-comprehensive list of changes in this release
   ``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
   ``__builtin_reduce_xor``, ``__builtin_elementwise_popcount``,
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-  ``__builtin_elementwise_sub_sat``.
+  ``__builtin_elementwise_sub_sat``, ``__builtin_reduce_min`` (For integral element type),
+  ``__builtin_reduce_max`` (For integral element type).
+
+- Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
+  not a power of two, matching preexisting behaviour for vector types.
+
+- Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
+  which allows them to be stored in STL containers.
 
 New Compiler Flags
 ------------------
@@ -429,6 +445,9 @@ New Compiler Flags
 
 - The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
   starting from C++26, this warning is enabled as an error by default.
+
+- clang-cl and clang-dxc now support ``-fdiagnostics-color=[auto|never|always]``
+  in addition to ``-f[no-]color-diagnostics``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -612,6 +631,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Fix false positives when `[[gsl::Owner/Pointer]]` and `[[clang::lifetimebound]]` are used together.
+
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
 - Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
@@ -663,6 +684,55 @@ Improvements to Clang's diagnostics
     class C {
       bool operator==(const C&) = default;
     };
+
+- Clang now emits `-Wdangling-capture` diangostic when a STL container captures a dangling reference.
+
+  .. code-block:: c++
+
+    void test() {
+      std::vector<std::string_view> views;
+      views.push_back(std::string("123")); // warning
+    }
+
+- Clang now emits a ``-Wtautological-compare`` diagnostic when a check for
+  pointer addition overflow is always true or false, because overflow would
+  be undefined behavior.
+
+  .. code-block:: c++
+
+    bool incorrect_overflow_check(const char *ptr, size_t index) {
+      return ptr + index < ptr; // warning
+    }
+
+- Fix -Wdangling false positives on conditional operators (#120206).
+
+- Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
+  Objective-C. Clang now emits a diagnostic message instead of hanging.
+
+- The :doc:`ThreadSafetyAnalysis` now supports passing scoped capabilities into functions:
+  an attribute on the scoped capability parameter indicates both the expected associated capabilities and,
+  like in the case of attributes on the function declaration itself, their state before and after the call.
+
+  .. code-block:: c++
+
+    #include "mutex.h"
+
+    Mutex mu1, mu2;
+    int a GUARDED_BY(mu1);
+
+    void require(MutexLocker& scope REQUIRES(mu1)) {
+      scope.Unlock();
+      a = 0; // Warning!  Requires mu1.
+      scope.Lock();
+    }
+
+    void testParameter() {
+      MutexLocker scope(&mu1), scope2(&mu2);
+      require(scope2); // Warning! Mutex managed by 'scope2' is 'mu2' instead of 'mu1'
+      require(scope); // OK.
+      scope.Unlock();
+      require(scope); // Warning!  Requires mu1.
+    }
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -803,6 +873,8 @@ Bug Fixes to C++ Support
   missing placeholder return type. (#GH78694)
 - Fixed a bug where bounds of partially expanded pack indexing expressions were checked too early. (#GH116105)
 - Fixed an assertion failure caused by using ``consteval`` in condition in consumed analyses. (#GH117385)
+- Fixed an assertion failure caused by invalid default argument substitutions in non-defining
+  friend declarations. (#GH113324)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
 - Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072) 
 - Fixed a null pointer dereference issue when heuristically computing ``sizeof...(pack)`` expressions. (#GH81436)
@@ -810,6 +882,11 @@ Bug Fixes to C++ Support
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
+- Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
+  out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
+- Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
+- Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
+- Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -930,6 +1007,12 @@ Arm and AArch64 Support
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
 
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  For AArch64:
+
+  * FUJITSU-MONAKA (fujitsu-monaka)
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -1026,6 +1109,10 @@ AST Matchers
 
 - Ensure ``pointee`` matches Objective-C pointer types.
 
+- Add ``dependentScopeDeclRefExpr`` matcher to match expressions that refer to dependent scope declarations.
+
+- Add ``dependentNameType`` matcher to match a dependent name type.
+
 clang-format
 ------------
 
@@ -1037,6 +1124,9 @@ clang-format
   ``Never``, and ``true`` to ``Always``.
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 - Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
+- Adds ``AllowShortNamespacesOnASingleLine`` option.
+- Adds ``VariableTemplates`` option.
+- Adds support for bash globstar in ``.clang-format-ignore``.
 
 libclang
 --------
@@ -1155,6 +1245,17 @@ Sanitizers
   <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
   for examples.
 
+- Introduced an experimental Type Sanitizer, activated by using the
+  ``-fsanitize=type`` flag. This sanitizer detects violations of C/C++ type-based
+  aliasing rules.
+
+- Implemented ``-f[no-]sanitize-trap=local-bounds``, and ``-f[no-]sanitize-recover=local-bounds``.
+
+- ``-fsanitize-merge`` (default) and ``-fno-sanitize-merge`` have been added for
+  fine-grained, unified control of which UBSan checks can potentially be merged
+  by the compiler (for example,
+  ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
@@ -1164,6 +1265,9 @@ OpenMP Support
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
 - Added support for allocator-modifier in 'allocate' clause.
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.
 
 Improvements
 ^^^^^^^^^^^^

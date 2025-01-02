@@ -13,18 +13,16 @@ define i64 @test0() {
 ; CHECK:         .functype test0 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push0=, __stack_pointer
-; CHECK-NEXT:    i32.const $push1=, 80
-; CHECK-NEXT:    i32.sub $push7=, $pop0, $pop1
-; CHECK-NEXT:    local.tee $push6=, $1=, $pop7
-; CHECK-NEXT:    global.set __stack_pointer, $pop6
-; CHECK-NEXT:    i32.const $push4=, 8
-; CHECK-NEXT:    i32.add $push5=, $1, $pop4
-; CHECK-NEXT:    call return_multi_multi, $pop5
-; CHECK-NEXT:    i64.load $0=, 8($1)
-; CHECK-NEXT:    i32.const $push2=, 80
+; CHECK-NEXT:    i32.const $push1=, 96
+; CHECK-NEXT:    i32.sub $push5=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push4=, $1=, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    call return_multi_multi, $1
+; CHECK-NEXT:    i64.load $0=, 0($1)
+; CHECK-NEXT:    i32.const $push2=, 96
 ; CHECK-NEXT:    i32.add $push3=, $1, $pop2
 ; CHECK-NEXT:    global.set __stack_pointer, $pop3
-; CHECK-NEXT:    local.copy $push8=, $0
+; CHECK-NEXT:    local.copy $push6=, $0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call { i64, i128, i192, i128, i64 } @return_multi_multi()
   %t1 = extractvalue { i64, i128, i192, i128, i64 } %t0, 0
@@ -36,18 +34,16 @@ define i128 @test1() {
 ; CHECK:         .functype test1 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push1=, __stack_pointer
-; CHECK-NEXT:    i32.const $push2=, 80
-; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
-; CHECK-NEXT:    local.tee $push7=, $2=, $pop8
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
-; CHECK-NEXT:    i32.const $push5=, 8
-; CHECK-NEXT:    i32.add $push6=, $2, $pop5
-; CHECK-NEXT:    call return_multi_multi, $pop6
-; CHECK-NEXT:    i64.load $1=, 16($2)
-; CHECK-NEXT:    i64.load $push0=, 24($2)
-; CHECK-NEXT:    i64.store 8($0), $pop0
-; CHECK-NEXT:    i64.store 0($0), $1
-; CHECK-NEXT:    i32.const $push3=, 80
+; CHECK-NEXT:    i32.const $push2=, 96
+; CHECK-NEXT:    i32.sub $push6=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push5=, $2=, $pop6
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
+; CHECK-NEXT:    call return_multi_multi, $2
+; CHECK-NEXT:    i64.load $1=, 24($2)
+; CHECK-NEXT:    i64.load $push0=, 16($2)
+; CHECK-NEXT:    i64.store 0($0), $pop0
+; CHECK-NEXT:    i64.store 8($0), $1
+; CHECK-NEXT:    i32.const $push3=, 96
 ; CHECK-NEXT:    i32.add $push4=, $2, $pop3
 ; CHECK-NEXT:    global.set __stack_pointer, $pop4
 ; CHECK-NEXT:    # fallthrough-return
@@ -61,13 +57,11 @@ define i192 @test2() {
 ; CHECK:         .functype test2 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push3=, __stack_pointer
-; CHECK-NEXT:    i32.const $push4=, 80
-; CHECK-NEXT:    i32.sub $push10=, $pop3, $pop4
-; CHECK-NEXT:    local.tee $push9=, $3=, $pop10
-; CHECK-NEXT:    global.set __stack_pointer, $pop9
-; CHECK-NEXT:    i32.const $push7=, 8
-; CHECK-NEXT:    i32.add $push8=, $3, $pop7
-; CHECK-NEXT:    call return_multi_multi, $pop8
+; CHECK-NEXT:    i32.const $push4=, 96
+; CHECK-NEXT:    i32.sub $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, $3=, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    call return_multi_multi, $3
 ; CHECK-NEXT:    i64.load $1=, 40($3)
 ; CHECK-NEXT:    i64.load $2=, 32($3)
 ; CHECK-NEXT:    i32.const $push0=, 48
@@ -76,7 +70,7 @@ define i192 @test2() {
 ; CHECK-NEXT:    i64.store 16($0), $pop2
 ; CHECK-NEXT:    i64.store 0($0), $2
 ; CHECK-NEXT:    i64.store 8($0), $1
-; CHECK-NEXT:    i32.const $push5=, 80
+; CHECK-NEXT:    i32.const $push5=, 96
 ; CHECK-NEXT:    i32.add $push6=, $3, $pop5
 ; CHECK-NEXT:    global.set __stack_pointer, $pop6
 ; CHECK-NEXT:    # fallthrough-return
@@ -90,18 +84,16 @@ define i128 @test3() {
 ; CHECK:         .functype test3 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push1=, __stack_pointer
-; CHECK-NEXT:    i32.const $push2=, 80
-; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
-; CHECK-NEXT:    local.tee $push7=, $2=, $pop8
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
-; CHECK-NEXT:    i32.const $push5=, 8
-; CHECK-NEXT:    i32.add $push6=, $2, $pop5
-; CHECK-NEXT:    call return_multi_multi, $pop6
-; CHECK-NEXT:    i64.load $1=, 56($2)
+; CHECK-NEXT:    i32.const $push2=, 96
+; CHECK-NEXT:    i32.sub $push6=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push5=, $2=, $pop6
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
+; CHECK-NEXT:    call return_multi_multi, $2
+; CHECK-NEXT:    i64.load $1=, 72($2)
 ; CHECK-NEXT:    i64.load $push0=, 64($2)
-; CHECK-NEXT:    i64.store 8($0), $pop0
-; CHECK-NEXT:    i64.store 0($0), $1
-; CHECK-NEXT:    i32.const $push3=, 80
+; CHECK-NEXT:    i64.store 0($0), $pop0
+; CHECK-NEXT:    i64.store 8($0), $1
+; CHECK-NEXT:    i32.const $push3=, 96
 ; CHECK-NEXT:    i32.add $push4=, $2, $pop3
 ; CHECK-NEXT:    global.set __stack_pointer, $pop4
 ; CHECK-NEXT:    # fallthrough-return
@@ -115,18 +107,16 @@ define i64 @test4() {
 ; CHECK:         .functype test4 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push0=, __stack_pointer
-; CHECK-NEXT:    i32.const $push1=, 80
-; CHECK-NEXT:    i32.sub $push7=, $pop0, $pop1
-; CHECK-NEXT:    local.tee $push6=, $1=, $pop7
-; CHECK-NEXT:    global.set __stack_pointer, $pop6
-; CHECK-NEXT:    i32.const $push4=, 8
-; CHECK-NEXT:    i32.add $push5=, $1, $pop4
-; CHECK-NEXT:    call return_multi_multi, $pop5
-; CHECK-NEXT:    i64.load $0=, 72($1)
-; CHECK-NEXT:    i32.const $push2=, 80
+; CHECK-NEXT:    i32.const $push1=, 96
+; CHECK-NEXT:    i32.sub $push5=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push4=, $1=, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    call return_multi_multi, $1
+; CHECK-NEXT:    i64.load $0=, 80($1)
+; CHECK-NEXT:    i32.const $push2=, 96
 ; CHECK-NEXT:    i32.add $push3=, $1, $pop2
 ; CHECK-NEXT:    global.set __stack_pointer, $pop3
-; CHECK-NEXT:    local.copy $push8=, $0
+; CHECK-NEXT:    local.copy $push6=, $0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call { i64, i128, i192, i128, i64 } @return_multi_multi()
   %t1 = extractvalue { i64, i128, i192, i128, i64 } %t0, 4
@@ -140,20 +130,18 @@ define { i64, i128 } @test5() {
 ; CHECK:         .functype test5 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push1=, __stack_pointer
-; CHECK-NEXT:    i32.const $push2=, 80
-; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
-; CHECK-NEXT:    local.tee $push7=, $3=, $pop8
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
-; CHECK-NEXT:    i32.const $push5=, 8
-; CHECK-NEXT:    i32.add $push6=, $3, $pop5
-; CHECK-NEXT:    call return_multi_multi, $pop6
-; CHECK-NEXT:    i64.load $1=, 8($3)
-; CHECK-NEXT:    i64.load $2=, 24($3)
-; CHECK-NEXT:    i64.load $push0=, 16($3)
-; CHECK-NEXT:    i64.store 8($0), $pop0
+; CHECK-NEXT:    i32.const $push2=, 96
+; CHECK-NEXT:    i32.sub $push6=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push5=, $3=, $pop6
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
+; CHECK-NEXT:    call return_multi_multi, $3
+; CHECK-NEXT:    i64.load $1=, 24($3)
+; CHECK-NEXT:    i64.load $2=, 16($3)
+; CHECK-NEXT:    i64.load $push0=, 0($3)
+; CHECK-NEXT:    i64.store 0($0), $pop0
 ; CHECK-NEXT:    i64.store 16($0), $2
-; CHECK-NEXT:    i64.store 0($0), $1
-; CHECK-NEXT:    i32.const $push3=, 80
+; CHECK-NEXT:    i64.store 24($0), $1
+; CHECK-NEXT:    i32.const $push3=, 96
 ; CHECK-NEXT:    i32.add $push4=, $3, $pop3
 ; CHECK-NEXT:    global.set __stack_pointer, $pop4
 ; CHECK-NEXT:    # fallthrough-return
@@ -170,22 +158,20 @@ define { i128, i128 } @test6() {
 ; CHECK:         .functype test6 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push1=, __stack_pointer
-; CHECK-NEXT:    i32.const $push2=, 80
-; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
-; CHECK-NEXT:    local.tee $push7=, $4=, $pop8
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
-; CHECK-NEXT:    i32.const $push5=, 8
-; CHECK-NEXT:    i32.add $push6=, $4, $pop5
-; CHECK-NEXT:    call return_multi_multi, $pop6
+; CHECK-NEXT:    i32.const $push2=, 96
+; CHECK-NEXT:    i32.sub $push6=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push5=, $4=, $pop6
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
+; CHECK-NEXT:    call return_multi_multi, $4
 ; CHECK-NEXT:    i64.load $1=, 24($4)
 ; CHECK-NEXT:    i64.load $2=, 16($4)
-; CHECK-NEXT:    i64.load $3=, 64($4)
-; CHECK-NEXT:    i64.load $push0=, 56($4)
+; CHECK-NEXT:    i64.load $3=, 72($4)
+; CHECK-NEXT:    i64.load $push0=, 64($4)
 ; CHECK-NEXT:    i64.store 16($0), $pop0
 ; CHECK-NEXT:    i64.store 24($0), $3
 ; CHECK-NEXT:    i64.store 0($0), $2
 ; CHECK-NEXT:    i64.store 8($0), $1
-; CHECK-NEXT:    i32.const $push3=, 80
+; CHECK-NEXT:    i32.const $push3=, 96
 ; CHECK-NEXT:    i32.add $push4=, $4, $pop3
 ; CHECK-NEXT:    global.set __stack_pointer, $pop4
 ; CHECK-NEXT:    # fallthrough-return
@@ -202,24 +188,22 @@ define { i64, i192 } @test7() {
 ; CHECK:         .functype test7 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push3=, __stack_pointer
-; CHECK-NEXT:    i32.const $push4=, 80
-; CHECK-NEXT:    i32.sub $push10=, $pop3, $pop4
-; CHECK-NEXT:    local.tee $push9=, $4=, $pop10
-; CHECK-NEXT:    global.set __stack_pointer, $pop9
-; CHECK-NEXT:    i32.const $push7=, 8
-; CHECK-NEXT:    i32.add $push8=, $4, $pop7
-; CHECK-NEXT:    call return_multi_multi, $pop8
-; CHECK-NEXT:    i64.load $1=, 8($4)
-; CHECK-NEXT:    i64.load $2=, 40($4)
-; CHECK-NEXT:    i64.load $3=, 32($4)
+; CHECK-NEXT:    i32.const $push4=, 96
+; CHECK-NEXT:    i32.sub $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, $4=, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    call return_multi_multi, $4
 ; CHECK-NEXT:    i32.const $push0=, 48
 ; CHECK-NEXT:    i32.add $push1=, $4, $pop0
-; CHECK-NEXT:    i64.load $push2=, 0($pop1)
-; CHECK-NEXT:    i64.store 24($0), $pop2
-; CHECK-NEXT:    i64.store 8($0), $3
-; CHECK-NEXT:    i64.store 16($0), $2
-; CHECK-NEXT:    i64.store 0($0), $1
-; CHECK-NEXT:    i32.const $push5=, 80
+; CHECK-NEXT:    i64.load $1=, 0($pop1)
+; CHECK-NEXT:    i64.load $2=, 40($4)
+; CHECK-NEXT:    i64.load $3=, 32($4)
+; CHECK-NEXT:    i64.load $push2=, 0($4)
+; CHECK-NEXT:    i64.store 0($0), $pop2
+; CHECK-NEXT:    i64.store 32($0), $1
+; CHECK-NEXT:    i64.store 16($0), $3
+; CHECK-NEXT:    i64.store 24($0), $2
+; CHECK-NEXT:    i32.const $push5=, 96
 ; CHECK-NEXT:    i32.add $push6=, $4, $pop5
 ; CHECK-NEXT:    global.set __stack_pointer, $pop6
 ; CHECK-NEXT:    # fallthrough-return
@@ -236,32 +220,30 @@ define { i128, i192, i128, i64 } @test8() {
 ; CHECK:         .functype test8 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push3=, __stack_pointer
-; CHECK-NEXT:    i32.const $push4=, 80
-; CHECK-NEXT:    i32.sub $push10=, $pop3, $pop4
-; CHECK-NEXT:    local.tee $push9=, $8=, $pop10
-; CHECK-NEXT:    global.set __stack_pointer, $pop9
-; CHECK-NEXT:    i32.const $push7=, 8
-; CHECK-NEXT:    i32.add $push8=, $8, $pop7
-; CHECK-NEXT:    call return_multi_multi, $pop8
+; CHECK-NEXT:    i32.const $push4=, 96
+; CHECK-NEXT:    i32.sub $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, $8=, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    call return_multi_multi, $8
 ; CHECK-NEXT:    i32.const $push0=, 48
 ; CHECK-NEXT:    i32.add $push1=, $8, $pop0
 ; CHECK-NEXT:    i64.load $1=, 0($pop1)
-; CHECK-NEXT:    i64.load $2=, 8($8)
+; CHECK-NEXT:    i64.load $2=, 72($8)
 ; CHECK-NEXT:    i64.load $3=, 64($8)
-; CHECK-NEXT:    i64.load $4=, 56($8)
-; CHECK-NEXT:    i64.load $5=, 40($8)
-; CHECK-NEXT:    i64.load $6=, 32($8)
-; CHECK-NEXT:    i64.load $7=, 24($8)
-; CHECK-NEXT:    i64.load $push2=, 16($8)
-; CHECK-NEXT:    i64.store 40($0), $pop2
+; CHECK-NEXT:    i64.load $4=, 40($8)
+; CHECK-NEXT:    i64.load $5=, 32($8)
+; CHECK-NEXT:    i64.load $6=, 24($8)
+; CHECK-NEXT:    i64.load $7=, 16($8)
+; CHECK-NEXT:    i64.load $push2=, 0($8)
+; CHECK-NEXT:    i64.store 64($0), $pop2
 ; CHECK-NEXT:    i64.store 48($0), $7
+; CHECK-NEXT:    i64.store 56($0), $6
 ; CHECK-NEXT:    i64.store 32($0), $1
-; CHECK-NEXT:    i64.store 16($0), $6
-; CHECK-NEXT:    i64.store 24($0), $5
-; CHECK-NEXT:    i64.store 0($0), $4
-; CHECK-NEXT:    i64.store 8($0), $3
-; CHECK-NEXT:    i64.store 56($0), $2
-; CHECK-NEXT:    i32.const $push5=, 80
+; CHECK-NEXT:    i64.store 16($0), $5
+; CHECK-NEXT:    i64.store 24($0), $4
+; CHECK-NEXT:    i64.store 0($0), $3
+; CHECK-NEXT:    i64.store 8($0), $2
+; CHECK-NEXT:    i32.const $push5=, 96
 ; CHECK-NEXT:    i32.add $push6=, $8, $pop5
 ; CHECK-NEXT:    global.set __stack_pointer, $pop6
 ; CHECK-NEXT:    # fallthrough-return
