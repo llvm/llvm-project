@@ -112,10 +112,10 @@ struct RDVFinalCleanupList {
 
 /// Return true iff at least one value in `values` is live, given the liveness
 /// information in `la`.
-static bool hasLive(ValueRange values, const DenseSet<Value> &deletionSet,
+static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
                     RunLivenessAnalysis &la) {
   for (Value value : values) {
-    if (deletionSet.contains(value))
+    if (nonLiveSet.contains(value))
       continue;
 
     const Liveness *liveness = la.getLiveness(value);
@@ -128,12 +128,12 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &deletionSet,
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
 static BitVector markLives(ValueRange values,
-                           const DenseSet<Value> &deletionSet,
+                           const DenseSet<Value> &nonLiveSet,
                            RunLivenessAnalysis &la) {
   BitVector lives(values.size(), true);
 
   for (auto [index, value] : llvm::enumerate(values)) {
-    if (deletionSet.contains(value)) {
+    if (nonLiveSet.contains(value)) {
       lives.reset(index);
       continue;
     }
@@ -153,14 +153,14 @@ static BitVector markLives(ValueRange values,
 }
 
 /// Collects values marked as "non-live" in the provided range and inserts them
-/// into the given set. A value is considered "non-live" if the corresponding
+/// into the nonLiveSet. A value is considered "non-live" if the corresponding
 /// index in the `nonLive` bit vector is set.
-static void collectNonLiveValues(DenseSet<Value> &deletionSet, ValueRange range,
+static void collectNonLiveValues(DenseSet<Value> &nonLiveSet, ValueRange range,
                                  const BitVector &nonLive) {
   for (auto [index, result] : llvm::enumerate(range)) {
     if (!nonLive[index])
       continue;
-    deletionSet.insert(result);
+    nonLiveSet.insert(result);
   }
 }
 
@@ -227,13 +227,13 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 ///   - A region branch terminator
 ///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
-                            DenseSet<Value> &deletionSet,
+                            DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
-  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), deletionSet, la))
+  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la))
     return;
 
   cl.operations.push_back(op);
-  collectNonLiveValues(deletionSet, op->getResults(),
+  collectNonLiveValues(nonLiveSet, op->getResults(),
                        BitVector(op->getNumResults(), true));
 }
 
@@ -251,21 +251,21 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   6. Marking all its results as non-live values.
 /// iff it is not public or external.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
-                          RunLivenessAnalysis &la, DenseSet<Value> &deletionSet,
+                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
   if (funcOp.isPublic() || funcOp.isExternal())
     return;
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
-  BitVector nonLiveArgs = markLives(arguments, deletionSet, la);
+  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
   nonLiveArgs = nonLiveArgs.flip();
 
   // Do (1).
   for (auto [index, arg] : llvm::enumerate(arguments))
     if (arg && nonLiveArgs[index]) {
       cl.values.push_back(arg);
-      deletionSet.insert(arg);
+      nonLiveSet.insert(arg);
     }
 
   // Do (2).
@@ -312,11 +312,10 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets = markLives(callOp->getResults(), deletionSet, la);
+    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
-  // Do (4).
   // Note that in the absence of control flow ops forcing the control to go from
   // the entry (first) block to the other blocks, the control never reaches any
   // block other than the entry block, because every block has a terminator.
@@ -325,6 +324,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     if (returnOp && returnOp->getNumOperands() == numReturns)
       cl.operands.push_back({returnOp, nonLiveRets});
   }
+
+  // Do (4).
   cl.functions.push_back({funcOp, nonLiveArgs, nonLiveRets});
 
   // Do (5) and (6).
@@ -332,7 +333,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     cl.results.push_back({callOp, nonLiveRets});
-    collectNonLiveValues(deletionSet, callOp->getResults(), nonLiveRets);
+    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
   }
 }
 
@@ -341,24 +342,24 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 ///
 /// Scenario 1: If the operation has no memory effects and none of its results
 /// are live:
-///   1. Enqueue all its uses for deletion.
-///   2. Enqueue the branch itself for deletion.
+///   (1') Enqueue all its uses for deletion.
+///   (2') Enqueue the branch itself for deletion.
 ///
 /// Scenario 2: Otherwise:
-///   1. Collect its unnecessary operands (operands forwarded to unnecessary
+///   (1) Collect its unnecessary operands (operands forwarded to unnecessary
 ///   results or arguments).
-///   2. Process each of its regions.
-///   3. Collect the uses of its unnecessary results (results forwarded from
+///   (2) Process each of its regions.
+///   (3) Collect the uses of its unnecessary results (results forwarded from
 ///   unnecessary operands
 ///      or terminator operands).
-///   4. Add these results to the deletion list.
+///   (4) Add these results to the deletion list.
 ///
 /// Processing a region includes:
-///   a. Collecting the uses of its unnecessary arguments (arguments forwarded
+///   (a) Collecting the uses of its unnecessary arguments (arguments forwarded
 ///   from unnecessary operands
 ///      or terminator operands).
-///   b. Collecting these unnecessary arguments.
-///   c. Collecting its unnecessary terminator operands (terminator operands
+///   (b) Collecting these unnecessary arguments.
+///   (c) Collecting its unnecessary terminator operands (terminator operands
 ///   forwarded to unnecessary results
 ///      or arguments).
 ///
@@ -367,18 +368,18 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 /// - To arguments and results (successor inputs).
 static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   RunLivenessAnalysis &la,
-                                  DenseSet<Value> &deletionSet,
+                                  DenseSet<Value> &nonLiveSet,
                                   RDVFinalCleanupList &cl) {
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
-    liveResults = markLives(regionBranchOp->getResults(), deletionSet, la);
+    liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, la);
   };
 
   // Mark live arguments in the regions of `regionBranchOp` in `liveArgs`.
   auto markLiveArgs = [&](DenseMap<Region *, BitVector> &liveArgs) {
     for (Region &region : regionBranchOp->getRegions()) {
       SmallVector<Value> arguments(region.front().getArguments());
-      BitVector regionLiveArgs = markLives(arguments, deletionSet, la);
+      BitVector regionLiveArgs = markLives(arguments, nonLiveSet, la);
       liveArgs[&region] = regionLiveArgs;
     }
   };
@@ -566,8 +567,9 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // case, a non-forwarded operand of `regionBranchOp` could be live/non-live.
   // It could never be live because of this op but its liveness could have been
   // attributed to something else.
+  // Do (1') and (2').
   if (isMemoryEffectFree(regionBranchOp.getOperation()) &&
-      !hasLive(regionBranchOp->getResults(), deletionSet, la)) {
+      !hasLive(regionBranchOp->getResults(), nonLiveSet, la)) {
     cl.operations.push_back(regionBranchOp.getOperation());
     return;
   }
@@ -616,7 +618,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                               "implementing `RegionBranchOpInterface`");
     BitVector argsToRemove = argsToKeep[&region].flip();
     cl.blocks.push_back({&region.front(), argsToRemove});
-    collectNonLiveValues(deletionSet, region.front().getArguments(),
+    collectNonLiveValues(nonLiveSet, region.front().getArguments(),
                          argsToRemove);
   }
 
@@ -629,7 +631,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
   // Do (3) and (4).
   BitVector resultsToRemove = resultsToKeep.flip();
-  collectNonLiveValues(deletionSet, regionBranchOp.getOperation()->getResults(),
+  collectNonLiveValues(nonLiveSet, regionBranchOp.getOperation()->getResults(),
                        resultsToRemove);
   cl.results.push_back({regionBranchOp.getOperation(), resultsToRemove});
 }
@@ -642,7 +644,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 ///    as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
-                            DenseSet<Value> &deletionSet,
+                            DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
@@ -661,8 +663,8 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 
     // Do (3)
     BitVector successorNonLive =
-        markLives(operandValues, deletionSet, la).flip();
-    collectNonLiveValues(deletionSet, successorBlock->getArguments(),
+        markLives(operandValues, nonLiveSet, la).flip();
+    collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
     cl.blocks.push_back({successorBlock, successorNonLive});
     cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
