@@ -72,7 +72,7 @@ void f_outlen(char *__counted_by(*outLen) derOut, unsigned long long *outLen) {
 // UBSAN-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[TMP4]], {{!nosanitize ![0-9]+}}
 // UBSAN-NEXT:    br i1 [[TMP6]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!nosanitize ![0-9]+}}
 // UBSAN:       trap:
-// UBSAN-NEXT:    tail call void @llvm.ubsantrap(i8 19) #[[ATTR4]], {{!nosanitize ![0-9]+}}
+// UBSAN-NEXT:    tail call void @llvm.ubsantrap(i8 19) #[[ATTR6:[0-9]+]], {{!nosanitize ![0-9]+}}
 // UBSAN-NEXT:    unreachable, {{!nosanitize ![0-9]+}}
 // UBSAN:       cont:
 // UBSAN-NEXT:    [[TMP_SROA_4_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 16

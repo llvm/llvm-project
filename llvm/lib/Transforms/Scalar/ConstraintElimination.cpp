@@ -516,10 +516,11 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
       collectOffsets(GEP, State.DL);
   // We support either plain gep nuw, or gep nusw with non-negative offset,
   // which implies gep nuw.
-  if (!BasePtr || NW == GEPNoWrapFlags::none())
+  if (!BasePtr)
     return &GEP;
 
-  if (!NW.hasNoUnsignedSignedWrap()) {
+  bool SaveViaPrecondition = false;
+  if (NW == GEPNoWrapFlags::none()) {
     // If a GEP is not inbounds, check if we have a known-safe bounds.
     // If we have, add a precondition to make sure the GEP index is <=
     // the known-safe bound.
@@ -530,6 +531,7 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
       if (!IndexExpr)
         return &GEP;
       Preconditions.emplace_back(CmpInst::ICMP_ULE, IndexExpr, Iter->second);
+      SaveViaPrecondition = true;
     } else
       return &GEP;
   }
@@ -542,7 +544,8 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
 
     if (!NW.hasNoUnsignedWrap()) {
       // Try to prove nuw from nusw and nneg.
-      assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
+      assert((SaveViaPrecondition || NW.hasNoUnsignedSignedWrap()) &&
+             "Must have nusw flag");
       if (!isKnownNonNegative(Index, State.DL))
         Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
                                    ConstantInt::get(Index->getType(), 0));

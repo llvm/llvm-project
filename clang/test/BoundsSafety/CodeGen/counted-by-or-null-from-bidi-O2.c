@@ -36,7 +36,7 @@ int * __counted_by_or_null(len) foo(int * __bidi_indexable p, int len) {
 // CHECK:       [[LOR_RHS]]:
 // CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
 // CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64, !annotation [[META2]]
-// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META8:![0-9]+]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META7:![0-9]+]]
 // CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META2]]
 // CHECK-NEXT:    [[CMP34:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META2]]
 // CHECK-NEXT:    [[CMP37:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META2]]
@@ -56,7 +56,7 @@ void foo_assign(int * __bidi_indexable p, int len) {
 // CHECK-LABEL: define dso_local void @bar(
 // CHECK-SAME: ptr dead_on_unwind noalias nocapture writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 initializes((0, 24)) [[AGG_RESULT:%.*]], ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META10:![0-9]+]]
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META9:![0-9]+]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[LEN]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[ADD_PTR_SINK:%.*]] = select i1 [[DOTNOT]], ptr null, ptr [[ADD_PTR]]
@@ -126,11 +126,11 @@ int *__bidi_indexable null_count_too_big(void) {
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
 // CHECK: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-// CHECK: [[META4]] = !{!"p1 int", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"any pointer", [[META6:![0-9]+]], i64 0}
-// CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META8]] = !{!"bounds-safety-generic", [[META9:![0-9]+]]}
-// CHECK: [[META9]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
-// CHECK: [[META10]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[META4]] = !{!"p1 int", [[META41:!.+]], i64 0}
+// CHECK: [[META41]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META7]] = !{!"bounds-safety-generic", [[META8:![0-9]+]]}
+// CHECK: [[META8]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
+// CHECK: [[META9]] = !{!"bounds-safety-check-ptr-neq-null"}
 //.

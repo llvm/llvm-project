@@ -310,7 +310,6 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct eb_with_other_data* p
 // CHECK-SAME: ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA12:![0-9]+]]
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 8
@@ -320,7 +319,6 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct eb_with_other_data* p
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[AGG_TMP]]) #[[ATTR8]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union(char* __bidi_indexable new_start,
@@ -588,7 +586,6 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_eb(struct eb_with_other
 // CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
 // CHECK-NEXT:    store ptr [[NEW_START]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA12]]
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA14]]
@@ -597,7 +594,6 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_eb(struct eb_with_other
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[AGG_TMP]]) #[[ATTR8]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_from_eb(char* __ended_by(new_end) new_start,

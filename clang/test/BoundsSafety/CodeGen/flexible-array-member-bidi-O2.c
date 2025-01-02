@@ -2,6 +2,7 @@
 
 
 // RUN: %clang_cc1 -O2  -fbounds-safety -triple arm64e-apple-iphoneos -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -O2  -fbounds-safety -triple arm64e-apple-iphoneos -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s
 
 #include <ptrcheck.h>
 
@@ -21,15 +22,15 @@ struct Simple {
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META7:![0-9]+]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META8:![0-9]+]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META7:![0-9]+]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META9:![0-9]+]]
-// CHECK-NEXT:    unreachable, !annotation [[META9]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META8:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META8]]
 // CHECK:       [[CONT1]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA10:![0-9]+]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void simple_no_flexbase_update(struct Simple * __bidi_indexable p) {
@@ -45,15 +46,15 @@ void simple_no_flexbase_update(struct Simple * __bidi_indexable p) {
 // CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[P2_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_4_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[P2_SROA_5_0_COPYLOAD]], [[P2_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_4_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[P2_SROA_5_0_COPYLOAD]], [[P2_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
-// CHECK-NEXT:    unreachable, !annotation [[META9]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META8]]
+// CHECK-NEXT:    unreachable, !annotation [[META8]]
 // CHECK:       [[CONT1]]:
-// CHECK-NEXT:    store i32 11, ptr [[P2_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[P2_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void simple_flexbase_update(struct Simple * __bidi_indexable p) {
@@ -70,15 +71,15 @@ void simple_flexbase_update(struct Simple * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
-// CHECK-NEXT:    unreachable, !annotation [[META9]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META8]]
+// CHECK-NEXT:    unreachable, !annotation [[META8]]
 // CHECK:       [[CONT1]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void simple_flexbase_self_assign(struct Simple * __bidi_indexable p) {
@@ -101,27 +102,27 @@ int * __counted_by(len) baz(int len);
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12:![0-9]+]]
+// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP29_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP29_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT37:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP29_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP29_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT37:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14:![0-9]+]]
-// CHECK-NEXT:    unreachable, !annotation [[META14]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META11:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT37]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META6]]
 // CHECK:       [[CONT53]]:
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA15:![0-9]+]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void shared_no_flexbase_update(struct Shared * __bidi_indexable p) {
@@ -138,27 +139,28 @@ void shared_no_flexbase_update(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP36_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP36_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP36_SROA_3_0_COPYLOAD]], [[AGG_TEMP36_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT44:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP36_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP36_SROA_3_0_COPYLOAD]], [[AGG_TEMP36_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT44:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14]]
-// CHECK-NEXT:    unreachable, !annotation [[META14]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META11]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT44]]:
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP36_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_2_0_P_SROA_IDX]], align 8
+// CHECK-NEXT:    [[AGG_TEMP45_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP36_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP45_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META6]]
 // CHECK:       [[CONT53]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void shared_no_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
@@ -174,19 +176,19 @@ void shared_no_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[P2_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_5_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[P2_SROA_7_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[P2_SROA_7_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_7_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[P2_SROA_7_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_7_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_5_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[P2_SROA_7_0_COPYLOAD]], [[P2_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT44:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_5_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[P2_SROA_7_0_COPYLOAD]], [[P2_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT44:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14]]
-// CHECK-NEXT:    unreachable, !annotation [[META14]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META11]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT44]]:
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA15]]
-// CHECK-NEXT:    store i32 11, ptr [[P2_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i32 11, ptr [[P2_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_update(struct Shared * __bidi_indexable p) {
@@ -204,19 +206,19 @@ void shared_flexbase_update(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[P2_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_5_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[P2_SROA_7_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[P2_SROA_7_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_7_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[P2_SROA_7_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_7_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_5_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[P2_SROA_7_0_COPYLOAD]], [[P2_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT37:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_5_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[P2_SROA_7_0_COPYLOAD]], [[P2_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT37:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14]]
-// CHECK-NEXT:    unreachable, !annotation [[META14]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META11]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT37]]:
-// CHECK-NEXT:    store i32 11, ptr [[P2_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[P2_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
@@ -234,27 +236,28 @@ void shared_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP36_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP36_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP36_SROA_3_0_COPYLOAD]], [[AGG_TEMP36_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT44:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP36_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP36_SROA_3_0_COPYLOAD]], [[AGG_TEMP36_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT44:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14]]
-// CHECK-NEXT:    unreachable, !annotation [[META14]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META11]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT44]]:
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP36_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_2_0_P_SROA_IDX]], align 8
+// CHECK-NEXT:    [[AGG_TEMP45_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP36_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP45_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META6]]
 // CHECK:       [[CONT53]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_self_assign(struct Shared * __bidi_indexable p) {
@@ -272,27 +275,27 @@ void shared_flexbase_self_assign(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP29_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP29_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT37:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP29_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP29_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT37:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14]]
-// CHECK-NEXT:    unreachable, !annotation [[META14]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META11]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT37]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP45_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP45_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP29_SROA_3_0_COPYLOAD]], [[AGG_TEMP45_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[CONT53:.*]], label %[[TRAP]], !annotation [[META6]]
 // CHECK:       [[CONT53]]:
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP45_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
@@ -309,21 +312,21 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_5_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT12:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_5_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT12:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META17:![0-9]+]]
-// CHECK-NEXT:    unreachable, !annotation [[META17]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META12:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META12]]
 // CHECK:       [[CONT12]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
-// CHECK-NEXT:    [[OR_COND78:%.*]] = icmp sgt i32 [[TMP3]], 10, !annotation [[META18:![0-9]+]]
-// CHECK-NEXT:    br i1 [[OR_COND78]], label %[[CONT73:.*]], label %[[TRAP]], !annotation [[META18]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[OR_COND78:%.*]] = icmp sgt i32 [[TMP3]], 10, !annotation [[META13:![0-9]+]]
+// CHECK-NEXT:    br i1 [[OR_COND78]], label %[[CONT73:.*]], label %[[TRAP]], !annotation [[META13]]
 // CHECK:       [[CONT73]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
@@ -339,33 +342,33 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_5_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT12:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_5_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT12:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META17]]
-// CHECK-NEXT:    unreachable, !annotation [[META17]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META12]]
+// CHECK-NEXT:    unreachable, !annotation [[META12]]
 // CHECK:       [[CONT12]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 8, !tbaa [[TBAA15]]
-// CHECK-NEXT:    [[OR_COND78:%.*]] = icmp sgt i32 [[TMP3]], 10, !annotation [[META18]]
-// CHECK-NEXT:    br i1 [[OR_COND78]], label %[[CONT56:.*]], label %[[TRAP]], !annotation [[META18]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[OR_COND78:%.*]] = icmp sgt i32 [[TMP3]], 10, !annotation [[META13]]
+// CHECK-NEXT:    br i1 [[OR_COND78]], label %[[CONT56:.*]], label %[[TRAP]], !annotation [[META13]]
 // CHECK:       [[CONT56]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[AGG_TEMP65_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP65_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[AGG_TEMP65_SROA_0_0_COPYLOAD]], i64 16
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[TMP5]], [[AGG_TEMP65_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP7:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_5_0_COPYLOAD]], [[AGG_TEMP65_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND77:%.*]] = select i1 [[TMP6]], i1 [[TMP7]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND77]], label %[[CONT73:.*]], label %[[TRAP]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[TMP5]], [[AGG_TEMP65_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP7:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_5_0_COPYLOAD]], [[AGG_TEMP65_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND77:%.*]] = select i1 [[TMP6]], i1 [[TMP7]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND77]], label %[[CONT73:.*]], label %[[TRAP]], !annotation [[META6]]
 // CHECK:       [[CONT73]]:
 // CHECK-NEXT:    [[PTR74:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP65_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    store ptr [[TMP4]], ptr [[PTR74]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store ptr [[TMP4]], ptr [[PTR74]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void shared_flexbase_self_assign_fr_reverse(struct Shared * __bidi_indexable p) {
@@ -387,17 +390,17 @@ struct Double {
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA19:![0-9]+]]
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
-// CHECK-NEXT:    unreachable, !annotation [[META9]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META8]]
+// CHECK-NEXT:    unreachable, !annotation [[META8]]
 // CHECK:       [[CONT1]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void double_no_flexbase_update_once(struct Double * __bidi_indexable p) {
@@ -411,27 +414,27 @@ void double_no_flexbase_update_once(struct Double * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA19]]
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT1:.*]], label %[[TRAP:.*]], !annotation [[META6]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
-// CHECK-NEXT:    unreachable, !annotation [[META9]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META8]]
+// CHECK-NEXT:    unreachable, !annotation [[META8]]
 // CHECK:       [[CONT1]]:
-// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], align 4, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[AGG_TEMP2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP2_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[AGG_TEMP2_SROA_0_0_COPYLOAD]], i64 8
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP2_SROA_2_0_COPYLOAD]], !annotation [[META7]]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP2_SROA_0_0_COPYLOAD]], !annotation [[META8]]
-// CHECK-NEXT:    [[OR_COND11:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND11]], label %[[CONT10:.*]], label %[[TRAP]], !annotation [[META7]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[TMP3]], [[AGG_TEMP2_SROA_2_0_COPYLOAD]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[AGG_TEMP_SROA_3_0_COPYLOAD]], [[AGG_TEMP2_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    [[OR_COND11:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND11]], label %[[CONT10:.*]], label %[[TRAP]], !annotation [[META6]]
 // CHECK:       [[CONT10]]:
 // CHECK-NEXT:    [[LEN2:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP2_SROA_0_0_COPYLOAD]], i64 4
-// CHECK-NEXT:    store i32 11, ptr [[LEN2]], align 4, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 11, ptr [[LEN2]], align 4, !tbaa [[TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void double_no_flexbase_update_both(struct Double * __bidi_indexable p) {
@@ -440,22 +443,15 @@ void double_no_flexbase_update_both(struct Double * __bidi_indexable p) {
 }
 //.
 // CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"p1 _ZTS6Simple", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META7]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// CHECK: [[META8]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
-// CHECK: [[META9]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
-// CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
-// CHECK: [[META11]] = !{!"int", [[META5]], i64 0}
-// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
-// CHECK: [[META13]] = !{!"p1 _ZTS6Shared", [[META4]], i64 0}
-// CHECK: [[META14]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
-// CHECK: [[TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
-// CHECK: [[META16]] = !{!"p1 int", [[META4]], i64 0}
-// CHECK: [[META17]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-generic"}
-// CHECK: [[META18]] = !{!"bounds-safety-generic"}
-// CHECK: [[TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
-// CHECK: [[META20]] = !{!"p1 _ZTS6Double", [[META4]], i64 0}
+// CHECK: [[META3]] = !{!"any pointer", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// CHECK: [[META7]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[META8]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"int", [[META4]], i64 0}
+// CHECK: [[META11]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[META12]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-generic"}
+// CHECK: [[META13]] = !{!"bounds-safety-generic"}
 //.

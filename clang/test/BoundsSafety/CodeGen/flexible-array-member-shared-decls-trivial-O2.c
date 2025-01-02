@@ -21,7 +21,7 @@ struct Outer {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr @b, ptr @a, align 16, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    ret ptr @a
 //
 struct Outer * good(void) {
@@ -35,7 +35,7 @@ struct Outer * good(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr @a, ptr @a, align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret ptr @a
 //
 struct Outer * good_recursive(void) {
@@ -49,7 +49,7 @@ struct Outer * good_recursive(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr @b, ptr @a, align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 20, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store i32 20, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret ptr @a
 //
 struct Outer * good_margin(void) {
@@ -63,7 +63,7 @@ struct Outer * good_margin(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr @b, ptr @a, align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 16, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store i32 16, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret ptr @a
 //
 struct Outer * good_no_fam(void) {
@@ -76,8 +76,8 @@ struct Outer * good_no_fam(void) {
 // CHECK-LABEL: define dso_local noalias noundef nonnull ptr @bad(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META10:![0-9]+]]
-// CHECK-NEXT:    unreachable, !annotation [[META10]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META9:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META9]]
 //
 struct Outer * bad(void) {
   int len = 43;
@@ -91,9 +91,9 @@ struct Outer * bad(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr @b, ptr @a, align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 15, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA9]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META10]]
-// CHECK-NEXT:    unreachable, !annotation [[META10]]
+// CHECK-NEXT:    store i32 15, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
+// CHECK-NEXT:    unreachable, !annotation [[META9]]
 //
 struct Outer * bad_neg_count(void) {
   struct Outer * p = a;
@@ -105,8 +105,8 @@ struct Outer * bad_neg_count(void) {
 // CHECK-LABEL: define dso_local noalias noundef nonnull ptr @bad_ptr(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META10]]
-// CHECK-NEXT:    unreachable, !annotation [[META10]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
+// CHECK-NEXT:    unreachable, !annotation [[META9]]
 //
 struct Outer * bad_ptr(void) {
   struct Outer * p = a;
@@ -119,9 +119,9 @@ struct Outer * bad_ptr(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr @b, ptr getelementptr inbounds nuw (i8, ptr @a, i64 1), align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 9), align 8, !tbaa [[TBAA9]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META10]]
-// CHECK-NEXT:    unreachable, !annotation [[META10]]
+// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 9), align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
+// CHECK-NEXT:    unreachable, !annotation [[META9]]
 //
 struct Outer * bad_fam(void) {
   struct Outer * p = a + 1;
@@ -131,12 +131,12 @@ struct Outer * bad_fam(void) {
 }
 //.
 // CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]], i64 0}
-// CHECK: [[META3]] = !{!"Inner", [[META4]], i64 0, [[META8:![0-9]+]], i64 8}
-// CHECK: [[META4]] = !{!"p1 omnipotent char", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"any pointer", [[META6:![0-9]+]], i64 0}
-// CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META8]] = !{!"int", [[META6]], i64 0}
-// CHECK: [[TBAA9]] = !{[[META3]], [[META8]], i64 8}
-// CHECK: [[META10]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-check-one-past-end-overflow", !"bounds-safety-check-ptr-le-upper-bound", !"bounds-safety-check-flexible-count-gt-bounds"}
+// CHECK: [[META3]] = !{!"Inner", [[META4]], i64 0, [[META7:![0-9]+]], i64 8}
+// CHECK: [[META4]] = !{!"p1 omnipotent char", [[META41:!.+]], i64 0}
+// CHECK: [[META41]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META7]] = !{!"int", [[META5]], i64 0}
+// CHECK: [[TBAA8]] = !{[[META3]], [[META7]], i64 8}
+// CHECK: [[META9]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-check-one-past-end-overflow", !"bounds-safety-check-ptr-le-upper-bound", !"bounds-safety-check-flexible-count-gt-bounds"}
 //.

@@ -247,12 +247,12 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sbon* ptr,
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x %struct.sbon], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR8]]
-// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[ARR]], align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[ARR]], align 8, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 4
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
-// CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[BUF]], align 8, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[BUF]], align 8, !tbaa [[TBAA10:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[ARRAYINIT_ELEMENT]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    call void @consume_sbon_arr(ptr noundef nonnull [[ARR]]) #[[ATTR8]]
@@ -326,19 +326,17 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct sbon_with_other_data*
 // CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
-// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA12:![0-9]+]]
+// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA11:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 4
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
-// CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[BUF]], align 8, !tbaa [[TBAA14:![0-9]+]]
+// CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[BUF]], align 8, !tbaa [[TBAA13:![0-9]+]]
 // CHECK-NEXT:    [[OTHER:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA15:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA14:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[AGG_TMP]]) #[[ATTR8]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union(int new_count,
@@ -366,7 +364,7 @@ void call_arg_transparent_union(int new_count,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_5_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 20
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA16:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA15:![0-9]+]]
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR8]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR8]]
 // CHECK-NEXT:    ret void
@@ -547,11 +545,11 @@ void assign_via_ptr_nested_v2_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x %struct.sbon], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR8]]
-// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[ARR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[ARR]], align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 4
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 8
-// CHECK-NEXT:    store ptr [[NEW_PTR]], ptr [[BUF]], align 8, !tbaa [[TBAA11]]
+// CHECK-NEXT:    store ptr [[NEW_PTR]], ptr [[BUF]], align 8, !tbaa [[TBAA10]]
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[ARRAYINIT_ELEMENT]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    call void @consume_sbon_arr(ptr noundef nonnull [[ARR]]) #[[ATTR8]]
@@ -623,19 +621,17 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_sbon(struct sbon_with_o
 // CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
-// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA12]]
+// CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA11]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 4
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
-// CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[BUF]], align 8, !tbaa [[TBAA14]]
+// CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[BUF]], align 8, !tbaa [[TBAA13]]
 // CHECK-NEXT:    [[OTHER:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA15]]
+// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA14]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[AGG_TMP]]) #[[ATTR8]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[AGG_TMP]]) #[[ATTR8]]
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_from_sbon(int new_count,
@@ -664,7 +660,7 @@ void call_arg_transparent_union_from_sbon(int new_count,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_5_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 20
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA16]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA15]]
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR8]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR8]]
 // CHECK-NEXT:    ret void
@@ -687,14 +683,14 @@ void call_arg_transparent_union_untransparently_from_sbon(int new_count,
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK: [[META7]] = !{!"p1 omnipotent char", [[META8:![0-9]+]], i64 0}
-// CHECK: [[META8]] = !{!"any pointer", [[META4]], i64 0}
-// CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META10]] = !{!"sbon", [[META3]], i64 0, [[META7]], i64 8}
-// CHECK: [[TBAA11]] = !{[[META10]], [[META7]], i64 8}
-// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META13]] = !{!"sbon_with_other_data", [[META3]], i64 0, [[META7]], i64 8, [[META3]], i64 16}
-// CHECK: [[TBAA14]] = !{[[META13]], [[META7]], i64 8}
-// CHECK: [[TBAA15]] = !{[[META13]], [[META3]], i64 16}
-// CHECK: [[TBAA16]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[META7]] = !{!"p1 omnipotent char", [[META71:!.+]], i64 0}
+// CHECK: [[META71]] = !{!"any pointer", [[META4]], i64 0}
+// CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META9]] = !{!"sbon", [[META3]], i64 0, [[META7]], i64 8}
+// CHECK: [[TBAA10]] = !{[[META9]], [[META7]], i64 8}
+// CHECK: [[TBAA11]] = !{[[META12:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META12]] = !{!"sbon_with_other_data", [[META3]], i64 0, [[META7]], i64 8, [[META3]], i64 16}
+// CHECK: [[TBAA13]] = !{[[META12]], [[META7]], i64 8}
+// CHECK: [[TBAA14]] = !{[[META12]], [[META3]], i64 16}
+// CHECK: [[TBAA15]] = !{[[META4]], [[META4]], i64 0}
 //.
