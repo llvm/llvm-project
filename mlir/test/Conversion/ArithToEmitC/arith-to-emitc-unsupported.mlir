@@ -157,3 +157,35 @@ func.func @arith_truncf(%arg0: f64) -> f32 {
   %truncd = arith.truncf %arg0 to_nearest_away : f64 to f32
   return %truncd : f32
 }
+
+// -----
+
+func.func @arith_extf_f128(%arg0: f32) -> f128 {
+  // expected-error @+1 {{failed to legalize operation 'arith.truncf'}}
+  %extd = arith.extf %arg0 : f32 to f128
+  return %extd : f128
+}
+
+// -----
+
+func.func @arith_truncf_f128(%arg0: f128) -> f32 {
+  // expected-error @+1 {{failed to legalize operation 'arith.truncf'}}
+  %truncd = arith.truncf %arg0 : f128 to f32
+  return %truncd : f32
+}
+
+// -----
+
+func.func @arith_extf_vector(%arg0: vector<4xf32>) -> vector<4xf64> {
+  // expected-error @+1 {{failed to legalize operation 'arith.truncf'}}
+  %extd = arith.extf %arg0 : vector<4xf32> to vector<4xf64>
+  return %extd : vector<4xf64>
+}
+
+// -----
+
+func.func @arith_truncf_vector(%arg0: vector<4xf64>) -> vector<4xf32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.truncf'}}
+  %truncd = arith.truncf %arg0 : vector<4xf64> to vector<4xf32>
+  return %truncd : vector<4xf32>
+}
