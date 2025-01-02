@@ -1544,9 +1544,10 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
     if (Res.isInvalid()) {
       C.cleanup();
       Stk.clear();
+      return returnInt(false);
     }
 
-    if (!Res.isInvalid() && !Res.empty()) {
+    if (!Res.empty()) {
       const APValue &LV = Res.toAPValue();
       if (LV.isLValue()) {
         APValue::LValueBase Base = LV.getLValueBase();
