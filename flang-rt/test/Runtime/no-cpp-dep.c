@@ -6,7 +6,7 @@ a C compiler.
 UNSUPPORTED: system-windows
 
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
-RUN: %cc -std=c99 %s -I%include -L%libdir -lflang_rt -lm %deplibs \
+RUN: %cc -std=c99 %s -I%include -L"%libdir" -lflang_rt -lm %deplibs \
 RUN: %if system-aix %{-lpthread %}
 */
 

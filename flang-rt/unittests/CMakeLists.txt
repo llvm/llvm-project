@@ -91,7 +91,7 @@ function(add_flangrt_nongtest_unittest test_name)
       set(suffix .test)
   endif()
 
-  add_executable(${test_name}${suffix} ${ARG_UNPARSED_ARGUMENTS})
+  add_executable(${test_name}${suffix} EXCLUDE_FROM_ALL ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang-RT/Tests/Unit")
 
   target_include_directories(${test_name}${suffix} PRIVATE

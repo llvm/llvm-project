@@ -140,8 +140,8 @@ function (add_flangrt_library name)
 
   foreach (tgtname IN LISTS libtargets)
     if (NOT WIN32)
-      # Use same stem name for .a and .so. Common in UNIX environments. Not
-      # allowed with Windows.
+      # Use same stem name for .a and .so. Common in UNIX environments.
+      # Not possible in Windows environments.
       set_target_properties(${tgtname} PROPERTIES OUTPUT_NAME "${name}")
     endif ()
 
@@ -244,13 +244,13 @@ function (add_flangrt_library name)
     if (ARG_INSTALL_WITH_TOOLCHAIN)
       set_target_properties(${tgtname}
         PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR}"
-          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
+          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
+          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
         )
 
       install(TARGETS ${tgtname}
-          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR}"
-          LIBRARY DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
+          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
+          LIBRARY DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
         )
     endif ()
 

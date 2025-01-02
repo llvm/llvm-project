@@ -96,8 +96,8 @@ if (LLVM_TREE_AVAILABLE)
   # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
-  get_clang_resource_dir(FLANG_RT_OUTPUT_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
-  get_clang_resource_dir(FLANG_RT_INSTALL_PATH)
+  get_clang_resource_dir(FLANG_RT_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH)
 else ()
   # In a standalone runtimes build, do not write into LLVM_BINARY_DIR. It may be
   # read-only and/or shared by multiple runtimes with different build
@@ -106,29 +106,27 @@ else ()
   # For the install prefix, still use the resource dir assuming that Flang will
   # be installed there using the same prefix. This is to not have a difference
   # between bootstrap and standalone runtimes builds.
-  set(FLANG_RT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-  set(FLANG_RT_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}/clang/${LLVM_VERSION_MAJOR}")
+  set(FLANG_RT_OUTPUT_RESOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+  set(FLANG_RT_INSTALL_RESOURCE_PATH "${CMAKE_INSTALL_LIBDIR}/clang/${LLVM_VERSION_MAJOR}")
 endif ()
-cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_DIR)
-cmake_path(NORMAL_PATH FLANG_RT_INSTALL_PATH)
+cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_DIR)
+cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_PATH)
 
 # Determine subdirectories for build output and install destinations.
+# FIXME: For the libflang_rt.so, the toolchain resource lib dir is not a good
+#        destination because it is not a ld.so default search path.
+#        The machine where the executable is eventually executed may not be the
+#        machine where the Flang compiler and its resource dir is installed, so
+#        setting RPath by the driver is not an solution. It should belong into
+#        /usr/lib/<triple>/libflang_rt.so, like e.g. libgcc_s.so.
+#        But the linker as invoked by the Flang driver also requires
+#        libflang_rt.so to be found when linking and the resource lib dir is
+#        the only reliable location.
 get_toolchain_library_subdir(toolchain_lib_subdir)
-get_system_library_subdir(arch_lib_subdir)
-extend_path(FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${toolchain_lib_subdir}")
-if (LLVM_TREE_AVAILABLE)
-  extend_path(FLANG_RT_BUILD_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${arch_lib_subdir}")
-else ()
-  # Only building for a single target, so no need to write into a arch-specific subirectory.
-  extend_path(FLANG_RT_BUILD_LIB_DIR "${FLANG_RT_OUTPUT_DIR}" "${CMAKE_INSTALL_LIBDIR}")
-endif ()
-extend_path(FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR "${FLANG_RT_INSTALL_PATH}" "${toolchain_lib_subdir}")
-extend_path(FLANG_RT_INSTALL_LIB_DIR "${FLANG_RT_INSTALL_PATH}" "${arch_lib_subdir}")
-
-cmake_path(NORMAL_PATH FLANG_RT_BUILD_TOOLCHAIN_LIB_DIR)
-cmake_path(NORMAL_PATH FLANG_RT_BUILD_LIB_DIR)
-cmake_path(NORMAL_PATH FLANG_RT_INSTALL_TOOLCHAIN_LIB_DIR)
-cmake_path(NORMAL_PATH FLANG_RT_INSTALL_LIB_DIR)
+extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
+extend_path(FLANG_RT_INSTALL_RESOURCE_LIB_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
+cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_LIB_DIR)
+cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
 
 #################
@@ -146,7 +144,13 @@ if (WIN32)
   # Windows DLL currently not implemented.
   set(FLANG_RT_ENABLE_SHARED OFF)
 else ()
-  option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." ON)
+  # TODO: Enable by default to increase test coverage, and which version of the
+  #       library should be the user's choice anyway.
+  #       Currently, the Flang driver adds `-L"libdir" -lflang_rt` as linker
+  #       argument, which leaves the choice which library to use to the linker.
+  #       Since most linkers prefer the shared library, this would constitute a
+  #       breaking change unless the driver is changed.
+  option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
 if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   message(FATAL_ERROR "

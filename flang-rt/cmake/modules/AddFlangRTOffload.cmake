@@ -8,9 +8,9 @@
 
 macro(enable_cuda_compilation name files)
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
-    if (BUILD_SHARED_LIBS)
+    if (FLANG_RT_ENABLE_SHARED)
       message(FATAL_ERROR
-        "BUILD_SHARED_LIBS is not supported for CUDA build of Fortran runtime"
+        "FLANG_RT_ENABLE_SHARED is not supported for CUDA build of Flang-RT"
         )
     endif()
 
@@ -70,9 +70,9 @@ macro(enable_omp_offload_compilation name files)
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
     # OpenMP offload build only works with Clang compiler currently.
 
-    if (BUILD_SHARED_LIBS)
+    if (FLANG_RT_ENABLE_SHARED)
       message(FATAL_ERROR
-        "BUILD_SHARED_LIBS is not supported for OpenMP offload build of Fortran runtime"
+        "FLANG_RT_ENABLE_SHARED is not supported for OpenMP offload build of Flang-RT"
         )
     endif()
 

@@ -134,10 +134,10 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt "${supported_sources}")
-  enable_omp_offload_compilation(flang_rt "${supported_sources}")
+  enable_cuda_compilation(flang_rt.static "${supported_sources}")
+  enable_omp_offload_compilation(flang_rt.static "${supported_sources}")
 
-  # Select a default runtime, which is also used for unittests.
+  # Select a default runtime, which is used for unittests.
   if (TARGET flang_rt.shared AND BUILD_SHARED_LIBS)
     set(default_flang_rt "flang_rt.shared")
   elseif (TARGET flang_rt.static)
