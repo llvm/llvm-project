@@ -745,7 +745,11 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
   std::string ArchAndEnv;
   if (AddArch) {
     StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
-    const char *Env = TT.isAndroid() ? "-android" : "";
+    const char *Env = "";
+    if (TT.isAndroid())
+      Env = "-android";
+    else if (TT.isOHOSFamily())
+      Env = "-ohos";
     ArchAndEnv = ("-" + Arch + Env).str();
   }
   return (Prefix + Twine("clang_rt.") + Component + ArchAndEnv + Suffix).str();
