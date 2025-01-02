@@ -672,11 +672,11 @@ public:
 
   bool isSplit() const { return Fragment != FragmentNum::main(); }
 
-  bool isCold() const {
-    assert(Fragment.get() < 2 &&
-           "Function is split into more than two (hot/cold)-fragments");
-    return isSplit();
-  }
+  bool isCold() const { return Fragment == FragmentNum::cold(); }
+
+  bool isWarm() const { return Fragment == FragmentNum::warm(); }
+
+  bool isHot() const { return Fragment == FragmentNum::main(); }
 
   void setIsCold(const bool Flag) {
     Fragment = Flag ? FragmentNum::cold() : FragmentNum::main();
