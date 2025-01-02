@@ -842,11 +842,11 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
       VPInstruction::BranchOnCond,
       {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
 
-  SmallVector<VPValue *> PossiblyDead(Term->operands());
   Term->eraseFromParent();
-  for (VPValue *Op : PossiblyDead)
-    recursivelyDeleteDeadRecipes(Op);
   ExitingVPBB->appendRecipe(BOC);
+
+  VPlanTransforms::removeDeadRecipes(Plan);
+
   Plan.setVF(BestVF);
   Plan.setUF(BestUF);
   // TODO: Further simplifications are possible
