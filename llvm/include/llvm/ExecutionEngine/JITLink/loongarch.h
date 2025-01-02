@@ -41,6 +41,50 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///
   Pointer32,
 
+  /// A 16-bit PC-relative branch.
+  ///
+  /// Represents a PC-relative branch to a target within +/-128Kb. The target
+  /// must be 4-byte aligned.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int16
+  ///
+  /// Notes:
+  ///   The '16' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 18-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int16 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Branch16PCRel,
+
+  /// A 21-bit PC-relative branch.
+  ///
+  /// Represents a PC-relative branch to a target within +/-4Mb. The Target must
+  /// be 4-byte aligned.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int21
+  ///
+  /// Notes:
+  ///   The '21' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 23-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int21 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Branch21PCRel,
+
   /// A 26-bit PC-relative branch.
   ///
   /// Represents a PC-relative call or branch to a target within +/-128Mb. The
@@ -211,6 +255,37 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     if (Value > std::numeric_limits<uint32_t>::max())
       return makeTargetOutOfRangeError(G, B, E);
     *(ulittle32_t *)FixupPtr = Value;
+    break;
+  }
+  case Branch16PCRel: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    if (!isInt<18>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+
+    if (!isShiftedInt<16, 2>(Value))
+      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+    uint32_t RawInstr = *(little32_t *)FixupPtr;
+    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+    *(little32_t *)FixupPtr = RawInstr | Imm15_0;
+    break;
+  }
+  case Branch21PCRel: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    if (!isInt<23>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+
+    if (!isShiftedInt<21, 2>(Value))
+      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+    uint32_t RawInstr = *(little32_t *)FixupPtr;
+    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+    uint32_t Imm20_16 = extractBits(Imm, /*Hi=*/20, /*Lo=*/16);
+    *(little32_t *)FixupPtr = RawInstr | Imm15_0 | Imm20_16;
     break;
   }
   case Branch26PCRel: {

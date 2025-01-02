@@ -479,7 +479,8 @@ public:
         AC(AC), ORE(ORE), VF(VecWidth),
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
-        PSI(PSI), RTChecks(RTChecks), Plan(Plan) {
+        PSI(PSI), RTChecks(RTChecks), Plan(Plan),
+        VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {
     // Query this against the original loop and save it here because the profile
     // of the original loop header may change as the transformation happens.
     OptForSizeBasedOnProfile = llvm::shouldOptimizeForSize(
@@ -582,6 +583,11 @@ protected:
   virtual void printDebugTracesAtStart() {}
   virtual void printDebugTracesAtEnd() {}
 
+  /// Introduces a new VPIRBasicBlock for \p CheckIRBB to Plan between the
+  /// vector preheader and its predecessor, also connecting the new block to the
+  /// scalar preheader.
+  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
+
   /// The original loop.
   Loop *OrigLoop;
 
@@ -676,6 +682,10 @@ protected:
   BasicBlock *AdditionalBypassBlock = nullptr;
 
   VPlan &Plan;
+
+  /// The vector preheader block of \p Plan, used as target for check blocks
+  /// introduced during skeleton creation.
+  VPBlockBase *VectorPHVPB;
 };
 
 /// Encapsulate information regarding vectorization of a loop and its epilogue.
@@ -1721,7 +1731,8 @@ private:
   bool needsExtract(Value *V, ElementCount VF) const {
     Instruction *I = dyn_cast<Instruction>(V);
     if (VF.isScalar() || !I || !TheLoop->contains(I) ||
-        TheLoop->isLoopInvariant(I))
+        TheLoop->isLoopInvariant(I) ||
+        getWideningDecision(I, VF) == CM_Scalarize)
       return false;
 
     // Assume we can vectorize V (and hence we need extraction) if the
@@ -2443,19 +2454,15 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   return VectorTripCount;
 }
 
-/// Introduces a new VPIRBasicBlock for \p CheckIRBB to \p Plan between the
-/// vector preheader and its predecessor, also connecting the new block to the
-/// scalar preheader.
-static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
+void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-  VPBlockBase *VectorPH = Plan.getVectorPreheader();
-  VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
+  VPBlockBase *PreVectorPH = VectorPHVPB->getSinglePredecessor();
   if (PreVectorPH->getNumSuccessors() != 1) {
     assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
     assert(PreVectorPH->getSuccessors()[0] == ScalarPH &&
            "Unexpected successor");
     VPIRBasicBlock *CheckVPIRBB = Plan.createVPIRBasicBlock(CheckIRBB);
-    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
+    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPHVPB, CheckVPIRBB);
     PreVectorPH = CheckVPIRBB;
   }
   VPBlockUtils::connectBlocks(PreVectorPH, ScalarPH);
@@ -2544,7 +2551,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(TCCheckBlock);
 
   // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
-  introduceCheckBlockInVPlan(Plan, TCCheckBlock);
+  introduceCheckBlockInVPlan(TCCheckBlock);
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -2562,7 +2569,7 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(SCEVCheckBlock);
   AddedSafetyChecks = true;
 
-  introduceCheckBlockInVPlan(Plan, SCEVCheckBlock);
+  introduceCheckBlockInVPlan(SCEVCheckBlock);
   return SCEVCheckBlock;
 }
 
@@ -2599,8 +2606,23 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 
   AddedSafetyChecks = true;
 
-  introduceCheckBlockInVPlan(Plan, MemCheckBlock);
+  introduceCheckBlockInVPlan(MemCheckBlock);
   return MemCheckBlock;
+}
+
+/// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
+/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
+/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
+/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
+static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
+  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
+  for (auto &R : make_early_inc_range(*VPBB)) {
+    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
+    R.moveBefore(*IRVPBB, IRVPBB->end());
+  }
+
+  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+  // VPBB is now dead and will be cleaned up when the plan gets destroyed.
 }
 
 void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
@@ -2613,9 +2635,11 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopMiddleBlock =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "middle.block");
+  replaceVPBBWithIRVPBB(Plan.getMiddleBlock(), LoopMiddleBlock);
   LoopScalarPreHeader =
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -2961,22 +2985,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   PSE.getSE()->forgetLoop(OrigLoop);
   PSE.getSE()->forgetBlockAndLoopDispositions();
 
-  // When dealing with uncountable early exits we create middle.split blocks
-  // between the vector loop region and the exit block. These blocks need
-  // adding to any outer loop.
-  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
-  Loop *OuterLoop = OrigLoop->getParentLoop();
-  if (Legal->hasUncountableEarlyExit() && OuterLoop) {
-    VPBasicBlock *MiddleVPBB = State.Plan->getMiddleBlock();
-    VPBlockBase *PredVPBB = MiddleVPBB->getSinglePredecessor();
-    while (PredVPBB && PredVPBB != VectorRegion) {
-      BasicBlock *MiddleSplitBB =
-          State.CFG.VPBB2IRBB[cast<VPBasicBlock>(PredVPBB)];
-      OuterLoop->addBasicBlockToLoop(MiddleSplitBB, *LI);
-      PredVPBB = PredVPBB->getSinglePredecessor();
-    }
-  }
-
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
   // looked through single-entry phis.
@@ -3007,6 +3015,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
+  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = VectorRegion->getEntryBasicBlock();
   BasicBlock *HeaderBB = State.CFG.VPBB2IRBB[HeaderVPBB];
 
@@ -7715,7 +7724,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
-                         &BestVPlan, Legal->getWidestInductionType());
+                         &BestVPlan, OrigLoop->getParentLoop(),
+                         Legal->getWidestInductionType());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -7723,11 +7733,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
-  if (!BestVPlan.getEntry()->empty()) {
-    State.CFG.PrevBB = OrigLoop->getLoopPreheader();
-    State.Builder.SetInsertPoint(OrigLoop->getLoopPreheader()->getTerminator());
+  if (!BestVPlan.getEntry()->empty())
     BestVPlan.getEntry()->execute(&State);
-  }
+
   if (!ILV.getTripCount())
     ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
   else
@@ -7773,6 +7781,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BestVPlan.prepareToExecute(
       ILV.getTripCount(),
       ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
+  replaceVPBBWithIRVPBB(BestVPlan.getVectorPreheader(), State.CFG.PrevBB);
 
   BestVPlan.execute(&State);
 
@@ -7950,7 +7959,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  introduceCheckBlockInVPlan(Plan, TCCheckBlock);
+  introduceCheckBlockInVPlan(TCCheckBlock);
   return TCCheckBlock;
 }
 
@@ -8090,7 +8099,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   Plan.setEntry(NewEntry);
   // OldEntry is now dead and will be cleaned up when the plan gets destroyed.
 
-  introduceCheckBlockInVPlan(Plan, Insert);
+  introduceCheckBlockInVPlan(Insert);
   return Insert;
 }
 
