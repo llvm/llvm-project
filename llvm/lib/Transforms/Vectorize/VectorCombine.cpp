@@ -141,10 +141,17 @@ private:
 
   void eraseInstruction(Instruction &I) {
     LLVM_DEBUG(dbgs() << "VC: Erasing: " << I << '\n');
-    for (Value *Op : I.operands())
-      Worklist.pushValue(Op);
+    SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
     I.eraseFromParent();
+
+    // Push remaining users of the operands and then the operand itself - allows
+    // further folds that were hindered by OneUse limits.
+    for (Value *Op : Ops)
+      if (auto *OpI = dyn_cast<Instruction>(Op)) {
+        Worklist.pushUsersToWorkList(*OpI);
+        Worklist.pushValue(OpI);
+      }
   }
 };
 } // namespace
@@ -1337,6 +1344,10 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
                              MemoryLocation::get(SI), AA))
       return false;
 
+    // Ensure we add the load back to the worklist BEFORE its users so they can
+    // erased in the correct order.
+    Worklist.push(Load);
+
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
     Value *GEP = Builder.CreateInBoundsGEP(
@@ -1424,6 +1435,10 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
   if (ScalarizedCost >= OriginalCost)
     return false;
+
+  // Ensure we add the load back to the worklist BEFORE its users so they can
+  // erased in the correct order.
+  Worklist.push(LI);
 
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
