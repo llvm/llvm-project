@@ -39,6 +39,7 @@
 #include <string_view>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "test_macros.h"
 #include "test_range.h"
@@ -50,7 +51,9 @@
 #endif
 
 using std::ranges::fold_left;
+using std::ranges::fold_left_first;
 using std::ranges::fold_left_with_iter;
+using std::ranges::fold_left_first_with_iter;
 
 template <class Result, class Range, class T>
 concept is_in_value_result =
@@ -104,6 +107,47 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
     assert(telemetry.copies == 1);
   }
 }
+
+template <std::ranges::input_range R, class F, std::equality_comparable Expected>
+  requires std::copyable<R>
+constexpr void check_iterator(R& r, F f, std::optional<Expected> const& expected) {
+  {
+    is_in_value_result<R, std::optional<Expected>> decltype(auto) result = fold_left_first_with_iter(r.begin(), r.end(), f);
+    assert(result.in == r.end());
+    assert(result.value == expected);
+  }
+
+  {
+    auto telemetry                                        = invocable_telemetry();
+    auto f2                                               = invocable_with_telemetry(f, telemetry);
+    is_in_value_result<R, std::optional<Expected>> decltype(auto) result = fold_left_first_with_iter(r.begin(), r.end(), f2);
+    assert(result.in == r.end());
+    assert(result.value == expected);
+    if (result.value.has_value()) {
+        assert(telemetry.invocations == std::ranges::distance(r) - 1);
+        assert(telemetry.moves == 0);
+        assert(telemetry.copies == 1);
+    }
+  }
+
+  {
+    std::same_as<std::optional<Expected>> decltype(auto) result = fold_left_first(r.begin(), r.end(), f);
+    assert(result == expected);
+  }
+
+  {
+    auto telemetry                               = invocable_telemetry();
+    auto f2                                      = invocable_with_telemetry(f, telemetry);
+    std::same_as<std::optional<Expected>> decltype(auto) result = fold_left_first(r.begin(), r.end(), f2);
+    assert(result == expected);
+    if (result.has_value()) {
+        assert(telemetry.invocations == std::ranges::distance(r) - 1);
+        assert(telemetry.moves == 0);
+        assert(telemetry.copies == 1);
+    }
+  }
+}
+
 
 template <std::ranges::input_range R, class T, class F, std::equality_comparable Expected>
   requires std::copyable<R>
@@ -186,19 +230,29 @@ constexpr void check(R r, T const& init, F f, Expected const& expected) {
   check_rvalue_range(r, init, f, expected);
 }
 
+template <std::ranges::input_range R, class F, std::equality_comparable Expected>
+  requires std::copyable<R>
+constexpr void check(R r, F f, std::optional<Expected> const& expected) {
+  check_iterator(r, f, expected);
+}
+
 constexpr void empty_range_test_case() {
   auto const data = std::vector<int>{};
   check(data, 100, std::plus(), 100);
   check(data, -100, std::multiplies(), -100);
+  check(data, std::plus(), std::optional<int>());
 
   check(data | std::views::take_while([](auto) { return false; }), 1.23, std::plus(), 1.23);
   check(data, Integer(52), &Integer::plus, Integer(52));
+  check(data | std::views::take_while([](auto) { return false; }), std::plus(), std::optional<int>());
 }
 
 constexpr void common_range_test_case() {
   auto const data = std::vector<int>{1, 2, 3, 4};
   check(data, 0, std::plus(), triangular_sum(data));
   check(data, 1, std::multiplies(), factorial(data.back()));
+  check(data, std::plus(), std::optional(triangular_sum(data)));
+  check(data, std::multiplies(), std::optional(factorial(data.back())));
 
   auto multiply_with_prev = [n = 1](auto const x, auto const y) mutable {
     auto const result = x * y * n;
@@ -206,6 +260,7 @@ constexpr void common_range_test_case() {
     return static_cast<std::size_t>(result);
   };
   check(data, 1, multiply_with_prev, factorial(data.size()) * factorial(data.size() - 1));
+  check(data, multiply_with_prev, std::optional(factorial(data.size()) * factorial(data.size() - 1)));
 
   auto fib = [n = 1](auto x, auto) mutable {
     auto old_x = x;
@@ -237,6 +292,7 @@ constexpr void non_common_range_test_case() {
     auto data  = std::vector<std::string>{"five", "three", "two", "six", "one", "four"};
     auto range = data | std::views::transform(parse);
     check(range, 0, std::plus(), triangular_sum(range));
+    check(range, std::plus(), std::optional(triangular_sum(range)));
   }
 
   {
@@ -248,6 +304,7 @@ constexpr void non_common_range_test_case() {
     auto range =
         std::views::lazy_split(data, ' ') | std::views::transform(to_string_view) | std::views::transform(parse);
     check(range, 0, std::plus(), triangular_sum(range));
+    check(range, std::plus(), std::optional(triangular_sum(range)));
   }
 }
 
