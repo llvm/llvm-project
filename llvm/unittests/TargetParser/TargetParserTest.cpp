@@ -1130,14 +1130,20 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-s4", "armv8.3-a"),
                       AArch64CPUTestParams("apple-s5", "armv8.3-a"),
                       AArch64CPUTestParams("apple-a13", "armv8.4-a"),
+                      AArch64CPUTestParams("apple-s6", "armv8.4-a"),
+                      AArch64CPUTestParams("apple-s7", "armv8.4-a"),
+                      AArch64CPUTestParams("apple-s8", "armv8.4-a"),
                       AArch64CPUTestParams("apple-a14", "armv8.4-a"),
                       AArch64CPUTestParams("apple-m1", "armv8.4-a"),
                       AArch64CPUTestParams("apple-a15", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m2", "armv8.6-a"),
                       AArch64CPUTestParams("apple-a16", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m3", "armv8.6-a"),
+                      AArch64CPUTestParams("apple-s9", "armv8.6-a"),
+                      AArch64CPUTestParams("apple-s10", "armv8.6-a"),
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-a18", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1246,13 +1252,17 @@ INSTANTIATE_TEST_SUITE_P(
                                                  "apple-a8", "apple-a9"}),
                       AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
                                                  "apple-s5"}),
+                      AArch64CPUAliasTestParams({"apple-a13", "apple-s6",
+                                                 "apple-s7", "apple-s8"}),
                       AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
                       AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
-                      AArch64CPUAliasTestParams({"apple-a16", "apple-m3"})),
+                      AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
+                                                 "apple-s9", "apple-s10"}),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 82;
+static constexpr unsigned NumAArch64CPUArchs = 88;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
