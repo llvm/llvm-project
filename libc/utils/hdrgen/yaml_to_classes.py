@@ -241,7 +241,10 @@ def main():
         help="Add a function to the YAML file",
     )
     parser.add_argument(
-        "--entry-point", action="append", help="Entry point to include", dest="entry_points"
+        "--entry-point",
+        action="append",
+        help="Entry point to include",
+        dest="entry_points",
     )
     parser.add_argument(
         "--export-decls",
