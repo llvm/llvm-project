@@ -110,7 +110,7 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
   if (FieldDesc->isCompositeArray()) {
     QualType ElemType = FieldDesc->getElemQualType();
     Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+    for (unsigned I = P.getIndex(); I != FieldDesc->getNumElems(); ++I) {
       enumerateData(P.atIndex(I).narrow(), Ctx, Offset, BitsToRead, F);
       Offset += ElemSize;
       if (Offset >= BitsToRead)
