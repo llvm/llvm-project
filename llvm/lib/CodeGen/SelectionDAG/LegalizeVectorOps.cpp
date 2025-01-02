@@ -2246,12 +2246,8 @@ SDValue VectorLegalizer::UnrollVSETCC(SDNode *Node) {
                                   DAG.getVectorIdxConstant(i, dl));
     SDValue RHSElem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, RHS,
                                   DAG.getVectorIdxConstant(i, dl));
-    Ops[i] = DAG.getNode(ISD::SETCC, dl,
-                         TLI.getSetCCResultType(DAG.getDataLayout(),
-                                                *DAG.getContext(), TmpEltVT),
-                         LHSElem, RHSElem, CC);
-    Ops[i] = DAG.getSelect(dl, EltVT, Ops[i], DAG.getAllOnesConstant(dl, EltVT),
-                           DAG.getConstant(0, dl, EltVT));
+    Ops[i] = DAG.getNode(ISD::SETCC, dl, MVT::i1, LHSElem, RHSElem, CC);
+    Ops[i] = DAG.getBoolExtOrTrunc(Ops[i], dl, EltVT, VT);
   }
   return DAG.getBuildVector(VT, dl, Ops);
 }
