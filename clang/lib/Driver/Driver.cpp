@@ -781,18 +781,10 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
-static const char *getDefaultSYCLArch(Compilation &C) {
-  // If -fsycl is supplied we will assume SPIR-V
-  if (C.getDefaultToolChain().getTriple().isArch32Bit())
-    return "spirv32";
-  return "spirv64";
-}
-
 static llvm::Triple getSYCLDeviceTriple(StringRef TargetArch) {
   SmallVector<StringRef, 5> SYCLAlias = {"spir", "spir64", "spirv", "spirv32",
                                          "spirv64"};
-  if (std::find(SYCLAlias.begin(), SYCLAlias.end(), TargetArch) !=
-      SYCLAlias.end()) {
+  if (llvm::is_contained(SYCLAlias, TargetArch)) {
     llvm::Triple TargetTriple;
     TargetTriple.setArchName(TargetArch);
     TargetTriple.setVendor(llvm::Triple::UnknownVendor);
@@ -811,7 +803,9 @@ static bool addSYCLDefaultTriple(Compilation &C,
       return false;
   }
   // Add the default triple as it was not found.
-  llvm::Triple DefaultTriple = getSYCLDeviceTriple(getDefaultSYCLArch(C));
+  llvm::Triple DefaultTriple = getSYCLDeviceTriple(
+      C.getDefaultToolChain().getTriple().isArch32Bit() ? "spirv32"
+                                                        : "spirv64");
   SYCLTriples.insert(SYCLTriples.begin(), DefaultTriple);
   return true;
 }
@@ -1028,9 +1022,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     return;
   }
 
-  //
-  // SYCL
-  //
   // We need to generate a SYCL toolchain if the user specified -fsycl.
   bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
                                          options::OPT_fno_sycl, false);
@@ -6680,17 +6671,10 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
       break;
     }
     case Action::OFK_SYCL:
-      switch (Target.getArch()) {
-      case llvm::Triple::spir:
-      case llvm::Triple::spir64:
-      case llvm::Triple::spirv32:
-      case llvm::Triple::spirv64:
+      if (Target.isSPIROrSPIRV())
         TC = std::make_unique<toolchains::SYCLToolChain>(*this, Target, HostTC,
                                                          Args);
-        break;
-      default:
-        break;
-      }
+      break;
     default:
       break;
     }
