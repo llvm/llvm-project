@@ -1640,55 +1640,39 @@ define i1 @fpclass(float %x) {
 ;
 ; RV32I-LABEL: fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 1
+; RV32I-NEXT:    addi a1, a0, -1
 ; RV32I-NEXT:    lui a2, 2048
+; RV32I-NEXT:    slli a3, a0, 1
+; RV32I-NEXT:    addi a2, a2, -2
+; RV32I-NEXT:    sltu a1, a2, a1
+; RV32I-NEXT:    lui a2, 1046528
+; RV32I-NEXT:    srli a3, a3, 1
+; RV32I-NEXT:    add a2, a3, a2
+; RV32I-NEXT:    srli a2, a2, 24
+; RV32I-NEXT:    sltiu a2, a2, 127
+; RV32I-NEXT:    xori a2, a2, 1
 ; RV32I-NEXT:    slti a0, a0, 0
-; RV32I-NEXT:    lui a3, 522240
-; RV32I-NEXT:    lui a4, 1046528
-; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    addi a5, a1, -1
-; RV32I-NEXT:    sltu a2, a5, a2
-; RV32I-NEXT:    xor a5, a1, a3
-; RV32I-NEXT:    slt a3, a3, a1
-; RV32I-NEXT:    add a4, a1, a4
-; RV32I-NEXT:    seqz a1, a1
-; RV32I-NEXT:    seqz a5, a5
-; RV32I-NEXT:    srli a4, a4, 24
-; RV32I-NEXT:    and a2, a2, a0
-; RV32I-NEXT:    or a1, a1, a5
-; RV32I-NEXT:    sltiu a4, a4, 127
-; RV32I-NEXT:    or a1, a1, a2
-; RV32I-NEXT:    or a1, a1, a3
-; RV32I-NEXT:    and a0, a4, a0
-; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fpclass:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a1, a0
+; RV64I-NEXT:    addiw a2, a0, -1
+; RV64I-NEXT:    lui a3, 2048
 ; RV64I-NEXT:    slli a0, a0, 33
-; RV64I-NEXT:    lui a2, 2048
-; RV64I-NEXT:    lui a3, 522240
-; RV64I-NEXT:    lui a4, 1046528
+; RV64I-NEXT:    addiw a3, a3, -2
+; RV64I-NEXT:    sltu a2, a3, a2
+; RV64I-NEXT:    lui a3, 1046528
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    add a0, a0, a3
+; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    sltiu a0, a0, 127
+; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    slti a1, a1, 0
-; RV64I-NEXT:    addi a5, a0, -1
-; RV64I-NEXT:    sltu a2, a5, a2
-; RV64I-NEXT:    xor a5, a0, a3
-; RV64I-NEXT:    slt a3, a3, a0
-; RV64I-NEXT:    add a4, a0, a4
-; RV64I-NEXT:    seqz a0, a0
-; RV64I-NEXT:    seqz a5, a5
-; RV64I-NEXT:    srliw a4, a4, 24
-; RV64I-NEXT:    and a2, a2, a1
-; RV64I-NEXT:    or a0, a0, a5
-; RV64I-NEXT:    sltiu a4, a4, 127
-; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a3
-; RV64I-NEXT:    and a1, a4, a1
 ; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a2, a0
 ; RV64I-NEXT:    ret
   %cmp = call i1 @llvm.is.fpclass.f32(float %x, i32 639)
   ret i1 %cmp
