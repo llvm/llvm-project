@@ -28,6 +28,32 @@ define <16 x i8> @sel_v16i8(<16 x i8> %v0, <16 x i8> %v1) {
   ret <16 x i8> %tmp0
 }
 
+define <16 x i8> @sel_v16i8_poison(<16 x i8> %v0, <16 x i8> %v1) {
+; CHECK-LABEL: sel_v16i8_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 22, i32 23, i32 24, i32 25, i32 26, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <16 x i8> %tmp0
+}
+
+define <16 x i8> @sel_v16i8_unregular(<16 x i8> %v0, <16 x i8> %v1) {
+; CHECK-LABEL: sel_v16i8_unregular:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+  %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <16 x i8> %tmp0
+}
+
 define <4 x i16> @sel_v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 ; CHECK-LABEL: sel_v4i16:
 ; CHECK:       // %bb.0:
@@ -41,9 +67,9 @@ define <4 x i16> @sel_v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 define <8 x i16> @sel_v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: sel_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI5_0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
@@ -95,9 +121,9 @@ define <4 x half> @sel_v4f16(<4 x half> %v0, <4 x half> %v1) {
 define <8 x half> @sel_v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-LABEL: sel_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI10_0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
