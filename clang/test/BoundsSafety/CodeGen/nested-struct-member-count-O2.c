@@ -22,7 +22,7 @@ struct Outer {
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN]], align 4, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[FAM]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[FAM]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[FAM]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], !annotation [[META7:![0-9]+]]
@@ -46,9 +46,9 @@ char access(struct Outer *bar, int index) {
 // CHECK-SAME: ptr nocapture noundef readonly [[BAR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[BAR]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[BAR]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_2_0_BAR_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[BAR]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX]], align 8, !tbaa [[TBAA11:![0-9]+]]
 // CHECK-NEXT:    [[FLEX_BASE_NULL_CHECK_NOT:%.*]] = icmp eq ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], null, !annotation [[META13:![0-9]+]]
 // CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK_NOT]], label [[BOUNDSCHECK_CONT_THREAD:%.*]], label [[FLEX_BASE_NONNULL:%.*]], !annotation [[META13]]

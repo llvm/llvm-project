@@ -14,7 +14,7 @@ struct __attribute__((packed)) foo {
 
 // CHECK-LABEL: @p(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 4
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 4
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 unsigned *p(struct foo *s) {

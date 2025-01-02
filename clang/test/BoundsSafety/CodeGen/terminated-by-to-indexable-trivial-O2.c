@@ -18,7 +18,7 @@ const int *__indexable good_ints(void) {
 
 // CHECK-LABEL: @good_ints_unsafe(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr @ints, ptr getelementptr inbounds (i8, ptr @ints, i64 8) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr @ints, ptr getelementptr inbounds nuw (i8, ptr @ints, i64 8) }
 //
 const int *__indexable good_ints_unsafe(void) {
   return __unsafe_terminated_by_to_indexable(ints);
@@ -26,7 +26,7 @@ const int *__indexable good_ints_unsafe(void) {
 
 // CHECK-LABEL: @good_chars(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr @.str, ptr getelementptr inbounds (i8, ptr @.str, i64 5) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr @.str, ptr getelementptr inbounds nuw (i8, ptr @.str, i64 5) }
 //
 const char *__indexable good_chars(void) {
   return __terminated_by_to_indexable(chars);
@@ -34,7 +34,7 @@ const char *__indexable good_chars(void) {
 
 // CHECK-LABEL: @good_chars_unsafe(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr @.str, ptr getelementptr inbounds (i8, ptr @.str, i64 6) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr @.str, ptr getelementptr inbounds nuw (i8, ptr @.str, i64 6) }
 //
 const char *__indexable good_chars_unsafe(void) {
   return __unsafe_terminated_by_to_indexable(chars);

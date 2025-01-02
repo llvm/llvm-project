@@ -17,9 +17,9 @@ struct Simple {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6:![0-9]+]]
@@ -41,9 +41,9 @@ void simple_no_flexbase_update(struct Simple * __bidi_indexable p) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[P2_SROA_4_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[P2_SROA_4_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[P2_SROA_4_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_4_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[P2_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_4_0_COPYLOAD]], !annotation [[META6]]
@@ -66,9 +66,9 @@ void simple_flexbase_update(struct Simple * __bidi_indexable p) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6]]
@@ -99,9 +99,9 @@ int * __counted_by(len) baz(int len);
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP29_SROA_2_0_COPYLOAD]], !annotation [[META6]]
@@ -136,9 +136,9 @@ void shared_no_flexbase_update(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP36_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP36_SROA_2_0_COPYLOAD]], !annotation [[META6]]
@@ -173,9 +173,9 @@ void shared_no_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[P2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[P2_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_5_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[P2_SROA_7_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[P2_SROA_7_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[P2_SROA_7_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_7_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_5_0_COPYLOAD]], !annotation [[META6]]
@@ -203,9 +203,9 @@ void shared_flexbase_update(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[P2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[P2_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[P2_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_5_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[P2_SROA_7_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[P2_SROA_7_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[P2_SROA_7_0_COPYLOAD:%.*]] = load ptr, ptr [[P2_SROA_7_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P2_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[P2_SROA_5_0_COPYLOAD]], !annotation [[META6]]
@@ -233,9 +233,9 @@ void shared_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP36_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP36_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP36_SROA_2_0_COPYLOAD]], !annotation [[META6]]
@@ -272,9 +272,9 @@ void shared_flexbase_self_assign(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP29_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP29_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP29_SROA_2_0_COPYLOAD]], !annotation [[META6]]
@@ -309,9 +309,9 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], !annotation [[META6]]
@@ -339,9 +339,9 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_5_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], !annotation [[META6]]
@@ -387,9 +387,9 @@ struct Double {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6]]
@@ -411,9 +411,9 @@ void double_no_flexbase_update_once(struct Double * __bidi_indexable p) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META6]]

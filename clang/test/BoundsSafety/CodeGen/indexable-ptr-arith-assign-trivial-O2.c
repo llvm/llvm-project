@@ -13,7 +13,7 @@ static struct {
 
 // CHECK-LABEL: @good_add_one(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @foo, i64 44), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds nuw (i8, ptr @foo, i64 44), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
 //
 int *__indexable good_add_one(void) {
   int *__indexable p = foo.array;
@@ -24,7 +24,7 @@ int *__indexable good_add_one(void) {
 
 // CHECK-LABEL: @good_sub_neg_one(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @foo, i64 44), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds nuw (i8, ptr @foo, i64 44), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
 //
 int *__indexable good_sub_neg_one(void) {
   int *__indexable p = foo.array;
@@ -35,7 +35,7 @@ int *__indexable good_sub_neg_one(void) {
 
 // CHECK-LABEL: @good_oob(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @foo, i64 80), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds nuw (i8, ptr @foo, i64 80), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
 //
 int *__indexable good_oob(void) {
   int *__indexable p = foo.array;

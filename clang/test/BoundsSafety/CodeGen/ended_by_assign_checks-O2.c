@@ -26,7 +26,7 @@ int TestOK() {
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 40
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    [[CMP24_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[CMP35_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP24_NOT]], [[CMP35_NOT]], {{!annotation ![0-9]+}}
@@ -50,7 +50,7 @@ int TestStartFail() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR5]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 40
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 44
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[CMP22_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}

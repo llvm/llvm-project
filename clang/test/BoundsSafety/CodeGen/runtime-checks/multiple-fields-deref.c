@@ -12,9 +12,9 @@ struct foo {
 // CHECK-LABEL: @sum(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[F:%.*]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_F_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_F_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_F_SROA_IDX]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_F_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_F_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_F_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 12
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], {{!annotation ![0-9]+}}

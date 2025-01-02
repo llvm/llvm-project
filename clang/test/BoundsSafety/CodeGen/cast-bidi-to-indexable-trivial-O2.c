@@ -22,7 +22,7 @@ int *__indexable good(void) {
 
 // CHECK-LABEL: @good_upper(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @foo, i64 176), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds nuw (i8, ptr @foo, i64 176), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
 //
 int *__indexable good_upper(void) {
   int *__bidi_indexable p = foo.array;
@@ -32,7 +32,7 @@ int *__indexable good_upper(void) {
 
 // CHECK-LABEL: @good_upper2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @foo, i64 208), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
+// CHECK-NEXT:    ret { ptr, ptr } { ptr getelementptr inbounds nuw (i8, ptr @foo, i64 208), ptr getelementptr inbounds (i32, ptr getelementptr inbounds nuw ([[STRUCT_ANON:%.*]], ptr @foo, i32 0, i32 1), i64 3) }
 //
 int *__indexable good_upper2(void) {
   int *__bidi_indexable p = foo.array;

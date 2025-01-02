@@ -141,7 +141,7 @@ void *cpy(flex_t *dest, const flex_t *src, unsigned size) {
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont159:
 // CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DEST]], ptr align 1 [[SRC]], i64 [[CONV]], i1 false)
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[DEST]], i64 [[CONV]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 [[CONV]]
 // CHECK-NEXT:    ret ptr [[TMP2]]
 //
 void *__unsafe_indexable pcpy(flex_t *dest, const flex_t *src, unsigned size) {

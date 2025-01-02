@@ -38,7 +38,7 @@ void foo(int *buf __counted_by(len), int len) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca [10 x i32], align 4
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[A]]) #[[ATTR4:[0-9]+]]
-// CHECK-NEXT:    [[ADD_PTR3_I:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 40
+// CHECK-NEXT:    [[ADD_PTR3_I:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH5_I:%.*]] = getelementptr i8, ptr [[A]], i64 -40
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH5_I]], [[ADD_PTR3_I]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH5_I]], [[A]], {{!annotation ![0-9]+}}

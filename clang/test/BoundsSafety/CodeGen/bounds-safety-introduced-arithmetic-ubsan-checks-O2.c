@@ -72,12 +72,12 @@ void f_outlen(char *__counted_by(*outLen) derOut, unsigned long long *outLen) {
 // UBSAN-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[TMP4]], {{!nosanitize ![0-9]+}}
 // UBSAN-NEXT:    br i1 [[TMP6]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!nosanitize ![0-9]+}}
 // UBSAN:       trap:
-// UBSAN-NEXT:    tail call void @llvm.ubsantrap(i8 19) #[[ATTR4]], {{!nosanitize ![0-9]+}}
+// UBSAN-NEXT:    tail call void @llvm.ubsantrap(i8 19) #[[ATTR6:[0-9]+]], {{!nosanitize ![0-9]+}}
 // UBSAN-NEXT:    unreachable, {{!nosanitize ![0-9]+}}
 // UBSAN:       cont:
-// UBSAN-NEXT:    [[TMP_SROA_4_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 16
+// UBSAN-NEXT:    [[TMP_SROA_4_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 16
 // UBSAN-NEXT:    [[TMP_SROA_4_0_COPYLOAD:%.*]] = load ptr, ptr [[TMP_SROA_4_0_BUF_SROA_IDX]], align 8, {{!tbaa ![0-9]+}}
-// UBSAN-NEXT:    [[TMP_SROA_3_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 8
+// UBSAN-NEXT:    [[TMP_SROA_3_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 8
 // UBSAN-NEXT:    [[TMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[TMP_SROA_3_0_BUF_SROA_IDX]], align 8
 // UBSAN-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[TMP_SROA_3_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // UBSAN-NEXT:    [[CMP27_NOT:%.*]] = icmp ugt ptr [[TMP_SROA_4_0_COPYLOAD]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
@@ -98,11 +98,11 @@ void f_outlen(char *__counted_by(*outLen) derOut, unsigned long long *outLen) {
 // NOUBSAN-LABEL: @f_call_bound_checks(
 // NOUBSAN-NEXT:  entry:
 // NOUBSAN-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[BUF:%.*]], align 8
-// NOUBSAN-NEXT:    [[TMP_SROA_2_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 8
+// NOUBSAN-NEXT:    [[TMP_SROA_2_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 8
 // NOUBSAN-NEXT:    [[TMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[TMP_SROA_2_0_BUF_SROA_IDX]], align 8
 // NOUBSAN-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[TMP_SROA_0_0_COPYLOAD]], i64 [[OFFSET:%.*]]
 // NOUBSAN-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[TMP_SROA_2_0_COPYLOAD]], {{!annotation ![0-9]+}}
-// NOUBSAN-NEXT:    [[TMP_SROA_3_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 16
+// NOUBSAN-NEXT:    [[TMP_SROA_3_0_BUF_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 16
 // NOUBSAN-NEXT:    [[TMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[TMP_SROA_3_0_BUF_SROA_IDX]], align 8
 // NOUBSAN-NEXT:    [[CMP27_NOT:%.*]] = icmp ugt ptr [[TMP_SROA_3_0_COPYLOAD]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
 // NOUBSAN-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_NOT]], i1 true, i1 [[CMP27_NOT]], {{!annotation ![0-9]+}}

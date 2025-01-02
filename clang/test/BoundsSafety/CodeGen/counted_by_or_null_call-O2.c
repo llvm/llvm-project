@@ -88,12 +88,12 @@ void caller_6(int *__counted_by(len) p, int len) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_9_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP_SROA_9_0_COPYLOAD]], !annotation [[META3]]
 // CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[LAND_LHS_TRUE:%.*]], !annotation [[META3]]
 // CHECK:       land.lhs.true:
-// CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_17_0_P_SROA_IDX]], align 8, !tbaa [[TBAA5:!.+]]
 // CHECK-NEXT:    [[CMP27_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_17_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META3]]
 // CHECK-NEXT:    br i1 [[CMP27_NOT]], label [[TRAP]], label [[LAND_RHS:%.*]], !annotation [[META3]]
@@ -195,7 +195,8 @@ int *__counted_by_or_null(len) caller_10(int len) {
 // CHECK: [[META2]] = !{!"bounds-safety-check-ptr-neq-null"}
 // CHECK: [[META3]] = !{!"bounds-safety-generic"}
 // CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-// CHECK: [[META6]] = !{!"any pointer", [[META7:![0-9]+]], i64 0}
+// CHECK: [[META6]] = !{!"p1 int", [[META61:.+]], i64 0}
+// CHECK: [[META61]] = !{!"any pointer", [[META7:![0-9]+]], i64 0}
 // CHECK: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
 // CHECK: [[META8]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META11]] = !{!"bounds-safety-generic", [[META12:![0-9]+]]}

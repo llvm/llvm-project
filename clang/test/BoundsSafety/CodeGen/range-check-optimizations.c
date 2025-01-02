@@ -258,7 +258,7 @@ void loop_accesses_out_of_bounds_eliminate_lower_check(int* __counted_by(n) dst,
 // CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[LEN]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
@@ -361,7 +361,7 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check(int* __counted_by(n
 // CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void

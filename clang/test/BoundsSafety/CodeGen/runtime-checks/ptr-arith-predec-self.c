@@ -66,7 +66,7 @@
 // CHECK-O2-NEXT:    [[A:%.*]] = alloca [1 x i32], align 4
 // CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[A]]) #[[ATTR3:[0-9]+]]
 // CHECK-O2-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
+// CHECK-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 // CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[A]], i64 -4
 // CHECK-O2-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-O2-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[A]], {{!annotation ![0-9]+}}

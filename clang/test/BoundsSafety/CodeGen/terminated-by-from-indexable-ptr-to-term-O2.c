@@ -32,7 +32,7 @@ int *__null_terminated indexable_indexable(int *__indexable ptr, int *__indexabl
 // CHECK-LABEL: @bidi_indexable_single(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR:%.*]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_PTR_SROA_IDX]], align 8, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[PTR_TO_TERM:%.*]], {{!annotation ![0-9]+}}
@@ -42,7 +42,7 @@ int *__null_terminated indexable_indexable(int *__indexable ptr, int *__indexabl
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont6:
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_2_0_PTR_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TERMINATED_BY_ONE_PAST_TERM_PTR:%.*]] = getelementptr i8, ptr [[PTR_TO_TERM]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_TO_TERM]], {{!annotation ![0-9]+}}
@@ -87,7 +87,7 @@ int *__single *__terminated_by(-1) nested_indexable_indexable(int *__single *__i
 // CHECK-LABEL: @nested_bidi_indexable_single(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR:%.*]], align 8
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_PTR_SROA_IDX]], align 8, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[PTR_TO_TERM:%.*]], {{!annotation ![0-9]+}}
@@ -97,7 +97,7 @@ int *__single *__terminated_by(-1) nested_indexable_indexable(int *__single *__i
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont6:
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_2_0_PTR_SROA_IDX]], align 8
 // CHECK-NEXT:    [[TERMINATED_BY_ONE_PAST_TERM_PTR:%.*]] = getelementptr i8, ptr [[PTR_TO_TERM]], i64 8, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_TO_TERM]], {{!annotation ![0-9]+}}

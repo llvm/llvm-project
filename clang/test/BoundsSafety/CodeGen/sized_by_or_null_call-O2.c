@@ -92,12 +92,12 @@ void caller_6(int *__sized_by(len) p, int len) {
 // CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_9_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP_SROA_9_0_COPYLOAD]], !annotation [[META3]]
 // CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[LAND_LHS_TRUE:%.*]], !annotation [[META3]]
 // CHECK:       land.lhs.true:
-// CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_P_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_17_0_P_SROA_IDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    [[CMP27_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_17_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META3]]
 // CHECK-NEXT:    br i1 [[CMP27_NOT]], label [[TRAP]], label [[LAND_RHS:%.*]], !annotation [[META3]]
@@ -202,7 +202,8 @@ int *__sized_by_or_null(len) caller_10(int len) {
 // CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
 // CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// CHECK: [[META10]] = !{!"any pointer", [[META6]], i64 0}
+// CHECK: [[META10]] = !{!"p1 int", [[META101:!.+]], i64 0}
+// CHECK: [[META101]] = !{!"any pointer", [[META6]], i64 0}
 // CHECK: [[META13]] = !{!"bounds-safety-generic", [[META14:![0-9]+]]}
 // CHECK: [[META14]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
 // CHECK: [[META15]] = !{!"bounds-safety-zero-init"}

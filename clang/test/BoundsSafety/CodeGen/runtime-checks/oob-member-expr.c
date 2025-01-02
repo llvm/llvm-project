@@ -18,7 +18,7 @@ struct S {
 // O2-NEXT:    store ptr [[A:%.*]], ptr [[S]], align 8, {{!tbaa ![0-9]+}}
 // O2-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 8
 // O2-NEXT:    store i64 [[I:%.*]], ptr [[I1]], align 8, {{!tbaa ![0-9]+}}
-// O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 16
+// O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
 // O2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i64 24
 // O2-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[TMP0]], {{!annotation ![0-9]+}}
 // O2-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT9:%.*]], {{!annotation ![0-9]+}}
