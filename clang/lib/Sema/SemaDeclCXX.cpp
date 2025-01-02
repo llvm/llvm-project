@@ -2655,7 +2655,7 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       return nullptr;
     }
 
-    if (BaseType.hasQualifiers() && !isa<SubstTemplateTypeParmType>(BaseType)) {
+    if (BaseType.hasQualifiers()) {
       std::string Quals =
           BaseType.getQualifiers().getAsString(Context.getPrintingPolicy());
       Diag(BaseLoc, diag::warn_qual_base_type)
