@@ -372,7 +372,7 @@ enum ArmSMEState : unsigned {
 
 bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
                                 unsigned ArgIdx, unsigned EltBitWidth,
-                                unsigned VecBitWidth) {
+                                unsigned ContainerBitWidth) {
   // Function that checks whether the operand (ArgIdx) is an immediate
   // that is one of a given set of values.
   auto CheckImmediateInSet = [&](std::initializer_list<int64_t> Set,
@@ -445,17 +445,17 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     break;
   case ImmCheckType::ImmCheckLaneIndex:
     if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / EltBitWidth) - 1))
+                                        (ContainerBitWidth / EltBitWidth) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckLaneIndexCompRotate:
-    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / (2 * EltBitWidth)) - 1))
+    if (SemaRef.BuiltinConstantArgRange(
+            TheCall, ArgIdx, 0, (ContainerBitWidth / (2 * EltBitWidth)) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckLaneIndexDot:
-    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / (4 * EltBitWidth)) - 1))
+    if (SemaRef.BuiltinConstantArgRange(
+            TheCall, ArgIdx, 0, (ContainerBitWidth / (4 * EltBitWidth)) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckComplexRot90_270:
@@ -515,13 +515,13 @@ bool SemaARM::PerformNeonImmChecks(
   bool HasError = false;
 
   for (const auto &I : ImmChecks) {
-    auto [ArgIdx, CheckTy, ElementSizeInBits, VecSizeInBits] = I;
+    auto [ArgIdx, CheckTy, ElementBitWidth, VecBitWidth] = I;
 
     if (OverloadType >= 0)
-      ElementSizeInBits = NeonTypeFlags(OverloadType).getEltSizeInBits();
+      ElementBitWidth = NeonTypeFlags(OverloadType).getEltSizeInBits();
 
-    HasError |= CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementSizeInBits,
-                                  VecSizeInBits);
+    HasError |= CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementBitWidth,
+                                  VecBitWidth);
   }
 
   return HasError;
@@ -532,9 +532,9 @@ bool SemaARM::PerformSVEImmChecks(
   bool HasError = false;
 
   for (const auto &I : ImmChecks) {
-    auto [ArgIdx, CheckTy, ElementSizeInBits] = I;
+    auto [ArgIdx, CheckTy, ElementBitWidth] = I;
     HasError |=
-        CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementSizeInBits, 128);
+        CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementBitWidth, 128);
   }
 
   return HasError;
