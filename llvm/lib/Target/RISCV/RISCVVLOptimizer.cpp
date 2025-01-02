@@ -50,6 +50,7 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
+  std::optional<const MachineOperand> getVLForUser(MachineOperand &UserOp);
   /// Returns the largest common VL MachineOperand that may be used to optimize
   /// MI. Returns std::nullopt if it failed to find a suitable VL.
   std::optional<const MachineOperand> checkUsers(MachineInstr &MI);
@@ -97,6 +98,8 @@ struct OperandInfo {
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
       : S(State::Known), EMUL(EMUL), Log2EEW(Log2EEW) {}
 
+  OperandInfo(unsigned Log2EEW) : S(State::Known), Log2EEW(Log2EEW) {}
+
   OperandInfo() : S(State::Unknown) {}
 
   bool isUnknown() const { return S == State::Unknown; }
@@ -107,6 +110,11 @@ struct OperandInfo {
 
     return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
            A.EMUL->second == B.EMUL->second;
+  }
+
+  static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
+    assert(A.isKnown() && B.isKnown() && "Both operands must be known");
+    return A.Log2EEW == B.Log2EEW;
   }
 
   void print(raw_ostream &OS) const {
@@ -720,8 +728,8 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
 
   // Vector Reduction Operations
   // Vector Single-Width Integer Reduction Instructions
-  // The Dest and VS1 only read element 0 of the vector register. Return unknown
-  // for these. VS2 has EEW=SEW and EMUL=LMUL.
+  // The Dest and VS1 only read element 0 of the vector register. Return just
+  // the EEW for these. VS2 has EEW=SEW and EMUL=LMUL.
   case RISCV::VREDAND_VS:
   case RISCV::VREDMAX_VS:
   case RISCV::VREDMAXU_VS:
@@ -732,7 +740,7 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VREDXOR_VS: {
     if (MO.getOperandNo() == 2)
       return OperandInfo(MIVLMul, MILog2SEW);
-    return {};
+    return OperandInfo(MILog2SEW);
   }
 
   default:
@@ -1048,47 +1056,63 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
 }
 
 std::optional<const MachineOperand>
+RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
+  const MachineInstr &UserMI = *UserOp.getParent();
+  const MCInstrDesc &Desc = UserMI.getDesc();
+
+  // Instructions like reductions may use a vector register as a scalar
+  // register. In this case, we should treat it like a scalar register which
+  // does not impact the decision on whether to optimize VL. But if there is
+  // another user of MI and it may have VL=0, we need to be sure not to reduce
+  // the VL of MI to zero when the VLOp of UserOp is may be non-zero. The most
+  // we can reduce it to is one.
+  if (isVectorOpUsedAsScalarOp(UserOp)) {
+    [[maybe_unused]] Register R = UserOp.getReg();
+    [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
+    assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
+           "Expect LMUL 1 register class for vector as scalar operands!");
+    LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
+    // VMV_X_S and VFMV_F_S do not have a VL opt which would cause an assert
+    // assert failure if we called getVLOpNum. Therefore, we will set the
+    // CommonVL in that case as 1, even if it could have been set to 0.
+    if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
+      return MachineOperand::CreateImm(1);
+
+    unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
+    const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
+    if (VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0))
+      return MachineOperand::CreateImm(1);
+    LLVM_DEBUG(dbgs() << "    Abort because could not determine VL of vector "
+                         "operand used as scalar operand\n");
+
+    return std::nullopt;
+  }
+
+  if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
+    LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
+                         " use VLMAX\n");
+    return std::nullopt;
+  }
+
+  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
+  const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
+  // Looking for an immediate or a register VL that isn't X0.
+  assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
+         "Did not expect X0 VL");
+  return VLOp;
+}
+
+std::optional<const MachineOperand>
 RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
   // along lines of an instcombine style worklist which integrates the outer
   // pass.
   bool CanReduceVL = true;
-  const MachineOperand *CommonVL = nullptr;
-  const MachineOperand One = MachineOperand::CreateImm(1);
+  std::optional<const MachineOperand> CommonVL;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
-
-    // Instructions like reductions may use a vector register as a scalar
-    // register. In this case, we should treat it like a scalar register which
-    // does not impact the decision on whether to optimize VL. But if there is
-    // another user of MI and it may have VL=0, we need to be sure not to reduce
-    // the VL of MI to zero when the VLOp of UserOp is may be non-zero. The most
-    // we can reduce it to is one.
-    if (isVectorOpUsedAsScalarOp(UserOp)) {
-      [[maybe_unused]] Register R = UserOp.getReg();
-      [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-      assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-             "Expect LMUL 1 register class for vector as scalar operands!");
-      LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
-      const MCInstrDesc &Desc = UserMI.getDesc();
-      // VMV_X_S and VFMV_F_S do not have a VL opt which would cause an assert
-      // assert failure if we called getVLOpNum. Therefore, we will set the
-      // CommonVL in that case as 1, even if it could have been set to 0.
-      if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-        CommonVL = &One;
-        continue;
-      }
-
-      unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-      const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-      if (VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0)) {
-        CommonVL = &One;
-        continue;
-      }
-    }
-
     if (mayReadPastVL(UserMI)) {
       LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
       CanReduceVL = false;
@@ -1102,45 +1126,55 @@ RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       break;
     }
 
-    const MCInstrDesc &Desc = UserMI.getDesc();
-    if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to lack of VL or SEW, assume that"
-                           " use VLMAX\n");
+    auto VLOp = getVLForUser(UserOp);
+    if (!VLOp) {
       CanReduceVL = false;
       break;
     }
 
-    unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-    const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-
-    // Looking for an immediate or a register VL that isn't X0.
-    assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
-           "Did not expect X0 VL");
-
     // Use the largest VL among all the users. If we cannot determine this
     // statically, then we cannot optimize the VL.
-    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-      CommonVL = &VLOp;
+    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, *VLOp)) {
+      CommonVL.emplace(*VLOp);
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!RISCV::isVLKnownLE(VLOp, *CommonVL)) {
+    } else if (!RISCV::isVLKnownLE(*VLOp, *CommonVL)) {
       LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
       CanReduceVL = false;
       break;
     }
 
-    // The SEW and LMUL of destination and source registers need to match.
+    if (!RISCVII::hasSEWOp(UserMI.getDesc().TSFlags)) {
+      LLVM_DEBUG(dbgs() << "    Abort due to lack of SEW operand\n");
+      CanReduceVL = false;
+      break;
+    }
+
     OperandInfo ConsumerInfo = getOperandInfo(UserOp, MRI);
     OperandInfo ProducerInfo = getOperandInfo(MI.getOperand(0), MRI);
-    if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown() ||
-        !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to incompatible or unknown "
-                           "information for EMUL or EEW.\n");
+    if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown()) {
+      LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
+      LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
+      LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
+      CanReduceVL = false;
+      break;
+    }
+
+    // If the operand is used as a scalar operand, then the EEW must be
+    // compatible. Otherwise, the EMUL *and* EEW must be compatible.
+    if ((isVectorOpUsedAsScalarOp(UserOp) &&
+         !OperandInfo::EEWAreEqual(ConsumerInfo, ProducerInfo)) ||
+        (!isVectorOpUsedAsScalarOp(UserOp) &&
+         !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo))) {
+      LLVM_DEBUG(
+          dbgs()
+          << "    Abort due to incompatible information for EMUL or EEW.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
       LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
       CanReduceVL = false;
       break;
     }
   }
+
   return CanReduceVL && CommonVL
              ? std::make_optional<const MachineOperand>(*CommonVL)
              : std::nullopt;

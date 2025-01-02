@@ -171,9 +171,8 @@ define i32 @mul_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @and_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: and_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    vredand.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -186,9 +185,8 @@ define i32 @and_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @or_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: or_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vredor.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -216,9 +214,8 @@ define i32 @xor_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @umin_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: umin_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    vredminu.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -231,9 +228,8 @@ define i32 @umin_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @umax_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: umax_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    vredmaxu.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -246,9 +242,8 @@ define i32 @umax_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @smin_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: smin_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmin.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmin.vv v8, v8, v9
 ; CHECK-NEXT:    vredmin.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -261,9 +256,8 @@ define i32 @smin_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @smax_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: smax_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    vredmax.vs v8, v8, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
