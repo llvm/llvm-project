@@ -18448,7 +18448,7 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
     EVT VT = A.getValueType();
     SDValue Op0 = A.getOperand(0);
     SDValue Op1 = A.getOperand(1);
-    if (Op0.getOpcode() != Op0.getOpcode() ||
+    if (Op0.getOpcode() != Op1.getOpcode() ||
         (Op0.getOpcode() != ISD::ZERO_EXTEND &&
          Op0.getOpcode() != ISD::SIGN_EXTEND))
       return SDValue();
