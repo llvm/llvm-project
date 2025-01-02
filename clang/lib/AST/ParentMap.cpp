@@ -34,13 +34,13 @@ static void BuildParentMap(MapTy& M, Stmt* S,
   case Stmt::PseudoObjectExprClass: {
     PseudoObjectExpr *POE = cast<PseudoObjectExpr>(S);
 
-    if (OVMode == OV_Opaque && M[POE->getSyntacticForm()])
+    if (OVMode == OV_Opaque && M.contains(POE->getSyntacticForm()))
       break;
 
     // If we are rebuilding the map, clear out any existing state.
-    if (M[POE->getSyntacticForm()])
+    if (M.contains(POE->getSyntacticForm()))
       for (Stmt *SubStmt : S->children())
-        M[SubStmt] = nullptr;
+        M.erase(SubStmt);
 
     M[POE->getSyntacticForm()] = S;
     BuildParentMap(M, POE->getSyntacticForm(), OV_Transparent);
@@ -78,7 +78,7 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     // The right thing to do is to give the OpaqueValueExpr its syntactic
     // parent, then not reassign that when traversing the semantic expressions.
     OpaqueValueExpr *OVE = cast<OpaqueValueExpr>(S);
-    if (OVMode == OV_Transparent || !M[OVE->getSourceExpr()]) {
+    if (OVMode == OV_Transparent || !M.contains(OVE->getSourceExpr())) {
       M[OVE->getSourceExpr()] = S;
       BuildParentMap(M, OVE->getSourceExpr(), OV_Transparent);
     }
