@@ -104,8 +104,8 @@ std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
     return std::nullopt;
 }
 
-std::optional<size_t> ComputeOffsetsHelper::HasSpecialAlign(const Symbol &sym,
-                                                            Scope &scope) {
+std::optional<size_t> ComputeOffsetsHelper::HasSpecialAlign(
+    const Symbol &sym, Scope &scope) {
   // On AIX, if the component that is not the first component and is
   // a float of 8 bytes or larger, it has the 4-byte alignment.
   // Only set the special alignment for bind(c) derived type on that platform.
