@@ -365,9 +365,6 @@ public:
     return getPointerSpec(AS).BitWidth;
   }
 
-  /// Returns the maximum index size over all address spaces.
-  unsigned getMaxIndexSizeInBits() const;
-
   /// Size in bits of index used for address calculation in getelementptr.
   unsigned getIndexSizeInBits(unsigned AS) const {
     return getPointerSpec(AS).IndexBitWidth;

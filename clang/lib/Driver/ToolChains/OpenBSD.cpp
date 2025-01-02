@@ -213,9 +213,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
-  bool NeedsSanitizerDeps =
-      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -253,7 +251,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (NeedsSanitizerDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
-      linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     }
     if (NeedsXRayDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));

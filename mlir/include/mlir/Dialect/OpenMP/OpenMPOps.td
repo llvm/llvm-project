@@ -1223,10 +1223,11 @@ def TargetOp : OpenMP_Op<"target", traits = [
     OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
-    OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
-    OpenMP_HasDeviceAddrClause, OpenMP_IfClause, OpenMP_InReductionClause,
-    OpenMP_IsDevicePtrClause, OpenMP_MapClauseSkip<assemblyFormat = true>,
-    OpenMP_NowaitClause, OpenMP_PrivateClause, OpenMP_ThreadLimitClause
+    OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
+    OpenMP_DeviceClause, OpenMP_HasDeviceAddrClause, OpenMP_IfClause,
+    OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
+    OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
+    OpenMP_PrivateClause, OpenMP_ThreadLimitClause,
   ], singleRegion = true> {
   let summary = "target construct";
   let description = [{

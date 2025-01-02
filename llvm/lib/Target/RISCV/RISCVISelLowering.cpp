@@ -17,6 +17,7 @@
 #include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -758,9 +759,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
-      setOperationAction(
-          {ISD::SELECT_CC, ISD::VSELECT, ISD::VP_MERGE, ISD::VP_SELECT}, VT,
-          Expand);
+      setOperationAction({ISD::SELECT_CC, ISD::VSELECT, ISD::VP_SELECT}, VT,
+                         Expand);
+      setOperationAction(ISD::VP_MERGE, VT, Custom);
 
       setOperationAction({ISD::VP_CTTZ_ELTS, ISD::VP_CTTZ_ELTS_ZERO_UNDEF}, VT,
                          Custom);
@@ -1236,6 +1237,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::VP_FP_TO_SINT, ISD::VP_FP_TO_UINT,
                               ISD::VP_SETCC, ISD::VP_TRUNCATE},
                              VT, Custom);
+
+          setOperationAction(ISD::VP_MERGE, VT, Custom);
 
           setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
           setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -6392,14 +6395,12 @@ static unsigned getRISCVVLOp(SDValue Op) {
 /// Return true if a RISC-V target specified op has a passthru operand.
 static bool hasPassthruOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
+         Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    127 &&
-                RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
-                        ISD::FIRST_TARGET_STRICTFP_OPCODE ==
-                    21 &&
-                "adding target specific op should update this function");
+  static_assert(
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 127 &&
+      RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
+      "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
     return true;
   if (Opcode == RISCVISD::FCOPYSIGN_VL)
@@ -6418,14 +6419,12 @@ static bool hasPassthruOp(unsigned Opcode) {
 /// Return true if a RISC-V target specified op has a mask operand.
 static bool hasMaskOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
+         Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    127 &&
-                RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
-                        ISD::FIRST_TARGET_STRICTFP_OPCODE ==
-                    21 &&
-                "adding target specific op should update this function");
+  static_assert(
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 127 &&
+      RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
+      "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
     return true;
   if (Opcode >= RISCVISD::VRGATHER_VX_VL && Opcode <= RISCVISD::VFIRST_VL)
@@ -7492,8 +7491,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSET_ROUNDING(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
-  case ISD::VP_SELECT:
   case ISD::VP_MERGE:
+    if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
+      return lowerVPMergeMask(Op, DAG);
+    [[fallthrough]];
+  case ISD::VP_SELECT:
   case ISD::VP_ADD:
   case ISD::VP_SUB:
   case ISD::VP_MUL:
@@ -8295,10 +8297,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return V;
 
   if (Op.hasOneUse()) {
-    unsigned UseOpc = Op->use_begin()->getOpcode();
+    unsigned UseOpc = Op->user_begin()->getOpcode();
     if (isBinOp(UseOpc) && DAG.isSafeToSpeculativelyExecute(UseOpc)) {
-      SDNode *BinOp = *Op->use_begin();
-      if (SDValue NewSel = foldBinOpIntoSelectIfProfitable(*Op->use_begin(),
+      SDNode *BinOp = *Op->user_begin();
+      if (SDValue NewSel = foldBinOpIntoSelectIfProfitable(*Op->user_begin(),
                                                            DAG, Subtarget)) {
         DAG.ReplaceAllUsesWith(BinOp, &NewSel);
         // Opcode check is necessary because foldBinOpIntoSelectIfProfitable
@@ -10901,23 +10903,23 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     return DAG.getMergeValues({Even, Odd}, DL);
   }
 
-  // For the indices, use the same SEW to avoid an extra vsetvli
-  // TODO: If container type is larger than m1, we can consider using a splat
-  // of a constant instead of the following sequence
+  // For the indices, use the vmv.v.x of an i8 constant to fill the largest
+  // possibly mask vector, then extract the required subvector.  Doing this
+  // (instead of a vid, vmsne sequence) reduces LMUL, and allows the mask
+  // creation to be rematerialized during register allocation to reduce
+  // register pressure if needed.
 
-  // Create a vector of even indices {0, 1, 2, ...}
-  MVT IdxVT = ConcatVT.changeVectorElementTypeToInteger();
-  SDValue StepVec = DAG.getStepVector(DL, IdxVT);
-  // 0, 1, 0, 1, 0, 1
-  SDValue ZeroOnes =
-      DAG.getNode(ISD::AND, DL, IdxVT, StepVec, DAG.getConstant(1, DL, IdxVT));
   MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
-  SDValue EvenMask =
-      DAG.getSetCC(DL, MaskVT, ZeroOnes, DAG.getConstant(0, DL, IdxVT),
-                   ISD::CondCode::SETEQ);
-  // Have the latter be the not of the former to minimize the live range of
-  // the index vector since that might be large.
-  SDValue OddMask = DAG.getLogicalNOT(DL, EvenMask, MaskVT);
+
+  SDValue EvenSplat = DAG.getConstant(0b01010101, DL, MVT::nxv8i8);
+  EvenSplat = DAG.getBitcast(MVT::nxv64i1, EvenSplat);
+  SDValue EvenMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskVT, EvenSplat,
+                                 DAG.getVectorIdxConstant(0, DL));
+
+  SDValue OddSplat = DAG.getConstant(0b10101010, DL, MVT::nxv8i8);
+  OddSplat = DAG.getBitcast(MVT::nxv64i1, OddSplat);
+  SDValue OddMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskVT, OddSplat,
+                                DAG.getVectorIdxConstant(0, DL));
 
   // vcompress the even and odd elements into two separate vectors
   SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
@@ -12076,6 +12078,65 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op,
   if (!VT.isFixedLengthVector())
     return Result;
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
+}
+
+SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue Mask = Op.getOperand(0);
+  SDValue TrueVal = Op.getOperand(1);
+  SDValue FalseVal = Op.getOperand(2);
+  SDValue VL = Op.getOperand(3);
+
+  // Use default legalization if a vector of EVL type would be legal.
+  EVT EVLVecVT = EVT::getVectorVT(*DAG.getContext(), VL.getValueType(),
+                                  VT.getVectorElementCount());
+  if (isTypeLegal(EVLVecVT))
+    return SDValue();
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    Mask = convertToScalableVector(ContainerVT, Mask, DAG, Subtarget);
+    TrueVal = convertToScalableVector(ContainerVT, TrueVal, DAG, Subtarget);
+    FalseVal = convertToScalableVector(ContainerVT, FalseVal, DAG, Subtarget);
+  }
+
+  // Promote to a vector of i8.
+  MVT PromotedVT = ContainerVT.changeVectorElementType(MVT::i8);
+
+  // Promote TrueVal and FalseVal using VLMax.
+  // FIXME: Is there a better way to do this?
+  SDValue VLMax = DAG.getRegister(RISCV::X0, XLenVT);
+  SDValue SplatOne = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, PromotedVT,
+                                 DAG.getUNDEF(PromotedVT),
+                                 DAG.getConstant(1, DL, XLenVT), VLMax);
+  SDValue SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, PromotedVT,
+                                  DAG.getUNDEF(PromotedVT),
+                                  DAG.getConstant(0, DL, XLenVT), VLMax);
+  TrueVal = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, TrueVal, SplatOne,
+                        SplatZero, DAG.getUNDEF(PromotedVT), VL);
+  // Any element past VL uses FalseVal, so use VLMax
+  FalseVal = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, FalseVal,
+                         SplatOne, SplatZero, DAG.getUNDEF(PromotedVT), VLMax);
+
+  // VP_MERGE the two promoted values.
+  SDValue VPMerge = DAG.getNode(RISCVISD::VMERGE_VL, DL, PromotedVT, Mask,
+                                TrueVal, FalseVal, FalseVal, VL);
+
+  // Convert back to mask.
+  SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
+  SDValue Result = DAG.getNode(
+      RISCVISD::SETCC_VL, DL, ContainerVT,
+      {VPMerge, DAG.getConstant(0, DL, PromotedVT), DAG.getCondCode(ISD::SETNE),
+       DAG.getUNDEF(getMaskTypeFor(ContainerVT)), TrueMask, VLMax});
+
+  if (VT.isFixedLengthVector())
+    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
+  return Result;
 }
 
 SDValue
@@ -15624,17 +15685,15 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
     auto AppendUsersIfNeeded = [&Worklist, &Subtarget,
                                 &Inserted](const NodeExtensionHelper &Op) {
       if (Op.needToPromoteOtherUsers()) {
-        for (SDNode::use_iterator UI = Op.OrigOperand->use_begin(),
-                                  UE = Op.OrigOperand->use_end();
-             UI != UE; ++UI) {
-          SDNode *TheUse = *UI;
-          if (!NodeExtensionHelper::isSupportedRoot(TheUse, Subtarget))
+        for (SDUse &Use : Op.OrigOperand->uses()) {
+          SDNode *TheUser = Use.getUser();
+          if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
             return false;
           // We only support the first 2 operands of FMA.
-          if (UI.getOperandNo() >= 2)
+          if (Use.getOperandNo() >= 2)
             return false;
-          if (Inserted.insert(TheUse).second)
-            Worklist.push_back(TheUse);
+          if (Inserted.insert(TheUser).second)
+            Worklist.push_back(TheUser);
         }
       }
       return true;
@@ -15852,9 +15911,7 @@ static SDValue performMemPairCombine(SDNode *N,
   auto [Base1, Offset1] = ExtractBaseAndOffset(LSNode1->getOperand(OpNum));
 
   SDValue Chain = N->getOperand(0);
-  for (SDNode::use_iterator UI = Chain->use_begin(), UE = Chain->use_end();
-       UI != UE; ++UI) {
-    SDUse &Use = UI.getUse();
+  for (SDUse &Use : Chain->uses()) {
     if (Use.getUser() != N && Use.getResNo() == 0 &&
         Use.getUser()->getOpcode() == N->getOpcode()) {
       LSBaseSDNode *LSNode2 = cast<LSBaseSDNode>(Use.getUser());
@@ -15920,7 +15977,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
 
   // Don't do this for strict-fp Src.
-  if (Src->isStrictFPOpcode() || Src->isTargetStrictFPOpcode())
+  if (Src->isStrictFPOpcode())
     return SDValue();
 
   // Ensure the FP type is legal.
@@ -16025,7 +16082,7 @@ static SDValue performFP_TO_INT_SATCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
 
   // Don't do this for strict-fp Src.
-  if (Src->isStrictFPOpcode() || Src->isTargetStrictFPOpcode())
+  if (Src->isStrictFPOpcode())
     return SDValue();
 
   // Ensure the FP type is also legal.
@@ -16133,7 +16190,9 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
 static SDValue combineVFMADD_VLWithVFNEG_VL(SDNode *N, SelectionDAG &DAG) {
   // Fold FNEG_VL into FMA opcodes.
   // The first operand of strict-fp is chain.
-  unsigned Offset = N->isTargetStrictFPOpcode();
+  bool IsStrict =
+      DAG.getSelectionDAGInfo().isTargetStrictFPOpcode(N->getOpcode());
+  unsigned Offset = IsStrict ? 1 : 0;
   SDValue A = N->getOperand(0 + Offset);
   SDValue B = N->getOperand(1 + Offset);
   SDValue C = N->getOperand(2 + Offset);
@@ -16160,7 +16219,7 @@ static SDValue combineVFMADD_VLWithVFNEG_VL(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   unsigned NewOpcode = negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC);
-  if (N->isTargetStrictFPOpcode())
+  if (IsStrict)
     return DAG.getNode(NewOpcode, SDLoc(N), N->getVTList(),
                        {N->getOperand(0), A, B, C, Mask, VL});
   return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
@@ -16176,7 +16235,7 @@ static SDValue performVFMADD_VLCombine(SDNode *N,
     return V;
 
   // FIXME: Ignore strict opcodes for now.
-  if (N->isTargetStrictFPOpcode())
+  if (DAG.getSelectionDAGInfo().isTargetStrictFPOpcode(N->getOpcode()))
     return SDValue();
 
   return combineOp_VLToVWOp_VL(N, DCI, Subtarget);
@@ -16246,7 +16305,7 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
     // All users should be a shift by constant less than or equal to 32. This
     // ensures we'll do this optimization for each of them to produce an
     // add/sub+sext_inreg they can all share.
-    for (SDNode *U : N0->uses()) {
+    for (SDNode *U : N0->users()) {
       if (U->getOpcode() != ISD::SRA ||
           !isa<ConstantSDNode>(U->getOperand(1)) ||
           U->getConstantOperandVal(1) > 32)
@@ -18310,7 +18369,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   // LD/ST, it can still complete the folding optimization operation performed
   // above.
   auto isUsedByLdSt = [](const SDNode *X, const SDNode *User) {
-    for (SDNode *Use : X->uses()) {
+    for (SDNode *Use : X->users()) {
       // This use is the one we're on right now. Skip it
       if (Use == User || Use->getOpcode() == ISD::SELECT)
         continue;
@@ -20428,7 +20487,7 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   if (!N->hasNUsesOfValue(1, 0))
     return false;
 
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
 
   if (Copy->getOpcode() == ISD::BITCAST) {
     return isUsedByReturnOnly(Copy, Chain);
@@ -20447,7 +20506,7 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
 
   // The copy must be used by a RISCVISD::RET_GLUE, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != RISCVISD::RET_GLUE)
       return false;
     HasRet = true;
@@ -22289,6 +22348,35 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
 unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
                                                  ISD::CondCode Cond) const {
   return isCtpopFast(VT) ? 0 : 1;
+}
+
+bool RISCVTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  if (Subtarget.hasStdExtZalasr()) {
+    if (Subtarget.hasStdExtZtso()) {
+      // Zalasr + TSO means that atomic_load_acquire and atomic_store_release
+      // should be lowered to plain load/store. The easiest way to do this is
+      // to say we should insert fences for them, and the fence insertion code
+      // will just not insert any fences
+      auto *LI = dyn_cast<LoadInst>(I);
+      auto *SI = dyn_cast<StoreInst>(I);
+      if ((LI &&
+           (LI->getOrdering() == AtomicOrdering::SequentiallyConsistent)) ||
+          (SI &&
+           (SI->getOrdering() == AtomicOrdering::SequentiallyConsistent))) {
+        // Here, this is a load or store which is seq_cst, and needs a .aq or
+        // .rl therefore we shouldn't try to insert fences
+        return false;
+      }
+      // Here, we are a TSO inst that isn't a seq_cst load/store
+      return isa<LoadInst>(I) || isa<StoreInst>(I);
+    }
+    return false;
+  }
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
+  // than this hook due to limitations in the interface here.
+  return isa<LoadInst>(I) || isa<StoreInst>(I);
 }
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {

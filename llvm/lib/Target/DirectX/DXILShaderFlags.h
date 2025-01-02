@@ -26,6 +26,7 @@
 namespace llvm {
 class Module;
 class GlobalVariable;
+class DXILResourceTypeMap;
 
 namespace dxil {
 
@@ -84,7 +85,7 @@ struct ComputedShaderFlags {
 };
 
 struct ModuleShaderFlags {
-  void initialize(const Module &);
+  void initialize(const Module &, DXILResourceTypeMap &DRTM);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
@@ -135,9 +136,7 @@ public:
 
   bool runOnModule(Module &M) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 } // namespace dxil

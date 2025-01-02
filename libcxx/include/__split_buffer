@@ -14,7 +14,6 @@
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
 #include <__config>
-#include <__cstddef/size_t.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -24,7 +23,6 @@
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
-#include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
@@ -435,7 +433,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_fron
       __begin_            = std::move_backward(__begin_, __end_, __end_ + __d);
       __end_ += __d;
     } else {
-      size_type __c = std::max<size_type>(2 * static_cast<size_t>(__cap_ - __first_), 1);
+      size_type __c = std::max<size_type>(2 * static_cast<size_type>(__cap_ - __first_), 1);
       __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, __alloc_);
       __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
       std::swap(__first_, __t.__first_);
@@ -458,7 +456,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_back
       __end_              = std::move(__begin_, __end_, __begin_ - __d);
       __begin_ -= __d;
     } else {
-      size_type __c = std::max<size_type>(2 * static_cast<size_t>(__cap_ - __first_), 1);
+      size_type __c = std::max<size_type>(2 * static_cast<size_type>(__cap_ - __first_), 1);
       __split_buffer<value_type, __alloc_rr&> __t(__c, __c / 4, __alloc_);
       __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
       std::swap(__first_, __t.__first_);

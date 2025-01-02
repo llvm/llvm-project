@@ -1149,7 +1149,7 @@ bool AArch64ExpandPseudo::expandMultiVecPseudo(
 bool AArch64ExpandPseudo::expandFormTuplePseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
-  assert(Size == 2 || Size == 4 && "Invalid Tuple Size");
+  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
   MachineInstr &MI = *MBBI;
   Register ReturnTuple = MI.getOperand(0).getReg();
 

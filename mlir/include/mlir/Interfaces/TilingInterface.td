@@ -427,6 +427,28 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
         /*defaultImplementation=*/[{
           return failure();
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to return the position of the partial result tile computed by
+          the tiled operation. This is same as
+          TilingInterface:::getResultTilePosition, but determines the result
+          tile position for partial reduction.
+        }],
+        /*retType=*/"::llvm::LogicalResult",
+        /*methodName=*/"getPartialResultTilePosition",
+        /*args=*/(ins
+            "::mlir::OpBuilder &":$b,
+            "unsigned":$resultNumber,
+            "::mlir::ArrayRef<::mlir::OpFoldResult> ":$offsets,
+            "::mlir::ArrayRef<::mlir::OpFoldResult> ":$sizes,
+            "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultOffsets,
+            "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultSizes,
+            "::mlir::ArrayRef<int>":$reductionDims),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
       >
   ];
 }

@@ -1399,7 +1399,8 @@ private:
   void visitCallBase(CallBase &CB) {
     // If the call operand is NoCapture ReadOnly, then we mark it as
     // EscapedReadOnly.
-    if (CB.doesNotCapture(U->getOperandNo()) &&
+    if (CB.isDataOperand(U) &&
+        CB.doesNotCapture(U->getOperandNo()) &&
         CB.onlyReadsMemory(U->getOperandNo())) {
       PI.setEscapedReadOnly(&CB);
       return;
@@ -5549,6 +5550,8 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
 
     // Step on to the next partition.
     PartitionBegin = PartitionEnd;
+    if (PartitionBegin == AS.end())
+      break;
     BeginOffset = PartitionBegin->beginOffset();
     EndOffset = PartitionBegin->endOffset();
   }

@@ -117,7 +117,7 @@ namespace null_ptr {
 
 namespace ref_counted_lookalike {
   struct Decoy {
-    RefCountable* get() { return nullptr; }
+    RefCountable* get();
   };
 
   void foo() {
@@ -375,4 +375,22 @@ namespace call_with_explicit_temporary_obj {
 }
 
 namespace call_with_explicit_construct {
+}
+
+namespace call_with_adopt_ref {
+  class Obj {
+  public:
+    void ref() const;
+    void deref() const;
+    void method();
+  };
+
+  // This is needed due to rdar://141692212.
+  struct dummy {
+    RefPtr<Obj> any;
+  };
+
+  void foo() {
+    adoptRef(new Obj)->method();
+  }
 }

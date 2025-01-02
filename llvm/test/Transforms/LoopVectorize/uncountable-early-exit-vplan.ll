@@ -28,10 +28,8 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
@@ -49,10 +47,11 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: Successor(s): ir-bb<e2>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<e2>:
@@ -112,10 +111,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
@@ -133,10 +130,11 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
@@ -189,10 +187,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:     EMIT vp<[[NOT1:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[NOT2:%.+]]> = not vp<[[NOT1]]>
-; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of vp<[[NOT2]]>
+; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
@@ -210,10 +206,11 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:

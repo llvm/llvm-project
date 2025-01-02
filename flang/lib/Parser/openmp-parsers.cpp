@@ -567,6 +567,16 @@ TYPE_PARSER(construct<OmpBindClause>(
     "TEAMS" >> pure(OmpBindClause::Binding::Teams) ||
     "THREAD" >> pure(OmpBindClause::Binding::Thread)))
 
+TYPE_PARSER(construct<OmpAtClause>(
+    "EXECUTION" >> pure(OmpAtClause::ActionTime::Execution) ||
+    "COMPILATION" >> pure(OmpAtClause::ActionTime::Compilation)))
+
+TYPE_PARSER(construct<OmpSeverityClause>(
+    "FATAL" >> pure(OmpSeverityClause::Severity::Fatal) ||
+    "WARNING" >> pure(OmpSeverityClause::Severity::Warning)))
+
+TYPE_PARSER(construct<OmpMessageClause>(expr))
+
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
@@ -578,6 +588,8 @@ TYPE_PARSER(
                       parenthesized(Parser<OmpAllocateClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
                        parenthesized(scalarIntExpr))) ||
+    "AT" >> construct<OmpClause>(construct<OmpClause::At>(
+                parenthesized(Parser<OmpAtClause>{}))) ||
     "ATOMIC_DEFAULT_MEM_ORDER" >>
         construct<OmpClause>(construct<OmpClause::AtomicDefaultMemOrder>(
             parenthesized(Parser<OmpAtomicDefaultMemOrderClause>{}))) ||
@@ -645,6 +657,8 @@ TYPE_PARSER(
     "MAP" >> construct<OmpClause>(construct<OmpClause::Map>(
                  parenthesized(Parser<OmpMapClause>{}))) ||
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
+    "MESSAGE" >> construct<OmpClause>(construct<OmpClause::Message>(
+                     parenthesized(Parser<OmpMessageClause>{}))) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NONTEMPORAL" >> construct<OmpClause>(construct<OmpClause::Nontemporal>(
                          parenthesized(nonemptyList(name)))) ||
@@ -657,6 +671,7 @@ TYPE_PARSER(
                        parenthesized(scalarIntExpr))) ||
     "NUM_THREADS" >> construct<OmpClause>(construct<OmpClause::NumThreads>(
                          parenthesized(scalarIntExpr))) ||
+    "OMPX_BARE" >> construct<OmpClause>(construct<OmpClause::OmpxBare>()) ||
     "ORDER" >> construct<OmpClause>(construct<OmpClause::Order>(
                    parenthesized(Parser<OmpOrderClause>{}))) ||
     "ORDERED" >> construct<OmpClause>(construct<OmpClause::Ordered>(
@@ -687,6 +702,8 @@ TYPE_PARSER(
     "SCHEDULE" >> construct<OmpClause>(construct<OmpClause::Schedule>(
                       parenthesized(Parser<OmpScheduleClause>{}))) ||
     "SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>()) ||
+    "SEVERITY" >> construct<OmpClause>(construct<OmpClause::Severity>(
+                      parenthesized(Parser<OmpSeverityClause>{}))) ||
     "SHARED" >> construct<OmpClause>(construct<OmpClause::Shared>(
                     parenthesized(Parser<OmpObjectList>{}))) ||
     "SIMD"_id >> construct<OmpClause>(construct<OmpClause::Simd>()) ||
@@ -1010,6 +1027,9 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
+TYPE_PARSER(sourced(construct<OpenMPErrorConstruct>(
+    verbatim("ERROR"_tok), Parser<OmpClauseList>{})))
+
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
     sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
@@ -1107,6 +1127,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
                 construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPErrorConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),

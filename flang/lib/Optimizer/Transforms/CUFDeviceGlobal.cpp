@@ -28,22 +28,19 @@ namespace fir {
 
 namespace {
 
-static constexpr llvm::StringRef builtinPrefix = "_QM__fortran_builtins";
-
 static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
-                            llvm::DenseSet<fir::GlobalOp> &candidates) {
+                            llvm::DenseSet<fir::GlobalOp> &candidates,
+                            bool recurseInGlobal) {
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
     if (globalOp.getConstant()) {
-      // Limit recursion to builtin global for now.
-      if (globalOp.getSymName().starts_with(builtinPrefix)) {
+      if (recurseInGlobal)
         globalOp.walk([&](fir::AddrOfOp op) {
-          processAddrOfOp(op, symbolTable, candidates);
+          processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
         });
-      }
       candidates.insert(globalOp);
     }
   }
@@ -52,18 +49,18 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
 static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
                            llvm::DenseSet<fir::GlobalOp> &candidates) {
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(
-          fir::unwrapRefType(emboxOp.getMemref().getType())))
-    // Only look at builtin record type.
-    if (recTy.getName().starts_with(builtinPrefix))
-      if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
-              fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
-        if (!candidates.contains(globalOp)) {
-          globalOp.walk([&](fir::AddrOfOp op) {
-            processAddrOfOp(op, symbolTable, candidates);
-          });
-          candidates.insert(globalOp);
-        }
+          fir::unwrapRefType(emboxOp.getMemref().getType()))) {
+    if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
+            fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
+      if (!candidates.contains(globalOp)) {
+        globalOp.walk([&](fir::AddrOfOp op) {
+          processAddrOfOp(op, symbolTable, candidates,
+                          /*recurseInGlobal=*/true);
+        });
+        candidates.insert(globalOp);
       }
+    }
+  }
 }
 
 static void
@@ -74,7 +71,7 @@ prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
   if (cudaProcAttr && cudaProcAttr.getValue() != cuf::ProcAttribute::Host) {
     funcOp.walk([&](fir::AddrOfOp op) {
-      processAddrOfOp(op, symbolTable, candidates);
+      processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false);
     });
     funcOp.walk(
         [&](fir::EmboxOp op) { processEmboxOp(op, symbolTable, candidates); });
@@ -97,7 +94,8 @@ public:
     });
     mod.walk([&](cuf::KernelOp kernelOp) {
       kernelOp.walk([&](fir::AddrOfOp addrOfOp) {
-        processAddrOfOp(addrOfOp, symTable, candidates);
+        processAddrOfOp(addrOfOp, symTable, candidates,
+                        /*recurseInGlobal=*/false);
       });
     });
 

@@ -761,8 +761,8 @@ struct PadOpInterface
     RankedTensorType srcType = padOp.getSourceType();
 
     auto toValue = [&](OpFoldResult ofr) {
-      if (ofr.is<Value>())
-        return ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr))
+        return value;
       return rewriter
           .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
           .getResult();

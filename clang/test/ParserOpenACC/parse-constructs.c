@@ -54,12 +54,15 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc kernels clause list
   for(;;){}
+    // expected-error@+2{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc data clause list
   for(;;){}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc enter data clause list
   for(;;){}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc exit data clause list
   for(;;){}
@@ -75,6 +78,7 @@ void func() {
   // expected-error@+1{{expected identifier}}
 #pragma acc exit }
   for(;;){}
+  // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc host_data clause list
   for(;;){}
@@ -137,12 +141,10 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'declare' not yet implemented, pragma ignored}}
 #pragma acc declare clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc init clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'shutdown' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc shutdown clause list
   for(;;){}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}

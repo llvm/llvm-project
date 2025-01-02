@@ -55,7 +55,9 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
   )
 endif()
 
-if(LLVM_LIBC_FULL_BUILD)
+# TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
+# defined by GPU start.cpp files so for now we exclude this test on GPU.
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     freelist_heap_test
     SUITE

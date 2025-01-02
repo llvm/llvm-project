@@ -95,10 +95,7 @@ public:
 
   bool hasFeature(StringRef Feature) const override { return Feature == "tce"; }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override {
-    return {nullptr, {}};
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
   std::string_view getClobbers() const override { return ""; }
 
