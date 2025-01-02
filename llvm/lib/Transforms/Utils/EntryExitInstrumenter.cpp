@@ -104,8 +104,8 @@ static bool runOnFunction(Function &F, bool PostInlining) {
     return false;
 
   // available_externally functions may not have definitions external to the
-  // module (e.g. gnu::always_inline). Instrumenting them would lead to linker
-  // errors. Skip them like GCC.
+  // module (e.g. gnu::always_inline). Instrumenting them might lead to linker
+  // errors if they are optimized out. Skip them like GCC.
   if (F.hasAvailableExternallyLinkage())
     return false;
 
