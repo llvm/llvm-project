@@ -2795,7 +2795,7 @@ func.func @fold_cast_multiple_results(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2x
 // CHECK-SAME:      %[[PAD:.*]]: i32) -> tensor<1x1x8x1xi32> {
 // CHECK:           %[[PACK:.*]] = tensor.pack %[[SRC]] padding_value(%[[PAD]] : i32)
 // CHECK-SAME:        inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]]
-// CHECK-SAME:        some_attr
+// CHECK-SAME:        test_attr
 // CHECK-SAME:        : tensor<7x?xi32> -> tensor<1x1x8x1xi32>
 // CHECK:           return %[[PACK]] : tensor<1x1x8x1xi32>
 func.func @fold_cast_pack_dynamic_tile_size(
@@ -2808,7 +2808,7 @@ func.func @fold_cast_pack_dynamic_tile_size(
     %pack = tensor.pack %src padding_value(%pad : i32)
       inner_dims_pos = [0, 1]
       inner_tiles = [%c8, 1]
-      into %cast {some_attr} : tensor<7x?xi32> -> tensor<1x1x?x1xi32>
+      into %cast {test_attr} : tensor<7x?xi32> -> tensor<1x1x?x1xi32>
     %res = tensor.cast %pack : tensor<1x1x?x1xi32> to tensor<1x1x8x1xi32>
     return %res : tensor<1x1x8x1xi32>
 }
@@ -2818,7 +2818,7 @@ func.func @fold_cast_pack_dynamic_tile_size(
 // CHECK-LABEL:   func.func @fold_cast_unpack_dynamic_tile_size(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<1x1x8x1xi32>,
 // CHECK-SAME:      %[[DEST:.*]]: tensor<7x?xi32>) -> tensor<7x?xi32> {
-// CHECK:           %[[RES:.*]] = tensor.unpack %[[SRC]] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] {some_attr} : tensor<1x1x8x1xi32> -> tensor<7x?xi32>
+// CHECK:           %[[RES:.*]] = tensor.unpack %[[SRC]] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] {test_attr} : tensor<1x1x8x1xi32> -> tensor<7x?xi32>
 // CHECK:           return %[[RES]] : tensor<7x?xi32>
 func.func @fold_cast_unpack_dynamic_tile_size(
   %src: tensor<1x1x8x1xi32>,
@@ -2829,7 +2829,7 @@ func.func @fold_cast_unpack_dynamic_tile_size(
     %unpack = tensor.unpack %cast
       inner_dims_pos = [0, 1]
       inner_tiles = [%c8, 1]
-      into %res {some_attr} : tensor<1x1x?x1xi32> -> tensor<7x?xi32>
+      into %res {test_attr} : tensor<1x1x?x1xi32> -> tensor<7x?xi32>
     return %unpack : tensor<7x?xi32>
 }
 

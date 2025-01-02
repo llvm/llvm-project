@@ -4795,6 +4795,44 @@ static SmallVector<Value> getNewOperands(DestinationStyleOpInterface op,
   return newOperands;
 }
 
+// Given the (potentially) updated packed type, `newPackedTy`, generates an
+// updated mixed-tile-sizes attribute. A tile size is updated only
+// when:
+//  * a dim from newPackedTy is static, and
+//  * the corresponding size from mixedTiles is still dynamic.
+// Otherwise, the original tile size is preserved.
+// Note - packed-type-dim and mixed-tile-size should always match!
+static SmallVector<OpFoldResult>
+getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
+                     SmallVector<OpFoldResult> mixedTiles) {
+  SmallVector<OpFoldResult> newMixedTileSizes;
+  for (auto it : llvm::zip(cast<ShapedType>(newPackedTy)
+                               .getShape()
+                               .take_back(mixedTiles.size()),
+                           mixedTiles)) {
+    int64_t shape = std::get<0>(it);
+    if (shape == ShapedType::kDynamic) {
+      newMixedTileSizes.push_back(std::get<1>(it));
+      continue;
+    }
+
+    // If the current result dim is static, update the dynamic mixed-size
+    // (provided the original value is dynamic).
+    OpFoldResult tile = std::get<1>(it);
+    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(tile)) {
+      // Already a constant
+      newMixedTileSizes.push_back(tile);
+    } else {
+      assert(getConstantIntValue(tile).value() == shape &&
+             "tile size and dim size don't match!");
+      newMixedTileSizes.push_back(
+          (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+    }
+  }
+
+  return newMixedTileSizes;
+}
+
 /// Folds a tensor.cast op into a consuming tensor::PackOp op if the
 /// `tensor.cast` has source that is more static than the consuming op.
 ///
@@ -4821,28 +4859,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
 
     // Get the updated mixed-tile-sizes attribute.
-    SmallVector<OpFoldResult> newMixedTileSizes;
-    for (auto it : llvm::zip(cast<ShapedType>(newResultTypes[0])
-                                 .getShape()
-                                 .take_back(op.getMixedTiles().size()),
-                             op.getMixedTiles())) {
-      int64_t shape = std::get<0>(it);
-      if (shape == ShapedType::kDynamic) {
-        newMixedTileSizes.push_back(std::get<1>(it));
-        continue;
-      }
-
-      if (Attribute attr =
-              llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-        // Already a constant
-        newMixedTileSizes.push_back(std::get<1>(it));
-      } else {
-        assert(getConstantIntValue(std::get<1>(it)).value() == shape &&
-               "tile size and dim size don't match!");
-        newMixedTileSizes.push_back(
-            (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
-      }
-    }
+    SmallVector<OpFoldResult> newMixedTileSizes =
+        getNewMixedTileSizes(rewriter, newResultTypes[0], op.getMixedTiles());
 
     // Clone op.
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at
@@ -4873,7 +4891,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 /// Example:
 /// ```mlir
 ///   %1 = tensor.cast %0 : tensor<1x1x8x1xi32> to tensor<1x1x?x1xi32>
-///   %2 = tensor.unpack %1 ... : tensor<1x1x8x1xi32> -> tensor<7x?xi32>
+///   %2 = tensor.unpack %1 ... : tensor<1x1x?x1xi32> -> tensor<7x?xi32>
 /// ```
 ///
 /// folds into:
@@ -4894,32 +4912,8 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     Value sourceTensor = newOperands[0];
 
     // Get the updated mixed-tile-sizes attribute.
-    SmallVector<OpFoldResult> newMixedTileSizes;
-    for (auto it : llvm::zip(cast<ShapedType>(sourceTensor.getType())
-                                 .getShape()
-                                 .take_back(op.getMixedTiles().size()),
-                             op.getMixedTiles())) {
-      int64_t shape = std::get<0>(it);
-      // If the current source shape is dynamic, just preserve this mixed
-      // size.
-      if (shape == ShapedType::kDynamic) {
-        newMixedTileSizes.push_back(std::get<1>(it));
-        continue;
-      }
-
-      // If the current source is static, update the dynamic mixed-size
-      // (provided the original value is dynamic).
-      if (Attribute attr =
-              llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-        // Already a constant
-        newMixedTileSizes.push_back(std::get<1>(it));
-      } else {
-        assert(getConstantIntValue(std::get<1>(it)).value() == shape &&
-               "tile size and dim size don't match!");
-        newMixedTileSizes.push_back(
-            (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
-      }
-    }
+    SmallVector<OpFoldResult> newMixedTileSizes = getNewMixedTileSizes(
+        rewriter, sourceTensor.getType(), op.getMixedTiles());
 
     // Clone op.
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at
