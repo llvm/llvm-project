@@ -908,6 +908,10 @@ namespace llvm {
     // Load x87 FPU environment from memory.
     FLDENVm,
 
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT_CUSTOM,
+    FP_TO_UINT_SAT_CUSTOM,
+
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
     /// to the X86::FIST*m instructions and the rounding mode change stuff. It
