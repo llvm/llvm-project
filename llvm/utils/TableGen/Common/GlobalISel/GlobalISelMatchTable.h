@@ -1809,10 +1809,6 @@ public:
   OperandMatcher &addPhysRegInput(const Record *Reg, unsigned OpIdx,
                                   unsigned TempOpIdx);
 
-  ArrayRef<std::pair<const Record *, unsigned>> getPhysRegInputs() const {
-    return PhysRegInputs;
-  }
-
   StringRef getSymbolicName() const { return SymbolicName; }
 
   unsigned getNumOperandMatchers() const { return Operands.size(); }
