@@ -5103,6 +5103,15 @@ struct FormatStyle {
   /// \version 3.7
   UseTabStyle UseTab;
 
+  /// A vector of non-keyword identifiers that should be interpreted as variable
+  /// template names.
+  ///
+  /// A ``)`` after a variable template instantiation is **not** annotated as
+  /// the closing parenthesis of C-style cast operator.
+  ///
+  /// \version 20
+  std::vector<std::string> VariableTemplates;
+
   /// For Verilog, put each port on its own line in module instantiations.
   /// \code
   ///    true:
@@ -5314,7 +5323,7 @@ struct FormatStyle {
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
            TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
