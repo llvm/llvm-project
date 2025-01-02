@@ -144,6 +144,9 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
   EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
+#define CHECK_PARSE_LIST(FIELD)                                                \
+  CHECK_PARSE(#FIELD ": [foo]", FIELD, std::vector<std::string>{"foo"})
+
 #define CHECK_PARSE_NESTED_VALUE(TEXT, STRUCT, FIELD, VALUE)                   \
   EXPECT_NE(VALUE, Style.STRUCT.FIELD) << "Initial value already the same!";   \
   EXPECT_EQ(0, parseConfiguration(#STRUCT ":\n  " TEXT, &Style).value());      \
@@ -899,11 +902,15 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("StatementMacros: [QUNUSED, QT_REQUIRE_VERSION]", StatementMacros,
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
-  Style.NamespaceMacros.clear();
-  CHECK_PARSE("NamespaceMacros: [TESTSUITE]", NamespaceMacros,
-              std::vector<std::string>{"TESTSUITE"});
-  CHECK_PARSE("NamespaceMacros: [TESTSUITE, SUITE]", NamespaceMacros,
-              std::vector<std::string>({"TESTSUITE", "SUITE"}));
+  CHECK_PARSE_LIST(JavaImportGroups);
+  CHECK_PARSE_LIST(Macros);
+  CHECK_PARSE_LIST(NamespaceMacros);
+  CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
+  CHECK_PARSE_LIST(TableGenBreakingDAGArgOperators);
+  CHECK_PARSE_LIST(TemplateNames);
+  CHECK_PARSE_LIST(TypeNames);
+  CHECK_PARSE_LIST(TypenameMacros);
+  CHECK_PARSE_LIST(VariableTemplates);
 
   Style.WhitespaceSensitiveMacros.clear();
   CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE]",
