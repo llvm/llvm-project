@@ -493,7 +493,7 @@ protected:
   /// the renderers.
   StringMap<OperandMatcher *> DefinedOperands;
 
-  using PhysRegOperandsTy = MapVector<const Record *, OperandMatcher *>;
+  using PhysRegOperandsTy = SmallMapVector<const Record *, OperandMatcher *, 1>;
 
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.
