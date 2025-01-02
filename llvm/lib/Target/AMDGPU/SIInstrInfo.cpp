@@ -2798,8 +2798,7 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   } else if (!Src0.isReg() && Src1.isReg()) {
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
-  } else if (isInlineConstant(Src1)) {
-    // If Src1 is inline constant and Src0 is not, then isOperandLegal rejects
+  } else if (isInlineConstant(Src0) && isInlineConstant(Src1)) {
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapInlineConstOperands(MI, Src0, Src1);
   } else {
