@@ -6798,6 +6798,15 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _VariableTemplates:
+
+**VariableTemplates** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <VariableTemplates>`
+  A vector of non-keyword identifiers that should be interpreted as variable
+  template names.
+
+  A ``)`` after a variable template instantiation is **not** annotated as
+  the closing parenthesis of C-style cast operator.
+
 .. _VerilogBreakBetweenInstancePorts:
 
 **VerilogBreakBetweenInstancePorts** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <VerilogBreakBetweenInstancePorts>`

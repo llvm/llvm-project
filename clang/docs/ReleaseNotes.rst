@@ -1159,6 +1159,8 @@ clang-format
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 - Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
 - Adds ``AllowShortNamespacesOnASingleLine`` option.
+- Adds ``VariableTemplates`` option.
+- Adds support for bash globstar in ``.clang-format-ignore``.
 
 libclang
 --------
