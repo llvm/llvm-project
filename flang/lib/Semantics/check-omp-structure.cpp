@@ -1748,6 +1748,14 @@ void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_dispatch);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDispatchConstruct &x) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Leave(const parser::OmpErrorDirective &x) {
   dirContext_.pop_back();
 }
