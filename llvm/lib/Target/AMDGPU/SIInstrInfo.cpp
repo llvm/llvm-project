@@ -2752,8 +2752,8 @@ static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
 static MachineInstr *swapInlineConstOperands(MachineInstr &MI,
                                              MachineOperand &NonRegOp1,
                                              MachineOperand &NonRegOp2) {
-  auto TargetFlags = NonRegOp1.getTargetFlags();
-  auto NonRegVal = NonRegOp1.getImm();
+  unsigned TargetFlags = NonRegOp1.getTargetFlags();
+  int64_t NonRegVal = NonRegOp1.getImm();
 
   NonRegOp1.setImm(NonRegOp2.getImm());
   NonRegOp2.setImm(NonRegVal);
@@ -2798,7 +2798,8 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   } else if (!Src0.isReg() && Src1.isReg()) {
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
-  } else if (isInlineConstant(Src0) && isInlineConstant(Src1)) {
+  } else if (isInlineConstant(Src1)) {
+    // If Src1 is inline constant and Src0 is not, then isOperandLegal rejects
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapInlineConstOperands(MI, Src0, Src1);
   } else {

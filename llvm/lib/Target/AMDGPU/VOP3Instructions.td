@@ -335,8 +335,9 @@ let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
 let FPDPRounding = 1 in {
   let Predicates = [Has16BitInsts, isGFX8Only] in {
     defm V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
-    let isCommutable = 1 in
-    defm V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fma>;
+    let isCommutable = 1 in {
+      defm V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fma>;
+    } // End isCommutable = 1
   } // End Predicates = [Has16BitInsts, isGFX8Only]
 
   let SubtargetPredicate = isGFX9Plus in {
@@ -1257,8 +1258,9 @@ let SubtargetPredicate = isGFX10Plus in {
     def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
     def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
   }
-  let isCommutable = 1 in
-  defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
+  let isCommutable = 1 in {
+    defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
+  } // End isCommutable = 1
   defm V_SUB_NC_U16 : VOP3Inst_t16 <"v_sub_nc_u16", VOP_I16_I16_I16, sub>;
 
 } // End SubtargetPredicate = isGFX10Plus
