@@ -32,7 +32,7 @@ int TemplateFuncParameters(T1 val1, T2 val2) {
 
 int AllComparisons() {
     unsigned int uVar = 42;
-    unsigned short uArray[7] = {0, 1, 2, 3, 9, 7, 9};
+    unsigned int uArray[7] = {0, 1, 2, 3, 9, 7, 9};
 
     int sVar = -42;
     short sArray[7] = {-1, -2, -8, -94, -5, -4, -6};
@@ -113,10 +113,30 @@ int AllComparisons() {
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
 // CHECK-FIXES: if (std::cmp_greater(uArray[6] , VALUE))
 
-
     FuncParameters(uVar);
     TemplateFuncParameter(sVar);
     TemplateFuncParameters(uVar, sVar);
 
     return 0;
+}
+
+bool foo1(int x, unsigned char y) {
+    return x == y;
+// CHECK-MESSAGES-NOT: warning:
+}
+
+bool foo2(int x, unsigned short y) {
+    return x == y;
+// CHECK-MESSAGES-NOT: warning:
+}
+
+bool bar1(unsigned int x, char y) {
+    return x == y;
+// CHECK-MESSAGES-NOT: warning:
+}
+
+bool bar2(unsigned int x, short y) {
+    return x == y;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: std::cmp_equal(x , y);
 }

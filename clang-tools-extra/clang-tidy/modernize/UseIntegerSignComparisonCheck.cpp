@@ -89,7 +89,8 @@ void UseIntegerSignComparisonCheck::storeOptions(
 
 void UseIntegerSignComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto SignedIntCastExpr = intCastExpression(true, "sIntCastExpression");
-  const auto UnSignedIntCastExpr = intCastExpression(false);
+  const auto UnSignedIntCastExpr =
+      intCastExpression(false, "uIntCastExpression");
 
   // Flag all operators "==", "<=", ">=", "<", ">", "!="
   // that are used between signed/unsigned
@@ -111,7 +112,10 @@ void UseIntegerSignComparisonCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *SignedCastExpression =
       Result.Nodes.getNodeAs<ImplicitCastExpr>("sIntCastExpression");
+  const auto *UnSignedCastExpression =
+      Result.Nodes.getNodeAs<ImplicitCastExpr>("uIntCastExpression");
   assert(SignedCastExpression);
+  assert(UnSignedCastExpression);
 
   // Ignore the match if we know that the signed int value is not negative.
   Expr::EvalResult EVResult;
@@ -134,6 +138,13 @@ void UseIntegerSignComparisonCheck::check(
   const Expr *RHS = BinaryOp->getRHS()->IgnoreImpCasts();
   if (LHS == nullptr || RHS == nullptr)
     return;
+
+  if (Result.Context->getTypeSize(
+          SignedCastExpression->getSubExpr()->getType()) >
+      Result.Context->getTypeSize(
+          UnSignedCastExpression->getSubExpr()->getType()))
+    return;
+
   const Expr *SubExprLHS = nullptr;
   const Expr *SubExprRHS = nullptr;
   SourceRange R1 = SourceRange(LHS->getBeginLoc());
@@ -151,6 +162,7 @@ void UseIntegerSignComparisonCheck::check(
     SubExprRHS = RHSCast->getSubExpr();
     R2.setEnd(SubExprRHS->getBeginLoc().getLocWithOffset(-1));
   }
+
   DiagnosticBuilder Diag =
       diag(BinaryOp->getBeginLoc(),
            "comparison between 'signed' and 'unsigned' integers");
