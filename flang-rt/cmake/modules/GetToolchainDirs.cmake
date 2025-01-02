@@ -49,6 +49,14 @@ function (get_toolchain_library_subdir outvar)
 endfunction ()
 
 
+# Return the subdir of PREFIX where the system holds target-system specific libraries.
+# E.g. lib/x86_64-linux-gnu in /usr
+function (get_system_library_subdir outvar)
+  get_lib_arch_dirname(archdirname)
+  set(${outvar} "${CMAKE_INSTALL_LIBDIR}/${archdirname}" PARENT_SCOPE)
+endfunction ()
+
+
 # Corresponds to Clang's ToolChain::getOSLibName(). Adapted from Compiler-RT.
 function (get_toolchain_os_dirname outvar)
   if (ANDROID)
@@ -125,3 +133,20 @@ function (get_toolchain_arch_dirname outvar)
   endif()
   set(${outvar} "${target}" PARENT_SCOPE)
 endfunction()
+
+
+# Compute the arch-specific subdir of lib.
+function (get_lib_arch_dirname outvar)
+  get_toolchain_arch_dirname(normalize_triple)
+  string(REPLACE "-" ";" triple_list "${normalize_triple}")
+
+  # Vendor is optional. Remove if "unknown", as done by e.g. Debian.
+  #  x86_64-unkown-linux-gnu ->  x86_64-linux-gnu
+  list(GET triple_list 1 vendor)
+  if (vendor STREQUAL "unknown")
+     list(REMOVE_AT triple_list 1)
+  endif ()
+
+  list(JOIN triple_list "-" result)
+  set(${outvar} "${result}" PARENT_SCOPE)
+endfunction ()

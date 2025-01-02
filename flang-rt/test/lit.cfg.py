@@ -87,14 +87,12 @@ llvm_config.add_tool_substitutions(tools)
 # Let tests find LLVM's standard tools (FileCheck, split-file, not, ...)
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
-# Library path of libflang_rt.a
+# Library path of libflang_rt.a/so
 config.substitutions.append(("%libdir", config.flang_rt_build_lib_dir))
 
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler.
-libruntime = os.path.join(config.flang_rt_build_lib_dir, "libflang_rt.a")
 include = os.path.join(config.flang_source_dir, "include")
-config.substitutions.append(("%libruntime", libruntime))
 config.substitutions.append(("%include", include))
 
 # Additional library depedendencies the that flang driver does not add itself.
