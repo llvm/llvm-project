@@ -216,8 +216,8 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 
 /// Process a simple operation `op` using the liveness analysis `la`.
 /// If the operation has no memory effects and none of its results are live:
-///   1. Adding the operation to a list for future removal, and
-///   2. Marking all its results as non-live values
+///   1. Add the operation to a list for future removal, and
+///   2. Mark all its results as non-live values
 ///
 /// The operation `op` is assumed to be simple.
 /// A simple operation is one that is NOT:
