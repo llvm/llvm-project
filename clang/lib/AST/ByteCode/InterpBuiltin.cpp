@@ -1863,6 +1863,10 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Can't read from dummy pointers.
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
   QualType DestElemType;
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
@@ -1925,9 +1929,6 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     }
   }
 
-  // As a last resort, reject dummy pointers.
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
-    return false;
   assert(Size.getZExtValue() % DestElemSize == 0);
   if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size.getZExtValue()).toBits()))
     return false;
