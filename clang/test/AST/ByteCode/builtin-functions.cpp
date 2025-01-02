@@ -1253,6 +1253,16 @@ namespace BuiltinMemcpy {
   static_assert(test_memmove(2, 0, 12) == 4234); // both-error {{constant}} \
                                                  // both-note {{in call}}
 #endif
+
+  struct Trivial { char k; short s; constexpr bool ok() { return k == 3 && s == 4; } };
+  constexpr bool test_trivial() {
+    Trivial arr[3] = {{1, 2}, {3, 4}, {5, 6}};
+    __builtin_memcpy(arr, arr+1, sizeof(Trivial));
+    __builtin_memmove(arr+1, arr, 2 * sizeof(Trivial));
+
+    return arr[0].ok() && arr[1].ok() && arr[2].ok();
+  }
+  static_assert(test_trivial());
 }
 
 namespace Memcmp {
