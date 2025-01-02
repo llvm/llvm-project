@@ -246,6 +246,16 @@ void PTMFTester::convert() [[clang::nonblocking]]
 	(this->*mConvertFunc)();
 }
 
+// Allow implicit conversion from array to pointer.
+void nb14(unsigned idx) [[clang::nonblocking]]
+{
+	using FP = void (*)() [[clang::nonblocking]];
+	auto nb = +[]() [[clang::nonblocking]] {};
+
+	FP array[4] = { nb, nb, nb, nb };
+	FP f = array[idx]; // This should not generate a warning.
+}
+
 // Block variables
 void nb17(void (^blk)() [[clang::nonblocking]]) [[clang::nonblocking]] {
 	blk();
