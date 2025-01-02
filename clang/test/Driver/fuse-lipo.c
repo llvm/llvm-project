@@ -9,3 +9,7 @@
 
 // RUN: %clang %s -### --target=arm64-apple-darwin -Wno-unused-command-line-argument -fuse-lipo=llvm-lipo 2>&1 | FileCheck -check-prefix=TEST4 %s
 // TEST4-NOT: llvm-lipo
+
+// RUN: %clang %s -### --target=arm64-apple-darwin -arch x86_64 -arch arm64 2>&1 | FileCheck -check-prefix=TEST5 %s
+// TEST5: lipo
+// TEST5-NOT: llvm-lipo
