@@ -128,6 +128,7 @@ private:
   void outputDependencyFile(DiagnosticsEngine &Diags);
 
   IntrusiveRefCntPtr<llvm::vfs::OutputBackend> OutputBackend;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;
