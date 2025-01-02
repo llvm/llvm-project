@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
@@ -709,5 +710,36 @@ public:
 } // namespace ento
 
 } // namespace clang
+
+// Override the default definition that would use pointer values of SymbolRefs
+// to order them, which is unstable due to ASLR.
+// Use the SymbolID instead which reflect the order in which the symbols were
+// allocated. This is usually stable across runs leading to the stability of
+// ConstraintMap and other containers using SymbolRef as keys.
+template <>
+struct ::llvm::ImutContainerInfo<clang::ento::SymbolRef>
+    : public ImutProfileInfo<clang::ento::SymbolRef> {
+  using value_type =
+      typename ImutProfileInfo<clang::ento::SymbolRef>::value_type;
+  using value_type_ref =
+      typename ImutProfileInfo<clang::ento::SymbolRef>::value_type_ref;
+  using key_type = value_type;
+  using key_type_ref = value_type_ref;
+  using data_type = bool;
+  using data_type_ref = bool;
+
+  static key_type_ref KeyOfValue(value_type_ref D) { return D; }
+  static data_type_ref DataOfValue(value_type_ref) { return true; }
+
+  static bool isEqual(key_type_ref LHS, key_type_ref RHS) {
+    return LHS->getSymbolID() == RHS->getSymbolID();
+  }
+
+  static bool isLess(key_type_ref LHS, key_type_ref RHS) {
+    return LHS->getSymbolID() < RHS->getSymbolID();
+  }
+
+  static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
+};
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMBOLMANAGER_H
