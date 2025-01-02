@@ -755,7 +755,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     return true;
   };
 
-  const auto *CallerDecl = getCurFunctionDecl();
+  const auto *CallerDecl = dyn_cast<FunctionDecl>(CurContext);
 
   // Find caller function signature.
   if (!CallerDecl) {
@@ -1010,7 +1010,8 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
     bool Immediate = ExprEvalContexts.back().Context ==
                      ExpressionEvaluationContext::ImmediateFunctionContext;
     if (CurContext->isFunctionOrMethod()) {
-      const auto *FD = getCurFunctionDecl();
+      const auto *FD =
+          dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
       if (FD && FD->isImmediateFunction())
         Immediate = true;
     }
@@ -3918,7 +3919,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // deduction.
   if (getLangOpts().CPlusPlus14) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
-      FunctionDecl *FD = getCurFunctionDecl();
+      FunctionDecl *FD = cast<FunctionDecl>(CurContext);
       // If we've already decided this function is invalid, e.g. because
       // we saw a `return` whose expression had an error, don't keep
       // trying to deduce its return type.

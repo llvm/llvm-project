@@ -959,14 +959,15 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   return New;
 }
 
-namespace {
 // CheckBindingsCount
 //  - Checks the arity of the structured bindings
 //  - Creates the resolved pack expr if there is
 //    one
-bool CheckBindingsCount(Sema &S, DecompositionDecl *DD, QualType DecompType,
-                        ArrayRef<BindingDecl *> Bindings,
-                        unsigned MemberCount) {
+
+static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
+                               QualType DecompType,
+                               ArrayRef<BindingDecl *> Bindings,
+                               unsigned MemberCount) {
   auto BindingWithPackItr =
       std::find_if(Bindings.begin(), Bindings.end(),
                    [](BindingDecl *D) -> bool { return D->isParameterPack(); });
@@ -1058,7 +1059,6 @@ struct BindingInitWalker {
     ++BindingItr;
   }
 };
-} // namespace
 
 static bool checkSimpleDecomposition(
     Sema &S, ArrayRef<BindingDecl *> Bindings, ValueDecl *Src,
@@ -1617,35 +1617,6 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
   }
 
   return false;
-}
-
-unsigned Sema::GetDecompositionElementCount(QualType DecompType) {
-  assert(!DecompType->isDependentType() && "expecting non-dependent type");
-  SourceLocation Loc = SourceLocation(); // FIXME
-  DecompType = DecompType.getNonReferenceType();
-  if (auto *CAT = Context.getAsConstantArrayType(DecompType))
-    return CAT->getSize().getLimitedValue(UINT_MAX);
-  if (auto *VT = DecompType->getAs<VectorType>())
-    return VT->getNumElements();
-  if (auto *CT = DecompType->getAs<ComplexType>())
-    return 2;
-  llvm::APSInt TupleSize(32);
-  if (IsTupleLike TL = isTupleLike(*this, Loc, DecompType, TupleSize);
-      TL == IsTupleLike::TupleLike)
-    return (unsigned)TupleSize.getLimitedValue(UINT_MAX);
-
-  if (CXXRecordDecl *RD = DecompType->getAsCXXRecordDecl();
-      RD && !RD->isUnion()) {
-    CXXCastPath BasePath;
-    DeclAccessPair BasePair =
-        findDecomposableBaseClass(*this, Loc, RD, BasePath);
-    RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
-    if (RD)
-      return llvm::count_if(
-          RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitField(); });
-  }
-
-  llvm_unreachable("unknown type for decomposition");
 }
 
 void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {

@@ -3425,11 +3425,10 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-
 void DecompositionDecl::VisitHoldingVars(
     llvm::function_ref<void(VarDecl *)> F) const {
-  VisitBindings([&](BindingDecl* BD) {
-    if (VarDecl* VD = BD->getHoldingVar())
+  VisitBindings([&](BindingDecl *BD) {
+    if (VarDecl *VD = BD->getHoldingVar())
       F(VD);
   });
 }

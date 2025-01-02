@@ -19,7 +19,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
@@ -70,6 +69,7 @@ class CollectUnexpandedParameterPacksVisitor
       if (T->getDepth() < DepthLimit)
         Unexpanded.push_back({T, Loc});
     }
+
     void addUnexpanded(ResolvedUnexpandedPackExpr *E) {
       Unexpanded.push_back({E, E->getBeginLoc()});
     }
@@ -807,9 +807,8 @@ bool Sema::CheckParameterPacksForExpansion(
             CurrentInstantiationScope->findInstantiationOf(ND);
         if (Decl *B = Instantiation->dyn_cast<Decl *>()) {
           Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
-          if (auto *RP = dyn_cast<ResolvedUnexpandedPackExpr>(BindingExpr)) {
+          if (auto *RP = dyn_cast<ResolvedUnexpandedPackExpr>(BindingExpr))
             ResolvedPack = RP;
-          }
         }
         if (!ResolvedPack) {
           ShouldExpand = false;
@@ -1218,9 +1217,8 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
   MarkAnyDeclReferenced(OpLoc, ParameterPack, true);
 
   std::optional<unsigned> Length;
-  if (auto *RP = ResolvedUnexpandedPackExpr::getFromDecl(ParameterPack)) {
+  if (auto *RP = ResolvedUnexpandedPackExpr::getFromDecl(ParameterPack))
     Length = RP->getNumExprs();
-  }
 
   return SizeOfPackExpr::Create(Context, OpLoc, ParameterPack, NameLoc,
                                 RParenLoc, Length);
@@ -1494,10 +1492,8 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
     }
   }
 
-  ExprResult Result = BuildCXXFoldExpr(ULE, LParenLoc, LHS, Opc, EllipsisLoc,
-                                       RHS, RParenLoc, std::nullopt);
-
-  return Result;
+  return BuildCXXFoldExpr(ULE, LParenLoc, LHS, Opc, EllipsisLoc, RHS, RParenLoc,
+                          std::nullopt);
 }
 
 ExprResult Sema::BuildCXXFoldExpr(UnresolvedLookupExpr *Callee,

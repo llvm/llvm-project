@@ -7369,8 +7369,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
     ConsumeToken();
 
     if (Tok.is(tok::ellipsis) && !PrevEllipsisLoc.isValid()) {
-      DiagnoseMisplacedEllipsis(Tok.getLocation(), Loc,
-                                EllipsisLoc.isValid(), true);
+      DiagnoseMisplacedEllipsis(Tok.getLocation(), Loc, EllipsisLoc.isValid(),
+                                true);
       EllipsisLoc = Tok.getLocation();
       ConsumeToken();
     }
