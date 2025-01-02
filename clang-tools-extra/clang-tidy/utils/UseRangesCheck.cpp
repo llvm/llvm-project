@@ -168,7 +168,7 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
       [&](SourceLocation BeginLoc,
           SourceLocation EndLoc) -> std::optional<CharSourceRange> {
     auto Invalid = false;
-    auto SourceText = Lexer::getSourceText(
+    StringRef SourceText = Lexer::getSourceText(
         CharSourceRange::getCharRange({BeginLoc, EndLoc}),
         Ctx.getSourceManager(), Ctx.getLangOpts(), &Invalid);
     assert(!Invalid);
@@ -203,8 +203,8 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
       if (Index + 1 < Call.getNumArgs()) {
         // Remove the next comma
         const Expr *NextArg = Call.getArg(Index + 1);
-        auto CommaLoc = GetCommaLoc(Arg->getEndLoc().getLocWithOffset(1),
-                                    NextArg->getBeginLoc());
+        std::optional<CharSourceRange> CommaLoc = GetCommaLoc(
+            Arg->getEndLoc().getLocWithOffset(1), NextArg->getBeginLoc());
         if (CommaLoc) {
           Commas[Index + 1] = true;
           Diag << FixItHint::CreateRemoval(*CommaLoc);
@@ -213,8 +213,8 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
     } else {
       // At this point we know Index > 0 because `Commas[0] = true` earlier
       const Expr *PrevArg = Call.getArg(Index - 1);
-      auto CommaLoc = GetCommaLoc(PrevArg->getEndLoc().getLocWithOffset(1),
-                                  Arg->getBeginLoc());
+      std::optional<CharSourceRange> CommaLoc = GetCommaLoc(
+          PrevArg->getEndLoc().getLocWithOffset(1), Arg->getBeginLoc());
       if (CommaLoc) {
         Commas[Index] = true;
         Diag << FixItHint::CreateRemoval(*CommaLoc);

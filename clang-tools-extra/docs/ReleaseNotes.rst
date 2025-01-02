@@ -355,6 +355,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check to
   validate ``namespace`` aliases.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` and :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check to more precisely remove
+  comma.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
