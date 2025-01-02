@@ -252,8 +252,9 @@ SymbolManager::getCastSymbol(const SymExpr *Op,
   void *InsertPos;
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
   if (!data) {
-    data = new (BPAlloc) SymbolCast(Op, From, To);
+    data = new (BPAlloc) SymbolCast(SymbolCounter, Op, From, To);
     DataSet.InsertNode(data, InsertPos);
+    ++SymbolCounter;
   }
 
   return cast<SymbolCast>(data);
@@ -268,8 +269,9 @@ const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = new (BPAlloc) SymIntExpr(lhs, op, v, t);
+    data = new (BPAlloc) SymIntExpr(SymbolCounter, lhs, op, v, t);
     DataSet.InsertNode(data, InsertPos);
+    ++SymbolCounter;
   }
 
   return cast<SymIntExpr>(data);
@@ -284,8 +286,9 @@ const IntSymExpr *SymbolManager::getIntSymExpr(APSIntPtr lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = new (BPAlloc) IntSymExpr(lhs, op, rhs, t);
+    data = new (BPAlloc) IntSymExpr(SymbolCounter, lhs, op, rhs, t);
     DataSet.InsertNode(data, InsertPos);
+    ++SymbolCounter;
   }
 
   return cast<IntSymExpr>(data);
@@ -301,8 +304,9 @@ const SymSymExpr *SymbolManager::getSymSymExpr(const SymExpr *lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = new (BPAlloc) SymSymExpr(lhs, op, rhs, t);
+    data = new (BPAlloc) SymSymExpr(SymbolCounter, lhs, op, rhs, t);
     DataSet.InsertNode(data, InsertPos);
+    ++SymbolCounter;
   }
 
   return cast<SymSymExpr>(data);
@@ -316,8 +320,9 @@ const UnarySymExpr *SymbolManager::getUnarySymExpr(const SymExpr *Operand,
   void *InsertPos;
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
   if (!data) {
-    data = new (BPAlloc) UnarySymExpr(Operand, Opc, T);
+    data = new (BPAlloc) UnarySymExpr(SymbolCounter, Operand, Opc, T);
     DataSet.InsertNode(data, InsertPos);
+    ++SymbolCounter;
   }
 
   return cast<UnarySymExpr>(data);

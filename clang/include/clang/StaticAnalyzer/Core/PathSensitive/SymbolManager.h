@@ -287,8 +287,8 @@ class SymbolCast : public SymExpr {
   QualType ToTy;
 
 public:
-  SymbolCast(const SymExpr *In, QualType From, QualType To)
-      : SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) {
+  SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
+      : SymExpr(SymbolCastKind, Sym), Operand(In), FromTy(From), ToTy(To) {
     assert(In);
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
@@ -333,8 +333,9 @@ class UnarySymExpr : public SymExpr {
   QualType T;
 
 public:
-  UnarySymExpr(const SymExpr *In, UnaryOperator::Opcode Op, QualType T)
-      : SymExpr(UnarySymExprKind), Operand(In), Op(Op), T(T) {
+  UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
+               QualType T)
+      : SymExpr(UnarySymExprKind, Sym), Operand(In), Op(Op), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -381,8 +382,8 @@ class BinarySymExpr : public SymExpr {
   QualType T;
 
 protected:
-  BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
-      : SymExpr(k), Op(op), T(t) {
+  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t)
+      : SymExpr(k, Sym), Op(op), T(t) {
     assert(classof(this));
     // Binary expressions are results of arithmetic. Pointer arithmetic is not
     // handled by binary expressions, but it is instead handled by applying
@@ -426,9 +427,9 @@ class BinarySymExprImpl : public BinarySymExpr {
   RHSTYPE RHS;
 
 public:
-  BinarySymExprImpl(LHSTYPE lhs, BinaryOperator::Opcode op, RHSTYPE rhs,
-                    QualType t)
-      : BinarySymExpr(ClassKind, op, t), LHS(lhs), RHS(rhs) {
+  BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
+                    RHSTYPE rhs, QualType t)
+      : BinarySymExpr(Sym, ClassKind, op, t), LHS(lhs), RHS(rhs) {
     assert(getPointer(lhs));
     assert(getPointer(rhs));
   }
