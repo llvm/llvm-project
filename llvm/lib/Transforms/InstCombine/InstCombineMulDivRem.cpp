@@ -199,6 +199,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
+  if (Instruction *X = foldBinopOfReductions(I))
+    return replaceInstUsesWith(I, X);
+
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
