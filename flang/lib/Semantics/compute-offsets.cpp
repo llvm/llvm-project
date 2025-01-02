@@ -70,25 +70,29 @@ private:
       equivalenceBlock_;
 };
 
+// This function is only called if the target platform is AIX.
 static bool isReal8OrLarger(const Fortran::semantics::DeclTypeSpec *type) {
   return ((type->IsNumeric(common::TypeCategory::Real) ||
               type->IsNumeric(common::TypeCategory::Complex)) &&
       evaluate::ToInt64(type->numericTypeSpec().kind()) > 4);
 }
 
+// This function is only called if the target platform is AIX.
+// It determines the alignment of a component. If the component is a derived
+// type, the alignment is computed accordingly.
 std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
   size_t max_align{0};
   bool contain_double{false};
-  const auto derivedTypeSpec{sym.GetType()->AsDerived()};
+  auto derivedTypeSpec{sym.GetType()->AsDerived()};
   DirectComponentIterator directs{*derivedTypeSpec};
-  for (auto it = directs.begin(); it != directs.end(); ++it) {
+  for (auto it{directs.begin()}; it != directs.end(); ++it) {
     auto type{it->GetType()};
     auto s{GetSizeAndAlignment(*it, true)};
     if (isReal8OrLarger(type)) {
       max_align = std::max(max_align, 4UL);
       contain_double = true;
     } else if (type->AsDerived()) {
-      if (const auto newAlgin = CompAlignment(*it)) {
+      if (const auto newAlgin{CompAlignment(*it)}) {
         max_align = std::max(max_align, s.alignment);
       } else {
         return std::nullopt;
@@ -98,18 +102,22 @@ std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
     }
   }
 
-  if (contain_double)
+  if (contain_double) {
     return max_align;
-  else
+  } else {
     return std::nullopt;
+  }
 }
 
+// This function is only called if the target platform is AIX.
+// Special alignment is needed only if it is a bind(c) derived type
+// and contain real type components that have larger than 4 bytes.
 std::optional<size_t> ComputeOffsetsHelper::HasSpecialAlign(
     const Symbol &sym, Scope &scope) {
   // On AIX, if the component that is not the first component and is
   // a float of 8 bytes or larger, it has the 4-byte alignment.
   // Only set the special alignment for bind(c) derived type on that platform.
-  if (const auto type = sym.GetType()) {
+  if (const auto type{sym.GetType()}) {
     auto &symOwner{sym.owner()};
     if (symOwner.symbol() && symOwner.IsDerivedType() &&
         symOwner.symbol()->attrs().HasAny({semantics::Attr::BIND_C}) &&
@@ -390,10 +398,7 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
     return 0;
   }
   std::size_t previousOffset{offset_};
-  size_t alignVal{s.alignment};
-  if (newAlign) {
-    alignVal = newAlign.value();
-  }
+  size_t alignVal{newAlign.value_or(s.alignment)};
   offset_ = Align(offset_, alignVal);
   std::size_t padding{offset_ - previousOffset};
   symbol.set_size(s.size);
