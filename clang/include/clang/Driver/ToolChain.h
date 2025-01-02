@@ -763,7 +763,7 @@ public:
                                  llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add arguments to use system-specific SYCL includes.
-  virtual void AddSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+  virtual void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add arguments to use MCU GCC toolchain includes.

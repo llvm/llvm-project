@@ -1025,9 +1025,9 @@ void Darwin::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void Darwin::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+void Darwin::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args) const {
-  SYCLInstallation->AddSYCLIncludeArgs(DriverArgs, CC1Args);
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 // This is just a MachO name translation routine and there's no

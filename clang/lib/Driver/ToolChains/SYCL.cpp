@@ -20,7 +20,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     const llvm::opt::ArgList &Args)
     : D(D) {}
 
-void SYCLInstallationDetector::AddSYCLIncludeArgs(
+void SYCLInstallationDetector::addSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(clang::driver::options::OPT_nobuiltininc))
     return;
@@ -138,9 +138,9 @@ SYCLToolChain::GetCXXStdlibType(const ArgList &Args) const {
   return HostTC.GetCXXStdlibType(Args);
 }
 
-void SYCLToolChain::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+void SYCLToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
-  SYCLInstallation.AddSYCLIncludeArgs(DriverArgs, CC1Args);
+  SYCLInstallation.addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void SYCLToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

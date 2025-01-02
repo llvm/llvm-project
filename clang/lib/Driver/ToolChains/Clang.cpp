@@ -1087,7 +1087,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (JA.isOffloading(Action::OFK_HIP))
     getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
   if (JA.isOffloading(Action::OFK_SYCL))
-    getToolChain().AddSYCLIncludeArgs(Args, CmdArgs);
+    getToolChain().addSYCLIncludeArgs(Args, CmdArgs);
 
   // If we are offloading to a target via OpenMP we need to include the
   // openmp_wrappers folder which contains alternative system headers.

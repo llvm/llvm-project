@@ -759,9 +759,9 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-void Linux::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+void Linux::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                ArgStringList &CC1Args) const {
-  SYCLInstallation->AddSYCLIncludeArgs(DriverArgs, CC1Args);
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {

@@ -630,9 +630,9 @@ void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void toolchains::MinGW::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+void toolchains::MinGW::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                            ArgStringList &CC1Args) const {
-  SYCLInstallation->AddSYCLIncludeArgs(DriverArgs, CC1Args);
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {

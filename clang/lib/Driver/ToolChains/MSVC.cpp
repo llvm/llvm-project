@@ -503,9 +503,9 @@ void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void MSVCToolChain::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+void MSVCToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
-  SYCLInstallation->AddSYCLIncludeArgs(DriverArgs, CC1Args);
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,

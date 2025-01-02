@@ -3275,9 +3275,9 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-void Generic_GCC::AddSYCLIncludeArgs(const ArgList &DriverArgs,
+void Generic_GCC::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                      ArgStringList &CC1Args) const {
-  SYCLInstallation->AddSYCLIncludeArgs(DriverArgs, CC1Args);
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void

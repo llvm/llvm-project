@@ -20,7 +20,7 @@ public:
   SYCLInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
                            const llvm::opt::ArgList &Args);
 
-  void AddSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const;
 
 private:
@@ -58,7 +58,7 @@ public:
 
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
-  void AddSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
