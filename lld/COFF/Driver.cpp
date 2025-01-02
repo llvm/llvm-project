@@ -189,6 +189,71 @@ bool LinkerDriver::findUnderscoreMangle(StringRef sym) {
   return s && !isa<Undefined>(s);
 }
 
+static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
+  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
+    return true;
+  switch (ctx.config.machine) {
+  case ARM64:
+    return mt == ARM64 || mt == ARM64X;
+  case ARM64EC:
+    return isArm64EC(mt) || mt == AMD64;
+  case ARM64X:
+    return isAnyArm64(mt) || mt == AMD64;
+  case IMAGE_FILE_MACHINE_UNKNOWN:
+    return true;
+  default:
+    return ctx.config.machine == mt;
+  }
+}
+
+void LinkerDriver::addFile(InputFile *file) {
+  Log(ctx) << "Reading " << toString(file);
+  if (file->lazy) {
+    if (auto *f = dyn_cast<BitcodeFile>(file))
+      f->parseLazy();
+    else
+      cast<ObjFile>(file)->parseLazy();
+  } else {
+    file->parse();
+    if (auto *f = dyn_cast<ObjFile>(file)) {
+      ctx.objFileInstances.push_back(f);
+    } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      if (ltoCompilationDone) {
+        Err(ctx) << "LTO object file " << toString(file)
+                 << " linked in after "
+                    "doing LTO compilation.";
+      }
+      ctx.bitcodeFileInstances.push_back(f);
+    } else if (auto *f = dyn_cast<ImportFile>(file)) {
+      ctx.importFileInstances.push_back(f);
+    }
+  }
+
+  MachineTypes mt = file->getMachineType();
+  // The ARM64EC target must be explicitly specified and cannot be inferred.
+  if (mt == ARM64EC &&
+      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
+       (ctx.config.machineInferred &&
+        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
+    Err(ctx) << toString(file)
+             << ": machine type arm64ec is ambiguous and cannot be "
+                "inferred, use /machine:arm64ec or /machine:arm64x";
+    return;
+  }
+  if (!compatibleMachineType(ctx, mt)) {
+    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
+             << " conflicts with " << machineToStr(ctx.config.machine);
+    return;
+  }
+  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
+      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
+    ctx.config.machineInferred = true;
+    setMachine(mt);
+  }
+
+  parseDirectives(file);
+}
+
 MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   MemoryBufferRef mbref = *mb;
   make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take ownership
@@ -222,17 +287,17 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
         addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
       return;
     }
-    ctx.symtab.addFile(make<ArchiveFile>(ctx, mbref));
+    addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
-    ctx.symtab.addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
+    addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
-    ctx.symtab.addFile(ObjFile::create(ctx, mbref, lazy));
+    addFile(ObjFile::create(ctx, mbref, lazy));
     break;
   case file_magic::pdb:
-    ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
+    addFile(make<PDBInputFile>(ctx, mbref));
     break;
   case file_magic::coff_cl_gl_object:
     Err(ctx) << filename
@@ -240,7 +305,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      ctx.symtab.addFile(make<DLLFile>(ctx.symtab, mbref));
+      addFile(make<DLLFile>(ctx.symtab, mbref));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {
@@ -306,7 +371,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   if (magic == file_magic::coff_import_library) {
     InputFile *imp = make<ImportFile>(ctx, mb);
     imp->parentName = parentName;
-    ctx.symtab.addFile(imp);
+    addFile(imp);
     return;
   }
 
@@ -326,7 +391,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   }
 
   obj->parentName = parentName;
-  ctx.symtab.addFile(obj);
+  addFile(obj);
   Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
@@ -1400,7 +1465,7 @@ void LinkerDriver::convertResources() {
   }
   ObjFile *f =
       ObjFile::create(ctx, convertResToCOFF(resources, resourceObjFiles));
-  ctx.symtab.addFile(f);
+  addFile(f);
   f->includeResourceChunks();
 }
 
@@ -2548,7 +2613,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
     symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
-    if (isArm64EC(ctx.config.machine)) {
+    if (symtab.isEC()) {
       symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
       symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
       symtab.addAbsolute("__arm64x_redirection_metadata", 0);
@@ -2702,6 +2767,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
+  ltoCompilationDone = true;
   ctx.symtab.compileBitcodeFiles();
 
   if (Defined *d =
@@ -2824,6 +2890,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (ctx.symtabEC)
     ctx.symtabEC->initializeECThunks();
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

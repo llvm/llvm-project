@@ -975,6 +975,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortLambdasOnASingleLine);
     IO.mapOptional("AllowShortLoopsOnASingleLine",
                    Style.AllowShortLoopsOnASingleLine);
+    IO.mapOptional("AllowShortNamespacesOnASingleLine",
+                   Style.AllowShortNamespacesOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
@@ -1164,6 +1166,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
     IO.mapOptional("UseTab", Style.UseTab);
+    IO.mapOptional("VariableTemplates", Style.VariableTemplates);
     IO.mapOptional("VerilogBreakBetweenInstancePorts",
                    Style.VerilogBreakBetweenInstancePorts);
     IO.mapOptional("WhitespaceSensitiveMacros",
@@ -1480,6 +1483,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
+  LLVMStyle.AllowShortNamespacesOnASingleLine = false;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
