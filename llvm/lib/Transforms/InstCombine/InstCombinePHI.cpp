@@ -788,6 +788,9 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
     BasicBlock *BB = std::get<0>(Incoming);
     Value *V = std::get<1>(Incoming);
     LoadInst *LI = cast<LoadInst>(V);
+    // FIXME: https://github.com/llvm/llvm-project/issues/121495
+    // Call combineMetadataForCSE instead, so that an explicit set of KnownIDs
+    // doesn't need to be maintained here.
     combineMetadata(NewLI, LI, KnownIDs, true);
     Value *NewInVal = LI->getOperand(0);
     if (NewInVal != InVal)
