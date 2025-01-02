@@ -151,6 +151,7 @@ class FuseOp(FuseOp):
         *,
         tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         tile_interchange: OptionalIntList = None,
+        apply_cleanup: Optional[bool] = False,
         loc=None,
         ip=None,
     ):
@@ -164,6 +165,7 @@ class FuseOp(FuseOp):
         *,
         tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         tile_interchange: OptionalIntList = None,
+        apply_cleanup: Optional[bool] = False,
         loc=None,
         ip=None,
     ):
@@ -190,6 +192,7 @@ class FuseOp(FuseOp):
             target,
             tile_sizes=tile_sizes,
             tile_interchange=tile_interchange,
+            apply_cleanup=apply_cleanup,
             loc=loc,
             ip=ip,
         )
