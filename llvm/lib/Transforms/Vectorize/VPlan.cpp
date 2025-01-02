@@ -949,21 +949,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   }
 }
 
-/// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
-/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
-/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
-static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
-  for (auto &R : make_early_inc_range(*VPBB)) {
-    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
-    R.moveBefore(*IRVPBB, IRVPBB->end());
-  }
-
-  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
-  // VPBB is now dead and will be cleaned up when the plan gets destroyed.
-}
-
 /// Generate the code inside the preheader and body of the vectorized loop.
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
@@ -971,24 +956,12 @@ void VPlan::execute(VPTransformState *State) {
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
-  BasicBlock *VectorPreHeader = State->CFG.PrevBB;
-  State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
+  BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
-
-  // Replace regular VPBB's for the vector preheader, middle and scalar
-  // preheader blocks with VPIRBasicBlocks wrapping their IR blocks. The IR
-  // blocks are created during skeleton creation, so we can only create the
-  // VPIRBasicBlocks now during VPlan execution rather than earlier during VPlan
-  // construction.
-  BasicBlock *MiddleBB = State->CFG.ExitBB;
-  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
-  replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
-  replaceVPBBWithIRVPBB(getMiddleBlock(), MiddleBB);
-  replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');
@@ -998,6 +971,8 @@ void VPlan::execute(VPTransformState *State) {
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
   // execution.
+  BasicBlock *MiddleBB = State->CFG.ExitBB;
+  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();

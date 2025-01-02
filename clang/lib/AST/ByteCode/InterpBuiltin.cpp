@@ -1863,11 +1863,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Can't read from dummy pointers.
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
   QualType DestElemType;
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
     DestElemType = DestPtr.getFieldDesc()->getElemQualType();
-    RemainingDestElems = (DestPtr.getNumElems() - DestPtr.getIndex());
+    RemainingDestElems = DestPtr.isUnknownSizeArray()
+                             ? 0
+                             : (DestPtr.getNumElems() - DestPtr.getIndex());
   } else {
     DestElemType = DestPtr.getType();
     RemainingDestElems = 1;
@@ -1886,7 +1892,9 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   size_t RemainingSrcElems;
   if (SrcPtr.getFieldDesc()->isArray()) {
     SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
-    RemainingSrcElems = (SrcPtr.getNumElems() - SrcPtr.getIndex());
+    RemainingSrcElems = SrcPtr.isUnknownSizeArray()
+                            ? 0
+                            : (SrcPtr.getNumElems() - SrcPtr.getIndex());
   } else {
     SrcElemType = SrcPtr.getType();
     RemainingSrcElems = 1;
@@ -1925,9 +1933,6 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     }
   }
 
-  // As a last resort, reject dummy pointers.
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
-    return false;
   assert(Size.getZExtValue() % DestElemSize == 0);
   if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size.getZExtValue()).toBits()))
     return false;
