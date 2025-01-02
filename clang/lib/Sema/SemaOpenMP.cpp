@@ -6064,14 +6064,13 @@ static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context,
     // 		 		match(user = {condition(1)})
     // ...
     //     #pragma omp dispatch nocontext(cond_true)
-    //         foo(i, j); // with traits: CodeGen call to
-    //         foo_variant_dispatch(i,j)
+    //         foo(i,j); // with traits: call to foo_variant_dispatch(i,j)
     // dispatch construct is changed to:
     // if (cond_true) {
-    //    foo(i,j) // with traits: CodeGen call to foo_variant_allCond(i,j)
+    //    foo(i,j) // with traits: call to foo_variant_allCond(i,j)
     // } else {
     //   #pragma omp dispatch
-    //   foo(i,j)  // with traits: CodeGen call to foo_variant_dispatch(i,j)
+    //   foo(i,j)  // with traits: call to foo_variant_dispatch(i,j)
     // }
 
     // Convert StmtResult to a CallExpr before calling ActOnOpenMPCall()
