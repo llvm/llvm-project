@@ -910,13 +910,13 @@ void pr6302(id x, Class y) {
 
 //===----------------------------------------------------------------------===//
 // Specially handle global variables that are declared constant.  In the
-// example below, this forces the loop to take exactly 2 iterations.
+// example below, this forces the loop to take exactly 1 iteration.
 //===----------------------------------------------------------------------===//
 
-const int pr6288_L_N = 2;
+const int pr6288_L_N = 1;
 void pr6288_(void) {
-  int x[2];
-  int *px[2];
+  int x[1];
+  int *px[1];
   int i;
   for (i = 0; i < pr6288_L_N; i++)
     px[i] = &x[i];
@@ -924,8 +924,8 @@ void pr6288_(void) {
 }
 
 void pr6288_pos(int z) {
-  int x[2];
-  int *px[2];
+  int x[1];
+  int *px[1];
   int i;
   for (i = 0; i < z; i++)
     px[i] = &x[i]; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
@@ -933,13 +933,26 @@ void pr6288_pos(int z) {
 }
 
 void pr6288_b(void) {
-  const int L_N = 2;
-  int x[2];
-  int *px[2];
+  const int L_N = 1;
+  int x[1];
+  int *px[1];
   int i;
   for (i = 0; i < L_N; i++)
     px[i] = &x[i];
   *(px[0]) = 0; // no-warning
+}
+
+void pr6288_no_third_iter(int z) {
+  int x[2];
+  int *px[2];
+  int i;
+  // If the loop condition is opaque, we assume that there may be two
+  // iterations (becasuse otherwise the loop could be replaced by an if); but
+  // we do not assume that there may be a third iteration. Therefore,
+  // unlike 'pr6288_pos', this testcase does not produce an out-of-bounds error.
+  for (i = 0; i < z; i++)
+    px[i] = &x[i];
+  *(px[0]) = 0; // expected-warning{{Dereference of undefined pointer value}}
 }
 
 // A bug in RemoveDeadBindings was causing instance variable bindings to get

@@ -1157,6 +1157,13 @@ New features
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
+- In loops where the loop condition is opaque (i.e. the analyzer cannot
+  determine whether it's true or false), the analyzer will no longer assume
+  execution paths that perform more that two iterations. These unjustified
+  assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
+  the FFMPEG codebase) in loops where the programmer intended only two or three
+  steps but the analyzer wasn't able to understand that the loop is limited.
+
 Improvements
 ^^^^^^^^^^^^
 
