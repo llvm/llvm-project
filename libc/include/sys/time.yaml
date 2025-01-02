@@ -1,4 +1,5 @@
-header: sys-time.h
+header: sys/time.h
+header_template: time.h.def
 standards: Linux
 macros: []
 types: []

@@ -1,4 +1,5 @@
 header: string.h
+header_template: string.h.def
 macros: []
 types:
   - type_name: size_t

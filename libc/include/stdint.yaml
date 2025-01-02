@@ -1,4 +1,5 @@
 header: stdint.h
+header_template: stdint.h.def
 standards:
   - stdc
 macros: []

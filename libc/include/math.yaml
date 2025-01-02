@@ -1,4 +1,5 @@
 header: math.h
+header_template: math.h.def
 macros: []
 types:
   - type_name: float_t

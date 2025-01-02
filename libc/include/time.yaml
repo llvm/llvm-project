@@ -1,4 +1,5 @@
 header: time.h
+header_template: time.h.def
 macros: []
 types:
   - type_name: struct_timeval

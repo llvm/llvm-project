@@ -1,4 +1,5 @@
 header: dlfcn.h
+header_template: dlfcn.h.def
 macros:
   - macro_name: RTLD_LAZY
     macro_value: null

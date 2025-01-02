@@ -1,4 +1,5 @@
 header: uchar.h
+header_template: uchar.h.def
 standards:
   - stdc
 macros: []
