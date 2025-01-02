@@ -149,8 +149,8 @@ class FuseOp(FuseOp):
         self,
         target: Union[Operation, Value, OpView],
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
+        tile_interchange: OptionalIntList = None,
         loc=None,
         ip=None,
     ):
@@ -158,16 +158,19 @@ class FuseOp(FuseOp):
 
     def __init__(
         self,
-        loop_types_or_target: Union[Type, List[Type], Operation, Value],
+        loop_types_or_target: Union[Type, Sequence[Type], Operation, OpView, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
+        tile_interchange: OptionalIntList = None,
         loc=None,
         ip=None,
     ):
-        sizes = sizes if sizes else []
-        num_loops = sum(v if v == 0 else 1 for v in sizes)
+        tile_sizes = tile_sizes if tile_sizes else []
+        tile_interchange = tile_interchange if tile_interchange else []
+        _, tile_sizes, _ = _dispatch_dynamic_index_list(tile_sizes)
+        _, tile_interchange, _ = _dispatch_dynamic_index_list(tile_interchange)
+        num_loops = sum(0 if v == 0 else 1 for v in tile_sizes)
 
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
@@ -184,8 +187,8 @@ class FuseOp(FuseOp):
             target.type,
             loop_types,
             target,
-            tile_sizes=sizes,
-            tile_interchange=interchange,
+            tile_sizes=tile_sizes,
+            tile_interchange=tile_interchange,
             loc=loc,
             ip=ip,
         )

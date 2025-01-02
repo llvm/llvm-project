@@ -104,7 +104,7 @@ def testFuseIntoContainingOpCompact(target):
 @run
 @create_sequence
 def testFuseOpCompact(target):
-    structured.FuseOp(target, sizes=[4, 8], interchange=[0, 1])
+    structured.FuseOp(target, tile_sizes=[4, 8], tile_interchange=[0, 1])
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
     # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
@@ -120,6 +120,19 @@ def testFuseOpNoArg(target):
     # CHECK: transform.sequence
     # CHECK: %{{.+}} = transform.structured.fuse %{{.*}} :
     # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+@create_sequence
+def testFuseOpAttributes(target):
+    attr = DenseI64ArrayAttr.get([4, 8])
+    ichange = DenseI64ArrayAttr.get([0, 1])
+    structured.FuseOp(target, tile_sizes=attr, tile_interchange=ichange)
+    # CHECK-LABEL: TEST: testFuseOpAttributes
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK-SAME: interchange [0, 1]
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
 
 @run
