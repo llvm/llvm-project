@@ -1263,6 +1263,15 @@ namespace BuiltinMemcpy {
     return arr[0].ok() && arr[1].ok() && arr[2].ok();
   }
   static_assert(test_trivial());
+
+  // Check that an incomplete array is rejected.
+  constexpr int test_incomplete_array_type() { // both-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(arr, arr, 4 * sizeof(arr[0]));
+    // both-note@-1 2{{'memmove' not supported: source is not a contiguous array of at least 4 elements of type 'int'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_incomplete_array_type() == 1234); // both-error {{constant}} both-note {{in call}}
 }
 
 namespace Memcmp {

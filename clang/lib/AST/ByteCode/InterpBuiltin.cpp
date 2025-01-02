@@ -1871,7 +1871,9 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
     DestElemType = DestPtr.getFieldDesc()->getElemQualType();
-    RemainingDestElems = (DestPtr.getNumElems() - DestPtr.getIndex());
+    RemainingDestElems = DestPtr.isUnknownSizeArray()
+                             ? 0
+                             : (DestPtr.getNumElems() - DestPtr.getIndex());
   } else {
     DestElemType = DestPtr.getType();
     RemainingDestElems = 1;
@@ -1890,7 +1892,9 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   size_t RemainingSrcElems;
   if (SrcPtr.getFieldDesc()->isArray()) {
     SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
-    RemainingSrcElems = (SrcPtr.getNumElems() - SrcPtr.getIndex());
+    RemainingSrcElems = SrcPtr.isUnknownSizeArray()
+                            ? 0
+                            : (SrcPtr.getNumElems() - SrcPtr.getIndex());
   } else {
     SrcElemType = SrcPtr.getType();
     RemainingSrcElems = 1;
