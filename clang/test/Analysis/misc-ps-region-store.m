@@ -910,7 +910,7 @@ void pr6302(id x, Class y) {
 
 //===----------------------------------------------------------------------===//
 // Specially handle global variables that are declared constant.  In the
-// example below, this forces the loop to take exactly 1 iterations.
+// example below, this forces the loop to take exactly 1 iteration.
 //===----------------------------------------------------------------------===//
 
 const int pr6288_L_N = 1;
