@@ -279,7 +279,7 @@ struct StackEntry {
   StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
              SmallVector<Value *, 2> ValuesToRelease)
       : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
-        ValuesToRelease(ValuesToRelease) {}
+        ValuesToRelease(std::move(ValuesToRelease)) {}
 };
 
 struct ConstraintTy {
@@ -836,8 +836,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   for (const auto &KV : VariablesB) {
-    if (SubOverflow(R[GetOrAddIndex(KV.Variable)], KV.Coefficient,
-                    R[GetOrAddIndex(KV.Variable)]))
+    auto &Coeff = R[GetOrAddIndex(KV.Variable)];
+    if (SubOverflow(Coeff, KV.Coefficient, Coeff))
       return {};
     auto I =
         KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
@@ -869,9 +869,9 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     if (!KV.second ||
         (!Value2Index.contains(KV.first) && !NewIndexMap.contains(KV.first)))
       continue;
-    SmallVector<int64_t, 8> C(Value2Index.size() + NewVariables.size() + 1, 0);
+    auto &C = Res.ExtraInfo.emplace_back(
+        Value2Index.size() + NewVariables.size() + 1, 0);
     C[GetOrAddIndex(KV.first)] = -1;
-    Res.ExtraInfo.push_back(C);
   }
   return Res;
 }
@@ -2083,52 +2083,51 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
-  bool Added = false;
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
     return;
 
-  Added |= CSToUse.addVariableRowFill(R.Coefficients);
+  bool Added = CSToUse.addVariableRowFill(R.Coefficients);
+  if (!Added)
+    return;
 
   // If R has been added to the system, add the new variables and queue it for
   // removal once it goes out-of-scope.
-  if (Added) {
-    SmallVector<Value *, 2> ValuesToRelease;
-    auto &Value2Index = getValue2Index(R.IsSigned);
+  SmallVector<Value *, 2> ValuesToRelease;
+  auto &Value2Index = getValue2Index(R.IsSigned);
+  for (Value *V : NewVariables) {
+    Value2Index.insert({V, Value2Index.size() + 1});
+    ValuesToRelease.push_back(V);
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "  constraint: ";
+    dumpConstraint(R.Coefficients, getValue2Index(R.IsSigned));
+    dbgs() << "\n";
+  });
+
+  DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                          std::move(ValuesToRelease));
+
+  if (!R.IsSigned) {
     for (Value *V : NewVariables) {
-      Value2Index.insert({V, Value2Index.size() + 1});
-      ValuesToRelease.push_back(V);
-    }
-
-    LLVM_DEBUG({
-      dbgs() << "  constraint: ";
-      dumpConstraint(R.Coefficients, getValue2Index(R.IsSigned));
-      dbgs() << "\n";
-    });
-
-    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
-                            std::move(ValuesToRelease));
-
-    if (!R.IsSigned) {
-      for (Value *V : NewVariables) {
-        ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
-                            false, false, false);
-        VarPos.Coefficients[Value2Index[V]] = -1;
-        CSToUse.addVariableRow(VarPos.Coefficients);
-        DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
-                                SmallVector<Value *, 2>());
-      }
-    }
-
-    if (R.isEq()) {
-      // Also add the inverted constraint for equality constraints.
-      for (auto &Coeff : R.Coefficients)
-        Coeff *= -1;
-      CSToUse.addVariableRowFill(R.Coefficients);
-
+      ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
+                          false, false, false);
+      VarPos.Coefficients[Value2Index[V]] = -1;
+      CSToUse.addVariableRow(VarPos.Coefficients);
       DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                               SmallVector<Value *, 2>());
     }
+  }
+
+  if (R.isEq()) {
+    // Also add the inverted constraint for equality constraints.
+    for (auto &Coeff : R.Coefficients)
+      Coeff *= -1;
+    CSToUse.addVariableRowFill(R.Coefficients);
+
+    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                            SmallVector<Value *, 2>());
   }
 }
 
