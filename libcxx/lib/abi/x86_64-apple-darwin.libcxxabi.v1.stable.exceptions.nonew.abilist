@@ -2089,10 +2089,8 @@
 {'is_defined': True, 'name': '__ZTINSt3__120__time_get_c_storageIwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__13pmr15memory_resourceE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__13pmr25monotonic_buffer_resourceE', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '__ZTINSt3__13pmr26__null_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__13pmr26synchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__13pmr28unsynchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '__ZTINSt3__13pmr32__new_delete_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__14__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__15ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__15ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
@@ -2314,10 +2312,8 @@
 {'is_defined': True, 'name': '__ZTSNSt3__120__codecvt_utf8_utf16IwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__13pmr15memory_resourceE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__13pmr25monotonic_buffer_resourceE', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '__ZTSNSt3__13pmr26__null_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__13pmr26synchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__13pmr28unsynchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '__ZTSNSt3__13pmr32__new_delete_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__14__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__15ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__15ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
