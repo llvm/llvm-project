@@ -98,7 +98,7 @@ void TestAccessFail() {
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [9 x i32], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(36) [[ARR]], i8 0, i64 36, i1 false)
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 36
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 36
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[ARR]], {{!annotation ![0-9]+}}

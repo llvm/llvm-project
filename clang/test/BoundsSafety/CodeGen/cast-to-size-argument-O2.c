@@ -66,7 +66,7 @@ void TestCountPtrArgFail3(void) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR7:[0-9]+]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    call void @Foo(ptr noundef nonnull [[UPPER]], i32 noundef 0) #[[ATTR7]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void
@@ -82,7 +82,7 @@ void TestCountPtrArgOK(void) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR7]]
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 36
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 36
 // CHECK-NEXT:    call void @Foo(ptr noundef nonnull [[BOUND_PTR_ARITH]], i32 noundef 4) #[[ATTR7]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void

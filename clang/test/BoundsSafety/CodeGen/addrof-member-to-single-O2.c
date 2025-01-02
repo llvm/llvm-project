@@ -21,7 +21,7 @@ char **addrof_single_ptr_to_single(struct foo *f) {
 
 // CHECK-LABEL: @addrof_single_i_to_single(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F:%.*]], i64 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F:%.*]], i64 8
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 int *addrof_single_i_to_single(struct foo *f) {
@@ -30,7 +30,7 @@ int *addrof_single_i_to_single(struct foo *f) {
 
 // CHECK-LABEL: @addrof_single_l_to_single(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F:%.*]], i64 16
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F:%.*]], i64 16
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 long *addrof_single_l_to_single(struct foo *f) {
@@ -68,7 +68,7 @@ char **addrof_bidi_ptr_to_single_oob_upper(void) {
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    store ptr null, ptr [[F]], align 8, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 24
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[F]], i64 -24
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[F]], {{!annotation ![0-9]+}}
@@ -95,7 +95,7 @@ static inline int *__addrof_bidi_i_to_single(struct foo *__bidi_indexable f) {
 // CHECK-NEXT:  __addrof_bidi_i_to_single.exit:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 8
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
@@ -120,7 +120,7 @@ int *addrof_bidi_i_to_single_oob_upper(void) {
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    store ptr null, ptr [[F]], align 8, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 24
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[F]], i64 -24
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[F]], {{!annotation ![0-9]+}}
@@ -148,7 +148,7 @@ static inline long *__addrof_bidi_l_to_single(struct foo *__bidi_indexable f) {
 // CHECK-NEXT:  __addrof_bidi_l_to_single.exit:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 16
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 16
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
@@ -173,7 +173,7 @@ long *addrof_bidi_l_to_single_oob_upper(void) {
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    store ptr null, ptr [[F]], align 8, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 24
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[F]], i64 -24
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[F]], {{!annotation ![0-9]+}}

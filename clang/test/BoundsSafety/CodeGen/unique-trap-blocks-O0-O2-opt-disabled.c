@@ -55,32 +55,32 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT2-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
 // OPT2-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // OPT2-NEXT:    store ptr [[PTR]], ptr [[PTR_INDIRECT_ADDR]], align 8, !tbaa [[TBAA2:![0-9]+]]
-// OPT2-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA7:![0-9]+]]
-// OPT2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP]], ptr align 8 [[PTR]], i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT9:![0-9]+]]
+// OPT2-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// OPT2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP]], ptr align 8 [[PTR]], i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
 // OPT2-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0
 // OPT2-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
-// OPT2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA7]]
+// OPT2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA6]]
 // OPT2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP0]] to i64
 // OPT2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 [[IDXPROM]]
 // OPT2-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 1
 // OPT2-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // OPT2-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // OPT2-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// OPT2-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META12:![0-9]+]]
-// OPT2-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META12]]
+// OPT2-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META9:![0-9]+]]
+// OPT2-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META9]]
 // OPT2:       [[TRAP]]:
-// OPT2-NEXT:    call void asm sideeffect "", "n"(i64 0), !annotation [[META12]]
-// OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META12]]
-// OPT2-NEXT:    unreachable, !annotation [[META12]]
+// OPT2-NEXT:    call void asm sideeffect "", "n"(i64 0), !annotation [[META9]]
+// OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META9]]
+// OPT2-NEXT:    unreachable, !annotation [[META9]]
 // OPT2:       [[CONT]]:
-// OPT2-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META13:![0-9]+]]
-// OPT2-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META13]]
+// OPT2-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META10:![0-9]+]]
+// OPT2-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META10]]
 // OPT2:       [[TRAP1]]:
-// OPT2-NEXT:    call void asm sideeffect "", "n"(i64 1), !annotation [[META13]]
-// OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META13]]
-// OPT2-NEXT:    unreachable, !annotation [[META13]]
+// OPT2-NEXT:    call void asm sideeffect "", "n"(i64 1), !annotation [[META10]]
+// OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META10]]
+// OPT2-NEXT:    unreachable, !annotation [[META10]]
 // OPT2:       [[CONT2]]:
-// OPT2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA7]]
+// OPT2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
 // OPT2-NEXT:    ret i32 [[TMP3]]
 //
 //.
@@ -88,15 +88,12 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT0: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
 // OPT2: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// OPT2: [[META3]] = !{!"p2 int", [[META4:![0-9]+]], i64 0}
-// OPT2: [[META4]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
-// OPT2: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// OPT2: [[META6]] = !{!"Simple C/C++ TBAA"}
-// OPT2: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// OPT2: [[META8]] = !{!"int", [[META5]], i64 0}
-// OPT2: [[TBAA_STRUCT9]] = !{i64 0, i64 24, [[META10:![0-9]+]]}
-// OPT2: [[META10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
-// OPT2: [[META11]] = !{!"p1 int", [[META4]], i64 0}
-// OPT2: [[META12]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// OPT2: [[META13]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// OPT2: [[META3]] = !{!"any pointer", [[META4:![0-9]+]], i64 0}
+// OPT2: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// OPT2: [[META5]] = !{!"Simple C/C++ TBAA"}
+// OPT2: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// OPT2: [[META7]] = !{!"int", [[META4]], i64 0}
+// OPT2: [[TBAA_STRUCT8]] = !{i64 0, i64 24, [[TBAA2]]}
+// OPT2: [[META9]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// OPT2: [[META10]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

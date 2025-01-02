@@ -2,6 +2,7 @@
 
 // Note: Specifying the triple seems to be necessary for `update_cc_test_checks.py` to work
 // RUN: %clang_cc1 -O2 -triple arm64-apple-iphoneos -emit-llvm -fbounds-safety -fno-bounds-safety-bringup-missing-checks=ended_by_lower_bound -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O2 -triple arm64-apple-iphoneos -x objective-c  -emit-llvm -fbounds-attributes-objc-experimental -fbounds-safety -fno-bounds-safety-bringup-missing-checks=ended_by_lower_bound -o - %s | FileCheck %s
 #include <ptrcheck.h>
 
 
@@ -12,7 +13,7 @@ void ended_by(const char *__ended_by(end) start, const char *end);
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4:[0-9]+]]
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef nonnull [[BOUND_PTR_ARITH]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -27,7 +28,7 @@ void pass_const_size_arr_in_bounds(void) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 -2
 // CHECK-NEXT:    [[CMP30_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation [[META2:![0-9]+]]
 // CHECK-NEXT:    br i1 [[CMP30_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
@@ -49,7 +50,7 @@ void pass_const_size_arr_start_oob(void) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 11
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation [[META2]]
 // CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ugt ptr [[LOCAL]], [[BOUND_PTR_ARITH]], !annotation [[META2]]
@@ -73,7 +74,7 @@ void pass_const_size_arr_end_oob(void) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef nonnull [[UPPER]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -89,7 +90,7 @@ void pass_explicit_indexable(void) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef nonnull [[UPPER]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -126,7 +127,7 @@ void pass_ended_by(char* __ended_by(end) start, const char* end) {
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[COUNT]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[START]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    tail call void @ended_by(ptr noundef [[START]], ptr noundef [[ADD_PTR]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
