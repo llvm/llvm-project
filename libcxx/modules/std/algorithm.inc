@@ -164,13 +164,12 @@ export namespace std {
     using std::ranges::fold_left;
     using std::ranges::fold_left_with_iter;
     using std::ranges::fold_left_with_iter_result;
-#  if 0
     using std::ranges::fold_left_first;
+    using std::ranges::fold_left_first_with_iter;
+    using std::ranges::fold_left_first_with_iter_result;
+#  if 0
     using std::ranges::fold_right;
     using std::ranges::fold_right_last;
-    using std::ranges::fold_left_with_iter;
-    using std::ranges::fold_left_first_with_iter;
-    using std::ranges::fold_left_first_with_iter;
 #  endif
 #endif // _LIBCPP_STD_VER >= 23
   }    // namespace ranges
