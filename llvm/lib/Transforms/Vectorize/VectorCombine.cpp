@@ -128,6 +128,8 @@ private:
   bool shrinkType(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
+    LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
+    LLVM_DEBUG(dbgs() << "         With: " << New << '\n');
     Old.replaceAllUsesWith(&New);
     if (auto *NewI = dyn_cast<Instruction>(&New)) {
       New.takeName(&Old);
