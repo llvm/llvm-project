@@ -403,28 +403,42 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
                                 SDNode OpNodeSAE> {
   let ExeDomain = _.ExeDomain, Predicates = [HasAVX10_2] in {
     let mayRaiseFPException = 1 in {
-      defm rri : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
-                               (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
-                                OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
-                                (_.VT (OpNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
-                                              (i32 timm:$src3)))>,
-                                Sched<[WriteFMAX]>;
+      let isCodeGenOnly = 1 in {
+        def rri : AVX512Ii8<0x53, MRMSrcReg, (outs _.FRC:$dst),
+                            (ins _.FRC:$src1, _.FRC:$src2, i32u8imm:$src3),
+                             !strconcat(OpStr, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
+                             [(set _.FRC:$dst, (OpNode _.FRC:$src1, _.FRC:$src2, (i32 timm:$src3)))]>,
+                       Sched<[WriteFMAX]>;
 
-      defm rmi : AVX512_maskable<0x53, MRMSrcMem, _, (outs VR128X:$dst),
-                       (ins VR128X:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
-                       OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
-                       (_.VT (OpNode (_.VT _.RC:$src1), (_.ScalarIntMemFrags addr:$src2),
-                                     (i32 timm:$src3)))>,
+        def rmi : AVX512Ii8<0x53, MRMSrcMem, (outs _.FRC:$dst),
+                            (ins _.FRC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
+                             !strconcat(OpStr, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
+                             [(set _.FRC:$dst, (OpNode _.FRC:$src1, (_.ScalarLdFrag addr:$src2),
+                                                       (i32 timm:$src3)))]>,
+                       Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
+      }
+      defm rri_Int : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
+                                     (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+                                      OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
+                                      (_.VT (OpNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
+                                                    (i32 timm:$src3)))>,
+                       Sched<[WriteFMAX]>;
+
+      defm rmi_Int : AVX512_maskable<0x53, MRMSrcMem, _, (outs VR128X:$dst),
+                                     (ins VR128X:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
+                                      OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
+                                      (_.VT (OpNode (_.VT _.RC:$src1), (_.ScalarIntMemFrags addr:$src2),
+                                                    (i32 timm:$src3)))>,
                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
     }
     let Uses = []<Register>, mayRaiseFPException = 0 in
-      defm rrib : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
-                        (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
-                        OpStr, "$src3, {sae}, $src2, $src1",
-                        "$src1, $src2, {sae}, $src3",
-                        (_.VT (OpNodeSAE (_.VT _.RC:$src1), (_.VT _.RC:$src2),
-                                         (i32 timm:$src3)))>,
-                        Sched<[WriteFMAX]>, EVEX_B;
+      defm rrib_Int : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
+                                      (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+                                       OpStr, "$src3, {sae}, $src2, $src1",
+                                       "$src1, $src2, {sae}, $src3",
+                                       (_.VT (OpNodeSAE (_.VT _.RC:$src1), (_.VT _.RC:$src2),
+                                                        (i32 timm:$src3)))>,
+                       Sched<[WriteFMAX]>, EVEX_B;
   }
 }
 
