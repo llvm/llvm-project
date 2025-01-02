@@ -103,7 +103,7 @@
 // RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -no-canonical-prefixes -v \
 // RUN:   -resource-dir=%t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 --print-rocm-search-dirs %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=SPACK %s
+// RUN:   | FileCheck -check-prefixes=SPACK %s --dump-input always --dump-input-context 100
 
 // Test SPACK installation with multiple hip and rocm-device-libs packages of the same
 // ROCm release. --hip-path and --rocm-device-lib-path can be used to specify them.
@@ -147,12 +147,12 @@
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
 
 // SPACK: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
+// SPACK: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
 // SPACK: ROCm installation search path (Spack 4.0.0): [[DIR]]
 // SPACK: ROCm installation search path: [[CLANG:.*]]
 // SPACK: ROCm installation search path: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z
 // SPACK: ROCm installation search path: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang
 // SPACK: ROCm installation search path: /opt/rocm
-// SPACK: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
 // SPACK: "-triple" "amdgcn-amd-amdhsa"
 // SPACK-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
 // SPACK-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"

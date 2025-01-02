@@ -80,6 +80,7 @@ private:
   bool HasHIPStdParLibrary = false;
   bool HasRocThrustLibrary = false;
   bool HasRocPrimLibrary = false;
+  bool IsHostMSVC = false;
 
   // Default version if not detected or specified.
   const unsigned DefaultVersionMajor = 3;
@@ -193,6 +194,10 @@ public:
   /// Check whether we detected a valid HIP STDPAR Acceleration library.
   bool hasHIPStdParLibrary() const { return HasHIPStdParLibrary; }
 
+  /// Check whether the target triple is for Windows.
+  bool isHostWindows() const { return IsHostMSVC; }
+  void setHostWindows(bool val) { IsHostMSVC = val; }
+
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;
 
@@ -270,6 +275,13 @@ public:
     if (Loc == LibDeviceMap.end())
       return "";
     return Loc->second;
+  }
+
+  void init(bool DetectHIPRuntime = true, bool DetectDeviceLib = false) {
+    if (DetectHIPRuntime)
+      detectHIPRuntime();
+    if (DetectDeviceLib)
+      detectDeviceLibrary();
   }
 
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,

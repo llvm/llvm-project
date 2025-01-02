@@ -431,6 +431,12 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
+
+  // Tell the ROCm installation detector that Host is Windows before trying to
+  // find HIPRT or Device Libs
+  RocmInstallation->setHostWindows(true);
+  RocmInstallation->init();
+
   getProgramPaths().push_back(getDriver().Dir);
 
   std::optional<llvm::StringRef> VCToolsDir, VCToolsVersion;

@@ -33,7 +33,8 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
                                              const llvm::Triple &Triple,
                                              const ToolChain &HostTC,
                                              const ArgList &Args)
-    : ROCMToolChain(D, Triple, Args), HostTC(HostTC) {
+    : ROCMToolChain(D, Triple, Args, HostTC.getTriple().isOSWindows()),
+      HostTC(HostTC) {
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
