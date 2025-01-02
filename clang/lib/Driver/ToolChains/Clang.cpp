@@ -8010,7 +8010,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasArg(options::OPT_forder_file_instrumentation)) {
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_forder_file_instrumentation)) {
+     D.Diag(diag::warn_drv_deprecated_arg)
+         << A->getAsString(Args) << /*hasReplacement=*/true
+         << "-mllvm -pgo-temporal-instrumentation";
      CmdArgs.push_back("-forder-file-instrumentation");
      // Enable order file instrumentation when ThinLTO is not on. When ThinLTO is
      // on, we need to pass these flags as linker flags and that will be handled
