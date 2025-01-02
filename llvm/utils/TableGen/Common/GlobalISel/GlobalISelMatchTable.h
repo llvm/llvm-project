@@ -1763,11 +1763,6 @@ protected:
   unsigned InsnVarID;
   bool AllowNumOpsCheck;
 
-  /// PhysRegInputs - List list has an entry for each explicitly specified
-  /// physreg input to the pattern.  The first elt is the Register node, the
-  /// second is the recorded slot number the input pattern match saved it in.
-  SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
-
   bool canAddNumOperandsCheck() const {
     // Add if it's allowed, and:
     //    - We don't have a variadic operand
