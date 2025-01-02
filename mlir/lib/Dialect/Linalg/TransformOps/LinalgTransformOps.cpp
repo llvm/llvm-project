@@ -262,6 +262,19 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
   linalg::populateFoldAddIntoDestPatterns(patterns);
 }
 
+
+void transform::ApplyHoistVectorTransferPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateHoistVectorTransferPatterns(patterns);
+}
+
+
+void transform::ApplyVectorContractToFMAPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateVectorContractToFMAPatterns(patterns);
+}
+
+
 void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populatePadOpVectorizationPatterns(patterns);

@@ -1824,6 +1824,16 @@ void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
 /// suffices for achieving the sum.
 void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 
+
+/// Pattern to hoists the vector transfer reads/writes outside the reduction and 
+/// k-loop.
+void populateHoistVectorTransferPatterns(RewritePatternSet &patterns);
+
+
+/// Pattern to lower vector contraction op for GEMM of size MxN to
+/// sequence of vector FMAs
+void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
+
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
 /// if the producer is a `linalg` operation with all parallel iterator types.
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
