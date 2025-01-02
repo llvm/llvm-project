@@ -125,7 +125,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
      << (Sym.isLive() ? "live" : "dead") << "  -   "
-     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
+     << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
@@ -165,6 +165,16 @@ Section::~Section() {
     Sym->~Symbol();
   for (auto *B : Blocks)
     B->~Block();
+}
+
+LinkGraph::~LinkGraph() {
+  for (auto *Sym : AbsoluteSymbols) {
+    Sym->~Symbol();
+  }
+  for (auto *Sym : external_symbols()) {
+    Sym->~Symbol();
+  }
+  ExternalSymbols.clear();
 }
 
 std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
@@ -481,22 +491,25 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
+                          std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
   switch (Magic) {
   case file_magic::macho_object:
-    return createLinkGraphFromMachOObject(ObjectBuffer);
+    return createLinkGraphFromMachOObject(ObjectBuffer, std::move(SSP));
   case file_magic::elf_relocatable:
-    return createLinkGraphFromELFObject(ObjectBuffer);
+    return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
   case file_magic::coff_object:
-    return createLinkGraphFromCOFFObject(ObjectBuffer);
+    return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
 }
 
-std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
-                                                    orc::SymbolMap Symbols) {
+std::unique_ptr<LinkGraph>
+absoluteSymbolsLinkGraph(const Triple &TT,
+                         std::shared_ptr<orc::SymbolStringPool> SSP,
+                         orc::SymbolMap Symbols) {
   unsigned PointerSize;
   endianness Endianness =
       TT.isLittleEndian() ? endianness::little : endianness::big;
@@ -518,8 +531,8 @@ std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", TT, PointerSize,
-      Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP), TT,
+      PointerSize, Endianness, /*GetEdgeKindName=*/nullptr);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,

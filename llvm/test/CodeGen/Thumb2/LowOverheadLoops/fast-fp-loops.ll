@@ -9,12 +9,12 @@ define arm_aapcs_vfpcc void @fast_float_mul(ptr nocapture %a, ptr nocapture read
 ; CHECK-NEXT:    beq.w .LBB0_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
 ; CHECK-NEXT:    add.w r4, r2, r3, lsl #2
-; CHECK-NEXT:    add.w lr, r0, r3, lsl #2
 ; CHECK-NEXT:    cmp r4, r0
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    cmp lr, r2
-; CHECK-NEXT:    csel r12, zr, r4, ls
-; CHECK-NEXT:    cmp lr, r1
+; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
+; CHECK-NEXT:    cset r12, hi
+; CHECK-NEXT:    cmp r4, r2
+; CHECK-NEXT:    csel r12, zr, r12, ls
+; CHECK-NEXT:    cmp r4, r1
 ; CHECK-NEXT:    add.w r4, r1, r3, lsl #2
 ; CHECK-NEXT:    cset lr, hi
 ; CHECK-NEXT:    cmp r4, r0

@@ -424,11 +424,22 @@ def unary_undef_to_zero: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
+def unary_undef_to_undef_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR, G_FPTOSI,
+            G_FPTOUI],
+           (pattern (op $dst, $x), (G_IMPLICIT_DEF $x)))>;
+def unary_undef_to_undef : GICombineRule<
+  (defs root:$dst),
+  (match (unary_undef_to_undef_frags $dst)),
+  (apply [{ Helper.replaceInstWithUndef(*${dst}.getParent()); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST):$root,
+  (match (wip_match_opcode G_ADD, G_SUB, G_XOR):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -1857,26 +1868,6 @@ class integer_of_opcode<Instruction castOpcode> : GICombineRule <
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 
-def anyext_undef: GICombineRule<
-   (defs root:$root),
-   (match (G_IMPLICIT_DEF $undef),
-          (G_ANYEXT $root, $undef):$Aext),
-   (apply [{ Helper.replaceInstWithUndef(*${Aext}); }])>;
-
-def zext_undef: GICombineRule<
-   (defs root:$root),
-   (match (G_IMPLICIT_DEF $undef),
-          (G_ZEXT $root, $undef):$Zext,
-   [{ return Helper.isConstantLegalOrBeforeLegalizer(MRI.getType(${Zext}->getOperand(0).getReg())); }]),
-   (apply [{ Helper.replaceInstWithConstant(*${Zext}, 0); }])>;
-
-def sext_undef: GICombineRule<
-   (defs root:$root),
-   (match (G_IMPLICIT_DEF $undef),
-          (G_SEXT $root, $undef):$Sext,
-   [{ return Helper.isConstantLegalOrBeforeLegalizer(MRI.getType(${Sext}->getOperand(0).getReg())); }]),
-   (apply [{ Helper.replaceInstWithConstant(*${Sext}, 0); }])>;
-
 def cast_of_cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
@@ -1902,10 +1893,7 @@ def cast_combines: GICombineGroup<[
   narrow_binop_and,
   narrow_binop_or,
   narrow_binop_xor,
-  integer_of_truncate,
-  anyext_undef,
-  sext_undef,
-  zext_undef
+  integer_of_truncate
 ]>;
 
 def canonicalize_icmp : GICombineRule<
@@ -1942,6 +1930,7 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      binop_left_undef_to_zero,
                                      binop_right_undef_to_undef,
                                      unary_undef_to_zero,
+                                     unary_undef_to_undef,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,

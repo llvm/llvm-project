@@ -13,24 +13,24 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
+#include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
+#include "CIRGenTypes.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 class ASTContext;
 class CodeGenOptions;
 class Decl;
-class DiagnosticBuilder;
-class DiagnosticsEngine;
 class GlobalDecl;
 class LangOptions;
-class SourceLocation;
-class SourceRange;
 class TargetInfo;
+class VarDecl;
 
 namespace CIRGen {
 
@@ -41,19 +41,17 @@ class CIRGenModule : public CIRGenTypeCache {
   CIRGenModule &operator=(CIRGenModule &) = delete;
 
 public:
-  CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
+  CIRGenModule(mlir::MLIRContext &mlirContext, clang::ASTContext &astContext,
                const clang::CodeGenOptions &cgo,
                clang::DiagnosticsEngine &diags);
 
   ~CIRGenModule() = default;
 
 private:
-  // TODO(CIR) 'builder' will change to CIRGenBuilderTy once that type is
-  // defined
-  mlir::OpBuilder builder;
+  CIRGenBuilderTy builder;
 
   /// Hold Clang AST information.
-  clang::ASTContext &astCtx;
+  clang::ASTContext &astContext;
 
   const clang::LangOptions &langOpts;
 
@@ -64,8 +62,14 @@ private:
 
   const clang::TargetInfo &target;
 
+  CIRGenTypes genTypes;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
+  CIRGenBuilderTy &getBuilder() { return builder; }
+  clang::ASTContext &getASTContext() const { return astContext; }
+  CIRGenTypes &getTypes() { return genTypes; }
+  mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an
   /// MLIR Location.
@@ -81,13 +85,28 @@ public:
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+  void emitGlobalVarDefinition(const clang::VarDecl *vd,
+                               bool isTentative = false);
 
   /// Helpers to emit "not yet implemented" error diagnostics
-  DiagnosticBuilder errorNYI(llvm::StringRef);
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
-  DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef, llvm::StringRef);
+
+  template <typename T>
+  DiagnosticBuilder errorNYI(SourceLocation loc, llvm::StringRef feature,
+                             const T &name) {
+    unsigned diagID =
+        diags.getCustomDiagID(DiagnosticsEngine::Error,
+                              "ClangIR code gen Not Yet Implemented: %0: %1");
+    return diags.Report(loc, diagID) << feature << name;
+  }
+
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);
-  DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef, llvm::StringRef);
+
+  template <typename T>
+  DiagnosticBuilder errorNYI(SourceRange loc, llvm::StringRef feature,
+                             const T &name) {
+    return errorNYI(loc.getBegin(), feature, name) << loc;
+  }
 };
 } // namespace CIRGen
 

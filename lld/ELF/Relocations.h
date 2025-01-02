@@ -22,6 +22,7 @@ class Symbol;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
+class RelocationBaseSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
@@ -91,7 +92,10 @@ enum RelExpr {
   // of a relocation type, there are some relocations whose semantics are
   // unique to a target. Such relocation are marked with RE_<TARGET_NAME>.
   RE_AARCH64_GOT_PAGE_PC,
+  RE_AARCH64_AUTH_GOT_PAGE_PC,
   RE_AARCH64_GOT_PAGE,
+  RE_AARCH64_AUTH_GOT,
+  RE_AARCH64_AUTH_GOT_PC,
   RE_AARCH64_PAGE_PC,
   RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   RE_AARCH64_TLSDESC_PAGE,
@@ -355,6 +359,8 @@ sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
          SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
   return {};
 }
+
+RelocationBaseSection &getIRelativeSection(Ctx &ctx);
 
 // Returns true if Expr refers a GOT entry. Note that this function returns
 // false for TLS variables even though they need GOT, because TLS variables uses

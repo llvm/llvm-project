@@ -335,3 +335,17 @@ constexpr void foo() {
 }
 
 } // namespace GH47400
+
+namespace GH84961 {
+
+template <typename T> void g(const T &t) {}
+
+template <typename T> void f(const T &t) {
+  [t] { g(t); }();
+}
+
+void h() {
+  f(h);
+}
+
+} // namespace GH84961

@@ -17,6 +17,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -197,8 +198,18 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
-  if (ID == Builtin::BIstrcmp)
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  uint64_t Limit = ~static_cast<uint64_t>(0);
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
+    Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
+                .getZExtValue();
+
+  if (Limit == 0) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
 
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
@@ -212,7 +223,11 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   unsigned IndexA = A.getIndex();
   unsigned IndexB = B.getIndex();
   int32_t Result = 0;
-  for (;; ++IndexA, ++IndexB) {
+  uint64_t Steps = 0;
+  for (;; ++IndexA, ++IndexB, ++Steps) {
+
+    if (Steps >= Limit)
+      break;
     const Pointer &PA = A.atIndex(IndexA);
     const Pointer &PB = B.atIndex(IndexB);
     if (!CheckRange(S, OpPC, PA, AK_Read) ||
@@ -243,7 +258,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ID = Func->getBuiltinID();
   const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
 
-  if (ID == Builtin::BIstrlen)
+  if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (!CheckArray(S, OpPC, StrPtr))
@@ -256,6 +271,12 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
+  unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+
+  if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
+    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
+    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+  }
 
   size_t Len = 0;
   for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
@@ -264,7 +285,20 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     if (!CheckRange(S, OpPC, ElemPtr, AK_Read))
       return false;
 
-    uint8_t Val = ElemPtr.deref<uint8_t>();
+    uint32_t Val;
+    switch (ElemSize) {
+    case 1:
+      Val = ElemPtr.deref<uint8_t>();
+      break;
+    case 2:
+      Val = ElemPtr.deref<uint16_t>();
+      break;
+    case 4:
+      Val = ElemPtr.deref<uint32_t>();
+      break;
+    default:
+      llvm_unreachable("Unsupported char size");
+    }
     if (Val == 0)
       break;
   }
@@ -1797,12 +1831,14 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
 
   return true;
 }
+
 static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call) {
   assert(Call->getNumArgs() == 3);
   unsigned ID = Func->getBuiltinID();
   Pointer DestPtr = getParam<Pointer>(Frame, 0);
+  const ASTContext &ASTCtx = S.getASTContext();
   const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
   const APSInt &Size =
       peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
@@ -1823,19 +1859,195 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
         << /*IsMove=*/Move << /*IsWchar=*/false << !SrcPtr.isZero()
-        << DiagPtr.toDiagnosticString(S.getASTContext());
+        << DiagPtr.toDiagnosticString(ASTCtx);
     return false;
+  }
+
+  QualType DestElemType;
+  size_t RemainingDestElems;
+  if (DestPtr.getFieldDesc()->isArray()) {
+    DestElemType = DestPtr.getFieldDesc()->getElemQualType();
+    RemainingDestElems = (DestPtr.getNumElems() - DestPtr.getIndex());
+  } else {
+    DestElemType = DestPtr.getType();
+    RemainingDestElems = 1;
+  }
+  unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
+
+  if (Size.urem(DestElemSize) != 0) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_unsupported)
+        << Move << /*IsWchar=*/false << 0 << DestElemType << Size
+        << DestElemSize;
+    return false;
+  }
+
+  QualType SrcElemType;
+  size_t RemainingSrcElems;
+  if (SrcPtr.getFieldDesc()->isArray()) {
+    SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
+    RemainingSrcElems = (SrcPtr.getNumElems() - SrcPtr.getIndex());
+  } else {
+    SrcElemType = SrcPtr.getType();
+    RemainingSrcElems = 1;
+  }
+  unsigned SrcElemSize = ASTCtx.getTypeSizeInChars(SrcElemType).getQuantity();
+
+  if (!ASTCtx.hasSameUnqualifiedType(DestElemType, SrcElemType)) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_type_pun)
+        << Move << SrcElemType << DestElemType;
+    return false;
+  }
+
+  // Check if we have enough elements to read from and write to/
+  size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
+  size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
+  if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {
+    APInt N = Size.udiv(DestElemSize);
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_unsupported)
+        << Move << /*IsWChar*/ false << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
+        << DestElemType << toString(N, 10, /*Signed=*/false);
+    return false;
+  }
+
+  // Check for overlapping memory regions.
+  if (!Move && Pointer::pointToSameBlock(SrcPtr, DestPtr)) {
+    unsigned SrcIndex = SrcPtr.getIndex() * SrcPtr.elemSize();
+    unsigned DstIndex = DestPtr.getIndex() * DestPtr.elemSize();
+    unsigned N = Size.getZExtValue();
+
+    if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
+        (DstIndex <= SrcIndex && (DstIndex + N) > SrcIndex)) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_overlap)
+          << /*IsWChar=*/false;
+      return false;
+    }
   }
 
   // As a last resort, reject dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
-
-  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+  assert(Size.getZExtValue() % DestElemSize == 0);
+  if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size.getZExtValue()).toBits()))
     return false;
 
   S.Stk.push<Pointer>(DestPtr);
   return true;
+}
+
+/// Determine if T is a character type for which we guarantee that
+/// sizeof(T) == 1.
+static bool isOneByteCharacterType(QualType T) {
+  return T->isCharType() || T->isChar8Type();
+}
+
+static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  unsigned ID = Func->getBuiltinID();
+  const Pointer &PtrA = getParam<Pointer>(Frame, 0);
+  const Pointer &PtrB = getParam<Pointer>(Frame, 1);
+  const APSInt &Size =
+      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+
+  if (ID == Builtin::BImemcmp || ID == Builtin::BIbcmp ||
+      ID == Builtin::BIwmemcmp)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  if (Size.isZero()) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  bool IsWide =
+      (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  // FIXME: This is an arbitrary limitation the current constant interpreter
+  // had. We could remove this.
+  if (!IsWide && (!isOneByteCharacterType(PtrA.getType()) ||
+                  !isOneByteCharacterType(PtrB.getType()))) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcmp_unsupported)
+        << ("'" + ASTCtx.BuiltinInfo.getName(ID) + "'").str() << PtrA.getType()
+        << PtrB.getType();
+    return false;
+  }
+
+  if (PtrA.isDummy() || PtrB.isDummy())
+    return false;
+
+  // Now, read both pointers to a buffer and compare those.
+  BitcastBuffer BufferA(
+      Bits(ASTCtx.getTypeSize(PtrA.getFieldDesc()->getType())));
+  readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+  // FIXME: The swapping here is UNDOING something we do when reading the
+  // data into the buffer.
+  if (ASTCtx.getTargetInfo().isBigEndian())
+    swapBytes(BufferA.Data.get(), BufferA.byteSize().getQuantity());
+
+  BitcastBuffer BufferB(
+      Bits(ASTCtx.getTypeSize(PtrB.getFieldDesc()->getType())));
+  readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
+  // FIXME: The swapping here is UNDOING something we do when reading the
+  // data into the buffer.
+  if (ASTCtx.getTargetInfo().isBigEndian())
+    swapBytes(BufferB.Data.get(), BufferB.byteSize().getQuantity());
+
+  size_t MinBufferSize = std::min(BufferA.byteSize().getQuantity(),
+                                  BufferB.byteSize().getQuantity());
+
+  unsigned ElemSize = 1;
+  if (IsWide)
+    ElemSize = ASTCtx.getTypeSizeInChars(ASTCtx.getWCharType()).getQuantity();
+  // The Size given for the wide variants is in wide-char units. Convert it
+  // to bytes.
+  size_t ByteSize = Size.getZExtValue() * ElemSize;
+  size_t CmpSize = std::min(MinBufferSize, ByteSize);
+
+  for (size_t I = 0; I != CmpSize; I += ElemSize) {
+    if (IsWide) {
+      INT_TYPE_SWITCH(*S.getContext().classify(ASTCtx.getWCharType()), {
+        T A = *reinterpret_cast<T *>(BufferA.Data.get() + I);
+        T B = *reinterpret_cast<T *>(BufferB.Data.get() + I);
+        if (A < B) {
+          pushInteger(S, -1, Call->getType());
+          return true;
+        } else if (A > B) {
+          pushInteger(S, 1, Call->getType());
+          return true;
+        }
+      });
+    } else {
+      std::byte A = BufferA.Data[I];
+      std::byte B = BufferB.Data[I];
+
+      if (A < B) {
+        pushInteger(S, -1, Call->getType());
+        return true;
+      } else if (A > B) {
+        pushInteger(S, 1, Call->getType());
+        return true;
+      }
+    }
+  }
+
+  // We compared CmpSize bytes above. If the limiting factor was the Size
+  // passed, we're done and the result is equality (0).
+  if (ByteSize <= CmpSize) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  // However, if we read all the available bytes but were instructed to read
+  // even more, diagnose this as a "read of dereferenced one-past-the-end
+  // pointer". This is what would happen if we called CheckRead() on every array
+  // element.
+  S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+      << AK_Read << S.Current->getRange(OpPC);
+  return false;
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -1854,11 +2066,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_strcmp:
   case Builtin::BIstrcmp:
+  case Builtin::BI__builtin_strncmp:
+  case Builtin::BIstrncmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_strlen:
   case Builtin::BIstrlen:
+  case Builtin::BI__builtin_wcslen:
+  case Builtin::BIwcslen:
     if (!interp__builtin_strlen(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -2304,6 +2520,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemmove:
     if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_memcmp:
+  case Builtin::BImemcmp:
+  case Builtin::BI__builtin_bcmp:
+  case Builtin::BIbcmp:
+  case Builtin::BI__builtin_wmemcmp:
+  case Builtin::BIwmemcmp:
+    if (!interp__builtin_memcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
 
