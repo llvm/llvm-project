@@ -2491,7 +2491,7 @@ TemplateInstantiator::TransformDeclRefExpr(DeclRefExpr *E) {
   if (BindingDecl *BD = dyn_cast<BindingDecl>(D); BD && BD->isParameterPack()) {
     BD = cast<BindingDecl>(TransformDecl(BD->getLocation(), BD));
     if (auto *RP =
-            dyn_cast_or_null<ResolvedUnexpandedPackExpr>(BD->getBinding())) {
+            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding())) {
       return TransformResolvedUnexpandedPackExpr(RP);
     }
   }

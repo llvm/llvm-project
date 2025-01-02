@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 %s -verify
 // expected-no-diagnostics
 
 template <typename T>
@@ -64,8 +64,6 @@ void decompose_struct() {
 
 template <typename T>
 void decompose_array() {
-  // previously unable to use non-dependent array here
-  // Fixes https://bugs.llvm.org/show_bug.cgi?id=45964
   int arr[4] = {1, 2, 3, 6};
   auto [x, ...rest, y] = arr;
 

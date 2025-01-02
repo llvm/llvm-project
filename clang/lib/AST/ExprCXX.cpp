@@ -1971,6 +1971,9 @@ ResolvedUnexpandedPackExpr::ResolvedUnexpandedPackExpr(SourceLocation BL,
                                                        unsigned NumExprs)
     : Expr(ResolvedUnexpandedPackExprClass, QT, VK_PRValue, OK_Ordinary),
       BeginLoc(BL), NumExprs(NumExprs) {
+  // C++ [temp.dep.expr]p3
+  // An id-expression is type-dependent if it is
+  //    - associated by name lookup with a pack
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
@@ -2007,9 +2010,7 @@ ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
 }
 
 ResolvedUnexpandedPackExpr *ResolvedUnexpandedPackExpr::getFromDecl(Decl *D) {
-  // TODO P1858: Extend to VarDecls for P1858
-  if (auto *BD = dyn_cast<BindingDecl>(D)) {
-    return dyn_cast_or_null<ResolvedUnexpandedPackExpr>(BD->getBinding());
-  }
+  if (auto *BD = dyn_cast<BindingDecl>(D))
+    return dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding());
   return nullptr;
 }

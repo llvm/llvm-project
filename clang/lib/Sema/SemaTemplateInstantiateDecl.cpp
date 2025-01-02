@@ -1180,13 +1180,13 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   ResolvedUnexpandedPackExpr *OldResolvedPack = nullptr;
   for (auto *OldBD : D->bindings()) {
     Expr *BindingExpr = OldBD->getBinding();
-    if (auto *RP = dyn_cast_or_null<ResolvedUnexpandedPackExpr>(BindingExpr))
+    if (auto *RP = dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr))
       OldResolvedPack = RP;
     NewBindings.push_back(cast<BindingDecl>(VisitBindingDecl(OldBD)));
   }
   ArrayRef<BindingDecl*> NewBindingArray = NewBindings;
 
-  auto *NewDD = cast_or_null<DecompositionDecl>(
+  auto *NewDD = cast_if_present<DecompositionDecl>(
       VisitVarDecl(D, /*InstantiatingVarTemplate=*/false, &NewBindingArray));
 
   if (!NewDD || NewDD->isInvalidDecl())

@@ -7310,14 +7310,14 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
   // array declarator.
   if (!(Tok.isOneOf(tok::identifier, tok::ellipsis) &&
         NextToken().isOneOf(tok::comma, tok::r_square, tok::kw_alignas,
-                            tok::identifier, tok::l_square)) &&
+                            tok::identifier, tok::l_square, tok::ellipsis)) &&
       !(Tok.is(tok::r_square) &&
         NextToken().isOneOf(tok::equal, tok::l_brace))) {
     PA.Revert();
     return ParseMisplacedBracketDeclarator(D);
   }
 
-  bool HasEllipsis = false;
+  SourceLocation PrevEllipsisLoc;
   SmallVector<DecompositionDeclarator::Binding, 32> Bindings;
   while (Tok.isNot(tok::r_square)) {
     if (!Bindings.empty()) {
@@ -7332,9 +7332,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
           Diag(Tok, diag::err_expected_comma_or_rsquare);
         }
 
-        // I don't know why this skipping was here
-        // SkipUntil(tok::r_square, tok::comma, tok::identifier,
-        //          StopAtSemi | StopBeforeMatch);
+        SkipUntil({tok::r_square, tok::comma, tok::identifier, tok::ellipsis},
+                  StopAtSemi | StopBeforeMatch);
         if (Tok.is(tok::comma))
           ConsumeToken();
         else if (Tok.is(tok::r_square))
@@ -7345,17 +7344,18 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
     if (isCXX11AttributeSpecifier())
       DiagnoseAndSkipCXX11Attributes();
 
-    SourceLocation EllipsisLoc = {};
+    SourceLocation EllipsisLoc;
 
     if (Tok.is(tok::ellipsis)) {
       if (!getLangOpts().CPlusPlus26)
-        Diag(Tok, diag::warn_cxx2c_binding_pack);
-      if (HasEllipsis) {
+        Diag(Tok, diag::ext_cxx_binding_pack);
+      if (PrevEllipsisLoc.isValid()) {
         Diag(Tok, diag::err_binding_multiple_ellipses);
+        Diag(PrevEllipsisLoc, diag::note_previous_ellipsis);
         break;
       }
-      HasEllipsis = true;
       EllipsisLoc = Tok.getLocation();
+      PrevEllipsisLoc = EllipsisLoc;
       ConsumeToken();
     }
 
@@ -7367,6 +7367,13 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
     IdentifierInfo *II = Tok.getIdentifierInfo();
     SourceLocation Loc = Tok.getLocation();
     ConsumeToken();
+
+    if (Tok.is(tok::ellipsis) && !PrevEllipsisLoc.isValid()) {
+      DiagnoseMisplacedEllipsis(Tok.getLocation(), Loc,
+                                EllipsisLoc.isValid(), true);
+      EllipsisLoc = Tok.getLocation();
+      ConsumeToken();
+    }
 
     ParsedAttributes Attrs(AttrFactory);
     if (isCXX11AttributeSpecifier()) {

@@ -56,7 +56,7 @@ class CollectUnexpandedParameterPacksVisitor
         return;
       } else if (auto *BD = dyn_cast<BindingDecl>(ND)) {
         Expr *E = BD->getBinding();
-        if (auto *RP = dyn_cast_or_null<ResolvedUnexpandedPackExpr>(E)) {
+        if (auto *RP = dyn_cast_if_present<ResolvedUnexpandedPackExpr>(E)) {
           addUnexpanded(RP);
           return;
         }

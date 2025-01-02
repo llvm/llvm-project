@@ -9780,7 +9780,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   QualType R = TInfo->getType();
 
   assert(R->isFunctionType());
-  bool NeedsExpansion = false;
 
   if (R.getCanonicalType()->castAs<FunctionType>()->getCmseNSCallAttr())
     Diag(D.getIdentifierLoc(), diag::err_function_decl_cmse_ns_call);
@@ -10965,14 +10964,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       !NewFD->isInvalidDecl() &&
       D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration)
     ExternalDeclarations.push_back(NewFD);
-
-  if (NeedsExpansion) {
-    CodeSynthesisContext SynthCtx{};
-    pushCodeSynthesisContext(SynthCtx);
-    NewFD = dyn_cast_or_null<FunctionDecl>(
-        SubstDecl(NewFD, DC, MultiLevelTemplateArgumentList{}));
-    popCodeSynthesisContext();
-  }
 
   return NewFD;
 }

@@ -4166,7 +4166,6 @@ public:
   void setDecomposedDecl(ValueDecl *Decomposed) { Decomp = Decomposed; }
 
   VarDecl *getHoldingVar() const;
-  static VarDecl *getHoldingVar(Expr *E);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::Binding; }
@@ -4224,7 +4223,7 @@ public:
   /// binding. Only present for user-defined bindings for tuple-like types.
   void VisitHoldingVars(llvm::function_ref<void(VarDecl *)> F) const;
 
-  // Visit the concrete bindings. (workaround)
+  // Visit the concrete bindings.
   void VisitBindings(llvm::function_ref<void(BindingDecl *)> F) const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

@@ -3653,12 +3653,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
-    // These never have a side-effect.
-    return false;
-
-  // ResolvedUnexpandedPackExpr is currently only used for
-  // structed bindings which have no side effects
   case ResolvedUnexpandedPackExprClass:
+    // These never have a side-effect.
     return false;
 
   case ConstantExprClass:

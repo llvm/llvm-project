@@ -5321,6 +5321,8 @@ public:
   }
 };
 
+// Represents an unexpanded pack where the list of expressions are
+// known. These are used when structured bindings introduce a pack.
 class ResolvedUnexpandedPackExpr final
     : public Expr,
       private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Stmt *> {

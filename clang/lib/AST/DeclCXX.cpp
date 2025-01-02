@@ -3395,7 +3395,7 @@ VarDecl *ValueDecl::getPotentiallyDecomposedVarDecl() {
   if (auto *Var = llvm::dyn_cast<VarDecl>(this))
     return Var;
   if (auto *BD = llvm::dyn_cast<BindingDecl>(this))
-    return llvm::dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+    return llvm::dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
   return nullptr;
 }
 
@@ -3416,16 +3416,7 @@ VarDecl *BindingDecl::getHoldingVar() const {
   Expr *B = getBinding();
   if (!B)
     return nullptr;
-  return getHoldingVar(B);
-}
-
-VarDecl *BindingDecl::getHoldingVar(Expr *E) {
-  auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreImplicit());
-  if (!DRE)
-    return nullptr;
-  if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
-    DRE = dyn_cast<DeclRefExpr>(BD->getBinding());
-  }
+  auto *DRE = dyn_cast<DeclRefExpr>(B->IgnoreImplicit());
   if (!DRE)
     return nullptr;
 
@@ -3434,27 +3425,13 @@ VarDecl *BindingDecl::getHoldingVar(Expr *E) {
   return VD;
 }
 
+
 void DecompositionDecl::VisitHoldingVars(
     llvm::function_ref<void(VarDecl *)> F) const {
-  for (BindingDecl *B : bindings()) {
-    Expr *BE = B->getBinding();
-    // All BindingDecls will contain holding vars or none will
-    if (!BE)
-      return;
-
-    llvm::ArrayRef<Expr *> Exprs;
-    if (auto *RP = dyn_cast<ResolvedUnexpandedPackExpr>(BE))
-      Exprs = llvm::ArrayRef(RP->getExprs(), RP->getNumExprs());
-    else
-      Exprs = BE;
-
-    for (Expr *E : Exprs) {
-      VarDecl *VD = BindingDecl::getHoldingVar(E);
-      if (!VD)
-        return;
+  VisitBindings([&](BindingDecl* BD) {
+    if (VarDecl* VD = BD->getHoldingVar())
       F(VD);
-    }
-  }
+  });
 }
 
 void DecompositionDecl::VisitBindings(
