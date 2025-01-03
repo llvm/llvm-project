@@ -1271,6 +1271,27 @@ func.func @while_two_arg(%arg0: index) {
 
 // -----
 
+// CHECK-LABEL: func @while_fun
+func.func @while_fun() {
+    %c0 = arith.constant 0 : i1
+    %4 = scf.while (%arg1 = %c0) : (i1) -> (i1) {
+      scf.condition(%c0) %arg1 : i1
+    } do {
+    ^bb0(%arg1: i1):
+      %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<i32>
+      %7 = func.call @foo(%alloc_1, %arg1) : (memref<i32>, i1) -> (i1)
+      scf.yield %7#0: i1
+    }
+    return
+}
+
+func.func private @foo(%arg1: memref<i32>, %arg2: i1) -> (i1) {
+    return %arg2 : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @while_three_arg
 func.func @while_three_arg(%arg0: index) {
 // CHECK: %[[ALLOC:.*]] = memref.alloc
   %a = memref.alloc(%arg0) : memref<?xf32>
