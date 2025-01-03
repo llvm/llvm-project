@@ -150,6 +150,33 @@ class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodes
   let Inst{31-25} = {simm, funct2};
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIMVCC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
+               (ins GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $rs1, $rs2, $rs3"> {
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIMVCCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
+               (ins GPRNoX0:$rs1, simm5:$imm, GPRNoX0:$rs3),
+               opcodestr, "$rd, $rs1, $imm, $rs3"> {
+  bits<5> imm;
+
+  let rs2 = imm;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIMVCCUI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
+               (ins GPRNoX0:$rs1, uimm5:$imm, GPRNoX0:$rs3),
+                       opcodestr, "$rd, $rs1, $imm, $rs3"> {
+  bits<5> imm;
+
+  let rs2 = imm;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -269,6 +296,42 @@ let Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli" in {
   def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">;
   def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">;
 } // Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli"
+
+let Predicates = [HasVendorXqcicm, IsRV32], DecoderNamespace = "Xqcicm" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+  def QC_C_MVEQZ   : RVInst16CL<0b101, 0b10, (outs GPRC:$rd_wb),
+                              (ins GPRC:$rd, GPRC:$rs1),
+                              "qc.c.mveqz", "$rd, $rs1"> {
+    let Constraints = "$rd = $rd_wb";
+
+    let Inst{12-10} = 0b011;
+    let Inst{6-5} = 0b00;
+  }
+
+  def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">;
+
+  def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">;
+
+  def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">;
+
+  def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">;
+
+  def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">;
+
+  def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">;
+
+  def QC_MVEQI   : QCIMVCCI <0b000, "qc.mveqi">;
+
+  def QC_MVNEI   : QCIMVCCI <0b001, "qc.mvnei">;
+
+  def QC_MVLTI   : QCIMVCCI <0b100, "qc.mvlti">;
+
+  def QC_MVGEI   : QCIMVCCI <0b101, "qc.mvgei">;
+
+  def QC_MVLTUI  : QCIMVCCUI<0b110, "qc.mvltui">;
+
+  def QC_MVGEUI  : QCIMVCCUI<0b111, "qc.mvgeui">;
+} // Predicates = [HasVendorXqcicm, IsRV32], DecoderNamespace = "Xqcicm"
 
 //===----------------------------------------------------------------------===//
 // Aliases

@@ -84,6 +84,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcia %s -o - | FileCheck --check-prefix=RV32XQCIA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqciac %s -o - | FileCheck --check-prefix=RV32XQCIAC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicli %s -o - | FileCheck --check-prefix=RV32XQCICLI %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm %s -o - | FileCheck --check-prefix=RV32XQCICM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcics %s -o - | FileCheck --check-prefix=RV32XQCICS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicsr %s -o - | FileCheck --check-prefix=RV32XQCICSR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilsm %s -o - | FileCheck --check-prefix=RV32XQCILSM %s
@@ -395,6 +396,7 @@
 ; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p2"
 ; RV32XQCIAC: .attribute 5, "rv32i2p1_zca1p0_xqciac0p2"
 ; RV32XQCICLI: .attribute 5, "rv32i2p1_xqcicli0p2"
+; RV32XQCICM: .attribute 5, "rv32i2p1_zca1p0_xqcicm0p2"
 ; RV32XQCICS: .attribute 5, "rv32i2p1_xqcics0p2"
 ; RV32XQCICSR: .attribute 5, "rv32i2p1_xqcicsr0p2"
 ; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p2"

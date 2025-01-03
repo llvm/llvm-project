@@ -435,6 +435,9 @@ The current vendor extensions supported are:
 ``experimental-Xqcicli``
   LLVM implements `version 0.2 of the Qualcomm uC Conditional Load Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
+``experimental-Xqcicm``
+  LLVM implements `version 0.2 of the Qualcomm uC Conditional Move extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
 ``experimental-Xqcics``
   LLVM implements `version 0.2 of the Qualcomm uC Conditional Select extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
