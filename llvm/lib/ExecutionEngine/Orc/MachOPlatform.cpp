@@ -937,6 +937,12 @@ Error MachOPlatform::MachOPlatformPlugin::bootstrapPipelineEnd(
     jitlink::LinkGraph &G) {
   std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
   assert(MP.Bootstrap && "DeferredAAs reset before bootstrap completed");
+
+  // Transfer any allocation actions to DeferredAAs.
+  std::move(G.allocActions().begin(), G.allocActions().end(),
+            std::back_inserter(MP.Bootstrap.load()->DeferredAAs));
+  G.allocActions().clear();
+
   --MP.Bootstrap.load()->ActiveGraphs;
   // Notify Bootstrap->CV while holding the mutex because the mutex is
   // also keeping Bootstrap->CV alive.
@@ -1397,10 +1403,6 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                              SPSExecutorAddrRange, SPSExecutorAddrRange>>,
         SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
 
-    shared::AllocActions &allocActions = LLVM_LIKELY(!InBootstrapPhase)
-                                             ? G.allocActions()
-                                             : MP.Bootstrap.load()->DeferredAAs;
-
     ExecutorAddr HeaderAddr;
     {
       std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
@@ -1410,7 +1412,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
       assert(I->second && "Null header registered for JD");
       HeaderAddr = I->second;
     }
-    allocActions.push_back(
+    G.allocActions().push_back(
         {cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
                  MP.RegisterObjectPlatformSections.Addr, HeaderAddr, UnwindInfo,
