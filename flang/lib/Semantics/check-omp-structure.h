@@ -102,8 +102,8 @@ public:
   void Enter(const parser::OmpDeclareTargetWithList &);
   void Enter(const parser::OmpDeclareTargetWithClause &);
   void Leave(const parser::OmpDeclareTargetWithClause &);
-  void Enter(const parser::OpenMPErrorConstruct &);
-  void Leave(const parser::OpenMPErrorConstruct &);
+  void Enter(const parser::OmpErrorDirective &);
+  void Leave(const parser::OmpErrorDirective &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
