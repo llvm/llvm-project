@@ -157,6 +157,7 @@ class FuseOp(FuseOp):
         ip=None,
     ):
         ...
+
     @overload
     def __init__(
         self,
