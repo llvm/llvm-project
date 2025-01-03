@@ -435,7 +435,8 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     if (MO0 == LoongArchII::MO_IE_PC_HI && MO1 == LoongArchII::MO_IE_PC_LO &&
         MO2 == LoongArchII::MO_IE_PC64_LO)
       return true;
-    if (MO0 == LoongArchII::MO_DESC_PC_HI && MO1 == LoongArchII::MO_DESC_PC_LO &&
+    if (MO0 == LoongArchII::MO_DESC_PC_HI &&
+        MO1 == LoongArchII::MO_DESC_PC_LO &&
         MO2 == LoongArchII::MO_DESC64_PC_LO)
       return true;
     break;
