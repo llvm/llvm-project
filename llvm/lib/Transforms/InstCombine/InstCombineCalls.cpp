@@ -2674,8 +2674,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
-      II->andIRFlags(Sign);
-      return replaceOperand(*II, 1, X);
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.setFastMathFlags(II->getFastMathFlags() &
+                               cast<Instruction>(Sign)->getFastMathFlags());
+      Value *CopySign =
+          Builder.CreateBinaryIntrinsic(Intrinsic::copysign, Mag, X);
+      return replaceInstUsesWith(*II, CopySign);
     }
 
     // Clear sign-bit of constant magnitude:
