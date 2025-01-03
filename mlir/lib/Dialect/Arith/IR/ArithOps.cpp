@@ -580,6 +580,7 @@ void arith::MulUIExtendedOp::getCanonicalizationPatterns(
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `(a * b) / b -> a`
 static Value foldDivMul(Value lhs, Value rhs,
                         arith::IntegerOverflowFlags ovfFlags) {
   auto mul = lhs.getDefiningOp<mlir::arith::MulIOp>();
@@ -600,6 +601,7 @@ OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
 
+  // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nuw))
     return val;
 
@@ -639,6 +641,7 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
 
+  // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nsw))
     return val;
 
