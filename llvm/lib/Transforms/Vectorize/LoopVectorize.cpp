@@ -7749,7 +7749,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
-  VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getEntry()->getSingleSuccessor());
+  VPBasicBlock *VectorPH =
+      cast<VPBasicBlock>(BestVPlan.getEntry()->getSingleSuccessor());
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton(
       ExpandedSCEVs ? *ExpandedSCEVs : State.ExpandedSCEVs);
   if (VectorizingEpilogue)
