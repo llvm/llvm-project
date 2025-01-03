@@ -267,12 +267,8 @@ define i1 @length4_le(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    seta %dl
-; X64-NEXT:    sbbl $0, %edx
-; X64-NEXT:    testl %edx, %edx
-; X64-NEXT:    setle %al
+; X64-NEXT:    setbe %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp slt i32 %m, 1
@@ -286,11 +282,8 @@ define i1 @length4_ge(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    seta %dl
-; X64-NEXT:    sbbl $0, %edx
-; X64-NEXT:    setns %al
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp sgt i32 %m, -1

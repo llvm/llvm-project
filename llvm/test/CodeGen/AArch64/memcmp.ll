@@ -267,11 +267,7 @@ define i1 @length4_le(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w8, w8, w9
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp slt i32 %m, 1
@@ -286,11 +282,7 @@ define i1 @length4_ge(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w8, w8, w9
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    lsr w0, w8, #31
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp sgt i32 %m, -1

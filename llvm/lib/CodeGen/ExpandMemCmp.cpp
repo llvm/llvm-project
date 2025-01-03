@@ -668,7 +668,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
   // We can generate more optimal code with a smaller number of operations
   if (CI->hasOneUser()) {
     auto *UI = cast<Instruction>(*CI->user_begin());
-    CmpPredicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
+    CmpPredicate Pred;
     uint64_t Shift;
     bool NeedsZExt = false;
     // This is a special case because instead of checking if the result is less
@@ -680,9 +680,19 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
         Shift == (CI->getType()->getIntegerBitWidth() - 1)) {
       Pred = ICmpInst::ICMP_SLT;
       NeedsZExt = true;
+    } else if (match(UI, m_ICmp(Pred, m_Specific(CI), m_Zero()))) {
+      // Compare with 0. Pred is already set.
+    } else if (match(UI, m_ICmp(Pred, m_Specific(CI), m_AllOnes())) &&
+               Pred == ICmpInst::ICMP_SGT) {
+      // Adjust predicate as if it compared with 0.
+      Pred = ICmpInst::ICMP_SGE;
+    } else if (match(UI, m_ICmp(Pred, m_Specific(CI), m_One())) &&
+               Pred == ICmpInst::ICMP_SLT) {
+      // Adjust predicate as if it compared with 0.
+      Pred = ICmpInst::ICMP_SLE;
     } else {
-      // In case of a successful match this call will set `Pred` variable
-      match(UI, m_ICmp(Pred, m_Specific(CI), m_Zero()));
+      // No match, invalidate Pred.
+      Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
     }
     // Generate new code and remove the original memcmp call and the user
     if (ICmpInst::isSigned(Pred)) {
