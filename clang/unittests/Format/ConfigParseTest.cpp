@@ -865,7 +865,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
               FormatStyle::SUD_LexicographicNumeric);
 
-  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Leave;
   CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Never",
               WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Never);
   CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Always",
