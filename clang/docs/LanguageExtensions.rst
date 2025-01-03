@@ -3641,7 +3641,7 @@ program location should be executed. It is expected to be used to implement
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
 intrinsic.
 
-The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+The ``__builtin_allow_runtime_check()`` can be used within control structures
 like ``if`` to guard expensive runtime checks. The return value is determined
 by the following compiler options and may differ per call site:
 
