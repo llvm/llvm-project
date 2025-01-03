@@ -157,7 +157,7 @@ RPC_ATTRS void sleep_briefly() {
     asm("nanosleep.u32 64;" ::: "memory");
 #elif defined(__AMDGPU__) && defined(RPC_TARGET_IS_GPU)
   __builtin_amdgcn_s_sleep(2);
-#elif __has_builtin(__builtin_ia32_pause)
+#elif __has_builtin(__builtin_ia32_pause) && !defined(__SPIRV__)
   __builtin_ia32_pause();
 #elif __has_builtin(__builtin_arm_isb)
   __builtin_arm_isb(0xf);
