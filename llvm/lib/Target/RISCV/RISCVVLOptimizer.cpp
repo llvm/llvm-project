@@ -50,10 +50,10 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  std::optional<const MachineOperand> getVLForUser(MachineOperand &UserOp);
+  std::optional<MachineOperand> getVLForUser(MachineOperand &UserOp);
   /// Returns the largest common VL MachineOperand that may be used to optimize
   /// MI. Returns std::nullopt if it failed to find a suitable VL.
-  std::optional<const MachineOperand> checkUsers(MachineInstr &MI);
+  std::optional<MachineOperand> checkUsers(MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -1055,7 +1055,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-std::optional<const MachineOperand>
+std::optional<MachineOperand>
 RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
@@ -1102,51 +1102,43 @@ RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
   return VLOp;
 }
 
-std::optional<const MachineOperand>
-RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
+std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
   // along lines of an instcombine style worklist which integrates the outer
   // pass.
-  bool CanReduceVL = true;
-  std::optional<const MachineOperand> CommonVL;
+  std::optional<MachineOperand> CommonVL;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
     if (mayReadPastVL(UserMI)) {
       LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
-      CanReduceVL = false;
-      break;
+      return std::nullopt;
     }
 
     // Tied operands might pass through.
     if (UserOp.isTied()) {
       LLVM_DEBUG(dbgs() << "    Abort because user used as tied operand\n");
-      CanReduceVL = false;
-      break;
+      return std::nullopt;
     }
 
     auto VLOp = getVLForUser(UserOp);
-    if (!VLOp) {
-      CanReduceVL = false;
-      break;
-    }
+    if (!VLOp)
+      return std::nullopt;
 
     // Use the largest VL among all the users. If we cannot determine this
     // statically, then we cannot optimize the VL.
     if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, *VLOp)) {
-      CommonVL.emplace(*VLOp);
+      CommonVL = *VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
     } else if (!RISCV::isVLKnownLE(*VLOp, *CommonVL)) {
       LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
-      CanReduceVL = false;
-      break;
+      return std::nullopt;
     }
 
     if (!RISCVII::hasSEWOp(UserMI.getDesc().TSFlags)) {
       LLVM_DEBUG(dbgs() << "    Abort due to lack of SEW operand\n");
-      CanReduceVL = false;
-      break;
+      return std::nullopt;
     }
 
     OperandInfo ConsumerInfo = getOperandInfo(UserOp, MRI);
@@ -1155,29 +1147,26 @@ RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
       LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
-      CanReduceVL = false;
-      break;
+      return std::nullopt;
     }
 
     // If the operand is used as a scalar operand, then the EEW must be
     // compatible. Otherwise, the EMUL *and* EEW must be compatible.
-    if ((isVectorOpUsedAsScalarOp(UserOp) &&
+    bool IsVectorOpUsedAsScalarOp = isVectorOpUsedAsScalarOp(UserOp);
+    if ((IsVectorOpUsedAsScalarOp &&
          !OperandInfo::EEWAreEqual(ConsumerInfo, ProducerInfo)) ||
-        (!isVectorOpUsedAsScalarOp(UserOp) &&
+        (!IsVectorOpUsedAsScalarOp &&
          !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo))) {
       LLVM_DEBUG(
           dbgs()
           << "    Abort due to incompatible information for EMUL or EEW.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
       LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
-      CanReduceVL = false;
-      break;
+      return std::nullopt;
     }
   }
 
-  return CanReduceVL && CommonVL
-             ? std::make_optional<const MachineOperand>(*CommonVL)
-             : std::nullopt;
+  return CommonVL;
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
