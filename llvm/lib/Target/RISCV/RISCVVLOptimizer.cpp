@@ -840,6 +840,9 @@ static bool isVectorOpUsedAsScalarOp(MachineOperand &MO) {
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
     return MO.getOperandNo() == 3;
+  case RISCV::VMV_X_S:
+  case RISCV::VFMV_F_S:
+    return MO.getOperandNo() == 1;
   default:
     return false;
   }
