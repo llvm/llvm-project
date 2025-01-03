@@ -1462,14 +1462,6 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return ctx.target->getTlsGdRelaxSkip(type);
   }
 
-  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_TLSGD_PAGE_PC, in which
-  // NEEDS_TLSIE shouldn't set. So we check independently.
-  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
-      execOptimize && isLocalInExecutable) {
-    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
-    return 1;
-  }
-
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_AARCH64_GOT_PAGE_PC,
             RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
     ctx.hasTlsIe.store(true, std::memory_order_relaxed);
@@ -1486,6 +1478,15 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
+    return 1;
+  }
+
+  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
+  // NEEDS_TLSIE shouldn't set. So we check independently.
+  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
+      execOptimize && isLocalInExecutable) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 
