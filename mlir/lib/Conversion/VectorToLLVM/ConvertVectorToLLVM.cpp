@@ -1096,6 +1096,29 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
+    for (unsigned idx = 0; idx < positionVec.size(); ++idx) {
+      if (auto position = llvm::dyn_cast<Value>(positionVec[idx])) {
+        auto defOp = position.getDefiningOp();
+        while (true) {
+          if (!defOp) {
+            break;
+          }
+          if (llvm::isa<arith::ConstantOp, LLVM::ConstantOp>(defOp)) {
+            Attribute value =
+                defOp->getAttr(arith::ConstantOp::getAttributeNames()[0]);
+            positionVec[idx] = OpFoldResult{
+                rewriter.getI64IntegerAttr(cast<IntegerAttr>(value).getInt())};
+            break;
+          } else if (auto unrealizedCastOp =
+                         llvm::dyn_cast<UnrealizedConversionCastOp>(defOp)) {
+            defOp = unrealizedCastOp.getOperand(0).getDefiningOp();
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
     // The Vector -> LLVM lowering models N-D vectors as nested aggregates of
     // 1-d vectors. This nesting is modeled using arrays. We do this conversion
     // from a N-d vector extract to a nested aggregate vector extract in two
