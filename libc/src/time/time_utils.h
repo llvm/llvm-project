@@ -25,8 +25,6 @@
 #include "src/__support/macros/config.h"
 #include "time_constants.h"
 #include "src/errno/libc_errno.h"
-#include "src/time/mktime.h"
-#include "src/time/timezone.h"
 #include "timezone.h"
 
 #include <stdint.h>
