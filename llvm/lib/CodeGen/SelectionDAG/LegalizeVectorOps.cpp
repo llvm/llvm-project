@@ -2246,6 +2246,7 @@ SDValue VectorLegalizer::UnrollVSETCC(SDNode *Node) {
                                   DAG.getVectorIdxConstant(i, dl));
     SDValue RHSElem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, RHS,
                                   DAG.getVectorIdxConstant(i, dl));
+    // FIXME: We should use i1 setcc + boolext here, but it causes regressions.
     Ops[i] = DAG.getNode(ISD::SETCC, dl,
                          TLI.getSetCCResultType(DAG.getDataLayout(),
                                                 *DAG.getContext(), TmpEltVT),
