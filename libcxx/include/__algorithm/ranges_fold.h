@@ -133,9 +133,9 @@ struct __fold_left_first_with_iter {
       return fold_left_first_with_iter_result<_Ip, optional<_Up>>{std::move(__first), optional<_Up>()};
     }
 
-    optional<_Up> __result(std::in_place, *__first);
+    _Up __result(*__first);
     for (++__first; __first != __last; ++__first) {
-      *__result = std::invoke(__f, std::move(*__result), *__first);
+      __result = std::invoke(__f, std::move(__result), *__first);
     }
 
     return fold_left_first_with_iter_result<_Ip, optional<_Up>>{std::move(__first), optional<_Up>(std::move(__result))};
@@ -148,7 +148,7 @@ struct __fold_left_first_with_iter {
 
     using _Up = decltype(fold_left(ranges::begin(__r), ranges::end(__r), range_value_t<_Rp>(*ranges::begin(__r)), __f));
     return fold_left_first_with_iter_result<borrowed_iterator_t<_Rp>, optional<_Up>>{
-        std::move(__result.in), optional(std::move(__result.value))};
+        std::move(__result.in), std::move(__result.value)};
   }
 };
 
