@@ -3012,6 +3012,8 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
                    getOrCreateVectorTripCount(nullptr), LoopMiddleBlock, State);
   }
 
+  // Don't apply optimizations below when no vector region remains, as they all
+  // require a vector loop at the moment.
   if (!State.Plan->getVectorLoopRegion())
     return;
 
@@ -7811,14 +7813,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.6. Maintain Loop Hints
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
-  MDNode *OrigLoopID = OrigLoop->getLoopID();
+  if (auto *LoopRegion = BestVPlan.getVectorLoopRegion()) {
+    MDNode *OrigLoopID = OrigLoop->getLoopID();
 
-  std::optional<MDNode *> VectorizedLoopID =
-      makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
-                                      LLVMLoopVectorizeFollowupVectorized});
+    std::optional<MDNode *> VectorizedLoopID =
+        makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
+                                        LLVMLoopVectorizeFollowupVectorized});
 
-  if (auto *R = BestVPlan.getVectorLoopRegion()) {
-    VPBasicBlock *HeaderVPBB = R->getEntryBasicBlock();
+    VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
     Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
     if (VectorizedLoopID) {
       L->setLoopID(*VectorizedLoopID);
@@ -7844,11 +7846,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.printDebugTracesAtEnd();
 
   // 4. Adjust branch weight of the branch in the middle block.
-  if (auto *R = BestVPlan.getVectorLoopRegion()) {
-    auto *ExitVPBB = cast<VPBasicBlock>(R->getSingleSuccessor());
-
+  if (BestVPlan.getVectorLoopRegion()) {
+    auto *MiddleVPBB = BestVPlan.getMiddleBlock();
     auto *MiddleTerm =
-        cast<BranchInst>(State.CFG.VPBB2IRBB[ExitVPBB]->getTerminator());
+        cast<BranchInst>(State.CFG.VPBB2IRBB[MiddleVPBB]->getTerminator());
     if (MiddleTerm->isConditional() &&
         hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
       // Assume that `Count % VectorTripCount` is equally distributed.

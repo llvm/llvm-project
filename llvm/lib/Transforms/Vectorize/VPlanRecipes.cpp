@@ -2376,9 +2376,7 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   // Replace the temporary unreachable terminator with a new conditional branch,
   // whose two destinations will be set later when they are created.
   auto *CurrentTerminator = State.CFG.PrevBB->getTerminator();
-  assert((isa<UnreachableInst>(CurrentTerminator) ||
-          (isa<BranchInst>(CurrentTerminator) &&
-           !CurrentTerminator->getOperand(0))) &&
+  assert(isa<UnreachableInst>(CurrentTerminator) &&
          "Expected to replace unreachable terminator with conditional branch.");
   auto *CondBr = BranchInst::Create(State.CFG.PrevBB, nullptr, ConditionBit);
   CondBr->setSuccessor(0, nullptr);

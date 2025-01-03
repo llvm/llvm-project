@@ -794,15 +794,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 }
 
-/// Try to simplify the recipes in \p Plan. If \p CanonicalIVTy is not nullptr,
-/// use it directly instead of retrieving the canonical IV type from the plan
-/// which may not exist any longer.
-static void simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy = nullptr) {
+/// Try to simplify the recipes in \p Plan. Use \p CanonicalIVTy as type for all
+/// un-typed live-ins in VPTypeAnalysis.
+static void simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  Type *CanonicalIVType =
-      CanonicalIVTy ? CanonicalIVTy : Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  VPTypeAnalysis TypeInfo(CanonicalIVTy);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -840,38 +837,40 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
 
+  // The vector loop region only executes once. If possible, completely remove
+  // the region, otherwise replace the terminator controlling the latch with
+  // (BranchOnCond true).
   Term->eraseFromParent();
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
-  if (any_of(Header->phis(),
-             IsaPred<VPWidenIntOrFpInductionRecipe, VPReductionPHIRecipe>)) {
+  if (all_of(
+          Header->phis(),
+          IsaPred<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe>)) {
+    for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
+      auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
+      HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());
+      HeaderPhiR->eraseFromParent();
+    }
+
+    VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
+    VPBlockBase *Exit = VectorRegion->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(Preheader, VectorRegion);
+    VPBlockUtils::disconnectBlocks(VectorRegion, Exit);
+
+    for (VPBlockBase *B : vp_depth_first_shallow(VectorRegion->getEntry()))
+      B->setParent(nullptr);
+
+    VPBlockUtils::connectBlocks(Preheader, Header);
+    VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
+    simplifyRecipes(Plan, CanIVTy);
+  } else {
+    // The vector region contains header phis for which we cannot remove the
+    // loop region yet.
     LLVMContext &Ctx = SE.getContext();
     auto *BOC = new VPInstruction(
         VPInstruction::BranchOnCond,
         {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
-  } else {
-    for (VPRecipeBase &R : make_early_inc_range(Header->phis())) {
-      auto *P = cast<VPHeaderPHIRecipe>(&R);
-      P->replaceAllUsesWith(P->getStartValue());
-      P->eraseFromParent();
-    }
-
-    VPBlockBase *Preheader = Plan.getVectorPreheader();
-    VPBlockBase *Middle = Plan.getMiddleBlock();
-    VPBlockUtils::disconnectBlocks(Preheader, VectorRegion);
-    VPBlockUtils::disconnectBlocks(VectorRegion, Middle);
-
-    Header->setParent(nullptr);
-    ExitingVPBB->setParent(nullptr);
-
-    for (VPBlockBase *B : vp_depth_first_shallow(VectorRegion->getEntry())) {
-      if (isa<VPRegionBlock>(B))
-        B->setParent(nullptr);
-    }
-    VPBlockUtils::connectBlocks(Preheader, Header);
-    VPBlockUtils::connectBlocks(ExitingVPBB, Middle);
-    simplifyRecipes(Plan, CanIVTy);
   }
 
   VPlanTransforms::removeDeadRecipes(Plan);
@@ -1287,10 +1286,10 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   removeRedundantCanonicalIVs(Plan);
   removeRedundantInductionCasts(Plan);
 
-  simplifyRecipes(Plan);
+  simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
   legalizeAndOptimizeInductions(Plan);
   removeRedundantExpandSCEVRecipes(Plan);
-  simplifyRecipes(Plan);
+  simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);

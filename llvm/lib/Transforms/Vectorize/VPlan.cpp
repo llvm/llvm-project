@@ -554,6 +554,8 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
 template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
   if (P && P->isReplicator()) {
     P = P->getParent();
+    // Multiple loop regions can be nested, but replicate regions can only be
+    // nested inside a loop region or must be outside any other region.
     assert((!P || !cast<VPRegionBlock>(P)->isReplicator()) &&
            "unexpected nested replicate regions");
   }
@@ -933,6 +935,8 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
+  assert((!getVectorLoopRegion() || VFxUF.getNumUsers()) &&
+         "VFxUF expected to always have users");
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
@@ -986,54 +990,56 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
-  if (auto *LoopRegion = getVectorLoopRegion()) {
-    VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
-    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
+  State->CFG.DTU.flush();
 
-    // Fix the latch value of canonical, reduction and first-order recurrences
-    // phis in the vector loop.
-    VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-    for (VPRecipeBase &R : Header->phis()) {
-      // Skip phi-like recipes that generate their backedege values themselves.
-      if (isa<VPWidenPHIRecipe>(&R))
-        continue;
+  auto *LoopRegion = getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
 
-      if (isa<VPWidenInductionRecipe>(&R)) {
-        PHINode *Phi = nullptr;
-        if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-          Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
-        } else {
-          auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-          assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-                 "recipe generating only scalars should have been replaced");
-          auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-          Phi = cast<PHINode>(GEP->getPointerOperand());
-        }
+  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
-        Phi->setIncomingBlock(1, VectorLatchBB);
+  // Fix the latch value of canonical, reduction and first-order recurrences
+  // phis in the vector loop.
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    // Skip phi-like recipes that generate their backedege values themselves.
+    if (isa<VPWidenPHIRecipe>(&R))
+      continue;
 
-        // Move the last step to the end of the latch block. This ensures
-        // consistent placement of all induction updates.
-        Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-        Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
-
-        // Use the steps for the last part as backedge value for the induction.
-        if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-          Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
-        continue;
+    if (isa<VPWidenInductionRecipe>(&R)) {
+      PHINode *Phi = nullptr;
+      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
+      } else {
+        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
+        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+               "recipe generating only scalars should have been replaced");
+        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
+        Phi = cast<PHINode>(GEP->getPointerOperand());
       }
 
-      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-      bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
-                         (isa<VPReductionPHIRecipe>(PhiR) &&
-                          cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-      Value *Phi = State->get(PhiR, NeedsScalar);
-      Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
-      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
-    }
-  }
+      Phi->setIncomingBlock(1, VectorLatchBB);
 
-  State->CFG.DTU.flush();
+      // Move the last step to the end of the latch block. This ensures
+      // consistent placement of all induction updates.
+      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+
+      // Use the steps for the last part as backedge value for the induction.
+      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
+      continue;
+    }
+
+    auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+    bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+                       (isa<VPReductionPHIRecipe>(PhiR) &&
+                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    Value *Phi = State->get(PhiR, NeedsScalar);
+    Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
+    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+  }
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -1399,13 +1405,17 @@ void VPlanIngredient::print(raw_ostream &O) const {
 
 #endif
 
-bool VPValue::isDefinedOutsideLoopRegions() const {
-
-  return !hasDefiningRecipe() ||
-         (!getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
-          getDefiningRecipe()->getParent()->getPlan()->getVectorLoopRegion());
+/// Returns true if there is a vector loop region and \p VPV is defined in a
+/// loop region.
+static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
+  const VPRecipeBase *DefR = VPV->getDefiningRecipe();
+  return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
+                  DefR->getParent()->getEnclosingLoopRegion());
 }
 
+bool VPValue::isDefinedOutsideLoopRegions() const {
+  return !isDefinedInsideLoopRegions(this);
+}
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
 }

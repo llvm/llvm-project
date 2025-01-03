@@ -3809,6 +3809,8 @@ public:
 
   ~VPlan();
 
+  /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
+  /// EntryBlock must have no predecessors.
   void setEntry(VPBasicBlock *VPBB) {
     Entry = VPBB;
     VPBB->setPlan(this);
@@ -3842,7 +3844,8 @@ public:
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
-  /// Returns the preheader of the vector loop region.
+  /// Returns the preheader of the vector loop region, if one exists, or null
+  /// otherwise.
   VPBasicBlock *getVectorPreheader() {
     VPRegionBlock *VectorRegion = getVectorLoopRegion();
     return VectorRegion
