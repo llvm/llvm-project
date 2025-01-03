@@ -131,6 +131,8 @@ Changes to the AArch64 Backend
 * Assembler/disassembler support has been added for Armv9.6-A (2024)
   architecture extensions.
 
+* Added support for the FUJITSU-MONAKA CPU.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -222,10 +224,15 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciac` (Load-Store Address Calculation)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcics` (Conditonal Select)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicli` (Conditional Load Immediate)
+  extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -350,10 +357,16 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports the following options for Mach-O:
+  `--globalize-symbol`, `--globalize-symbols`,
+  `--keep-global-symbol`, `--keep-global-symbols`,
+  `--localize-symbol`, `--localize-symbols`,
+  `--skip-symbol`, `--skip-symbols`.
+
 Changes to LLDB
 ---------------------------------
 
-* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
+* LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
   ```

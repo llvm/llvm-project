@@ -1688,12 +1688,12 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPErrorConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPErrorConstruct &x) {
+void OmpStructureChecker::Leave(const parser::OmpErrorDirective &x) {
   dirContext_.pop_back();
 }
 
