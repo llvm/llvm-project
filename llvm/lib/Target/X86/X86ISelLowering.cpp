@@ -344,9 +344,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
     for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
-                   MVT::v4i64, MVT::v8i64}) {
+                   MVT::v4i64}) {
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
+    }
+    if (Subtarget.hasAVX10_2_512()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
     }
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
@@ -33686,11 +33690,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     if (VT == MVT::v2i32 && OpVT == MVT::v2f64) {
       SDValue V4f32 = DAG.getNode(X86ISD::VFPROUND, dl, MVT::v4f32, Op);
       if (IsSigned)
-        V4I32 =
-            DAG.getNode(X86ISD::FP_TO_SINT_SAT_CUSTOM, dl, MVT::v4i32, V4f32);
+        V4I32 = DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v4i32, V4f32);
       else
-        V4I32 =
-            DAG.getNode(X86ISD::FP_TO_UINT_SAT_CUSTOM, dl, MVT::v4i32, V4f32);
+        V4I32 = DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v4i32, V4f32);
       Results.push_back(V4I32);
       return;
     }
@@ -34676,8 +34678,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VPERMV3)
   NODE_NAME_CASE(VPERMI)
   NODE_NAME_CASE(VPTERNLOG)
-  NODE_NAME_CASE(FP_TO_SINT_SAT_CUSTOM)
-  NODE_NAME_CASE(FP_TO_UINT_SAT_CUSTOM)
+  NODE_NAME_CASE(FP_TO_SINT_SAT)
+  NODE_NAME_CASE(FP_TO_UINT_SAT)
   NODE_NAME_CASE(VFIXUPIMM)
   NODE_NAME_CASE(VFIXUPIMM_SAE)
   NODE_NAME_CASE(VFIXUPIMMS)
@@ -56251,13 +56253,12 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
     SDValue V2F64 =
         DAG.getNode(ISD::FP_EXTEND, dl, MVT::v2f64, N->getOperand(0));
 
-    // Select the FP_TO_SINT_SAT_CUSTOM/FP_TO_UINT_SAT_CUSTOM node
+    // Select the FP_TO_SINT_SAT/FP_TO_UINT_SAT node
     if (IsSigned)
-      return DAG.getNode(X86ISD::FP_TO_SINT_SAT_CUSTOM, dl, MVT::v2i64, V2F64);
-    else
-      return DAG.getNode(X86ISD::FP_TO_UINT_SAT_CUSTOM, dl, MVT::v2i64, V2F64);
-  }
+      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v2i64, V2F64);
 
+    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v2i64, V2F64);
+  }
   return SDValue();
 }
 

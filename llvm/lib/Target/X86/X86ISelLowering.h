@@ -909,8 +909,8 @@ namespace llvm {
     FLDENVm,
 
     // Custom handling for FP_TO_xINT_SAT
-    FP_TO_SINT_SAT_CUSTOM,
-    FP_TO_UINT_SAT_CUSTOM,
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds

@@ -5456,39 +5456,37 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
   }
 
-  case X86ISD::FP_TO_SINT_SAT_CUSTOM:
-  case X86ISD::FP_TO_UINT_SAT_CUSTOM:
-    if (Subtarget->hasAVX10_2()) {
-      bool IsSigned = Node->getOpcode() == X86ISD::FP_TO_SINT_SAT_CUSTOM;
-      SDValue Op = Node->getOperand(0);
-      EVT VT = Node->getValueType(0);
-      EVT OpVT = Op.getValueType();
-      MachineSDNode *MachineNode;
+  case X86ISD::FP_TO_SINT_SAT:
+  case X86ISD::FP_TO_UINT_SAT: {
+    assert(Subtarget->hasAVX10_2() && "Unsupported node");
+    bool IsSigned = Node->getOpcode() == X86ISD::FP_TO_SINT_SAT;
+    SDValue Op = Node->getOperand(0);
+    EVT VT = Node->getValueType(0);
+    EVT OpVT = Op.getValueType();
+    MachineSDNode *MachineNode;
 
-      if (VT == MVT::v4i32 && OpVT == MVT::v4f32) {
-        if (IsSigned)
-          MachineNode = CurDAG->getMachineNode(X86::VCVTTPD2DQSZ128rr, dl,
-                                               MVT::v4i32, Op);
-        else
-          MachineNode = CurDAG->getMachineNode(X86::VCVTTPD2UDQSZ128rr, dl,
-                                               MVT::v4i32, Op);
-      }
-
-      if ((VT == MVT::v2i64 && OpVT == MVT::v2f64)) {
-        if (IsSigned)
-          MachineNode = CurDAG->getMachineNode(X86::VCVTTPS2QQSZ128rr, dl,
-                                               MVT::v2i64, Op);
-        else
-          MachineNode = CurDAG->getMachineNode(X86::VCVTTPS2UQQSZ128rr, dl,
-                                               MVT::v2i64, Op);
-      }
-
-      SDValue NewNode = SDValue(MachineNode, 0);
-      ReplaceNode(Node, NewNode.getNode());
-      return;
+    if (VT == MVT::v4i32 && OpVT == MVT::v4f32) {
+      if (IsSigned)
+        MachineNode =
+            CurDAG->getMachineNode(X86::VCVTTPD2DQSZ128rr, dl, MVT::v4i32, Op);
+      else
+        MachineNode =
+            CurDAG->getMachineNode(X86::VCVTTPD2UDQSZ128rr, dl, MVT::v4i32, Op);
     }
-    break;
 
+    if ((VT == MVT::v2i64 && OpVT == MVT::v2f64)) {
+      if (IsSigned)
+        MachineNode =
+            CurDAG->getMachineNode(X86::VCVTTPS2QQSZ128rr, dl, MVT::v2i64, Op);
+      else
+        MachineNode =
+            CurDAG->getMachineNode(X86::VCVTTPS2UQQSZ128rr, dl, MVT::v2i64, Op);
+    }
+
+    SDValue NewNode = SDValue(MachineNode, 0);
+    ReplaceNode(Node, NewNode.getNode());
+    return;
+  }
   case X86ISD::ANDNP:
     if (tryVPTERNLOG(Node))
       return;
