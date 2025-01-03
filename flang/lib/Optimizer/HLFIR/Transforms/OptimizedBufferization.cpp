@@ -87,6 +87,13 @@ private:
   /// determines if the transformation can be applied to this elemental
   static std::optional<MatchInfo> findMatch(hlfir::ElementalOp elemental);
 
+  /// Returns the array indices for the given hlfir.designate.
+  /// It recognizes the computations used to transform the one-based indices
+  /// into the array's lb-based indices, and returns the one-based indices
+  /// in these cases.
+  static llvm::SmallVector<mlir::Value>
+  getDesignatorIndices(hlfir::DesignateOp designate);
+
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
@@ -430,6 +437,73 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
   return false;
 }
 
+llvm::SmallVector<mlir::Value>
+ElementalAssignBufferization::getDesignatorIndices(
+    hlfir::DesignateOp designate) {
+  mlir::Value memref = designate.getMemref();
+
+  // If the object is a box, then the indices may be adjusted
+  // according to the box's lower bound(s). Scan through
+  // the computations to try to find the one-based indices.
+  if (mlir::isa<fir::BaseBoxType>(memref.getType())) {
+    // Look for the following pattern:
+    //   %13 = fir.load %12 : !fir.ref<!fir.box<...>
+    //   %14:3 = fir.box_dims %13, %c0 : (!fir.box<...>, index) -> ...
+    //   %17 = arith.subi %14#0, %c1 : index
+    //   %18 = arith.addi %arg2, %17 : index
+    //   %19 = hlfir.designate %13 (%18)  : (!fir.box<...>, index) -> ...
+    //
+    // %arg2 is a one-based index.
+
+    auto isNormalizedLb = [memref](mlir::Value v, unsigned dim) {
+      // Return true, if v and dim are such that:
+      //   %14:3 = fir.box_dims %13, %dim : (!fir.box<...>, index) -> ...
+      //   %17 = arith.subi %14#0, %c1 : index
+      //   %19 = hlfir.designate %13 (...)  : (!fir.box<...>, index) -> ...
+      if (auto subOp =
+              mlir::dyn_cast_or_null<mlir::arith::SubIOp>(v.getDefiningOp())) {
+        auto cst = fir::getIntIfConstant(subOp.getRhs());
+        if (!cst || *cst != 1)
+          return false;
+        if (auto dimsOp = mlir::dyn_cast_or_null<fir::BoxDimsOp>(
+                subOp.getLhs().getDefiningOp())) {
+          if (memref != dimsOp.getVal() ||
+              dimsOp.getResult(0) != subOp.getLhs())
+            return false;
+          auto dimsOpDim = fir::getIntIfConstant(dimsOp.getDim());
+          return dimsOpDim && dimsOpDim == dim;
+        }
+      }
+      return false;
+    };
+
+    llvm::SmallVector<mlir::Value> newIndices;
+    for (auto index : llvm::enumerate(designate.getIndices())) {
+      if (auto addOp = mlir::dyn_cast_or_null<mlir::arith::AddIOp>(
+              index.value().getDefiningOp())) {
+        for (unsigned opNum = 0; opNum < 2; ++opNum)
+          if (isNormalizedLb(addOp->getOperand(opNum), index.index())) {
+            newIndices.push_back(addOp->getOperand((opNum + 1) % 2));
+            break;
+          }
+
+        // If new one-based index was not added, exit early.
+        if (newIndices.size() <= index.index())
+          break;
+      }
+    }
+
+    // If any of the indices is not adjusted to the array's lb,
+    // then return the original designator indices.
+    if (newIndices.size() != designate.getIndices().size())
+      return designate.getIndices();
+
+    return newIndices;
+  }
+
+  return designate.getIndices();
+}
+
 std::optional<ElementalAssignBufferization::MatchInfo>
 ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -557,7 +631,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
                                   << " at " << elemental.getLoc() << "\n");
           return std::nullopt;
         }
-        auto indices = designate.getIndices();
+        auto indices = getDesignatorIndices(designate);
         auto elementalIndices = elemental.getIndices();
         if (indices.size() == elementalIndices.size() &&
             std::equal(indices.begin(), indices.end(), elementalIndices.begin(),
