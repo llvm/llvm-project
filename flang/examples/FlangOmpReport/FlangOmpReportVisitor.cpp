@@ -106,10 +106,16 @@ std::string OpenMPCounterVisitor::getName(const OmpWrapperType &w) {
   return getName(*std::get<const OpenMPDeclarativeConstruct *>(w));
 }
 std::string OpenMPCounterVisitor::getName(const OpenMPDeclarativeConstruct &c) {
-  return std::visit(
-      [&](const auto &o) -> std::string {
-        const CharBlock &source{std::get<Verbatim>(o.t).source};
-        return normalize_construct_name(source.ToString());
+  return std::visit( //
+      Fortran::common::visitors{
+          [&](const OpenMPUtilityConstruct &o) -> std::string {
+            const CharBlock &source{o.source};
+            return normalize_construct_name(source.ToString());
+          },
+          [&](const auto &o) -> std::string {
+            const CharBlock &source{std::get<Verbatim>(o.t).source};
+            return normalize_construct_name(source.ToString());
+          },
       },
       c.u);
 }
