@@ -251,6 +251,24 @@ v_cvt_i32_i16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 v_cvt_i32_i16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
 
+v_cvt_i32_i16_e32 v5, v199.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cvt_i32_i16_e32 v5, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cvt_i32_i16_e32 v5, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cvt_i32_i16_e32 v5, v199.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cvt_i32_i16_e32 v5, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cvt_i32_i16_e32 v5, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
 v_cvt_norm_i16_f16_e32 v128.h, 0xfe0b
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
 
