@@ -5880,6 +5880,12 @@ static void TryOrBuildParenListInitialization(
       } else {
         // We've processed all of the args, but there are still members that
         // have to be initialized.
+        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>()) {
+          S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
+              << /* Var-in-Record */ 0 << FD;
+          S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+        }
+
         if (FD->hasInClassInitializer()) {
           if (!VerifyOnly) {
             // C++ [dcl.init]p16.6.2.2
@@ -7350,6 +7356,22 @@ PerformConstructorInitialization(Sema &S,
     // An explicitly-constructed temporary, e.g., X(1, 2).
     if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
       return ExprError();
+
+    if (Kind.getKind() == InitializationKind::IK_Value &&
+        Constructor->isImplicit()) {
+      auto *RD = Step.Type.getCanonicalType()->getAsCXXRecordDecl();
+      if (RD && RD->isAggregate() && RD->hasUninitializedExplicitInitFields()) {
+        unsigned I = 0;
+        for (const FieldDecl *FD : RD->fields()) {
+          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>()) {
+            S.Diag(Loc, diag::warn_field_requires_explicit_init)
+                << /* Var-in-Record */ 0 << FD;
+            S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+          }
+          ++I;
+        }
+      }
+    }
 
     TypeSourceInfo *TSInfo = Entity.getTypeSourceInfo();
     if (!TSInfo)
