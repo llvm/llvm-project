@@ -663,7 +663,7 @@ define ptr @gep_of_phi_of_gep_flags1(i1 %c, ptr %p) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
