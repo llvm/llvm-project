@@ -227,7 +227,7 @@ ConversionValueMapping::lookupOrDefault(Value from,
   ValueVector current{from};
   do {
     // Store the current value if the types match.
-    if (TypeRange(current) == desiredTypes)
+    if (TypeRange(ValueRange(current)) == desiredTypes)
       desiredValue = current;
 
     // If possible, Replace each value with (one or multiple) mapped values.
@@ -271,9 +271,8 @@ ConversionValueMapping::lookupOrDefault(Value from,
 ValueVector ConversionValueMapping::lookupOrNull(Value from,
                                                  TypeRange desiredTypes) const {
   ValueVector result = lookupOrDefault(from, desiredTypes);
-  TypeRange resultTypes(result);
   if (result == ValueVector{from} ||
-      (!desiredTypes.empty() && resultTypes != desiredTypes))
+      (!desiredTypes.empty() && TypeRange(ValueRange(result)) != desiredTypes))
     return {};
   return result;
 }
@@ -1291,7 +1290,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     }
 
     ValueVector repl = mapping.lookupOrDefault(operand, legalTypes);
-    if (!repl.empty() && TypeRange(repl) == legalTypes) {
+    if (!repl.empty() && TypeRange(ValueRange(repl)) == legalTypes) {
       // Mapped values have the correct type or there is an existing
       // materialization. Or the operand is not mapped at all and has the
       // correct type.
