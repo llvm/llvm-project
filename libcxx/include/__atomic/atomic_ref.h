@@ -76,18 +76,23 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static bool __compare_exchange(
-      _Tp* __ptr, _Tp* __expected, _Tp* __desired, bool __is_weak, int __success, int __failure) noexcept {
+      _Tp* __ptr,
+      value_type* __expected,
+      value_type* __desired,
+      bool __is_weak,
+      int __success,
+      int __failure) noexcept {
     if constexpr (
 #  if __has_builtin(__builtin_clear_padding)
-        has_unique_object_representations_v<_Tp> || floating_point<_Tp>
+        has_unique_object_representations_v<value_type> || floating_point<value_type>
 #  else
         true // NOLINT(readability-simplify-boolean-expr)
 #  endif
     ) {
       return __atomic_compare_exchange(__ptr, __expected, __desired, __is_weak, __success, __failure);
-    } else { // _Tp has padding bits and __builtin_clear_padding is available
+    } else { // value_type has padding bits and __builtin_clear_padding is available
       __clear_padding(*__desired);
-      _Tp __copy = *__expected;
+      value_type __copy = *__expected;
       __clear_padding(__copy);
       // The algorithm we use here is basically to perform `__atomic_compare_exchange` on the
       // values until it has either succeeded, or failed because the value representation of the
@@ -95,15 +100,15 @@ private:
       // we basically loop until its failure is caused by the value representation of the objects
       // being different, not only their object representation.
       while (true) {
-        _Tp __prev = __copy;
+        value_type __prev = __copy;
         if (__atomic_compare_exchange(__ptr, std::addressof(__copy), __desired, __is_weak, __success, __failure)) {
           return true;
         }
-        _Tp __curr = __copy;
-        if (std::memcmp(__clear_padding(__prev), __clear_padding(__curr), sizeof(_Tp)) != 0) {
+        value_type __curr = __copy;
+        if (std::memcmp(__clear_padding(__prev), __clear_padding(__curr), sizeof(value_type)) != 0) {
           // Value representation without padding bits do not compare equal ->
           // write the current content of *ptr into *expected
-          std::memcpy(__expected, std::addressof(__copy), sizeof(_Tp));
+          std::memcpy(__expected, std::addressof(__copy), sizeof(value_type));
           return false;
         }
       }

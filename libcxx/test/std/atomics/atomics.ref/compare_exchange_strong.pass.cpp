@@ -24,22 +24,58 @@
 #include "test_helper.h"
 #include "test_macros.h"
 
-template <typename T>
+template <typename T, typename U>
+concept has_compare_exchange_strong_1 =
+    requires { std::declval<T>().compare_exchange_strong(std::declval<U&>(), std::declval<U>()); };
+template <typename T, typename U>
+concept has_compare_exchange_strong_2 = requires {
+  std::declval<T>().compare_exchange_strong(std::declval<U&>(), std::declval<U>(), std::declval<std::memory_order>());
+};
+template <typename T, typename U>
+concept has_compare_exchange_strong_3 = requires {
+  std::declval<T>().compare_exchange_strong(
+      std::declval<U&>(), std::declval<U>(), std::declval<std::memory_order>(), std::declval<std::memory_order>());
+};
+
+template <typename T, typename U>
+concept has_compare_exchange_strong =
+    has_compare_exchange_strong_1<T, U> && has_compare_exchange_strong_2<T, U> && has_compare_exchange_strong_3<T, U>;
+
+template <typename T, typename U>
+concept does_not_have_compare_exchange_strong =
+    !has_compare_exchange_strong_1<T, U> && !has_compare_exchange_strong_2<T, U> &&
+    !has_compare_exchange_strong_3<T, U>;
+
+template <typename U>
 struct TestCompareExchangeStrong {
   void operator()() const {
+    static_assert(has_compare_exchange_strong<std::atomic_ref<U>, U>);
+    do_test<U>();
+    do_test_atomic<U>();
+    static_assert(does_not_have_compare_exchange_strong<std::atomic_ref<U const>, U>);
+    if constexpr (std::atomic_ref<U>::is_always_lock_free) {
+      static_assert(has_compare_exchange_strong<std::atomic_ref<U volatile>, U>);
+      do_test<U volatile>();
+      do_test_atomic<U volatile>();
+      static_assert(does_not_have_compare_exchange_strong<std::atomic_ref<U const volatile>, U>);
+    }
+  }
+
+  template <typename T>
+  void do_test() const {
     {
       T x(T(1));
       std::atomic_ref<T> const a(x);
 
-      T t(T(1));
+      std::remove_cv_t<T> t(T(1));
       std::same_as<bool> decltype(auto) y = a.compare_exchange_strong(t, T(2));
       assert(y == true);
-      assert(a == T(2));
-      assert(t == T(1));
+      assert(a == std::remove_cv_t<T>(2));
+      assert(t == std::remove_cv_t<T>(1));
       y = a.compare_exchange_strong(t, T(3));
       assert(y == false);
-      assert(a == T(2));
-      assert(t == T(2));
+      assert(a == std::remove_cv_t<T>(2));
+      assert(t == std::remove_cv_t<T>(2));
 
       ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2)));
     }
@@ -47,15 +83,15 @@ struct TestCompareExchangeStrong {
       T x(T(1));
       std::atomic_ref<T> const a(x);
 
-      T t(T(1));
+      std::remove_cv_t<T> t(T(1));
       std::same_as<bool> decltype(auto) y = a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst);
       assert(y == true);
-      assert(a == T(2));
-      assert(t == T(1));
+      assert(a == std::remove_cv_t<T>(2));
+      assert(t == std::remove_cv_t<T>(1));
       y = a.compare_exchange_strong(t, T(3), std::memory_order_seq_cst);
       assert(y == false);
-      assert(a == T(2));
-      assert(t == T(2));
+      assert(a == std::remove_cv_t<T>(2));
+      assert(t == std::remove_cv_t<T>(2));
 
       ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst));
     }
@@ -63,32 +99,41 @@ struct TestCompareExchangeStrong {
       T x(T(1));
       std::atomic_ref<T> const a(x);
 
-      T t(T(1));
+      std::remove_cv_t<T> t(T(1));
       std::same_as<bool> decltype(auto) y =
           a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed);
       assert(y == true);
-      assert(a == T(2));
-      assert(t == T(1));
+      assert(a == std::remove_cv_t<T>(2));
+      assert(t == std::remove_cv_t<T>(1));
       y = a.compare_exchange_strong(t, T(3), std::memory_order_release, std::memory_order_relaxed);
       assert(y == false);
-      assert(a == T(2));
-      assert(t == T(2));
+      assert(a == std::remove_cv_t<T>(2));
+      assert(t == std::remove_cv_t<T>(2));
 
       ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed));
     }
+  }
 
+  template <typename T>
+  void do_test_atomic() const {
     // success memory_order::release
     {
-      auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
-        auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::release, std::memory_order::relaxed);
+      auto store = [](std::atomic_ref<T> const& x, T const& old_val, T const& new_val) {
+        auto r = x.compare_exchange_strong(
+            const_cast<std::remove_cv_t<T>&>(old_val),
+            const_cast<std::remove_cv_t<T> const&>(new_val),
+            std::memory_order::release,
+            std::memory_order::relaxed);
         assert(r);
       };
 
       auto load = [](std::atomic_ref<T> const& x) { return x.load(std::memory_order::acquire); };
       test_acquire_release<T>(store, load);
-
-      auto store_one_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
-        auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::release);
+      auto store_one_arg = [](std::atomic_ref<T> const& x, T const& old_val, T const& new_val) {
+        auto r = x.compare_exchange_strong(
+            const_cast<std::remove_cv_t<T>&>(old_val),
+            const_cast<std::remove_cv_t<T> const&>(new_val),
+            std::memory_order::release);
         assert(r);
       };
       test_acquire_release<T>(store_one_arg, load);
@@ -96,7 +141,9 @@ struct TestCompareExchangeStrong {
 
     // success memory_order::acquire
     {
-      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::release); };
+      auto store = [](std::atomic_ref<T> const& x, T const&, T const& new_val) {
+        x.store(const_cast<std::remove_cv_t<T> const&>(new_val), std::memory_order::release);
+      };
 
       auto load = [](std::atomic_ref<T> const& x) {
         auto val = x.load(std::memory_order::relaxed);
@@ -117,8 +164,12 @@ struct TestCompareExchangeStrong {
 
     // success memory_order::acq_rel
     {
-      auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
-        auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::acq_rel, std::memory_order::relaxed);
+      auto store = [](std::atomic_ref<T> const& x, T const& old_val, T const& new_val) {
+        auto r = x.compare_exchange_strong(
+            const_cast<std::remove_cv_t<T>&>(old_val),
+            const_cast<std::remove_cv_t<T> const&>(new_val),
+            std::memory_order::acq_rel,
+            std::memory_order::relaxed);
         assert(r);
       };
       auto load = [](std::atomic_ref<T> const& x) {
@@ -129,8 +180,11 @@ struct TestCompareExchangeStrong {
       };
       test_acquire_release<T>(store, load);
 
-      auto store_one_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
-        auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::acq_rel);
+      auto store_one_arg = [](std::atomic_ref<T> const& x, T const& old_val, T const& new_val) {
+        auto r = x.compare_exchange_strong(
+            const_cast<std::remove_cv_t<T>&>(old_val),
+            const_cast<std::remove_cv_t<T> const&>(new_val),
+            std::memory_order::acq_rel);
         assert(r);
       };
       auto load_one_arg = [](std::atomic_ref<T> const& x) {
@@ -144,8 +198,12 @@ struct TestCompareExchangeStrong {
 
     // success memory_order::seq_cst
     {
-      auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
-        auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::seq_cst, std::memory_order::relaxed);
+      auto store = [](std::atomic_ref<T> const& x, T const& old_val, T const& new_val) {
+        auto r = x.compare_exchange_strong(
+            const_cast<std::remove_cv_t<T>&>(old_val),
+            const_cast<std::remove_cv_t<T> const&>(new_val),
+            std::memory_order::seq_cst,
+            std::memory_order::relaxed);
         assert(r);
       };
       auto load = [](std::atomic_ref<T> const& x) {
@@ -156,8 +214,11 @@ struct TestCompareExchangeStrong {
       };
       test_seq_cst<T>(store, load);
 
-      auto store_one_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
-        auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::seq_cst);
+      auto store_one_arg = [](std::atomic_ref<T> const& x, T const& old_val, T const& new_val) {
+        auto r = x.compare_exchange_strong(
+            const_cast<std::remove_cv_t<T>&>(old_val),
+            const_cast<std::remove_cv_t<T> const&>(new_val),
+            std::memory_order::seq_cst);
         assert(r);
       };
       auto load_one_arg = [](std::atomic_ref<T> const& x) {
@@ -171,10 +232,12 @@ struct TestCompareExchangeStrong {
 
     // failure memory_order::acquire
     {
-      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::release); };
-      auto load  = [](std::atomic_ref<T> const& x) {
+      auto store = [](std::atomic_ref<T> const& x, T const&, T const& new_val) {
+        x.store(const_cast<std::remove_cv_t<T> const&>(new_val), std::memory_order::release);
+      };
+      auto load = [](std::atomic_ref<T> const& x) {
         auto result = x.load(std::memory_order::relaxed);
-        T unexpected(T(255));
+        std::remove_cv_t<T> unexpected(std::remove_cv_t<T>(255));
         bool r =
             x.compare_exchange_strong(unexpected, unexpected, std::memory_order::relaxed, std::memory_order::acquire);
         assert(!r);
@@ -184,7 +247,7 @@ struct TestCompareExchangeStrong {
 
       auto load_one_arg = [](std::atomic_ref<T> const& x) {
         auto result = x.load(std::memory_order::relaxed);
-        T unexpected(T(255));
+        std::remove_cv_t<T> unexpected(std::remove_cv_t<T>(255));
         bool r = x.compare_exchange_strong(unexpected, unexpected, std::memory_order::acquire);
         assert(!r);
         return result;
@@ -194,7 +257,7 @@ struct TestCompareExchangeStrong {
       // acq_rel replaced by acquire
       auto load_one_arg_acq_rel = [](std::atomic_ref<T> const& x) {
         auto result = x.load(std::memory_order::relaxed);
-        T unexpected(T(255));
+        std::remove_cv_t<T> unexpected(std::remove_cv_t<T>(255));
         bool r = x.compare_exchange_strong(unexpected, unexpected, std::memory_order::acq_rel);
         assert(!r);
         return result;
@@ -204,10 +267,12 @@ struct TestCompareExchangeStrong {
 
     // failure memory_order::seq_cst
     {
-      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::seq_cst); };
-      auto load  = [](std::atomic_ref<T> const& x) {
+      auto store = [](std::atomic_ref<T> const& x, T const&, T const& new_val) {
+        x.store(const_cast<std::remove_cv_t<T> const&>(new_val), std::memory_order::seq_cst);
+      };
+      auto load = [](std::atomic_ref<T> const& x) {
         auto result = x.load(std::memory_order::relaxed);
-        T unexpected(T(255));
+        std::remove_cv_t<T> unexpected(std::remove_cv_t<T>(255));
         bool r =
             x.compare_exchange_strong(unexpected, unexpected, std::memory_order::relaxed, std::memory_order::seq_cst);
         assert(!r);
