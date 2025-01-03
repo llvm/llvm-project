@@ -478,7 +478,7 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:
   case RISCV::VFMAX_VF:
-   // Vector Floating-Point Sign-Injection Instructions
+  // Vector Floating-Point Sign-Injection Instructions
   case RISCV::VFMAX_VV:
   case RISCV::VFSGNJ_VF:
   case RISCV::VFSGNJ_VV:
@@ -486,7 +486,7 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VFSGNJN_VF:
   case RISCV::VFSGNJX_VF:
   case RISCV::VFSGNJX_VV:
- // Vector Floating-Point Classify Instruction
+  // Vector Floating-Point Classify Instruction
   case RISCV::VFCLASS_V:
   // Vector Floating-Point Move Instruction
   case RISCV::VFMV_V_F:
