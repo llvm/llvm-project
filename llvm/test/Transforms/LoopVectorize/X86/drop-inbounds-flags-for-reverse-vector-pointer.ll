@@ -6,7 +6,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; FIXME:  GEP flags on GEPs for reverse vector pointer need to be dropped when folding the tail.
 
-; Function Attrs: nofree norecurse nosync nounwind memory(none)
 define i1 @fn(ptr %nno) #0 {
 ; CHECK-LABEL: define i1 @fn(
 ; CHECK-SAME: ptr [[NNO:%.*]]) #[[ATTR0:[0-9]+]] {
