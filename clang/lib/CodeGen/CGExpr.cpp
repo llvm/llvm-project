@@ -52,11 +52,6 @@
 using namespace clang;
 using namespace CodeGen;
 
-// Experiment to make sanitizers easier to debug
-static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
-    "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."));
-
 // TODO: Introduce frontend options to enabled per sanitizers, similar to
 // `fsanitize-trap`.
 static llvm::cl::opt<bool> ClSanitizeGuardChecks(
@@ -1172,7 +1167,7 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   Indices.push_back(Builder.getInt32(0));
   return Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
-      RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
+      RecIndicesTy(llvm::reverse(Indices)), "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1187,7 +1182,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
     return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
-                                     getIntAlign(), "..counted_by.load");
+                                     getIntAlign(), "counted_by.load");
   return nullptr;
 }
 
@@ -3546,7 +3541,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                  ArrayRef<llvm::Value *> FnArgs,
                                  SanitizerHandler CheckHandler,
                                  CheckRecoverableKind RecoverKind, bool IsFatal,
-                                 llvm::BasicBlock *ContBB) {
+                                 llvm::BasicBlock *ContBB, bool NoMerge) {
   assert(IsFatal || RecoverKind != CheckRecoverableKind::Unrecoverable);
   std::optional<ApplyDebugLocation> DL;
   if (!CGF.Builder.getCurrentDebugLocation()) {
@@ -3581,6 +3576,10 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
+  NoMerge = NoMerge || !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+            (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+  if (NoMerge)
+    HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();
     CGF.Builder.CreateUnreachable();
@@ -3602,6 +3601,7 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *FatalCond = nullptr;
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
+  bool NoMerge = false;
   for (int i = 0, n = Checked.size(); i < n; ++i) {
     llvm::Value *Check = Checked[i].first;
     // -fsanitize-trap= overrides -fsanitize-recover=.
@@ -3612,6 +3612,9 @@ void CodeGenFunction::EmitCheck(
                   ? RecoverableCond
                   : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
+
+    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Checked[i].second))
+      NoMerge = true;
   }
 
   if (ClSanitizeGuardChecks) {
@@ -3626,7 +3629,7 @@ void CodeGenFunction::EmitCheck(
   }
 
   if (TrapCond)
-    EmitTrapCheck(TrapCond, CheckHandler);
+    EmitTrapCheck(TrapCond, CheckHandler, NoMerge);
   if (!FatalCond && !RecoverableCond)
     return;
 
@@ -3692,7 +3695,7 @@ void CodeGenFunction::EmitCheck(
     // Simple case: we need to generate a single handler call, either
     // fatal, or non-fatal.
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind,
-                         (FatalCond != nullptr), Cont);
+                         (FatalCond != nullptr), Cont, NoMerge);
   } else {
     // Emit two handler calls: first one for set of unrecoverable checks,
     // another one for recoverable.
@@ -3702,10 +3705,10 @@ void CodeGenFunction::EmitCheck(
     Builder.CreateCondBr(FatalCond, NonFatalHandlerBB, FatalHandlerBB);
     EmitBlock(FatalHandlerBB);
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind, true,
-                         NonFatalHandlerBB);
+                         NonFatalHandlerBB, NoMerge);
     EmitBlock(NonFatalHandlerBB);
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind, false,
-                         Cont);
+                         Cont, NoMerge);
   }
 
   EmitBlock(Cont);
@@ -3895,7 +3898,8 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 }
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
-                                    SanitizerHandler CheckHandlerID) {
+                                    SanitizerHandler CheckHandlerID,
+                                    bool NoMerge) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -3905,9 +3909,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  if (!ClSanitizeDebugDeoptimization &&
-      CGM.getCodeGenOpts().OptimizationLevel && TrapBB &&
-      (!CurCodeDecl || !CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+  NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
+            (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+
+  if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
@@ -3919,18 +3924,17 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall = Builder.CreateCall(
-        CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty,
-                               ClSanitizeDebugDeoptimization
-                                   ? TrapBB->getParent()->size()
-                                   : static_cast<uint64_t>(CheckHandlerID)));
+    llvm::CallInst *TrapCall =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
+    if (NoMerge)
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
@@ -4370,7 +4374,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           ME &&
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
           ME->getMemberDecl()->getType()->isCountAttributedType()) {
-        const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        const FieldDecl *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
         if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
           if (std::optional<int64_t> Diff =
                   getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {
@@ -5826,9 +5830,12 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 // This function implements trivial copy assignment for HLSL's
 // assignable constant arrays.
 LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
-  LValue TrivialAssignmentRHS = EmitLValue(E->getRHS());
+  // Don't emit an LValue for the RHS because it might not be an LValue
   LValue LHS = EmitLValue(E->getLHS());
-  EmitAggregateAssign(LHS, TrivialAssignmentRHS, E->getLHS()->getType());
+  // In C the RHS of an assignment operator is an RValue.
+  // EmitAggregateAssign takes anan LValue for the RHS. Instead we can call
+  // EmitInitializationToLValue to emit an RValue into an LValue.
+  EmitInitializationToLValue(E->getRHS(), LHS);
   return LHS;
 }
 

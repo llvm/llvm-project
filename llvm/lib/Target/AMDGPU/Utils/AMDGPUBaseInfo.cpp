@@ -378,13 +378,20 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-struct FP8DstByteSelInfo {
+#define GET_FP4FP8DstByteSelTable_DECL
+#define GET_FP4FP8DstByteSelTable_IMPL
+
+struct DPMACCInstructionInfo {
   uint16_t Opcode;
-  bool HasFP8DstByteSel;
+  bool IsDPMACCInstruction;
 };
 
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
+struct FP4FP8DstByteSelInfo {
+  uint16_t Opcode;
+  bool HasFP8DstByteSel;
+  bool HasFP4DstByteSel;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -415,6 +422,11 @@ struct FP8DstByteSelInfo {
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
+#define GET_getMFMA_F8F6F4_WithSize_DECL
+#define GET_getMFMA_F8F6F4_WithSize_IMPL
+#define GET_isMFMA_F8F6F4Table_IMPL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -523,6 +535,30 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+  switch (EncodingVal) {
+  case MFMAScaleFormats::FP6_E2M3:
+  case MFMAScaleFormats::FP6_E3M2:
+    return 6;
+  case MFMAScaleFormats::FP4_E2M1:
+    return 4;
+  case MFMAScaleFormats::FP8_E4M3:
+  case MFMAScaleFormats::FP8_E5M2:
+  default:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over mfma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
+                                                      unsigned BLGP,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = mfmaScaleF8F6F4FormatToNumRegs(CBSZ);
+  uint8_t SrcBNumRegs = mfmaScaleF8F6F4FormatToNumRegs(BLGP);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
@@ -565,6 +601,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
+         Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
          Opc == AMDGPU::V_DOT8C_I32_I4_e64_vi;
@@ -619,9 +656,16 @@ bool isTrue16Inst(unsigned Opc) {
   return Info ? Info->IsTrue16 : false;
 }
 
-bool isFP8DstSelInst(unsigned Opc) {
-  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
-  return Info ? Info->HasFP8DstByteSel : false;
+FPType getFPDstSelType(unsigned Opc) {
+  const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
+  if (!Info)
+    return FPType::None;
+  if (Info->HasFP8DstByteSel)
+    return FPType::FP8;
+  if (Info->HasFP4DstByteSel)
+    return FPType::FP4;
+
+  return FPType::None;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -916,6 +960,8 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 32768;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 163840;
   return 0;
 }
 
@@ -1286,22 +1332,33 @@ std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
+  if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
+    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+  return Default;
+}
+
+std::optional<std::pair<unsigned, std::optional<unsigned>>>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        bool OnlyFirstRequired) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
-    return Default;
+    return std::nullopt;
 
   LLVMContext &Ctx = F.getContext();
-  std::pair<unsigned, unsigned> Ints = Default;
+  std::pair<unsigned, std::optional<unsigned>> Ints;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
     Ctx.emitError("can't parse first integer attribute " + Name);
-    return Default;
+    return std::nullopt;
   }
-  if (Strs.second.trim().getAsInteger(0, Ints.second)) {
+  unsigned Second = 0;
+  if (Strs.second.trim().getAsInteger(0, Second)) {
     if (!OnlyFirstRequired || !Strs.second.trim().empty()) {
       Ctx.emitError("can't parse second integer attribute " + Name);
-      return Default;
+      return std::nullopt;
     }
+  } else {
+    Ints.second = Second;
   }
 
   return Ints;
@@ -2910,6 +2967,7 @@ const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace

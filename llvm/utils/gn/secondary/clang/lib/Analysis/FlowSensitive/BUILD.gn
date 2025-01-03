@@ -35,6 +35,7 @@ static_library("FlowSensitive") {
     "Logger.cpp",
     "RecordOps.cpp",
     "SimplifyConstraints.cpp",
+    "SmartPointerAccessorCaching.cpp",
     "Transfer.cpp",
     "TypeErasedDataflowAnalysis.cpp",
     "Value.cpp",

@@ -472,9 +472,6 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
       getRegionBuilder() {
       return regionBuilder;
     }
-
-    static void createRegion(::mlir::OpBuilder &opBuilder,
-                             ::mlir::OperationState & odsState);
   }];
 
   let hasFolder = 1;
@@ -622,7 +619,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
-          attributes, MatmulOp::getRegionBuilder());
+          attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -630,16 +628,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         buildMatmulOp($_builder, $_state, resultTensorTypes,
-          inputs, outputs, attributes, MatmulOp::getRegionBuilder());
-      }]>,
-      OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        $_state.addOperands(operands);
-        $_state.addAttributes(attributes);
-        $_state.addTypes(resultTensorTypes);
-        (void)$_state.addRegion();
+          inputs, outputs, attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -648,7 +638,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       [{
         $_state.addAttribute("cast", cast);
         buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
-          attributes, MatmulOp::getRegionBuilder());
+          attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
       }]>
 
     ];
@@ -664,7 +655,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                                 Block &block, ArrayRef<NamedAttribute> attrs);
 
       /// Returns a list of AffineMap with the typical matmul indexing charactristic.
-      SmallVector<AffineMap> getDefaultIndexingMaps();
+      static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);

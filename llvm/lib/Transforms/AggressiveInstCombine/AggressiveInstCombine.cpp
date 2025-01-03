@@ -181,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -190,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source
@@ -803,8 +805,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
-                                    Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),

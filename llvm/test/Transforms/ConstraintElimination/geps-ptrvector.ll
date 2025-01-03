@@ -37,7 +37,7 @@ define <2 x i1> @test.vectorgep.ult.false(<2 x ptr> %vec) {
 define <vscale x 2 x i1> @test.scalable.vectorgep.ult.true(<vscale x 2 x ptr> %vec) {
 ; CHECK-LABEL: @test.scalable.vectorgep.ult.true(
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, <vscale x 2 x ptr> [[VEC:%.*]], i64 1
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %gep.1 = getelementptr inbounds i32, <vscale x 2 x ptr> %vec, i64 1
   %t.1 = icmp ult <vscale x 2 x ptr> %vec, %gep.1

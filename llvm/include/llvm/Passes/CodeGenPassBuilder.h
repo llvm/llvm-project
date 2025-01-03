@@ -52,6 +52,7 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
@@ -667,9 +668,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
     addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
                                             /*UseMemorySSA=*/true));
-    // FIXME: use -stop-after so we could remove PrintLSR
-    if (Opt.PrintLSR)
-      addPass(PrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
   }
 
   if (getOptLevel() != CodeGenOptLevel::None) {

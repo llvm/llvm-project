@@ -336,7 +336,7 @@ the function:
     /// CreateEntryBlockAlloca - Create an alloca instruction in the entry block of
     /// the function.  This is used for mutable variables etc.
     static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
-                                              const std::string &VarName) {
+                                              StringRef VarName) {
       IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                      TheFunction->getEntryBlock().begin());
       return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr,
@@ -440,11 +440,11 @@ get good codegen once again:
 .. code-block:: c++
 
         // Promote allocas to registers.
-        TheFPM->add(createPromoteMemoryToRegisterPass());
+        TheFPM->addPass(PromotePass());
         // Do simple "peephole" optimizations and bit-twiddling optzns.
-        TheFPM->add(createInstructionCombiningPass());
+        TheFPM->addPass(InstCombinePass());
         // Reassociate expressions.
-        TheFPM->add(createReassociatePass());
+        TheFPM->addPass(ReassociatePass());
         ...
 
 It is interesting to see what the code looks like before and after the

@@ -208,6 +208,12 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - Offset;
 }
 
+static inline unsigned getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
+  // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
+  // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
+  return FeatureBits[RISCV::FeatureStdExtZicfilp] ? RISCV::X7 : RISCV::X6;
+}
+
 static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   assert(hasSEWOp(TSFlags));
@@ -295,6 +301,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM3,
   OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM5_NONZERO,
+  OPERAND_UIMM5_GT3,
   OPERAND_UIMM5_LSB0,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
@@ -306,8 +314,12 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
+  OPERAND_UIMM11,
   OPERAND_UIMM12,
   OPERAND_UIMM16,
+  OPERAND_UIMM20,
+  OPERAND_UIMMLOG2XLEN,
+  OPERAND_UIMMLOG2XLEN_NONZERO,
   OPERAND_UIMM32,
   OPERAND_UIMM48,
   OPERAND_UIMM64,
@@ -319,9 +331,6 @@ enum OperandType : unsigned {
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
-  OPERAND_UIMM20,
-  OPERAND_UIMMLOG2XLEN,
-  OPERAND_UIMMLOG2XLEN_NONZERO,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -339,8 +348,10 @@ enum OperandType : unsigned {
   OPERAND_COND_CODE,
   // Vector policy operand.
   OPERAND_VEC_POLICY,
-  // Vector SEW operand.
+  // Vector SEW operand. Stores in log2(SEW).
   OPERAND_SEW,
+  // Special SEW for mask only instructions. Always 0.
+  OPERAND_SEW_MASK,
   // Vector rounding mode for VXRM or FRM.
   OPERAND_VEC_RM,
   OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
@@ -442,9 +453,9 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char *Name;
-  const char *AltName;
-  const char *DeprecatedName;
+  const char Name[32];
+  const char AltName[32];
+  const char DeprecatedName[32];
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.

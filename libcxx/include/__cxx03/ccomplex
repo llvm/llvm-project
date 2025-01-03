@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CCOMPLEX
-#define _LIBCPP_CCOMPLEX
+#ifndef _LIBCPP___CXX03_CCOMPLEX
+#define _LIBCPP___CXX03_CCOMPLEX
 
 /*
     ccomplex synopsis
@@ -23,4 +23,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CCOMPLEX
+#endif // _LIBCPP___CXX03_CCOMPLEX
