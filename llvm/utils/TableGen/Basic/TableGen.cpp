@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the main function for LLVM's TableGen.
+// This file contains the global defintions (mostly command line parameters)
+// shared between llvm-tblgen and llvm-min-tblgen.
 //
 //===----------------------------------------------------------------------===//
 
+#include "TableGen.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -74,7 +76,7 @@ static TableGen::Emitter::Opt X[] = {
     {"print-sets", printSets, "Print expanded sets for testing DAG exprs"},
 };
 
-int main(int argc, char **argv) {
+int tblgen_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
 

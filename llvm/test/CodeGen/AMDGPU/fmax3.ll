@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250_Plus,GFX1250 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250_Plus,GFX13 %s
 
@@ -716,6 +717,19 @@ define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX11-NEXT:    v_pk_max_f16 v0, v2, v0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: no_fmax3_v2f16:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v2, v0
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: no_fmax3_v2f16:
 ; GFX1250:       ; %bb.0: ; %entry
