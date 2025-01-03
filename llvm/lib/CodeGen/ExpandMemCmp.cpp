@@ -696,17 +696,9 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     }
   }
 
-  // The result of memcmp is negative, zero, or positive, so produce that by
-  // subtracting 2 extended compare bits: sub (ugt, ult).
-  // If a target prefers to use selects to get -1/0/1, they should be able
-  // to transform this later. The inverse transform (going from selects to math)
-  // may not be possible in the DAG because the selects got converted into
-  // branches before we got there.
-  Value *CmpUGT = Builder.CreateICmpUGT(Loads.Lhs, Loads.Rhs);
-  Value *CmpULT = Builder.CreateICmpULT(Loads.Lhs, Loads.Rhs);
-  Value *ZextUGT = Builder.CreateZExt(CmpUGT, Builder.getInt32Ty());
-  Value *ZextULT = Builder.CreateZExt(CmpULT, Builder.getInt32Ty());
-  return Builder.CreateSub(ZextUGT, ZextULT);
+  // The result of memcmp is negative, zero, or positive.
+  return Builder.CreateIntrinsic(Builder.getInt32Ty(), Intrinsic::ucmp,
+                                 {Loads.Lhs, Loads.Rhs});
 }
 
 // This function expands the memcmp call into an inline expansion and returns
