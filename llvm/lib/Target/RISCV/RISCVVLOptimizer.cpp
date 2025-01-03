@@ -532,6 +532,15 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
   case RISCV::VWMACCUS_VX:
+  // Vector Widening Floating-Point Fused Multiply-Add Instructions
+  case RISCV::VFWMACC_VF:
+  case RISCV::VFWMACC_VV:
+  case RISCV::VFWNMACC_VF:
+  case RISCV::VFWNMACC_VV:
+  case RISCV::VFWMSAC_VF:
+  case RISCV::VFWMSAC_VV:
+  case RISCV::VFWNMSAC_VF:
+  case RISCV::VFWNMSAC_VV: 
   // Vector Widening Floating-Point Add/Subtract Instructions
   // Dest EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
   case RISCV::VFWADD_VV:
@@ -568,16 +577,7 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VFWADD_WF:
   case RISCV::VFWADD_WV:
   case RISCV::VFWSUB_WF:
-  case RISCV::VFWSUB_WV:
-  // Vector Widening Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFWMACC_VF:
-  case RISCV::VFWMACC_VV:
-  case RISCV::VFWNMACC_VF:
-  case RISCV::VFWNMACC_VV:
-  case RISCV::VFWMSAC_VF:
-  case RISCV::VFWMSAC_VV:
-  case RISCV::VFWNMSAC_VF:
-  case RISCV::VFWNMSAC_VV: {
+  case RISCV::VFWSUB_WV: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
