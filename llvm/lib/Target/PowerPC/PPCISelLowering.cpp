@@ -200,8 +200,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // On P10, the default lowering generates better code using the
   // setbc instruction.
-  if (!Subtarget.hasP10Vector())
+  if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+    if (isPPC64)
+      setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+  }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
@@ -1635,14 +1638,14 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign, Align MaxMaxAlign) {
 
 /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
 /// function arguments in the caller parameter area.
-uint64_t PPCTargetLowering::getByValTypeAlignment(Type *Ty,
-                                                  const DataLayout &DL) const {
+Align PPCTargetLowering::getByValTypeAlignment(Type *Ty,
+                                               const DataLayout &DL) const {
   // 16byte and wider vectors are passed on 16byte boundary.
   // The rest is 8 on PPC64 and 4 on PPC32 boundary.
   Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
   if (Subtarget.hasAltivec())
     getMaxByValAlign(Ty, Alignment, Align(16));
-  return Alignment.value();
+  return Alignment;
 }
 
 bool PPCTargetLowering::useSoftFloat() const {
@@ -2684,7 +2687,7 @@ static bool provablyDisjointOr(SelectionDAG &DAG, const SDValue &N) {
 bool PPCTargetLowering::SelectAddressEVXRegReg(SDValue N, SDValue &Base,
                                                SDValue &Index,
                                                SelectionDAG &DAG) const {
-  for (SDNode *U : N->uses()) {
+  for (SDNode *U : N->users()) {
     if (MemSDNode *Memop = dyn_cast<MemSDNode>(U)) {
       if (Memop->getMemoryVT() == MVT::f64) {
           Base = N.getOperand(0);
@@ -2703,7 +2706,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)N->getAsZExtVal();
+  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -2925,7 +2928,7 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
   if (N.getOpcode() == ISD::ADD) {
     if (!isIntS34Immediate(N.getOperand(1), Imm))
       return false;
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
@@ -2946,12 +2949,12 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
       Base = N.getOperand(0);
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     return true;
   }
 
   if (isIntS34Immediate(N, Imm)) { // If the address is a 34-bit const.
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     return true;
   }
@@ -3046,11 +3049,10 @@ static bool usePartialVectorLoads(SDNode *N, const PPCSubtarget& ST) {
   if (!LoadedVal.hasOneUse())
     return false;
 
-  for (SDNode::use_iterator UI = LD->use_begin(), UE = LD->use_end();
-       UI != UE; ++UI)
-    if (UI.getUse().get().getResNo() == 0 &&
-        UI->getOpcode() != ISD::SCALAR_TO_VECTOR &&
-        UI->getOpcode() != PPCISD::SCALAR_TO_VECTOR_PERMUTED)
+  for (SDUse &Use : LD->uses())
+    if (Use.getResNo() == 0 &&
+        Use.getUser()->getOpcode() != ISD::SCALAR_TO_VECTOR &&
+        Use.getUser()->getOpcode() != PPCISD::SCALAR_TO_VECTOR_PERMUTED)
       return false;
 
   return true;
@@ -7241,6 +7243,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     MVT LocVT = VA.getLocVT();
     MVT ValVT = VA.getValVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
+
+    EVT ArgVT = Ins[VA.getValNo()].ArgVT;
+    bool ArgSignExt = Ins[VA.getValNo()].Flags.isSExt();
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
     // in register.  The caller is required to initialize both the register
@@ -7288,7 +7293,24 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
       SDValue ArgValue =
           DAG.getLoad(ValVT, dl, Chain, FIN, MachinePointerInfo());
-      InVals.push_back(ArgValue);
+
+      // While the ABI specifies the argument type is (sign or zero) extended
+      // out to register width, not all code is compliant. We truncate and
+      // re-extend to be more forgiving of these callers when the argument type
+      // is smaller than register width.
+      if (!ArgVT.isVector() && !ValVT.isVector() && ArgVT.isInteger() &&
+          ValVT.isInteger() &&
+          ArgVT.getScalarSizeInBits() < ValVT.getScalarSizeInBits()) {
+        SDValue ArgValueTrunc = DAG.getNode(
+            ISD::TRUNCATE, dl, ArgVT.getSimpleVT() == MVT::i1 ? MVT::i8 : ArgVT,
+            ArgValue);
+        SDValue ArgValueExt =
+            ArgSignExt ? DAG.getSExtOrTrunc(ArgValueTrunc, dl, ValVT)
+                       : DAG.getZExtOrTrunc(ArgValueTrunc, dl, ValVT);
+        InVals.push_back(ArgValueExt);
+      } else {
+        InVals.push_back(ArgValue);
+      }
     };
 
     // Vector arguments to VaArg functions are passed both on the stack, and
@@ -8661,18 +8683,17 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
       (!MMO->getSize().hasValue() || MMO->getSize().getValue() <= 2))
     return true;
 
-  for (SDNode::use_iterator UI = Origin->use_begin(),
-                            UE = Origin->use_end();
-       UI != UE; ++UI) {
+  for (SDUse &Use : Origin->uses()) {
 
     // Only look at the users of the loaded value.
-    if (UI.getUse().get().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
-    if (UI->getOpcode() != ISD::SINT_TO_FP &&
-        UI->getOpcode() != ISD::UINT_TO_FP &&
-        UI->getOpcode() != ISD::STRICT_SINT_TO_FP &&
-        UI->getOpcode() != ISD::STRICT_UINT_TO_FP)
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::SINT_TO_FP &&
+        User->getOpcode() != ISD::UINT_TO_FP &&
+        User->getOpcode() != ISD::STRICT_SINT_TO_FP &&
+        User->getOpcode() != ISD::STRICT_UINT_TO_FP)
       return true;
   }
 
@@ -12010,7 +12031,7 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
   // Default to target independent lowering if there is a logical user of the
   // carry-bit.
-  for (SDNode *U : Op->uses()) {
+  for (SDNode *U : Op->users()) {
     if (U->getOpcode() == ISD::SELECT)
       return SDValue();
     if (ISD::isBitwiseLogicOp(U->getOpcode())) {
@@ -12051,16 +12072,19 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
 
-  SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i32, LHS, RHS);
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
 
-  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, MVT::i32, RHS, LHS);
-  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, MVT::i32, Sub, LHS);
+  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, RHS, LHS);
+  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, VT, Sub, LHS);
 
-  SDValue And = DAG.getNode(ISD::AND, dl, MVT::i32, Xor1, Xor2);
+  SDValue And = DAG.getNode(ISD::AND, dl, VT, Xor1, Xor2);
 
-  SDValue Overflow = DAG.getNode(ISD::SRL, dl, MVT::i32, And,
-                                 DAG.getConstant(31, dl, MVT::i32));
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, And,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+
   SDValue OverflowTrunc =
       DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
 
@@ -14264,7 +14288,7 @@ static bool findConsecutiveLoad(LoadSDNode *LD, SelectionDAG &DAG) {
         if (isConsecutiveLS(ChainLD, LD, VT.getStoreSize(), 1, DAG))
           return true;
 
-      for (SDNode *U : LoadRoot->uses())
+      for (SDNode *U : LoadRoot->users())
         if (((isa<MemSDNode>(U) &&
               cast<MemSDNode>(U)->getChain().getNode() == LoadRoot) ||
              U->getOpcode() == ISD::TokenFactor) &&
@@ -14326,7 +14350,7 @@ SDValue PPCTargetLowering::ConvertSETCCToSubtract(SDNode *N,
 
   // If all users of SETCC extend its value to a legal integer type
   // then we replace SETCC with a subtraction
-  for (const SDNode *U : N->uses())
+  for (const SDNode *U : N->users())
     if (U->getOpcode() != ISD::ZERO_EXTEND)
       return SDValue();
 
@@ -14505,7 +14529,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
     if (isa<ConstantSDNode>(Inputs[i]))
       continue;
 
-    for (const SDNode *User : Inputs[i].getNode()->uses()) {
+    for (const SDNode *User : Inputs[i].getNode()->users()) {
       if (User != N && !Visited.count(User))
         return SDValue();
 
@@ -14526,7 +14550,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
   }
 
   for (unsigned i = 0, ie = PromOps.size(); i != ie; ++i) {
-    for (const SDNode *User : PromOps[i].getNode()->uses()) {
+    for (const SDNode *User : PromOps[i].getNode()->users()) {
       if (User != N && !Visited.count(User))
         return SDValue();
 
@@ -14710,7 +14734,7 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
     if (isa<ConstantSDNode>(Inputs[i]))
       continue;
 
-    for (SDNode *User : Inputs[i].getNode()->uses()) {
+    for (SDNode *User : Inputs[i].getNode()->users()) {
       if (User != N && !Visited.count(User))
         return SDValue();
 
@@ -14732,7 +14756,7 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
   }
 
   for (unsigned i = 0, ie = PromOps.size(); i != ie; ++i) {
-    for (SDNode *User : PromOps[i].getNode()->uses()) {
+    for (SDNode *User : PromOps[i].getNode()->users()) {
       if (User != N && !Visited.count(User))
         return SDValue();
 
@@ -16055,9 +16079,9 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
     // If the load return value 0 has more than one user except the
     // shufflevector instruction, it is not profitable to replace the
     // shufflevector with a reverse load.
-    for (SDNode::use_iterator UI = LSBase->use_begin(), UE = LSBase->use_end();
-         UI != UE; ++UI)
-      if (UI.getUse().getResNo() == 0 && UI->getOpcode() != ISD::VECTOR_SHUFFLE)
+    for (SDUse &Use : LSBase->uses())
+      if (Use.getResNo() == 0 &&
+          Use.getUser()->getOpcode() != ISD::VECTOR_SHUFFLE)
         return SDValue();
 
     SDLoc dl(LSBase);
@@ -16305,7 +16329,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       if (!LD->hasNUsesOfValue(2, 0))
         return false;
 
-      auto UI = LD->use_begin();
+      auto UI = LD->user_begin();
       while (UI.getUse().getResNo() != 0) ++UI;
       SDNode *Trunc = *UI++;
       while (UI.getUse().getResNo() != 0) ++UI;
@@ -16323,14 +16347,14 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
           !RightShift->hasOneUse())
         return false;
 
-      SDNode *Trunc2 = *RightShift->use_begin();
+      SDNode *Trunc2 = *RightShift->user_begin();
       if (Trunc2->getOpcode() != ISD::TRUNCATE ||
           Trunc2->getValueType(0) != MVT::i32 ||
           !Trunc2->hasOneUse())
         return false;
 
-      SDNode *Bitcast = *Trunc->use_begin();
-      SDNode *Bitcast2 = *Trunc2->use_begin();
+      SDNode *Bitcast = *Trunc->user_begin();
+      SDNode *Bitcast2 = *Trunc2->user_begin();
 
       if (Bitcast->getOpcode() != ISD::BITCAST ||
           Bitcast->getValueType(0) != MVT::f32)
@@ -16530,34 +16554,34 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                   APInt::getAllOnes(Bits /* alignment */)
                                       .zext(Add.getScalarValueSizeInBits()))) {
           SDNode *BasePtr = Add->getOperand(0).getNode();
-          for (SDNode *U : BasePtr->uses()) {
-          if (U->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-              U->getConstantOperandVal(0) == IID) {
-            // We've found another LVSL/LVSR, and this address is an aligned
-            // multiple of that one. The results will be the same, so use the
-            // one we've just found instead.
+          for (SDNode *U : BasePtr->users()) {
+            if (U->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+                U->getConstantOperandVal(0) == IID) {
+              // We've found another LVSL/LVSR, and this address is an aligned
+              // multiple of that one. The results will be the same, so use the
+              // one we've just found instead.
 
-            return SDValue(U, 0);
-          }
+              return SDValue(U, 0);
+            }
           }
         }
 
         if (isa<ConstantSDNode>(Add->getOperand(1))) {
           SDNode *BasePtr = Add->getOperand(0).getNode();
-          for (SDNode *U : BasePtr->uses()) {
-          if (U->getOpcode() == ISD::ADD &&
-              isa<ConstantSDNode>(U->getOperand(1)) &&
-              (Add->getConstantOperandVal(1) - U->getConstantOperandVal(1)) %
-                      (1ULL << Bits) ==
-                  0) {
-            SDNode *OtherAdd = U;
-            for (SDNode *V : OtherAdd->uses()) {
-              if (V->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-                  V->getConstantOperandVal(0) == IID) {
-                return SDValue(V, 0);
+          for (SDNode *U : BasePtr->users()) {
+            if (U->getOpcode() == ISD::ADD &&
+                isa<ConstantSDNode>(U->getOperand(1)) &&
+                (Add->getConstantOperandVal(1) - U->getConstantOperandVal(1)) %
+                        (1ULL << Bits) ==
+                    0) {
+              SDNode *OtherAdd = U;
+              for (SDNode *V : OtherAdd->users()) {
+                if (V->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+                    V->getConstantOperandVal(0) == IID) {
+                  return SDValue(V, 0);
+                }
               }
             }
-          }
           }
         }
       }
@@ -16729,13 +16753,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       SDNode *VCMPrecNode = nullptr;
 
       SDNode *LHSN = N->getOperand(0).getNode();
-      for (SDNode::use_iterator UI = LHSN->use_begin(), E = LHSN->use_end();
-           UI != E; ++UI)
-        if (UI->getOpcode() == PPCISD::VCMP_rec &&
-            UI->getOperand(1) == N->getOperand(1) &&
-            UI->getOperand(2) == N->getOperand(2) &&
-            UI->getOperand(0) == N->getOperand(0)) {
-          VCMPrecNode = *UI;
+      for (SDNode *User : LHSN->users())
+        if (User->getOpcode() == PPCISD::VCMP_rec &&
+            User->getOperand(1) == N->getOperand(1) &&
+            User->getOperand(2) == N->getOperand(2) &&
+            User->getOperand(0) == N->getOperand(0)) {
+          VCMPrecNode = User;
           break;
         }
 
@@ -16751,7 +16774,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       for (SDNode::use_iterator UI = VCMPrecNode->use_begin();
            FlagUser == nullptr; ++UI) {
         assert(UI != VCMPrecNode->use_end() && "Didn't find user!");
-        SDNode *User = *UI;
+        SDNode *User = UI->getUser();
         for (unsigned i = 0, e = User->getNumOperands(); i != e; ++i) {
           if (User->getOperand(i) == SDValue(VCMPrecNode, 1)) {
             FlagUser = User;

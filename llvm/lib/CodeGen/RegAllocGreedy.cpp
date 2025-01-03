@@ -156,7 +156,7 @@ INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
 INITIALIZE_PASS_DEPENDENCY(MachineScheduler)
-INITIALIZE_PASS_DEPENDENCY(LiveStacks)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
@@ -206,8 +206,8 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariablesWrapperLegacy>();
   AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
-  AU.addRequired<LiveStacks>();
-  AU.addPreserved<LiveStacks>();
+  AU.addRequired<LiveStacksWrapperLegacy>();
+  AU.addPreserved<LiveStacksWrapperLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -374,6 +374,12 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
   }
 
   return Prio;
+}
+
+unsigned DummyPriorityAdvisor::getPriority(const LiveInterval &LI) const {
+  // Prioritize by virtual register number, lowest first.
+  Register Reg = LI.reg();
+  return ~Reg.virtRegIndex();
 }
 
 const LiveInterval *RAGreedy::dequeue() { return dequeue(Queue); }
@@ -2427,7 +2433,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     } else
       return PhysReg;
   }
-  // Non emtpy NewVRegs means VirtReg has been split.
+  // Non empty NewVRegs means VirtReg has been split.
   if (!NewVRegs.empty())
     return 0;
 
@@ -2465,7 +2471,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     return 0;
   }
 
-  if (Stage < RS_Spill) {
+  if (Stage < RS_Spill && !VirtReg.empty()) {
     // Try splitting VirtReg or interferences.
     unsigned NewVRegSizeBefore = NewVRegs.size();
     Register PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);

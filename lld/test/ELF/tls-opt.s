@@ -28,17 +28,17 @@
 // DISASM-NEXT:   addq $-8, %r28
 // DISASM-NEXT:   addq $-4, %r16
 # NDD
-// DISASM-NEXT:   addq $-10, %r16, %r16
-// DISASM-NEXT:   addq $-10, %r16, %r20
-// DISASM-NEXT:   addq $-10, %r16, %rax
-// DISASM-NEXT:   addq $-10, %rax, %r16
-// DISASM-NEXT:   addq $-10, %r8, %r16
-// DISASM-NEXT:   addq $-10, %rax, %r12
+// DISASM-NEXT:   addq $-8, %r16, %r16
+// DISASM-NEXT:   addq $-8, %r16, %r20
+// DISASM-NEXT:   addq $-8, %r16, %rax
+// DISASM-NEXT:   addq $-8, %rax, %r16
+// DISASM-NEXT:   addq $-8, %r8, %r16
+// DISASM-NEXT:   addq $-8, %rax, %r12
 # NDD + NF
-// DISASM-NEXT:   {nf} addq $-10, %r8, %r16
-// DISASM-NEXT:   {nf} addq $-10, %rax, %r12
+// DISASM-NEXT:   {nf} addq $-8, %r8, %r16
+// DISASM-NEXT:   {nf} addq $-8, %rax, %r12
 # NF
-// DISASM-NEXT:   {nf} addq $-10, %r12
+// DISASM-NEXT:   {nf} addq $-8, %r12
 
 // LD to LE:
 // DISASM-NEXT:   movq %fs:0, %rax

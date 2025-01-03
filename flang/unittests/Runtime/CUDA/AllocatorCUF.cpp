@@ -35,8 +35,7 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
   EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
-  (*a, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
-      __LINE__);
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -54,8 +53,7 @@ TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
-  (*a, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
-      __LINE__);
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -68,7 +66,7 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
   Descriptor *desc = nullptr;
-  desc = RTNAME(CUFAllocDesciptor)(a->SizeInBytes());
+  desc = RTNAME(CUFAllocDescriptor)(a->SizeInBytes());
   EXPECT_TRUE(desc != nullptr);
-  RTNAME(CUFFreeDesciptor)(desc);
+  RTNAME(CUFFreeDescriptor)(desc);
 }

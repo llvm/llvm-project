@@ -172,6 +172,42 @@ define void @combine_fabs_int_f32(ptr %src, ptr %dst) {
   ret void
 }
 
+define void @combine_fabs_int_rmw_bfloat(ptr %ptr) nounwind {
+; SSE-LABEL: combine_fabs_int_rmw_bfloat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andb $127, 1(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_int_rmw_bfloat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    andb $127, 1(%rdi)
+; AVX-NEXT:    retq
+  %1 = load bfloat, ptr %ptr
+  %2 = call bfloat @llvm.fabs.bf16(bfloat %1)
+  store bfloat %2, ptr %ptr
+  ret void
+}
+
+define void @combine_fabs_int_half(ptr %src, ptr %dst) nounwind {
+; SSE-LABEL: combine_fabs_int_half:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movzwl (%rdi), %eax
+; SSE-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; SSE-NEXT:    movw %ax, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_fabs_int_half:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; AVX-NEXT:    movw %ax, (%rsi)
+; AVX-NEXT:    retq
+  %1 = load half, ptr %src
+  %2 = call half @llvm.fabs.f16(half %1)
+  store half %2, ptr %dst
+  ret void
+}
+
 ; don't convert vector to scalar
 define void @combine_fabs_vec_int_v4f32(ptr %src, ptr %dst) {
 ; SSE-LABEL: combine_fabs_vec_int_v4f32:

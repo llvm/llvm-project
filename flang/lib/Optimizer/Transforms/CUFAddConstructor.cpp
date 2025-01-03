@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -19,7 +20,6 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -106,7 +106,8 @@ struct CUFAddConstructor
 
         mlir::func::FuncOp func;
         switch (attr.getValue()) {
-        case cuf::DataAttribute::Device: {
+        case cuf::DataAttribute::Device:
+        case cuf::DataAttribute::Constant: {
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
               loc, builder);
           auto fTy = func.getFunctionType();

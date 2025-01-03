@@ -43,6 +43,11 @@ void CreateDomainConnectedSockets(llvm::StringRef path,
 bool HostSupportsIPv6();
 bool HostSupportsIPv4();
 
+/// Returns true if the name `localhost` maps to a loopback IPv4 address.
+bool HostSupportsLocalhostToIPv4();
+/// Returns true if the name `localhost` maps to a loopback IPv6 address.
+bool HostSupportsLocalhostToIPv6();
+
 /// Return an IP for localhost based on host support.
 ///
 /// This will return either "127.0.0.1" if IPv4 is detected, or "[::1]" if IPv6

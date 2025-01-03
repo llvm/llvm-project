@@ -234,11 +234,11 @@ static llvm::cl::opt<bool> integerWrapAround(
     llvm::cl::desc("Treat signed integer overflow as two's complement"),
     llvm::cl::init(false));
 
-// TODO: integrate this option with the above
 static llvm::cl::opt<bool>
-    setNSW("integer-overflow",
-           llvm::cl::desc("add nsw flag to internal operations"),
-           llvm::cl::init(false));
+    reallocateLHS("frealloc-lhs",
+                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
+                                 "the LHS of the intrinsic assignment"),
+                  llvm::cl::init(true));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
@@ -381,7 +381,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
-  loweringOptions.setNSWOnLoopVarInc(setNSW);
+  loweringOptions.setReallocateLHS(reallocateLHS);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -470,7 +470,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
     if (enableOpenMP)
       config.EnableOpenMP = true;
-    config.NSWOnLoopVarInc = setNSW;
+    config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }

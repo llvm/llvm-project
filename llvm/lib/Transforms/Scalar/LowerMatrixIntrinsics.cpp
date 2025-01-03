@@ -924,8 +924,7 @@ public:
              match(B, m_Intrinsic<Intrinsic::matrix_transpose>(
                           m_Value(BT), m_ConstantInt(), m_ConstantInt()))) {
       IRBuilder<> Builder(&I);
-      auto *Add = cast<Instruction>(Builder.CreateFAdd(AT, BT, "mfadd"));
-      setShapeInfo(Add, {R, C});
+      auto *Add = Builder.CreateFAdd(AT, BT, "mfadd");
       MatrixBuilder MBuilder(Builder);
       Instruction *NewInst = MBuilder.CreateMatrixTranspose(
           Add, R->getZExtValue(), C->getZExtValue(), "mfadd_t");
@@ -934,9 +933,13 @@ public:
                  computeShapeInfoForInst(&I, ShapeMap) &&
              "Shape of new instruction doesn't match original shape.");
       CleanupBinOp(I, A, B);
-      assert(computeShapeInfoForInst(Add, ShapeMap).value_or(ShapeMap[Add]) ==
-                 ShapeMap[Add] &&
-             "Shape of updated addition doesn't match cached shape.");
+      if (auto *AddI = dyn_cast<Instruction>(Add)) {
+        setShapeInfo(AddI, {R, C});
+        assert(
+            computeShapeInfoForInst(AddI, ShapeMap).value_or(ShapeMap[AddI]) ==
+                ShapeMap[AddI] &&
+            "Shape of updated addition doesn't match cached shape.");
+      }
     }
   }
 

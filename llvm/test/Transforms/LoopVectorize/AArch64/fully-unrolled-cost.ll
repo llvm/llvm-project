@@ -12,12 +12,10 @@ define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
 ; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 8: 26
-; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 16: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 16: 50
-; CHECK: LV: Selecting VF: vscale x 2
+; CHECK: Cost for VF 16: 48
+; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
 
@@ -50,9 +48,8 @@ define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK: Cost for VF 8: 26
 ; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 16: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 16: 50
+; CHECK: Cost for VF 16: 49
 ; CHECK: LV: Selecting VF: vscale x 2
 entry:
   br label %for.body
@@ -84,15 +81,12 @@ define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 ; CHECK-NEXT: Cost of 1 for VF 8: induction instruction   %j.iv.next = add nuw nsw i64 %j.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 8: 27
-; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %j.iv.next = add nuw nsw i64 %j.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 16: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 16: 51
+; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost for VF 16: 48
 ; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
@@ -116,6 +110,36 @@ for.body:                                         ; preds = %entry, %for.body
   %j.iv.next = add nuw nsw i64 %j.iv, 1
   %exitcond.not = icmp eq i64 %i.iv.next, 16
   br i1 %exitcond.not, label %exit, label %for.body
+}
+
+define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src) {
+; CHECK-LABEL: LV: Checking a loop in 'test_extra_cmp_user'
+; CHECK: Cost of 4 for VF 8: induction instruction   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT: Cost of 4 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost for VF 8: 12
+; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost for VF 16: 4
+; CHECK: LV: Selecting VF: 16
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %src, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds nuw i8, ptr %dst, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 4
+  %add = add nsw i8 %1, %0
+  store i8 %add, ptr %arrayidx2, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret i1 %exitcond.not
 }
 
 attributes #0 = { vscale_range(1, 16) "target-features"="+sve" }

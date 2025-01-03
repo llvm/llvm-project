@@ -101,6 +101,7 @@
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
@@ -219,11 +220,11 @@
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
-#include "llvm/Transforms/Instrumentation/PoisonChecking.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
@@ -491,6 +492,9 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)                              \
+  PIC->addClassToPassName(CLASS, NAME);
 #include "llvm/Passes/MachinePassRegistry.def"
     });
   }
@@ -1280,9 +1284,33 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
-  RealtimeSanitizerOptions Result;
-  return Result;
+Expected<BoundsCheckingPass::BoundsCheckingOptions>
+parseBoundsCheckingOptions(StringRef Params) {
+  BoundsCheckingPass::BoundsCheckingOptions Options(
+      BoundsCheckingPass::ReportingMode::Trap, false);
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName == "trap") {
+      Options.Mode = BoundsCheckingPass::ReportingMode::Trap;
+    } else if (ParamName == "rt") {
+      Options.Mode = BoundsCheckingPass::ReportingMode::FullRuntime;
+    } else if (ParamName == "rt-abort") {
+      Options.Mode = BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+    } else if (ParamName == "min-rt") {
+      Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
+    } else if (ParamName == "min-rt-abort") {
+      Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+    } else if (ParamName == "merge") {
+      Options.Merge = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Options;
 }
 
 } // namespace

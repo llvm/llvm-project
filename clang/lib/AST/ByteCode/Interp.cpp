@@ -1154,6 +1154,53 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   return false;
 }
 
+static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                     uint32_t Off) {
+  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
+      !CheckNull(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (Ptr.isIntegralPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
+    return true;
+  }
+
+  if (!Ptr.isBlockPointer()) {
+    // FIXME: The only time we (seem to) get here is when trying to access a
+    // field of a typeid pointer. In that case, we're supposed to diagnose e.g.
+    // `typeid(int).name`, but we currently diagnose `&typeid(int)`.
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (Off > Ptr.block()->getSize())
+    return false;
+
+  S.Stk.push<Pointer>(Ptr.atField(Off));
+  return true;
+}
+
+bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  return getField(S, OpPC, Ptr, Off);
+}
+
+bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  return getField(S, OpPC, Ptr, Off);
+}
+
 static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
                              const Pointer &ThisPtr) {
   assert(Func->isConstructor());
@@ -1360,7 +1407,10 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID) {
-  if (S.checkingPotentialConstantExpression())
+  // A little arbitrary, but the current interpreter allows evaluation
+  // of builtin functions in this mode, with some exceptions.
+  if (BuiltinID == Builtin::BI__builtin_operator_new &&
+      S.checkingPotentialConstantExpression())
     return false;
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
@@ -1589,6 +1639,41 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
   QualType ExprType = E->getType();
   S.FFDiag(E, diag::note_constexpr_bit_cast_indet_dest)
       << ExprType << S.getLangOpts().CharIsSigned << E->getSourceRange();
+  return false;
+}
+
+bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
+               const Type *TypeInfoType) {
+  S.Stk.push<Pointer>(TypePtr, TypeInfoType);
+  return true;
+}
+
+bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
+  const auto &P = S.Stk.pop<Pointer>();
+
+  if (!P.isBlockPointer())
+    return false;
+
+  if (P.isDummy()) {
+    QualType StarThisType =
+        S.getASTContext().getLValueReferenceType(P.getType());
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_polymorphic_unknown_dynamic_type)
+        << AK_TypeId
+        << P.toAPValue(S.getASTContext())
+               .getAsString(S.getASTContext(), StarThisType);
+    return false;
+  }
+
+  S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
+  return true;
+}
+
+bool DiagTypeid(InterpState &S, CodePtr OpPC) {
+  const auto *E = cast<CXXTypeidExpr>(S.Current->getExpr(OpPC));
+  S.CCEDiag(E, diag::note_constexpr_typeid_polymorphic)
+      << E->getExprOperand()->getType()
+      << E->getExprOperand()->getSourceRange();
   return false;
 }
 

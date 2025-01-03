@@ -38,8 +38,8 @@ define <4 x float> @interleave_v2f32(<2 x float> %x, <2 x float> %y) {
 define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; V128-LABEL: interleave_v2f64:
 ; V128:       # %bb.0:
-; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vid.v v9
 ; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsrl.vi v14, v9, 1
@@ -247,12 +247,12 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; V128-NEXT:    vslidedown.vi v24, v16, 16
 ; V128-NEXT:    li a0, 32
-; V128-NEXT:    vslidedown.vi v0, v8, 16
 ; V128-NEXT:    lui a1, 699051
+; V128-NEXT:    vslidedown.vi v0, v8, 16
 ; V128-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; V128-NEXT:    vzext.vf2 v8, v24
-; V128-NEXT:    vzext.vf2 v24, v0
 ; V128-NEXT:    addi a1, a1, -1366
+; V128-NEXT:    vzext.vf2 v24, v0
 ; V128-NEXT:    vmv.s.x v0, a1
 ; V128-NEXT:    vsll.vx v8, v8, a0
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma

@@ -11,6 +11,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
+#include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
@@ -278,7 +279,8 @@ bool Symbol::includeInDynsym(Ctx &ctx) const {
     // __pthread_initialize_minimal reference in csu/libc-start.c.
     return !(isUndefWeak() && ctx.arg.noDynamicLinker);
 
-  return exportDynamic || inDynamicList;
+  return exportDynamic ||
+         (ctx.arg.exportDynamic && (isUsedInRegularObj || !ltoCanOmit));
 }
 
 // Print out a log message for --trace-symbol.
@@ -344,7 +346,7 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
 
   // Only symbols with default visibility that appear in dynsym can be
   // preempted. Symbols with protected visibility cannot be preempted.
-  if (!sym.includeInDynsym(ctx) || sym.visibility() != STV_DEFAULT)
+  if (sym.visibility() != STV_DEFAULT)
     return false;
 
   // At this point copy relocations have not been created yet, so any
@@ -369,15 +371,26 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   return true;
 }
 
+void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
+  // Symbol themselves might know their versions because symbols
+  // can contain versions in the form of <name>@<version>.
+  // Let them parse and update their names to exclude version suffix.
+  bool hasDynSymTab = ctx.arg.hasDynSymTab;
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
+    if (sym->hasVersionSuffix)
+      sym->parseSymbolVersion(ctx);
+    sym->isExported = sym->includeInDynsym(ctx);
+    if (hasDynSymTab)
+      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+  }
+}
+
 // Merge symbol properties.
 //
 // When we have many symbols of the same name, we choose one of them,
 // and that's the result of symbol resolution. However, symbols that
 // were not chosen still affect some symbol properties.
 void Symbol::mergeProperties(const Symbol &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
-
   // DSO symbols do not affect visibility in the output.
   if (!other.isShared() && other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
@@ -463,8 +476,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // A forms group 0. B form group 1. C and D (including their member object
     // files) form group 2. E forms group 3. I think that you can see how this
     // group assignment rule simulates the traditional linker's semantics.
-    bool backref = ctx.arg.warnBackrefs && other.file &&
-                   file->groupId < other.file->groupId;
+    bool backref = ctx.arg.warnBackrefs && file->groupId < other.file->groupId;
     extract(ctx);
 
     if (!ctx.arg.whyExtract.empty())
@@ -477,7 +489,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // sandwich), where def2 may or may not be the same as def1. We don't want
     // to warn for this case, so dismiss the warning if we see a subsequent lazy
     // definition. this->file needs to be saved because in the case of LTO it
-    // may be reset to nullptr or be replaced with a file named lto.tmp.
+    // may be reset to internalFile or be replaced with a file named lto.tmp.
     if (backref && !isWeak())
       ctx.backwardReferences.try_emplace(this,
                                          std::make_pair(other.file, file));
@@ -485,7 +497,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
   }
 
   // Undefined symbols in a SharedFile do not change the binding.
-  if (isa_and_nonnull<SharedFile>(other.file))
+  if (isa<SharedFile>(other.file))
     return;
 
   if (isUndefined() || isShared()) {
@@ -565,8 +577,6 @@ void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
 }
 
 void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
   if (other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
@@ -603,8 +613,6 @@ void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const Defined &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
   if (other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
