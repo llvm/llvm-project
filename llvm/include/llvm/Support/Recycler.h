@@ -86,7 +86,7 @@ public:
     static_assert(sizeof(SubClass) <= Size,
                   "Recycler allocation size is less than object size!");
     static_assert(Size >= sizeof(FreeNode) &&
-                  "Recycler size must be atleast 8");
+                  "Recycler size must be at least sizeof(FreeNode)");
     return FreeList ? reinterpret_cast<SubClass *>(pop_val())
                     : static_cast<SubClass *>(Allocator.Allocate(Size, Align));
   }
