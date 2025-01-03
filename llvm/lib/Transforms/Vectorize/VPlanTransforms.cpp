@@ -1506,8 +1506,12 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
             SmallVector<VPValue *> Ops(CR->operands());
             Ops.push_back(&AllOneMask);
             Ops.push_back(&EVL);
-            return new VPWidenIntrinsicRecipe(
+            auto *VPR = new VPWidenIntrinsicRecipe(
                 VPID, Ops, TypeInfo.inferScalarType(CR), CR->getDebugLoc());
+            // Preserve the underlying value as some cast instructions may have
+            // their cost skipped in collectValuesToIgnore
+            VPR->setUnderlyingValue(CR->getUnderlyingValue());
+            return VPR;
           })
       .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
         SmallVector<VPValue *> Ops(Sel->operands());
