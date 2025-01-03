@@ -247,10 +247,7 @@ Ignore a function when doing a source level single step in
 
   (lldb) settings show target.process.thread.step-avoid-regexp
   target.process.thread.step-avoid-regexp (regex) = ^std::
-  (lldb) settings set target.process.thread.step-avoid-regexp (^std::)|(^abc)
-
-Get the default value, make it into a capture group, then add another capture
-group for the new function name.
+  (lldb) settings set target.process.thread.step-avoid-regexp ^std::|^abc
 
 You can ignore a function once using:
 
@@ -258,10 +255,11 @@ You can ignore a function once using:
 
   (lldb) thread step-in -r ^abc
 
-Or you can do the opposite, only step into functions with a certain name:
+Or you can do the opposite, only step into functions matching a certain name:
 
 .. code-block:: shell
 
+  # Step in if abc is a substring of the function name.
   (lldb) sif abc
   # Which is equivalent to:
   (lldb) thread step-in -t abc
