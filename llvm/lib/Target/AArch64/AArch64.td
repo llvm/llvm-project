@@ -63,7 +63,7 @@ def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSVE2, HasSVE2orSME, HasSVE2orSME2, HasSSVE_FP8FMA, HasSMEF8F16,
-                       HasSMEF8F32, HasSVEAES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm,
+                       HasSMEF8F32, HasSVEAES, HasSVE2SHA3, HasSVE2SM4, HasSVEBitPerm,
                        HasSVEB16B16],
                        SVE2p1Unsupported.F);
 }
@@ -74,7 +74,7 @@ def SVEUnsupported : AArch64Unsupported {
 }
 
 let F = [HasSME2p2, HasSVE2p2orSME2p2, HasNonStreamingSVEorSME2p2,
-         HasNonStreamingSVE2p2orSME2p2] in
+         HasNonStreamingSVE2p2orSME2p2, HasNonStreamingSVE2orSSVE_BitPerm] in
 def SME2p2Unsupported : AArch64Unsupported;
 
 def SME2p1Unsupported : AArch64Unsupported {

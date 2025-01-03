@@ -485,7 +485,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
-  if (HasSVE2 && HasSVE2BitPerm)
+  if (HasSVE2 && HasSVEBitPerm)
     Builder.defineMacro("__ARM_FEATURE_SVE2_BITPERM", "1");
 
   if (HasSVE2 && HasSVE2SHA3)
@@ -769,7 +769,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
       .Case("sve-aes", HasSVEAES)
-      .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
+      .Case("sve-bitperm", FPU & HasSVEBitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sve2p1", FPU & SveMode && HasSVE2p1)
@@ -881,12 +881,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+sve-b16b16")
       HasSVEB16B16 = true;
-    if (Feature == "+sve2-bitperm") {
+    if (Feature == "+sve-bitperm") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2BitPerm = true;
+      HasSVEBitPerm = true;
     }
     if (Feature == "+f32mm") {
       FPU |= NeonMode;
