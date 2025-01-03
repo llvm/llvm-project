@@ -1,5 +1,5 @@
 .. meta::
-  :description: HIPCC environment variables
+  :description: HIPCC usage description
   :keywords: HIPCC, ROCm, HIP tools, HIP compiler
 
 .. _hipcc_use:
