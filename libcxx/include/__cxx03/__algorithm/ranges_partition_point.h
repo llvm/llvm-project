@@ -6,29 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_PARTITION_POINT_H
-#define _LIBCPP___ALGORITHM_RANGES_PARTITION_POINT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_POINT_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_POINT_H
 
-#include <__algorithm/half_positive.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__iterator/concepts.h>
-#include <__iterator/distance.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__iterator/projected.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/dangling.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/half_positive.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/distance.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/next.h>
+#include <__cxx03/__iterator/projected.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__ranges/dangling.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -90,4 +90,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_PARTITION_POINT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_POINT_H

@@ -32,6 +32,7 @@ exports_files([
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     "utils/lit/lit.py",
+    # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
 
@@ -1219,6 +1220,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Object",
+        ":ProfileData",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1246,6 +1248,18 @@ cc_library(
         ":TargetParser",
         ":config",
     ],
+)
+
+filegroup(
+    name = "common_target_td_sources",
+    srcs = glob([
+        "include/llvm/CodeGen/*.td",
+        "include/llvm/Frontend/Directive/*.td",
+        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/TableGen/*.td",
+        "include/llvm/Target/*.td",
+        "include/llvm/Target/GlobalISel/*.td",
+    ]),
 )
 
 gentbl(
@@ -1605,13 +1619,16 @@ gentbl(
 
 cc_library(
     name = "FrontendAtomic",
+    srcs = glob([
+        "lib/Frontend/Atomic/*.cpp",
+    ]),
     hdrs = glob([
         "include/llvm/Frontend/Atomic/*.h",
     ]),
     copts = llvm_copts,
     deps = [
+        ":Core",
         ":Support",
-        ":ir_headers",
     ],
 )
 
@@ -2325,18 +2342,6 @@ cc_library(
     textual_hdrs = ["lib/Target/X86/X86InstrInfo.h"],
 )
 
-filegroup(
-    name = "common_target_td_sources",
-    srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
-        "include/llvm/TableGen/*.td",
-        "include/llvm/Target/*.td",
-        "include/llvm/Target/GlobalISel/*.td",
-    ]),
-)
-
 gentbl(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
@@ -2798,6 +2803,7 @@ cc_library(
         ":MC",
         ":MCDisassembler",
         ":Object",
+        ":OrcShared",
         ":OrcTargetProcess",
         ":Passes",
         ":Support",
@@ -2935,6 +2941,8 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Shared/*.h",
+    ] + [
+        "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
     ]),
     copts = llvm_copts,
     deps = [

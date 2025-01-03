@@ -6,10 +6,10 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_FUNCTIONAL_H
-#define _LIBCPP___FWD_FUNCTIONAL_H
+#ifndef _LIBCPP___CXX03___FWD_FUNCTIONAL_H
+#define _LIBCPP___CXX03___FWD_FUNCTIONAL_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,4 +25,4 @@ class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_FUNCTIONAL_H
+#endif // _LIBCPP___CXX03___FWD_FUNCTIONAL_H

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_INVOCABLE_H
-#define _LIBCPP___CONCEPTS_INVOCABLE_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_INVOCABLE_H
+#define _LIBCPP___CXX03___CONCEPTS_INVOCABLE_H
 
-#include <__config>
-#include <__functional/invoke.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,4 +37,4 @@ concept regular_invocable = invocable<_Fn, _Args...>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_INVOCABLE_H
+#endif // _LIBCPP___CXX03___CONCEPTS_INVOCABLE_H

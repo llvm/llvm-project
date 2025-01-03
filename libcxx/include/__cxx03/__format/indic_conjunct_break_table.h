@@ -58,14 +58,14 @@
 // use or other dealings in these Data Files or Software without prior
 // written authorization of the copyright holder.
 
-#ifndef _LIBCPP___FORMAT_INDIC_CONJUNCT_BREAK_TABLE_H
-#define _LIBCPP___FORMAT_INDIC_CONJUNCT_BREAK_TABLE_H
+#ifndef _LIBCPP___CXX03___FORMAT_INDIC_CONJUNCT_BREAK_TABLE_H
+#define _LIBCPP___CXX03___FORMAT_INDIC_CONJUNCT_BREAK_TABLE_H
 
-#include <__algorithm/ranges_upper_bound.h>
-#include <__config>
-#include <__iterator/access.h>
-#include <cstddef>
-#include <cstdint>
+#include <__cxx03/__algorithm/ranges_upper_bound.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/access.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -347,4 +347,4 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[201] = {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_INDIC_CONJUNCT_BREAK_TABLE_H
+#endif // _LIBCPP___CXX03___FORMAT_INDIC_CONJUNCT_BREAK_TABLE_H

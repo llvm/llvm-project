@@ -40,7 +40,7 @@ define double @fast_minus_zero(double %value) {
 define <2 x double> @vec_zero(<2 x double> %value) {
 ; CHECK-LABEL: define <2 x double> @vec_zero(
 ; CHECK-SAME: <2 x double> [[VALUE:%.*]]) {
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %res = call <2 x double> @llvm.pow.v2f64(<2 x double> %value, <2 x double> <double 0.000000e+00, double 0.000000e+00>)
   ret <2 x double> %res
@@ -49,7 +49,7 @@ define <2 x double> @vec_zero(<2 x double> %value) {
 define <2 x double> @vec_minus_zero(<2 x double> %value) {
 ; CHECK-LABEL: define <2 x double> @vec_minus_zero(
 ; CHECK-SAME: <2 x double> [[VALUE:%.*]]) {
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %res = call <2 x double> @llvm.pow.v2f64(<2 x double> %value, <2 x double> <double -0.000000e+00, double -0.000000e+00>)
   ret <2 x double> %res
@@ -58,7 +58,7 @@ define <2 x double> @vec_minus_zero(<2 x double> %value) {
 define <2 x double> @vec_fast_zero(<2 x double> %value) {
 ; CHECK-LABEL: define <2 x double> @vec_fast_zero(
 ; CHECK-SAME: <2 x double> [[VALUE:%.*]]) {
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %res = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %value, <2 x double> <double 0.000000e+00, double 0.000000e+00>)
   ret <2 x double> %res
@@ -67,7 +67,7 @@ define <2 x double> @vec_fast_zero(<2 x double> %value) {
 define <2 x double> @vec_fast_minus_zero(<2 x double> %value) {
 ; CHECK-LABEL: define <2 x double> @vec_fast_minus_zero(
 ; CHECK-SAME: <2 x double> [[VALUE:%.*]]) {
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %res = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %value, <2 x double> <double -0.000000e+00, double -0.000000e+00>)
   ret <2 x double> %res

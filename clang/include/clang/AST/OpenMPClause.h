@@ -486,7 +486,8 @@ public:
 /// #pragma omp parallel private(a) allocate(omp_default_mem_alloc :a)
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'private'
-/// and clause 'allocate' for the variable 'a'.
+/// and clause 'allocate' for the variable 'a', which specifies an explicit
+/// memory allocator.
 class OMPAllocateClause final
     : public OMPVarListClause<OMPAllocateClause>,
       private llvm::TrailingObjects<OMPAllocateClause, Expr *> {
@@ -499,6 +500,10 @@ class OMPAllocateClause final
   Expr *Allocator = nullptr;
   /// Position of the ':' delimiter in the clause;
   SourceLocation ColonLoc;
+  /// Modifier of 'allocate' clause.
+  OpenMPAllocateClauseModifier AllocatorModifier = OMPC_ALLOCATE_unknown;
+  /// Location of allocator modifier if any.
+  SourceLocation AllocatorModifierLoc;
 
   /// Build clause with number of variables \a N.
   ///
@@ -510,10 +515,14 @@ class OMPAllocateClause final
   /// \param N Number of the variables in the clause.
   OMPAllocateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                     Expr *Allocator, SourceLocation ColonLoc,
-                    SourceLocation EndLoc, unsigned N)
+                    OpenMPAllocateClauseModifier AllocatorModifier,
+                    SourceLocation AllocatorModifierLoc, SourceLocation EndLoc,
+                    unsigned N)
       : OMPVarListClause<OMPAllocateClause>(llvm::omp::OMPC_allocate, StartLoc,
                                             LParenLoc, EndLoc, N),
-        Allocator(Allocator), ColonLoc(ColonLoc) {}
+        Allocator(Allocator), ColonLoc(ColonLoc),
+        AllocatorModifier(AllocatorModifier),
+        AllocatorModifierLoc(AllocatorModifierLoc) {}
 
   /// Build an empty clause.
   ///
@@ -527,6 +536,9 @@ class OMPAllocateClause final
   void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
 
   void setAllocator(Expr *A) { Allocator = A; }
+  void setAllocatorModifier(OpenMPAllocateClauseModifier AM) {
+    AllocatorModifier = AM;
+  }
 
 public:
   /// Creates clause with a list of variables \a VL.
@@ -536,18 +548,31 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param Allocator Allocator expression.
   /// \param ColonLoc Location of ':' delimiter.
+  /// \param AllocatorModifier Allocator modifier.
+  /// \param SourceLocation Allocator modifier location.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
-  static OMPAllocateClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                   SourceLocation LParenLoc, Expr *Allocator,
-                                   SourceLocation ColonLoc,
-                                   SourceLocation EndLoc, ArrayRef<Expr *> VL);
+  static OMPAllocateClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         Expr *Allocator, SourceLocation ColonLoc,
+         OpenMPAllocateClauseModifier AllocatorModifier,
+         SourceLocation AllocatorModifierLoc, SourceLocation EndLoc,
+         ArrayRef<Expr *> VL);
 
   /// Returns the allocator expression or nullptr, if no allocator is specified.
   Expr *getAllocator() const { return Allocator; }
 
+  /// Return 'allocate' modifier.
+  OpenMPAllocateClauseModifier getAllocatorModifier() const {
+    return AllocatorModifier;
+  }
+
   /// Returns the location of the ':' delimiter.
   SourceLocation getColonLoc() const { return ColonLoc; }
+  /// Return the location of the modifier.
+  SourceLocation getAllocatorModifierLoc() const {
+    return AllocatorModifierLoc;
+  }
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -2645,8 +2670,8 @@ public:
   }
 };
 
-/// This represents 'seq_cst' clause in the '#pragma omp atomic'
-/// directive.
+/// This represents 'seq_cst' clause in the '#pragma omp atomic|flush'
+/// directives.
 ///
 /// \code
 /// #pragma omp atomic seq_cst

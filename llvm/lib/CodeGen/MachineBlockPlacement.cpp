@@ -2906,7 +2906,7 @@ void MachineBlockPlacement::buildCFGChains() {
 
 void MachineBlockPlacement::optimizeBranches() {
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
-  SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
+  SmallVector<MachineOperand, 4> Cond;
 
   // Now that all the basic blocks in the chain have the proper layout,
   // make a final call to analyzeBranch with AllowModify set.
@@ -2916,24 +2916,30 @@ void MachineBlockPlacement::optimizeBranches() {
   // a fallthrough when it occurs after predicated terminators.
   for (MachineBasicBlock *ChainBB : FunctionChain) {
     Cond.clear();
-    MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
-    if (!TII->analyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true)) {
-      // If PrevBB has a two-way branch, try to re-order the branches
-      // such that we branch to the successor with higher probability first.
-      if (TBB && !Cond.empty() && FBB &&
-          MBPI->getEdgeProbability(ChainBB, FBB) >
-              MBPI->getEdgeProbability(ChainBB, TBB) &&
-          !TII->reverseBranchCondition(Cond)) {
-        LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
-                          << getBlockName(ChainBB) << "\n");
-        LLVM_DEBUG(dbgs() << "    Edge probability: "
-                          << MBPI->getEdgeProbability(ChainBB, FBB) << " vs "
-                          << MBPI->getEdgeProbability(ChainBB, TBB) << "\n");
-        DebugLoc dl; // FIXME: this is nowhere
-        TII->removeBranch(*ChainBB);
-        TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
-      }
-    }
+    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+    if (TII->analyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true))
+      continue;
+    if (!TBB || !FBB || Cond.empty())
+      continue;
+    // If we are optimizing for size we do not consider the runtime performance.
+    // Instead, we retain the original branch condition so we have more uniform
+    // instructions which will benefit ICF.
+    if (llvm::shouldOptimizeForSize(ChainBB, PSI, MBFI.get()))
+      continue;
+    // If ChainBB has a two-way branch, try to re-order the branches
+    // such that we branch to the successor with higher probability first.
+    if (MBPI->getEdgeProbability(ChainBB, TBB) >=
+        MBPI->getEdgeProbability(ChainBB, FBB))
+      continue;
+    if (TII->reverseBranchCondition(Cond))
+      continue;
+    LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
+                      << getBlockName(ChainBB) << "\n");
+    LLVM_DEBUG(dbgs() << "  " << getBlockName(TBB) << " < " << getBlockName(FBB)
+                      << "\n");
+    auto Dl = ChainBB->findBranchDebugLoc();
+    TII->removeBranch(*ChainBB);
+    TII->insertBranch(*ChainBB, FBB, TBB, Cond, Dl);
   }
 }
 
@@ -3552,14 +3558,16 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(), MLI,
                             /*AfterPlacement=*/true)) {
-      // Redo the layout if tail merging creates/removes/moves blocks.
-      BlockToChain.clear();
-      ComputedEdges.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->recalculate(MF);
-      ChainAllocator.DestroyAll();
-      buildCFGChains();
+      if (!UseExtTspForSize) {
+        // Redo the layout if tail merging creates/removes/moves blocks.
+        BlockToChain.clear();
+        ComputedEdges.clear();
+        ChainAllocator.DestroyAll();
+        buildCFGChains();
+      }
     }
   }
 

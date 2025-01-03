@@ -38,7 +38,6 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -324,7 +323,7 @@ void WinCOFFWriter::defineSection(const MCAssembler &Asm,
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
 
-  if (UseOffsetLabels && !MCSec.empty()) {
+  if (UseOffsetLabels) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
     for (uint32_t Off = Interval, E = Asm.getSectionAddressSize(MCSec); Off < E;

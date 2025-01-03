@@ -10,6 +10,9 @@
 
 #include "lldb/Host/FileAction.h"
 #include "gtest/gtest.h"
+#if defined(_WIN32)
+#include "lldb/Host/windows/PosixApi.h"
+#endif
 
 using namespace lldb_private;
 
@@ -31,7 +34,9 @@ TEST(FileActionTest, OpenReadWrite) {
 TEST(FileActionTest, OpenReadOnly) {
   FileAction Action;
   Action.Open(49, FileSpec("/tmp_1"), /*read*/ true, /*write*/ false);
+#ifndef _WIN32
   EXPECT_TRUE(Action.GetActionArgument() & (O_NOCTTY | O_RDONLY));
+#endif
   EXPECT_FALSE(Action.GetActionArgument() & O_WRONLY);
 }
 

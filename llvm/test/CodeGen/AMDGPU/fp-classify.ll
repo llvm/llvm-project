@@ -9,8 +9,8 @@ declare double @llvm.fabs.f64(double) #1
 define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isinf_pattern:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x204
@@ -22,11 +22,11 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 ;
 ; VI-LABEL: test_isinf_pattern:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x204
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -36,11 +36,11 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 ; GFX11-LABEL: test_isinf_pattern:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s4, 0x204
+; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x204
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -55,8 +55,8 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_not_isinf_pattern_0:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
@@ -68,11 +68,11 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 ;
 ; VI-LABEL: test_not_isinf_pattern_0:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_nlg_f32_e64 s[2:3], |s4|, v0
+; VI-NEXT:    v_cmp_nlg_f32_e64 s[2:3], |s2|, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -82,11 +82,11 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 ; GFX11-LABEL: test_not_isinf_pattern_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_nlg_f32_e64 s2, 0x7f800000, |s4|
+; GFX11-NEXT:    v_cmp_nlg_f32_e64 s2, 0x7f800000, |s2|
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_not_isinf_pattern_1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
@@ -111,7 +111,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %
 ;
 ; VI-LABEL: test_not_isinf_pattern_1:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -121,7 +121,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %
 ;
 ; GFX11-LABEL: test_not_isinf_pattern_1:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
@@ -136,8 +136,8 @@ define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %
 define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_pattern_0:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x1f8
@@ -149,11 +149,11 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 ;
 ; VI-LABEL: test_isfinite_pattern_0:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -163,11 +163,11 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 ; GFX11-LABEL: test_isfinite_pattern_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s4, 0x1f8
+; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -184,8 +184,8 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_pattern_1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x1f8
@@ -197,11 +197,11 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 ;
 ; VI-LABEL: test_isfinite_pattern_1:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -211,11 +211,11 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 ; GFX11-LABEL: test_isfinite_pattern_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s4, 0x1f8
+; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -231,22 +231,22 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_not_pattern_0:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_o_f32_e64 s[4:5], s4, s4
+; SI-NEXT:    v_cmp_o_f32_e64 s[4:5], s6, s6
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_isfinite_not_pattern_0:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_o_f32_e64 s[2:3], s4, s4
+; VI-NEXT:    v_cmp_o_f32_e64 s[2:3], s2, s2
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -256,11 +256,11 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 ; GFX11-LABEL: test_isfinite_not_pattern_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_o_f32_e64 s2, s4, s4
+; GFX11-NEXT:    v_cmp_o_f32_e64 s2, s2, s2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -278,8 +278,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_not_pattern_1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s6, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
@@ -293,12 +293,12 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 ;
 ; VI-LABEL: test_isfinite_not_pattern_1:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_o_f32_e64 s[2:3], s4, s4
-; VI-NEXT:    v_cmp_neq_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_o_f32_e64 s[2:3], s6, s6
+; VI-NEXT:    v_cmp_neq_f32_e32 vcc, s6, v0
 ; VI-NEXT:    s_and_b64 s[2:3], s[2:3], vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
@@ -309,14 +309,14 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 ; GFX11-LABEL: test_isfinite_not_pattern_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_o_f32_e64 s2, s4, s4
-; GFX11-NEXT:    v_cmp_neq_f32_e64 s3, 0x7f800000, s4
+; GFX11-NEXT:    v_cmp_o_f32_e64 s3, s2, s2
+; GFX11-NEXT:    v_cmp_neq_f32_e64 s2, 0x7f800000, s2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s2, s2, s3
+; GFX11-NEXT:    s_and_b32 s2, s3, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -332,7 +332,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocapture %out, float %x, float %y) #0 {
 ; SI-LABEL: test_isfinite_not_pattern_2:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
@@ -348,7 +348,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ;
 ; VI-LABEL: test_isfinite_not_pattern_2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_cmp_o_f32_e64 s[4:5], s2, s2
@@ -362,7 +362,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ;
 ; GFX11-LABEL: test_isfinite_not_pattern_2:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_o_f32_e64 s2, s2, s2
@@ -385,8 +385,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_not_pattern_3:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s6, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
@@ -400,12 +400,12 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ;
 ; VI-LABEL: test_isfinite_not_pattern_3:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x7f800000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_u_f32_e64 s[2:3], s4, s4
-; VI-NEXT:    v_cmp_neq_f32_e64 s[4:5], |s4|, v0
+; VI-NEXT:    v_cmp_u_f32_e64 s[2:3], s6, s6
+; VI-NEXT:    v_cmp_neq_f32_e64 s[4:5], |s6|, v0
 ; VI-NEXT:    s_and_b64 s[2:3], s[2:3], s[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
@@ -416,14 +416,14 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ; GFX11-LABEL: test_isfinite_not_pattern_3:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_u_f32_e64 s2, s4, s4
-; GFX11-NEXT:    v_cmp_neq_f32_e64 s3, 0x7f800000, |s4|
+; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s2, s2
+; GFX11-NEXT:    v_cmp_neq_f32_e64 s2, 0x7f800000, |s2|
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s2, s2, s3
+; GFX11-NEXT:    s_and_b32 s2, s3, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -439,8 +439,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_pattern_4:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x1f8
@@ -452,11 +452,11 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 ;
 ; VI-LABEL: test_isfinite_pattern_4:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -466,11 +466,11 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 ; GFX11-LABEL: test_isfinite_pattern_4:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s4, 0x1f8
+; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -487,8 +487,8 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) nocapture %out, float %x) #0 {
 ; SI-LABEL: test_isfinite_pattern_4_commute_and:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x1f8
@@ -500,11 +500,11 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 ;
 ; VI-LABEL: test_isfinite_pattern_4_commute_and:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -514,11 +514,11 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 ; GFX11-LABEL: test_isfinite_pattern_4_commute_and:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s4, 0x1f8
+; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -535,11 +535,11 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrspace(1) nocapture %out, float %x, [8 x i32], float %y) #0 {
 ; SI-LABEL: test_not_isfinite_pattern_4_wrong_ord_test:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s0, s[2:3], 0x14
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x9
-; SI-NEXT:    s_load_dword s1, s[2:3], 0xb
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dword s0, s[4:5], 0x14
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s1, s[4:5], 0xb
+; SI-NEXT:    s_mov_b32 s11, 0xf000
+; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, s0
@@ -547,14 +547,14 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; SI-NEXT:    v_cmp_class_f32_e64 s[0:1], s1, v0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_not_isfinite_pattern_4_wrong_ord_test:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s0, s[2:3], 0x50
-; VI-NEXT:    s_load_dword s1, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s0, s[4:5], 0x50
+; VI-NEXT:    s_load_dword s1, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
@@ -570,15 +570,15 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; GFX11-LABEL: test_not_isfinite_pattern_4_wrong_ord_test:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b32 s5, s[2:3], 0x50
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x50
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f32_e64 s3, s4, 0x1f8
-; GFX11-NEXT:    v_cmp_o_f32_e64 s2, s4, s5
+; GFX11-NEXT:    v_cmp_o_f32_e64 s3, s2, s3
+; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s2, s2, s3
+; GFX11-NEXT:    s_and_b32 s2, s3, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -594,12 +594,12 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %out, half %x) #0 {
 ; SI-LABEL: test_isinf_pattern_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_and_b32 s4, s4, 0x7fff
+; SI-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; SI-NEXT:    s_cmpk_eq_i32 s4, 0x7c00
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
@@ -608,11 +608,11 @@ define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %ou
 ;
 ; VI-LABEL: test_isinf_pattern_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x204
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f16_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -622,11 +622,11 @@ define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %ou
 ; GFX11-LABEL: test_isinf_pattern_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f16_e64 s2, s4, 0x204
+; GFX11-NEXT:    v_cmp_class_f16_e64 s2, s2, 0x204
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -641,13 +641,13 @@ define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %ou
 define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocapture %out, half %x) #0 {
 ; SI-LABEL: test_isfinite_pattern_0_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, s4
-; SI-NEXT:    s_and_b32 s4, s4, 0x7fff
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s6
+; SI-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; SI-NEXT:    s_cmpk_lg_i32 s4, 0x7c00
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
@@ -658,11 +658,11 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
 ;
 ; VI-LABEL: test_isfinite_pattern_0_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f16_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -672,11 +672,11 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
 ; GFX11-LABEL: test_isfinite_pattern_0_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f16_e64 s2, s4, 0x1f8
+; GFX11-NEXT:    v_cmp_class_f16_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -693,28 +693,25 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
 define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocapture %out, half %x) #0 {
 ; SI-LABEL: test_isfinite_pattern_4_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s4, s[2:3], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, s4
-; SI-NEXT:    s_and_b32 s4, s4, 0x7fff
-; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; SI-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; SI-NEXT:    s_cmpk_lt_i32 s4, 0x7c00
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_isfinite_pattern_4_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x1f8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_class_f16_e32 vcc, s4, v0
+; VI-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -724,11 +721,11 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
 ; GFX11-LABEL: test_isfinite_pattern_4_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_class_f16_e64 s2, s4, 0x1f8
+; GFX11-NEXT:    v_cmp_class_f16_e64 s2, s2, 0x1f8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]

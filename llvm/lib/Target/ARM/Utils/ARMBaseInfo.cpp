@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ARMBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 namespace llvm {

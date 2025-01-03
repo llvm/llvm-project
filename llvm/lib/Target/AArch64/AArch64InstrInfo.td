@@ -149,8 +149,8 @@ def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p1), "sve2p1">;
-def HasSVE2AES       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2AES()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
+def HasSVEAES       : Predicate<"Subtarget->hasSVEAES()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEAES), "sve-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SHA3()">,
@@ -244,7 +244,7 @@ def HasSVEorSME
     : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
-def HasSVEorSME2p2
+def HasNonStreamingSVEorSME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
@@ -257,7 +257,7 @@ def HasSVE2orSME2
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
                 "sve2 or sme2">;
-def HasSVE2orSSVE_AES
+def HasNonStreamingSVE2orSSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_AES), "sve2 or ssve-aes">;
@@ -273,7 +273,7 @@ def HasSVE2p1_or_HasSME2p1
 def HasSVE2p2orSME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2), "sme2p2 or sve2p2">;
-def HasSVE2p1orSSVE_AES
+def HasNonStreamingSVE2p1orSSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p1, FeatureSSVE_AES), "sve2p1 or ssve-aes">;
@@ -281,6 +281,11 @@ def HasSMEF16F16orSMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
+def HasNonStreamingSVE2p2orSME2p2
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
+                "sme2p2 or sve2p2">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
@@ -433,9 +438,9 @@ def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
                                       SDTCisInt<3>,
                                       SDTCisInt<4>,
                                       SDTCisVT<5, i32>]>;
-def SDT_AArch64FCmp   : SDTypeProfile<0, 2,
-                                   [SDTCisFP<0>,
-                                    SDTCisSameAs<0, 1>]>;
+def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                                            SDTCisFP<1>,
+                                            SDTCisSameAs<2, 1>]>;
 def SDT_AArch64Dup   : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
 def SDT_AArch64DupLane   : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<2>]>;
 def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
@@ -876,9 +881,11 @@ def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
 
 def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
-                                    [SDNPInGlue, SDNPOutGlue, SDNPHasChain,
-                                     SDNPVariadic]>;
+                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
+def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
+                                    SDT_AArch64TLSDescCallSeq,
+                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;
@@ -987,8 +994,10 @@ def AArch64probedalloca
              [SDNPHasChain, SDNPMayStore]>;
 
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
-                        SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
-                        [SDNPHasChain, SDNPOutGlue]>;
+                        SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
+                                             SDTCisVT<1, i32>,
+                                             SDTCisVT<2, i32>]>,
+                        [SDNPHasChain]>;
 
 def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
@@ -1835,28 +1844,28 @@ let Predicates = [HasPAuth] in {
   // materialization here), in part because they're handled in a safer way by
   // the kernel, notably on Darwin.
   def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                                 GPR64noip:$AddrDisc),
+                                 GPR64:$AddrDisc),
                     [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                      GPR64noip:$AddrDisc)]>, Sched<[]> {
+                                      GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let isCall = 1;
     let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
-    let Defs = [X17,LR];
+    let Defs = [X16,X17,LR];
     let Uses = [SP];
   }
 
   def BLRA_RVMARKER : Pseudo<
         (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                     GPR64noip:$AddrDisc),
+                     GPR64:$AddrDisc),
         [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
                                    GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                   GPR64noip:$AddrDisc)]>, Sched<[]> {
+                                   GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
     let isCall = 1;
-    let Defs = [X17,LR];
+    let Defs = [X16,X17,LR];
     let Uses = [SP];
   }
 
@@ -1937,8 +1946,15 @@ let Predicates = [HasPAuth] in {
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
-    let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
-    let Defs = [X16,X17];
+    let Size = 68; // 12 fixed + 56 variable, for pointer offset, discriminator and
+                   // ELF signed GOT signed pointer authentication (if no FPAC)
+    let Defs = [X16,X17,NZCV];
+  }
+
+  def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
+               Sched<[WriteI, ReadI]> {
+    let Defs = [X16,X17,NZCV];
+    let Size = 44;
   }
 
   // Load a signed global address from a special $auth_ptr$ stub slot.
@@ -1952,30 +1968,36 @@ let Predicates = [HasPAuth] in {
   }
 
   // Size 16: 4 fixed + 8 variable, to compute discriminator.
+  // The size returned by getInstSizeInBytes() is incremented according
+  // to the variant of LR check.
+  // As the check requires either x16 or x17 as a scratch register and
+  // authenticated tail call instructions have two register operands,
+  // make sure at least one register is usable as a scratch one - for that
+  // purpose, use tcGPRnotx16x17 register class for one of the operands.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
-      Uses = [SP] in {
+      Defs = [X16,X17], Uses = [SP] in {
     def AUTH_TCRETURN
-      : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff, i32imm:$Key,
+      : Pseudo<(outs), (ins tcGPRnotx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
                             i64imm:$Disc, tcGPR64:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
     def AUTH_TCRETURN_BTI
       : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
-                            i64imm:$Disc, tcGPR64:$AddrDisc),
+                            i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
   }
 
   let Predicates = [TailCallAny] in
-    def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+    def : Pat<(AArch64authtcret tcGPRnotx16x17:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
                                 (i64 timm:$Disc), tcGPR64:$AddrDisc),
-              (AUTH_TCRETURN tcGPR64:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
+              (AUTH_TCRETURN tcGPRnotx16x17:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
                              tcGPR64:$AddrDisc)>;
 
   let Predicates = [TailCallX16X17] in
     def : Pat<(AArch64authtcret tcGPRx16x17:$dst, (i32 timm:$FPDiff),
                                 (i32 timm:$Key), (i64 timm:$Disc),
-                                tcGPR64:$AddrDisc),
+                                tcGPRnotx16x17:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
-                                 imm:$Disc, tcGPR64:$AddrDisc)>;
+                                 imm:$Disc, tcGPRnotx16x17:$AddrDisc)>;
 }
 
 // v9.5-A pointer authentication extensions
@@ -2143,6 +2165,12 @@ let Defs = [FPSR] in
 def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpsr i64:$val)]>,
                PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
+               Sched<[WriteSys]>;
+
+let Defs = [FPMR] in
+def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpmr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda22, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -3287,8 +3315,16 @@ def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
              [(AArch64tlsdesc_callseq tglobaltlsaddr:$sym)]>,
       Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
+let isCall = 1, Defs = [NZCV, LR, X0, X16], hasSideEffects = 1, Size = 16,
+    isCodeGenOnly = 1 in
+def TLSDESC_AUTH_CALLSEQ
+    : Pseudo<(outs), (ins i64imm:$sym),
+             [(AArch64tlsdesc_auth_callseq tglobaltlsaddr:$sym)]>,
+      Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
 def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
           (TLSDESC_CALLSEQ texternalsym:$sym)>;
+def : Pat<(AArch64tlsdesc_auth_callseq texternalsym:$sym),
+          (TLSDESC_AUTH_CALLSEQ texternalsym:$sym)>;
 
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
@@ -5360,7 +5396,7 @@ let isPseudo = 1 in {
 //===----------------------------------------------------------------------===//
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1, isPseudo = 1 in {
-   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret)]>, Sched<[]>;
+   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret bb)]>, Sched<[]>;
    let usesCustomInserter = 1 in
      def CATCHRET : Pseudo<(outs), (ins am_brcond:$dst, am_brcond:$src), [(catchret bb:$dst, bb:$src)]>,
                     Sched<[]>;
@@ -6949,6 +6985,12 @@ def : Pat<(v4f32 (AArch64duplane32 (v4f32 V128:$Rn), VectorIndexS:$imm)),
 def : Pat<(v2f64 (AArch64duplane64 (v2f64 V128:$Rn), VectorIndexD:$imm)),
           (DUPv2i64lane V128:$Rn, VectorIndexD:$imm)>;
 
+// Also covers DUP (truncate i64 to i32)
+def : Pat<(v2i32 (AArch64dup (i32 (extractelt (v4i32 V128:$Rn), imm:$idx)))),
+          (DUPv2i32lane V128:$Rn, imm:$idx)>;
+def : Pat<(v4i32 (AArch64dup (i32 (extractelt (v4i32 V128:$Rn), imm:$idx)))),
+          (DUPv4i32lane V128:$Rn, imm:$idx)>;
+
 // If there's an (AArch64dup (vector_extract ...) ...), we can use a duplane
 // instruction even if the types don't match: we just have to remap the lane
 // carefully. N.b. this trick only applies to truncations.
@@ -6962,44 +7004,20 @@ def VecIndex_x8 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(8 * N->getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
-multiclass DUPWithTruncPats<ValueType ResVT, ValueType Src64VT,
-                            ValueType Src128VT, ValueType ScalVT,
-                            Instruction DUP, SDNodeXForm IdxXFORM> {
-  def : Pat<(ResVT (AArch64dup (ScalVT (vector_extract (Src128VT V128:$Rn),
-                                                     imm:$idx)))),
-            (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
+class DUPWithTruncPat<ValueType ResVT, ValueType SrcVT, ValueType ScalVT,
+           Instruction DUP, SDNodeXForm IdxXFORM>
+  : Pat<(ResVT (AArch64dup (ScalVT (vector_extract (SrcVT V128:$Rn), imm:$idx)))),
+        (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
 
-  def : Pat<(ResVT (AArch64dup (ScalVT (vector_extract (Src64VT V64:$Rn),
-                                                     imm:$idx)))),
-            (DUP (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), (IdxXFORM imm:$idx))>;
-}
-
-defm : DUPWithTruncPats<v8i8,   v4i16, v8i16, i32, DUPv8i8lane,  VecIndex_x2>;
-defm : DUPWithTruncPats<v8i8,   v2i32, v4i32, i32, DUPv8i8lane,  VecIndex_x4>;
-defm : DUPWithTruncPats<v4i16,  v2i32, v4i32, i32, DUPv4i16lane, VecIndex_x2>;
-
-defm : DUPWithTruncPats<v16i8,  v4i16, v8i16, i32, DUPv16i8lane, VecIndex_x2>;
-defm : DUPWithTruncPats<v16i8,  v2i32, v4i32, i32, DUPv16i8lane, VecIndex_x4>;
-defm : DUPWithTruncPats<v8i16,  v2i32, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
-
-multiclass DUPWithTrunci64Pats<ValueType ResVT, Instruction DUP,
-                               SDNodeXForm IdxXFORM> {
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v2i64 V128:$Rn),
-                                                         imm:$idx))))),
-            (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
-
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v1i64 V64:$Rn),
-                                                       imm:$idx))))),
-            (DUP (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), (IdxXFORM imm:$idx))>;
-}
-
-defm : DUPWithTrunci64Pats<v8i8,  DUPv8i8lane,   VecIndex_x8>;
-defm : DUPWithTrunci64Pats<v4i16, DUPv4i16lane,  VecIndex_x4>;
-defm : DUPWithTrunci64Pats<v2i32, DUPv2i32lane,  VecIndex_x2>;
-
-defm : DUPWithTrunci64Pats<v16i8, DUPv16i8lane, VecIndex_x8>;
-defm : DUPWithTrunci64Pats<v8i16, DUPv8i16lane, VecIndex_x4>;
-defm : DUPWithTrunci64Pats<v4i32, DUPv4i32lane, VecIndex_x2>;
+// DUP (truncate i16 to i8)
+def : DUPWithTruncPat<v8i8,  v8i16, i32, DUPv8i8lane,  VecIndex_x2>;
+def : DUPWithTruncPat<v16i8, v8i16, i32, DUPv16i8lane, VecIndex_x2>;
+// DUP (truncate i32/64 to i8)
+def : DUPWithTruncPat<v8i8,  v4i32, i32, DUPv8i8lane,  VecIndex_x4>;
+def : DUPWithTruncPat<v16i8, v4i32, i32, DUPv16i8lane, VecIndex_x4>;
+// DUP (truncate i32/i64 to i16)
+def : DUPWithTruncPat<v4i16, v4i32, i32, DUPv4i16lane, VecIndex_x2>;
+def : DUPWithTruncPat<v8i16, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
 
 // SMOV and UMOV definitions, with some extra patterns for convenience
 defm SMOV : SMov;
@@ -7222,8 +7240,23 @@ def : Pat<(v2i64 (int_aarch64_neon_vcopy_lane
                    V128:$Vd, VectorIndexD:$idx, V128:$Vs, VectorIndexD:$idx2)
           )>;
 
-multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64,
-                                ValueType VTScal, Instruction INS> {
+// Move elements between vectors
+multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE,
+                                ValueType VTScal, Operand SVEIdxTy, Instruction INS> {
+  // Extracting from the lowest 128-bits of an SVE vector
+  def : Pat<(VT128 (vector_insert VT128:$Rn,
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
+                      (i64 imm:$Immd))),
+            (INS VT128:$Rn, imm:$Immd, (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn)>;
+
+  def : Pat<(VT64 (vector_insert VT64:$Rn,
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
+                      (i64 imm:$Immd))),
+            (EXTRACT_SUBREG
+                (INS (SUBREG_TO_REG (i64 0), VT64:$Rn, dsub), imm:$Immd,
+                     (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn),
+                 dsub)>;
+  // Extracting from another NEON vector
   def : Pat<(VT128 (vector_insert V128:$src,
                         (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
                         (i64 imm:$Immd))),
@@ -7251,15 +7284,15 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64,
                 dsub)>;
 }
 
-defm : Neon_INS_elt_pattern<v8f16, v4f16, f16, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v8bf16, v4bf16, bf16, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4f32, v2f32, f32, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v2f64, v1f64, f64, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v8f16,  v4f16,  nxv8f16,  f16,  VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
+defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane>;
 
-defm : Neon_INS_elt_pattern<v16i8, v8i8, i32, INSvi8lane>;
-defm : Neon_INS_elt_pattern<v8i16, v4i16, i32, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4i32, v2i32, i32, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v2i64, v1i64, i64, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane>;
+defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
+defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
+defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
@@ -7309,7 +7342,8 @@ def : Pat<(vector_extract (v8bf16 V128:$Rn), VectorIndexH:$idx),
 // All concat_vectors operations are canonicalised to act on i64 vectors for
 // AArch64. In the general case we need an instruction, which had just as well be
 // INS.
-multiclass ConcatPat<ValueType DstTy, ValueType SrcTy> {
+multiclass ConcatPat<ValueType DstTy, ValueType SrcTy,
+                     ComplexPattern ExtractHigh> {
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
             (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
                          (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
@@ -7322,16 +7356,22 @@ multiclass ConcatPat<ValueType DstTy, ValueType SrcTy> {
   // If the high lanes are undef we can just ignore them:
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
             (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
+
+  // Concatting the high half of two vectors is the insert of the first
+  // into the low half of the second.
+  def : Pat<(DstTy (concat_vectors (ExtractHigh (DstTy V128:$Rn)),
+                                   (ExtractHigh (DstTy V128:$Rm)))),
+            (INSvi64lane V128:$Rm, (i64 0), V128:$Rn, (i64 1))>;
 }
 
-defm : ConcatPat<v2i64, v1i64>;
-defm : ConcatPat<v2f64, v1f64>;
-defm : ConcatPat<v4i32, v2i32>;
-defm : ConcatPat<v4f32, v2f32>;
-defm : ConcatPat<v8i16, v4i16>;
-defm : ConcatPat<v8f16, v4f16>;
-defm : ConcatPat<v8bf16, v4bf16>;
-defm : ConcatPat<v16i8, v8i8>;
+defm : ConcatPat<v2i64, v1i64, extract_high_v2i64>;
+defm : ConcatPat<v2f64, v1f64, extract_high_v2f64>;
+defm : ConcatPat<v4i32, v2i32, extract_high_v4i32>;
+defm : ConcatPat<v4f32, v2f32, extract_high_v4f32>;
+defm : ConcatPat<v8i16, v4i16, extract_high_v8i16>;
+defm : ConcatPat<v8f16, v4f16, extract_high_v8f16>;
+defm : ConcatPat<v8bf16, v4bf16, extract_high_v8bf16>;
+defm : ConcatPat<v16i8, v8i8, extract_high_v16i8>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD across lanes instructions
@@ -10037,14 +10077,6 @@ let Predicates = [HasMOPS, HasMTE] in {
     defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
   }
 }
-
-// MOPS Node operands: 0: Dst, 1: Src or Value, 2: Size, 3: Chain
-// MOPS Node results: 0: Dst writeback, 1: Size writeback, 2: Chain
-def SDT_AArch64mops : SDTypeProfile<2, 3, [ SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2> ]>;
-def AArch64mops_memset : SDNode<"AArch64ISD::MOPS_MEMSET", SDT_AArch64mops>;
-def AArch64mops_memset_tagging : SDNode<"AArch64ISD::MOPS_MEMSET_TAGGING", SDT_AArch64mops>;
-def AArch64mops_memcopy : SDNode<"AArch64ISD::MOPS_MEMCOPY", SDT_AArch64mops>;
-def AArch64mops_memmove : SDNode<"AArch64ISD::MOPS_MEMMOVE", SDT_AArch64mops>;
 
 // MOPS operations always contain three 4-byte instructions
 let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {

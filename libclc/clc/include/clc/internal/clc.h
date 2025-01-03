@@ -21,6 +21,9 @@
 /* 6.1 Supported Data Types */
 #include <clc/clctypes.h>
 
+/* 6.2.4.2 Reinterpreting Types Using __clc_as_type() and __clc_as_typen() */
+#include <clc/clc_as_type.h>
+
 #pragma OPENCL EXTENSION all : disable
 
 #endif // __CLC_INTERNAL_CLC_H_

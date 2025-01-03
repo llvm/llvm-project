@@ -84,9 +84,15 @@
 
 /// Check -Xopenmp-target triggers error when an option requiring arguments is passed to it.
 // RUN:   not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR %s
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR_0 %s
 
-// CHK-FOPENMP-TARGET-NESTED-ERROR: clang{{.*}} error: invalid -Xopenmp-target argument: '-Xopenmp-target -Xopenmp-target', options requiring arguments are unsupported
+// CHK-FOPENMP-TARGET-NESTED-ERROR_0: error: invalid -Xopenmp-target argument: '-Xopenmp-target -Xopenmp-target', options requiring arguments are unsupported
+
+/// Check -Xopenmp-target= triggers error when an option requiring arguments is passed to it.
+// RUN:   not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR_1 %s
+
+// CHK-FOPENMP-TARGET-NESTED-ERROR_1: error: invalid -Xopenmp-target argument: '-Xopenmp-target=powerpc64le-ibm-linux-gnu -Xopenmp-target', options requiring arguments are unsupported
 
 /// ###########################################################################
 

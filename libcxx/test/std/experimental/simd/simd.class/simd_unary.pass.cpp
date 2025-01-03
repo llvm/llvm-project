@@ -12,9 +12,8 @@
 //   Pass-by-value arguments with alignment greater than register width are not supported.
 // XFAIL: target=powerpc{{.*}}-ibm-{{.*}} && (clang-17 || clang-18)
 
-// FIXME: The following issue occurs on macOS 13.7 with Apple clang 15.0.0:
-//   clang: error: unable to execute command: Illegal instruction: 4
-// XFAIL: target=x86_64-apple-macosx13.7
+// This test crashes AppleClang 15 but not later versions.
+// UNSUPPORTED: apple-clang-15
 
 // FIXME: The following issue occurs on Windows to Armv7 Ubuntu Linux:
 //   Assertion failed: N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type"

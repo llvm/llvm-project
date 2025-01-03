@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestVisitor.h"
+#include "CRTPTestVisitor.h"
 
 using namespace clang;
 
 namespace {
 
 class InitListExprPostOrderVisitor
-    : public ExpectedLocationVisitor<InitListExprPostOrderVisitor> {
+    : public CRTPExpectedLocationVisitor<InitListExprPostOrderVisitor> {
 public:
   bool shouldTraversePostOrder() const { return true; }
 

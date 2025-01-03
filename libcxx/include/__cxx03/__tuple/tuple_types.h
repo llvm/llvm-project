@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_TYPES_H
-#define _LIBCPP___TUPLE_TUPLE_TYPES_H
+#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_TYPES_H
+#define _LIBCPP___CXX03___TUPLE_TUPLE_TYPES_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,4 +22,4 @@ struct __tuple_types {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_TYPES_H
+#endif // _LIBCPP___CXX03___TUPLE_TUPLE_TYPES_H

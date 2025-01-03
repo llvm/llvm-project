@@ -129,9 +129,6 @@ bool SPIRVSubtarget::canDirectlyComparePointers() const {
 
 void SPIRVSubtarget::initAvailableExtensions() {
   AvailableExtensions.clear();
-  if (!isOpenCLEnv())
-    return;
-
   AvailableExtensions.insert(Extensions.begin(), Extensions.end());
 }
 

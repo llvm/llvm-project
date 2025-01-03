@@ -15,6 +15,7 @@
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/sort.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__debug_utils/strict_weak_ordering_check.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
@@ -23,7 +24,6 @@
 #include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

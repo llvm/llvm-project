@@ -7,48 +7,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNIQUE_PTR_H
-#define _LIBCPP___MEMORY_UNIQUE_PTR_H
+#ifndef _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
+#define _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
 
-#include <__compare/compare_three_way.h>
-#include <__compare/compare_three_way_result.h>
-#include <__compare/three_way_comparable.h>
-#include <__config>
-#include <__functional/hash.h>
-#include <__functional/operations.h>
-#include <__memory/allocator_traits.h> // __pointer
-#include <__memory/auto_ptr.h>
-#include <__memory/compressed_pair.h>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/common_type.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/dependent_type.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/remove_extent.h>
-#include <__type_traits/remove_pointer.h>
-#include <__type_traits/type_identity.h>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <cstddef>
+#include <__cxx03/__compare/compare_three_way.h>
+#include <__cxx03/__compare/compare_three_way_result.h>
+#include <__cxx03/__compare/three_way_comparable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/hash.h>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__memory/allocator_traits.h> // __pointer
+#include <__cxx03/__memory/auto_ptr.h>
+#include <__cxx03/__memory/compressed_pair.h>
+#include <__cxx03/__type_traits/add_lvalue_reference.h>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/dependent_type.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_array.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_function.h>
+#include <__cxx03/__type_traits/is_pointer.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__type_traits/is_trivially_relocatable.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/remove_extent.h>
+#include <__cxx03/__type_traits/remove_pointer.h>
+#include <__cxx03/__type_traits/type_identity.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -690,4 +690,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_UNIQUE_PTR_H
+#endif // _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H

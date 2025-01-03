@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ERRC
-#define _LIBCPP___ERRC
+#ifndef _LIBCPP___CXX03___ERRC
+#define _LIBCPP___CXX03___ERRC
 
 /*
     system_error synopsis
@@ -100,8 +100,8 @@ enum class errc
 
 */
 
-#include <__config>
-#include <cerrno>
+#include <__cxx03/__config>
+#include <__cxx03/cerrno>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -263,4 +263,4 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(errc)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ERRC
+#endif // _LIBCPP___CXX03___ERRC
