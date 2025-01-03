@@ -50,15 +50,14 @@ class CollectUnexpandedParameterPacksVisitor
         auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
         if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
           return;
-      } else if (ND->isTemplateParameterPack() &&
-                 getDepthAndIndex(ND).first >= DepthLimit) {
-        return;
       } else if (auto *BD = dyn_cast<BindingDecl>(ND)) {
         Expr *E = BD->getBinding();
         if (auto *RP = dyn_cast_if_present<ResolvedUnexpandedPackExpr>(E)) {
           addUnexpanded(RP);
           return;
         }
+      } else if (getDepthAndIndex(ND).first >= DepthLimit) {
+        return;
       }
 
       Unexpanded.push_back({ND, Loc});
@@ -228,10 +227,6 @@ class CollectUnexpandedParameterPacksVisitor
     }
     bool TraversePackIndexingTypeLoc(PackIndexingTypeLoc TL) override {
       return DynamicRecursiveASTVisitor::TraverseStmt(TL.getIndexExpr());
-    }
-    bool
-    TraverseResolvedUnexpandedPackExpr(ResolvedUnexpandedPackExpr *E) override {
-      return true;
     }
 
     ///@}
