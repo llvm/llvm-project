@@ -1,6 +1,5 @@
-// Test optimized bufferization for hlfir.assign of arrays
-// variables:
-// RUN: fir-opt --opt-bufferization %s | FileCheck %s
+// Test inlining of hlfir.assign of arrays:
+// RUN: fir-opt --inline-hlfir-assign %s | FileCheck %s
 
 // The two assigns come from the following source forms:
 //   y(:,:) = x(:,:)
@@ -302,3 +301,55 @@ func.func @_QPtest7(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> {f
 // CHECK-NOT:       hlfir.assign
 // CHECK:           hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK-NOT:       hlfir.assign
+
+
+// Test that VAR = EXPR assignment is inlined:
+// subroutine test_expr_rhs(p1, p2)
+//   logical, pointer :: p1(:), p2(:)
+//   p1 = (p2)
+// end subroutine test_expr_rhs
+func.func @_QPtest_expr_rhs(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>> {fir.bindc_name = "p1"}, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>> {fir.bindc_name = "p2"}) {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_expr_rhsEp1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_expr_rhsEp2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>)
+  %3 = fir.load %2#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>
+  %4:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
+  %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
+  %6 = hlfir.elemental %5 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
+  ^bb0(%arg2: index):
+    %8 = arith.subi %4#0, %c1 : index
+    %9 = arith.addi %arg2, %8 : index
+    %10 = hlfir.designate %3 (%9)  : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> !fir.ref<!fir.logical<4>>
+    %11 = fir.load %10 : !fir.ref<!fir.logical<4>>
+    %12 = hlfir.no_reassoc %11 : !fir.logical<4>
+    hlfir.yield_element %12 : !fir.logical<4>
+  }
+  %7 = fir.load %1#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>
+  hlfir.assign %6 to %7 : !hlfir.expr<?x!fir.logical<4>>, !fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>
+  hlfir.destroy %6 : !hlfir.expr<?x!fir.logical<4>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_expr_rhs(
+// CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>> {fir.bindc_name = "p1"},
+// CHECK-SAME:                                %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>> {fir.bindc_name = "p2"}) {
+// CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_4]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_expr_rhsEp1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>)
+// CHECK:           %[[VAL_10:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
+// CHECK:           }
+// CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>
+// CHECK:           %[[VAL_18:.*]]:3 = fir.box_dims %[[VAL_17]], %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
+// CHECK:           fir.do_loop %[[VAL_19:.*]] = %[[VAL_2]] to %[[VAL_18]]#1 step %[[VAL_2]] unordered {
+// CHECK:             %[[VAL_20:.*]] = hlfir.apply %[[VAL_10]], %[[VAL_19]] : (!hlfir.expr<?x!fir.logical<4>>, index) -> !fir.logical<4>
+// CHECK:             %[[VAL_21:.*]]:3 = fir.box_dims %[[VAL_17]], %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
+// CHECK:             %[[VAL_22:.*]] = arith.subi %[[VAL_21]]#0, %[[VAL_2]] : index
+// CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_19]], %[[VAL_22]] : index
+// CHECK:             %[[VAL_24:.*]] = hlfir.designate %[[VAL_17]] (%[[VAL_23]])  : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> !fir.ref<!fir.logical<4>>
+// CHECK:             hlfir.assign %[[VAL_20]] to %[[VAL_24]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+// CHECK:           }
+// CHECK:           hlfir.destroy %[[VAL_10]] : !hlfir.expr<?x!fir.logical<4>>
+// CHECK:           return
+// CHECK:         }

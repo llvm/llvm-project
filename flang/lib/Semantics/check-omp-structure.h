@@ -73,6 +73,9 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPDeclarativeConstruct &);
+  void Leave(const parser::OpenMPDeclarativeConstruct &);
+
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
@@ -270,11 +273,12 @@ private:
       const parser::Variable &, const parser::Expr &);
   inline void ErrIfNonScalarAssignmentStmt(
       const parser::Variable &, const parser::Expr &);
-  enum directiveNestType {
+  enum directiveNestType : int {
     SIMDNest,
     TargetBlockOnlyTeams,
     TargetNest,
-    LastType
+    DeclarativeNest,
+    LastType = DeclarativeNest,
   };
   int directiveNest_[LastType + 1] = {0};
 
