@@ -835,6 +835,8 @@ let Predicates = [HasAVX10_2] in {
 // Patterns VCVTTPD2DQSZ128
 
 // VCVTTPD2DQS
+def : Pat<(v4i32(X86fp2sisat(v4f32 VR128X:$src))),
+          (VCVTTPD2DQSZ128rr VR128X:$src)>;
 def : Pat<(v4i32(fp_to_sint_sat(v4f64 VR256X:$src), i32)),
           (VCVTTPD2DQSZ256rr VR256X:$src)>;
 def : Pat<(v8i32(fp_to_sint_sat(v8f64 VR512:$src), i32)),
@@ -849,6 +851,8 @@ def : Pat<(v8i64(fp_to_sint_sat(v8f64 VR512:$src), i64)),
           (VCVTTPD2QQSZrr VR512:$src)>;
 
 // VCVTTPD2UDQS
+def : Pat<(v4i32(X86fp2uisat(v4f32 VR128X:$src))),
+          (VCVTTPD2UDQSZ128rr VR128X:$src)>;
 def : Pat<(v4i32(fp_to_uint_sat(v4f64 VR256X:$src), i32)),
           (VCVTTPD2UDQSZ256rr VR256X:$src)>;
 def : Pat<(v8i32(fp_to_uint_sat(v8f64 VR512:$src), i32)),
@@ -871,6 +875,8 @@ def : Pat<(v16i32(fp_to_sint_sat(v16f32 VR512:$src), i32)),
           (VCVTTPS2DQSZrr VR512:$src)>;
 
 // VCVTTPS2QQS
+def : Pat<(v2i64(X86fp2sisat(v2f64 VR128X:$src))),
+          (VCVTTPS2QQSZ128rr VR128X:$src)>;
 def : Pat<(v4i64(fp_to_sint_sat(v4f32 VR128X:$src), i64)),
           (VCVTTPS2QQSZ256rr VR128X:$src)>;
 def : Pat<(v8i64(fp_to_sint_sat(v8f32 VR256X:$src), i64)),
@@ -885,6 +891,8 @@ def : Pat<(v16i32(fp_to_uint_sat(v16f32 VR512:$src), i32)),
           (VCVTTPS2UDQSZrr VR512:$src)>;
 
 // VCVTTPS2UQQS
+def : Pat<(v2i64(X86fp2uisat(v2f64 VR128X:$src))),
+          (VCVTTPS2UQQSZ128rr VR128X:$src)>;
 def : Pat<(v4i64(fp_to_uint_sat(v4f32 VR128X:$src), i64)),
           (VCVTTPS2UQQSZ256rr VR128X:$src)>;
 def : Pat<(v8i64(fp_to_uint_sat(v8f32 VR256X:$src), i64)),
