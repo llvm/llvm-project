@@ -269,7 +269,7 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       outs() << "   RELRO ";
       break;
     case ELF::PT_GNU_PROPERTY:
-      outs() << "   PROPERTY ";
+      outs() << "PROPERTY ";
       break;
     case ELF::PT_GNU_STACK:
       outs() << "   STACK ";
