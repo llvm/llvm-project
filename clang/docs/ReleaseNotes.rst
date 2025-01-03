@@ -886,6 +886,7 @@ Bug Fixes to C++ Support
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 - Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
+- Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1124,6 +1125,8 @@ clang-format
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 - Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
 - Adds ``AllowShortNamespacesOnASingleLine`` option.
+- Adds ``VariableTemplates`` option.
+- Adds support for bash globstar in ``.clang-format-ignore``.
 
 libclang
 --------
@@ -1153,6 +1156,13 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- In loops where the loop condition is opaque (i.e. the analyzer cannot
+  determine whether it's true or false), the analyzer will no longer assume
+  execution paths that perform more that two iterations. These unjustified
+  assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
+  the FFMPEG codebase) in loops where the programmer intended only two or three
+  steps but the analyzer wasn't able to understand that the loop is limited.
 
 Improvements
 ^^^^^^^^^^^^
