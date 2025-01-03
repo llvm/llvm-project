@@ -34,12 +34,10 @@ class Compiler(ast.NodeVisitor):
     locals: list[str]
 
     buffer: io.StringIO
-    final_buffer: io.StringIO
 
     def __init__(self) -> None:
         self.locals = []
         self.buffer = io.StringIO()
-        self.final_buffer = io.StringIO()
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         # Initialize `locals` with the (positional) arguments.
@@ -56,26 +54,19 @@ class Compiler(ast.NodeVisitor):
     def visit_If(self, node: ast.If) -> None:
         self.visit(node.test)
 
-        # Does the body `return`?
-        has_return = any(isinstance(x, ast.Return) for x in node.body)
-
         self._output("{")
         self._visit_each(node.body)
-        if not node.orelse and not has_return:
-            # No else, and no early exit: a simple `if`
-            self._output("} if")
-            return
-
-        self._output("}")
         if node.orelse:
-            # Handle else.
-            self._output("{")
+            self._output("} {")
             self._visit_each(node.orelse)
             self._output("} ifelse")
-        elif has_return:
-            # Convert early exit into an `ifelse`.
-            self._output("{")
-            self._output("} ifelse", final=True)
+        else:
+            self._output("} if")
+
+    def visit_Return(self, node: ast.Return) -> None:
+        if node.value:
+            self.visit(node.value)
+        self._output("return")
 
     def visit_Constant(self, node: ast.Constant) -> None:
         if isinstance(node.value, str):
@@ -128,13 +119,12 @@ class Compiler(ast.NodeVisitor):
         for child in nodes:
             self.visit(child)
 
-    def _output(self, x: Any, final: bool = False) -> None:
-        dest = self.final_buffer if final else self.buffer
-        print(x, file=dest)
+    def _output(self, x: Any) -> None:
+        print(x, file=self.buffer)
 
     @property
     def output(self) -> str:
-        return compiler.buffer.getvalue() + compiler.final_buffer.getvalue()
+        return compiler.buffer.getvalue()
 
 
 if __name__ == "__main__":
