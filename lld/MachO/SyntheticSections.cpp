@@ -1990,7 +1990,7 @@ void InitOffsetsSection::setUp() {
       if (rel.addend != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
-      if (rel.referent.is<InputSection *>())
+      if (isa<InputSection *>(rel.referent))
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
@@ -2136,12 +2136,12 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = selRef->getVA();
     assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
-  } else if (reloc->referent.is<Symbol *>()) {
-    auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
+  } else if (auto *sym = dyn_cast<Symbol *>(reloc->referent)) {
+    auto *def = dyn_cast_or_null<Defined>(sym);
     assert(def && "Expected all syms in __objc_methlist to be defined");
     symVA = def->getVA();
   } else {
-    auto *isec = reloc->referent.get<InputSection *>();
+    auto *isec = cast<InputSection *>(reloc->referent);
     symVA = isec->getVA(reloc->addend);
   }
 

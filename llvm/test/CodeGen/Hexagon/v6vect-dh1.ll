@@ -1,7 +1,7 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
-; RUN: llc -march=hexagon -O1 < %s | FileCheck %s
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 ;
 ; CHECK-NOT: v{{[0-9]*}}.cur
 ;

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -175,7 +176,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       MachineDominatorTree ComputedMDT;
       if (!MDT) {
-        ComputedMDT.getBase().recalculate(MF);
+        ComputedMDT.recalculate(MF);
         MDT = &ComputedMDT;
       }
 
@@ -184,7 +185,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.analyze(MDT->getBase());
+        ComputedMLI.analyze(*MDT);
         MLI = &ComputedMLI;
       }
 
@@ -211,8 +212,12 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   auto &FirstMI = *FirstMBB.begin();
 
   if (!MF.getSubtarget().isXRaySupported()) {
-    FirstMI.emitError("An attempt to perform XRay instrumentation for an"
-                      " unsupported target.");
+
+    const Function &Fn = FirstMBB.getParent()->getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "An attempt to perform XRay instrumentation for an"
+            " unsupported target."));
+
     return false;
   }
 

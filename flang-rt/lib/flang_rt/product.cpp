@@ -96,6 +96,49 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(ProductInteger16)(
 }
 #endif
 
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(ProductUnsigned1)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 1>(x, source, line, dim,
+      mask,
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      "PRODUCT");
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(ProductUnsigned2)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 2>(x, source, line, dim,
+      mask,
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      "PRODUCT");
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(ProductUnsigned4)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 4>(x, source, line, dim,
+      mask,
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      "PRODUCT");
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(ProductUnsigned8)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 8>(x, source, line, dim,
+      mask,
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 8>>{x},
+      "PRODUCT");
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(ProductUnsigned16)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 16>(x, source, line, dim,
+      mask,
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Unsigned, 16>>{x},
+      "PRODUCT");
+}
+#endif
+
 // TODO: real/complex(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTDEF(ProductReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {

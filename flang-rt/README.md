@@ -31,7 +31,7 @@ Requirements:
   * [Same as LLVM](https://llvm.org/docs/GettingStarted.html#requirements).
 
 
-### Bootstrappng Runtimes Build
+### Bootstrapping Runtimes Build
 
 The bootstrapping build will first build Clang and Flang, then use these
 compilers to compile Flang-RT. CMake will create a secondary build tree

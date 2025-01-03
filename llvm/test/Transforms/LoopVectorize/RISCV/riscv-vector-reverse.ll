@@ -61,9 +61,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  No successors
+; CHECK-NEXT:  Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + vp<[[VEC_TC]]> * ir<-1>
+; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + vp<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -92,11 +94,13 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
-; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ]
+; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
+; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
@@ -152,9 +156,39 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  No successors
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
-; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  ir-bb<vector.scevcheck>:
+; CHECK-NEXT:    IR   %3 = add nsw i64 %0, -1
+; CHECK-NEXT:    IR   %4 = add i32 %n, -1
+; CHECK-NEXT:    IR   %5 = trunc i64 %3 to i32
+; CHECK-NEXT:    IR   %mul = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 %5)
+; CHECK-NEXT:    IR   %mul.result = extractvalue { i32, i1 } %mul, 0
+; CHECK-NEXT:    IR   %mul.overflow = extractvalue { i32, i1 } %mul, 1
+; CHECK-NEXT:    IR   %6 = sub i32 %4, %mul.result
+; CHECK-NEXT:    IR   %7 = icmp ugt i32 %6, %4
+; CHECK-NEXT:    IR   %8 = or i1 %7, %mul.overflow
+; CHECK-NEXT:    IR   %9 = icmp ugt i64 %3, 4294967295
+; CHECK-NEXT:    IR   %10 = or i1 %8, %9
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.memcheck>:
+; CHECK-NEXT:    IR   %11 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR   %12 = mul i64 %11, 4
+; CHECK-NEXT:    IR   %13 = mul i64 %12, 4
+; CHECK-NEXT:    IR   %14 = sub i64 %B1, %A2
+; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.ph>:
+; CHECK-NEXT:    IR   %15 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR   %16 = mul i64 %15, 4
+; CHECK-NEXT:    IR   %n.mod.vf = urem i64 %0, %16
+; CHECK-NEXT:    IR   %n.vec = sub i64 %0, %n.mod.vf
+; CHECK-NEXT:    IR   %17 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR   %18 = mul i64 %17, 4
+; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + ir<[[VEC_TC]]> * ir<-1>
+; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -182,18 +216,18 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi ir<%ind.end>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi ir<%ind.end3>, ir<%n>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
-; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from ir-bb<scalar.ph>
-; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from ir-bb<scalar.ph>
+; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME_1]]> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME_2]]>.1 from ir-bb<scalar.ph>)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK:  LV: Loop does not require scalar epilogue
@@ -277,9 +311,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  No successors
+; CHECK-NEXT:  Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + vp<[[VEC_TC]]> * ir<-1>
+; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + vp<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -308,11 +344,13 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
-; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ]
+; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
+; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
@@ -368,9 +406,39 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  No successors
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
-; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  ir-bb<vector.scevcheck>:
+; CHECK-NEXT:    IR   %3 = add nsw i64 %0, -1
+; CHECK-NEXT:    IR   %4 = add i32 %n, -1
+; CHECK-NEXT:    IR   %5 = trunc i64 %3 to i32
+; CHECK-NEXT:    IR   %mul = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 %5)
+; CHECK-NEXT:    IR   %mul.result = extractvalue { i32, i1 } %mul, 0
+; CHECK-NEXT:    IR   %mul.overflow = extractvalue { i32, i1 } %mul, 1
+; CHECK-NEXT:    IR   %6 = sub i32 %4, %mul.result
+; CHECK-NEXT:    IR   %7 = icmp ugt i32 %6, %4
+; CHECK-NEXT:    IR   %8 = or i1 %7, %mul.overflow
+; CHECK-NEXT:    IR   %9 = icmp ugt i64 %3, 4294967295
+; CHECK-NEXT:    IR   %10 = or i1 %8, %9
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.memcheck>:
+; CHECK-NEXT:    IR   %11 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR   %12 = mul i64 %11, 4
+; CHECK-NEXT:    IR   %13 = mul i64 %12, 4
+; CHECK-NEXT:    IR   %14 = sub i64 %B1, %A2
+; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.ph>:
+; CHECK-NEXT:    IR   %15 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR   %16 = mul i64 %15, 4
+; CHECK-NEXT:    IR   %n.mod.vf = urem i64 %0, %16
+; CHECK-NEXT:    IR   %n.vec = sub i64 %0, %n.mod.vf
+; CHECK-NEXT:    IR   %17 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR   %18 = mul i64 %17, 4
+; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + ir<[[VEC_TC]]> * ir<-1>
+; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -398,18 +466,18 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi ir<%ind.end>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi ir<%ind.end3>, ir<%n>
+; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
-; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from ir-bb<scalar.ph>
-; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from ir-bb<scalar.ph>
+; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from ir-bb<scalar.ph>)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK:  LV: Loop does not require scalar epilogue

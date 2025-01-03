@@ -1289,7 +1289,7 @@ static Instruction *foldAddToAshr(BinaryOperator &Add) {
   // Note that, by the time we end up here, if possible, ugt has been
   // canonicalized into eq.
   const APInt *MaskC, *MaskCCmp;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (!match(Add.getOperand(1),
              m_SExt(m_ICmp(Pred, m_And(m_Specific(X), m_APInt(MaskC)),
                            m_APInt(MaskCCmp)))))
@@ -1382,7 +1382,7 @@ Instruction *InstCombinerImpl::
   // `select` itself may be appropriately extended, look past that.
   SkipExtInMagic(Select);
 
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *Thr;
   Value *SignExtendingValue, *Zero;
   bool ShouldSignext;
@@ -1654,7 +1654,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
-  ICmpInst::Predicate LTPred, GTPred;
+  CmpPredicate LTPred, GTPred;
   if (match(&I,
             m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
                     m_ZExt(m_c_ICmp(GTPred, m_Deferred(A), m_Deferred(B))))) &&
@@ -1841,7 +1841,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // -->
   // BW - ctlz(A - 1, false)
   const APInt *XorC;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(&I,
             m_c_Add(
                 m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),

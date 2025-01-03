@@ -4806,6 +4806,21 @@ def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 //
+// WGMMA fence instructions
+//
+// wgmma.fence.sync.aligned;
+def int_nvvm_wgmma_fence_sync_aligned 
+  : Intrinsic<[], [], [IntrConvergent]>;
+
+// wgmma.commit_group.sync.aligned;
+def int_nvvm_wgmma_commit_group_sync_aligned
+  : Intrinsic<[], [], [IntrConvergent], "llvm.nvvm.wgmma.commit_group.sync.aligned">;
+
+// wgmma.wait_group.sync.aligned N;
+def int_nvvm_wgmma_wait_group_sync_aligned
+  : Intrinsic<[], [llvm_i64_ty], [IntrConvergent, ImmArg<ArgIndex<0>>], "llvm.nvvm.wgmma.wait_group.sync.aligned">;
+
+//
 // WMMA instructions
 //
 // WMMA.LOAD

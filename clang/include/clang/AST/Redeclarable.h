@@ -116,7 +116,7 @@ protected:
       return isa<KnownLatest>(Link) ||
              // FIXME: 'template' is required on the next line due to an
              // apparent clang bug.
-             cast<NotKnownLatest>(Link).template is<UninitializedLatest>();
+             isa<UninitializedLatest>(cast<NotKnownLatest>(Link));
     }
 
     decl_type *getPrevious(const decl_type *D) const {
