@@ -238,12 +238,20 @@ define <vscale x 2 x i64> @vwsll_vx_i8_nxv2i64_zext(<vscale x 2 x i32> %a, i8 %b
 }
 
 define <vscale x 2 x i64> @vwsll_vi_nxv2i64(<vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
-; CHECK-LABEL: vwsll_vi_nxv2i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2, v0.t
-; CHECK-NEXT:    ret
+; CHECK-RV32-LABEL: vwsll_vi_nxv2i64:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-RV32-NEXT:    vzext.vf2 v10, v8
+; CHECK-RV32-NEXT:    vsll.vi v8, v10, 2, v0.t
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: vwsll_vi_nxv2i64:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    li a1, 4
+; CHECK-RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-RV64-NEXT:    vwmulu.vx v10, v8, a1, v0.t
+; CHECK-RV64-NEXT:    vmv2r.v v8, v10
+; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv2i64:
 ; CHECK-ZVBB:       # %bb.0:
@@ -464,9 +472,10 @@ define <vscale x 4 x i32> @vwsll_vx_i8_nxv4i32_zext(<vscale x 4 x i16> %a, i8 %b
 define <vscale x 4 x i32> @vwsll_vi_nxv4i32(<vscale x 4 x i16> %a, <vscale x 4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vwsll_vi_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2, v0.t
+; CHECK-NEXT:    li a1, 4
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a1, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv4i32:
@@ -661,9 +670,10 @@ define <vscale x 8 x i16> @vwsll_vx_i8_nxv8i16_zext(<vscale x 8 x i8> %a, i8 %b,
 define <vscale x 8 x i16> @vwsll_vi_nxv8i16(<vscale x 8 x i8> %a, <vscale x 8 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vwsll_vi_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2, v0.t
+; CHECK-NEXT:    li a1, 4
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a1, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv8i16:

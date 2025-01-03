@@ -17341,6 +17341,78 @@ static SDValue combineScalarCTPOPToVCPOP(SDNode *N, SelectionDAG &DAG,
   return DAG.getZExtOrTrunc(Pop, DL, VT);
 }
 
+static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                          const RISCVSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  // (shl (zext x), y) -> (vwsll   x, y)
+  if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
+    return V;
+
+  // (shl (sext x), C) -> (vwmulsu x, 1u << C)
+  // (shl (zext x), C) -> (vwmulu  x, 1u << C)
+
+  SDValue LHS = N->getOperand(0);
+  if (!LHS.hasOneUse())
+    return SDValue();
+  unsigned Opcode;
+  switch (LHS.getOpcode()) {
+  case ISD::SIGN_EXTEND:
+    Opcode = RISCVISD::VWMULSU_VL;
+    break;
+  case ISD::ZERO_EXTEND:
+    Opcode = RISCVISD::VWMULU_VL;
+    break;
+  default:
+    return SDValue();
+  }
+
+  SDValue RHS = N->getOperand(1);
+  APInt ShAmt;
+  if (!ISD::isConstantSplatVector(RHS.getNode(), ShAmt))
+    return SDValue();
+
+  // Better foldings:
+  // (shl (sext x), 1) -> (vwadd  x, x)
+  // (shl (zext x), 1) -> (vwaddu x, x)
+  uint64_t ShAmtInt = ShAmt.getZExtValue();
+  if (ShAmtInt <= 1)
+    return SDValue();
+
+  SDValue NarrowOp = LHS.getOperand(0);
+  EVT NarrowVT = NarrowOp.getValueType();
+  uint64_t NarrowBits = NarrowVT.getScalarSizeInBits();
+  if (ShAmtInt >= NarrowBits)
+    return SDValue();
+  EVT VT = N->getValueType(0);
+  if (NarrowBits * 2 != VT.getScalarSizeInBits())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  SDValue Passthru, Mask, VL;
+  switch (N->getOpcode()) {
+  case ISD::SHL:
+    if (!VT.isScalableVector())
+      return SDValue();
+    Passthru = DAG.getUNDEF(VT);
+    std::tie(Mask, VL) =
+        getDefaultScalableVLOps(VT.getSimpleVT(), DL, DAG, Subtarget);
+    break;
+  case RISCVISD::SHL_VL:
+    Passthru = N->getOperand(2);
+    Mask = N->getOperand(3);
+    VL = N->getOperand(4);
+    break;
+  default:
+    llvm_unreachable("Expected SHL");
+  }
+  return DAG.getNode(Opcode, DL, VT, NarrowOp,
+                     DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), NarrowVT),
+                     Passthru, Mask, VL);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17970,7 +18042,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case RISCVISD::SHL_VL:
-    if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
+    if (SDValue V = combineSHL(N, DCI, Subtarget))
       return V;
     [[fallthrough]];
   case RISCVISD::SRA_VL:
@@ -17995,7 +18067,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SRL:
   case ISD::SHL: {
     if (N->getOpcode() == ISD::SHL) {
-      if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
+      if (SDValue V = combineSHL(N, DCI, Subtarget))
         return V;
     }
     SDValue ShAmt = N->getOperand(1);
