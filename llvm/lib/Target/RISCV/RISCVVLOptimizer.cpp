@@ -1072,9 +1072,9 @@ RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
     assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
            "Expect LMUL 1 register class for vector as scalar operands!");
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
-    // VMV_X_S and VFMV_F_S do not have a VL opt which would cause an assert
-    // assert failure if we called getVLOpNum. Therefore, we will set the
-    // CommonVL in that case as 1, even if it could have been set to 0.
+    // VMV_X_S and VFMV_F_S do not have a VL operand which would cause an assert
+    // failure if we called getVLOpNum. Therefore, we will return 1 in this
+    // case, even if it could have been set to 0.
     if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
       return MachineOperand::CreateImm(1);
 
