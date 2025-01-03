@@ -643,8 +643,8 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
   };
 
   // For now we only care about float and double type fma.
-  unsigned VSSRCLimit = TRI->getRegPressureSetLimit(
-      *MBB->getParent(), PPC::RegisterPressureSets::VSSRC);
+  unsigned VSSRCLimit =
+      RegClassInfo->getRegPressureSetLimit(PPC::RegisterPressureSets::VSSRC);
 
   // Only reduce register pressure when pressure is high.
   return GetMBBPressure(MBB)[PPC::RegisterPressureSets::VSSRC] >
