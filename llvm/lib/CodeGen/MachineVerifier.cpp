@@ -3071,7 +3071,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     // def of Reg
     if (MRI->isSSA() && Reg.isVirtual()) {
       auto I = MRI->def_begin(Reg);
-      if ((!I.atEnd())) {
+      if (I != MRI->def_end()) {
         if (I->getParent()->isBundle()) // BUNDLE operand first
           I++;
         else { // BUNDLE operand second
