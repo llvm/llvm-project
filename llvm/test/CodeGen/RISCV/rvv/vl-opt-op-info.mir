@@ -513,6 +513,36 @@ body: |
     %y:vr = PseudoVNSRL_WV_MF2 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
+name: vfnop_vs2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfnop_vs2
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVFNCVT_X_F_W_MF2 $noreg, %x, 0, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    early-clobber %y:vr = PseudoVFNCVT_X_F_W_MF2 $noreg, %x, 0, 1, 3 /* e8 */, 0
+...
+---
+name: vfnop_vs2_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfnop_vs2_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVFNCVT_X_F_W_MF2 $noreg, %x, 0, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    early-clobber %y:vr = PseudoVFNCVT_X_F_W_MF2 $noreg, %x, 0, 1, 4 /* e16 */, 0
+...
+---
+name: vfnop_vs2_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfnop_vs2_incompatible_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVFNCVT_X_F_W_MF2 $noreg, %x, 0, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    early-clobber %y:vr = PseudoVFNCVT_X_F_W_MF2 $noreg, %x, 0, 1, 3 /* e8 */, 0
+...
+---
 name: vseN_v
 body: |
   bb.0:

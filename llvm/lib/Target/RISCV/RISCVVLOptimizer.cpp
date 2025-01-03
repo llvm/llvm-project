@@ -456,6 +456,49 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VCOMPRESS_VM:
   // Vector Element Index Instruction
   case RISCV::VID_V:
+  // Vector Single-Width Floating-Point Add/Subtract Instructions
+  case RISCV::VFADD_VF:
+  case RISCV::VFADD_VV:
+  case RISCV::VFSUB_VF:
+  case RISCV::VFSUB_VV:
+  case RISCV::VFRSUB_VF:
+  // Vector Single-Width Floating-Point Multiply/Divide Instructions
+  case RISCV::VFMUL_VF:
+  case RISCV::VFMUL_VV:
+  case RISCV::VFDIV_VF:
+  case RISCV::VFDIV_VV:
+  case RISCV::VFRDIV_VF:
+  // Vector Floating-Point Square-Root Instruction
+  case RISCV::VFSQRT_V:
+  // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+  case RISCV::VFRSQRT7_V:
+  // Vector Floating-Point Reciprocal Estimate Instruction
+  case RISCV::VFREC7_V:
+  // Vector Floating-Point MIN/MAX Instructions
+  case RISCV::VFMIN_VF:
+  case RISCV::VFMIN_VV:
+  case RISCV::VFMAX_VF:
+   // Vector Floating-Point Sign-Injection Instructions
+  case RISCV::VFMAX_VV:
+  case RISCV::VFSGNJ_VF:
+  case RISCV::VFSGNJ_VV:
+  case RISCV::VFSGNJN_VV:
+  case RISCV::VFSGNJN_VF:
+  case RISCV::VFSGNJX_VF:
+  case RISCV::VFSGNJX_VV:
+ // Vector Floating-Point Classify Instruction
+  case RISCV::VFCLASS_V:
+  // Vector Floating-Point Move Instruction
+  case RISCV::VFMV_V_F:
+  // Single-Width Floating-Point/Integer Type-Convert Instructions
+  case RISCV::VFCVT_XU_F_V:
+  case RISCV::VFCVT_X_F_V:
+  case RISCV::VFCVT_RTZ_XU_F_V:
+  case RISCV::VFCVT_RTZ_X_F_V:
+  case RISCV::VFCVT_F_XU_V:
+  case RISCV::VFCVT_F_X_V:
+  // Vector Floating-Point Merge Instruction
+  case RISCV::VFMERGE_VFM:
     return OperandInfo(MIVLMul, MILog2SEW);
 
   // Vector Widening Integer Add/Subtract
@@ -488,7 +531,24 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VWMACC_VX:
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX: {
+  case RISCV::VWMACCUS_VX:
+  // Vector Widening Floating-Point Add/Subtract Instructions
+  // Dest EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
+  case RISCV::VFWADD_VV:
+  case RISCV::VFWADD_VF:
+  case RISCV::VFWSUB_VV:
+  case RISCV::VFWSUB_VF:
+  // Vector Widening Floating-Point Multiply
+  case RISCV::VFWMUL_VF:
+  case RISCV::VFWMUL_VV:
+  // Widening Floating-Point/Integer Type-Convert Instructions
+  case RISCV::VFWCVT_XU_F_V:
+  case RISCV::VFWCVT_X_F_V:
+  case RISCV::VFWCVT_RTZ_XU_F_V:
+  case RISCV::VFWCVT_RTZ_X_F_V:
+  case RISCV::VFWCVT_F_XU_V:
+  case RISCV::VFWCVT_F_X_V:
+  case RISCV::VFWCVT_F_F_V: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
         IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
@@ -503,7 +563,21 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VWADD_WV:
   case RISCV::VWADD_WX:
   case RISCV::VWSUB_WV:
-  case RISCV::VWSUB_WX: {
+  case RISCV::VWSUB_WX:
+  // Vector Widening Floating-Point Add/Subtract Instructions
+  case RISCV::VFWADD_WF:
+  case RISCV::VFWADD_WV:
+  case RISCV::VFWSUB_WF:
+  case RISCV::VFWSUB_WV:
+  // Vector Widening Floating-Point Fused Multiply-Add Instructions
+  case RISCV::VFWMACC_VF:
+  case RISCV::VFWMACC_VV:
+  case RISCV::VFWNMACC_VF:
+  case RISCV::VFWNMACC_VV:
+  case RISCV::VFWMSAC_VF:
+  case RISCV::VFWMSAC_VV:
+  case RISCV::VFWNMSAC_VF:
+  case RISCV::VFWNMSAC_VV: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
@@ -539,7 +613,16 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VNCLIPU_WX:
   case RISCV::VNCLIP_WI:
   case RISCV::VNCLIP_WV:
-  case RISCV::VNCLIP_WX: {
+  case RISCV::VNCLIP_WX:
+  // Narrowing Floating-Point/Integer Type-Convert Instructions
+  case RISCV::VFNCVT_XU_F_W:
+  case RISCV::VFNCVT_X_F_W:
+  case RISCV::VFNCVT_RTZ_XU_F_W:
+  case RISCV::VFNCVT_RTZ_X_F_W:
+  case RISCV::VFNCVT_F_XU_W:
+  case RISCV::VFNCVT_F_X_W:
+  case RISCV::VFNCVT_F_F_W:
+  case RISCV::VFNCVT_ROD_F_F_W: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
@@ -615,7 +698,19 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VMADC_VI:
   case RISCV::VMADC_VX:
   case RISCV::VMSBC_VV:
-  case RISCV::VMSBC_VX: {
+  case RISCV::VMSBC_VX:
+  // 13.13. Vector Floating-Point Compare Instructions
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW EMUL=LMUL.
+  case RISCV::VMFEQ_VF:
+  case RISCV::VMFEQ_VV:
+  case RISCV::VMFNE_VF:
+  case RISCV::VMFNE_VV:
+  case RISCV::VMFLT_VF:
+  case RISCV::VMFLT_VV:
+  case RISCV::VMFLE_VF:
+  case RISCV::VMFLE_VV:
+  case RISCV::VMFGT_VF:
+  case RISCV::VMFGE_VF: {
     if (IsMODef)
       return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
     return OperandInfo(MIVLMul, MILog2SEW);
