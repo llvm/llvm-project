@@ -144,7 +144,7 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (ctx.isPic ||
+    if (ctx.isPic || sym->isShared() ||
         (sym->isUndefined() &&
          ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
