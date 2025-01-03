@@ -7,27 +7,27 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @test() {
   ; Buffer<float4>
   %float4 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
   ; CHECK: %TypedBuffer = type { <4 x float> }
 
   ; Buffer<int>
   %int = call target("dx.TypedBuffer", i32, 0, 0, 1)
-      @llvm.dx.handle.fromBinding(i32 0, i32 1, i32 1, i32 0, i1 false)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false)
   ; CHECK: %TypedBuffer.0 = type { i32 }
 
   ; Buffer<uint3>
   %uint3 = call target("dx.TypedBuffer", <3 x i32>, 0, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 2, i32 1, i32 0, i1 false)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false)
   ; CHECK: %TypedBuffer.1 = type { <3 x i32> }
 
   ; StructuredBuffer<S>
   %struct0 = call target("dx.RawBuffer", %struct.S, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 10, i32 1, i32 0, i1 true)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 10, i32 1, i32 0, i1 true)
   ; CHECK: %StructuredBuffer = type { %struct.S }
 
   ; ByteAddressBuffer
   %byteaddr = call target("dx.RawBuffer", i8, 0, 0)
-      @llvm.dx.handle.fromBinding(i32 0, i32 20, i32 1, i32 0, i1 false)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 20, i32 1, i32 0, i1 false)
   ; CHECK: %ByteAddressBuffer = type { i32 }
 
   ret void

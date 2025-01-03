@@ -557,8 +557,8 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
-  fir::ExtendedValue
-  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) {
+  fir::ExtendedValue symBoxToExtendedValue(
+      const Fortran::lower::SymbolBox &symBox) override final {
     return symBox.match(
         [](const Fortran::lower::SymbolBox::Intrinsic &box)
             -> fir::ExtendedValue { return box.getAddr(); },
@@ -1028,7 +1028,7 @@ public:
 
   fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
 
-  mlir::ModuleOp &getModuleOp() override final { return bridge.getModule(); }
+  mlir::ModuleOp getModuleOp() override final { return bridge.getModule(); }
 
   mlir::MLIRContext &getMLIRContext() override final {
     return bridge.getMLIRContext();
@@ -6137,10 +6137,7 @@ void Fortran::lower::LoweringBridge::lower(
 }
 
 void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {
-  mlir::OwningOpRef<mlir::ModuleOp> owningRef =
-      mlir::parseSourceFile<mlir::ModuleOp>(srcMgr, &context);
-  module.reset(new mlir::ModuleOp(owningRef.get().getOperation()));
-  owningRef.release();
+  module = mlir::parseSourceFile<mlir::ModuleOp>(srcMgr, &context);
 }
 
 Fortran::lower::LoweringBridge::LoweringBridge(
@@ -6207,19 +6204,18 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   };
 
   // Create the module and attach the attributes.
-  module = std::make_unique<mlir::ModuleOp>(
+  module = mlir::OwningOpRef<mlir::ModuleOp>(
       mlir::ModuleOp::create(getPathLocation()));
-  assert(module.get() && "module was not created");
-  fir::setTargetTriple(*module.get(), triple);
-  fir::setKindMapping(*module.get(), kindMap);
-  fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
-  fir::setTuneCPU(*module.get(), targetOpts.cpuToTuneFor);
-  fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
-  fir::support::setMLIRDataLayout(*module.get(),
-                                  targetMachine.createDataLayout());
-  fir::setIdent(*module.get(), Fortran::common::getFlangFullVersion());
+  assert(*module && "module was not created");
+  fir::setTargetTriple(*module, triple);
+  fir::setKindMapping(*module, kindMap);
+  fir::setTargetCPU(*module, targetMachine.getTargetCPU());
+  fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
+  fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   if (cgOpts.RecordCommandLine)
-    fir::setCommandline(*module.get(), *cgOpts.RecordCommandLine);
+    fir::setCommandline(*module, *cgOpts.RecordCommandLine);
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(
