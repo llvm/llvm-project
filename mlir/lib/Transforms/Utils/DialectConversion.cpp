@@ -174,7 +174,7 @@ struct ConversionValueMapping {
 
   /// Map a value vector to the one provided.
   template <typename OldVal, typename NewVal>
-  std::enable_if_t<IsValueVector<OldVal>{} && IsValueVector<NewVal>{}>
+  std::enable_if_t<IsValueVector<OldVal>::value && IsValueVector<NewVal>::value>
   map(OldVal &&oldVal, NewVal &&newVal) {
     LLVM_DEBUG({
       ValueVector next(newVal);
@@ -194,7 +194,8 @@ struct ConversionValueMapping {
 
   /// Map a value vector or single value to the one provided.
   template <typename OldVal, typename NewVal>
-  std::enable_if_t<!IsValueVector<OldVal>{} || !IsValueVector<NewVal>{}>
+  std::enable_if_t<!IsValueVector<OldVal>::value ||
+                   !IsValueVector<NewVal>::value>
   map(OldVal &&oldVal, NewVal &&newVal) {
     if constexpr (IsValueVector<OldVal>{}) {
       map(std::forward<OldVal>(oldVal), ValueVector{newVal});
