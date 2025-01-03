@@ -1088,22 +1088,6 @@ bool Fortran::lower::isArraySectionWithoutVectorSubscript(
          !Fortran::evaluate::HasVectorSubscript(expr);
 }
 
-static void genCUFPointerSync(const mlir::Value box,
-                              fir::FirOpBuilder &builder) {
-  if (auto declareOp = box.getDefiningOp<hlfir::DeclareOp>()) {
-    if (auto addrOfOp = declareOp.getMemref().getDefiningOp<fir::AddrOfOp>()) {
-      auto mod = addrOfOp->getParentOfType<mlir::ModuleOp>();
-      if (auto globalOp =
-              mod.lookupSymbol<fir::GlobalOp>(addrOfOp.getSymbol())) {
-        if (cuf::isRegisteredDeviceGlobal(globalOp)) {
-          builder.create<cuf::SyncDescriptorOp>(box.getLoc(),
-                                                addrOfOp.getSymbol());
-        }
-      }
-    }
-  }
-}
-
 void Fortran::lower::associateMutableBox(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const fir::MutableBoxValue &box, const Fortran::lower::SomeExpr &source,
@@ -1111,12 +1095,13 @@ void Fortran::lower::associateMutableBox(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(source)) {
     fir::factory::disassociateMutableBox(builder, loc, box);
+    cuf::genPointerSync(box.getAddr(), builder);
     return;
   }
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
     fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
-    genCUFPointerSync(box.getAddr(), builder);
+    cuf::genPointerSync(box.getAddr(), builder);
     return;
   }
   // The right hand side is not be evaluated into a temp. Array sections can
