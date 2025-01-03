@@ -788,6 +788,45 @@ private:
   const mlir::SymbolTable &symTab;
 };
 
+struct CUFSyncDescriptorOpConversion
+    : public mlir::OpRewritePattern<cuf::SyncDescriptorOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  CUFSyncDescriptorOpConversion(mlir::MLIRContext *context,
+                                const mlir::SymbolTable &symTab)
+      : OpRewritePattern(context), symTab{symTab} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::SyncDescriptorOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    auto globalOp = mod.lookupSymbol<fir::GlobalOp>(op.getGlobalName());
+    if (!globalOp)
+      return mlir::failure();
+
+    auto hostAddr = builder.create<fir::AddrOfOp>(
+        loc, fir::ReferenceType::get(globalOp.getType()), op.getGlobalName());
+    mlir::func::FuncOp callee =
+        fir::runtime::getRuntimeFunc<mkRTKey(CUFSyncGlobalDescriptor)>(loc,
+                                                                       builder);
+    auto fTy = callee.getFunctionType();
+    mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+    mlir::Value sourceLine =
+        fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+    llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+        builder, loc, fTy, hostAddr, sourceFile, sourceLine)};
+    builder.create<fir::CallOp>(loc, callee, args);
+    op.erase();
+    return mlir::success();
+  }
+
+private:
+  const mlir::SymbolTable &symTab;
+};
+
 class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
@@ -851,7 +890,8 @@ void cuf::populateCUFToFIRConversionPatterns(
                   CUFFreeOpConversion>(patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
-  patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
+  patterns.insert<CUFLaunchOpConversion, CUFSyncDescriptorOpConversion>(
+      patterns.getContext(), symtab);
 }
 
 void cuf::populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,
