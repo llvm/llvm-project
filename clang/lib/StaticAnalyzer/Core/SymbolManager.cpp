@@ -170,9 +170,8 @@ SymbolManager::getRegionValueSymbol(const TypedValueRegion* R) {
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolRegionValue(SymbolCounter, R);
+    SD = Alloc.make<SymbolRegionValue>(R);
     DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
   }
 
   return cast<SymbolRegionValue>(SD);
@@ -188,9 +187,8 @@ const SymbolConjured* SymbolManager::conjureSymbol(const Stmt *E,
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolConjured(SymbolCounter, E, LCtx, T, Count, SymbolTag);
+    SD = Alloc.make<SymbolConjured>(E, LCtx, T, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
   }
 
   return cast<SymbolConjured>(SD);
@@ -204,9 +202,8 @@ SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolDerived(SymbolCounter, parentSymbol, R);
+    SD = Alloc.make<SymbolDerived>(parentSymbol, R);
     DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
   }
 
   return cast<SymbolDerived>(SD);
@@ -219,9 +216,8 @@ SymbolManager::getExtentSymbol(const SubRegion *R) {
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolExtent(SymbolCounter, R);
+    SD = Alloc.make<SymbolExtent>(R);
     DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
   }
 
   return cast<SymbolExtent>(SD);
@@ -236,9 +232,8 @@ SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
-    SD = new (BPAlloc) SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
+    SD = Alloc.make<SymbolMetadata>(R, S, T, LCtx, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
-    ++SymbolCounter;
   }
 
   return cast<SymbolMetadata>(SD);
@@ -252,7 +247,7 @@ SymbolManager::getCastSymbol(const SymExpr *Op,
   void *InsertPos;
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
   if (!data) {
-    data = new (BPAlloc) SymbolCast(Op, From, To);
+    data = Alloc.make<SymbolCast>(Op, From, To);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -268,7 +263,7 @@ const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = new (BPAlloc) SymIntExpr(lhs, op, v, t);
+    data = Alloc.make<SymIntExpr>(lhs, op, v, t);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -284,7 +279,7 @@ const IntSymExpr *SymbolManager::getIntSymExpr(APSIntPtr lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = new (BPAlloc) IntSymExpr(lhs, op, rhs, t);
+    data = Alloc.make<IntSymExpr>(lhs, op, rhs, t);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -301,7 +296,7 @@ const SymSymExpr *SymbolManager::getSymSymExpr(const SymExpr *lhs,
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!data) {
-    data = new (BPAlloc) SymSymExpr(lhs, op, rhs, t);
+    data = Alloc.make<SymSymExpr>(lhs, op, rhs, t);
     DataSet.InsertNode(data, InsertPos);
   }
 
@@ -316,7 +311,7 @@ const UnarySymExpr *SymbolManager::getUnarySymExpr(const SymExpr *Operand,
   void *InsertPos;
   SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
   if (!data) {
-    data = new (BPAlloc) UnarySymExpr(Operand, Opc, T);
+    data = Alloc.make<UnarySymExpr>(Operand, Opc, T);
     DataSet.InsertNode(data, InsertPos);
   }
 
