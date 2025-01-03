@@ -1468,6 +1468,8 @@ public:
   static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
                                        const Instruction *AInstr,
                                        const Instruction *BInstr);
+  static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.

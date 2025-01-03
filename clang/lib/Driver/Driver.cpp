@@ -43,6 +43,7 @@
 #include "ToolChains/PS4CPU.h"
 #include "ToolChains/RISCVToolchain.h"
 #include "ToolChains/SPIRV.h"
+#include "ToolChains/SPIRVOpenMP.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -893,9 +894,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                                       HostTC->getTriple());
 
       // Attempt to deduce the offloading triple from the set of architectures.
-      // We can only correctly deduce NVPTX / AMDGPU triples currently. We need
-      // to temporarily create these toolchains so that we can access tools for
-      // inferring architectures.
+      // We can only correctly deduce NVPTX / AMDGPU triples currently.
+      // We need to temporarily create these toolchains so that we can access
+      // tools for inferring architectures.
       llvm::DenseSet<StringRef> Archs;
       if (NVPTXTriple) {
         auto TempTC = std::make_unique<toolchains::CudaToolChain>(
@@ -965,7 +966,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         const ToolChain *TC;
         // Device toolchains have to be selected differently. They pair host
         // and device in their implementation.
-        if (TT.isNVPTX() || TT.isAMDGCN()) {
+        if (TT.isNVPTX() || TT.isAMDGCN() || TT.isSPIRV()) {
           const ToolChain *HostTC =
               C.getSingleOffloadToolChain<Action::OFK_Host>();
           assert(HostTC && "Host toolchain should be always defined.");
@@ -978,6 +979,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
             else if (TT.isAMDGCN())
               DeviceTC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
                   *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
+            else if (TT.isSPIRV())
+              DeviceTC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
+                  *this, TT, *HostTC, C.getInputArgs());
             else
               assert(DeviceTC && "Device toolchain not defined.");
           }
