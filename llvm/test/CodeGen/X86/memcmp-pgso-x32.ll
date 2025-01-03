@@ -122,13 +122,13 @@ define i32 @length4(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %edx
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    cmpl %eax, %ecx
 ; X86-NEXT:    seta %al
-; X86-NEXT:    sbbl $0, %eax
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movsbl %al, %eax
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 4) nounwind
   ret i32 %m
