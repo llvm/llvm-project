@@ -1,6 +1,8 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=riscv64 -filetype=obj -o %t/riscv64_reloc_add.o %s
-# RUN: llvm-mc -triple=riscv32 -filetype=obj -o %t/riscv32_reloc_add.o %s
+# RUN: llvm-mc -triple=riscv64 -mattr=+relax -filetype=obj \
+# RUN:     -o %t/riscv64_reloc_add.o %s
+# RUN: llvm-mc -triple=riscv32 -mattr=+relax -filetype=obj \
+# RUN:     -o %t/riscv32_reloc_add.o %s
 # RUN: llvm-jitlink -noexec -check %s %t/riscv64_reloc_add.o \
 # RUN:     -slab-allocate=1Mb -slab-address=0x1000 -slab-page-size=0x1000
 # RUN: llvm-jitlink -noexec -check %s %t/riscv32_reloc_add.o \
