@@ -864,8 +864,9 @@ Additional substitutions can be defined as follows:
 - Lit configuration files (e.g., ``lit.cfg`` or ``lit.local.cfg``) can define
   substitutions for all tests in a test directory.  They do so by extending the
   substitution list, ``config.substitutions``.  Each item in the list is a tuple
-  consisting of a pattern and its replacement, which lit applies using python's
-  ``re.sub`` function.
+  consisting of a pattern and its replacement, which lit applies as plain text
+  (even if it contains sequences that python's ``re.sub`` considers to be
+  escape sequences).
 - To define substitutions within a single test file, lit supports the
   ``DEFINE:`` and ``REDEFINE:`` directives, described in detail below.  So that
   they have no effect on other test files, these directives modify a copy of the

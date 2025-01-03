@@ -29,8 +29,8 @@ static bool shouldIgnoreArgument(const Value *V) {
 
 static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
                                Intrinsic::ID NewIID,
-                               ArrayRef<Type *> Tys = std::nullopt) {
-  Function *NewFunc = Intrinsic::getDeclaration(&M, NewIID, Tys);
+                               ArrayRef<Type *> Tys = {}) {
+  Function *NewFunc = Intrinsic::getOrInsertDeclaration(&M, NewIID, Tys);
   II->setCalledFunction(NewFunc);
   return II;
 }

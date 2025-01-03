@@ -20,6 +20,7 @@
 #ifndef NVGPU
 #define NVGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -109,10 +110,22 @@ def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
   let cppNamespace = "::mlir::nvgpu";
 }
 
+def RcpApprox : I32EnumAttrCase<"APPROX", 0, "approx">;
+def RcpRN     : I32EnumAttrCase<"RN", 1, "rn">;
+def RcpRZ     : I32EnumAttrCase<"RZ", 2, "rz">;
+def RcpRM     : I32EnumAttrCase<"RM", 3, "rm">;
+def RcpRP     : I32EnumAttrCase<"RP", 4, "rp">;
+def RcpRoundingMode   : I32EnumAttr<"RcpRoundingMode", "Rounding mode of rcp",
+  [RcpApprox, RcpRN, RcpRZ, RcpRM, RcpRP]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
 def TensorMapSwizzleAttr : EnumAttr<NVGPU_Dialect, TensorMapSwizzleKind, "swizzle">;
 def TensorMapL2PromoAttr : EnumAttr<NVGPU_Dialect, TensorMapL2PromoKind, "l2promo">;
 def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
 def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
+def RcpRoundingModeAttr : EnumAttr<NVGPU_Dialect, RcpRoundingMode, "rcp_rounding_mode">;
 
 //===----------------------------------------------------------------------===//
 // NVGPU Type Definitions
@@ -242,7 +255,7 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
   let arguments = (ins Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$srcMemref,
                            Variadic<Index>:$indices, BoolAttr:$transpose,
                            I32Attr:$numTiles);
-  let results = (outs AnyVector:$res);
+  let results = (outs AnyVectorOfNonZeroRank:$res);
   let assemblyFormat = [{
     $srcMemref`[` $indices `]` attr-dict `:` type($srcMemref) `->` type($res)
   }];
@@ -288,13 +301,13 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
         (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf32>) -> vector<2x2xf32>
     ```
   }];
-  let arguments = (ins AnyVector:$matrixA,
-                       AnyVector:$matrixB,
-                       AnyVector:$matrixC,
+  let arguments = (ins AnyVectorOfNonZeroRank:$matrixA,
+                       AnyVectorOfNonZeroRank:$matrixB,
+                       AnyVectorOfNonZeroRank:$matrixC,
                        I64ArrayAttr:$mmaShape,
                        OptionalAttr<UnitAttr>:$tf32Enabled);
 
-  let results = (outs AnyVector:$res);
+  let results = (outs AnyVectorOfNonZeroRank:$res);
 
   let builders = [
     OpBuilder<(ins "Value":$matrixA,
@@ -344,16 +357,16 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
   ```
   }];
 
-  let arguments = (ins AnyVector:$matrixA,
-                       AnyVector:$matrixB,
-                       AnyVector:$matrixC,
+  let arguments = (ins AnyVectorOfNonZeroRank:$matrixA,
+                       AnyVectorOfNonZeroRank:$matrixB,
+                       AnyVectorOfNonZeroRank:$matrixC,
                        NVGPU_MmaSparseSyncMetadataType:$sparseMetadata,
                        I64ArrayAttr:$mmaShape,
                        DefaultValuedAttr<I32Attr, "0">:$sparsitySelector,
                        OptionalAttr<UnitAttr>:$tf32Enabled
                        );
 
-  let results = (outs AnyVector:$res);
+  let results = (outs AnyVectorOfNonZeroRank:$res);
 
   let builders = [
     OpBuilder<(ins "Value":$matrixA,
@@ -758,7 +771,7 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 
   let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA, 
                        NVGPU_WarpgroupMatrixDescriptor:$descriptorB,                                               
-                       DefaultValuedOptionalAttr<I32Attr, "1">:$waitGroup,
+                       DefaultValuedOptionalAttr<I64Attr, "1">:$waitGroup,
                        OptionalAttr<UnitAttr>:$transposeA,
                        OptionalAttr<UnitAttr>:$transposeB,
                        NVGPU_WarpgroupAccumulator:$matrixC);
@@ -802,4 +815,24 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
   let hasVerifier = 1;
 }
 
+def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
+                                   SameOperandsAndResultType]> {
+  let summary = "The reciprocal calculation for vector types";
+  let description = [{
+    Reciprocal calculation for `vector` types using `nvvm.rcp` OPs.
+
+    Currently, only the `approx` rounding mode and `ftz` are supported, and only for the `f32` type.
+
+    The input and output must be of the same vector type and shape.
+  }];
+  let arguments = (ins VectorOfNonZeroRankOf<[F32]>:$in,
+                       DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
+                       UnitAttr:$ftz);
+  let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
+  let assemblyFormat = [{
+    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
+    attr-dict `:` type($out)
+  }];
+  let hasVerifier = 1;
+}
 #endif // NVGPU

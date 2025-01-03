@@ -30,6 +30,8 @@ using namespace lldb;
 static constexpr lldb::user_id_t expected_breakpoint_id = 1;
 static constexpr lldb::user_id_t expected_breakpoint_location_id = 0;
 
+int baton_value;
+
 class BreakpointSetCallbackTest : public ::testing::Test {
 public:
   static void CheckCallbackArgs(void *baton, StoppointCallbackContext *context,
@@ -37,7 +39,7 @@ public:
                                 lldb::user_id_t break_loc_id,
                                 TargetSP expected_target_sp) {
     EXPECT_EQ(context->exe_ctx_ref.GetTargetSP(), expected_target_sp);
-    EXPECT_EQ(baton, "hello");
+    EXPECT_EQ(baton, &baton_value);
     EXPECT_EQ(break_id, expected_breakpoint_id);
     EXPECT_EQ(break_loc_id, expected_breakpoint_location_id);
   }
@@ -55,7 +57,6 @@ protected:
 };
 
 TEST_F(BreakpointSetCallbackTest, TestBreakpointSetCallback) {
-  void *baton = (void *)"hello";
   // Set up the debugger, make sure that was done properly.
   TargetSP target_sp;
   ArchSpec arch("x86_64-apple-macosx-");
@@ -78,7 +79,7 @@ TEST_F(BreakpointSetCallbackTest, TestBreakpointSetCallback) {
         CheckCallbackArgs(baton, context, break_id, break_loc_id, target_sp);
         return true;
       },
-      baton, true);
+      (void *)&baton_value, true);
   ExecutionContext exe_ctx(target_sp, false);
   StoppointCallbackContext context(nullptr, exe_ctx, true);
   breakpoint_sp->InvokeCallback(&context, 0);

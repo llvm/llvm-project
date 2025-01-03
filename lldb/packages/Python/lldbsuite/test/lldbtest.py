@@ -31,7 +31,6 @@ $
 import abc
 from functools import wraps
 import gc
-import glob
 import io
 import json
 import os.path
@@ -173,9 +172,9 @@ VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
 WATCHPOINT_CREATED = "Watchpoint created successfully"
 
 
-def CMD_MSG(str):
+def CMD_MSG(command):
     """A generic "Command '%s' did not return successfully" message generator."""
-    return "Command '%s' did not return successfully" % str
+    return f"Command '{command}' did not return successfully"
 
 
 def COMPLETION_MSG(str_before, str_after, completions):
@@ -416,7 +415,7 @@ class _LocalProcess(_BaseProcess):
 
         self._proc = Popen(
             [executable] + args,
-            stdout=open(os.devnull) if not self._trace_on else None,
+            stdout=DEVNULL if not self._trace_on else None,
             stdin=PIPE,
             env=env,
         )
@@ -866,13 +865,9 @@ class Base(unittest.TestCase):
         session_file = self.getLogBasenameForCurrentTest() + ".log"
         self.log_files.append(session_file)
 
-        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        self.session = encoded_file.open(session_file, "utf-8", mode="w")
-
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info
-        # (self.session) is then dumped into a session specific file for
-        # diagnosis.
+        # is then dumped into a session specific file for diagnosis.
         self.__cleanup_errored__ = False
         self.__errored__ = False
         self.__failed__ = False
@@ -991,16 +986,14 @@ class Base(unittest.TestCase):
                     print("Command '" + cmd + "' failed!", file=sbuf)
 
         if check:
+            if not msg:
+                msg = CMD_MSG(cmd)
             output = ""
             if self.res.GetOutput():
                 output += "\nCommand output:\n" + self.res.GetOutput()
             if self.res.GetError():
                 output += "\nError output:\n" + self.res.GetError()
-            if msg:
-                msg += output
-            if cmd:
-                cmd += output
-            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
+            self.assertTrue(self.res.Succeeded(), msg + output)
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1238,20 +1231,25 @@ class Base(unittest.TestCase):
         else:
             prefix = "Success"
 
+        session_file = self.getLogBasenameForCurrentTest() + ".log"
+
+        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
+        session = encoded_file.open(session_file, "utf-8", mode="w")
+
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
-                    print(traceback, file=self.session)
+                    print(traceback, file=session)
 
         import datetime
 
         print(
             "Session info generated @",
             datetime.datetime.now().ctime(),
-            file=self.session,
+            file=session,
         )
-        self.session.close()
-        del self.session
+        session.close()
+        del session
 
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
@@ -1318,7 +1316,18 @@ class Base(unittest.TestCase):
         # Need to do something different for non-Linux/Android targets
         cpuinfo_path = self.getBuildArtifact("cpuinfo")
         if configuration.lldb_platform_name:
-            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
+            self.runCmd(
+                'platform get-file "/proc/cpuinfo" ' + cpuinfo_path, check=False
+            )
+            if not self.res.Succeeded():
+                if self.TraceOn():
+                    print(
+                        'Failed to get /proc/cpuinfo from remote: "{}"'.format(
+                            self.res.GetOutput().strip()
+                        )
+                    )
+                    print("All cpuinfo feature checks will fail.")
+                return ""
         else:
             cpuinfo_path = "/proc/cpuinfo"
 
@@ -1359,6 +1368,9 @@ class Base(unittest.TestCase):
         if self.getArchitecture() == "arm64e":
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
+
+    def isAArch64FPMR(self):
+        return self.isAArch64() and "fpmr" in self.getCPUInfo()
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
@@ -1514,19 +1526,23 @@ class Base(unittest.TestCase):
             stdflag = "-std=c++11"
         return stdflag
 
-    def buildDriver(self, sources, exe_name):
+    def buildDriver(self, sources, exe_name, defines=None):
         """Platform-specific way to build a program that links with LLDB (via the liblldb.so
         or LLDB.framework).
         """
+        if defines is None:
+            defines = []
+
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
+        defines = " ".join(["-D{}={}".format(name, value) for name, value in defines])
 
         lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s" % (stdflag, stdlibflag),
+                "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
                 "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
             }
@@ -1534,12 +1550,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
             }
@@ -1547,12 +1564,13 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
+                    defines,
                 ),
                 "LD_EXTRAS": "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir),
             }

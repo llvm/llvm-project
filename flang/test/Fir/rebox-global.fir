@@ -20,4 +20,4 @@ fir.global @pointer_char4_init : !fir.box<!fir.ptr<!fir.char<4,10>>> {
   fir.has_value %2 : !fir.box<!fir.ptr<!fir.char<4,10>>>
 }
 // CHECK-LABEL: @pointer_char4_init
-// CHECK-SAME: { ptr @char4, i64 ptrtoint (ptr getelementptr ([10 x i32], ptr null, i32 1) to i64), i32 20180515, i8 0, i8 44, i8 1, i8 0 }
+// CHECK-SAME: { ptr @char4, i64 ptrtoint (ptr getelementptr ([10 x i32], ptr null, i32 1) to i64), i32 20240719, i8 0, i8 44, i8 1, i8 0 }

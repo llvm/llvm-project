@@ -164,6 +164,9 @@ private:
 
   void preregisterSections();
 
+  /// run analyses requested in binary analysis mode.
+  void runBinaryAnalyses();
+
   /// Run optimizations that operate at the binary, or post-linker, level.
   void runOptimizationPasses();
 
@@ -510,12 +513,11 @@ private:
   };
 
   /// Different types of X86-64 PLT sections.
-  const PLTSectionInfo X86_64_PLTSections[4] = {
-      { ".plt", 16 },
-      { ".plt.got", 8 },
-      { ".plt.sec", 8 },
-      { nullptr, 0 }
-  };
+  const PLTSectionInfo X86_64_PLTSections[5] = {{".plt", 16},
+                                                {".plt.got", 8},
+                                                {".plt.sec", 8},
+                                                {".iplt", 16},
+                                                {nullptr, 0}};
 
   /// AArch64 PLT sections.
   const PLTSectionInfo AArch64_PLTSections[4] = {
@@ -556,14 +558,6 @@ private:
     ErrorOr<BinarySection &> ErrOrSection = BC->getUniqueSectionByName(Name);
     return ErrOrSection ? &ErrOrSection.get() : nullptr;
   }
-
-  /// Keep track of functions we fail to write in the binary. We need to avoid
-  /// rewriting CFI info for these functions.
-  std::vector<uint64_t> FailedAddresses;
-
-  /// Keep track of which functions didn't fit in their original space in the
-  /// last emission, so that we may either decide to split or not optimize them.
-  std::set<uint64_t> LargeFunctions;
 
   /// Section header string table.
   StringTableBuilder SHStrTab;

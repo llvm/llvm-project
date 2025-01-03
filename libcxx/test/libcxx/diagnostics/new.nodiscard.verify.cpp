@@ -21,12 +21,12 @@ void test() {
   ::operator new(0, std::nothrow);                        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ::operator new[](0);                                    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ::operator new[](0, std::nothrow);                      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
   ::operator new(0, std::align_val_t{1});                 // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ::operator new(0, std::align_val_t{1}, std::nothrow);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ::operator new[](0, std::align_val_t{1});               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ::operator new[](0, std::align_val_t{1}, std::nothrow); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif // _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#endif // _LIBCPP_HAS_ALIGNED_ALLOCATION
 
 #if TEST_STD_VER >= 17
   int* ptr = nullptr;

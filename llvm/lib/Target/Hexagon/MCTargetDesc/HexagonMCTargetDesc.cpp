@@ -26,10 +26,10 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -91,6 +91,10 @@ cl::opt<bool> MV71T("mv71t", cl::Hidden, cl::desc("Build for Hexagon V71T"),
                     cl::init(false));
 cl::opt<bool> MV73("mv73", cl::Hidden, cl::desc("Build for Hexagon V73"),
                    cl::init(false));
+cl::opt<bool> MV75("mv75", cl::Hidden, cl::desc("Build for Hexagon V75"),
+                   cl::init(false));
+cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
+                   cl::init(false));
 } // namespace
 
 cl::opt<Hexagon::ArchEnum> EnableHVX(
@@ -104,6 +108,8 @@ cl::opt<Hexagon::ArchEnum> EnableHVX(
                clEnumValN(Hexagon::ArchEnum::V69, "v69", "Build for HVX v69"),
                clEnumValN(Hexagon::ArchEnum::V71, "v71", "Build for HVX v71"),
                clEnumValN(Hexagon::ArchEnum::V73, "v73", "Build for HVX v73"),
+               clEnumValN(Hexagon::ArchEnum::V75, "v75", "Build for HVX v75"),
+               clEnumValN(Hexagon::ArchEnum::V79, "v79", "Build for HVX v79"),
                // Sentinel for no value specified.
                clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
     // Sentinel for flag not present.
@@ -148,6 +154,11 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv71t";
   if (MV73)
     return "hexagonv73";
+  if (MV75)
+    return "hexagonv75";
+  if (MV79)
+    return "hexagonv79";
+
   return "";
 }
 
@@ -443,19 +454,28 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   case Hexagon::ArchEnum::V73:
     Result.push_back("+hvxv73");
     break;
-  case Hexagon::ArchEnum::Generic:{
+  case Hexagon::ArchEnum::V75:
+    Result.push_back("+hvxv75");
+    break;
+  case Hexagon::ArchEnum::V79:
+    Result.push_back("+hvxv79");
+    break;
+
+  case Hexagon::ArchEnum::Generic: {
     Result.push_back(StringSwitch<StringRef>(CPU)
-             .Case("hexagonv60", "+hvxv60")
-             .Case("hexagonv62", "+hvxv62")
-             .Case("hexagonv65", "+hvxv65")
-             .Case("hexagonv66", "+hvxv66")
-             .Case("hexagonv67", "+hvxv67")
-             .Case("hexagonv67t", "+hvxv67")
-             .Case("hexagonv68", "+hvxv68")
-             .Case("hexagonv69", "+hvxv69")
-             .Case("hexagonv71", "+hvxv71")
-             .Case("hexagonv71t", "+hvxv71")
-             .Case("hexagonv73", "+hvxv73"));
+                         .Case("hexagonv60", "+hvxv60")
+                         .Case("hexagonv62", "+hvxv62")
+                         .Case("hexagonv65", "+hvxv65")
+                         .Case("hexagonv66", "+hvxv66")
+                         .Case("hexagonv67", "+hvxv67")
+                         .Case("hexagonv67t", "+hvxv67")
+                         .Case("hexagonv68", "+hvxv68")
+                         .Case("hexagonv69", "+hvxv69")
+                         .Case("hexagonv71", "+hvxv71")
+                         .Case("hexagonv71t", "+hvxv71")
+                         .Case("hexagonv73", "+hvxv73")
+                         .Case("hexagonv75", "+hvxv75")
+                         .Case("hexagonv79", "+hvxv79"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
@@ -503,8 +523,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   // turns on hvxvNN, corresponding to the existing ArchVNN.
   FeatureBitset FB = S;
   unsigned CpuArch = ArchV5;
-  for (unsigned F : {ArchV73, ArchV71, ArchV69, ArchV68, ArchV67, ArchV66,
-                     ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
+  for (unsigned F :
+       {ArchV79, ArchV75, ArchV73, ArchV71, ArchV69, ArchV68, ArchV67, ArchV66,
+        ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
     if (!FB.test(F))
       continue;
     CpuArch = F;
@@ -518,9 +539,10 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
     break;
   }
   bool HasHvxVer = false;
-  for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
-                     ExtensionHVXV66, ExtensionHVXV67, ExtensionHVXV68,
-                     ExtensionHVXV69, ExtensionHVXV71, ExtensionHVXV73}) {
+  for (unsigned F :
+       {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66,
+        ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+        ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79}) {
     if (!FB.test(F))
       continue;
     HasHvxVer = true;
@@ -533,6 +555,12 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
+  case ArchV79:
+    FB.set(ExtensionHVXV79);
+    [[fallthrough]];
+  case ArchV75:
+    FB.set(ExtensionHVXV75);
+    [[fallthrough]];
   case ArchV73:
     FB.set(ExtensionHVXV73);
     [[fallthrough]];
@@ -627,7 +655,8 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
 
 std::optional<unsigned>
 Hexagon_MC::getHVXVersion(const FeatureBitset &Features) {
-  for (auto Arch : {Hexagon::ExtensionHVXV73, Hexagon::ExtensionHVXV71,
+  for (auto Arch : {Hexagon::ExtensionHVXV79, Hexagon::ExtensionHVXV75,
+                    Hexagon::ExtensionHVXV73, Hexagon::ExtensionHVXV71,
                     Hexagon::ExtensionHVXV69, Hexagon::ExtensionHVXV68,
                     Hexagon::ExtensionHVXV67, Hexagon::ExtensionHVXV66,
                     Hexagon::ExtensionHVXV65, Hexagon::ExtensionHVXV62,
@@ -639,12 +668,13 @@ Hexagon_MC::getHVXVersion(const FeatureBitset &Features) {
 
 unsigned Hexagon_MC::getArchVersion(const FeatureBitset &Features) {
   for (auto Arch :
-       {Hexagon::ArchV73, Hexagon::ArchV71, Hexagon::ArchV69, Hexagon::ArchV68,
-        Hexagon::ArchV67, Hexagon::ArchV66, Hexagon::ArchV65, Hexagon::ArchV62,
-        Hexagon::ArchV60, Hexagon::ArchV55, Hexagon::ArchV5})
+       {Hexagon::ArchV79, Hexagon::ArchV75, Hexagon::ArchV73, Hexagon::ArchV71,
+        Hexagon::ArchV69, Hexagon::ArchV68, Hexagon::ArchV67, Hexagon::ArchV66,
+        Hexagon::ArchV65, Hexagon::ArchV62, Hexagon::ArchV60, Hexagon::ArchV55,
+        Hexagon::ArchV5})
     if (Features.test(Arch))
       return Arch;
-  llvm_unreachable("Expected arch v5-v73");
+  llvm_unreachable("Expected arch v5-v79");
   return 0;
 }
 
@@ -663,7 +693,9 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
       .Case("hexagonv69", llvm::ELF::EF_HEXAGON_MACH_V69)
       .Case("hexagonv71", llvm::ELF::EF_HEXAGON_MACH_V71)
       .Case("hexagonv71t", llvm::ELF::EF_HEXAGON_MACH_V71T)
-      .Case("hexagonv73", llvm::ELF::EF_HEXAGON_MACH_V73);
+      .Case("hexagonv73", llvm::ELF::EF_HEXAGON_MACH_V73)
+      .Case("hexagonv75", llvm::ELF::EF_HEXAGON_MACH_V75)
+      .Case("hexagonv79", llvm::ELF::EF_HEXAGON_MACH_V79);
 }
 
 llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {

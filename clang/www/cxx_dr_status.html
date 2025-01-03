@@ -705,7 +705,7 @@
     <td><a href="https://cplusplus.github.io/CWG/issues/110.html">110</a></td>
     <td>CD6</td>
     <td>Can template functions and classes be declared in the same scope?</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 2.8</td>
   </tr>
   <tr id="111">
     <td><a href="https://cplusplus.github.io/CWG/issues/111.html">111</a></td>
@@ -873,7 +873,7 @@
     <td><a href="https://cplusplus.github.io/CWG/issues/138.html">138</a></td>
     <td>CD6</td>
     <td>Friend declaration name lookup</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">Partial</td>
   </tr>
   <tr id="139">
     <td><a href="https://cplusplus.github.io/CWG/issues/139.html">139</a></td>
@@ -945,7 +945,7 @@
     <td><a href="https://cplusplus.github.io/CWG/issues/150.html">150</a></td>
     <td>C++17</td>
     <td>Template template parameters and default arguments</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="151">
     <td><a href="https://cplusplus.github.io/CWG/issues/151.html">151</a></td>
@@ -1017,7 +1017,7 @@
     <td><a href="https://cplusplus.github.io/CWG/issues/162.html">162</a></td>
     <td>CD1</td>
     <td>(<TT>&amp;C::f)()</TT> with nonstatic members</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="163">
     <td><a href="https://cplusplus.github.io/CWG/issues/163.html">163</a></td>
@@ -1440,11 +1440,11 @@ accessible?</td>
     <td>Is indirection through a null pointer undefined behavior?</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="233">
+  <tr id="233">
     <td><a href="https://cplusplus.github.io/CWG/issues/233.html">233</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>References vs pointers in UDC overload resolution</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="234">
     <td><a href="https://cplusplus.github.io/CWG/issues/234.html">234</a></td>
@@ -1721,7 +1721,7 @@ of class templates</td>
     <td><a href="https://cplusplus.github.io/CWG/issues/279.html">279</a></td>
     <td>CD6</td>
     <td>Correspondence of "names for linkage purposes"</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="none" align="center">No</td>
   </tr>
   <tr id="280">
     <td><a href="https://cplusplus.github.io/CWG/issues/280.html">280</a></td>
@@ -2075,7 +2075,7 @@ of class templates</td>
     <td><a href="https://cplusplus.github.io/CWG/issues/338.html">338</a></td>
     <td>CD6</td>
     <td>Enumerator name with linkage used as class name in other translation unit</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">Duplicate of <a href="#1884">1884</a></td>
   </tr>
   <tr id="339">
     <td><a href="https://cplusplus.github.io/CWG/issues/339.html">339</a></td>
@@ -2363,7 +2363,7 @@ of class templates</td>
     <td><a href="https://cplusplus.github.io/CWG/issues/386.html">386</a></td>
     <td>CD6</td>
     <td>Friend declaration of name brought in by <I>using-declaration</I></td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="none" align="center">No</td>
   </tr>
   <tr id="387">
     <td><a href="https://cplusplus.github.io/CWG/issues/387.html">387</a></td>
@@ -2763,7 +2763,7 @@ of class templates</td>
   </tr>
   <tr id="453">
     <td><a href="https://cplusplus.github.io/CWG/issues/453.html">453</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>References may only bind to &#8220;valid&#8221; objects</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -2879,7 +2879,11 @@ of class templates</td>
     <td><a href="https://cplusplus.github.io/CWG/issues/472.html">472</a></td>
     <td>drafting</td>
     <td>Casting across protected inheritance</td>
-    <td title="Clang does not implement 2011-04 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang does not implement 2011-04 resolution
+      </details></td>
   </tr>
   <tr id="473">
     <td><a href="https://cplusplus.github.io/CWG/issues/473.html">473</a></td>
@@ -3427,7 +3431,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/563.html">563</a></td>
     <td>CD6</td>
     <td>Linkage specification for objects</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.3</td>
   </tr>
   <tr id="564">
     <td><a href="https://cplusplus.github.io/CWG/issues/564.html">564</a></td>
@@ -3595,7 +3599,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/591.html">591</a></td>
     <td>CD4</td>
     <td>When a dependent base class is the current instantiation</td>
-    <td class="none" align="center">No</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="592">
     <td><a href="https://cplusplus.github.io/CWG/issues/592.html">592</a></td>
@@ -4327,7 +4331,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/713.html">713</a></td>
     <td>CD2</td>
     <td>Unclear note about cv-qualified function types</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.0</td>
   </tr>
   <tr id="714">
     <td><a href="https://cplusplus.github.io/CWG/issues/714.html">714</a></td>
@@ -4381,7 +4385,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/722.html">722</a></td>
     <td>CD2</td>
     <td>Can <TT>nullptr</TT> be passed to an ellipsis?</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="726">
     <td><a href="https://cplusplus.github.io/CWG/issues/726.html">726</a></td>
@@ -5161,7 +5165,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/882.html">882</a></td>
     <td>CD2</td>
     <td>Defining <TT>main</TT> as deleted</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.5</td>
   </tr>
   <tr id="883">
     <td><a href="https://cplusplus.github.io/CWG/issues/883.html">883</a></td>
@@ -5575,7 +5579,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/960.html">960</a></td>
     <td>CD2</td>
     <td>Covariant functions and lvalue/rvalue references</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.0</td>
   </tr>
   <tr id="961">
     <td><a href="https://cplusplus.github.io/CWG/issues/961.html">961</a></td>
@@ -7153,7 +7157,11 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1223.html">1223</a></td>
     <td>drafting</td>
     <td>Syntactic disambiguation and <I>trailing-return-type</I>s</td>
-    <td title="Clang 17 implements 2023-05-12 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 17 implements 2023-05-12 resolution
+      </details></td>
   </tr>
   <tr id="1224">
     <td><a href="https://cplusplus.github.io/CWG/issues/1224.html">1224</a></td>
@@ -7302,7 +7310,7 @@ and <I>POD class</I></td>
   <tr class="open" id="1248">
     <td><a href="https://cplusplus.github.io/CWG/issues/1248.html">1248</a></td>
     <td>open</td>
-    <td>Updating Annex C to C99</td>
+    <td>Updating Annex C to C99 and C23</td>
     <td align="center">Not resolved</td>
   </tr>
   <tr id="1249">
@@ -7329,11 +7337,11 @@ and <I>POD class</I></td>
     <td>Overloading member function templates based on dependent return type</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="1253">
+  <tr id="1253">
     <td><a href="https://cplusplus.github.io/CWG/issues/1253.html">1253</a></td>
-    <td>open</td>
+    <td>C++17</td>
     <td>Generic non-template members</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="1254">
     <td><a href="https://cplusplus.github.io/CWG/issues/1254.html">1254</a></td>
@@ -7819,7 +7827,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1334.html">1334</a></td>
     <td>NAD</td>
     <td>Layout compatibility and cv-qualification</td>
-    <td class="unreleased-superseded" align="center">Superseded by <a href="#1719">1719</a></td>
+    <td class="full-superseded" align="center">Superseded by <a href="#1719">1719</a></td>
   </tr>
   <tr id="1335">
     <td><a href="https://cplusplus.github.io/CWG/issues/1335.html">1335</a></td>
@@ -8677,7 +8685,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1477.html">1477</a></td>
     <td>CD3</td>
     <td>Definition of a <TT>friend</TT> outside its namespace</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 2.7</td>
   </tr>
   <tr id="1478">
     <td><a href="https://cplusplus.github.io/CWG/issues/1478.html">1478</a></td>
@@ -8805,11 +8813,11 @@ and <I>POD class</I></td>
     <td>Lifetime of temporaries in range-based <TT>for</TT></td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="1499">
+  <tr id="1499">
     <td><a href="https://cplusplus.github.io/CWG/issues/1499.html">1499</a></td>
-    <td>drafting</td>
+    <td>DRWP</td>
     <td>Missing case for deleted move assignment operator</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="1500">
     <td><a href="https://cplusplus.github.io/CWG/issues/1500.html">1500</a></td>
@@ -9319,7 +9327,11 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1584.html">1584</a></td>
     <td>drafting</td>
     <td>Deducing function types from cv-qualified types</td>
-    <td title="Clang 7 implements 2015-05 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 7 implements 2015-05 resolution
+      </details></td>
   </tr>
   <tr id="1585">
     <td><a href="https://cplusplus.github.io/CWG/issues/1585.html">1585</a></td>
@@ -9567,11 +9579,11 @@ and <I>POD class</I></td>
     <td>Adding spaces between tokens in stringizing</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="1626">
+  <tr id="1626">
     <td><a href="https://cplusplus.github.io/CWG/issues/1626.html">1626</a></td>
-    <td>open</td>
+    <td>dup</td>
     <td><TT>constexpr</TT> member functions in <I>brace-or-equal-initializer</I>s</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="1627">
     <td><a href="https://cplusplus.github.io/CWG/issues/1627.html">1627</a></td>
@@ -10129,7 +10141,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1719.html">1719</a></td>
     <td>CD4</td>
     <td>Layout compatibility and cv-qualification revisited</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="1720">
     <td><a href="https://cplusplus.github.io/CWG/issues/1720.html">1720</a></td>
@@ -10705,7 +10717,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1815.html">1815</a></td>
     <td>CD4</td>
     <td>Lifetime extension in aggregate initialization</td>
-    <td class="none" align="center">No</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="1816">
     <td><a href="https://cplusplus.github.io/CWG/issues/1816.html">1816</a></td>
@@ -10723,7 +10735,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1818.html">1818</a></td>
     <td>CD6</td>
     <td>Visibility and inherited language linkage</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.4</td>
   </tr>
   <tr id="1819">
     <td><a href="https://cplusplus.github.io/CWG/issues/1819.html">1819</a></td>
@@ -11119,7 +11131,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1884.html">1884</a></td>
     <td>CD6</td>
     <td>Unclear requirements for same-named external-linkage entities</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">Partial</td>
   </tr>
   <tr id="1885">
     <td><a href="https://cplusplus.github.io/CWG/issues/1885.html">1885</a></td>
@@ -11155,7 +11167,11 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1890.html">1890</a></td>
     <td>drafting</td>
     <td>Member type depending on definition of member function</td>
-    <td title="Clang does not implement 2018-06-04 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang does not implement 2018-06-04 resolution
+      </details></td>
   </tr>
   <tr id="1891">
     <td><a href="https://cplusplus.github.io/CWG/issues/1891.html">1891</a></td>
@@ -11203,7 +11219,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1898.html">1898</a></td>
     <td>CD6</td>
     <td>Use of &#8220;equivalent&#8221; in overload resolution</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 2.7</td>
   </tr>
   <tr id="1899">
     <td><a href="https://cplusplus.github.io/CWG/issues/1899.html">1899</a></td>
@@ -11215,7 +11231,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/1900.html">1900</a></td>
     <td>CD6</td>
     <td>Do <TT>friend</TT> declarations count as &#8220;previous declarations&#8221;?</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 2.7</td>
   </tr>
   <tr class="open" id="1901">
     <td><a href="https://cplusplus.github.io/CWG/issues/1901.html">1901</a></td>
@@ -11537,7 +11553,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="1954">
     <td><a href="https://cplusplus.github.io/CWG/issues/1954.html">1954</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><TT>typeid</TT> null dereference check in subexpressions</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -11793,11 +11809,11 @@ and <I>POD class</I></td>
     <td>Reference list-initialization ignores conversion functions</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="1997">
+  <tr id="1997">
     <td><a href="https://cplusplus.github.io/CWG/issues/1997.html">1997</a></td>
-    <td>drafting</td>
+    <td>DRWP</td>
     <td>Placement new and previous initialization</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="1998">
     <td><a href="https://cplusplus.github.io/CWG/issues/1998.html">1998</a></td>
@@ -12361,7 +12377,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2091.html">2091</a></td>
     <td>CD4</td>
     <td>Deducing reference non-type template arguments</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 10</td>
   </tr>
   <tr id="2092">
     <td><a href="https://cplusplus.github.io/CWG/issues/2092.html">2092</a></td>
@@ -12637,7 +12653,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2137.html">2137</a></td>
     <td>CD4</td>
     <td>List-initialization from object of same type</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="2138">
     <td><a href="https://cplusplus.github.io/CWG/issues/2138.html">2138</a></td>
@@ -12675,11 +12691,11 @@ and <I>POD class</I></td>
     <td>Value-dependency via injected-class-name</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2144">
+  <tr id="2144">
     <td><a href="https://cplusplus.github.io/CWG/issues/2144.html">2144</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Function/variable declaration ambiguity</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2145">
     <td><a href="https://cplusplus.github.io/CWG/issues/2145.html">2145</a></td>
@@ -12707,7 +12723,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2149">
     <td><a href="https://cplusplus.github.io/CWG/issues/2149.html">2149</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Brace elision and array length deduction</td>
     <td class="full" align="center">Clang 3.1</td>
   </tr>
@@ -12927,11 +12943,11 @@ and <I>POD class</I></td>
     <td>Cv-qualified numeric types</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2186">
+  <tr id="2186">
     <td><a href="https://cplusplus.github.io/CWG/issues/2186.html">2186</a></td>
-    <td>drafting</td>
+    <td>C++20</td>
     <td>Unclear point that &#8220;preceding initialization&#8221; must precede</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2187">
     <td><a href="https://cplusplus.github.io/CWG/issues/2187.html">2187</a></td>
@@ -12961,7 +12977,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2191.html">2191</a></td>
     <td>C++17</td>
     <td>Incorrect result for <TT>noexcept(typeid(v))</TT></td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr class="open" id="2192">
     <td><a href="https://cplusplus.github.io/CWG/issues/2192.html">2192</a></td>
@@ -13825,7 +13841,11 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2335.html">2335</a></td>
     <td>drafting</td>
     <td>Deduced return types vs member types</td>
-    <td title="Clang does not implement 2018-06 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang does not implement 2018-06 resolution
+      </details></td>
   </tr>
   <tr id="2336">
     <td><a href="https://cplusplus.github.io/CWG/issues/2336.html">2336</a></td>
@@ -13921,7 +13941,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2351.html">2351</a></td>
     <td>CD5</td>
     <td><TT>void{}</TT></td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="2352">
     <td><a href="https://cplusplus.github.io/CWG/issues/2352.html">2352</a></td>
@@ -14383,7 +14403,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2428.html">2428</a></td>
     <td>C++23</td>
     <td>Deprecating a concept</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="2429">
     <td><a href="https://cplusplus.github.io/CWG/issues/2429.html">2429</a></td>
@@ -14485,7 +14505,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2445.html">2445</a></td>
     <td>C++20</td>
     <td>Partial ordering with rewritten candidates</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="2446">
     <td><a href="https://cplusplus.github.io/CWG/issues/2446.html">2446</a></td>
@@ -14669,7 +14689,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2476">
     <td><a href="https://cplusplus.github.io/CWG/issues/2476.html">2476</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><I>placeholder-type-specifier</I>s and function declarators</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -14731,7 +14751,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2486.html">2486</a></td>
     <td>CD6</td>
     <td>Call to <TT>noexcept</TT> function via <TT>noexcept(false)</TT> pointer/lvalue</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 4 (C++17 onwards)</td>
   </tr>
   <tr class="open" id="2487">
     <td><a href="https://cplusplus.github.io/CWG/issues/2487.html">2487</a></td>
@@ -15011,7 +15031,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2533">
     <td><a href="https://cplusplus.github.io/CWG/issues/2533.html">2533</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Storage duration of implicitly created objects</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15089,15 +15109,15 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2546">
     <td><a href="https://cplusplus.github.io/CWG/issues/2546.html">2546</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Defaulted secondary comparison operators defined as deleted</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2547">
     <td><a href="https://cplusplus.github.io/CWG/issues/2547.html">2547</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Defaulted comparison operator function for non-classes</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="2548">
     <td><a href="https://cplusplus.github.io/CWG/issues/2548.html">2548</a></td>
@@ -15133,13 +15153,21 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2553.html">2553</a></td>
     <td>review</td>
     <td>Restrictions on explicit object member functions</td>
-    <td title="Clang 18 implements 2023-07-14 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 18 implements 2023-07-14 resolution
+      </details></td>
   </tr>
   <tr class="open" id="2554">
     <td><a href="https://cplusplus.github.io/CWG/issues/2554.html">2554</a></td>
     <td>review</td>
     <td>Overriding virtual functions, also with explicit object parameters</td>
-    <td title="Clang 18 implements 2021-12-10 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 18 implements 2021-12-10 resolution
+      </details></td>
   </tr>
   <tr class="open" id="2555">
     <td><a href="https://cplusplus.github.io/CWG/issues/2555.html">2555</a></td>
@@ -15173,15 +15201,15 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2560">
     <td><a href="https://cplusplus.github.io/CWG/issues/2560.html">2560</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Parameter type determination in a <I>requirement-parameter-list</I></td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2561">
+  <tr id="2561">
     <td><a href="https://cplusplus.github.io/CWG/issues/2561.html">2561</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Conversion to function pointer for lambda with explicit object parameter</td>
-    <td title="Clang does not implement 2024-03-18 resolution" align="center">Not Resolved*</td>
+    <td class="none" align="center">No</td>
   </tr>
   <tr class="open" id="2562">
     <td><a href="https://cplusplus.github.io/CWG/issues/2562.html">2562</a></td>
@@ -15205,7 +15233,11 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2565.html">2565</a></td>
     <td>open</td>
     <td>Invalid types in the <I>parameter-declaration-clause</I> of a <I>requires-expression</I></td>
-    <td title="Clang 16 implements 2023-06-07 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 16 implements 2023-06-07 resolution
+      </details></td>
   </tr>
   <tr class="open" id="2566">
     <td><a href="https://cplusplus.github.io/CWG/issues/2566.html">2566</a></td>
@@ -15221,7 +15253,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2568">
     <td><a href="https://cplusplus.github.io/CWG/issues/2568.html">2568</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Access checking during synthesis of defaulted comparison operator</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15313,7 +15345,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2583.html">2583</a></td>
     <td>C++23</td>
     <td>Common initial sequence should consider over-alignment</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr class="open" id="2584">
     <td><a href="https://cplusplus.github.io/CWG/issues/2584.html">2584</a></td>
@@ -15331,7 +15363,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2586.html">2586</a></td>
     <td>CD6</td>
     <td>Explicit object parameter for assignment and comparison</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr class="open" id="2587">
     <td><a href="https://cplusplus.github.io/CWG/issues/2587.html">2587</a></td>
@@ -15339,11 +15371,11 @@ and <I>POD class</I></td>
     <td>Visible side effects and initial value of an object</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2588">
+  <tr id="2588">
     <td><a href="https://cplusplus.github.io/CWG/issues/2588.html">2588</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>friend declarations and module linkage</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2589">
     <td><a href="https://cplusplus.github.io/CWG/issues/2589.html">2589</a></td>
@@ -15541,7 +15573,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2621.html">2621</a></td>
     <td>C++23</td>
     <td>Kind of lookup for <TT>using enum</TT> declarations</td>
-    <td title="Clang 19 implements 2024-05-31 resolution" align="center">Superseded by <a href="#2877">2877</a></td>
+    <td class="full-superseded" align="center">Superseded by <a href="#2877">2877</a></td>
   </tr>
   <tr id="2622">
     <td><a href="https://cplusplus.github.io/CWG/issues/2622.html">2622</a></td>
@@ -15577,7 +15609,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2627.html">2627</a></td>
     <td>C++23</td>
     <td>Bit-fields and narrowing conversions</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="2628">
     <td><a href="https://cplusplus.github.io/CWG/issues/2628.html">2628</a></td>
@@ -15617,7 +15649,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2634">
     <td><a href="https://cplusplus.github.io/CWG/issues/2634.html">2634</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Avoid circularity in specification of scope for friend class declarations</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15635,13 +15667,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2637">
     <td><a href="https://cplusplus.github.io/CWG/issues/2637.html">2637</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Injected-class-name as a <I>simple-template-id</I></td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2638">
     <td><a href="https://cplusplus.github.io/CWG/issues/2638.html">2638</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Improve the example for initializing by initializer list</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15755,7 +15787,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2657">
     <td><a href="https://cplusplus.github.io/CWG/issues/2657.html">2657</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Cv-qualification adjustment when binding reference to temporary</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15779,7 +15811,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2661">
     <td><a href="https://cplusplus.github.io/CWG/issues/2661.html">2661</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Missing disambiguation rule for <I>pure-specifier</I> vs. <I>brace-or-equal-initializer</I></td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15821,7 +15853,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2668">
     <td><a href="https://cplusplus.github.io/CWG/issues/2668.html">2668</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><TT>co_await</TT> in a <I>lambda-expression</I></td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15947,7 +15979,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2689">
     <td><a href="https://cplusplus.github.io/CWG/issues/2689.html">2689</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Are cv-qualified <TT>std::nullptr_t</TT> fundamental types?</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -15967,7 +15999,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2692.html">2692</a></td>
     <td>C++23</td>
     <td>Static and explicit object member functions with the same parameter-type-lists</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr class="open" id="2693">
     <td><a href="https://cplusplus.github.io/CWG/issues/2693.html">2693</a></td>
@@ -16013,7 +16045,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2700">
     <td><a href="https://cplusplus.github.io/CWG/issues/2700.html">2700</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><TT>#error</TT> disallows existing implementation practice</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16055,9 +16087,9 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2707">
     <td><a href="https://cplusplus.github.io/CWG/issues/2707.html">2707</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Deduction guides cannot have a trailing <I>requires-clause</I></td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="2708">
     <td><a href="https://cplusplus.github.io/CWG/issues/2708.html">2708</a></td>
@@ -16097,7 +16129,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2714">
     <td><a href="https://cplusplus.github.io/CWG/issues/2714.html">2714</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Implicit deduction guides omit properties from the parameter-declaration-clause of a constructor</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16179,11 +16211,11 @@ and <I>POD class</I></td>
     <td>Importing header units synthesized from source files</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2728">
+  <tr id="2728">
     <td><a href="https://cplusplus.github.io/CWG/issues/2728.html">2728</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Evaluation of conversions in a <I>delete-expression</I></td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2729">
     <td><a href="https://cplusplus.github.io/CWG/issues/2729.html">2729</a></td>
@@ -16283,13 +16315,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2745">
     <td><a href="https://cplusplus.github.io/CWG/issues/2745.html">2745</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Dependent odr-use in generic lambdas</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2746">
     <td><a href="https://cplusplus.github.io/CWG/issues/2746.html">2746</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Checking of default template arguments</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16301,7 +16333,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2748">
     <td><a href="https://cplusplus.github.io/CWG/issues/2748.html">2748</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Accessing static data members via null pointer</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16309,7 +16341,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2749.html">2749</a></td>
     <td>DRWP</td>
     <td>Treatment of "pointer to void" for relational comparisons</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
   <tr id="2750">
     <td><a href="https://cplusplus.github.io/CWG/issues/2750.html">2750</a></td>
@@ -16369,7 +16401,7 @@ and <I>POD class</I></td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2759.html">2759</a></td>
     <td>DRWP</td>
     <td>[[no_unique_address] and common initial sequence</td>
-    <td class="unreleased" align="center">Clang 19</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="2760">
     <td><a href="https://cplusplus.github.io/CWG/issues/2760.html">2760</a></td>
@@ -16440,7 +16472,7 @@ objects</td>
   </tr>
   <tr id="2771">
     <td><a href="https://cplusplus.github.io/CWG/issues/2771.html">2771</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Transformation for <I>unqualified-id</I>s in address operator</td>
     <td class="full" align="center">Clang 18</td>
   </tr>
@@ -16464,7 +16496,7 @@ objects</td>
   </tr>
   <tr id="2775">
     <td><a href="https://cplusplus.github.io/CWG/issues/2775.html">2775</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Unclear argument type for copy of exception object</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16476,7 +16508,7 @@ objects</td>
   </tr>
   <tr id="2777">
     <td><a href="https://cplusplus.github.io/CWG/issues/2777.html">2777</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Type of <I>id-expression</I> denoting a template parameter object</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16632,7 +16664,7 @@ objects</td>
   </tr>
   <tr id="2803">
     <td><a href="https://cplusplus.github.io/CWG/issues/2803.html">2803</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Overload resolution for reference binding of similar types</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16668,19 +16700,19 @@ objects</td>
   </tr>
   <tr id="2809">
     <td><a href="https://cplusplus.github.io/CWG/issues/2809.html">2809</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>An implicit definition does not redeclare a function</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2810">
     <td><a href="https://cplusplus.github.io/CWG/issues/2810.html">2810</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Requiring the absence of diagnostics for templates</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2811">
     <td><a href="https://cplusplus.github.io/CWG/issues/2811.html">2811</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Clarify "use" of main</td>
     <td class="full" align="center">Clang 3.5</td>
   </tr>
@@ -16692,19 +16724,19 @@ objects</td>
   </tr>
   <tr id="2813">
     <td><a href="https://cplusplus.github.io/CWG/issues/2813.html">2813</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Class member access with prvalues</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 20</td>
   </tr>
-  <tr class="open" id="2814">
+  <tr id="2814">
     <td><a href="https://cplusplus.github.io/CWG/issues/2814.html">2814</a></td>
-    <td>tentatively ready</td>
+    <td>NAD</td>
     <td>Alignment requirement of incomplete class type</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2815">
     <td><a href="https://cplusplus.github.io/CWG/issues/2815.html">2815</a></td>
-    <td>open</td>
+    <td>tentatively ready</td>
     <td>Overload resolution for references/pointers to <TT>noexcept</TT> functions</td>
     <td align="center">Not resolved</td>
   </tr>
@@ -16720,21 +16752,21 @@ objects</td>
     <td>sizeof(abstract class) is underspecified</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2818">
+  <tr id="2818">
     <td><a href="https://cplusplus.github.io/CWG/issues/2818.html">2818</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Use of predefined reserved identifiers</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2819">
+  <tr id="2819">
     <td><a href="https://cplusplus.github.io/CWG/issues/2819.html">2819</a></td>
-    <td>tentatively ready</td>
+    <td>accepted</td>
     <td>Cast from null pointer value in a constant expression</td>
-    <td title="Clang 19 implements 2023-12-01 resolution" align="center">Not Resolved*</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr id="2820">
     <td><a href="https://cplusplus.github.io/CWG/issues/2820.html">2820</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Value-initialization and default constructors</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16746,7 +16778,7 @@ objects</td>
   </tr>
   <tr id="2822">
     <td><a href="https://cplusplus.github.io/CWG/issues/2822.html">2822</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Side-effect-free pointer zap</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16758,13 +16790,13 @@ objects</td>
   </tr>
   <tr id="2824">
     <td><a href="https://cplusplus.github.io/CWG/issues/2824.html">2824</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Copy-initialization of arrays</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2825">
     <td><a href="https://cplusplus.github.io/CWG/issues/2825.html">2825</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Range-based for statement using a <I>braced-init-list</I></td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16782,7 +16814,7 @@ objects</td>
   </tr>
   <tr id="2828">
     <td><a href="https://cplusplus.github.io/CWG/issues/2828.html">2828</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Ambiguous interpretation of C-style cast</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16794,13 +16826,13 @@ objects</td>
   </tr>
   <tr id="2830">
     <td><a href="https://cplusplus.github.io/CWG/issues/2830.html">2830</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Top-level cv-qualification should be ignored for list-initialization</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2831">
     <td><a href="https://cplusplus.github.io/CWG/issues/2831.html">2831</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Non-templated function definitions and <I>requires-clause</I>s</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16828,11 +16860,11 @@ objects</td>
     <td>Name-independent declarations</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2836">
+  <tr id="2836">
     <td><a href="https://cplusplus.github.io/CWG/issues/2836.html">2836</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Conversion rank of <TT>long double</TT> and extended floating-point types</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2837">
     <td><a href="https://cplusplus.github.io/CWG/issues/2837.html">2837</a></td>
@@ -16884,13 +16916,13 @@ objects</td>
   </tr>
   <tr id="2845">
     <td><a href="https://cplusplus.github.io/CWG/issues/2845.html">2845</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Make the closure type of a captureless lambda a structural type</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2846">
     <td><a href="https://cplusplus.github.io/CWG/issues/2846.html">2846</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Out-of-class definitions of explicit object member functions</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16898,29 +16930,33 @@ objects</td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2847.html">2847</a></td>
     <td>review</td>
     <td>Constrained explicit specializations of function templates at class scope</td>
-    <td title="Clang 19 implements 2024-03-01 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 19 implements 2024-03-01 resolution
+      </details></td>
   </tr>
   <tr id="2848">
     <td><a href="https://cplusplus.github.io/CWG/issues/2848.html">2848</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Omitting an empty template argument list for explicit instantiation</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2849">
     <td><a href="https://cplusplus.github.io/CWG/issues/2849.html">2849</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Parameter objects are not temporary objects</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2850">
     <td><a href="https://cplusplus.github.io/CWG/issues/2850.html">2850</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Unclear storage duration for function parameter objects</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2851">
     <td><a href="https://cplusplus.github.io/CWG/issues/2851.html">2851</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Allow floating-point conversions in converted constant expressions</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
@@ -16932,45 +16968,45 @@ objects</td>
   </tr>
   <tr id="2853">
     <td><a href="https://cplusplus.github.io/CWG/issues/2853.html">2853</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Pointer arithmetic with pointer to hypothetical element</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2854">
     <td><a href="https://cplusplus.github.io/CWG/issues/2854.html">2854</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Storage duration of exception objects</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2855">
     <td><a href="https://cplusplus.github.io/CWG/issues/2855.html">2855</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Undefined behavior in postfix increment</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2856">
     <td><a href="https://cplusplus.github.io/CWG/issues/2856.html">2856</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Copy-list-initialization with explicit default constructors</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2857">
     <td><a href="https://cplusplus.github.io/CWG/issues/2857.html">2857</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Argument-dependent lookup with incomplete class types</td>
     <td class="none" align="center">No</td>
   </tr>
-  <tr class="open" id="2858">
+  <tr id="2858">
     <td><a href="https://cplusplus.github.io/CWG/issues/2858.html">2858</a></td>
-    <td>tentatively ready</td>
+    <td>accepted</td>
     <td>Declarative <I>nested-name-specifier</I>s and <I>pack-index-specifier</I>s</td>
-    <td title="Clang 19 implements 2024-04-05 resolution" align="center">Not Resolved*</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
-  <tr class="open" id="2859">
+  <tr id="2859">
     <td><a href="https://cplusplus.github.io/CWG/issues/2859.html">2859</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Value-initialization with multiple default constructors</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2860">
     <td><a href="https://cplusplus.github.io/CWG/issues/2860.html">2860</a></td>
@@ -16978,15 +17014,15 @@ objects</td>
     <td>Remove and fix the term "vacuous initialization"</td>
     <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2861">
+  <tr id="2861">
     <td><a href="https://cplusplus.github.io/CWG/issues/2861.html">2861</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td><TT>dynamic_cast</TT> on bad pointer value</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2862">
     <td><a href="https://cplusplus.github.io/CWG/issues/2862.html">2862</a></td>
-    <td>tentatively ready</td>
+    <td>review</td>
     <td>Unclear boundaries of template declarations</td>
     <td align="center">Not resolved</td>
   </tr>
@@ -16996,17 +17032,17 @@ objects</td>
     <td>Unclear synchronization requirements for object lifetime rules</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2864">
+  <tr id="2864">
     <td><a href="https://cplusplus.github.io/CWG/issues/2864.html">2864</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Narrowing floating-point conversions</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2865">
+  <tr id="2865">
     <td><a href="https://cplusplus.github.io/CWG/issues/2865.html">2865</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Regression on result of conditional operator</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2866">
     <td><a href="https://cplusplus.github.io/CWG/issues/2866.html">2866</a></td>
@@ -17014,11 +17050,11 @@ objects</td>
     <td>Observing the effects of <TT>[[no_unique_address]]</TT></td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2867">
+  <tr id="2867">
     <td><a href="https://cplusplus.github.io/CWG/issues/2867.html">2867</a></td>
-    <td>review</td>
+    <td>DR</td>
     <td>Order of initialization for structured bindings</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2868">
     <td><a href="https://cplusplus.github.io/CWG/issues/2868.html">2868</a></td>
@@ -17026,29 +17062,29 @@ objects</td>
     <td>Self-references in trivially copyable objects as function return values</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2869">
+  <tr id="2869">
     <td><a href="https://cplusplus.github.io/CWG/issues/2869.html">2869</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td><TT>this</TT> in local classes</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2870">
+  <tr id="2870">
     <td><a href="https://cplusplus.github.io/CWG/issues/2870.html">2870</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Combining absent <I>encoding-prefix</I>es</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2871">
+  <tr id="2871">
     <td><a href="https://cplusplus.github.io/CWG/issues/2871.html">2871</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>User-declared constructor templates inhibiting default constructors</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2872">
+  <tr id="2872">
     <td><a href="https://cplusplus.github.io/CWG/issues/2872.html">2872</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Linkage and unclear "can be referred to"</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2873">
     <td><a href="https://cplusplus.github.io/CWG/issues/2873.html">2873</a></td>
@@ -17056,29 +17092,29 @@ objects</td>
     <td>Taking the address of a function involving template argument deduction</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2874">
+  <tr id="2874">
     <td><a href="https://cplusplus.github.io/CWG/issues/2874.html">2874</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Qualified declarations of partial specializations</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2875">
     <td><a href="https://cplusplus.github.io/CWG/issues/2875.html">2875</a></td>
-    <td>tentatively ready</td>
+    <td>review</td>
     <td>Missing support for round-tripping null pointer values through indirection/address operators</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2876">
+  <tr id="2876">
     <td><a href="https://cplusplus.github.io/CWG/issues/2876.html">2876</a></td>
-    <td>tentatively ready</td>
+    <td>accepted</td>
     <td>Disambiguation of <TT>T x = delete("text")</TT></td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2877">
+  <tr id="2877">
     <td><a href="https://cplusplus.github.io/CWG/issues/2877.html">2877</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Type-only lookup for <I>using-enum-declarator</I></td>
-    <td title="Clang 19 implements 2024-05-31 resolution" align="center">Not Resolved*</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
   <tr class="open" id="2878">
     <td><a href="https://cplusplus.github.io/CWG/issues/2878.html">2878</a></td>
@@ -17088,33 +17124,33 @@ objects</td>
   </tr>
   <tr class="open" id="2879">
     <td><a href="https://cplusplus.github.io/CWG/issues/2879.html">2879</a></td>
-    <td>drafting</td>
+    <td>review</td>
     <td>Undesired outcomes with <TT>const_cast</TT></td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2880">
+  <tr id="2880">
     <td><a href="https://cplusplus.github.io/CWG/issues/2880.html">2880</a></td>
-    <td>open</td>
+    <td>accepted</td>
     <td>Accessibility check for destructor of incomplete class type</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2881">
+  <tr id="2881">
     <td><a href="https://cplusplus.github.io/CWG/issues/2881.html">2881</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Type restrictions for the explicit object parameter of a lambda</td>
-    <td title="Clang 19 implements 2024-04-19 resolution" align="center">Not Resolved*</td>
+    <td class="full" align="center">Clang 19</td>
   </tr>
-  <tr class="open" id="2882">
+  <tr id="2882">
     <td><a href="https://cplusplus.github.io/CWG/issues/2882.html">2882</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Unclear treatment of conversion to <TT>void</TT></td>
-    <td title="Clang 2.7 implements 2024-05-31 resolution" align="center">Not Resolved*</td>
+    <td class="full" align="center">Clang 2.7</td>
   </tr>
-  <tr class="open" id="2883">
+  <tr id="2883">
     <td><a href="https://cplusplus.github.io/CWG/issues/2883.html">2883</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Definition of "odr-usable" ignores lambda scopes</td>
-    <td title="Clang does not implement 2024-05-31 resolution" align="center">Not Resolved*</td>
+    <td class="none" align="center">No</td>
   </tr>
   <tr id="2884">
     <td><a href="https://cplusplus.github.io/CWG/issues/2884.html">2884</a></td>
@@ -17124,21 +17160,25 @@ objects</td>
   </tr>
   <tr class="open" id="2885">
     <td><a href="https://cplusplus.github.io/CWG/issues/2885.html">2885</a></td>
-    <td>tentatively ready</td>
+    <td>review</td>
     <td>Non-eligible trivial default constructors</td>
-    <td title="Clang 16 implements 2024-05-31 resolution" align="center">Not Resolved*</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 16 implements 2024-05-31 resolution
+      </details></td>
   </tr>
-  <tr class="open" id="2886">
+  <tr id="2886">
     <td><a href="https://cplusplus.github.io/CWG/issues/2886.html">2886</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Temporaries and trivial potentially-throwing special member functions</td>
-    <td title="Clang 9 implements 2024-05-31 resolution" align="center">Not Resolved*</td>
+    <td class="full" align="center">Clang 9</td>
   </tr>
-  <tr class="open" id="2887">
+  <tr id="2887">
     <td><a href="https://cplusplus.github.io/CWG/issues/2887.html">2887</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Missing compatibility entries for xvalues</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2888">
     <td><a href="https://cplusplus.github.io/CWG/issues/2888.html">2888</a></td>
@@ -17158,17 +17198,17 @@ objects</td>
     <td>Defining members of local classes</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2891">
+  <tr id="2891">
     <td><a href="https://cplusplus.github.io/CWG/issues/2891.html">2891</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Normative status of implementation limits</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2892">
+  <tr id="2892">
     <td><a href="https://cplusplus.github.io/CWG/issues/2892.html">2892</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Unclear usual arithmetic conversions</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr id="2893">
     <td><a href="https://cplusplus.github.io/CWG/issues/2893.html">2893</a></td>
@@ -17182,11 +17222,11 @@ objects</td>
     <td>Functional casts create prvalues of reference type</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2895">
+  <tr id="2895">
     <td><a href="https://cplusplus.github.io/CWG/issues/2895.html">2895</a></td>
-    <td>tentatively ready</td>
+    <td>DR</td>
     <td>Initialization should ignore the destination type's cv-qualification</td>
-    <td align="center">Not resolved</td>
+    <td class="unknown" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2896">
     <td><a href="https://cplusplus.github.io/CWG/issues/2896.html">2896</a></td>
@@ -17208,7 +17248,7 @@ objects</td>
   </tr>
   <tr class="open" id="2899">
     <td><a href="https://cplusplus.github.io/CWG/issues/2899.html">2899</a></td>
-    <td>open</td>
+    <td>tentatively ready</td>
     <td>Bad value representations should cause undefined behavior</td>
     <td align="center">Not resolved</td>
   </tr>
@@ -17220,7 +17260,7 @@ objects</td>
   </tr>
   <tr class="open" id="2901">
     <td><a href="https://cplusplus.github.io/CWG/issues/2901.html">2901</a></td>
-    <td>open</td>
+    <td>tentatively ready</td>
     <td>Unclear semantics for near-match aliased access</td>
     <td align="center">Not resolved</td>
   </tr>
@@ -17234,6 +17274,238 @@ objects</td>
     <td><a href="https://cplusplus.github.io/CWG/issues/2903.html">2903</a></td>
     <td>tentatively ready</td>
     <td>Can we omit the <TT>template</TT> disambiguator in <I>nested-name-specifier</I>s in type-only contexts?</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2904">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2904.html">2904</a></td>
+    <td>open</td>
+    <td>Introducing <I>template-name</I>s</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2905">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2905.html">2905</a></td>
+    <td>tentatively ready</td>
+    <td>Value-dependence of <I>noexcept-expression</I></td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2906">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2906.html">2906</a></td>
+    <td>tentatively ready</td>
+    <td>Lvalue-to-rvalue conversion of class types for conditional operator</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2907">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2907.html">2907</a></td>
+    <td>tentatively ready</td>
+    <td>Constant lvalue-to-rvalue conversion on uninitialized <TT>std::nullptr_t</TT></td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2908">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2908.html">2908</a></td>
+    <td>tentatively ready</td>
+    <td>Counting physical source lines for <TT>__LINE__</TT></td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2909">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2909.html">2909</a></td>
+    <td>review</td>
+    <td>Subtle difference between constant-initialized and constexpr</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2910">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2910.html">2910</a></td>
+    <td>tentatively ready</td>
+    <td>Effect of <I>requirement-parameter-list</I>s on odr-usability</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2911">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2911.html">2911</a></td>
+    <td>tentatively ready</td>
+    <td>Unclear meaning of expressions "appearing within" subexpressions</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2912">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2912.html">2912</a></td>
+    <td>open</td>
+    <td>Too-large value for size in array new</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2913">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2913.html">2913</a></td>
+    <td>tentatively ready</td>
+    <td>Grammar for <I>deduction-guide</I> has <I>requires-clause</I> in the wrong position</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 20 implements 2024-08-16 resolution
+      </details></td>
+  </tr>
+  <tr class="open" id="2914">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2914.html">2914</a></td>
+    <td>review</td>
+    <td>Unclear order of initialization of static and thread-local variables</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2915">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2915.html">2915</a></td>
+    <td>tentatively ready</td>
+    <td>Explicit object parameters of type <TT>void</TT></td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 20 implements 2024-08-16 resolution
+      </details></td>
+  </tr>
+  <tr class="open" id="2916">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2916.html">2916</a></td>
+    <td>review</td>
+    <td>Variable template partial specializations should not be declared <TT>static</TT></td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2917">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2917.html">2917</a></td>
+    <td>review</td>
+    <td>Disallow multiple <I>friend-type-specifier</I>s for a friend template</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 20 implements 2024-07-30 resolution
+      </details></td>
+  </tr>
+  <tr class="open" id="2918">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2918.html">2918</a></td>
+    <td>tentatively ready</td>
+    <td>Consideration of constraints for address of overloaded function</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2919">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2919.html">2919</a></td>
+    <td>tentatively ready</td>
+    <td>Conversion function candidates for initialization of const lvalue reference</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2920">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2920.html">2920</a></td>
+    <td>open</td>
+    <td>The <TT>template</TT> keyword for base classes</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2921">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2921.html">2921</a></td>
+    <td>tentatively ready</td>
+    <td>Exporting redeclarations of entities not attached to a named module</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2922">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2922.html">2922</a></td>
+    <td>tentatively ready</td>
+    <td>constexpr placement-new is too permissive</td>
+    <td align="center">
+      <details>
+        <summary>Not resolved</summary>
+        Clang 20 implements 2024-07-10 resolution
+      </details></td>
+  </tr>
+  <tr class="open" id="2923">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2923.html">2923</a></td>
+    <td>tentatively ready</td>
+    <td>Note about infinite loops and execution steps</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2924">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2924.html">2924</a></td>
+    <td>review</td>
+    <td>Undefined behavior during constant evaluation</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2925">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2925.html">2925</a></td>
+    <td>NAD</td>
+    <td>Deleting a pointer to an incomplete enumeration type</td>
+    <td class="unknown" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2926">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2926.html">2926</a></td>
+    <td>open</td>
+    <td>Lookup context for dependent qualified names</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2927">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2927.html">2927</a></td>
+    <td>tentatively ready</td>
+    <td>Unclear status of translation unit with <TT>module</TT> keyword</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2928">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2928.html">2928</a></td>
+    <td>open</td>
+    <td>No ordering for initializing thread-local variables</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2929">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2929.html">2929</a></td>
+    <td>tentatively ready</td>
+    <td>Lifetime of trivially-destructible static or thread-local objects</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2930">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2930.html">2930</a></td>
+    <td>tentatively ready</td>
+    <td>Unclear term "copy/move operation" in specification of copy elision</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2931">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2931.html">2931</a></td>
+    <td>tentatively ready</td>
+    <td>Restrictions on operator functions that are explicit object member functions</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2932">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2932.html">2932</a></td>
+    <td>review</td>
+    <td>Value range of empty enumeration</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2933">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2933.html">2933</a></td>
+    <td>open</td>
+    <td>Dangling references</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2934">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2934.html">2934</a></td>
+    <td>open</td>
+    <td>Unclear semantics of exception escaping from <TT>unhandled_exception</TT></td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2935">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2935.html">2935</a></td>
+    <td>open</td>
+    <td>Destroying the coroutine state when initial-await-resume-called is false</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2936">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2936.html">2936</a></td>
+    <td>open</td>
+    <td>Local classes of templated functions should be part of the current instantiation</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2937">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2937.html">2937</a></td>
+    <td>open</td>
+    <td>Grammar for <I>preprocessing-file</I> has no normative effect</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2938">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2938.html">2938</a></td>
+    <td>open</td>
+    <td>Inheriting linkage from a previous declaration</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2939">
+    <td><a href="https://cplusplus.github.io/CWG/issues/2939.html">2939</a></td>
+    <td>open</td>
+    <td>Do not allow <TT>reinterpret_cast</TT> from prvalue to rvalue reference</td>
     <td align="center">Not resolved</td>
   </tr></table>
 

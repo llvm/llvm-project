@@ -81,7 +81,10 @@ class DAPTestCaseBase(TestBase):
                 body = stopped_event["body"]
                 if "reason" not in body:
                     continue
-                if body["reason"] != "breakpoint":
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
                     continue
                 if "description" not in body:
                     continue
@@ -100,13 +103,14 @@ class DAPTestCaseBase(TestBase):
                         return
         self.assertTrue(False, "breakpoint not hit")
 
-    def verify_stop_exception_info(self, expected_description):
+    def verify_stop_exception_info(self, expected_description, timeout=timeoutval):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
         """
-        stopped_events = self.dap_server.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped(timeout=timeout)
         for stopped_event in stopped_events:
+            print("stopped_event", stopped_event)
             if "body" in stopped_event:
                 body = stopped_event["body"]
                 if "reason" not in body:
@@ -177,6 +181,10 @@ class DAPTestCaseBase(TestBase):
         )
         return stackFrames
 
+    def get_exceptionInfo(self, threadId=None):
+        response = self.dap_server.request_exceptionInfo(threadId=threadId)
+        return self.get_dict_value(response, ["body"])
+
     def get_source_and_line(self, threadId=None, frameIndex=0):
         stackFrames = self.get_stackFrames(
             threadId=threadId, startFrame=frameIndex, levels=1
@@ -202,6 +210,11 @@ class DAPTestCaseBase(TestBase):
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
+        )
+
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
         # 'value' may have the variable value and summary.
@@ -222,14 +235,18 @@ class DAPTestCaseBase(TestBase):
         """Set a top level global variable only."""
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
-    def stepIn(self, threadId=None, targetId=None, waitForStop=True):
-        self.dap_server.request_stepIn(threadId=threadId, targetId=targetId)
+    def stepIn(
+        self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
+    ):
+        self.dap_server.request_stepIn(
+            threadId=threadId, targetId=targetId, granularity=granularity
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
 
-    def stepOver(self, threadId=None, waitForStop=True):
-        self.dap_server.request_next(threadId=threadId)
+    def stepOver(self, threadId=None, waitForStop=True, granularity="statement"):
+        self.dap_server.request_next(threadId=threadId, granularity=granularity)
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
@@ -350,7 +367,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -369,6 +386,7 @@ class DAPTestCaseBase(TestBase):
         expectFailure=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -410,6 +428,7 @@ class DAPTestCaseBase(TestBase):
             runInTerminal=runInTerminal,
             postRunCommands=postRunCommands,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
+            displayExtendedBacktrace=displayExtendedBacktrace,
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
@@ -432,7 +451,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -449,6 +468,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         lldbDAPEnv=None,
         enableAutoVariableSummaries=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -485,6 +505,7 @@ class DAPTestCaseBase(TestBase):
             postRunCommands=postRunCommands,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
+            displayExtendedBacktrace=displayExtendedBacktrace,
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
             customThreadFormat=customThreadFormat,

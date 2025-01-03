@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -1349,7 +1350,7 @@ bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
 
   // Make sure that we have compatible qualifiers.
   FromQuals.setObjCLifetime(Qualifiers::OCL_Autoreleasing);
-  if (!ToQuals.compatiblyIncludes(FromQuals))
+  if (!ToQuals.compatiblyIncludes(FromQuals, getASTContext()))
     return false;
 
   // Remove qualifiers from the pointee type we're converting from; they

@@ -1,8 +1,8 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zhinx -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zhinx -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+zhinx \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zhinx -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zhinx -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zhinx \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
@@ -23,6 +23,9 @@
 ## Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 ##===----------------------------------------------------------------------===##
 
+# CHECK-INST: fsgnj.h s1, s2, s2
+# CHECK-ALIAS: fmv.h s1, s2
+fmv.h s1, s2
 # CHECK-INST: fsgnjx.h s1, s2, s2
 # CHECK-ALIAS: fabs.h s1, s2
 fabs.h s1, s2

@@ -51,10 +51,10 @@ end subroutine target_allocatable
 !
 ! CHECK:      omp.private {type = private}
 ! CHECK-SAME:   @[[COMP_PRIVATIZER_SYM:[^[:space:]]+comp_var[^[:space:]]+]]
-! CHECK-SAME:   : [[COMP_TYPE:!fir.ref<!fir.complex<4>>]] alloc {
+! CHECK-SAME:   : [[COMP_TYPE:!fir.ref<complex<f32>>]] alloc {
 !
 ! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[COMP_TYPE]]):
-! CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.complex<4>
+! CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca complex<f32>
 ! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
 ! CHECK-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : [[COMP_TYPE]])
 ! CHECK-NEXT: }
@@ -147,21 +147,38 @@ end subroutine target_allocatable
 ! CHECK-NEXT: }
 
 ! CHECK:      func.func @_QPtarget_allocatable
+! CHECK:        %[[CHAR_VAR_DESC_ALLOCA:.*]] = fir.alloca !fir.boxchar<1>
+! CHECK:        %[[REAL_ARR_DESC_ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
+! CHECK:        %[[ALLOC_VAR_ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "alloc_var", {{.*}}}
+! CHECK:        %[[ALLOC_VAR_DECL:.*]]:2 = hlfir.declare %[[ALLOC_VAR_ALLOCA]]
 ! CHECK:        %[[MAPPED_ALLOC:.*]] = fir.alloca i32 {bindc_name = "mapped_var", {{.*}}}
 ! CHECK-NEXT:   %[[MAPPED_DECL:.*]]:2 = hlfir.declare %[[MAPPED_ALLOC]]
-! CHECK:        %[[MAPPED_MI:.*]] = omp.map.info var_ptr(%[[MAPPED_DECL]]#1 : !fir.ref<i32>, i32)
-
+! CHECK:        %[[CHAR_VAR_ALLOC:.*]] = fir.alloca !fir.char<1,?>{{.*}} {bindc_name = "char_var", {{.*}}}
+! CHECK:        %[[CHAR_VAR_DECL:.*]]:2 = hlfir.declare %[[CHAR_VAR_ALLOC]] typeparams
+! CHECK:        %[[REAL_ARR_ALLOC:.*]] = fir.alloca !fir.array<?xf32>, {{.*}} {bindc_name = "real_arr", {{.*}}}
+! CHECK:        %[[REAL_ARR_DECL:.*]]:2 = hlfir.declare %[[REAL_ARR_ALLOC]]({{.*}})
+! CHECK:        %[[MAPPED_MI0:.*]] = omp.map.info var_ptr(%[[MAPPED_DECL]]#1 : !fir.ref<i32>, i32) {{.*}}
+! CHECK:        %[[ALLOC_VAR_MAP:.*]] = omp.map.info var_ptr(%[[ALLOC_VAR_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>)
+! CHECK:        fir.store %[[REAL_ARR_DECL]]#0 to %[[REAL_ARR_DESC_ALLOCA]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
+! CHECK:        %[[REAL_ARR_DESC_MAP:.*]] = omp.map.info var_ptr(%[[REAL_ARR_DESC_ALLOCA]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:        fir.store %[[CHAR_VAR_DECL]]#0 to %[[CHAR_VAR_DESC_ALLOCA]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:        %[[CHAR_VAR_DESC_MAP:.*]] = omp.map.info var_ptr(%[[CHAR_VAR_DESC_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>)
 ! CHECK:        omp.target
-! CHECK-SAME:     map_entries(%[[MAPPED_MI]] -> %[[MAPPED_ARG:.*]] : !fir.ref<i32>)
+! CHECK-SAME:     map_entries(
+! CHECK-SAME:       %[[MAPPED_MI0]] -> %[[MAPPED_ARG0:[^,]+]],
+! CHECK-SAME:       %[[ALLOC_VAR_MAP]] -> %[[MAPPED_ARG1:[^,]+]]
+! CHECK-SAME        %[[REAL_ARR_DESC_MAP]] -> %[[MAPPED_ARG2:[^,]+]]
+! CHECK_SAME        %[[CHAR_VAR_DESC_MAP]] -> %[[MAPPED_ARG3:.[^,]+]] :
+! CHECK-SAME        !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<!fir.boxchar<1>>)
 ! CHECK-SAME:     private(
-! CHECK-SAME:       @[[ALLOC_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[ALLOC_ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>,
-! CHECK-SAME:       @[[REAL_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[REAL_ARG:.*]] : !fir.ref<f32>,
-! CHECK-SAME:       @[[LB_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[LB_ARG:.*]] : !fir.ref<i64>,
-! CHECK-SAME:       @[[ARR_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[ARR_ARG:.*]] : !fir.box<!fir.array<?xf32>>,
-! CHECK-SAME:       @[[COMP_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[COMP_ARG:.*]] : !fir.ref<!fir.complex<4>>,
-! CHECK-SAME:       @[[CHAR_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[CHAR_ARG:.*]] : !fir.boxchar<1>) {
+! CHECK-SAME:       @[[ALLOC_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[ALLOC_ARG:[^,]+]] [map_idx=1],
+! CHECK-SAME:       @[[REAL_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[REAL_ARG:[^,]+]],
+! CHECK-SAME:       @[[LB_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[LB_ARG:[^,]+]],
+! CHECK-SAME:       @[[ARR_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[ARR_ARG:[^,]+]] [map_idx=2],
+! CHECK-SAME:       @[[COMP_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[COMP_ARG:[^,]+]],
+! CHECK-SAME:       @[[CHAR_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[CHAR_ARG:[^,]+]] [map_idx=3] :
+! CHECK-SAME:       !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<f32>, !fir.ref<i64>, !fir.box<!fir.array<?xf32>>, !fir.ref<complex<f32>>, !fir.boxchar<1>) {
 ! CHECK-NOT:      fir.alloca
-! CHECK:          hlfir.declare %[[MAPPED_ARG]]
 ! CHECK:          hlfir.declare %[[ALLOC_ARG]]
 ! CHECK:          hlfir.declare %[[REAL_ARG]]
 ! CHECK:          hlfir.declare %[[LB_ARG]]

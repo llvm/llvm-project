@@ -355,7 +355,7 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
 
   // Swap bytes if required.
   if (BSwapSizeType) {
-    Function *Bswap = Intrinsic::getDeclaration(
+    Function *Bswap = Intrinsic::getOrInsertDeclaration(
         CI->getModule(), Intrinsic::bswap, BSwapSizeType);
     Lhs = Builder.CreateCall(Bswap, Lhs);
     Rhs = Builder.CreateCall(Bswap, Rhs);
@@ -590,7 +590,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
                                   ResBlock.PhiSrc2);
 
   Value *Res =
-      Builder.CreateSelect(Cmp, ConstantInt::get(Builder.getInt32Ty(), -1),
+      Builder.CreateSelect(Cmp, Constant::getAllOnesValue(Builder.getInt32Ty()),
                            ConstantInt::get(Builder.getInt32Ty(), 1));
 
   PhiRes->addIncoming(Res, ResBlock.BB);
@@ -668,16 +668,16 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
   // We can generate more optimal code with a smaller number of operations
   if (CI->hasOneUser()) {
     auto *UI = cast<Instruction>(*CI->user_begin());
-    ICmpInst::Predicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
-    uint64_t Shift;
+    CmpPredicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
     bool NeedsZExt = false;
     // This is a special case because instead of checking if the result is less
     // than zero:
     //    bool result = memcmp(a, b, NBYTES) < 0;
     // Compiler is clever enough to generate the following code:
     //    bool result = memcmp(a, b, NBYTES) >> 31;
-    if (match(UI, m_LShr(m_Value(), m_ConstantInt(Shift))) &&
-        Shift == (CI->getType()->getIntegerBitWidth() - 1)) {
+    if (match(UI,
+              m_LShr(m_Value(),
+                     m_SpecificInt(CI->getType()->getIntegerBitWidth() - 1)))) {
       Pred = ICmpInst::ICMP_SLT;
       NeedsZExt = true;
     } else {
@@ -686,7 +686,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     }
     // Generate new code and remove the original memcmp call and the user
     if (ICmpInst::isSigned(Pred)) {
-      Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred),
+      Value *Cmp = Builder.CreateICmp(ICmpInst::getUnsignedPredicate(Pred),
                                       Loads.Lhs, Loads.Rhs);
       auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, UI->getType()) : Cmp;
       UI->replaceAllUsesWith(Result);
@@ -696,17 +696,9 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     }
   }
 
-  // The result of memcmp is negative, zero, or positive, so produce that by
-  // subtracting 2 extended compare bits: sub (ugt, ult).
-  // If a target prefers to use selects to get -1/0/1, they should be able
-  // to transform this later. The inverse transform (going from selects to math)
-  // may not be possible in the DAG because the selects got converted into
-  // branches before we got there.
-  Value *CmpUGT = Builder.CreateICmpUGT(Loads.Lhs, Loads.Rhs);
-  Value *CmpULT = Builder.CreateICmpULT(Loads.Lhs, Loads.Rhs);
-  Value *ZextUGT = Builder.CreateZExt(CmpUGT, Builder.getInt32Ty());
-  Value *ZextULT = Builder.CreateZExt(CmpULT, Builder.getInt32Ty());
-  return Builder.CreateSub(ZextUGT, ZextULT);
+  // The result of memcmp is negative, zero, or positive.
+  return Builder.CreateIntrinsic(Builder.getInt32Ty(), Intrinsic::ucmp,
+                                 {Loads.Lhs, Loads.Rhs});
 }
 
 // This function expands the memcmp call into an inline expansion and returns
@@ -852,8 +844,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   // available load sizes.
   const bool IsUsedForZeroCmp =
       IsBCmp || isOnlyUsedInZeroEqualityComparison(CI);
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
+  bool OptForSize = llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
   auto Options = TTI->enableMemCmpExpansion(OptForSize,
                                             IsUsedForZeroCmp);
   if (!Options) return false;

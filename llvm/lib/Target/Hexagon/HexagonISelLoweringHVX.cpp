@@ -1203,8 +1203,9 @@ HexagonTargetLowering::insertHvxElementReg(SDValue VecV, SDValue IdxV,
                                      SDValue ByteIdxV) {
     MVT VecTy = ty(VecV);
     unsigned HwLen = Subtarget.getVectorLength();
-    SDValue MaskV = DAG.getNode(ISD::AND, dl, MVT::i32,
-                                {ByteIdxV, DAG.getConstant(-4, dl, MVT::i32)});
+    SDValue MaskV =
+        DAG.getNode(ISD::AND, dl, MVT::i32,
+                    {ByteIdxV, DAG.getSignedConstant(-4, dl, MVT::i32)});
     SDValue RotV = DAG.getNode(HexagonISD::VROR, dl, VecTy, {VecV, MaskV});
     SDValue InsV = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy, {RotV, ValV});
     SDValue SubV = DAG.getNode(ISD::SUB, dl, MVT::i32,
@@ -1574,9 +1575,10 @@ HexagonTargetLowering::resizeToWidth(SDValue VecV, MVT ResTy, bool Signed,
   unsigned ResWidth = ResTy.getSizeInBits();
 
   if (InpTy.isFloatingPoint()) {
-    return InpWidth < ResWidth ? DAG.getNode(ISD::FP_EXTEND, dl, ResTy, VecV)
-                               : DAG.getNode(ISD::FP_ROUND, dl, ResTy, VecV,
-                                             getZero(dl, MVT::i32, DAG));
+    return InpWidth < ResWidth
+               ? DAG.getNode(ISD::FP_EXTEND, dl, ResTy, VecV)
+               : DAG.getNode(ISD::FP_ROUND, dl, ResTy, VecV,
+                             DAG.getTargetConstant(0, dl, MVT::i32));
   }
 
   assert(InpTy.isInteger());
@@ -1725,7 +1727,7 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
       return DAG.getNode(HexagonISD::QCAT, dl, VecTy, Op0, Op.getOperand(1));
 
     ArrayRef<SDUse> U(Op.getNode()->ops());
-    SmallVector<SDValue,4> SV(U.begin(), U.end());
+    SmallVector<SDValue, 4> SV(U);
     ArrayRef<SDValue> Ops(SV);
 
     MVT HalfTy = typeSplit(VecTy).first;
@@ -1748,7 +1750,7 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
 
   unsigned InpLen = ty(Op.getOperand(0)).getVectorNumElements();
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
-  SDValue S = DAG.getConstant(InpLen*BitBytes, dl, MVT::i32);
+  SDValue S = DAG.getConstant(HwLen - InpLen*BitBytes, dl, MVT::i32);
   SDValue Res = getZero(dl, ByteTy, DAG);
   for (unsigned i = 0, e = Prefixes.size(); i != e; ++i) {
     Res = DAG.getNode(HexagonISD::VROR, dl, ByteTy, Res, S);
@@ -1882,7 +1884,7 @@ HexagonTargetLowering::LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const {
   SDValue VecW = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                              DAG.getConstant(ElemWidth, dl, MVT::i32));
   SDValue VecN1 = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
-                              DAG.getConstant(-1, dl, MVT::i32));
+                              DAG.getAllOnesConstant(dl, MVT::i32));
 
   // Do not use DAG.getNOT, because that would create BUILD_VECTOR with
   // a BITCAST. Here we can skip the BITCAST (so we don't have to handle
@@ -2128,7 +2130,7 @@ SDValue
 HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   unsigned IntNo = Op.getConstantOperandVal(0);
-  SmallVector<SDValue> Ops(Op->ops().begin(), Op->ops().end());
+  SmallVector<SDValue> Ops(Op->ops());
 
   auto Swap = [&](SDValue P) {
     return DAG.getMergeValues({P.getValue(1), P.getValue(0)}, dl);
@@ -2264,7 +2266,7 @@ SDValue HexagonTargetLowering::LowerHvxFpExtend(SDValue Op,
 
   SDValue ShuffVec =
       getInstr(Hexagon::V6_vshuffvdd, dl, VecTy,
-               {HiVec, LoVec, DAG.getConstant(-4, dl, MVT::i32)}, DAG);
+               {HiVec, LoVec, DAG.getSignedConstant(-4, dl, MVT::i32)}, DAG);
 
   return ShuffVec;
 }
@@ -2416,7 +2418,7 @@ HexagonTargetLowering::emitHvxAddWithOverflow(SDValue A, SDValue B,
   // i.e. (~A xor B) & ((A+B) xor B), then check the sign bit
   SDValue Add = DAG.getNode(ISD::ADD, dl, ResTy, {A, B});
   SDValue NotA =
-      DAG.getNode(ISD::XOR, dl, ResTy, {A, DAG.getConstant(-1, dl, ResTy)});
+      DAG.getNode(ISD::XOR, dl, ResTy, {A, DAG.getAllOnesConstant(dl, ResTy)});
   SDValue Xor0 = DAG.getNode(ISD::XOR, dl, ResTy, {NotA, B});
   SDValue Xor1 = DAG.getNode(ISD::XOR, dl, ResTy, {Add, B});
   SDValue And = DAG.getNode(ISD::AND, dl, ResTy, {Xor0, Xor1});
@@ -3589,7 +3591,7 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   SDValue Op(N, 0);
   unsigned Opc = Op.getOpcode();
 
-  SmallVector<SDValue, 4> Ops(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue, 4> Ops(N->ops());
 
   if (Opc == ISD::TRUNCATE)
     return combineTruncateBeforeLegal(Op, DCI);
@@ -3620,7 +3622,7 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     case HexagonISD::Q2V:
       if (Ops[0].getOpcode() == HexagonISD::QTRUE)
         return DAG.getNode(ISD::SPLAT_VECTOR, dl, ty(Op),
-                           DAG.getConstant(-1, dl, MVT::i32));
+                           DAG.getAllOnesConstant(dl, MVT::i32));
       if (Ops[0].getOpcode() == HexagonISD::QFALSE)
         return getZero(dl, ty(Op), DAG);
       break;

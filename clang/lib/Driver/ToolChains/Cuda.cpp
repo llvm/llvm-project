@@ -17,6 +17,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -86,6 +87,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_124;
   if (raw_version < 12060)
     return CudaVersion::CUDA_125;
+  if (raw_version < 12070)
+    return CudaVersion::CUDA_126;
   return CudaVersion::NEW;
 }
 
@@ -596,14 +599,16 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  if (GPUArch.empty()) {
+  if (GPUArch.empty() && !C.getDriver().isUsingLTO()) {
     C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
         << getToolChain().getArchName() << getShortName();
     return;
   }
 
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  if (!GPUArch.empty()) {
+    CmdArgs.push_back("-arch");
+    CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  }
 
   if (Args.hasArg(options::OPT_ptxas_path_EQ))
     CmdArgs.push_back(Args.MakeArgString(
@@ -629,16 +634,25 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::vector<StringRef> Features;
   getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
                          Features);
-  for (StringRef Feature : Features)
-    CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
-
-  addGPULibraries(getToolChain(), Args, CmdArgs);
+  CmdArgs.push_back(
+      Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
+
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
 
   C.addCommand(std::make_unique<Command>(
       JA, *this,
@@ -668,6 +682,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(126, 85);
     CASE_CUDA_VERSION(125, 85);
     CASE_CUDA_VERSION(124, 84);
     CASE_CUDA_VERSION(123, 83);
@@ -690,6 +705,10 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CASE_CUDA_VERSION(91, 61);
     CASE_CUDA_VERSION(90, 60);
 #undef CASE_CUDA_VERSION
+  // TODO: Use specific CUDA version once it's public.
+  case clang::CudaVersion::NEW:
+    PtxFeature = "+ptx86";
+    break;
   default:
     PtxFeature = "+ptx42";
   }
@@ -802,7 +821,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -832,22 +851,24 @@ void CudaToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-  assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
           DeviceOffloadingKind == Action::OFK_Cuda) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  if (DeviceOffloadingKind == Action::OFK_Cuda) {
-    CC1Args.append(
-        {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
+  CC1Args.append({"-fcuda-is-device", "-mllvm",
+                  "-enable-memcpyopt-without-libcalls",
+                  "-fno-threadsafe-statics"});
 
-    // Unsized function arguments used for variadics were introduced in CUDA-9.0
-    // We still do not support generating code that actually uses variadic
-    // arguments yet, but we do need to allow parsing them as recent CUDA
-    // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
-    if (CudaInstallation.version() >= CudaVersion::CUDA_90)
-      CC1Args.push_back("-fcuda-allow-variadic-functions");
-  }
+  // Unsized function arguments used for variadics were introduced in CUDA-9.0
+  // We still do not support generating code that actually uses variadic
+  // arguments yet, but we do need to allow parsing them as recent CUDA
+  // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
+  if (CudaInstallation.version() >= CudaVersion::CUDA_90)
+    CC1Args.push_back("-fcuda-allow-variadic-functions");
+
+  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
+                         options::OPT_fno_cuda_short_ptr, false))
+    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
@@ -865,11 +886,14 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
-  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
+  // For now, we don't use any Offload/OpenMP device runtime when we offload
+  // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
+  // and include the "generic" (or CUDA-specific) parts.
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false))
+    return;
 
-  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
-                         options::OPT_fno_cuda_short_ptr, false))
-    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
+  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 
   if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
     CC1Args.push_back(
@@ -885,7 +909,7 @@ void CudaToolChain::addClangTargetOptions(
     }
 
     // Link the bitcode library late if we're using device LTO.
-    if (getDriver().isUsingLTO(/* IsOffload */ true))
+    if (getDriver().isUsingOffloadLTO())
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),

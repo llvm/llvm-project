@@ -15,14 +15,12 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -531,6 +529,10 @@ static ExprResult calculateConstraintSatisfaction(
 
     std::optional<unsigned>
     EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) const {
+
+      // We should ignore errors in the presence of packs of different size.
+      Sema::SFINAETrap Trap(S);
+
       Expr *Pattern = FE->getPattern();
 
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -582,7 +584,7 @@ static bool CheckConstraintSatisfaction(
   ArrayRef<TemplateArgument> TemplateArgs =
       TemplateArgsLists.getNumSubstitutedLevels() > 0
           ? TemplateArgsLists.getOutermost()
-          : ArrayRef<TemplateArgument> {};
+          : ArrayRef<TemplateArgument>{};
   Sema::InstantiatingTemplate Inst(S, TemplateIDRange.getBegin(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
       const_cast<NamedDecl *>(Template), TemplateArgs, TemplateIDRange);
@@ -712,8 +714,8 @@ bool Sema::addInstantiatedCapturesToScope(
   auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
                               unsigned Index) {
     ValueDecl *CapturedVar = LambdaClass->getCapture(Index)->getCapturedVar();
-    if (CapturedVar->isInitCapture())
-      Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
+    assert(CapturedVar->isInitCapture());
+    Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
   };
 
   for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
@@ -721,13 +723,22 @@ bool Sema::addInstantiatedCapturesToScope(
       Instantiated++;
       continue;
     }
-    const ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+    ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+
+    if (!CapturedPattern->isInitCapture()) {
+      Instantiated++;
+      continue;
+    }
+
     if (!CapturedPattern->isParameterPack()) {
       AddSingleCapture(CapturedPattern, Instantiated++);
     } else {
       Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
-      std::optional<unsigned> NumArgumentsInExpansion =
-          getNumArgumentsInExpansion(CapturedPattern->getType(), TemplateArgs);
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      SemaRef.collectUnexpandedParameterPacks(
+          dyn_cast<VarDecl>(CapturedPattern)->getInit(), Unexpanded);
+      auto NumArgumentsInExpansion =
+          getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
       if (!NumArgumentsInExpansion)
         continue;
       for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)
@@ -963,10 +974,36 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // parameters that the surrounding function hasn't been instantiated yet. Note
   // this may happen while we're comparing two templates' constraint
   // equivalence.
-  LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
-    for (auto *PVD : FD->parameters())
-      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+  std::optional<LocalInstantiationScope> ScopeForParameters;
+  if (const NamedDecl *ND = DeclInfo.getDecl();
+      ND && ND->isFunctionOrFunctionTemplate()) {
+    ScopeForParameters.emplace(S, /*CombineWithOuterScope=*/true);
+    const FunctionDecl *FD = ND->getAsFunction();
+    for (auto *PVD : FD->parameters()) {
+      if (!PVD->isParameterPack()) {
+        ScopeForParameters->InstantiatedLocal(PVD, PVD);
+        continue;
+      }
+      // This is hacky: we're mapping the parameter pack to a size-of-1 argument
+      // to avoid building SubstTemplateTypeParmPackTypes for
+      // PackExpansionTypes. The SubstTemplateTypeParmPackType node would
+      // otherwise reference the AssociatedDecl of the template arguments, which
+      // is, in this case, the template declaration.
+      //
+      // However, as we are in the process of comparing potential
+      // re-declarations, the canonical declaration is the declaration itself at
+      // this point. So if we didn't expand these packs, we would end up with an
+      // incorrect profile difference because we will be profiling the
+      // canonical types!
+      //
+      // FIXME: Improve the "no-transform" machinery in FindInstantiatedDecl so
+      // that we can eliminate the Scope in the cases where the declarations are
+      // not necessarily instantiated. It would also benefit the noexcept
+      // specifier comparison.
+      ScopeForParameters->MakeInstantiatedLocalArgPack(PVD);
+      ScopeForParameters->InstantiatedLocalPackArg(PVD, PVD);
+    }
+  }
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
 
@@ -978,7 +1015,14 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // possible that e.g. constraints involving C<Class<T>> and C<Class> are
   // perceived identical.
   std::optional<Sema::ContextRAII> ContextScope;
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext())) {
+  const DeclContext *DC = [&] {
+    if (!DeclInfo.getDecl())
+      return DeclInfo.getDeclContext();
+    return DeclInfo.getDecl()->getFriendObjectKind()
+               ? DeclInfo.getLexicalDeclContext()
+               : DeclInfo.getDeclContext();
+  }();
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
     ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
                          /*NewThisContext=*/false);
@@ -1340,8 +1384,7 @@ static void diagnoseUnsatisfiedConstraintExpr(
     return;
   }
 
-  diagnoseWellFormedUnsatisfiedConstraintExpr(S,
-      Record.template get<Expr *>(), First);
+  diagnoseWellFormedUnsatisfiedConstraintExpr(S, cast<Expr *>(Record), First);
 }
 
 void
@@ -1457,8 +1500,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
           : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
   Sema::InstantiatingTemplate Inst(
       S, InstLocBegin,
-      Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
-      {InstLocBegin, InstLocEnd});
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      Atomic.ConstraintDecl, {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
@@ -1513,12 +1556,12 @@ NormalizedConstraint::NormalizedConstraint(ASTContext &C,
 
 NormalizedConstraint &NormalizedConstraint::getLHS() const {
   assert(isCompound() && "getLHS called on a non-compound constraint.");
-  return Constraint.get<CompoundConstraint>().getPointer()->LHS;
+  return cast<CompoundConstraint>(Constraint).getPointer()->LHS;
 }
 
 NormalizedConstraint &NormalizedConstraint::getRHS() const {
   assert(isCompound() && "getRHS called on a non-compound constraint.");
-  return Constraint.get<CompoundConstraint>().getPointer()->RHS;
+  return cast<CompoundConstraint>(Constraint).getPointer()->RHS;
 }
 
 std::optional<NormalizedConstraint>
@@ -1632,7 +1675,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
         Kind, std::move(*Sub), FE->getPattern()}};
   }
 
-  return NormalizedConstraint{new (S.Context) AtomicConstraint(S, E)};
+  return NormalizedConstraint{new (S.Context) AtomicConstraint(E, D)};
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(
@@ -1915,3 +1958,21 @@ concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T) :
     Value(T),
     Status(T->getType()->isInstantiationDependentType() ? SS_Dependent
                                                         : SS_Satisfied) {}
+
+NormalizedConstraint::CompoundConstraintKind
+NormalizedConstraint::getCompoundKind() const {
+  assert(isCompound() && "getCompoundKind on a non-compound constraint..");
+  return cast<CompoundConstraint>(Constraint).getInt();
+}
+
+AtomicConstraint *NormalizedConstraint::getAtomicConstraint() const {
+  assert(isAtomic() && "getAtomicConstraint called on non-atomic constraint.");
+  return cast<AtomicConstraint *>(Constraint);
+}
+
+FoldExpandedConstraint *
+NormalizedConstraint::getFoldExpandedConstraint() const {
+  assert(isFoldExpanded() &&
+         "getFoldExpandedConstraint called on non-fold-expanded constraint.");
+  return cast<FoldExpandedConstraint *>(Constraint);
+}

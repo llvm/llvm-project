@@ -10,12 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
+#include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
 #include <stack>
@@ -415,6 +418,13 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
       return new (S.Context) NoEscapeAttr(S.Context, getPlaceholderAttrInfo());
     });
 
+  if (auto Lifetimebound = Info.isLifetimebound())
+    handleAPINotedAttribute<LifetimeBoundAttr>(
+        S, D, *Lifetimebound, Metadata, [&] {
+          return new (S.Context)
+              LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
+        });
+
   // Retain count convention
   handleAPINotedRetainCountConvention(S, D, Metadata,
                                       Info.getRetainCountConvention());
@@ -427,6 +437,15 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
 /// Process API notes for a global variable.
 static void ProcessAPINotes(Sema &S, VarDecl *D,
                             const api_notes::GlobalVariableInfo &Info,
+                            VersionedInfoMetadata metadata) {
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
+                  metadata);
+}
+
+/// Process API notes for a C field.
+static void ProcessAPINotes(Sema &S, FieldDecl *D,
+                            const api_notes::FieldInfo &Info,
                             VersionedInfoMetadata metadata) {
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
@@ -463,7 +482,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
-    MD = AnyFunc.get<ObjCMethodDecl *>();
+    MD = cast<ObjCMethodDecl *>(AnyFunc);
     D = MD;
   }
 
@@ -491,6 +510,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     if (ParamTypeBefore.getAsOpaquePtr() != Param->getType().getAsOpaquePtr())
       AnyTypeChanged = true;
   }
+
+  // returns_(un)retained
+  if (!Info.SwiftReturnOwnership.empty())
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     "returns_" + Info.SwiftReturnOwnership));
 
   // Result type override.
   QualType OverriddenResultType;
@@ -550,6 +574,21 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
                             const api_notes::CXXMethodInfo &Info,
                             VersionedInfoMetadata Metadata) {
+  if (Info.This && Info.This->isLifetimebound() &&
+      !sema::implicitObjectParamIsLifetimeBound(Method)) {
+    auto MethodType = Method->getType();
+    auto *attr = ::new (S.Context)
+        LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
+    QualType AttributedType =
+        S.Context.getAttributedType(attr, MethodType, MethodType);
+    TypeLocBuilder TLB;
+    TLB.pushFullCopy(Method->getTypeSourceInfo()->getTypeLoc());
+    AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+    TyLoc.setAttr(attr);
+    Method->setType(AttributedType);
+    Method->setTypeSourceInfo(TLB.getTypeSourceInfo(S.Context, AttributedType));
+  }
+
   ProcessAPINotes(S, (FunctionOrMethod)Method, Info, Metadata);
 }
 
@@ -605,9 +644,18 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
 
+  if (auto ConformsTo = Info.SwiftConformance)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
       D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+  }
+
+  if (auto Escapable = Info.isSwiftEscapable()) {
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     *Escapable ? "Escapable" : "~Escapable"));
   }
 
   if (auto Extensibility = Info.EnumExtensibility) {
@@ -847,13 +895,12 @@ void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
 
+  auto *DC = D->getDeclContext();
   // Globals.
-  if (D->getDeclContext()->isFileContext() ||
-      D->getDeclContext()->isNamespace() ||
-      D->getDeclContext()->isExternCContext() ||
-      D->getDeclContext()->isExternCXXContext()) {
+  if (DC->isFileContext() || DC->isNamespace() || DC->isExternCContext() ||
+      DC->isExternCXXContext()) {
     std::optional<api_notes::Context> APINotesContext =
-        UnwindNamespaceContext(D->getDeclContext(), APINotes);
+        UnwindNamespaceContext(DC, APINotes);
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
@@ -900,7 +947,15 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      std::string LookupName = Tag->getName().str();
+      // Determine the name of the entity to search for. If this is an
+      // anonymous tag that gets its linked name from a typedef, look for the
+      // typedef name. This allows tag-specific information to be added
+      // to the declaration.
+      std::string LookupName;
+      if (auto typedefName = Tag->getTypedefNameForAnonDecl())
+        LookupName = typedefName->getName().str();
+      else
+        LookupName = Tag->getName().str();
 
       // Use the source location to discern if this Tag is an OPTIONS macro.
       // For now we would like to limit this trick of looking up the APINote tag
@@ -946,8 +1001,8 @@ void Sema::ProcessAPINotes(Decl *D) {
   }
 
   // Enumerators.
-  if (D->getDeclContext()->getRedeclContext()->isFileContext() ||
-      D->getDeclContext()->getRedeclContext()->isExternCContext()) {
+  if (DC->getRedeclContext()->isFileContext() ||
+      DC->getRedeclContext()->isExternCContext()) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
         auto Info = Reader->lookupEnumConstant(EnumConstant->getName());
@@ -958,7 +1013,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     }
   }
 
-  if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(D->getDeclContext())) {
+  if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(DC)) {
     // Location function that looks up an Objective-C context.
     auto GetContext = [&](api_notes::APINotesReader *Reader)
         -> std::optional<api_notes::ContextID> {
@@ -1042,13 +1097,29 @@ void Sema::ProcessAPINotes(Decl *D) {
     }
   }
 
-  if (auto TagContext = dyn_cast<TagDecl>(D->getDeclContext())) {
+  if (auto TagContext = dyn_cast<TagDecl>(DC)) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
-          auto Info =
-              Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
-          ProcessVersionedAPINotes(*this, CXXMethod, Info);
+      if (!isa<CXXConstructorDecl>(CXXMethod) &&
+          !isa<CXXDestructorDecl>(CXXMethod) &&
+          !isa<CXXConversionDecl>(CXXMethod) &&
+          !CXXMethod->isOverloadedOperator()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info =
+                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+          }
+        }
+      }
+    }
+
+    if (auto Field = dyn_cast<FieldDecl>(D)) {
+      if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info = Reader->lookupField(Context->id, Field->getName());
+            ProcessVersionedAPINotes(*this, Field, Info);
+          }
         }
       }
     }

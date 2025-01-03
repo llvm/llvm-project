@@ -56,7 +56,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TargetTransformInfo *TTI = nullptr;
 #endif
   CodeGenOptLevel OptLevel;
@@ -315,7 +315,7 @@ public:
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains offset in table for pattern being selected
+    // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
 
@@ -463,6 +463,7 @@ private:
   void Select_READ_REGISTER(SDNode *Op);
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
+  void Select_FAKE_USE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);
@@ -550,6 +551,7 @@ protected:
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 }
 

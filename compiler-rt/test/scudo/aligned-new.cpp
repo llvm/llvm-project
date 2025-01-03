@@ -1,4 +1,4 @@
-// RUN: %clangxx_scudo -std=c++1z -faligned-allocation %s -o %t
+// RUN: %clangxx_scudo %s -o %t
 // RUN:                                                 %run %t valid   2>&1
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid 2>&1
 // RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t invalid 2>&1 | FileCheck %s

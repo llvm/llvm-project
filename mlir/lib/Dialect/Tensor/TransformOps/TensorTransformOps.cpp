@@ -153,29 +153,29 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
   converter.addSourceMaterialization([ignoreDynamicInfo](
                                          OpBuilder &builder, Type resultType,
                                          ValueRange inputs,
-                                         Location loc) -> std::optional<Value> {
+                                         Location loc) -> Value {
     if (inputs.size() != 1) {
-      return std::nullopt;
+      return Value();
     }
     Value input = inputs[0];
     if (!ignoreDynamicInfo &&
         !tensor::preservesStaticInformation(resultType, input.getType())) {
-      return std::nullopt;
+      return Value();
     }
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
-      return std::nullopt;
+      return Value();
     }
     return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
   });
   converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
                                         ValueRange inputs,
-                                        Location loc) -> std::optional<Value> {
+                                        Location loc) -> Value {
     if (inputs.size() != 1) {
-      return std::nullopt;
+      return Value();
     }
     Value input = inputs[0];
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
-      return std::nullopt;
+      return Value();
     }
     return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
   });
@@ -236,6 +236,8 @@ class TensorTransformDialectExtension
     : public transform::TransformDialectExtension<
           TensorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TensorTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

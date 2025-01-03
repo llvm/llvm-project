@@ -51,7 +51,7 @@ public:
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
 
-  ABIArgInfo extendType(QualType Ty) const;
+  ABIArgInfo extendType(QualType Ty, llvm::Type *CoerceTy = nullptr) const;
 
   bool detectFPCCEligibleStruct(QualType Ty, llvm::Type *&Field1Ty,
                                 CharUnits &Field1Off, llvm::Type *&Field2Ty,
@@ -63,8 +63,52 @@ public:
                                                CharUnits Field2Off) const;
 
   ABIArgInfo coerceVLSVector(QualType Ty) const;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 } // end anonymous namespace
+
+void RISCVABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                           unsigned Index,
+                                           raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                           raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+
+  SmallVector<StringRef, 8> Attrs;
+  AttrStr.split(Attrs, ';');
+
+  // Only consider the arch string.
+  StringRef ArchStr;
+  for (auto &Attr : Attrs) {
+    if (Attr.starts_with("arch="))
+      ArchStr = Attr;
+  }
+
+  // Extract features string.
+  SmallVector<StringRef, 8> Features;
+  ArchStr.consume_front("arch=");
+  ArchStr.split(Features, ',');
+
+  llvm::stable_sort(Features);
+
+  for (auto Feat : Features) {
+    Feat.consume_front("+");
+    Out << "_" << Feat;
+  }
+}
 
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   QualType RetTy = FI.getReturnType();
@@ -327,11 +371,20 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
       getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
 
   unsigned NumElts = VT->getNumElements();
-  llvm::Type *EltType;
-  if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+  llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
+  switch (VT->getVectorKind()) {
+  case VectorKind::RVVFixedLengthMask_1:
+    break;
+  case VectorKind::RVVFixedLengthMask_2:
+    NumElts *= 2;
+    break;
+  case VectorKind::RVVFixedLengthMask_4:
+    NumElts *= 4;
+    break;
+  case VectorKind::RVVFixedLengthMask:
     NumElts *= 8;
-    EltType = llvm::Type::getInt1Ty(getVMContext());
-  } else {
+    break;
+  default:
     assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
            "Unexpected vector kind");
     EltType = CGT.ConvertType(VT->getElementType());
@@ -430,30 +483,27 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
 
     // All integral types are promoted to XLen width
     if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
-      return extendType(Ty);
+      return extendType(Ty, CGT.ConvertType(Ty));
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
       if (EIT->getNumBits() < XLen)
-        return extendType(Ty);
+        return extendType(Ty, CGT.ConvertType(Ty));
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
         return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
     }
 
-    ABIArgInfo Info = ABIArgInfo::getDirect();
-
-    // If it is tuple type, it can't be flattened.
-    if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty)))
-      Info.setCanBeFlattened(!STy->containsHomogeneousScalableVectorTypes());
-
-    return Info;
+    return ABIArgInfo::getDirect();
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>())
     if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask)
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       return coerceVLSVector(Ty);
 
   // Aggregates which are <= 2*XLen will be passed in registers if possible,
@@ -514,12 +564,12 @@ RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*AllowHigherAlign=*/true, Slot);
 }
 
-ABIArgInfo RISCVABIInfo::extendType(QualType Ty) const {
+ABIArgInfo RISCVABIInfo::extendType(QualType Ty, llvm::Type *CoerceTy) const {
   int TySize = getContext().getTypeSize(Ty);
   // RV64 ABI requires unsigned 32 bit integers to be sign extended.
   if (XLen == 64 && Ty->isUnsignedIntegerOrEnumerationType() && TySize == 32)
-    return ABIArgInfo::getSignExtend(Ty);
-  return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getSignExtend(Ty, CoerceTy);
+  return ABIArgInfo::getExtend(Ty, CoerceTy);
 }
 
 namespace {
@@ -538,6 +588,11 @@ public:
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
 
+    auto *Fn = cast<llvm::Function>(GV);
+
+    if (CGM.getCodeGenOpts().CFProtectionReturn)
+      Fn->addFnAttr("hw-shadow-stack");
+
     const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
     if (!Attr)
       return;
@@ -547,8 +602,6 @@ public:
     case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
     case RISCVInterruptAttr::machine: Kind = "machine"; break;
     }
-
-    auto *Fn = cast<llvm::Function>(GV);
 
     Fn->addFnAttr("interrupt", Kind);
   }

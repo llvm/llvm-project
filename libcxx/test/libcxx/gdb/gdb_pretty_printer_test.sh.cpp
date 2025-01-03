@@ -20,6 +20,9 @@
 // support gdb anymore, favoring lldb instead.
 // UNSUPPORTED: android
 
+// This test doesn't work as such on Windows.
+// UNSUPPORTED: windows
+
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
 // RUN: env LANG=en_US.UTF-8 %{gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
@@ -229,9 +232,7 @@ void u32string_test() {
 
 void tuple_test() {
   std::tuple<int, int, int> test0(2, 3, 4);
-  ComparePrettyPrintToChars(
-      test0,
-      "std::tuple containing = {[1] = 2, [2] = 3, [3] = 4}");
+  ComparePrettyPrintToChars(test0, "std::tuple containing = {[0] = 2, [1] = 3, [2] = 4}");
 
   std::tuple<> test1;
   ComparePrettyPrintToChars(

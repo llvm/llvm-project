@@ -162,8 +162,7 @@ define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
   ret i32 %m
@@ -194,8 +193,7 @@ define i32 @length4(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   ret i32 %m
@@ -286,8 +284,7 @@ define i32 @length5(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
   ret i32 %m
@@ -341,8 +338,7 @@ define i32 @length6(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 6) nounwind
   ret i32 %m
@@ -450,8 +446,7 @@ define i32 @length8(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) nounwind
   ret i32 %m

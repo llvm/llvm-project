@@ -118,7 +118,7 @@ define <2 x float> @x_add_y_rsqrt_reassociate_extra_use(<2 x float> %x, <2 x flo
 ; CHECK-LABEL: @x_add_y_rsqrt_reassociate_extra_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SQRT:%.*]] = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> [[ADD]])
-; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT]]
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <2 x float> splat (float 1.000000e+00), [[SQRT]]
 ; CHECK-NEXT:    [[RES:%.*]] = fdiv fast <2 x float> [[ADD]], [[SQRT]]
 ; CHECK-NEXT:    store <2 x float> [[RSQRT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[RES]]

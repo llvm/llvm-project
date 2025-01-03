@@ -37,29 +37,28 @@ GenerateStub(LinkGraph &G, size_t PointerSize, Edge::Kind PointerEdgeKind) {
   auto AnonymousPtrCreator = getAnonymousPointerCreator(G.getTargetTriple());
   EXPECT_TRUE(AnonymousPtrCreator);
 
-  auto PointerSym = AnonymousPtrCreator(G, PointersSec, &FuncSymbol, 0);
-  EXPECT_FALSE(errorToBool(PointerSym.takeError()));
-  EXPECT_EQ(std::distance(PointerSym->getBlock().edges().begin(),
-                          PointerSym->getBlock().edges().end()),
+  auto &PointerSym = AnonymousPtrCreator(G, PointersSec, &FuncSymbol, 0);
+  EXPECT_EQ(std::distance(PointerSym.getBlock().edges().begin(),
+                          PointerSym.getBlock().edges().end()),
             1U);
-  auto &DeltaEdge = *PointerSym->getBlock().edges().begin();
+  auto &DeltaEdge = *PointerSym.getBlock().edges().begin();
   EXPECT_EQ(DeltaEdge.getKind(), PointerEdgeKind);
   EXPECT_EQ(&DeltaEdge.getTarget(), &FuncSymbol);
-  EXPECT_EQ(PointerSym->getBlock().getSize(), PointerSize);
-  EXPECT_TRUE(all_of(PointerSym->getBlock().getContent(),
+  EXPECT_EQ(PointerSym.getBlock().getSize(), PointerSize);
+  EXPECT_TRUE(all_of(PointerSym.getBlock().getContent(),
                      [](char x) { return x == 0; }));
 
   auto PtrJumpStubCreator = getPointerJumpStubCreator(G.getTargetTriple());
   EXPECT_TRUE(PtrJumpStubCreator);
-  auto StubSym = PtrJumpStubCreator(G, StubsSec, *PointerSym);
-  EXPECT_FALSE(errorToBool(StubSym.takeError()));
-  return {*PointerSym, *StubSym};
+  auto &StubSym = PtrJumpStubCreator(G, StubsSec, PointerSym);
+  return {PointerSym, StubSym};
 }
 
 TEST(StubsTest, StubsGeneration_x86_64) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, x86_64::Pointer64);
 
@@ -79,7 +78,8 @@ TEST(StubsTest, StubsGeneration_aarch64) {
       0x10, 0x02, 0x40, (char)0xf9u, // LDR x16, [x16, <imm>@pageoff12]
       0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
   };
-  LinkGraph G("foo", Triple("aarch64-linux-gnu"), 8, llvm::endianness::little,
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("aarch64-linux-gnu"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, aarch64::Pointer64);
 
@@ -99,8 +99,9 @@ TEST(StubsTest, StubsGeneration_aarch64) {
 TEST(StubsTest, StubsGeneration_i386) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
-  LinkGraph G("foo", Triple("i386-unknown-linux-gnu"), 4,
-              llvm::endianness::little, getGenericEdgeKindName);
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("i386-unknown-linux-gnu"), 8, llvm::endianness::little,
+              getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386::Pointer32);
 
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
@@ -128,7 +129,8 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
       0x00,
       0x4c // jr $t8
   };
-  LinkGraph G("foo", Triple("loongarch32"), 4, llvm::endianness::little,
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("loongarch32"), 4, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, loongarch::Pointer32);
 
@@ -160,7 +162,8 @@ TEST(StubsTest, StubsGeneration_loongarch64) {
       0x00,
       0x4c // jr $t8
   };
-  LinkGraph G("foo", Triple("loongarch64"), 8, llvm::endianness::little,
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("loongarch64"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, loongarch::Pointer64);
 

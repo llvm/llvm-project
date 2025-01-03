@@ -13,7 +13,6 @@
 
 #include "X86InstrFMA3Info.h"
 #include "X86InstrInfo.h"
-#include "llvm/Support/Threading.h"
 #include <atomic>
 #include <cassert>
 #include <cstdint>
@@ -27,6 +26,11 @@ using namespace llvm;
   FMA3GROUP(Name, Suf, Attrs) \
   FMA3GROUP(Name, Suf##k, Attrs | X86InstrFMA3Group::KMergeMasked) \
   FMA3GROUP(Name, Suf##kz, Attrs | X86InstrFMA3Group::KZeroMasked)
+
+#define FMA3GROUP_MASKED_INT(Name, Suf, Attrs) \
+  FMA3GROUP(Name, Suf##_Int, Attrs) \
+  FMA3GROUP(Name, Suf##k_Int, Attrs | X86InstrFMA3Group::KMergeMasked) \
+  FMA3GROUP(Name, Suf##kz_Int, Attrs | X86InstrFMA3Group::KZeroMasked)
 
 #define FMA3GROUP_PACKED_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Z128m, Attrs) \
@@ -43,16 +47,19 @@ using namespace llvm;
   FMA3GROUP(Name, Suf##m, Attrs) \
   FMA3GROUP(Name, Suf##r, Attrs)
 
-#define FMA3GROUP_PACKED(Name, Attrs) \
+#define FMA3GROUP_PACKED_DHS(Name, Attrs) \
   FMA3GROUP_PACKED_WIDTHS_ALL(Name, PD, Attrs) \
   FMA3GROUP_PACKED_WIDTHS_Z(Name, PH, Attrs) \
   FMA3GROUP_PACKED_WIDTHS_ALL(Name, PS, Attrs)
 
+#define FMA3GROUP_PACKED_BF16(Name, Attrs) \
+  FMA3GROUP_PACKED_WIDTHS_Z(Name, NEPBF16, Attrs)
+
 #define FMA3GROUP_SCALAR_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP(Name, Suf##Zm, Attrs) \
-  FMA3GROUP_MASKED(Name, Suf##Zm_Int, Attrs | X86InstrFMA3Group::Intrinsic) \
+  FMA3GROUP_MASKED_INT(Name, Suf##Zm, Attrs | X86InstrFMA3Group::Intrinsic) \
   FMA3GROUP(Name, Suf##Zr, Attrs) \
-  FMA3GROUP_MASKED(Name, Suf##Zr_Int, Attrs | X86InstrFMA3Group::Intrinsic) \
+  FMA3GROUP_MASKED_INT(Name, Suf##Zr, Attrs | X86InstrFMA3Group::Intrinsic) \
 
 #define FMA3GROUP_SCALAR_WIDTHS_ALL(Name, Suf, Attrs) \
   FMA3GROUP_SCALAR_WIDTHS_Z(Name, Suf, Attrs) \
@@ -67,14 +74,15 @@ using namespace llvm;
   FMA3GROUP_SCALAR_WIDTHS_ALL(Name, SS, Attrs)
 
 #define FMA3GROUP_FULL(Name, Attrs) \
-  FMA3GROUP_PACKED(Name, Attrs) \
+  FMA3GROUP_PACKED_BF16(Name, Attrs) \
+  FMA3GROUP_PACKED_DHS(Name, Attrs) \
   FMA3GROUP_SCALAR(Name, Attrs)
 
 static const X86InstrFMA3Group Groups[] = {
   FMA3GROUP_FULL(VFMADD, 0)
-  FMA3GROUP_PACKED(VFMADDSUB, 0)
+  FMA3GROUP_PACKED_DHS(VFMADDSUB, 0)
   FMA3GROUP_FULL(VFMSUB, 0)
-  FMA3GROUP_PACKED(VFMSUBADD, 0)
+  FMA3GROUP_PACKED_DHS(VFMSUBADD, 0)
   FMA3GROUP_FULL(VFNMADD, 0)
   FMA3GROUP_FULL(VFNMSUB, 0)
 };
@@ -84,31 +92,40 @@ static const X86InstrFMA3Group Groups[] = {
   FMA3GROUP_MASKED(Name, Type##Z256##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, Type##Z##Suf, Attrs)
 
-#define FMA3GROUP_PACKED_AVX512(Name, Suf, Attrs) \
+#define FMA3GROUP_PACKED_AVX512_ALL(Name, Suf, Attrs) \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, NEPBF16, Suf, Attrs) \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PD, Suf, Attrs) \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PH, Suf, Attrs) \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PS, Suf, Attrs)
 
-#define FMA3GROUP_PACKED_AVX512_ROUND(Name, Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, PDZ##Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, PHZ##Suf, Attrs) \
+#define FMA3GROUP_PACKED_AVX512_DHS(Name, Suf, Attrs) \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PD, Suf, Attrs) \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PH, Suf, Attrs) \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PS, Suf, Attrs)
+
+#define FMA3GROUP_PACKED_AVX512_ROUND(Name, Suf, Attrs)                        \
+  FMA3GROUP_MASKED(Name, PDZ256##Suf, Attrs)                                   \
+  FMA3GROUP_MASKED(Name, PDZ##Suf, Attrs)                                      \
+  FMA3GROUP_MASKED(Name, PHZ256##Suf, Attrs)                                   \
+  FMA3GROUP_MASKED(Name, PHZ##Suf, Attrs)                                      \
+  FMA3GROUP_MASKED(Name, PSZ256##Suf, Attrs)                                   \
   FMA3GROUP_MASKED(Name, PSZ##Suf, Attrs)
 
 #define FMA3GROUP_SCALAR_AVX512_ROUND(Name, Suf, Attrs) \
   FMA3GROUP(Name, SDZ##Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, SDZ##Suf##_Int, Attrs) \
+  FMA3GROUP_MASKED_INT(Name, SDZ##Suf, Attrs) \
   FMA3GROUP(Name, SHZ##Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, SHZ##Suf##_Int, Attrs) \
+  FMA3GROUP_MASKED_INT(Name, SHZ##Suf, Attrs) \
   FMA3GROUP(Name, SSZ##Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, SSZ##Suf##_Int, Attrs)
+  FMA3GROUP_MASKED_INT(Name, SSZ##Suf, Attrs)
 
 static const X86InstrFMA3Group BroadcastGroups[] = {
-  FMA3GROUP_PACKED_AVX512(VFMADD, mb, 0)
-  FMA3GROUP_PACKED_AVX512(VFMADDSUB, mb, 0)
-  FMA3GROUP_PACKED_AVX512(VFMSUB, mb, 0)
-  FMA3GROUP_PACKED_AVX512(VFMSUBADD, mb, 0)
-  FMA3GROUP_PACKED_AVX512(VFNMADD, mb, 0)
-  FMA3GROUP_PACKED_AVX512(VFNMSUB, mb, 0)
+  FMA3GROUP_PACKED_AVX512_ALL(VFMADD, mb, 0)
+  FMA3GROUP_PACKED_AVX512_DHS(VFMADDSUB, mb, 0)
+  FMA3GROUP_PACKED_AVX512_ALL(VFMSUB, mb, 0)
+  FMA3GROUP_PACKED_AVX512_DHS(VFMSUBADD, mb, 0)
+  FMA3GROUP_PACKED_AVX512_ALL(VFNMADD, mb, 0)
+  FMA3GROUP_PACKED_AVX512_ALL(VFNMSUB, mb, 0)
 };
 
 static const X86InstrFMA3Group RoundGroups[] = {
@@ -150,7 +167,8 @@ const X86InstrFMA3Group *llvm::getFMA3Group(unsigned Opcode, uint64_t TSFlags) {
                         ((TSFlags & X86II::EncodingMask) == X86II::EVEX &&
                          ((TSFlags & X86II::OpMapMask) == X86II::T8 ||
                           (TSFlags & X86II::OpMapMask) == X86II::T_MAP6));
-  bool IsFMA3Prefix = (TSFlags & X86II::OpPrefixMask) == X86II::PD;
+  bool IsFMA3Prefix = (TSFlags & X86II::OpPrefixMask) == X86II::PD ||
+                      (TSFlags & X86II::OpPrefixMask) == 0; // X86II::PS
   if (!IsFMA3Opcode || !IsFMA3Encoding || !IsFMA3Prefix)
     return nullptr;
 

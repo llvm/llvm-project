@@ -17,12 +17,10 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -75,7 +73,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   markup(O, Markup::Register) << getRegisterName(Reg);
 }
 
@@ -265,8 +263,6 @@ void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
   const MCOperand &MO = MI->getOperand(OpNo);
 
   assert(MO.isReg() && "printRegReg can only print register operands");
-  if (MO.getReg() == RISCV::NoRegister)
-    return;
   printRegName(O, MO.getReg());
 
   O << "(";

@@ -36,10 +36,15 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-insert-vsetvli"
 #define RISCV_INSERT_VSETVLI_NAME "RISC-V Insert VSETVLI pass"
-#define RISCV_COALESCE_VSETVLI_NAME "RISC-V Coalesce VSETVLI pass"
 
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
+
+static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
+    DEBUG_TYPE "-whole-vector-register-move-valid-vtype", cl::Hidden,
+    cl::desc("Insert vsetvlis before vmvNr.vs to ensure vtype is valid and "
+             "vill is cleared"),
+    cl::init(true));
 
 namespace {
 
@@ -182,7 +187,7 @@ static bool isMaskRegOp(const MachineInstr &MI) {
 /// Note that this is different from "agnostic" as defined by the vector
 /// specification.  Agnostic requires each lane to either be undisturbed, or
 /// take the value -1; no other value is allowed.
-static bool hasUndefinedMergeOp(const MachineInstr &MI) {
+static bool hasUndefinedPassthru(const MachineInstr &MI) {
 
   unsigned UseOpIdx;
   if (!MI.isRegTiedToUseOperand(0, &UseOpIdx))
@@ -196,6 +201,14 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI) {
   return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
 }
 
+/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
+static bool isVectorCopy(const TargetRegisterInfo *TRI,
+                         const MachineInstr &MI) {
+  return MI.isCopy() && MI.getOperand(0).getReg().isPhysical() &&
+         RISCVRegisterInfo::isRVVRegClass(
+             TRI->getMinimalPhysRegClass(MI.getOperand(0).getReg()));
+}
+
 /// Which subfields of VL or VTYPE have values we need to preserve?
 struct DemandedFields {
   // Some unknown property of VL is used.  If demanded, must preserve entire
@@ -205,14 +218,14 @@ struct DemandedFields {
   bool VLZeroness = false;
   // What properties of SEW we need to preserve.
   enum : uint8_t {
-    SEWEqual = 3,              // The exact value of SEW needs to be preserved.
-    SEWGreaterThanOrEqual = 2, // SEW can be changed as long as it's greater
-                               // than or equal to the original value.
+    SEWEqual = 3, // The exact value of SEW needs to be preserved.
     SEWGreaterThanOrEqualAndLessThan64 =
-        1,      // SEW can be changed as long as it's greater
-                // than or equal to the original value, but must be less
-                // than 64.
-    SEWNone = 0 // We don't need to preserve SEW at all.
+        2, // SEW can be changed as long as it's greater
+           // than or equal to the original value, but must be less
+           // than 64.
+    SEWGreaterThanOrEqual = 1, // SEW can be changed as long as it's greater
+                               // than or equal to the original value.
+    SEWNone = 0                // We don't need to preserve SEW at all.
   } SEW = SEWNone;
   enum : uint8_t {
     LMULEqual = 2, // The exact value of LMUL needs to be preserved.
@@ -222,10 +235,13 @@ struct DemandedFields {
   bool SEWLMULRatio = false;
   bool TailPolicy = false;
   bool MaskPolicy = false;
+  // If this is true, we demand that VTYPE is set to some legal state, i.e. that
+  // vill is unset.
+  bool VILL = false;
 
   // Return true if any part of VTYPE was used
   bool usedVTYPE() const {
-    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
+    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy || VILL;
   }
 
   // Return true if any property of VL was used
@@ -240,6 +256,7 @@ struct DemandedFields {
     SEWLMULRatio = true;
     TailPolicy = true;
     MaskPolicy = true;
+    VILL = true;
   }
 
   // Mark all VL properties as demanded
@@ -264,6 +281,7 @@ struct DemandedFields {
     SEWLMULRatio |= B.SEWLMULRatio;
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
+    VILL |= B.VILL;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -309,7 +327,8 @@ struct DemandedFields {
     OS << ", ";
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
-    OS << "MaskPolicy=" << MaskPolicy;
+    OS << "MaskPolicy=" << MaskPolicy << ", ";
+    OS << "VILL=" << VILL;
     OS << "}";
   }
 #endif
@@ -443,13 +462,13 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
-    // For vmv.s.x and vfmv.s.f, if the merge operand is *undefined*, we don't
+    // For vmv.s.x and vfmv.s.f, if the passthru is *undefined*, we don't
     // need to preserve any other bits and are thus compatible with any larger,
     // etype and can disregard policy bits.  Warning: It's tempting to try doing
     // this for any tail agnostic operation, but we can't as TA requires
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
-    if (hasUndefinedMergeOp(MI)) {
+    if (hasUndefinedPassthru(MI)) {
       if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
@@ -458,7 +477,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     }
   }
 
-  // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
+  // vmv.x.s, and vfmv.f.s are unconditional and ignore everything except SEW.
   if (isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
     Res.LMUL = DemandedFields::LMULNone;
@@ -469,7 +488,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 
   if (RISCVII::hasVLOp(MI.getDesc().TSFlags)) {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
-    // A slidedown/slideup with an *undefined* merge op can freely clobber
+    // A slidedown/slideup with an *undefined* passthru can freely clobber
     // elements not copied from the source vector (e.g. masked off, tail, or
     // slideup's prefix). Notes:
     // * We can't modify SEW here since the slide amount is in units of SEW.
@@ -478,7 +497,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // * The LMUL1 restriction is for machines whose latency may depend on VL.
     // * As above, this is only legal for tail "undefined" not "agnostic".
     if (isVSlideInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedMergeOp(MI)) {
+        hasUndefinedPassthru(MI)) {
       Res.VLAny = false;
       Res.VLZeroness = true;
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
@@ -492,7 +511,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // careful to not increase the number of active vector registers (unlike for
     // vmv.s.x.)
     if (isScalarSplatInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedMergeOp(MI)) {
+        hasUndefinedPassthru(MI)) {
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
       Res.SEWLMULRatio = false;
       Res.VLAny = false;
@@ -502,6 +521,21 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
       Res.TailPolicy = false;
     }
+  }
+
+  // In §32.16.6, whole vector register moves have a dependency on SEW. At the
+  // MIR level though we don't encode the element type, and it gives the same
+  // result whatever the SEW may be.
+  //
+  // However it does need valid SEW, i.e. vill must be cleared. The entry to a
+  // function, calls and inline assembly may all set it, so make sure we clear
+  // it for whole register copies. Do this by leaving VILL demanded.
+  if (isVectorCopy(ST->getRegisterInfo(), MI)) {
+    Res.LMUL = DemandedFields::LMULNone;
+    Res.SEW = DemandedFields::SEWNone;
+    Res.SEWLMULRatio = false;
+    Res.TailPolicy = false;
+    Res.MaskPolicy = false;
   }
 
   return Res;
@@ -890,8 +924,8 @@ public:
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveDebugVariables>();
-    AU.addPreserved<LiveStacks>();
+    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+    AU.addPreserved<LiveStacksWrapperLegacy>();
 
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -1000,7 +1034,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
   bool TailAgnostic = true;
   bool MaskAgnostic = true;
-  if (!hasUndefinedMergeOp(MI)) {
+  if (!hasUndefinedPassthru(MI)) {
     // Start with undisturbed.
     TailAgnostic = false;
     MaskAgnostic = false;
@@ -1209,6 +1243,18 @@ static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
+  if (isVectorCopy(ST->getRegisterInfo(), MI) &&
+      (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
+    // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
+    // be coalesced into another vsetvli since we won't demand any fields.
+    VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
+    NewInfo.setAVLImm(1);
+    NewInfo.setVTYPE(RISCVII::VLMUL::LMUL_1, /*sew*/ 8, /*ta*/ true,
+                     /*ma*/ true);
+    Info = NewInfo;
+    return;
+  }
+
   if (!RISCVII::hasSEWOp(MI.getDesc().TSFlags))
     return;
 
@@ -1297,7 +1343,8 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
   for (const MachineInstr &MI : MBB) {
     transferBefore(Info, MI);
 
-    if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+    if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags) ||
+        isVectorCopy(ST->getRegisterInfo(), MI))
       HadVectorOp = true;
 
     transferAfter(Info, MI);
@@ -1425,6 +1472,16 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
       PrefixTransparent = false;
+    }
+
+    if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+        isVectorCopy(ST->getRegisterInfo(), MI)) {
+      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
+        insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
+        PrefixTransparent = false;
+      }
+      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ false,
+                                              /*isImp*/ true));
     }
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
@@ -1620,14 +1677,15 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
     }
 
     auto &AVL = MI.getOperand(1);
-    auto &PrevAVL = PrevMI.getOperand(1);
 
-    // If the AVL is a register, we need to make sure MI's AVL dominates PrevMI.
-    // For now just check that PrevMI uses the same virtual register.
-    if (AVL.isReg() && AVL.getReg() != RISCV::X0 &&
-        (!MRI->hasOneDef(AVL.getReg()) || !PrevAVL.isReg() ||
-         PrevAVL.getReg() != AVL.getReg()))
-      return false;
+    // If the AVL is a register, we need to make sure its definition is the same
+    // at PrevMI as it was at MI.
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
+      VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
+      VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
+      if (!VNI || !PrevVNI || VNI != PrevVNI)
+        return false;
+    }
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());

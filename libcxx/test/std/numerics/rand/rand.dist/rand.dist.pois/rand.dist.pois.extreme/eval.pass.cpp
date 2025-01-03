@@ -17,8 +17,9 @@
 
 #include <random>
 #include <cassert>
-#include <vector>
+#include <cmath>
 #include <numeric>
+#include <vector>
 
 #include "test_macros.h"
 

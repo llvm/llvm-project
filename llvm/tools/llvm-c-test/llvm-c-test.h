@@ -24,7 +24,7 @@ extern "C" {
 void llvm_tokenize_stdin(void (*cb)(char **tokens, int ntokens));
 
 // module.c
-LLVMModuleRef llvm_load_module(bool Lazy, bool New);
+LLVMModuleRef llvm_load_module(LLVMContextRef C, bool Lazy, bool New);
 int llvm_module_dump(bool Lazy, bool New);
 int llvm_module_list_functions(void);
 int llvm_module_list_globals(void);

@@ -42,7 +42,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
   return GetConsoleMode(reinterpret_cast<void*>(__handle), &__mode);
 }
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_EXPORTED_FROM_ABI void
 __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wstring_view __view) {
   // https://learn.microsoft.com/en-us/windows/console/writeconsole
@@ -54,7 +54,7 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
     __throw_system_error(filesystem::detail::make_windows_error(GetLastError()), "failed to write formatted output");
   }
 }
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #elif __has_include(<unistd.h>) // !_LIBCPP_WIN32API
 

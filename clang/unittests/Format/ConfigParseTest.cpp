@@ -159,33 +159,34 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
+  CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
-  CHECK_PARSE_BOOL(BinPackParameters);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
+  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
   CHECK_PARSE_BOOL(IndentAccessModifiers);
-  CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
+  CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentGotoLabels);
-  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentRequiresClause);
+  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(InsertBraces);
   CHECK_PARSE_BOOL(InsertNewlineAtEOF);
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtEndOfFile, "KeepEmptyLinesAtEOF");
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtStartOfBlock,
                          "KeepEmptyLinesAtTheStartOfBlocks");
+  CHECK_PARSE_BOOL(KeepFormFeed);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
-  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
-  CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
+  CHECK_PARSE_BOOL(RemoveEmptyLinesInUnwrappedLines);
   CHECK_PARSE_BOOL(RemoveSemicolon);
   CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
@@ -301,48 +302,53 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(                                                               \
-        #FIELD ": None", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLines", FIELD,                                    \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": AcrossComments", FIELD,                                      \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
+             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
              /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
-    CHECK_PARSE(                                                               \
-        #FIELD ": false", FIELD,                                               \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": false", FIELD,                                       \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
                                                                                \
     CHECK_PARSE_NESTED_BOOL(FIELD, Enabled);                                   \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionPointers);                     \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
 
@@ -377,6 +383,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("PointerBindsToType: Middle", PointerAlignment,
               FormatStyle::PAS_Middle);
 
+  Style.ReflowComments = FormatStyle::RCS_Always;
+  CHECK_PARSE("ReflowComments: Never", ReflowComments, FormatStyle::RCS_Never);
+  CHECK_PARSE("ReflowComments: IndentOnly", ReflowComments,
+              FormatStyle::RCS_IndentOnly);
+  CHECK_PARSE("ReflowComments: Always", ReflowComments,
+              FormatStyle::RCS_Always);
+  // For backward compatibility:
+  CHECK_PARSE("ReflowComments: false", ReflowComments, FormatStyle::RCS_Never);
+  CHECK_PARSE("ReflowComments: true", ReflowComments, FormatStyle::RCS_Always);
+
   Style.Standard = FormatStyle::LS_Auto;
   CHECK_PARSE("Standard: c++03", Standard, FormatStyle::LS_Cpp03);
   CHECK_PARSE("Standard: c++11", Standard, FormatStyle::LS_Cpp11);
@@ -404,6 +420,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
+  Style.BreakBinaryOperations = FormatStyle::BBO_Never;
+  CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,
+              FormatStyle::BBO_OnePerLine);
+  CHECK_PARSE("BreakBinaryOperations: RespectPrecedence", BreakBinaryOperations,
+              FormatStyle::BBO_RespectPrecedence);
+  CHECK_PARSE("BreakBinaryOperations: Never", BreakBinaryOperations,
+              FormatStyle::BBO_Never);
+
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
@@ -427,6 +451,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("BreakBeforeInheritanceComma: true", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
+
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  CHECK_PARSE("BinPackParameters: BinPack", BinPackParameters,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: OnePerLine", BinPackParameters,
+              FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", BinPackParameters,
+              FormatStyle::BPPS_AlwaysOnePerLine);
+  // For backward compatibility.
+  CHECK_PARSE("BinPackParameters: true", BinPackParameters,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: false", BinPackParameters,
+              FormatStyle::BPPS_OnePerLine);
 
   Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   CHECK_PARSE("PackConstructorInitializers: Never", PackConstructorInitializers,
@@ -827,6 +864,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SUD_Never);
   CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
               FormatStyle::SUD_LexicographicNumeric);
+
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Never",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Never);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Always",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Always);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Leave",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Leave);
 
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.

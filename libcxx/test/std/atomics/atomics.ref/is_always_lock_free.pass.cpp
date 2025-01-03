@@ -54,7 +54,7 @@ void check_always_lock_free(std::atomic_ref<T> const& a) {
 #define CHECK_ALWAYS_LOCK_FREE(T)                                                                                      \
   do {                                                                                                                 \
     typedef T type;                                                                                                    \
-    type obj{};                                                                                                        \
+    alignas(std::atomic_ref<type>::required_alignment) type obj{};                                                     \
     std::atomic_ref<type> a(obj);                                                                                      \
     check_always_lock_free(a);                                                                                         \
   } while (0)

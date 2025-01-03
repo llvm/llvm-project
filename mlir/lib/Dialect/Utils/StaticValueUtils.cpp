@@ -10,6 +10,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -49,12 +50,26 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<int64_t> &staticVec) {
   auto v = llvm::dyn_cast_if_present<Value>(ofr);
   if (!v) {
-    APInt apInt = cast<IntegerAttr>(ofr.get<Attribute>()).getValue();
+    APInt apInt = cast<IntegerAttr>(cast<Attribute>(ofr)).getValue();
     staticVec.push_back(apInt.getSExtValue());
     return;
   }
   dynamicVec.push_back(v);
   staticVec.push_back(ShapedType::kDynamic);
+}
+
+std::pair<int64_t, OpFoldResult>
+getSimplifiedOfrAndStaticSizePair(OpFoldResult tileSizeOfr, Builder &b) {
+  int64_t tileSizeForShape =
+      getConstantIntValue(tileSizeOfr).value_or(ShapedType::kDynamic);
+
+  OpFoldResult tileSizeOfrSimplified =
+      (tileSizeForShape != ShapedType::kDynamic)
+          ? b.getIndexAttr(tileSizeForShape)
+          : tileSizeOfr;
+
+  return std::pair<int64_t, OpFoldResult>(tileSizeForShape,
+                                          tileSizeOfrSimplified);
 }
 
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
@@ -124,17 +139,29 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
     auto cv = getConstantIntValue(ofr);
     if (!cv.has_value())
       failed = true;
-    return cv.has_value() ? cv.value() : 0;
+    return cv.value_or(0);
   });
   if (failed)
     return std::nullopt;
   return res;
 }
 
-/// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
   auto val = getConstantIntValue(ofr);
   return val && *val == value;
+}
+
+bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
+  return llvm::all_of(
+      ofrs, [&](OpFoldResult ofr) { return isConstantIntValue(ofr, value); });
+}
+
+bool areConstantIntValues(ArrayRef<OpFoldResult> ofrs,
+                          ArrayRef<int64_t> values) {
+  if (ofrs.size() != values.size())
+    return false;
+  std::optional<SmallVector<int64_t>> constOfrs = getConstantIntValues(ofrs);
+  return constOfrs && llvm::equal(constOfrs.value(), values);
 }
 
 /// Return true if ofr1 and ofr2 are the same integer constant attribute values
@@ -185,11 +212,11 @@ decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {
-    if (it.is<Attribute>()) {
-      staticValues.push_back(cast<IntegerAttr>(it.get<Attribute>()).getInt());
+    if (auto attr = dyn_cast<Attribute>(it)) {
+      staticValues.push_back(cast<IntegerAttr>(attr).getInt());
     } else {
       staticValues.push_back(ShapedType::kDynamic);
-      dynamicValues.push_back(it.get<Value>());
+      dynamicValues.push_back(cast<Value>(it));
     }
   }
   return {staticValues, dynamicValues};
@@ -267,10 +294,10 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
                                    bool onlyNonNegative, bool onlyNonZero) {
   bool valuesChanged = false;
   for (OpFoldResult &ofr : ofrs) {
-    if (ofr.is<Attribute>())
+    if (isa<Attribute>(ofr))
       continue;
     Attribute attr;
-    if (matchPattern(ofr.get<Value>(), m_Constant(&attr))) {
+    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
       // Note: All ofrs have index type.
       if (onlyNonNegative && *getConstantIntValue(attr) < 0)
         continue;

@@ -229,7 +229,7 @@ for.end:
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i32 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i32 3
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
@@ -248,7 +248,7 @@ for.end:
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP29]], i32 3
 ; CHECK-NEXT:    [[TMP34]] = add <4 x i32> [[TMP33]], [[TMP16]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
@@ -516,7 +516,7 @@ define void @test_drop_poison_generating_dead_recipe(ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %vector.ph ], [ [[TMP0:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP0]] = add <4 x i64> [[VEC_PHI]], <i64 -31364, i64 -31364, i64 -31364, i64 -31364>
+; CHECK-NEXT:    [[TMP0]] = add <4 x i64> [[VEC_PHI]], splat (i64 -31364)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 360
 ; CHECK-NEXT:    br i1 [[TMP1]], label %middle.block, label %vector.body
@@ -596,10 +596,10 @@ exit:                                             ; preds = %for.body
 define void @reduc_add_mul_store_same_ptr(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_add_mul_store_same_ptr
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
-; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1:%.*]])
-; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP4:%.*]])
+; CHECK-NEXT:    store i32 [[TMP6]], ptr %dst, align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr %dst, align 4
 ;
 entry:
   br label %for.body
@@ -625,10 +625,10 @@ exit:
 define void @reduc_mul_add_store_same_ptr(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_mul_add_store_same_ptr
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
-; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
-; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP7]], ptr %dst, align 4
+; CHECK-NEXT:    store i32 [[TMP6]], ptr %dst, align 4
 ;
 entry:
   br label %for.body
@@ -655,10 +655,10 @@ exit:
 define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_add_mul_store_different_ptr
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
-; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst2, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1:%.*]])
-; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP4:%.*]])
+; CHECK-NEXT:    store i32 [[TMP6]], ptr %dst1, align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr %dst2, align 4
 ;
 entry:
   br label %for.body
@@ -684,10 +684,10 @@ exit:
 define void @reduc_mul_add_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_mul_add_store_different_ptr
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
-; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst2, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
-; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP7]], ptr %dst1, align 4
+; CHECK-NEXT:    store i32 [[TMP6]], ptr %dst2, align 4
 ;
 entry:
   br label %for.body

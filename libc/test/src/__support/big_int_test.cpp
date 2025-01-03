@@ -8,7 +8,7 @@
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/big_int.h"
-#include "src/__support/integer_literals.h"        // parse_unsigned_bigint
+#include "src/__support/integer_literals.h" // parse_unsigned_bigint
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
@@ -208,6 +208,7 @@ TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
 }
 
 using LL_UInt16 = UInt<16>;
+using LL_UInt32 = UInt<32>;
 using LL_UInt64 = UInt<64>;
 // We want to test UInt<128> explicitly. So, for
 // convenience, we use a sugar which does not conflict with the UInt128 type
@@ -925,6 +926,153 @@ TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
   ASSERT_EQ(static_cast<int>(a), 3);
   ASSERT_EQ(static_cast<int>(a >> 32), 2);
   ASSERT_EQ(static_cast<int>(a >> 64), 1);
+}
+
+TEST(LlvmLibcUIntClassTest, OtherWordTypeCastTests) {
+  using LL_UInt96 = BigInt<96, false, uint32_t>;
+
+  LL_UInt96 a({123, 456, 789});
+
+  ASSERT_EQ(static_cast<int>(a), 123);
+  ASSERT_EQ(static_cast<int>(a >> 32), 456);
+  ASSERT_EQ(static_cast<int>(a >> 64), 789);
+
+  // Bigger word with more bits to smaller word with less bits.
+  LL_UInt128 b(a);
+
+  ASSERT_EQ(static_cast<int>(b), 123);
+  ASSERT_EQ(static_cast<int>(b >> 32), 456);
+  ASSERT_EQ(static_cast<int>(b >> 64), 789);
+  ASSERT_EQ(static_cast<int>(b >> 96), 0);
+
+  b = (b << 32) + 987;
+
+  ASSERT_EQ(static_cast<int>(b), 987);
+  ASSERT_EQ(static_cast<int>(b >> 32), 123);
+  ASSERT_EQ(static_cast<int>(b >> 64), 456);
+  ASSERT_EQ(static_cast<int>(b >> 96), 789);
+
+  // Smaller word with less bits to bigger word with more bits.
+  LL_UInt96 c(b);
+
+  ASSERT_EQ(static_cast<int>(c), 987);
+  ASSERT_EQ(static_cast<int>(c >> 32), 123);
+  ASSERT_EQ(static_cast<int>(c >> 64), 456);
+
+  // Smaller word with more bits to bigger word with less bits
+  LL_UInt64 d(c);
+
+  ASSERT_EQ(static_cast<int>(d), 987);
+  ASSERT_EQ(static_cast<int>(d >> 32), 123);
+
+  // Bigger word with less bits to smaller word with more bits
+
+  LL_UInt96 e(d);
+
+  ASSERT_EQ(static_cast<int>(e), 987);
+  ASSERT_EQ(static_cast<int>(e >> 32), 123);
+
+  e = (e << 32) + 654;
+
+  ASSERT_EQ(static_cast<int>(e), 654);
+  ASSERT_EQ(static_cast<int>(e >> 32), 987);
+  ASSERT_EQ(static_cast<int>(e >> 64), 123);
+}
+
+TEST(LlvmLibcUIntClassTest, SignedOtherWordTypeCastTests) {
+  using LL_Int64 = BigInt<64, true, uint64_t>;
+  using LL_Int96 = BigInt<96, true, uint32_t>;
+
+  LL_Int64 zero_64(0);
+  LL_Int96 zero_96(0);
+  LL_Int192 zero_192(0);
+
+  LL_Int96 plus_a({0x1234, 0x5678, 0x9ABC});
+
+  ASSERT_EQ(static_cast<int>(plus_a), 0x1234);
+  ASSERT_EQ(static_cast<int>(plus_a >> 32), 0x5678);
+  ASSERT_EQ(static_cast<int>(plus_a >> 64), 0x9ABC);
+
+  LL_Int96 minus_a(-plus_a);
+
+  // The reason that the numbers are inverted and not negated is that we're
+  // using two's complement. To negate a two's complement number you flip the
+  // bits and add 1, so minus_a is {~0x1234, ~0x5678, ~0x9ABC} + {1,0,0}.
+  ASSERT_EQ(static_cast<int>(minus_a), (~0x1234) + 1);
+  ASSERT_EQ(static_cast<int>(minus_a >> 32), ~0x5678);
+  ASSERT_EQ(static_cast<int>(minus_a >> 64), ~0x9ABC);
+
+  ASSERT_TRUE(plus_a + minus_a == zero_96);
+
+  // 192 so there's an extra block to get sign extended to
+  LL_Int192 bigger_plus_a(plus_a);
+
+  ASSERT_EQ(static_cast<int>(bigger_plus_a), 0x1234);
+  ASSERT_EQ(static_cast<int>(bigger_plus_a >> 32), 0x5678);
+  ASSERT_EQ(static_cast<int>(bigger_plus_a >> 64), 0x9ABC);
+  ASSERT_EQ(static_cast<int>(bigger_plus_a >> 96), 0);
+  ASSERT_EQ(static_cast<int>(bigger_plus_a >> 128), 0);
+  ASSERT_EQ(static_cast<int>(bigger_plus_a >> 160), 0);
+
+  LL_Int192 bigger_minus_a(minus_a);
+
+  ASSERT_EQ(static_cast<int>(bigger_minus_a), (~0x1234) + 1);
+  ASSERT_EQ(static_cast<int>(bigger_minus_a >> 32), ~0x5678);
+  ASSERT_EQ(static_cast<int>(bigger_minus_a >> 64), ~0x9ABC);
+  ASSERT_EQ(static_cast<int>(bigger_minus_a >> 96), ~0);
+  ASSERT_EQ(static_cast<int>(bigger_minus_a >> 128), ~0);
+  ASSERT_EQ(static_cast<int>(bigger_minus_a >> 160), ~0);
+
+  ASSERT_TRUE(bigger_plus_a + bigger_minus_a == zero_192);
+
+  LL_Int64 smaller_plus_a(plus_a);
+
+  ASSERT_EQ(static_cast<int>(smaller_plus_a), 0x1234);
+  ASSERT_EQ(static_cast<int>(smaller_plus_a >> 32), 0x5678);
+
+  LL_Int64 smaller_minus_a(minus_a);
+
+  ASSERT_EQ(static_cast<int>(smaller_minus_a), (~0x1234) + 1);
+  ASSERT_EQ(static_cast<int>(smaller_minus_a >> 32), ~0x5678);
+
+  ASSERT_TRUE(smaller_plus_a + smaller_minus_a == zero_64);
+
+  // Also try going from bigger word size to smaller word size
+  LL_Int96 smaller_back_plus_a(smaller_plus_a);
+
+  ASSERT_EQ(static_cast<int>(smaller_back_plus_a), 0x1234);
+  ASSERT_EQ(static_cast<int>(smaller_back_plus_a >> 32), 0x5678);
+  ASSERT_EQ(static_cast<int>(smaller_back_plus_a >> 64), 0);
+
+  LL_Int96 smaller_back_minus_a(smaller_minus_a);
+
+  ASSERT_EQ(static_cast<int>(smaller_back_minus_a), (~0x1234) + 1);
+  ASSERT_EQ(static_cast<int>(smaller_back_minus_a >> 32), ~0x5678);
+  ASSERT_EQ(static_cast<int>(smaller_back_minus_a >> 64), ~0);
+
+  ASSERT_TRUE(smaller_back_plus_a + smaller_back_minus_a == zero_96);
+
+  LL_Int96 bigger_back_plus_a(bigger_plus_a);
+
+  ASSERT_EQ(static_cast<int>(bigger_back_plus_a), 0x1234);
+  ASSERT_EQ(static_cast<int>(bigger_back_plus_a >> 32), 0x5678);
+  ASSERT_EQ(static_cast<int>(bigger_back_plus_a >> 64), 0x9ABC);
+
+  LL_Int96 bigger_back_minus_a(bigger_minus_a);
+
+  ASSERT_EQ(static_cast<int>(bigger_back_minus_a), (~0x1234) + 1);
+  ASSERT_EQ(static_cast<int>(bigger_back_minus_a >> 32), ~0x5678);
+  ASSERT_EQ(static_cast<int>(bigger_back_minus_a >> 64), ~0x9ABC);
+
+  ASSERT_TRUE(bigger_back_plus_a + bigger_back_minus_a == zero_96);
+}
+
+TEST(LlvmLibcUIntClassTest, MixedSignednessOtherWordTypeCastTests) {
+  using LL_UInt96 = BigInt<96, false, uint32_t>;
+  LL_UInt96 x = -123;
+  // ensure that -123 gets extended, even though the input type is signed while
+  // the BigInt is unsigned.
+  ASSERT_EQ(int64_t(x), int64_t(-123));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

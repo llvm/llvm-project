@@ -1,4 +1,4 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation,convert-arith-to-llvm),convert-vector-to-scf,convert-scf-to-cf,convert-cf-to-llvm,convert-vector-to-llvm,func.func(convert-math-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-math-polynomial-approximation),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
@@ -492,6 +492,10 @@ func.func @asin() {
   // CHECK: -0.25268
   %cst3 = arith.constant -0.25 : f32
   call @asin_f32(%cst3) : (f32) -> ()
+
+  // CHECK: -1.1197
+  %cst4 = arith.constant -0.90 : f32
+  call @asin_f32(%cst4) : (f32) -> ()
 
   // CHECK: 0.25268, 0.384397, 0.597406
   %vec_x = arith.constant dense<[0.25, 0.375, 0.5625]> : vector<3xf32>

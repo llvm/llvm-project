@@ -629,14 +629,35 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
-  if (C.getDriver().isUsingLTO())
+  if (C.getDriver().isUsingLTO()) {
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
                   C.getDriver().getLTOMode() == LTOK_Thin);
-  else if (Args.hasArg(options::OPT_mcpu_EQ))
+  } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
-        "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
+        "-plugin-opt=mcpu=" +
+        getProcessorFromTargetID(getToolChain().getTriple(),
+                                 Args.getLastArgValue(options::OPT_mcpu_EQ))));
+  }
 
-  addGPULibraries(getToolChain(), Args, CmdArgs);
+  // Always pass the target-id features to the LTO job.
+  std::vector<StringRef> Features;
+  getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
+                          Features);
+  if (!Features.empty()) {
+    CmdArgs.push_back(
+        Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
+  }
+
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
@@ -887,7 +908,7 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("amdgpu-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -1041,4 +1062,40 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, isOpenMP);
+}
+
+bool AMDGPUToolChain::shouldSkipSanitizeOption(
+    const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
+    StringRef TargetID, const llvm::opt::Arg *A) const {
+  // For actions without targetID, do nothing.
+  if (TargetID.empty())
+    return false;
+  Option O = A->getOption();
+  if (!O.matches(options::OPT_fsanitize_EQ))
+    return false;
+
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                          options::OPT_fno_gpu_sanitize, true))
+    return true;
+
+  auto &Diags = TC.getDriver().getDiags();
+
+  // For simplicity, we only allow -fsanitize=address
+  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+  if (K != SanitizerKind::Address)
+    return true;
+
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
+
+  assert(OptionalGpuArch && "Invalid Target ID");
+  (void)OptionalGpuArch;
+  auto Loc = FeatureMap.find("xnack");
+  if (Loc == FeatureMap.end() || !Loc->second) {
+    Diags.Report(
+        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    return true;
+  }
+  return false;
 }

@@ -24,8 +24,8 @@ BAR bar = 17;
 #  error BAR was not defined
 #endif
 
-// CHECK-FOO: definition of macro 'FOO' differs between the precompiled header ('1') and the command line ('blah')
-// CHECK-NOFOO: macro 'FOO' was defined in the precompiled header but undef'd on the command line
+// CHECK-FOO: definition of macro 'FOO' differs between the AST file '{{.*}}' ('1') and the command line ('blah')
+// CHECK-NOFOO: macro 'FOO' was defined in the AST file '{{.*}}' but undef'd on the command line
 
-// CHECK-UNDEF: command line contains '-undef' but precompiled header was not built with it
+// CHECK-UNDEF: command line contains '-undef' but AST file '{{.*}}' was not built with it
 

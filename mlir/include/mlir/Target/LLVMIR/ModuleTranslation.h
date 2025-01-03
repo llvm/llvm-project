@@ -167,6 +167,12 @@ public:
   /// attribute.
   void setLoopMetadata(Operation *op, llvm::Instruction *inst);
 
+  /// Sets the disjoint flag attribute for the exported instruction `value`
+  /// given the original operation `op`. Asserts if the operation does
+  /// not implement the disjoint flag interface, and asserts if the value
+  /// is an instruction that implements the disjoint flag.
+  void setDisjointFlag(Operation *op, llvm::Value *value);
+
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
 
@@ -328,6 +334,12 @@ private:
   /// Process tbaa LLVM Metadata operations and create LLVM
   /// metadata nodes for them.
   LogicalResult createTBAAMetadata();
+
+  /// Process the ident LLVM Metadata, if it exists.
+  LogicalResult createIdentMetadata();
+
+  /// Process the llvm.commandline LLVM Metadata, if it exists.
+  LogicalResult createCommandlineMetadata();
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult

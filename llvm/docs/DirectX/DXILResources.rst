@@ -96,7 +96,7 @@ Buffers
 
 .. code-block:: llvm
 
-   target("dx.TypedBuffer", ElementType, IsWriteable, IsROV)
+   target("dx.TypedBuffer", ElementType, IsWriteable, IsROV, IsSigned)
    target("dx.RawBuffer", ElementType, IsWriteable, IsROV)
 
 We need two separate buffer types to account for the differences between the
@@ -106,9 +106,14 @@ used for DXIL's RawBuffers and StructuredBuffers. We call the latter
 "RawBuffer" to match the naming of the operations, but it can represent both
 the Raw and Structured variants.
 
-For TypedBuffer, the element type must be an integer or floating point type.
-For RawBuffer the type can be an integer, floating point, or struct type.
-HLSL's ByteAddressBuffer is represented by an `i8` element type.
+HLSL's Buffer and RWBuffer are represented as a TypedBuffer with an element
+type that is a scalar integer or floating point type, or a vector of at most 4
+such types. HLSL's ByteAddressBuffer is a RawBuffer with an `i8` element type.
+HLSL's StructuredBuffers are RawBuffer with a struct, vector, or scalar type.
+
+One unfortunate necessity here is that TypedBuffer needs an extra parameter to
+differentiate signed vs unsigned ints. The is because in LLVM IR int types
+don't have a sign, so to keep this information we need a side channel.
 
 These types are generally used by BufferLoad and BufferStore operations, as
 well as atomics.
@@ -128,6 +133,8 @@ There are a few fields to describe variants of all of these types:
        writeable) and UAVs (writeable).
    * - IsROV
      - Whether the UAV is a rasterizer ordered view. Always ``0`` for SRVs.
+   * - IsSigned
+     - Whether an int element type is signed ("dx.TypedBuffer" only)
 
 .. _bufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferload
 .. _bufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
@@ -147,7 +154,7 @@ We provide a few different ways to instantiate resources in the IR via the
 type, returning an appropriate handle for the resource, and represent binding
 information in the arguments to the intrinsic.
 
-The three operations we need are ``llvm.dx.handle.fromBinding``,
+The three operations we need are ``llvm.dx.resource.handlefrombinding``,
 ``llvm.dx.handle.fromHeap``, and ``llvm.dx.handle.fromPointer``. These are
 rougly equivalent to the DXIL operations ``dx.op.createHandleFromBinding``,
 ``dx.op.createHandleFromHeap``, and ``dx.op.createHandleForLib``, but they fold
@@ -155,9 +162,14 @@ the subsequent ``dx.op.annotateHandle`` operation in. Note that we don't have
 an analogue for `dx.op.createHandle`_, since ``dx.op.createHandleFromBinding``
 subsumes it.
 
+We diverge from DXIL and index from the beginning of the binding rather than
+indexing from the beginning of the binding space. This matches the semantics
+more clearly and avoids a non-obvious invariant in what constitutes valid
+arguments.
+
 .. _dx.op.createHandle: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-handles
 
-.. list-table:: ``@llvm.dx.handle.fromBinding``
+.. list-table:: ``@llvm.dx.resource.handlefrombinding``
    :header-rows: 1
 
    * - Argument
@@ -183,7 +195,7 @@ subsumes it.
    * - ``%index``
      - 4
      - ``i32``
-     - Index of the resource to access.
+     - Index from the beginning of the binding.
    * - ``%non-uniform``
      - 5
      - i1
@@ -197,30 +209,36 @@ Examples:
 .. code-block:: llvm
 
    ; RWBuffer<float4> Buf : register(u5, space3)
-   %buf = call target("dx.TypedBuffer", float, 1, 0)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
-                   i32 3, i32 5, i32 1, i32 0, i1 false)
+   %buf = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
+            i32 3, i32 5, i32 1, i32 0, i1 false)
 
-   ; RWBuffer<uint> Buf : register(u7, space2)
-   %buf = call target("dx.TypedBuffer", i32, 1, 0)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
-                   i32 2, i32 7, i32 1, i32 0, i1 false)
+   ; RWBuffer<int> Buf : register(u7, space2)
+   %buf = call target("dx.TypedBuffer", i32, 1, 0, 1)
+        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(
+            i32 2, i32 7, i32 1, i32 0, i1 false)
 
    ; Buffer<uint4> Buf[24] : register(t3, space5)
-   %buf = call target("dx.TypedBuffer", i32, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
-                   i32 2, i32 7, i32 24, i32 0, i1 false)
+   %buf = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
+        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0t(
+            i32 2, i32 7, i32 24, i32 0, i1 false)
 
    ; struct S { float4 a; uint4 b; };
    ; StructuredBuffer<S> Buf : register(t2, space4)
-   %buf = call target("dx.RawBuffer", {<4 x f32>, <4 x i32>}, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
-                   i32 4, i32 2, i32 1, i32 0, i1 false)
+   %buf = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
+       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
+           i32 4, i32 2, i32 1, i32 0, i1 false)
 
    ; ByteAddressBuffer Buf : register(t8, space1)
    %buf = call target("dx.RawBuffer", i8, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
-                   i32 1, i32 8, i32 1, i32 0, i1 false)
+       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
+           i32 1, i32 8, i32 1, i32 0, i1 false)
+
+   ; RWBuffer<float4> Global[3] : register(u6, space5)
+   ; RWBuffer<float4> Buf = Global[2];
+   %buf = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
+           i32 5, i32 6, i32 3, i32 2, i1 false)
 
 .. list-table:: ``@llvm.dx.handle.fromHeap``
    :header-rows: 1
@@ -256,48 +274,41 @@ Examples:
                @llvm.dx.handle.fromHeap.tdx.RawBuffer_v4f32_1_0(
                    i32 2, i1 false)
 
-Buffer Loads and Stores
------------------------
+16-byte Loads, Samples, and Gathers
+-----------------------------------
 
-*relevant types: Buffers*
+*relevant types: TypedBuffer, CBuffer, and Textures*
 
-We need to treat buffer loads and stores from "dx.TypedBuffer" and
-"dx.RawBuffer" separately. For TypedBuffer, we have ``llvm.dx.typedBufferLoad``
-and ``llvm.dx.typedBufferStore``, which load and store 16-byte "rows" of data
-via a simple index. For RawBuffer, we have ``llvm.dx.rawBufferPtr``, which
-return a pointer that can be indexed, loaded, and stored to as needed.
+TypedBuffer, CBuffer, and Texture loads, as well as samples and gathers, can
+return 1 to 4 elements from the given resource, to a maximum of 16 bytes of
+data. DXIL's modeling of this is influenced by DirectX and DXBC's history and
+it generally treats these operations as returning 4 32-bit values. For 16-bit
+elements the values are 16-bit values, and for 64-bit values the operations
+return 4 32-bit integers and emit further code to construct the double.
 
-The typed load and store operations always operate on exactly 16 bytes of data,
-so there are only a few valid overloads. For types that are 32-bits or smaller,
-we operate on 4-element vectors, such as ``<4 x i32>``, ``<4 x float>``, or
-``<4 x half>``. Note that in 16-bit cases each 16-bit value occupies 32-bits of
-storage. For 64-bit types we operate on 2-element vectors - ``<2 x double>`` or
-``<2 x i64>``. When a type like `Buffer<float>` is used at the HLSL level, it
-is expected that this will operate on a single float in each 16 byte row - that
-is, a load would use the ``<4 x float>`` variant and then extract the first
-element.
+In DXIL, these operations return `ResRet`_ and `CBufRet`_ values, are structs
+containing 4 elements of the same type, and in the case of `ResRet` a 5th
+element that is used by the `CheckAccessFullyMapped`_ operation.
 
-.. note:: In DXC, trying to operate on a ``Buffer<double4>`` crashes the
-          compiler. We should probably just reject this in the frontend.
+In LLVM IR the intrinsics will return the contained type of the resource
+instead. That is, ``llvm.dx.resource.load.typedbuffer`` from a
+``Buffer<float>`` would return a single float, from ``Buffer<float4>`` a vector
+of 4 floats, and from ``Buffer<double2>`` a vector of two doubles, etc. The
+operations are then expanded out to match DXIL's format during lowering.
 
-The TypedBuffer intrinsics are lowered to the `bufferLoad`_ and `bufferStore`_
-operations, and the operations on the memory accessed by RawBufferPtr are
-lowered to `rawBufferLoad`_ and `rawBufferStore`_. Note that if we want to
-support DXIL versions prior to 1.2 we'll need to lower the RawBuffer loads and
-stores to the non-raw operations as well.
+In cases where we need ``CheckAccessFullyMapped``, we have a second intrinsic
+that returns an anonymous struct with element-0 being the contained type, and
+element-1 being the ``i1`` result of a ``CheckAccessFullyMapped`` call. We
+don't have a separate call to ``CheckAccessFullyMapped`` at all, since that's
+the only operation that can possibly be done on this value. In practice this
+may mean we insert a DXIL operation for the check when this was missing in the
+HLSL source, but this actually matches DXC's behaviour in practice.
 
-.. note:: TODO: We need to account for `CheckAccessFullyMapped`_ here.
-
-   In DXIL the load operations always return an ``i32`` status value, but this
-   isn't very ergonomic when it isn't used. We can (1) bite the bullet and have
-   the loads return `{%ret_type, %i32}` all the time, (2) create a variant or
-   update the signature iff the status is used, or (3) hide this in a sideband
-   channel somewhere. I'm leaning towards (2), but could probably be convinced
-   that the ugliness of (1) is worth the simplicity.
-
+.. _ResRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
+.. _CBufRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
 .. _CheckAccessFullyMapped: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/checkaccessfullymapped
 
-.. list-table:: ``@llvm.dx.typedBufferLoad``
+.. list-table:: ``@llvm.dx.resource.load.typedbuffer``
    :header-rows: 1
 
    * - Argument
@@ -306,7 +317,7 @@ stores to the non-raw operations as well.
      - Description
    * - Return value
      -
-     - A 4- or 2-element vector of the type of the buffer
+     - The contained type of the buffer
      - The data loaded from the buffer
    * - ``%buffer``
      - 0
@@ -321,16 +332,72 @@ Examples:
 
 .. code-block:: llvm
 
-   %ret = call <4 x float> @llvm.dx.typedBufferLoad.tdx.TypedBuffer_f32_0_0t(
-       target("dx.TypedBuffer", f32, 0, 0) %buffer, i32 %index)
-   %ret = call <4 x i32> @llvm.dx.typedBufferLoad.tdx.TypedBuffer_i32_0_0t(
-       target("dx.TypedBuffer", i32, 0, 0) %buffer, i32 %index)
-   %ret = call <4 x half> @llvm.dx.typedBufferLoad.tdx.TypedBuffer_f16_0_0t(
-       target("dx.TypedBuffer", f16, 0, 0) %buffer, i32 %index)
-   %ret = call <2 x double> @llvm.dx.typedBufferLoad.tdx.TypedBuffer_f64_0_0t(
-       target("dx.TypedBuffer", double, 0, 0) %buffer, i32 %index)
+   %ret = call <4 x float>
+       @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
+           target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
+   %ret = call float
+       @llvm.dx.resource.load.typedbuffer.f32.tdx.TypedBuffer_f32_0_0_0t(
+           target("dx.TypedBuffer", float, 0, 0, 0) %buffer, i32 %index)
+   %ret = call <4 x i32>
+       @llvm.dx.resource.load.typedbuffer.v4i32.tdx.TypedBuffer_v4i32_0_0_0t(
+           target("dx.TypedBuffer", <4 x i32>, 0, 0, 0) %buffer, i32 %index)
+   %ret = call <4 x half>
+       @llvm.dx.resource.load.typedbuffer.v4f16.tdx.TypedBuffer_v4f16_0_0_0t(
+           target("dx.TypedBuffer", <4 x half>, 0, 0, 0) %buffer, i32 %index)
+   %ret = call <2 x double>
+       @llvm.dx.resource.load.typedbuffer.v2f64.tdx.TypedBuffer_v2f64_0_0t(
+           target("dx.TypedBuffer", <2 x double>, 0, 0, 0) %buffer, i32 %index)
 
-.. list-table:: ``@llvm.dx.typedBufferStore``
+.. list-table:: ``@llvm.dx.resource.loadchecked.typedbuffer``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A structure of the contained type and the check bit
+     - The data loaded from the buffer and the check bit
+   * - ``%buffer``
+     - 0
+     - ``target(dx.TypedBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+.. code-block:: llvm
+
+   %ret = call {<4 x float>, i1}
+       @llvm.dx.resource.loadchecked.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
+           target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
+
+Texture and Typed Buffer Stores
+-------------------------------
+
+*relevant types: Textures and TypedBuffer*
+
+The `TextureStore`_ and `BufferStore`_ DXIL operations always write all four
+32-bit components to a texture or a typed buffer. While both operations include
+a mask parameter, it is specified that the mask must cover all components when
+used with these types.
+
+The store operations that we define as intrinsics behave similarly, and will
+only accept writes to the whole of the contained type. This differs from the
+loads above, but this makes sense to do from a semantics preserving point of
+view. Thus, texture and buffer stores may only operate on 4-element vectors of
+types that are 32-bits or fewer, such as ``<4 x i32>``, ``<4 x float>``, and
+``<4 x half>``, and 2 element vectors of 64-bit types like ``<2 x double>`` and
+``<2 x i64>``.
+
+.. _BufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
+.. _TextureStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
+
+Examples:
+
+.. list-table:: ``@llvm.dx.resource.store.typedbuffer``
    :header-rows: 1
 
    * - Argument
@@ -358,68 +425,9 @@ Examples:
 
 .. code-block:: llvm
 
-   call void @llvm.dx.bufferStore.tdx.Buffer_f32_1_0t(
+   call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v4f32_1_0_0t(
        target("dx.TypedBuffer", f32, 1, 0) %buf, i32 %index, <4 x f32> %data)
-   call void @llvm.dx.bufferStore.tdx.Buffer_f16_1_0t(
+   call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v4f16_1_0_0t(
        target("dx.TypedBuffer", f16, 1, 0) %buf, i32 %index, <4 x f16> %data)
-   call void @llvm.dx.bufferStore.tdx.Buffer_f64_1_0t(
+   call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v2f64_1_0_0t(
        target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
-
-.. list-table:: ``@llvm.dx.rawBufferPtr``
-   :header-rows: 1
-
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - ``ptr``
-     - Pointer to an element of the buffer
-   * - ``%buffer``
-     - 0
-     - ``target(dx.RawBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-
-Examples:
-
-.. code-block:: llvm
-
-   ; Load a float4 from a buffer
-   %buf = call ptr @llvm.dx.rawBufferPtr.tdx.RawBuffer_v4f32_0_0t(
-       target("dx.RawBuffer", <4 x f32>, 0, 0) %buffer, i32 %index)
-   %val = load <4 x float>, ptr %buf, align 16
-
-   ; Load the double from a struct containing an int, a float, and a double
-   %buf = call ptr @llvm.dx.rawBufferPtr.tdx.RawBuffer_sl_i32f32f64s_0_0t(
-       target("dx.RawBuffer", {i32, f32, f64}, 0, 0) %buffer, i32 %index)
-   %val = getelementptr inbounds {i32, f32, f64}, ptr %buf, i32 0, i32 2
-   %d = load double, ptr %val, align 8
-
-   ; Load a float from a byte address buffer
-   %buf = call ptr @llvm.dx.rawBufferPtr.tdx.RawBuffer_i8_0_0t(
-       target("dx.RawBuffer", i8, 0, 0) %buffer, i32 %index)
-   %val = getelementptr inbounds float, ptr %buf, i64 0
-   %f = load float, ptr %val, align 4
-
-   ; Store to a buffer containing float4
-   %addr = call ptr @llvm.dx.rawBufferPtr.tdx.RawBuffer_v4f32_0_0t(
-       target("dx.RawBuffer", <4 x f32>, 0, 0) %buffer, i32 %index)
-   store <4 x float> %val, ptr %addr
-
-   ; Store the double in a struct containing an int, a float, and a double
-   %buf = call ptr @llvm.dx.rawBufferPtr.tdx.RawBuffer_sl_i32f32f64s_0_0t(
-       target("dx.RawBuffer", {i32, f32, f64}, 0, 0) %buffer, i32 %index)
-   %addr = getelementptr inbounds {i32, f32, f64}, ptr %buf, i32 0, i32 2
-   store double %d, ptr %addr
-
-   ; Store a float into a byte address buffer
-   %buf = call ptr @llvm.dx.rawBufferPtr.tdx.RawBuffer_i8_0_0t(
-       target("dx.RawBuffer", i8, 0, 0) %buffer, i32 %index)
-   %addr = getelementptr inbounds float, ptr %buf, i64 0
-   store float %f, ptr %val
-

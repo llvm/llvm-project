@@ -91,6 +91,7 @@ LANGOPT(C2y               , 1, 0, "C2y")
 LANGOPT(MSVCCompat        , 1, 0, "Microsoft Visual C++ full compatibility mode")
 LANGOPT(Kernel            , 1, 0, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, "Microsoft C++ extensions")
+LANGOPT(ZOSExt            , 1, 0, "z/OS extensions")
 LANGOPT(AsmBlocks         , 1, 0, "Microsoft inline asm blocks")
 LANGOPT(Borland           , 1, 0, "Borland extensions")
 LANGOPT(CPlusPlus         , 1, 0, "C++")
@@ -161,6 +162,7 @@ LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P20
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 1, "C++17 relaxed matching of template template arguments")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
+LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
 LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")
@@ -170,9 +172,13 @@ LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
 LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, "incorporate address discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, "incorporate type discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthTypeInfoVTPtrDiscrimination, 1, 0, "incorporate type and address discrimination in authenticated vtable pointers for std::type_info")
-LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
 BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
                "Use type discrimination when signing function pointers")
+LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
+LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0,
+        "incorporate address discrimination in authenticated function pointers in init/fini arrays")
+LANGOPT(PointerAuthELFGOT, 1, 0, "authenticate pointers from GOT")
+LANGOPT(AArch64JumpTableHardening, 1, 0, "use hardened lowering for jump-table dispatch")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
@@ -185,7 +191,6 @@ LANGOPT(POSIXThreads      , 1, 0, "POSIX thread support")
 LANGOPT(Blocks            , 1, 0, "blocks extension to C")
 BENIGN_LANGOPT(EmitAllDecls      , 1, 0, "emitting all declarations")
 LANGOPT(MathErrno         , 1, 1, "errno in math functions")
-BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like and may be ripped out at any time")
 LANGOPT(Modules           , 1, 0, "modules semantics")
 COMPATIBLE_LANGOPT(CPlusPlusModules, 1, 0, "C++ modules syntax")
 LANGOPT(SkipODRCheckInGMF, 1, 0, "Skip ODR checks for decls in the global module fragment")
@@ -276,7 +281,6 @@ LANGOPT(OpenMPNoNestedParallelism  , 1, 0, "Assume that no thread in a parallel 
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(OpenMPForceUSM     , 1, 0, "Enable OpenMP unified shared memory mode via compiler.")
 LANGOPT(NoGPULib  , 1, 0, "Indicate a build without the standard GPU libraries.")
-LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
 LANGOPT(HLSL, 1, 0, "HLSL")
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, "HLSL Version")
@@ -294,6 +298,7 @@ LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, "default max threads per block for kern
 LANGOPT(GPUDeferDiag, 1, 0, "defer host/device related diagnostic messages for CUDA/HIP")
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
 LANGOPT(OffloadingNewDriver, 1, 0, "use the new driver for generating offloading code.")
+LANGOPT(OffloadViaLLVM, 1, 0, "target LLVM/Offload as portable offloading runtime.")
 
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 LANGOPT(SYCLIsHost        , 1, 0, "SYCL host compilation")
@@ -359,6 +364,8 @@ BENIGN_LANGOPT(CompatibilityQualifiedIdBlockParamTypeChecking, 1, 0,
 LANGOPT(ObjCDisableDirectMethodsForTesting, 1, 0,
         "Disable recognition of objc_direct methods")
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
+ENUM_LANGOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2, CFBranchLabelSchemeKind::Default,
+             "Control-Flow Branch Protection Label Scheme")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
 LANGOPT(IncludeDefaultHeader, 1, 0, "Include default header file for OpenCL")
@@ -424,7 +431,7 @@ LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(XLPragmaPack, 1, 0, "IBM XL #pragma pack handling")
 
-LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
+COMPATIBLE_LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 
 LANGOPT(APINotes, 1, 0, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, "use module-based external API notes")
@@ -459,7 +466,9 @@ LANGOPT(FixedPoint, 1, 0, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
         "unsigned fixed point types having one extra padding bit")
 
-LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
+ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
+             RegisterStaticDestructorsKind::All,
+             "Register C++ static destructors")
 
 LANGOPT(RegCall4, 1, 0, "Set __regcall4 as a default calling convention to respect __regcall ABI v.4")
 

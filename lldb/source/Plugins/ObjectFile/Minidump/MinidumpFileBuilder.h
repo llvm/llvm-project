@@ -23,6 +23,8 @@
 #include <utility>
 #include <variant>
 
+#include "lldb/Core/Progress.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -75,8 +77,10 @@ lldb_private::Status WriteString(const std::string &to_write,
 class MinidumpFileBuilder {
 public:
   MinidumpFileBuilder(lldb::FileUP &&core_file,
-                      const lldb::ProcessSP &process_sp)
-      : m_process_sp(process_sp), m_core_file(std::move(core_file)){};
+                      const lldb::ProcessSP &process_sp,
+                      lldb_private::SaveCoreOptions &save_core_options)
+      : m_process_sp(process_sp), m_core_file(std::move(core_file)),
+        m_save_core_options(save_core_options) {}
 
   MinidumpFileBuilder(const MinidumpFileBuilder &) = delete;
   MinidumpFileBuilder &operator=(const MinidumpFileBuilder &) = delete;
@@ -103,7 +107,7 @@ public:
   // Add Exception streams for any threads that stopped with exceptions.
   lldb_private::Status AddExceptions();
   // Add MemoryList stream, containing dumps of important memory segments
-  lldb_private::Status AddMemoryList(lldb::SaveCoreStyle core_style);
+  lldb_private::Status AddMemoryList();
   // Add MiscInfo stream, mainly providing ProcessId
   lldb_private::Status AddMiscInfo();
   // Add informative files about a Linux process
@@ -112,15 +116,21 @@ public:
   // Run cleanup and write all remaining bytes to file
   lldb_private::Status DumpFile();
 
+  // Delete the file if it exists
+  void DeleteFile() noexcept;
+
 private:
+  lldb_private::Status AddLLDBGeneratedStream();
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
   // trigger a flush.
   lldb_private::Status AddData(const void *data, uint64_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
-  AddMemoryList_64(lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_64(std::vector<lldb_private::CoreFileMemoryRange> &ranges,
+                   lldb_private::Progress &progress);
   lldb_private::Status
-  AddMemoryList_32(lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_32(std::vector<lldb_private::CoreFileMemoryRange> &ranges,
+                   lldb_private::Progress &progress);
   // Update the thread list on disk with the newly emitted stack RVAs.
   lldb_private::Status FixThreadStacks();
   lldb_private::Status FlushBufferToDisk();
@@ -164,6 +174,6 @@ private:
   std::unordered_map<lldb::tid_t, llvm::minidump::LocationDescriptor>
       m_tid_to_reg_ctx;
   lldb::FileUP m_core_file;
+  lldb_private::SaveCoreOptions m_save_core_options;
 };
-
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H

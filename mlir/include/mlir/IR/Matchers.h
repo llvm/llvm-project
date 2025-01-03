@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 
 namespace mlir {
 
@@ -97,6 +98,39 @@ struct constant_op_binder {
       return true;
     }
     return false;
+  }
+};
+
+/// A matcher that matches operations that implement the
+/// `InferIntRangeInterface` interface, and binds the inferred range.
+struct infer_int_range_op_binder {
+  IntegerValueRange *bind_value;
+
+  explicit infer_int_range_op_binder(IntegerValueRange *bind_value)
+      : bind_value(bind_value) {}
+
+  bool match(Operation *op) {
+    auto inferIntRangeOp = dyn_cast<InferIntRangeInterface>(op);
+    if (!inferIntRangeOp)
+      return false;
+
+    // Set the range of all integer operands to the maximal range.
+    SmallVector<IntegerValueRange> argRanges =
+        llvm::map_to_vector(op->getOperands(), IntegerValueRange::getMaxRange);
+
+    // Infer the result result range if possible.
+    bool matched = false;
+    auto setResultRanges = [&](Value value,
+                               const IntegerValueRange &argRanges) {
+      if (argRanges.isUninitialized())
+        return;
+      if (value != op->getResult(0))
+        return;
+      *bind_value = argRanges;
+      matched = true;
+    };
+    inferIntRangeOp.inferResultRangesFromOptional(argRanges, setResultRanges);
+    return matched;
   }
 };
 
@@ -216,6 +250,31 @@ struct constant_int_predicate_matcher {
   bool match(Operation *op) {
     APInt value;
     return constant_int_value_binder(&value).match(op) && predicate(value);
+  }
+};
+
+/// A matcher that matches a given a constant scalar / vector splat / tensor
+/// splat integer value or a constant integer range that fulfills a predicate.
+struct constant_int_range_predicate_matcher {
+  bool (*predicate)(const ConstantIntRanges &);
+
+  bool match(Attribute attr) {
+    APInt value;
+    return constant_int_value_binder(&value).match(attr) &&
+           predicate(ConstantIntRanges::constant(value));
+  }
+
+  bool match(Operation *op) {
+    // Try to match a constant integer value first.
+    APInt value;
+    if (constant_int_value_binder(&value).match(op))
+      return predicate(ConstantIntRanges::constant(value));
+
+    // Otherwise, try to match an operation that implements the
+    // `InferIntRangeInterface` interface.
+    IntegerValueRange range;
+    return infer_int_range_op_binder(&range).match(op) &&
+           predicate(range.getValue());
   }
 };
 
@@ -358,6 +417,11 @@ inline detail::constant_float_predicate_matcher m_OneFloat() {
   }};
 }
 
+/// Matches a constant scalar / vector splat / tensor splat float ones.
+inline detail::constant_float_predicate_matcher m_NaNFloat() {
+  return {[](const APFloat &value) { return value.isNaN(); }};
+}
+
 /// Matches a constant scalar / vector splat / tensor splat float positive
 /// infinity.
 inline detail::constant_float_predicate_matcher m_PosInfFloat() {
@@ -383,6 +447,31 @@ inline detail::constant_int_predicate_matcher m_Zero() {
 /// non-zero value.
 inline detail::constant_int_predicate_matcher m_NonZero() {
   return {[](const APInt &value) { return 0 != value; }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat integer or a
+/// unsigned integer range that does not contain zero. Note that this matcher
+/// interprets the target value as an unsigned integer.
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroU() {
+  return {[](const ConstantIntRanges &range) { return range.umin().ugt(0); }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat integer or a
+/// signed integer range that does not contain zero. Note that this matcher
+/// interprets the target value as a signed integer.
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroS() {
+  return {[](const ConstantIntRanges &range) {
+    return range.smin().sgt(0) || range.smax().slt(0);
+  }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat integer or a
+/// signed integer range that does not contain minus one. Note
+/// that this matcher interprets the target value as a signed integer.
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutNegOneS() {
+  return {[](const ConstantIntRanges &range) {
+    return range.smin().sgt(-1) || range.smax().slt(-1);
+  }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer one.

@@ -67,10 +67,7 @@ public:
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
 
     // Separate reduction and parallel dims
-    auto reductionDimsRange =
-        multiReductionOp.getReductionDims().getAsValueRange<IntegerAttr>();
-    auto reductionDims = llvm::to_vector<4>(llvm::map_range(
-        reductionDimsRange, [](const APInt &a) { return a.getZExtValue(); }));
+    ArrayRef<int64_t> reductionDims = multiReductionOp.getReductionDims();
     llvm::SmallDenseSet<int64_t> reductionDimsSet(reductionDims.begin(),
                                                   reductionDims.end());
     int64_t reductionSize = reductionDims.size();
@@ -394,9 +391,8 @@ struct TwoDimMultiReductionToReduction
         reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
       }
 
-      result = rewriter.create<vector::InsertElementOp>(
-          loc, reductionOp->getResult(0), result,
-          rewriter.create<arith::ConstantIndexOp>(loc, i));
+      result = rewriter.create<vector::InsertOp>(loc, reductionOp->getResult(0),
+                                                 result, i);
     }
 
     rewriter.replaceOp(rootOp, result);
@@ -490,7 +486,7 @@ struct LowerVectorMultiReductionPass
     populateVectorMultiReductionLoweringPatterns(loweringPatterns,
                                                  this->loweringStrategy);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

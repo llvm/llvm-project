@@ -73,7 +73,8 @@ OpAsmParser::~OpAsmParser() = default;
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
 /// Parse a type list.
-/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+/// This is out-of-line to work-around
+/// https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
   return parseCommaSeparatedList(
       [&]() { return parseType(result.emplace_back()); });
@@ -195,6 +196,10 @@ struct AsmPrinterOptions {
       "mlir-print-unique-ssa-ids", llvm::cl::init(false),
       llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
                      "and naming conflicts across all regions")};
+
+  llvm::cl::opt<bool> useNameLocAsPrefix{
+      "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
+      llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
 };
 } // namespace
 
@@ -212,7 +217,8 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), printUniqueSSAIDsFlag(false) {
+      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
+      useNameLocAsPrefix(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -231,6 +237,7 @@ OpPrintingFlags::OpPrintingFlags()
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
+  useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -360,6 +367,11 @@ bool OpPrintingFlags::shouldPrintValueUsers() const {
 /// Return if the printer should use unique IDs.
 bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
   return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
+}
+
+/// Return if the printer should use NameLocs as prefixes when printing SSA IDs.
+bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
+  return useNameLocAsPrefix;
 }
 
 //===----------------------------------------------------------------------===//
@@ -545,6 +557,10 @@ private:
   bool isType : 1;
   /// A flag indicating whether this alias may be deferred or not.
   bool isDeferrable : 1;
+
+public:
+  /// Used to avoid printing incomplete aliases for recursive types.
+  bool isPrinted = false;
 };
 
 /// This class represents a utility that initializes the set of attribute and
@@ -584,9 +600,8 @@ private:
   struct InProgressAliasInfo {
     InProgressAliasInfo()
         : aliasDepth(0), isType(false), canBeDeferred(false) {}
-    InProgressAliasInfo(StringRef alias, bool isType, bool canBeDeferred)
-        : alias(alias), aliasDepth(1), isType(isType),
-          canBeDeferred(canBeDeferred) {}
+    InProgressAliasInfo(StringRef alias)
+        : alias(alias), aliasDepth(1), isType(false), canBeDeferred(false) {}
 
     bool operator<(const InProgressAliasInfo &rhs) const {
       // Order first by depth, then by attr/type kind, and then by name.
@@ -1096,6 +1111,8 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 
   // Try to generate an alias for this value.
   generateAlias(value, it->second, canBeDeferred);
+  it->second.isType = std::is_base_of_v<Type, T>;
+  it->second.canBeDeferred = canBeDeferred;
 
   // Print the value, capturing any nested elements that require aliases.
   SmallVector<size_t> childAliases;
@@ -1153,8 +1170,7 @@ void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
       sanitizeIdentifier(nameBuffer, tempBuffer, /*allowedPunctChars=*/"$_-",
                          /*allowTrailingDigit=*/false);
   name = name.copy(aliasAllocator);
-  alias = InProgressAliasInfo(name, /*isType=*/std::is_base_of_v<Type, T>,
-                              canBeDeferred);
+  alias = InProgressAliasInfo(name);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1222,6 +1238,8 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
+  if (!it->second.isPrinted)
+    return failure();
 
   it->second.print(os);
   return success();
@@ -1238,12 +1256,9 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
     p.getStream() << " = ";
 
     if (alias.isTypeAlias()) {
-      // TODO: Support nested aliases in mutable types.
       Type type = Type::getFromOpaquePointer(opaqueSymbol);
-      if (type.hasTrait<TypeTrait::IsMutable>())
-        p.getStream() << type;
-      else
-        p.printTypeImpl(type);
+      p.printTypeImpl(type);
+      alias.isPrinted = true;
     } else {
       // TODO: Support nested aliases in mutable attributes.
       Attribute attr = Attribute::getFromOpaquePointer(opaqueSymbol);
@@ -1503,11 +1518,22 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   }
 }
 
+namespace {
+/// Try to get value name from value's location, fallback to `name`.
+StringRef maybeGetValueNameFromLoc(Value value, StringRef name) {
+  if (auto maybeNameLoc = value.getLoc()->findInstanceOf<NameLoc>())
+    return maybeNameLoc.getName();
+  return name;
+}
+} // namespace
+
 void SSANameState::numberValuesInRegion(Region &region) {
   auto setBlockArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(llvm::cast<BlockArgument>(arg).getOwner()->getParent() == &region &&
            "arg not defined in current region");
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      name = maybeGetValueNameFromLoc(arg, name);
     setValueName(arg, name);
   };
 
@@ -1550,7 +1576,10 @@ void SSANameState::numberValuesInBlock(Block &block) {
       specialNameBuffer.resize(strlen("arg"));
       specialName << nextArgumentID++;
     }
-    setValueName(arg, specialName.str());
+    StringRef specialNameStr = specialName.str();
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      specialNameStr = maybeGetValueNameFromLoc(arg, specialNameStr);
+    setValueName(arg, specialNameStr);
   }
 
   // Number the operations in this block.
@@ -1564,6 +1593,8 @@ void SSANameState::numberValuesInOp(Operation &op) {
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
     assert(result.getDefiningOp() == &op && "result not defined by 'op'");
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      name = maybeGetValueNameFromLoc(result, name);
     setValueName(result, name);
 
     // Record the result number for groups not anchored at 0.
@@ -1603,6 +1634,12 @@ void SSANameState::numberValuesInOp(Operation &op) {
     return;
   }
   Value resultBegin = op.getResult(0);
+
+  if (printerFlags.shouldUseNameLocAsPrefix() && !valueIDs.count(resultBegin)) {
+    if (auto nameLoc = resultBegin.getLoc()->findInstanceOf<NameLoc>()) {
+      setValueName(resultBegin, nameLoc.getName());
+    }
+  }
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
@@ -2006,12 +2043,23 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         else
           os << "unknown";
       })
-      .Case<FileLineColLoc>([&](FileLineColLoc loc) {
+      .Case<FileLineColRange>([&](FileLineColRange loc) {
         if (pretty)
           os << loc.getFilename().getValue();
         else
           printEscapedString(loc.getFilename());
-        os << ':' << loc.getLine() << ':' << loc.getColumn();
+        if (loc.getEndColumn() == loc.getStartColumn() &&
+            loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn();
+          return;
+        }
+        if (loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn()
+             << " to :" << loc.getEndColumn();
+          return;
+        }
+        os << ':' << loc.getStartLine() << ':' << loc.getStartColumn() << " to "
+           << loc.getEndLine() << ':' << loc.getEndColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
         printEscapedString(loc.getName());
@@ -2061,6 +2109,11 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
             [&](Location loc) { printLocationInternal(loc, pretty); },
             [&]() { os << ", "; });
         os << ']';
+      })
+      .Default([&](LocationAttr loc) {
+        // Assumes that this is a dialect-specific attribute and prints it
+        // directly.
+        printAttribute(loc);
       });
 }
 
@@ -2575,12 +2628,17 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
                            opaqueTy.getTypeData());
       })
       .Case<IndexType>([&](Type) { os << "index"; })
+      .Case<Float4E2M1FNType>([&](Type) { os << "f4E2M1FN"; })
+      .Case<Float6E2M3FNType>([&](Type) { os << "f6E2M3FN"; })
+      .Case<Float6E3M2FNType>([&](Type) { os << "f6E3M2FN"; })
       .Case<Float8E5M2Type>([&](Type) { os << "f8E5M2"; })
       .Case<Float8E4M3Type>([&](Type) { os << "f8E4M3"; })
       .Case<Float8E4M3FNType>([&](Type) { os << "f8E4M3FN"; })
       .Case<Float8E5M2FNUZType>([&](Type) { os << "f8E5M2FNUZ"; })
       .Case<Float8E4M3FNUZType>([&](Type) { os << "f8E4M3FNUZ"; })
       .Case<Float8E4M3B11FNUZType>([&](Type) { os << "f8E4M3B11FNUZ"; })
+      .Case<Float8E3M4Type>([&](Type) { os << "f8E3M4"; })
+      .Case<Float8E8M0FNUType>([&](Type) { os << "f8E8M0FNU"; })
       .Case<BFloat16Type>([&](Type) { os << "bf16"; })
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<FloatTF32Type>([&](Type) { os << "tf32"; })
@@ -3958,6 +4016,11 @@ void Operation::print(raw_ostream &os, AsmState &state) {
 
 void Operation::dump() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
+  llvm::errs() << "\n";
+}
+
+void Operation::dumpPretty() {
+  print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
   llvm::errs() << "\n";
 }
 

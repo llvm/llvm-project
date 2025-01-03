@@ -9,6 +9,59 @@
 // CHECK-UNDEFINED-TRAP: "-fsanitize-trap=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
 // CHECK-UNDEFINED-TRAP2: "-fsanitize-trap=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
 
+// The trailing -fsanitize-merge takes precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                                                              %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=undefined               -fsanitize-merge                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=undefined               -fsanitize-merge=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=bool                       -fsanitize-merge=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge=undefined -fsanitize-merge=bool %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
+// CHECK-UNDEFINED-MERGE: "-fsanitize-merge=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+
+// The trailing arguments (-fsanitize-merge -fno-sanitize-merge=signed-integer-overflow) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                                        -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge           -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge=undefined -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge           -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge=undefined -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge           -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge=undefined -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
+// CHECK-UNDEFINED-MERGE2: "-fsanitize-merge=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
+
+// The trailing -fno-sanitize-merge takes precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                            -fno-sanitize-merge                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                            -fno-sanitize-merge=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                            -fno-sanitize-merge           -fno-sanitize-merge=bool %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                            -fno-sanitize-merge=undefined -fno-sanitize-merge=bool %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge           -fno-sanitize-merge                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge           -fno-sanitize-merge=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=undefined -fno-sanitize-merge                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=undefined -fno-sanitize-merge=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
+// CHECK-UNDEFINED-MERGE3: "-fsanitize-merge"
+
+// The trailing arguments (-fsanitize-merge -fno-sanitize-merge=alignment,null) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                                        -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge           -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge=undefined -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge           -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge=undefined -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge           -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge=undefined -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
+// CHECK-UNDEFINED-MERGE4: "-fsanitize-merge=array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+
+// The trailing arguments (-fno-sanitize-merge -fsanitize-merge=alignment,null) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                          -fno-sanitize-merge           -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                          -fno-sanitize-merge=undefined -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge                         -fno-sanitize-merge           -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge                         -fno-sanitize-merge=undefined -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=signed-integer-overflow -fno-sanitize-merge           -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=signed-integer-overflow -fno-sanitize-merge=undefined -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
+// CHECK-UNDEFINED-MERGE5: "-fsanitize-merge=alignment,null"
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED
 // CHECK-UNDEFINED: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|function|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|vptr|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){19}"}}
 
@@ -196,6 +249,8 @@
 // RUN: %clang --target=aarch64-linux-android31 -fsanitize=memtag -march=armv8-a+memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
 // CHECK-SANMT-MT: "-target-feature" "+mte"
 // CHECK-SANMT-MT-SAME: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
+
+// RUN: not %clang --target=aarch64-linux -fsanitize=memtag -Xclang -target-feature -Xclang +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
 
 // RUN: not %clang --target=aarch64-linux -fsanitize=memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-0
 // CHECK-SANMT-NOMT-0: '-fsanitize=memtag-stack' requires hardware support (+memtag)
@@ -611,6 +666,8 @@
 // RUN: %clang --target=arm-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=aarch64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=arm-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=arm-none-eabi -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=thumb-none-eabi -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=aarch64-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=aarch64_be -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang --target=riscv32 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
@@ -724,8 +781,8 @@
 // NO-SP-NOT: stack-protector
 // NO-SP: "-fsanitize=safe-stack"
 // SP-ASAN: error: invalid argument '-fsanitize=safe-stack' not allowed with '-fsanitize=address'
-// SP: "-fsanitize=safe-stack"
 // SP: -stack-protector
+// SP: "-fsanitize=safe-stack"
 // NO-SP-NOT: stack-protector
 
 // RUN: %clang --target=powerpc64-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
@@ -862,6 +919,13 @@
 // CHECK-INTSAN-MINIMAL: "-fsanitize=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
 // CHECK-INTSAN-MINIMAL: "-fsanitize-minimal-runtime"
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-trap=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-IMPL-CONV-TRAP
+// CHECK-IMPL-CONV-TRAP: "-fsanitize-trap=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,implicit-bitfield-conversion"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-IMPL-CONV-MINIMAL
+// CHECK-IMPL-CONV-MINIMAL: "-fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,implicit-bitfield-conversion"
+// CHECK-IMPL-CONV-MINIMAL: "-fsanitize-minimal-runtime"
+
 // RUN: %clang --target=aarch64-linux-android -march=armv8-a+memtag -fsanitize=memtag -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MEMTAG-MINIMAL
 // CHECK-MEMTAG-MINIMAL: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 // CHECK-MEMTAG-MINIMAL: "-fsanitize-minimal-runtime"
@@ -978,19 +1042,25 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=undefined,function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-CODE-MODEL
 // CHECK-UBSAN-FUNCTION-CODE-MODEL: error: invalid argument '-fsanitize=function' only allowed with '-mcmodel=small'
 
-// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
-// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=undefined -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
-// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI
-// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function -fsanitize=kcfi %s -### 2>&1 | FileCheck %s  --check-prefix=CHECK-UBSAN-KCFI --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-TARGET
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=undefined -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-TARGET
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-TARGET
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function -fsanitize=kcfi %s -### 2>&1 | FileCheck %s  --check-prefix=CHECK-UBSAN-KCFI-TARGET --check-prefix=CHECK-UBSAN-FUNCTION-TARGET
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
 // CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
 
-// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
-// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI
+// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY
+// RUN: not %clang --target=armv6t2-eabi -mpure-code -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MPURE-CODE
+// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MEXECUTE-ONLY
+// RUN: not %clang --target=armv6t2-eabi -mpure-code -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MPURE-CODE
 // RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED-VPTR
 
-// CHECK-UBSAN-KCFI-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
-// CHECK-UBSAN-FUNCTION-DAG: error: invalid argument '-fsanitize=function' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
+// CHECK-UBSAN-KCFI-TARGET-DAG: error: unsupported option '-fsanitize=kcfi' for target 'x86_64-sie-ps5'
+// CHECK-UBSAN-KCFI-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with '-mexecute-only'
+// CHECK-UBSAN-KCFI-MPURE-CODE-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with '-mpure-code'
+// CHECK-UBSAN-FUNCTION-TARGET-DAG: error: unsupported option '-fsanitize=function' for target 'x86_64-sie-ps5'
+// CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mexecute-only'
+// CHECK-UBSAN-FUNCTION-MPURE-CODE-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mpure-code'
 // CHECK-UBSAN-UNDEFINED-VPTR: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound|vptr),?){18}"}}
 
 // * Test BareMetal toolchain sanitizer support *
@@ -1038,3 +1108,49 @@
 // RUN: not %clang --target=aarch64-none-elf -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
 // RUN: not %clang --target=arm-arm-none-eabi -fsanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s -check-prefix=UNSUPPORTED-BAREMETAL
 // UNSUPPORTED-BAREMETAL: unsupported option '-fsanitize={{.*}}' for target
+
+// RUN: %clang --target=x86_64-apple-darwin -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-DARWIN
+// CHECK-RTSAN-X86-64-DARWIN-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-darwin -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-DARWIN
+// CHECK-RTSAN-X86-64-DARWIN-NOT: unsupported option
+// RUN: %clang --target=x86_64-apple-macos -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-MACOS
+// CHECK-RTSAN-X86-64-MACOS-NOT: unsupported option
+// RUN: %clang --target=arm64-apple-macos -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-MACOS
+// CHECK-RTSAN-ARM64-MACOS-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-ios-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-IOSSIMULATOR
+// CHECK-RTSAN-ARM64-IOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-watchos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-WATCHOSSIMULATOR
+// CHECK-RTSAN-ARM64-WATCHOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-tvos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-ARM64-TVOSSIMULATOR
+// CHECK-RTSAN-ARM64-TVOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-ios-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-IOSSIMULATOR
+// CHECK-RTSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-watchos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-WATCHOSSIMULATOR
+// CHECK-RTSAN-X86-64-WATCHOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-tvos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-TVOSSIMULATOR
+// CHECK-RTSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-LINUX
+// CHECK-RTSAN-X86-64-LINUX-NOT: unsupported option
+
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-OPENBSD
+// CHECK-RTSAN-OPENBSD: unsupported option '-fsanitize=realtime' for target 'i386-pc-openbsd'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,thread  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TSAN
+// CHECK-REALTIME-TSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=thread'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,address  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-ASAN
+// CHECK-REALTIME-ASAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=address'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-MSAN
+// CHECK-REALTIME-MSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=memory'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,undefined  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-UBSAN
+// CHECK-REALTIME-UBSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=undefined'

@@ -181,13 +181,13 @@ namespace N1 {
 
   unsigned read(S* s) {
     // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N14read
-    // CHECK-X86-64:   %[[ptr:.*]] = getelementptr inbounds %{{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[ptr:.*]] = getelementptr inbounds nuw %{{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[val:.*]] = load i8, ptr %[[ptr]]
     // CHECK-X86-64:   %[[and:.*]] = and i8 %[[val]], 1
     // CHECK-X86-64:   %[[ext:.*]] = zext i8 %[[and]] to i32
     // CHECK-X86-64:                 ret i32 %[[ext]]
     // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N14read
-    // CHECK-PPC64:   %[[ptr:.*]] = getelementptr inbounds %{{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[ptr:.*]] = getelementptr inbounds nuw %{{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[val:.*]] = load i8, ptr %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]] = lshr i8 %[[val]], 7
     // CHECK-PPC64:   %[[ext:.*]] = zext i8 %[[shr]] to i32
@@ -196,7 +196,7 @@ namespace N1 {
   }
   void write(S* s, unsigned x) {
     // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N15write
-    // CHECK-X86-64:   %[[ptr:.*]]     = getelementptr inbounds %{{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[ptr:.*]]     = getelementptr inbounds nuw %{{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[x_trunc:.*]] = trunc i32 %{{.*}} to i8
     // CHECK-X86-64:   %[[old:.*]]     = load i8, ptr %[[ptr]]
     // CHECK-X86-64:   %[[x_and:.*]]   = and i8 %[[x_trunc]], 1
@@ -204,7 +204,7 @@ namespace N1 {
     // CHECK-X86-64:   %[[new:.*]]     = or i8 %[[old_and]], %[[x_and]]
     // CHECK-X86-64:                     store i8 %[[new]], ptr %[[ptr]]
     // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N15write
-    // CHECK-PPC64:   %[[ptr:.*]]     = getelementptr inbounds %{{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[ptr:.*]]     = getelementptr inbounds nuw %{{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[x_trunc:.*]] = trunc i32 %{{.*}} to i8
     // CHECK-PPC64:   %[[old:.*]]     = load i8, ptr %[[ptr]]
     // CHECK-PPC64:   %[[x_and:.*]]   = and i8 %[[x_trunc]], 1
@@ -333,12 +333,12 @@ namespace N4 {
     // instrumented by ThreadSanitizer.
     //
     // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N44read
-    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[val:.*]] = load i24, ptr %[[gep]]
     // CHECK-X86-64:   %[[ext:.*]] = zext i24 %[[val]] to i32
     // CHECK-X86-64:                 ret i32 %[[ext]]
     // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N44read
-    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[val:.*]] = load i24, ptr %[[gep]]
     // CHECK-PPC64:   %[[ext:.*]] = zext i24 %[[val]] to i32
     // CHECK-PPC64:                 ret i32 %[[ext]]
@@ -346,11 +346,11 @@ namespace N4 {
   }
   void write(Base* s, unsigned x) {
     // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N45write
-    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-X86-64:                 store i24 %[[new]], ptr %[[gep]]
     // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N45write
-    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-PPC64:                 store i24 %[[new]], ptr %[[gep]]
     s->b = x;
@@ -441,7 +441,7 @@ namespace N6 {
     // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N64read
     // CHECK-X86-64:   %[[val1:.*]] = load i24, ptr %{{.*}}
     // CHECK-X86-64:   %[[ext1:.*]] = zext i24 %[[val1]] to i32
-    // CHECK-X86-64:   %[[ptr2:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[ptr2:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[val2:.*]] = load i8, ptr %[[ptr2]]
     // CHECK-X86-64:   %[[ext2:.*]] = zext i8 %[[val2]] to i32
     // CHECK-X86-64:   %[[add:.*]]  = add nsw i32 %[[ext1]], %[[ext2]]
@@ -449,7 +449,7 @@ namespace N6 {
     // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N64read
     // CHECK-PPC64:   %[[val1:.*]] = load i24, ptr %{{.*}}
     // CHECK-PPC64:   %[[ext1:.*]] = zext i24 %[[val1]] to i32
-    // CHECK-PPC64:   %[[ptr2:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[ptr2:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[val2:.*]] = load i8, ptr %[[ptr2]]
     // CHECK-PPC64:   %[[ext2:.*]] = zext i8 %[[val2]] to i32
     // CHECK-PPC64:   %[[add:.*]]  = add nsw i32 %[[ext1]], %[[ext2]]
@@ -461,13 +461,13 @@ namespace N6 {
     // CHECK-X86-64:   %[[new1:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-X86-64:                  store i24 %[[new1]], ptr %{{.*}}
     // CHECK-X86-64:   %[[new2:.*]] = trunc i32 %{{.*}} to i8
-    // CHECK-X86-64:   %[[ptr2:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[ptr2:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:                  store i8 %[[new2]], ptr %[[ptr2]]
     // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N65write
     // CHECK-PPC64:   %[[new1:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-PPC64:                  store i24 %[[new1]], ptr %{{.*}}
     // CHECK-PPC64:   %[[new2:.*]] = trunc i32 %{{.*}} to i8
-    // CHECK-PPC64:   %[[ptr2:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[ptr2:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:                  store i8 %[[new2]], ptr %[[ptr2]]
     s->b1 = x;
     s->b2 = x;
@@ -514,12 +514,12 @@ namespace N7 {
     // instrumented by ThreadSanitizer.
     //
     // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N74read
-    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[val:.*]] = load i24, ptr %[[gep]]
     // CHECK-X86-64:   %[[ext:.*]] = zext i24 %[[val]] to i32
     // CHECK-X86-64:                 ret i32 %[[ext]]
     // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N74read
-    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[val:.*]] = load i24, ptr %[[gep]]
     // CHECK-PPC64:   %[[ext:.*]] = zext i24 %[[val]] to i32
     // CHECK-PPC64:                 ret i32 %[[ext]]
@@ -527,11 +527,11 @@ namespace N7 {
   }
   void write(B2* s, unsigned x) {
     // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N75write
-    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-X86-64:                 store i24 %[[new]], ptr %[[gep]]
     // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N75write
-    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, ptr %{{.*}}, i32 0, i32 1
+    // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds nuw {{.*}}, ptr %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-PPC64:                 store i24 %[[new]], ptr %[[gep]]
     s->b = x;

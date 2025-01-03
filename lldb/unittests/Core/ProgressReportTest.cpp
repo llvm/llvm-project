@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <mutex>
+#include <thread>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -131,6 +132,185 @@ TEST_F(ProgressReportTest, TestReportCreation) {
   EXPECT_TRUE(data->GetCompleted());
   EXPECT_FALSE(data->IsFinite());
   EXPECT_EQ(data->GetMessage(), "Progress report 1: Starting report 1");
+}
+
+TEST_F(ProgressReportTest, TestReportDestructionWithPartialProgress) {
+  ListenerSP listener_sp = CreateListenerFor(lldb::eBroadcastBitProgress);
+  EventSP event_sp;
+  const ProgressEventData *data;
+
+  // Create a finite progress report and only increment to a non-completed
+  // state before destruction.
+  {
+    Progress progress("Finite progress", "Report 1", 100);
+    progress.Increment(3);
+  }
+
+  // Verify that the progress in the events are:
+  // 1. At construction: 0 out of 100
+  // 2. At increment: 3 out of 100
+  // 3. At destruction: 100 out of 100
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_EQ(data->GetDetails(), "Report 1");
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), (uint64_t)0);
+  EXPECT_EQ(data->GetTotal(), (uint64_t)100);
+  EXPECT_EQ(data->GetMessage(), "Finite progress: Report 1");
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_EQ(data->GetDetails(), "Report 1");
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), (uint64_t)3);
+  EXPECT_EQ(data->GetTotal(), (uint64_t)100);
+  EXPECT_EQ(data->GetMessage(), "Finite progress: Report 1");
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_EQ(data->GetDetails(), "Report 1");
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), (uint64_t)100);
+  EXPECT_EQ(data->GetTotal(), (uint64_t)100);
+  EXPECT_EQ(data->GetMessage(), "Finite progress: Report 1");
+
+  // Create an infinite progress report and increment by some amount.
+  {
+    Progress progress("Infinite progress", "Report 2");
+    progress.Increment(3);
+  }
+
+  // Verify that the progress in the events are:
+  // 1. At construction: 0
+  // 2. At increment: 3
+  // 3. At destruction: Progress::kNonDeterministicTotal
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_EQ(data->GetDetails(), "Report 2");
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), (uint64_t)0);
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetMessage(), "Infinite progress: Report 2");
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_EQ(data->GetDetails(), "Report 2");
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), (uint64_t)3);
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetMessage(), "Infinite progress: Report 2");
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_EQ(data->GetDetails(), "Report 2");
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetMessage(), "Infinite progress: Report 2");
+}
+
+TEST_F(ProgressReportTest, TestFiniteOverflow) {
+  ListenerSP listener_sp = CreateListenerFor(lldb::eBroadcastBitProgress);
+  EventSP event_sp;
+  const ProgressEventData *data;
+
+  // Increment the report beyond its limit and make sure we only get one
+  // completed event.
+  {
+    Progress progress("Finite progress", "Report 1", 10);
+    progress.Increment(11);
+    progress.Increment(47);
+  }
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), 0U);
+  EXPECT_EQ(data->GetTotal(), 10U);
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), 10U);
+  EXPECT_EQ(data->GetTotal(), 10U);
+
+  ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
+}
+
+TEST_F(ProgressReportTest, TestNonDeterministicOverflow) {
+  ListenerSP listener_sp = CreateListenerFor(lldb::eBroadcastBitProgress);
+  EventSP event_sp;
+  const ProgressEventData *data;
+  constexpr uint64_t max_minus_1 = std::numeric_limits<uint64_t>::max() - 1;
+
+  // Increment the report beyond its limit and make sure we only get one
+  // completed event. The event which overflows the counter should be ignored.
+  {
+    Progress progress("Non deterministic progress", "Report 1");
+    progress.Increment(max_minus_1);
+    progress.Increment(max_minus_1);
+  }
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), 0U);
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), max_minus_1);
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_FALSE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), Progress::kNonDeterministicTotal);
+  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
+
+  ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
+}
+
+TEST_F(ProgressReportTest, TestMinimumReportTime) {
+  ListenerSP listener_sp = CreateListenerFor(lldb::eBroadcastBitProgress);
+  EventSP event_sp;
+  const ProgressEventData *data;
+
+  {
+    Progress progress("Finite progress", "Report 1", /*total=*/20,
+                      m_debugger_sp.get(),
+                      /*minimum_report_time=*/std::chrono::seconds(1));
+    // Send 10 events in quick succession. These should not generate any events.
+    for (int i = 0; i < 10; ++i)
+      progress.Increment();
+
+    // Sleep, then send 10 more. This should generate one event for the first
+    // increment, and then another for completion.
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    for (int i = 0; i < 10; ++i)
+      progress.Increment();
+  }
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), 0U);
+  EXPECT_EQ(data->GetTotal(), 20U);
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), 11U);
+  EXPECT_EQ(data->GetTotal(), 20U);
+
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  EXPECT_TRUE(data->IsFinite());
+  EXPECT_EQ(data->GetCompleted(), 20U);
+  EXPECT_EQ(data->GetTotal(), 20U);
+
+  ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
 }
 
 TEST_F(ProgressReportTest, TestProgressManager) {

@@ -166,7 +166,44 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FI The object to dump.
-  void dump(raw_ostream &OS, const FunctionInfo &FI);
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const FunctionInfo &FI, uint32_t Indent = 0);
+
+  /// Dump a MergedFunctionsInfo object.
+  ///
+  /// This function will dump a MergedFunctionsInfo object - basically by
+  /// dumping the contained FunctionInfo objects with indentation.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param MFI The object to dump.
+  void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+
+  /// Dump a CallSiteInfo object.
+  ///
+  /// This function will output the details of a CallSiteInfo object in a
+  /// human-readable format.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSI The CallSiteInfo object to dump.
+  void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+
+  /// Dump a CallSiteInfoCollection object.
+  ///
+  /// This function will iterate over a collection of CallSiteInfo objects and
+  /// dump each one.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSIC The CallSiteInfoCollection object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+            uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///
@@ -177,7 +214,10 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param LT The object to dump.
-  void dump(raw_ostream &OS, const LineTable &LT);
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
 
   /// Dump a InlineInfo object.
   ///

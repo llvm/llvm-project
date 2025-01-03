@@ -427,7 +427,8 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
-  if (Constant *CUI = dyn_cast<Constant>(Op1))
+  Constant *CUI;
+  if (match(Op1, m_ImmConstant(CUI)))
     if (Instruction *Res = FoldShiftByConstant(Op0, CUI, I))
       return Res;
 
@@ -510,6 +511,21 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
   if (match(Op1, m_Or(m_Value(), m_SpecificInt(BitWidth - 1))))
     return replaceOperand(I, 1, ConstantInt::get(Ty, BitWidth - 1));
+
+  Instruction *CmpIntr;
+  if ((I.getOpcode() == Instruction::LShr ||
+       I.getOpcode() == Instruction::AShr) &&
+      match(Op0, m_OneUse(m_Instruction(CmpIntr))) &&
+      isa<CmpIntrinsic>(CmpIntr) &&
+      match(Op1, m_SpecificInt(Ty->getScalarSizeInBits() - 1))) {
+    Value *Cmp =
+        Builder.CreateICmp(cast<CmpIntrinsic>(CmpIntr)->getLTPredicate(),
+                           CmpIntr->getOperand(0), CmpIntr->getOperand(1));
+    return CastInst::Create(I.getOpcode() == Instruction::LShr
+                                ? Instruction::ZExt
+                                : Instruction::SExt,
+                            Cmp, Ty);
+  }
 
   return nullptr;
 }
@@ -1463,6 +1479,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         Value *Signbit = Builder.CreateLShr(X, ShAmtC);
         return BinaryOperator::CreateAnd(Signbit, X);
       }
+
+      // lshr iN (X - 1) & ~X, N-1 --> zext (X == 0)
+      if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
+                                      m_Not(m_Deferred(X))))))
+        return new ZExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     Instruction *TruncSrc;
@@ -1739,6 +1760,11 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       Value *Y;
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+
+      // ashr iN (X - 1) & ~X, N-1 --> sext (X == 0)
+      if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
+                                      m_Not(m_Deferred(X))))))
+        return new SExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     const APInt *MulC;

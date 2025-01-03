@@ -91,6 +91,10 @@ func.func @array() {
   "some.op"() : () -> !llvm.array<10 x ptr<4>>
   // CHECK: !llvm.array<10 x array<4 x f32>>
   "some.op"() : () -> !llvm.array<10 x array<4 x f32>>
+  // CHECK: !llvm.array<10 x array<4 x vector<8xf32>>>
+  "some.op"() : () -> !llvm.array<10 x array<4 x vector<8xf32>>>
+  // CHECK: !llvm.array<10 x array<4 x vector<[8]xf32>>>
+  "some.op"() : () -> !llvm.array<10 x array<4 x vector<[8]xf32>>>
   return
 }
 

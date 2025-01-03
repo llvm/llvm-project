@@ -37,6 +37,11 @@ on:
         description: "Runner to use for the build"
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
+
 
 permissions:
   contents: read # Default everything to read-only
@@ -57,6 +62,12 @@ jobs:
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
 
     steps:
+    # It's good practice to use setup-python, but this is also required on macos-14
+    # due to https://github.com/actions/runner-images/issues/10385
+    - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f
+      with:
+        python-version: '3.12'
+
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
@@ -124,15 +135,7 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
-        # x86 macOS and x86 Windows have trouble building flang, so disable it.
-        # Windows: https://github.com/llvm/llvm-project/issues/100202
-        # macOS: 'rebase opcodes terminated early at offset 1 of 80016' when building __fortran_builtins.mod
         build_flang="true"
-
-        if [ "$target" = "Windows-X64" ]; then
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS=\"clang;lld;lldb;clang-tools-extra;bolt;polly;mlir\""
-          build_flang="false"
-        fi
 
         if [ "${{ runner.os }}" = "Windows" ]; then
           # The build times out on Windows, so we need to disable LTO.
@@ -156,16 +159,33 @@ jobs:
         sparse-checkout: |
           .github/workflows/
         sparse-checkout-cone-mode: false
+        # Check out outside of working directory so the source checkout doesn't
+        # remove it.
         path: workflows
 
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
+    # actions/checkout does not support paths outside of the GITHUB_WORKSPACE.
+    # Also, anything that we put inside of GITHUB_WORKSPACE will be overwritten
+    # by future actions/checkout steps.  Therefore, in order to checkout the
+    # latest actions from main, we need to first checkout out the actions inside of
+    # GITHUB_WORKSPACE (see previous step), then use actions/checkout to checkout
+    # the code being built and the move the actions from main back into GITHUB_WORKSPACE,
+    # becasue the uses on composite actions only reads workflows from inside GITHUB_WORKSPACE.
+    - shell: bash
+      run: mv workflows  ../workflows-main
 
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
+
+    - name: Copy main workflows
+      shell: bash
+      run: |
+        mv ../workflows-main .
+
+    - name: Setup Stage
+      id: setup-stage
+      uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
     - name: Setup sccache
       uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
@@ -194,7 +214,7 @@ jobs:
         ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
     
     - name: Save Stage
-      uses: ./workflows/.github/workflows/release-binaries-save-stage
+      uses: ./workflows-main/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
 
@@ -308,7 +328,7 @@ jobs:
       run: |
         # Build some of the mlir tools that take a long time to link
         if [ "${{ needs.prepare.outputs.build-flang }}" = "true" ]; then
-          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang-new bbc
+          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang bbc
         fi
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ \
             mlir-bytecode-parser-fuzzer \
@@ -400,6 +420,14 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
+    - name: Checkout Release Scripts
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        sparse-checkout: |
+          llvm/utils/release/github-upload-release.py
+          llvm/utils/git/requirements.txt
+        sparse-checkout-cone-mode: false
+
     - name: 'Download artifact'
       uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
       with:
@@ -419,14 +447,17 @@ jobs:
     - name: Upload Build Provenance
       uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
       with:
-        name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
+        name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
+
+    - name: Install Python Requirements
+      run: |
+        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Upload Release
       shell: bash
       run: |
-        sudo apt install python3-github
-        ./llvm-project/llvm/utils/release/github-upload-release.py \
+        ./llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \

@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Plugin name: xcoff
+# CHECK: Architecture: powerpc64-ibm-aix
+# CHECK: Executable: true
+# CHECK: Stripped: false
+# CHECK: Type: executable
+# CHECK: Strata: unknown
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1F7
+  NumberOfSections: 1 
+  CreationTime:    000000000
+  Flags:           0x0002
+Sections:
+  - Name:            .text
+    Address:         0x100000438
+    Size:            0x38
+    FileOffsetToData: 0x0
+    FileOffsetToLineNumbers: 0x0
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_TEXT ]
+    SectionData:     E8C20000E94204  
+StringTable:     {}
+...

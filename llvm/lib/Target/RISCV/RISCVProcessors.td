@@ -10,6 +10,11 @@
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
+// Predefined scheduling direction.
+defvar TopDown       = [{ MISched::TopDown }];
+defvar BottomUp      = [{ MISched::BottomUp }];
+defvar Bidirectional = [{ MISched::Bidirectional }];
+
 class RISCVTuneInfo {
   bits<8> PrefFunctionAlignment = 1;
   bits<8> PrefLoopAlignment = 1;
@@ -21,15 +26,39 @@ class RISCVTuneInfo {
   bits<32> MaxPrefetchIterationsAhead = -1;
 
   bits<32> MinimumJumpTableEntries = 5;
+
+  // Tail duplication threshold at -O3.
+  bits<32> TailDupAggressiveThreshold = 6;
+
+  bits<32> MaxStoresPerMemsetOptSize = 4;
+  bits<32> MaxStoresPerMemset = 8;
+
+  bits<32> MaxGluedStoresPerMemcpy = 0;
+  bits<32> MaxStoresPerMemcpyOptSize = 4;
+  bits<32> MaxStoresPerMemcpy = 8;
+
+  bits<32> MaxStoresPerMemmoveOptSize = 4;
+  bits<32> MaxStoresPerMemmove = 8;
+
+  bits<32> MaxLoadsPerMemcmpOptSize = 4;
+  bits<32> MaxLoadsPerMemcmp = 8;
+
+  // The direction of PostRA scheduling.
+  code PostRASchedDirection = TopDown;
 }
 
 def RISCVTuneInfoTable : GenericTable {
   let FilterClass = "RISCVTuneInfo";
   let CppTypeName = "RISCVTuneInfo";
   let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
-                "CacheLineSize", "PrefetchDistance",
-                "MinPrefetchStride", "MaxPrefetchIterationsAhead",
-                "MinimumJumpTableEntries"];
+                "CacheLineSize", "PrefetchDistance", "MinPrefetchStride",
+                "MaxPrefetchIterationsAhead", "MinimumJumpTableEntries",
+                "TailDupAggressiveThreshold", "MaxStoresPerMemsetOptSize",
+                "MaxStoresPerMemset", "MaxGluedStoresPerMemcpy",
+                "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
+                "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
+                "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
+                "PostRASchedDirection"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -46,6 +75,9 @@ class RISCVProcessorModel<string n,
                           string default_march = "">
     :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
+  int MVendorID = 0;
+  int MArchID = 0;
+  int MImpID = 0;
 }
 
 class RISCVTuneProcessorModel<string n,
@@ -54,19 +86,38 @@ class RISCVTuneProcessorModel<string n,
                               list<SubtargetFeature> f = []>
     : ProcessorModel<n, m, f,tunef>;
 
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
                                        [Feature32Bit,
-                                        FeatureStdExtI]>,
+                                        FeatureStdExtI],
+                                       GenericTuneFeatures>,
                    GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
                                        NoSchedModel,
                                        [Feature64Bit,
-                                        FeatureStdExtI]>,
+                                        FeatureStdExtI],
+                                       GenericTuneFeatures>,
                    GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+
+def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
+                                     MIPSP8700Model,
+                                     [Feature64Bit,
+                                      FeatureStdExtI,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC,
+                                      FeatureStdExtZba,
+                                      FeatureStdExtZbb,
+                                      FeatureStdExtZifencei,
+                                      FeatureStdExtZicsr],
+                                     [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
@@ -85,7 +136,7 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 
 defvar SiFive7TuneFeatures = [TuneSiFive7, TuneNoDefaultUnroll,
                               TuneShortForwardBranchOpt,
-                              FeaturePostRAScheduler];
+                              TunePostRAScheduler];
 def SIFIVE_7 : RISCVTuneProcessorModel<"sifive-7-series",
                                        SiFive7Model, SiFive7TuneFeatures>;
 
@@ -218,7 +269,8 @@ def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
 
 defvar SiFiveX280TuneFeatures = !listconcat(SiFive7TuneFeatures,
                                             [TuneDLenFactor2,
-                                             TuneOptimizedZeroStrideLoad]);
+                                             TuneOptimizedZeroStrideLoad,
+                                             TuneOptimizedNF2SegmentLoadStore]);
 def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
@@ -236,65 +288,44 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZbb],
                                       SiFiveX280TuneFeatures>;
 
+defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
+                                 TuneConditionalCompressedMoveFusion,
+                                 TuneLUIADDIFusion,
+                                 TuneAUIPCADDIFusion,
+                                 TunePostRAScheduler];
+
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
-                                      [Feature64Bit,
-                                       FeatureStdExtI,
-                                       FeatureStdExtZifencei,
-                                       FeatureStdExtM,
-                                       FeatureStdExtA,
-                                       FeatureStdExtF,
-                                       FeatureStdExtD,
-                                       FeatureStdExtC,
-                                       FeatureStdExtZa64rs,
-                                       FeatureStdExtZic64b,
-                                       FeatureStdExtZicbop,
-                                       FeatureStdExtZicbom,
-                                       FeatureStdExtZicboz,
-                                       FeatureStdExtZiccamoa,
-                                       FeatureStdExtZiccif,
-                                       FeatureStdExtZicclsm,
-                                       FeatureStdExtZiccrse,
+                                      !listconcat(RVA22U64Features,
+                                      [FeatureStdExtZifencei,
                                        FeatureStdExtZihintntl,
-                                       FeatureStdExtZihintpause,
-                                       FeatureStdExtZihpm,
-                                       FeatureStdExtZba,
-                                       FeatureStdExtZbb,
-                                       FeatureStdExtZbs,
-                                       FeatureStdExtZfhmin,
                                        FeatureUnalignedScalarMem,
-                                       FeatureUnalignedVectorMem],
-                                      [TuneNoDefaultUnroll,
-                                       TuneConditionalCompressedMoveFusion,
-                                       TuneLUIADDIFusion,
-                                       TuneAUIPCADDIFusion,
-                                       FeaturePostRAScheduler]>;
+                                       FeatureUnalignedVectorMem]),
+                                      SiFiveP400TuneFeatures>;
+
+def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
+                                      !listconcat(RVA22U64Features,
+                                      [FeatureStdExtV,
+                                       FeatureStdExtZifencei,
+                                       FeatureStdExtZihintntl,
+                                       FeatureStdExtZvl128b,
+                                       FeatureStdExtZvbb,
+                                       FeatureStdExtZvknc,
+                                       FeatureStdExtZvkng,
+                                       FeatureStdExtZvksc,
+                                       FeatureStdExtZvksg,
+                                       FeatureVendorXSiFivecdiscarddlone,
+                                       FeatureVendorXSiFivecflushdlone,
+                                       FeatureUnalignedScalarMem,
+                                       FeatureUnalignedVectorMem]),
+                                      !listconcat(SiFiveP400TuneFeatures,
+                                                  [TuneNoSinkSplatOperands,
+                                                   TuneVXRMPipelineFlush])>;
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
-                                      [Feature64Bit,
-                                       FeatureStdExtI,
+                                      !listconcat(RVA22U64Features,
+                                      [FeatureStdExtV,
                                        FeatureStdExtZifencei,
-                                       FeatureStdExtM,
-                                       FeatureStdExtA,
-                                       FeatureStdExtF,
-                                       FeatureStdExtD,
-                                       FeatureStdExtC,
-                                       FeatureStdExtZa64rs,
-                                       FeatureStdExtZic64b,
-                                       FeatureStdExtZicbop,
-                                       FeatureStdExtZicbom,
-                                       FeatureStdExtZicboz,
-                                       FeatureStdExtZiccamoa,
-                                       FeatureStdExtZiccif,
-                                       FeatureStdExtZicclsm,
-                                       FeatureStdExtZiccrse,
                                        FeatureStdExtZihintntl,
-                                       FeatureStdExtZihintpause,
-                                       FeatureStdExtZihpm,
-                                       FeatureStdExtZba,
-                                       FeatureStdExtZbb,
-                                       FeatureStdExtZbs,
-                                       FeatureStdExtZfhmin,
-                                       FeatureStdExtV,
                                        FeatureStdExtZvl128b,
                                        FeatureStdExtZvbb,
                                        FeatureStdExtZvknc,
@@ -302,13 +333,14 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        FeatureStdExtZvksc,
                                        FeatureStdExtZvksg,
                                        FeatureUnalignedScalarMem,
-                                       FeatureUnalignedVectorMem],
+                                       FeatureUnalignedVectorMem]),
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion,
                                        TuneNoSinkSplatOperands,
-                                       FeaturePostRAScheduler]>;
+                                       TuneVXRMPipelineFlush,
+                                       TunePostRAScheduler]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
@@ -337,7 +369,7 @@ def SYNTACORE_SCR3_RV32 : RISCVProcessorModel<"syntacore-scr3-rv32",
                                                FeatureStdExtZifencei,
                                                FeatureStdExtM,
                                                FeatureStdExtC],
-                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
 
 def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
                                               SyntacoreSCR3RV64Model,
@@ -348,7 +380,99 @@ def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
                                                FeatureStdExtM,
                                                FeatureStdExtA,
                                                FeatureStdExtC],
-                                              [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
+
+def SYNTACORE_SCR4_RV32 : RISCVProcessorModel<"syntacore-scr4-rv32",
+                                              SyntacoreSCR4RV32Model,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
+
+def SYNTACORE_SCR4_RV64 : RISCVProcessorModel<"syntacore-scr4-rv64",
+                                              SyntacoreSCR4RV64Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
+
+def SYNTACORE_SCR5_RV32 : RISCVProcessorModel<"syntacore-scr5-rv32",
+                                              SyntacoreSCR5RV32Model,
+                                              [Feature32Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
+
+def SYNTACORE_SCR5_RV64 : RISCVProcessorModel<"syntacore-scr5-rv64",
+                                              SyntacoreSCR5RV64Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC],
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
+
+def SYNTACORE_SCR7 : RISCVProcessorModel<"syntacore-scr7",
+                                              SyntacoreSCR7Model,
+                                              [Feature64Bit,
+                                               FeatureStdExtI,
+                                               FeatureStdExtZicsr,
+                                               FeatureStdExtZifencei,
+                                               FeatureStdExtM,
+                                               FeatureStdExtA,
+                                               FeatureStdExtF,
+                                               FeatureStdExtD,
+                                               FeatureStdExtC,
+                                               FeatureStdExtV,
+                                               FeatureStdExtZba,
+                                               FeatureStdExtZbb,
+                                               FeatureStdExtZbc,
+                                               FeatureStdExtZbs,
+                                               FeatureStdExtZkn],
+                                              [TuneNoDefaultUnroll, TunePostRAScheduler]>;
+
+def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
+                                                 TTAscalonD8Model,
+                                                 !listconcat(RVA23S64Features,
+                                                 [FeatureStdExtSmaia,
+                                                  FeatureStdExtSsaia,
+                                                  FeatureStdExtSscofpmf,
+                                                  FeatureStdExtSsstrict,
+                                                  FeatureStdExtZfbfmin,
+                                                  FeatureStdExtZfh,
+                                                  FeatureStdExtZicsr,
+                                                  FeatureStdExtZvbc,
+                                                  FeatureStdExtZvfbfmin,
+                                                  FeatureStdExtZvfbfwma,
+                                                  FeatureStdExtZvfh,
+                                                  FeatureStdExtZvkng,
+                                                  FeatureStdExtZvl256b,
+                                                  FeatureUnalignedScalarMem,
+                                                  FeatureUnalignedVectorMem]),
+                                                 [TuneNoDefaultUnroll,
+                                                  TuneOptimizedZeroStrideLoad,
+                                                  TunePostRAScheduler]>;
 
 def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                             NoSchedModel,
@@ -378,7 +502,11 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                               TuneZExtHFusion,
                                               TuneZExtWFusion,
                                               TuneShiftedZExtWFusion,
-                                              TuneLDADDFusion]>;
+                                              TuneLDADDFusion]> {
+  let MVendorID = 0x61f;
+  let MArchID = 0x8000000000010000;
+  let MImpID = 0x111;
+}
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
@@ -419,5 +547,30 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZicond,
                                         FeatureStdExtZvfh,
                                         FeatureStdExtZvkt,
-                                        FeatureStdExtZvl256b]),
-                                       [TuneDLenFactor2]>;
+                                        FeatureStdExtZvl256b,
+                                        FeatureUnalignedScalarMem]),
+                                       [TuneDLenFactor2,
+                                        TuneOptimizedNF2SegmentLoadStore,
+                                        TuneOptimizedNF3SegmentLoadStore,
+                                        TuneOptimizedNF4SegmentLoadStore,
+                                        TuneVXRMPipelineFlush]> {
+  let MVendorID = 0x710;
+  let MArchID = 0x8000000058000001;
+  let MImpID = 0x1000000049772200;
+}
+
+def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
+                                         NoSchedModel,
+                                         [Feature32Bit,
+                                          FeatureStdExtI,
+                                          FeatureStdExtM,
+                                          FeatureStdExtA,
+                                          FeatureStdExtC,
+                                          FeatureStdExtZicsr,
+                                          FeatureStdExtZifencei,
+                                          FeatureStdExtZba,
+                                          FeatureStdExtZbb,
+                                          FeatureStdExtZbs,
+                                          FeatureStdExtZbkb,
+                                          FeatureStdExtZcb,
+                                          FeatureStdExtZcmp]>;

@@ -27,16 +27,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptLexer.h"
+#include "Config.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 
 using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
-ScriptLexer::ScriptLexer(MemoryBufferRef mb) : curBuf(mb), mbs(1, mb) {}
+ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
+    : s(mb.getBuffer()), filename(mb.getBufferIdentifier()),
+      begin(mb.getBufferStart()) {
+  if (ctx.arg.sysroot == "")
+    return;
+  StringRef path = filename;
+  for (; !path.empty(); path = sys::path::parent_path(path)) {
+    if (!sys::fs::equivalent(ctx.arg.sysroot, path))
+      continue;
+    isUnderSysroot = true;
+    return;
+  }
+}
+
+ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
+    : ctx(ctx), curBuf(ctx, mb), mbs(1, mb) {
+  activeFilenames.insert(mb.getBufferIdentifier());
+}
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
@@ -48,32 +68,6 @@ StringRef ScriptLexer::getLine() {
   return s.substr(0, s.find_first_of("\r\n"));
 }
 
-// Returns 1-based line number of the current token.
-size_t ScriptLexer::getLineNumber() {
-  if (prevTok.empty())
-    return 1;
-  StringRef s = getCurrentMB().getBuffer();
-  const size_t tokOffset = prevTok.data() - s.data();
-
-  // For the first token, or when going backwards, start from the beginning of
-  // the buffer. If this token is after the previous token, start from the
-  // previous token.
-  size_t line = 1;
-  size_t start = 0;
-  if (lastLineNumberOffset > 0 && tokOffset >= lastLineNumberOffset) {
-    start = lastLineNumberOffset;
-    line = lastLineNumber;
-  }
-
-  line += s.substr(start, tokOffset - start).count('\n');
-
-  // Store the line number of this token for reuse.
-  lastLineNumberOffset = tokOffset;
-  lastLineNumber = line;
-
-  return line;
-}
-
 // Returns 0-based column number of the current token.
 size_t ScriptLexer::getColumnNumber() {
   return prevTok.data() - getLine().data();
@@ -81,19 +75,19 @@ size_t ScriptLexer::getColumnNumber() {
 
 std::string ScriptLexer::getCurrentLocation() {
   std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-  return (filename + ":" + Twine(getLineNumber())).str();
+  return (filename + ":" + Twine(prevTokLine)).str();
 }
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &msg) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   std::string s = (getCurrentLocation() + ": " + msg).str();
   if (prevTok.size())
     s += "\n>>> " + getLine().str() + "\n>>> " +
          std::string(getColumnNumber(), ' ') + "^";
-  error(s);
+  ErrAlways(ctx) << s;
 }
 
 void ScriptLexer::lex() {
@@ -107,6 +101,7 @@ void ScriptLexer::lex() {
         eof = true;
         return;
       }
+      activeFilenames.erase(curBuf.filename);
       curBuf = buffers.pop_back_val();
       continue;
     }
@@ -121,7 +116,8 @@ void ScriptLexer::lex() {
       if (e == StringRef::npos) {
         size_t lineno =
             StringRef(curBuf.begin, s.data() - curBuf.begin).count('\n');
-        error(curBuf.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
+        ErrAlways(ctx) << curBuf.filename << ":" << (lineno + 1)
+                       << ": unclosed quote";
         return;
       }
 
@@ -177,6 +173,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
         setError("unclosed comment in a linker script");
         return "";
       }
+      curBuf.lineNumber += s.substr(0, e).count('\n');
       s = s.substr(e + 2);
       continue;
     }
@@ -184,21 +181,29 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
       size_t e = s.find('\n', 1);
       if (e == StringRef::npos)
         e = s.size() - 1;
+      else
+        ++curBuf.lineNumber;
       s = s.substr(e + 1);
       continue;
     }
-    size_t size = s.size();
+    StringRef saved = s;
     s = s.ltrim();
-    if (s.size() == size)
+    auto len = saved.size() - s.size();
+    if (len == 0)
       return s;
+    curBuf.lineNumber += saved.substr(0, len).count('\n');
   }
 }
 
 // Used to determine whether to stop parsing. Treat errors like EOF.
-bool ScriptLexer::atEOF() { return eof || errorCount(); }
+bool ScriptLexer::atEOF() { return eof || errCount(ctx); }
 
 StringRef ScriptLexer::next() {
   prevTok = peek();
+  // `prevTokLine` is not updated for EOF so that the line number in `setError`
+  // will be more useful.
+  if (prevTok.size())
+    prevTokLine = curBuf.lineNumber;
   return std::exchange(curTok, StringRef(curBuf.s.data(), 0));
 }
 
@@ -223,7 +228,7 @@ bool ScriptLexer::consume(StringRef tok) {
 void ScriptLexer::skip() { (void)next(); }
 
 void ScriptLexer::expect(StringRef expect) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
   StringRef tok = next();
   if (tok != expect) {
@@ -232,6 +237,17 @@ void ScriptLexer::expect(StringRef expect) {
     else
       setError(expect + " expected, but got " + tok);
   }
+}
+
+ScriptLexer::Token ScriptLexer::till(StringRef tok) {
+  StringRef str = next();
+  if (str == tok)
+    return {};
+  if (!atEOF())
+    return {str};
+  prevTok = {};
+  setError("unexpected EOF");
+  return {};
 }
 
 // Returns true if S encloses T.

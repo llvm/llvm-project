@@ -452,8 +452,7 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
                             Stmt *TransformedStmt, Stmt *PreInits) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, std::nullopt, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
-      EndLoc);
+      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
@@ -555,7 +554,7 @@ OMPSectionDirective *OMPSectionDirective::Create(const ASTContext &C,
                                                  Stmt *AssociatedStmt,
                                                  bool HasCancel) {
   auto *Dir =
-      createDirective<OMPSectionDirective>(C, std::nullopt, AssociatedStmt,
+      createDirective<OMPSectionDirective>(C, {}, AssociatedStmt,
                                            /*NumChildren=*/0, StartLoc, EndLoc);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -605,7 +604,7 @@ OMPMasterDirective *OMPMasterDirective::Create(const ASTContext &C,
                                                SourceLocation StartLoc,
                                                SourceLocation EndLoc,
                                                Stmt *AssociatedStmt) {
-  return createDirective<OMPMasterDirective>(C, std::nullopt, AssociatedStmt,
+  return createDirective<OMPMasterDirective>(C, {}, AssociatedStmt,
                                              /*NumChildren=*/0, StartLoc,
                                              EndLoc);
 }
@@ -797,6 +796,23 @@ OMPTaskyieldDirective *OMPTaskyieldDirective::Create(const ASTContext &C,
 OMPTaskyieldDirective *OMPTaskyieldDirective::CreateEmpty(const ASTContext &C,
                                                           EmptyShell) {
   return new (C) OMPTaskyieldDirective();
+}
+
+OMPAssumeDirective *OMPAssumeDirective::Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses,
+                                               Stmt *AStmt) {
+  return createDirective<OMPAssumeDirective>(C, Clauses, AStmt,
+                                             /*NumChildren=*/0, StartLoc,
+                                             EndLoc);
+}
+
+OMPAssumeDirective *OMPAssumeDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses,
+                                                    EmptyShell) {
+  return createEmptyDirective<OMPAssumeDirective>(C, NumClauses,
+                                                  /*HasAssociatedStmt=*/true);
 }
 
 OMPErrorDirective *OMPErrorDirective::Create(const ASTContext &C,

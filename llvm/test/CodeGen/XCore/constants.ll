@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore -mcpu=xs1b-generic | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -mcpu=xs1b-generic | FileCheck %s
 
 ; CHECK: .section .cp.rodata.cst4,"aMc",@progbits,4
 ; CHECK: .LCPI0_0:

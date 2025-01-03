@@ -1,8 +1,10 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.assert
+    libc.include.complex
     libc.include.ctype
     libc.include.dirent
     libc.include.dlfcn
+    libc.include.elf
     libc.include.errno
     libc.include.fcntl
     libc.include.features
@@ -11,6 +13,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdint
     libc.include.inttypes
     libc.include.limits
+    libc.include.link
+    libc.include.malloc
     libc.include.math
     libc.include.pthread
     libc.include.sched
@@ -31,6 +35,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.unistd
     libc.include.wchar
     libc.include.uchar
+    libc.include.locale
 
     libc.include.arpa_inet
 

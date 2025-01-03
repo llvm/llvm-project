@@ -425,6 +425,7 @@ enum NodeType {
   STRICT_FASIN,
   STRICT_FACOS,
   STRICT_FATAN,
+  STRICT_FATAN2,
   STRICT_FSINH,
   STRICT_FCOSH,
   STRICT_FTANH,
@@ -814,6 +815,26 @@ enum NodeType {
 
   /// TRUNCATE - Completely drop the high bits.
   TRUNCATE,
+  /// TRUNCATE_[SU]SAT_[SU] - Truncate for saturated operand
+  /// [SU] located in middle, prefix for `SAT` means indicates whether
+  /// existing truncate target was a signed operation. For examples,
+  /// If `truncate(smin(smax(x, C), C))` was saturated then become `S`.
+  /// If `truncate(umin(x, C))` was saturated then become `U`.
+  /// [SU] located in last indicates whether range of truncated values is
+  /// sign-saturated. For example, if `truncate(smin(smax(x, C), C))` is a
+  /// truncation to `i8`, then if value of C ranges from `-128 to 127`, it will
+  /// be saturated against signed values, resulting in `S`, which will combine
+  /// to `TRUNCATE_SSAT_S`. If the value of C ranges from `0 to 255`, it will
+  /// be saturated against unsigned values, resulting in `U`, which will
+  /// combine to `TRUNCATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
+  /// value of C ranges from `0 to 255`, it becomes `U` because it is saturated
+  /// for unsigned values. As a result, it combines to `TRUNCATE_USAT_U`.
+  TRUNCATE_SSAT_S, // saturate signed input to signed result -
+                   // truncate(smin(smax(x, C), C))
+  TRUNCATE_SSAT_U, // saturate signed input to unsigned result -
+                   // truncate(smin(smax(x, 0), C))
+  TRUNCATE_USAT_U, // saturate unsigned input to unsigned result -
+                   // truncate(umin(x, C))
 
   /// [SU]INT_TO_FP - These operators convert integers (whose interpreted sign
   /// depends on the first letter) to floating point.
@@ -974,6 +995,8 @@ enum NodeType {
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
   FLDEXP,
+  /// FATAN2 - atan2, inspired by libm.
+  FATAN2,
 
   /// FFREXP - frexp, extract fractional and exponent component of a
   /// floating-point value. Returns the two components as separate return
@@ -1026,6 +1049,11 @@ enum NodeType {
   /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
   FMINIMUM,
   FMAXIMUM,
+
+  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
+  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  FMINIMUMNUM,
+  FMAXIMUMNUM,
 
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
@@ -1279,7 +1307,7 @@ enum NodeType {
   /// This corresponds to "load atomic" instruction.
   ATOMIC_LOAD,
 
-  /// OUTCHAIN = ATOMIC_STORE(INCHAIN, ptr, val)
+  /// OUTCHAIN = ATOMIC_STORE(INCHAIN, val, ptr)
   /// This corresponds to "store atomic" instruction.
   ATOMIC_STORE,
 
@@ -1320,6 +1348,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
+  ATOMIC_LOAD_USUB_COND,
+  ATOMIC_LOAD_USUB_SAT,
 
   /// Masked load and store - consecutive vector load and store operations
   /// with additional mask operand that prevents memory accesses to the
@@ -1346,6 +1376,11 @@ enum NodeType {
   /// is the chain and the second operand is the alloca pointer.
   LIFETIME_START,
   LIFETIME_END,
+
+  /// FAKE_USE represents a use of the operand but does not do anything.
+  /// Its purpose is the extension of the operand's lifetime mainly for
+  /// debugging purposes.
+  FAKE_USE,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
@@ -1455,21 +1490,14 @@ enum NodeType {
   BUILTIN_OP_END
 };
 
-/// FIRST_TARGET_STRICTFP_OPCODE - Target-specific pre-isel operations
-/// which cannot raise FP exceptions should be less than this value.
-/// Those that do must not be less than this value.
-static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END + 400;
-
-/// FIRST_TARGET_MEMORY_OPCODE - Target-specific pre-isel operations
-/// which do not reference a specific memory location should be less than
-/// this value. Those that do must not be less than this value, and can
-/// be used with SelectionDAG::getMemIntrinsicNode.
-static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
-
 /// Whether this is bitwise logic opcode.
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
+/// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
+NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
@@ -1494,7 +1522,7 @@ std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-unsigned getVPForBaseOpcode(unsigned Opcode);
+std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed

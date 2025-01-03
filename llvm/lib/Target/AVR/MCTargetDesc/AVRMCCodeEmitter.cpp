@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "mccodeemitter"
 
@@ -73,16 +72,31 @@ AVRMCCodeEmitter::loadStorePostEncoder(const MCInst &MI, unsigned EncodedValue,
 
   unsigned Opcode = MI.getOpcode();
 
-  // check whether either of the registers are the X pointer register.
-  bool IsRegX = MI.getOperand(0).getReg() == AVR::R27R26 ||
-                MI.getOperand(1).getReg() == AVR::R27R26;
-
-  bool IsPredec = Opcode == AVR::LDRdPtrPd || Opcode == AVR::STPtrPdRr;
-  bool IsPostinc = Opcode == AVR::LDRdPtrPi || Opcode == AVR::STPtrPiRr;
+  // Get the index of the pointer register operand.
+  unsigned Idx = 0;
+  if (Opcode == AVR::LDRdPtrPd || Opcode == AVR::LDRdPtrPi ||
+      Opcode == AVR::LDRdPtr)
+    Idx = 1;
 
   // Check if we need to set the inconsistent bit
-  if (IsRegX || IsPredec || IsPostinc) {
+  bool IsPredec = Opcode == AVR::LDRdPtrPd || Opcode == AVR::STPtrPdRr;
+  bool IsPostinc = Opcode == AVR::LDRdPtrPi || Opcode == AVR::STPtrPiRr;
+  if (MI.getOperand(Idx).getReg() == AVR::R27R26 || IsPredec || IsPostinc)
     EncodedValue |= (1 << 12);
+
+  // Encode the pointer register.
+  switch (MI.getOperand(Idx).getReg()) {
+  case AVR::R27R26:
+    EncodedValue |= 0xc;
+    break;
+  case AVR::R29R28:
+    EncodedValue |= 0x8;
+    break;
+  case AVR::R31R30:
+    break;
+  default:
+    llvm_unreachable("invalid pointer register");
+    break;
   }
 
   return EncodedValue;
@@ -110,26 +124,6 @@ AVRMCCodeEmitter::encodeRelCondBrTarget(const MCInst &MI, unsigned OpNo,
   return target;
 }
 
-unsigned AVRMCCodeEmitter::encodeLDSTPtrReg(const MCInst &MI, unsigned OpNo,
-                                            SmallVectorImpl<MCFixup> &Fixups,
-                                            const MCSubtargetInfo &STI) const {
-  auto MO = MI.getOperand(OpNo);
-
-  // The operand should be a pointer register.
-  assert(MO.isReg());
-
-  switch (MO.getReg()) {
-  case AVR::R27R26:
-    return 0x03; // X: 0b11
-  case AVR::R29R28:
-    return 0x02; // Y: 0b10
-  case AVR::R31R30:
-    return 0x00; // Z: 0b00
-  default:
-    llvm_unreachable("invalid pointer register");
-  }
-}
-
 /// Encodes a `memri` operand.
 /// The operand is 7-bits.
 /// * The lower 6 bits is the immediate
@@ -144,7 +138,7 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
 
   uint8_t RegBit = 0;
 
-  switch (RegOp.getReg()) {
+  switch (RegOp.getReg().id()) {
   default:
     Ctx.reportError(MI.getLoc(), "Expected either Y or Z register");
     return 0;
@@ -289,8 +283,7 @@ void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,
-                                      MCContext &Ctx) {
+MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx) {
   return new AVRMCCodeEmitter(MCII, Ctx);
 }
 

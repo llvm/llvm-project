@@ -323,7 +323,10 @@ def : SysReg<"tselect", 0x7A0>;
 def : SysReg<"tdata1", 0x7A1>;
 def : SysReg<"tdata2", 0x7A2>;
 def : SysReg<"tdata3", 0x7A3>;
+def : SysReg<"tinfo", 0x7A4>;
+def : SysReg<"tcontrol", 0x7A5>;
 def : SysReg<"mcontext", 0x7A8>;
+def : SysReg<"mscontext", 0x7AA>;
 
 //===----------------------------------------------------------------------===//
 // Debug Mode Registers
@@ -455,3 +458,12 @@ def : SysReg<"mnscratch", 0x740>;
 def : SysReg<"mnepc", 0x741>;
 def : SysReg<"mncause", 0x742>;
 def : SysReg<"mnstatus", 0x744>;
+
+//===-----------------------------------------------
+// Control Transfer Records CSRs
+//===-----------------------------------------------
+def : SysReg<"sctrctl", 0x14e>;
+def : SysReg<"sctrstatus", 0x14f>;
+def : SysReg<"sctrdepth", 0x15f>;
+def : SysReg<"vsctrctl", 0x24e>;
+def : SysReg<"mctrctl", 0x34e>;

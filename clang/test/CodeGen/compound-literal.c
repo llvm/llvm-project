@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fexperimental-new-constant-interpreter -emit-llvm %s -o - | FileCheck %s
 
 // Capture the type and name so matching later is cleaner.
 struct CompoundTy { int a; };
@@ -28,12 +29,12 @@ void f(void) {
   // CHECK: [[S:%[a-zA-Z0-9.]+]] = alloca [[STRUCT:%[a-zA-Z0-9.]+]],
   struct S s;
   // CHECK-NEXT: [[COMPOUNDLIT:%[a-zA-Z0-9.]+]] = alloca [[STRUCT]]
-  // CHECK-NEXT: [[CX:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[COMPOUNDLIT]], i32 0, i32 0
-  // CHECK-NEXT: [[SY:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[S]], i32 0, i32 1
+  // CHECK-NEXT: [[CX:%[a-zA-Z0-9.]+]] = getelementptr inbounds nuw [[STRUCT]], ptr [[COMPOUNDLIT]], i32 0, i32 0
+  // CHECK-NEXT: [[SY:%[a-zA-Z0-9.]+]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 1
   // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, ptr [[SY]]
   // CHECK-NEXT: store i32 [[TMP]], ptr [[CX]]
-  // CHECK-NEXT: [[CY:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[COMPOUNDLIT]], i32 0, i32 1
-  // CHECK-NEXT: [[SX:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[S]], i32 0, i32 0
+  // CHECK-NEXT: [[CY:%[a-zA-Z0-9.]+]] = getelementptr inbounds nuw [[STRUCT]], ptr [[COMPOUNDLIT]], i32 0, i32 1
+  // CHECK-NEXT: [[SX:%[a-zA-Z0-9.]+]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 0
   // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, ptr [[SX]]
   // CHECK-NEXT: store i32 [[TMP]], ptr [[CY]]
   // CHECK-NEXT: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} [[S]], ptr align {{[0-9]+}} [[COMPOUNDLIT]]
@@ -54,15 +55,15 @@ struct G g(int x, int y, int z) {
   // CHECK-NEXT: store i32
 
   // Evaluate the compound literal directly in the result value slot.
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], ptr [[RESULT]], i32 0, i32 0
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[G]], ptr [[RESULT]], i32 0, i32 0
   // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[X]], align 4
   // CHECK-NEXT: [[T2:%.*]] = trunc i32 [[T1]] to i16
   // CHECK-NEXT: store i16 [[T2]], ptr [[T0]], align 2
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], ptr [[RESULT]], i32 0, i32 1
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[G]], ptr [[RESULT]], i32 0, i32 1
   // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[Y]], align 4
   // CHECK-NEXT: [[T2:%.*]] = trunc i32 [[T1]] to i16
   // CHECK-NEXT: store i16 [[T2]], ptr [[T0]], align 2
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], ptr [[RESULT]], i32 0, i32 2
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[G]], ptr [[RESULT]], i32 0, i32 2
   // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[Z]], align 4
   // CHECK-NEXT: [[T2:%.*]] = trunc i32 [[T1]] to i16
   // CHECK-NEXT: store i16 [[T2]], ptr [[T0]], align 2

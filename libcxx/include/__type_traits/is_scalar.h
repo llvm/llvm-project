@@ -37,7 +37,7 @@ inline constexpr bool is_scalar_v = __is_scalar(_Tp);
 
 template <class _Tp>
 struct __is_block : false_type {};
-#  if defined(_LIBCPP_HAS_EXTENSION_BLOCKS)
+#  if _LIBCPP_HAS_EXTENSION_BLOCKS
 template <class _Rp, class... _Args>
 struct __is_block<_Rp (^)(_Args...)> : true_type {};
 #  endif

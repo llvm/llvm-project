@@ -130,6 +130,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // Generate the prolog instructions that set up the pipeline.
   generateProlog(MaxStageCount, KernelBB, VRMap, PrologBBs);
   MF.insert(BB->getIterator(), KernelBB);
+  LIS.insertMBBInMaps(KernelBB);
 
   // Rearrange the instructions to generate the new, pipelined loop,
   // and update register names as needed.
@@ -210,6 +211,7 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
     NewBB->transferSuccessors(PredBB);
     PredBB->addSuccessor(NewBB);
     PredBB = NewBB;
+    LIS.insertMBBInMaps(NewBB);
 
     // Generate instructions for each appropriate stage. Process instructions
     // in original program order.
@@ -283,6 +285,7 @@ void ModuloScheduleExpander::generateEpilog(
 
     PredBB->replaceSuccessor(LoopExitBB, NewBB);
     NewBB->addSuccessor(LoopExitBB);
+    LIS.insertMBBInMaps(NewBB);
 
     if (EpilogStart == LoopExitBB)
       EpilogStart = NewBB;
@@ -2664,8 +2667,8 @@ void ModuloScheduleExpanderMVE::calcNumUnroll() {
 void ModuloScheduleExpanderMVE::updateInstrDef(MachineInstr *NewMI,
                                                ValueMapTy &VRMap,
                                                bool LastDef) {
-  for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual() || !MO.isDef())
+  for (MachineOperand &MO : NewMI->all_defs()) {
+    if (!MO.getReg().isVirtual())
       continue;
     Register Reg = MO.getReg();
     const TargetRegisterClass *RC = MRI.getRegClass(Reg);
@@ -2690,8 +2693,7 @@ void ModuloScheduleExpanderMVE::expand() {
 /// Check if ModuloScheduleExpanderMVE can be applied to L
 bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
   if (!L.getExitBlock()) {
-    LLVM_DEBUG(
-        dbgs() << "Can not apply MVE expander: No single exit block.\n";);
+    LLVM_DEBUG(dbgs() << "Can not apply MVE expander: No single exit block.\n");
     return false;
   }
 
@@ -2708,9 +2710,8 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
       if (MO.isReg())
         for (MachineInstr &Ref : MRI.use_instructions(MO.getReg()))
           if (Ref.getParent() != BB || Ref.isPHI()) {
-            LLVM_DEBUG(dbgs()
-                           << "Can not apply MVE expander: A phi result is "
-                              "referenced outside of the loop or by phi.\n";);
+            LLVM_DEBUG(dbgs() << "Can not apply MVE expander: A phi result is "
+                                 "referenced outside of the loop or by phi.\n");
             return false;
           }
 
@@ -2723,12 +2724,12 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
         MRI.getVRegDef(LoopVal)->getParent() != BB) {
       LLVM_DEBUG(
           dbgs() << "Can not apply MVE expander: A phi source value coming "
-                    "from the loop is not defined in the loop.\n";);
+                    "from the loop is not defined in the loop.\n");
       return false;
     }
     if (UsedByPhi.count(LoopVal)) {
       LLVM_DEBUG(dbgs() << "Can not apply MVE expander: A value defined in the "
-                           "loop is referenced by two or more phis.\n";);
+                           "loop is referenced by two or more phis.\n");
       return false;
     }
     UsedByPhi.insert(LoopVal);

@@ -275,3 +275,112 @@ static_assert(S<int>::g<int>() == 2); // expected-error {{call to 'g' is ambiguo
 
 
 }
+
+namespace GH99430 {
+
+template <class _Ty1, class _Ty2>
+using _Synth_three_way_result = int;
+
+template <class... _Types>
+class tuple;
+
+template <int _Index>
+struct tuple_element;
+
+template <class, int...>
+struct _Three_way_comparison_result_with_tuple_like {
+  using type = int;
+};
+
+template <class... _TTypes, int... _Indices>
+  requires(requires {
+    typename _Synth_three_way_result<_TTypes, tuple_element<_Indices>>;
+  } && ...)
+
+struct _Three_way_comparison_result_with_tuple_like<tuple<_TTypes...>, _Indices...>{
+    using type = long;
+};
+
+static_assert(__is_same_as(_Three_way_comparison_result_with_tuple_like<tuple<int>, 0, 1>::type, int));
+static_assert(__is_same_as(_Three_way_comparison_result_with_tuple_like<tuple<int>, 0>::type, long));
+
+}
+
+namespace GH88866 {
+
+template <typename...Ts> struct index_by;
+
+template <typename T, typename Indices>
+concept InitFunc = true;
+
+namespace ExpandsBoth {
+
+template <typename Indices, InitFunc<Indices> auto... init>
+struct LazyLitMatrix; // expected-note {{here}}
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices>> auto... init
+>
+struct LazyLitMatrix<index_by<Indices...>, init...> {
+};
+
+// FIXME: Explain why we didn't pick up the partial specialization - pack sizes don't match.
+template struct LazyLitMatrix<index_by<int, char>, 42>;
+// expected-error@-1 {{instantiation of undefined template}}
+template struct LazyLitMatrix<index_by<int, char>, 42, 43>;
+
+}
+
+namespace ExpandsRespectively {
+
+template <typename Indices, InitFunc<Indices> auto... init>
+struct LazyLitMatrix;
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices...>> auto... init
+>
+struct LazyLitMatrix<index_by<Indices...>, init...> {
+};
+
+template struct LazyLitMatrix<index_by<int, char>, 42>;
+template struct LazyLitMatrix<index_by<int, char>, 42, 43>;
+
+}
+
+namespace TypeParameter {
+
+template <typename Indices, InitFunc<Indices>... init>
+struct LazyLitMatrix; // expected-note {{here}}
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices>>... init
+>
+struct LazyLitMatrix<index_by<Indices...>, init...> {
+};
+
+// FIXME: Explain why we didn't pick up the partial specialization - pack sizes don't match.
+template struct LazyLitMatrix<index_by<int, char>, float>;
+// expected-error@-1 {{instantiation of undefined template}}
+template struct LazyLitMatrix<index_by<int, char>, unsigned, float>;
+
+}
+
+namespace Invalid {
+
+template <typename Indices, InitFunc<Indices>... init>
+struct LazyLitMatrix;
+
+template <
+    typename...Indices,
+    InitFunc<index_by<Indices>> init
+    // expected-error@-1 {{unexpanded parameter pack 'Indices'}}
+>
+struct LazyLitMatrix<index_by<Indices...>, init> {
+};
+
+}
+
+}

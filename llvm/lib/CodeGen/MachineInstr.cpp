@@ -596,6 +596,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
+  // Copy the samesign flag.
+  if (const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I))
+    if (ICmp->hasSameSign())
+      MIFlags |= MachineInstr::MIFlag::SameSign;
+
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -1041,8 +1046,8 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (const MachineOperand &MO : operands()) {
-    if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == Reg)
+  for (const MachineOperand &MO : implicit_operands()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == Reg)
       return true;
   }
   return false;
@@ -1323,6 +1328,28 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   return true;
 }
 
+bool MachineInstr::wouldBeTriviallyDead() const {
+  // Don't delete frame allocation labels.
+  // FIXME: Why is LOCAL_ESCAPE not considered in MachineInstr::isLabel?
+  if (getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+
+  // Don't delete FAKE_USE.
+  // FIXME: Why is FAKE_USE not considered in MachineInstr::isPosition?
+  if (isFakeUse())
+    return false;
+
+  // LIFETIME markers should be preserved.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
+  if (isLifetimeMarker())
+    return false;
+
+  // If we can move an instruction, we can remove it.  Otherwise, it has
+  // a side-effect of some sort.
+  bool SawStore = false;
+  return isPHI() || isSafeToMove(SawStore);
+}
+
 static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
                                  bool UseTBAA, const MachineMemOperand *MMOa,
                                  const MachineMemOperand *MMOb) {
@@ -1513,19 +1540,16 @@ bool MachineInstr::isDereferenceableInvariantLoad() const {
   return true;
 }
 
-/// isConstantValuePHI - If the specified instruction is a PHI that always
-/// merges together the same virtual register, return the register, otherwise
-/// return 0.
-unsigned MachineInstr::isConstantValuePHI() const {
+Register MachineInstr::isConstantValuePHI() const {
   if (!isPHI())
-    return 0;
+    return {};
   assert(getNumOperands() >= 3 &&
          "It's illegal to have a PHI without source operands");
 
   Register Reg = getOperand(1).getReg();
   for (unsigned i = 3, e = getNumOperands(); i < e; i += 2)
     if (getOperand(i).getReg() != Reg)
-      return 0;
+      return {};
   return Reg;
 }
 
@@ -1751,6 +1775,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   // Print the opcode name.
   if (TII)
@@ -2125,19 +2151,15 @@ bool MachineInstr::addRegisterDead(Register Reg,
 }
 
 void MachineInstr::clearRegisterDeads(Register Reg) {
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg)
-      continue;
-    MO.setIsDead(false);
-  }
+  for (MachineOperand &MO : all_defs())
+    if (MO.getReg() == Reg)
+      MO.setIsDead(false);
 }
 
 void MachineInstr::setRegisterDefReadUndef(Register Reg, bool IsUndef) {
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg || MO.getSubReg() == 0)
-      continue;
-    MO.setIsUndef(IsUndef);
-  }
+  for (MachineOperand &MO : all_defs())
+    if (MO.getReg() == Reg && MO.getSubReg() != 0)
+      MO.setIsUndef(IsUndef);
 }
 
 void MachineInstr::addRegisterDefined(Register Reg,
@@ -2147,9 +2169,8 @@ void MachineInstr::addRegisterDefined(Register Reg,
     if (MO)
       return;
   } else {
-    for (const MachineOperand &MO : operands()) {
-      if (MO.isReg() && MO.getReg() == Reg && MO.isDef() &&
-          MO.getSubReg() == 0)
+    for (const MachineOperand &MO : all_defs()) {
+      if (MO.getReg() == Reg && MO.getSubReg() == 0)
         return;
     }
   }
@@ -2198,26 +2219,36 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
   return hash_combine_range(HashComponents.begin(), HashComponents.end());
 }
 
-void MachineInstr::emitError(StringRef Msg) const {
+const MDNode *MachineInstr::getLocCookieMD() const {
   // Find the source location cookie.
-  uint64_t LocCookie = 0;
   const MDNode *LocMD = nullptr;
   for (unsigned i = getNumOperands(); i != 0; --i) {
     if (getOperand(i-1).isMetadata() &&
         (LocMD = getOperand(i-1).getMetadata()) &&
         LocMD->getNumOperands() != 0) {
-      if (const ConstantInt *CI =
-              mdconst::dyn_extract<ConstantInt>(LocMD->getOperand(0))) {
-        LocCookie = CI->getZExtValue();
-        break;
-      }
+      if (mdconst::hasa<ConstantInt>(LocMD->getOperand(0)))
+        return LocMD;
     }
   }
 
-  if (const MachineBasicBlock *MBB = getParent())
-    if (const MachineFunction *MF = MBB->getParent())
-      return MF->getFunction().getContext().emitError(LocCookie, Msg);
-  report_fatal_error(Msg);
+  return nullptr;
+}
+
+void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
+  assert(isInlineAsm());
+  const MDNode *LocMD = getLocCookieMD();
+  uint64_t LocCookie =
+      LocMD
+          ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue()
+          : 0;
+  LLVMContext &Ctx = getMF()->getFunction().getContext();
+  Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg));
+}
+
+void MachineInstr::emitGenericError(const Twine &Msg) const {
+  const Function &Fn = getMF()->getFunction();
+  Fn.getContext().diagnose(
+      DiagnosticInfoGenericWithLoc(Msg, Fn, getDebugLoc()));
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
@@ -2296,9 +2327,9 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
 
 /// Compute the new DIExpression to use with a DBG_VALUE for a spill slot.
 /// This prepends DW_OP_deref when spilling an indirect DBG_VALUE.
-static const DIExpression *
-computeExprForSpill(const MachineInstr &MI,
-                    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+static const DIExpression *computeExprForSpill(
+    const MachineInstr &MI,
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
@@ -2353,7 +2384,7 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
 MachineInstr *llvm::buildDbgValueForSpill(
     MachineBasicBlock &BB, MachineBasicBlock::iterator I,
     const MachineInstr &Orig, int FrameIndex,
-    SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands) {
   const DIExpression *Expr = computeExprForSpill(Orig, SpilledOperands);
   MachineInstrBuilder NewMI =
       BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc());

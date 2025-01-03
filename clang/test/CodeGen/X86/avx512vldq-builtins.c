@@ -45,7 +45,7 @@ __m128i test_mm_maskz_mullo_epi64 (__mmask8 __U, __m128i __A, __m128i __B) {
 
 __m256d test_mm256_mask_andnot_pd (__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_mask_andnot_pd
-  // CHECK: xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: xor <4 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <4 x i64> %{{.*}}, %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return (__m256d) _mm256_mask_andnot_pd ( __W, __U, __A, __B);
@@ -53,7 +53,7 @@ __m256d test_mm256_mask_andnot_pd (__m256d __W, __mmask8 __U, __m256d __A, __m25
 
 __m256d test_mm256_maskz_andnot_pd (__mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_maskz_andnot_pd
-  // CHECK: xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: xor <4 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <4 x i64> %{{.*}}, %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return (__m256d) _mm256_maskz_andnot_pd (__U, __A, __B);
@@ -61,7 +61,7 @@ __m256d test_mm256_maskz_andnot_pd (__mmask8 __U, __m256d __A, __m256d __B) {
 
 __m128d test_mm_mask_andnot_pd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_mask_andnot_pd
-  // CHECK: xor <2 x i64> %{{.*}}, <i64 -1, i64 -1>
+  // CHECK: xor <2 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <2 x i64> %{{.*}}, %{{.*}}
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return (__m128d) _mm_mask_andnot_pd ( __W, __U, __A, __B);
@@ -69,7 +69,7 @@ __m128d test_mm_mask_andnot_pd (__m128d __W, __mmask8 __U, __m128d __A, __m128d 
 
 __m128d test_mm_maskz_andnot_pd (__mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_maskz_andnot_pd
-  // CHECK: xor <2 x i64> %{{.*}}, <i64 -1, i64 -1>
+  // CHECK: xor <2 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <2 x i64> %{{.*}}, %{{.*}}
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return (__m128d) _mm_maskz_andnot_pd (__U, __A, __B);
@@ -77,7 +77,7 @@ __m128d test_mm_maskz_andnot_pd (__mmask8 __U, __m128d __A, __m128d __B) {
 
 __m256 test_mm256_mask_andnot_ps (__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_mask_andnot_ps
-  // CHECK: xor <8 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <8 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <8 x i32> %{{.*}}, %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return (__m256) _mm256_mask_andnot_ps ( __W, __U, __A, __B);
@@ -85,7 +85,7 @@ __m256 test_mm256_mask_andnot_ps (__m256 __W, __mmask8 __U, __m256 __A, __m256 _
 
 __m256 test_mm256_maskz_andnot_ps (__mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_andnot_ps
-  // CHECK: xor <8 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <8 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <8 x i32> %{{.*}}, %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return (__m256) _mm256_maskz_andnot_ps (__U, __A, __B);
@@ -93,7 +93,7 @@ __m256 test_mm256_maskz_andnot_ps (__mmask8 __U, __m256 __A, __m256 __B) {
 
 __m128 test_mm_mask_andnot_ps (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_mask_andnot_ps
-  // CHECK: xor <4 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <4 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <4 x i32> %{{.*}}, %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return (__m128) _mm_mask_andnot_ps ( __W, __U, __A, __B);
@@ -101,7 +101,7 @@ __m128 test_mm_mask_andnot_ps (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 
 __m128 test_mm_maskz_andnot_ps (__mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_andnot_ps
-  // CHECK: xor <4 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <4 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <4 x i32> %{{.*}}, %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return (__m128) _mm_maskz_andnot_ps (__U, __A, __B);

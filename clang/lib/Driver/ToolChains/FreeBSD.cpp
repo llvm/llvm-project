@@ -213,11 +213,19 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
     break;
+  case llvm::Triple::loongarch32:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf32loongarch");
+    break;
+  case llvm::Triple::loongarch64:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf64loongarch");
+    break;
   default:
     break;
   }
 
-  if (Triple.isRISCV64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
@@ -313,7 +321,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       if (Profiling)

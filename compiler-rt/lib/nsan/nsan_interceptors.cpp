@@ -16,22 +16,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception/interception.h"
-#include "nsan/nsan.h"
+#include "nsan.h"
+#include "nsan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_linux.h"
 
 #include <wchar.h>
 
-#if SANITIZER_LINUX
-extern "C" int mallopt(int param, int value);
-#endif
-
+using namespace __nsan;
 using namespace __sanitizer;
-using __nsan::nsan_init_is_running;
-using __nsan::nsan_initialized;
 
 template <typename T> T min(T a, T b) { return a < b ? a : b; }
 
-INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
+INTERCEPTOR(void *, memset, void *dst, int v, usize size) {
   // NOTE: This guard is needed because nsan's initialization code might call
   // memset.
   if (!nsan_initialized && REAL(memset) == nullptr)
@@ -42,13 +39,13 @@ INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
   return res;
 }
 
-INTERCEPTOR(wchar_t *, wmemset, wchar_t *dst, wchar_t v, uptr size) {
+INTERCEPTOR(wchar_t *, wmemset, wchar_t *dst, wchar_t v, usize size) {
   wchar_t *res = REAL(wmemset)(dst, v, size);
   __nsan_set_value_unknown((u8 *)dst, sizeof(wchar_t) * size);
   return res;
 }
 
-INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
+INTERCEPTOR(void *, memmove, void *dst, const void *src, usize size) {
   // NOTE: This guard is needed because nsan's initialization code might call
   // memmove.
   if (!nsan_initialized && REAL(memmove) == nullptr)
@@ -60,13 +57,13 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
   return res;
 }
 
-INTERCEPTOR(wchar_t *, wmemmove, wchar_t *dst, const wchar_t *src, uptr size) {
+INTERCEPTOR(wchar_t *, wmemmove, wchar_t *dst, const wchar_t *src, usize size) {
   wchar_t *res = REAL(wmemmove)(dst, src, size);
   __nsan_copy_values((u8 *)dst, (const u8 *)src, sizeof(wchar_t) * size);
   return res;
 }
 
-INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
+INTERCEPTOR(void *, memcpy, void *dst, const void *src, usize size) {
   // NOTE: This guard is needed because nsan's initialization code might call
   // memcpy.
   if (!nsan_initialized && REAL(memcpy) == nullptr) {
@@ -81,7 +78,7 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
   return res;
 }
 
-INTERCEPTOR(wchar_t *, wmemcpy, wchar_t *dst, const wchar_t *src, uptr size) {
+INTERCEPTOR(wchar_t *, wmemcpy, wchar_t *dst, const wchar_t *src, usize size) {
   wchar_t *res = REAL(wmemcpy)(dst, src, size);
   __nsan_copy_values((u8 *)dst, (const u8 *)src, sizeof(wchar_t) * size);
   return res;
@@ -97,7 +94,7 @@ INTERCEPTOR(char *, strfry, char *s) {
 
 INTERCEPTOR(char *, strsep, char **Stringp, const char *delim) {
   char *OrigStringp = REAL(strsep)(Stringp, delim);
-  if (Stringp != nullptr) {
+  if (*Stringp != nullptr) {
     // The previous character has been overwritten with a '\0' char.
     __nsan_set_value_unknown(reinterpret_cast<u8 *>(*Stringp) - 1, 1);
   }
@@ -139,7 +136,7 @@ INTERCEPTOR(wchar_t *, wcsdup, const wchar_t *S) {
   return res;
 }
 
-INTERCEPTOR(char *, strndup, const char *S, uptr size) {
+INTERCEPTOR(char *, strndup, const char *S, usize size) {
   char *res = REAL(strndup)(S, size);
   if (res) {
     nsanCopyZeroTerminated(res, S, min(internal_strlen(S), size));
@@ -159,7 +156,7 @@ INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dst, const wchar_t *src) {
   return res;
 }
 
-INTERCEPTOR(char *, strncpy, char *dst, const char *src, uptr size) {
+INTERCEPTOR(char *, strncpy, char *dst, const char *src, usize size) {
   char *res = REAL(strncpy)(dst, src, size);
   nsanCopyZeroTerminated(dst, src, min(size, internal_strlen(src)));
   return res;
@@ -179,7 +176,7 @@ INTERCEPTOR(wchar_t *, wcscat, wchar_t *dst, const wchar_t *src) {
   return res;
 }
 
-INTERCEPTOR(char *, strncat, char *dst, const char *src, uptr size) {
+INTERCEPTOR(char *, strncat, char *dst, const char *src, usize size) {
   const auto DstLen = internal_strlen(dst);
   char *res = REAL(strncat)(dst, src, size);
   nsanCopyZeroTerminated(dst + DstLen, src, min(size, internal_strlen(src)));
@@ -198,22 +195,45 @@ INTERCEPTOR(wchar_t *, wcpcpy, wchar_t *dst, const wchar_t *src) {
   return res;
 }
 
-INTERCEPTOR(uptr, strxfrm, char *dst, const char *src, uptr size) {
+INTERCEPTOR(usize, strxfrm, char *dst, const char *src, usize size) {
   // This is overly conservative, but this function should very rarely be used.
   __nsan_set_value_unknown(reinterpret_cast<u8 *>(dst), internal_strlen(dst));
-  const uptr res = REAL(strxfrm)(dst, src, size);
+  return REAL(strxfrm)(dst, src, size);
+}
+
+extern "C" int pthread_attr_init(void *attr);
+extern "C" int pthread_attr_destroy(void *attr);
+
+static void *NsanThreadStartFunc(void *arg) {
+  auto *t = reinterpret_cast<NsanThread *>(arg);
+  SetCurrentThread(t);
+  t->Init();
+  SetSigProcMask(&t->starting_sigset_, nullptr);
+  return t->ThreadStart();
+}
+
+INTERCEPTOR(int, pthread_create, void *th, void *attr,
+            void *(*callback)(void *), void *param) {
+  __sanitizer_pthread_attr_t myattr;
+  if (!attr) {
+    pthread_attr_init(&myattr);
+    attr = &myattr;
+  }
+
+  AdjustStackSize(attr);
+
+  NsanThread *t = NsanThread::Create(callback, param);
+  ScopedBlockSignals block(&t->starting_sigset_);
+  int res = REAL(pthread_create)(th, attr, NsanThreadStartFunc, t);
+
+  if (attr == &myattr)
+    pthread_attr_destroy(&myattr);
   return res;
 }
 
 void __nsan::InitializeInterceptors() {
   static bool initialized = false;
   CHECK(!initialized);
-
-  // Instruct libc malloc to consume less memory.
-#if SANITIZER_LINUX
-  mallopt(1, 0);          // M_MXFAST
-  mallopt(-3, 32 * 1024); // M_MMAP_THRESHOLD
-#endif
 
   InitializeMallocInterceptors();
 
@@ -240,6 +260,8 @@ void __nsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(strfry);
   INTERCEPT_FUNCTION(strsep);
   INTERCEPT_FUNCTION(strtok);
+
+  INTERCEPT_FUNCTION(pthread_create);
 
   initialized = 1;
 }

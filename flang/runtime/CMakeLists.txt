@@ -59,6 +59,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     )
 endif()
 
+# function checks
+find_package(Backtrace)
+set(HAVE_BACKTRACE ${Backtrace_FOUND})
+set(BACKTRACE_HEADER ${Backtrace_HEADER})
+
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
@@ -107,6 +112,7 @@ add_subdirectory(Float128Math)
 
 set(sources
   ISO_Fortran_binding.cpp
+  allocator-registry.cpp
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
@@ -178,6 +184,7 @@ include(AddFlangOffloadRuntime)
 set(supported_files
   ISO_Fortran_binding.cpp
   allocatable.cpp
+  allocator-registry.cpp
   array-constructor.cpp
   assign.cpp
   buffer.cpp
@@ -249,6 +256,13 @@ if (NOT TARGET FortranFloat128Math)
       APPEND PROPERTY COMPILE_DEFINITIONS
       ${f128_defs}
       )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
+      )
     list(APPEND sources ${f128_sources})
   endif()
 endif()
@@ -299,11 +313,14 @@ set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries"
 # If FortranRuntime is part of a Flang build (and not a separate build) then
 # add dependency to make sure that Fortran runtime library is being built after
 # we have the Flang compiler available.  This also includes the MODULE files
-# that compile when the 'flang-new' target is built.
+# that compile when the 'flang' target is built.
 #
 # TODO: This is a workaround and should be updated when runtime build procedure
 # is changed to a regular runtime build.  See discussion in PR #95388.
-if (TARGET flang-new AND TARGET module_files)
-  add_dependencies(FortranRuntime flang-new module_files)
+if (TARGET flang AND TARGET module_files)
+  add_dependencies(FortranRuntime flang module_files)
 endif()
 
+if (FLANG_CUF_RUNTIME)
+  add_subdirectory(CUDA)
+endif()

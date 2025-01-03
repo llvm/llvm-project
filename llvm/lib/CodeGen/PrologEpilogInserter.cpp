@@ -48,10 +48,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -63,7 +61,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -228,6 +225,11 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
+  // Spill frame pointer and/or base pointer registers if they are clobbered.
+  // It is placed before call frame instruction elimination so it will not mess
+  // with stack arguments.
+  TFI->spillFPBP(MF);
+
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.
   calculateCallFrameInfo(MF);
@@ -340,6 +342,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
            << " stack bytes in function '"
            << ore::NV("Function", MF.getFunction().getName()) << "'";
   });
+
+  // Emit any remarks implemented for the target, based on final frame layout.
+  TFI->emitRemarks(MF, ORE);
 
   delete RS;
   SaveBlocks.clear();

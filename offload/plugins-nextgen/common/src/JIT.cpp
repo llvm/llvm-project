@@ -51,7 +51,7 @@ namespace {
 
 bool isImageBitcode(const __tgt_device_image &Image) {
   StringRef Binary(reinterpret_cast<const char *>(Image.ImageStart),
-                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+                   utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
 
   return identify_magic(Binary) == file_magic::bitcode;
 }
@@ -69,7 +69,7 @@ createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
 Expected<std::unique_ptr<Module>>
 createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   StringRef Data((const char *)Image.ImageStart,
-                 target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+                 utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
       Data, /*BufferName=*/"", /*RequiresNullTerminator=*/false);
   return createModuleFromMemoryBuffer(MB, Context);
@@ -175,8 +175,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
                         Module &M, raw_pwrite_stream &OS) {
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
-      reinterpret_cast<LLVMTargetMachine *>(TM));
+  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
@@ -223,7 +222,7 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     if (EC)
       return createStringError(
           EC, "Could not open %s to write the post-opt IR module\n",
-          PreOptIRModuleFileName.get().c_str());
+          PostOptIRModuleFileName.get().c_str());
     M.print(FD, nullptr);
   }
 

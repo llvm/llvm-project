@@ -90,6 +90,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   /* MSMode Unsupported */
   if (!LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
     return false;
+  /* HLSLMode Unsupported */
+  if (!LangOpts.HLSL && (BuiltinInfo.Langs & HLSL_LANG))
+    return false;
   /* ObjC Unsupported */
   if (!LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG)
     return false;
@@ -131,7 +134,7 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
 void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
                                           const LangOptions& LangOpts) {
   // Step #1: mark all target-independent builtins with their ID's.
-  for (unsigned i = Builtin::NotBuiltin+1; i != Builtin::FirstTSBuiltin; ++i)
+  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
     if (builtinIsSupported(BuiltinInfo[i], LangOpts)) {
       Table.get(BuiltinInfo[i].Name).setBuiltinID(i);
     }

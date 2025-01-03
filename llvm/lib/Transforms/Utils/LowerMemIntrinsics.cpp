@@ -45,16 +45,16 @@ void llvm::createMemCpyLoopKnownSize(
 
   Type *TypeOfCopyLen = CopyLen->getType();
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value(),
-      AtomicElementSize);
+      Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
 
+  Type *Int8Type = Type::getInt8Ty(Ctx);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   assert((!AtomicElementSize || LoopOpSize % *AtomicElementSize == 0) &&
-      "Atomic memcpy lowering is not supported for selected operand size");
+         "Atomic memcpy lowering is not supported for selected operand size");
 
-  uint64_t LoopEndCount = CopyLen->getZExtValue() / LoopOpSize;
+  uint64_t LoopEndCount = alignDown(CopyLen->getZExtValue(), LoopOpSize);
 
   if (LoopEndCount != 0) {
     // Split
@@ -72,8 +72,12 @@ void llvm::createMemCpyLoopKnownSize(
     PHINode *LoopIndex = LoopBuilder.CreatePHI(TypeOfCopyLen, 2, "loop-index");
     LoopIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0U), PreLoopBB);
     // Loop Body
-    Value *SrcGEP =
-        LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
+
+    // If we used LoopOpType as GEP element type, we would iterate over the
+    // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,
+    // we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore, use
+    // byte offsets computed from the TypeStoreSize.
+    Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopIndex);
     LoadInst *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
                                                    PartSrcAlign, SrcIsVolatile);
     if (!CanOverlap) {
@@ -81,8 +85,7 @@ void llvm::createMemCpyLoopKnownSize(
       Load->setMetadata(LLVMContext::MD_alias_scope,
                         MDNode::get(Ctx, NewScope));
     }
-    Value *DstGEP =
-        LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
+    Value *DstGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LoopIndex);
     StoreInst *Store = LoopBuilder.CreateAlignedStore(
         Load, DstGEP, PartDstAlign, DstIsVolatile);
     if (!CanOverlap) {
@@ -93,8 +96,8 @@ void llvm::createMemCpyLoopKnownSize(
       Load->setAtomic(AtomicOrdering::Unordered);
       Store->setAtomic(AtomicOrdering::Unordered);
     }
-    Value *NewIndex =
-        LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1U));
+    Value *NewIndex = LoopBuilder.CreateAdd(
+        LoopIndex, ConstantInt::get(TypeOfCopyLen, LoopOpSize));
     LoopIndex->addIncoming(NewIndex, LoopBB);
 
     // Create the loop branch condition.
@@ -103,7 +106,7 @@ void llvm::createMemCpyLoopKnownSize(
                              LoopBB, PostLoopBB);
   }
 
-  uint64_t BytesCopied = LoopEndCount * LoopOpSize;
+  uint64_t BytesCopied = LoopEndCount;
   uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopied;
   if (RemainingBytes) {
     IRBuilder<> RBuilder(PostLoopBB ? PostLoopBB->getFirstNonPHI()
@@ -111,25 +114,20 @@ void llvm::createMemCpyLoopKnownSize(
 
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, SrcAlign.value(),
-                                          DstAlign.value(), AtomicElementSize);
+                                          SrcAS, DstAS, SrcAlign, DstAlign,
+                                          AtomicElementSize);
 
     for (auto *OpTy : RemainingOps) {
       Align PartSrcAlign(commonAlignment(SrcAlign, BytesCopied));
       Align PartDstAlign(commonAlignment(DstAlign, BytesCopied));
 
-      // Calculate the new index
       unsigned OperandSize = DL.getTypeStoreSize(OpTy);
       assert(
           (!AtomicElementSize || OperandSize % *AtomicElementSize == 0) &&
           "Atomic memcpy lowering is not supported for selected operand size");
 
-      uint64_t GepIndex = BytesCopied / OperandSize;
-      assert(GepIndex * OperandSize == BytesCopied &&
-             "Division should have no Remainder!");
-
       Value *SrcGEP = RBuilder.CreateInBoundsGEP(
-          OpTy, SrcAddr, ConstantInt::get(TypeOfCopyLen, GepIndex));
+          Int8Type, SrcAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
       LoadInst *Load =
           RBuilder.CreateAlignedLoad(OpTy, SrcGEP, PartSrcAlign, SrcIsVolatile);
       if (!CanOverlap) {
@@ -138,7 +136,7 @@ void llvm::createMemCpyLoopKnownSize(
                           MDNode::get(Ctx, NewScope));
       }
       Value *DstGEP = RBuilder.CreateInBoundsGEP(
-          OpTy, DstAddr, ConstantInt::get(TypeOfCopyLen, GepIndex));
+          Int8Type, DstAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
       StoreInst *Store = RBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
                                                      DstIsVolatile);
       if (!CanOverlap) {
@@ -156,16 +154,6 @@ void llvm::createMemCpyLoopKnownSize(
          "Bytes copied should match size in the call!");
 }
 
-// \returns \p Len udiv \p OpSize, checking for optimization opportunities.
-static Value *getRuntimeLoopCount(const DataLayout &DL, IRBuilderBase &B,
-                                  Value *Len, Value *OpSize,
-                                  unsigned OpSizeVal) {
-  // For powers of 2, we can lshr by log2 instead of using udiv.
-  if (isPowerOf2_32(OpSizeVal))
-    return B.CreateLShr(Len, Log2_32(OpSizeVal));
-  return B.CreateUDiv(Len, OpSize);
-}
-
 // \returns \p Len urem \p OpSize, checking for optimization opportunities.
 static Value *getRuntimeLoopRemainder(const DataLayout &DL, IRBuilderBase &B,
                                       Value *Len, Value *OpSize,
@@ -174,6 +162,18 @@ static Value *getRuntimeLoopRemainder(const DataLayout &DL, IRBuilderBase &B,
   if (isPowerOf2_32(OpSizeVal))
     return B.CreateAnd(Len, OpSizeVal - 1);
   return B.CreateURem(Len, OpSize);
+}
+
+// \returns (\p Len udiv \p OpSize) mul \p OpSize, checking for optimization
+// opportunities.
+// If RTLoopRemainder is provided, it must be the result of
+// getRuntimeLoopRemainder() with the same arguments.
+static Value *getRuntimeLoopBytes(const DataLayout &DL, IRBuilderBase &B,
+                                  Value *Len, Value *OpSize, unsigned OpSizeVal,
+                                  Value *RTLoopRemainder = nullptr) {
+  if (!RTLoopRemainder)
+    RTLoopRemainder = getRuntimeLoopRemainder(DL, B, Len, OpSize, OpSizeVal);
+  return B.CreateSub(Len, RTLoopRemainder);
 }
 
 void llvm::createMemCpyLoopUnknownSize(
@@ -197,8 +197,7 @@ void llvm::createMemCpyLoopUnknownSize(
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value(),
-      AtomicElementSize);
+      Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
@@ -215,10 +214,15 @@ void llvm::createMemCpyLoopUnknownSize(
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
-  Value *RuntimeLoopCount = LoopOpIsInt8
-                                ? CopyLen
-                                : getRuntimeLoopCount(DL, PLBuilder, CopyLen,
-                                                      CILoopOpSize, LoopOpSize);
+
+  Value *RuntimeLoopBytes = CopyLen;
+  Value *RuntimeResidualBytes = nullptr;
+  if (!LoopOpIsInt8) {
+    RuntimeResidualBytes = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
+                                                   CILoopOpSize, LoopOpSize);
+    RuntimeLoopBytes = getRuntimeLoopBytes(DL, PLBuilder, CopyLen, CILoopOpSize,
+                                           LoopOpSize, RuntimeResidualBytes);
+  }
 
   BasicBlock *LoopBB =
       BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, PostLoopBB);
@@ -230,14 +234,18 @@ void llvm::createMemCpyLoopUnknownSize(
   PHINode *LoopIndex = LoopBuilder.CreatePHI(CopyLenType, 2, "loop-index");
   LoopIndex->addIncoming(ConstantInt::get(CopyLenType, 0U), PreLoopBB);
 
-  Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
+  // If we used LoopOpType as GEP element type, we would iterate over the
+  // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,
+  // we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore, use byte
+  // offsets computed from the TypeStoreSize.
+  Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopIndex);
   LoadInst *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
                                                  PartSrcAlign, SrcIsVolatile);
   if (!CanOverlap) {
     // Set alias scope for loads.
     Load->setMetadata(LLVMContext::MD_alias_scope, MDNode::get(Ctx, NewScope));
   }
-  Value *DstGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
+  Value *DstGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LoopIndex);
   StoreInst *Store =
       LoopBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
   if (!CanOverlap) {
@@ -248,13 +256,13 @@ void llvm::createMemCpyLoopUnknownSize(
     Load->setAtomic(AtomicOrdering::Unordered);
     Store->setAtomic(AtomicOrdering::Unordered);
   }
-  Value *NewIndex =
-      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(CopyLenType, 1U));
+  Value *NewIndex = LoopBuilder.CreateAdd(
+      LoopIndex, ConstantInt::get(CopyLenType, LoopOpSize));
   LoopIndex->addIncoming(NewIndex, LoopBB);
 
-  bool requiresResidual =
+  bool RequiresResidual =
       !LoopOpIsInt8 && !(AtomicElementSize && LoopOpSize == AtomicElementSize);
-  if (requiresResidual) {
+  if (RequiresResidual) {
     Type *ResLoopOpType = AtomicElementSize
                               ? Type::getIntNTy(Ctx, *AtomicElementSize * 8)
                               : Int8Type;
@@ -265,14 +273,9 @@ void llvm::createMemCpyLoopUnknownSize(
     Align ResSrcAlign(commonAlignment(PartSrcAlign, ResLoopOpSize));
     Align ResDstAlign(commonAlignment(PartDstAlign, ResLoopOpSize));
 
-    Value *RuntimeResidual = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
-                                                     CILoopOpSize, LoopOpSize);
-    Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
-
     // Loop body for the residual copy.
-    BasicBlock *ResLoopBB = BasicBlock::Create(Ctx, "loop-memcpy-residual",
-                                               PreLoopBB->getParent(),
-                                               PostLoopBB);
+    BasicBlock *ResLoopBB = BasicBlock::Create(
+        Ctx, "loop-memcpy-residual", PreLoopBB->getParent(), PostLoopBB);
     // Residual loop header.
     BasicBlock *ResHeaderBB = BasicBlock::Create(
         Ctx, "loop-memcpy-residual-header", PreLoopBB->getParent(), nullptr);
@@ -283,17 +286,17 @@ void llvm::createMemCpyLoopUnknownSize(
     // non-zero and finally branch to after the residual loop if the memcpy
     //  size is zero.
     ConstantInt *Zero = ConstantInt::get(ILengthType, 0U);
-    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopCount, Zero),
+    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopBytes, Zero),
                            LoopBB, ResHeaderBB);
     PreLoopBB->getTerminator()->eraseFromParent();
 
     LoopBuilder.CreateCondBr(
-        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopCount), LoopBB,
+        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopBytes), LoopBB,
         ResHeaderBB);
 
     // Determine if we need to branch to the residual loop or bypass it.
     IRBuilder<> RHBuilder(ResHeaderBB);
-    RHBuilder.CreateCondBr(RHBuilder.CreateICmpNE(RuntimeResidual, Zero),
+    RHBuilder.CreateCondBr(RHBuilder.CreateICmpNE(RuntimeResidualBytes, Zero),
                            ResLoopBB, PostLoopBB);
 
     // Copy the residual with single byte load/store loop.
@@ -302,9 +305,8 @@ void llvm::createMemCpyLoopUnknownSize(
         ResBuilder.CreatePHI(CopyLenType, 2, "residual-loop-index");
     ResidualIndex->addIncoming(Zero, ResHeaderBB);
 
-    Value *FullOffset = ResBuilder.CreateAdd(RuntimeBytesCopied, ResidualIndex);
-    Value *SrcGEP =
-        ResBuilder.CreateInBoundsGEP(ResLoopOpType, SrcAddr, FullOffset);
+    Value *FullOffset = ResBuilder.CreateAdd(RuntimeLoopBytes, ResidualIndex);
+    Value *SrcGEP = ResBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, FullOffset);
     LoadInst *Load = ResBuilder.CreateAlignedLoad(ResLoopOpType, SrcGEP,
                                                   ResSrcAlign, SrcIsVolatile);
     if (!CanOverlap) {
@@ -312,8 +314,7 @@ void llvm::createMemCpyLoopUnknownSize(
       Load->setMetadata(LLVMContext::MD_alias_scope,
                         MDNode::get(Ctx, NewScope));
     }
-    Value *DstGEP =
-        ResBuilder.CreateInBoundsGEP(ResLoopOpType, DstAddr, FullOffset);
+    Value *DstGEP = ResBuilder.CreateInBoundsGEP(Int8Type, DstAddr, FullOffset);
     StoreInst *Store =
         ResBuilder.CreateAlignedStore(Load, DstGEP, ResDstAlign, DstIsVolatile);
     if (!CanOverlap) {
@@ -330,7 +331,7 @@ void llvm::createMemCpyLoopUnknownSize(
 
     // Create the loop branch condition.
     ResBuilder.CreateCondBr(
-        ResBuilder.CreateICmpULT(ResNewIndex, RuntimeResidual), ResLoopBB,
+        ResBuilder.CreateICmpULT(ResNewIndex, RuntimeResidualBytes), ResLoopBB,
         PostLoopBB);
   } else {
     // In this case the loop operand type was a byte, and there is no need for a
@@ -338,11 +339,11 @@ void llvm::createMemCpyLoopUnknownSize(
     // We do however need to patch up the control flow by creating the
     // terminators for the preloop block and the memcpy loop.
     ConstantInt *Zero = ConstantInt::get(ILengthType, 0U);
-    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopCount, Zero),
+    PLBuilder.CreateCondBr(PLBuilder.CreateICmpNE(RuntimeLoopBytes, Zero),
                            LoopBB, PostLoopBB);
     PreLoopBB->getTerminator()->eraseFromParent();
     LoopBuilder.CreateCondBr(
-        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopCount), LoopBB,
+        LoopBuilder.CreateICmpULT(NewIndex, RuntimeLoopBytes), LoopBB,
         PostLoopBB);
   }
 }
@@ -411,8 +412,8 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value());
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
+                                                   SrcAlign, DstAlign);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
@@ -427,27 +428,25 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   // Calculate the loop trip count and remaining bytes to copy after the loop.
   IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
+  ConstantInt *CIResidualLoopOpSize =
+      ConstantInt::get(ILengthType, ResidualLoopOpSize);
   ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
-  ConstantInt *One = ConstantInt::get(ILengthType, 1);
 
   IRBuilder<> PLBuilder(InsertBefore);
 
-  Value *RuntimeLoopCount = CopyLen;
+  Value *RuntimeLoopBytes = CopyLen;
   Value *RuntimeLoopRemainder = nullptr;
-  Value *RuntimeBytesCopiedMainLoop = CopyLen;
   Value *SkipResidualCondition = nullptr;
   if (RequiresResidual) {
-    RuntimeLoopCount =
-        getRuntimeLoopCount(DL, PLBuilder, CopyLen, CILoopOpSize, LoopOpSize);
     RuntimeLoopRemainder = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
                                                    CILoopOpSize, LoopOpSize);
-    RuntimeBytesCopiedMainLoop =
-        PLBuilder.CreateSub(CopyLen, RuntimeLoopRemainder);
+    RuntimeLoopBytes = getRuntimeLoopBytes(DL, PLBuilder, CopyLen, CILoopOpSize,
+                                           LoopOpSize, RuntimeLoopRemainder);
     SkipResidualCondition =
         PLBuilder.CreateICmpEQ(RuntimeLoopRemainder, Zero, "skip_residual");
   }
   Value *SkipMainCondition =
-      PLBuilder.CreateICmpEQ(RuntimeLoopCount, Zero, "skip_main");
+      PLBuilder.CreateICmpEQ(RuntimeLoopBytes, Zero, "skip_main");
 
   // Create the a comparison of src and dst, based on which we jump to either
   // the forward-copy part of the function (if src >= dst) or the backwards-copy
@@ -466,7 +465,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(),
                                 &ThenTerm, &ElseTerm);
 
-  // If the LoopOpSize is greater than 1, each part of the function consist of
+  // If the LoopOpSize is greater than 1, each part of the function consists of
   // four blocks:
   //   memmove_copy_backwards:
   //       skip the residual loop when 0 iterations are required
@@ -521,14 +520,18 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
       PHINode *ResidualLoopPhi = ResidualLoopBuilder.CreatePHI(ILengthType, 0);
       Value *ResidualIndex = ResidualLoopBuilder.CreateSub(
-          ResidualLoopPhi, One, "bwd_residual_index");
-      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(
-          ResidualLoopOpType, SrcAddr, ResidualIndex);
+          ResidualLoopPhi, CIResidualLoopOpSize, "bwd_residual_index");
+      // If we used LoopOpType as GEP element type, we would iterate over the
+      // buffers in TypeStoreSize strides while copying TypeAllocSize bytes,
+      // i.e., we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore,
+      // use byte offsets computed from the TypeStoreSize.
+      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
+                                                             ResidualIndex);
       Value *Element = ResidualLoopBuilder.CreateAlignedLoad(
           ResidualLoopOpType, LoadGEP, ResidualSrcAlign, SrcIsVolatile,
           "element");
-      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(
-          ResidualLoopOpType, DstAddr, ResidualIndex);
+      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
+                                                              ResidualIndex);
       ResidualLoopBuilder.CreateAlignedStore(Element, StoreGEP,
                                              ResidualDstAlign, DstIsVolatile);
 
@@ -539,8 +542,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       IRBuilder<> IntermediateBuilder(IntermediateBB);
       IntermediateBuilder.CreateUnreachable();
       ResidualLoopBuilder.CreateCondBr(
-          ResidualLoopBuilder.CreateICmpEQ(ResidualIndex,
-                                           RuntimeBytesCopiedMainLoop),
+          ResidualLoopBuilder.CreateICmpEQ(ResidualIndex, RuntimeLoopBytes),
           IntermediateBB, ResidualLoopBB);
 
       ResidualLoopPhi->addIncoming(ResidualIndex, ResidualLoopBB);
@@ -558,19 +560,19 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
     IRBuilder<> MainLoopBuilder(MainLoopBB);
     PHINode *MainLoopPhi = MainLoopBuilder.CreatePHI(ILengthType, 0);
     Value *MainIndex =
-        MainLoopBuilder.CreateSub(MainLoopPhi, One, "bwd_main_index");
+        MainLoopBuilder.CreateSub(MainLoopPhi, CILoopOpSize, "bwd_main_index");
     Value *LoadGEP =
-        MainLoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, MainIndex);
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, MainIndex);
     Value *Element = MainLoopBuilder.CreateAlignedLoad(
         LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
     Value *StoreGEP =
-        MainLoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, MainIndex);
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, MainIndex);
     MainLoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
                                        DstIsVolatile);
     MainLoopBuilder.CreateCondBr(MainLoopBuilder.CreateICmpEQ(MainIndex, Zero),
                                  ExitBB, MainLoopBB);
     MainLoopPhi->addIncoming(MainIndex, MainLoopBB);
-    MainLoopPhi->addIncoming(RuntimeLoopCount, PredBB);
+    MainLoopPhi->addIncoming(RuntimeLoopBytes, PredBB);
 
     // How to get to the main loop:
     Instruction *PredBBTerm = PredBB->getTerminator();
@@ -588,14 +590,14 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
     PHINode *MainLoopPhi =
         MainLoopBuilder.CreatePHI(ILengthType, 0, "fwd_main_index");
     Value *LoadGEP =
-        MainLoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, MainLoopPhi);
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, MainLoopPhi);
     Value *Element = MainLoopBuilder.CreateAlignedLoad(
         LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
     Value *StoreGEP =
-        MainLoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, MainLoopPhi);
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, MainLoopPhi);
     MainLoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
                                        DstIsVolatile);
-    Value *MainIndex = MainLoopBuilder.CreateAdd(MainLoopPhi, One);
+    Value *MainIndex = MainLoopBuilder.CreateAdd(MainLoopPhi, CILoopOpSize);
     MainLoopPhi->addIncoming(MainIndex, MainLoopBB);
     MainLoopPhi->addIncoming(Zero, CopyForwardBB);
 
@@ -607,7 +609,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
     // leaving or staying in the main loop
     MainLoopBuilder.CreateCondBr(
-        MainLoopBuilder.CreateICmpEQ(MainIndex, RuntimeLoopCount), SuccessorBB,
+        MainLoopBuilder.CreateICmpEQ(MainIndex, RuntimeLoopBytes), SuccessorBB,
         MainLoopBB);
 
     // getting in or skipping the main loop
@@ -627,22 +629,22 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
       PHINode *ResidualLoopPhi =
           ResidualLoopBuilder.CreatePHI(ILengthType, 0, "fwd_residual_index");
-      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(
-          ResidualLoopOpType, SrcAddr, ResidualLoopPhi);
+      Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
+                                                             ResidualLoopPhi);
       Value *Element = ResidualLoopBuilder.CreateAlignedLoad(
           ResidualLoopOpType, LoadGEP, ResidualSrcAlign, SrcIsVolatile,
           "element");
-      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(
-          ResidualLoopOpType, DstAddr, ResidualLoopPhi);
+      Value *StoreGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
+                                                              ResidualLoopPhi);
       ResidualLoopBuilder.CreateAlignedStore(Element, StoreGEP,
                                              ResidualDstAlign, DstIsVolatile);
       Value *ResidualIndex =
-          ResidualLoopBuilder.CreateAdd(ResidualLoopPhi, One);
+          ResidualLoopBuilder.CreateAdd(ResidualLoopPhi, CIResidualLoopOpSize);
       ResidualLoopBuilder.CreateCondBr(
           ResidualLoopBuilder.CreateICmpEQ(ResidualIndex, CopyLen), ExitBB,
           ResidualLoopBB);
       ResidualLoopPhi->addIncoming(ResidualIndex, ResidualLoopBB);
-      ResidualLoopPhi->addIncoming(RuntimeBytesCopiedMainLoop, IntermediateBB);
+      ResidualLoopPhi->addIncoming(RuntimeLoopBytes, IntermediateBB);
     }
   }
 }
@@ -668,19 +670,19 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value());
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
+                                                   SrcAlign, DstAlign);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  Type *Int8Type = Type::getInt8Ty(Ctx);
 
   // Calculate the loop trip count and remaining bytes to copy after the loop.
-  uint64_t LoopEndCount = CopyLen->getZExtValue() / LoopOpSize;
-  uint64_t BytesCopiedInLoop = LoopEndCount * LoopOpSize;
+  uint64_t BytesCopiedInLoop = alignDown(CopyLen->getZExtValue(), LoopOpSize);
   uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopiedInLoop;
 
   IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
   ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
-  ConstantInt *One = ConstantInt::get(ILengthType, 1);
-  ConstantInt *TripCount = ConstantInt::get(ILengthType, LoopEndCount);
+  ConstantInt *LoopBound = ConstantInt::get(ILengthType, BytesCopiedInLoop);
+  ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
 
   IRBuilder<> PLBuilder(InsertBefore);
 
@@ -707,19 +709,18 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     Align ResSrcAlign(commonAlignment(SrcAlign, BytesCopied));
     Align ResDstAlign(commonAlignment(DstAlign, BytesCopied));
 
-    // Calculate the new index
     unsigned OperandSize = DL.getTypeStoreSize(OpTy);
 
-    uint64_t GepIndex = BytesCopied / OperandSize;
-    assert(GepIndex * OperandSize == BytesCopied &&
-           "Division should have no Remainder!");
-
+    // If we used LoopOpType as GEP element type, we would iterate over the
+    // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,
+    // we would miss bytes if TypeStoreSize != TypeAllocSize. Therefore, use
+    // byte offsets computed from the TypeStoreSize.
     Value *SrcGEP = Builder.CreateInBoundsGEP(
-        OpTy, SrcAddr, ConstantInt::get(TypeOfCopyLen, GepIndex));
+        Int8Type, SrcAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
     LoadInst *Load =
         Builder.CreateAlignedLoad(OpTy, SrcGEP, ResSrcAlign, SrcIsVolatile);
     Value *DstGEP = Builder.CreateInBoundsGEP(
-        OpTy, DstAddr, ConstantInt::get(TypeOfCopyLen, GepIndex));
+        Int8Type, DstAddr, ConstantInt::get(TypeOfCopyLen, BytesCopied));
     Builder.CreateAlignedStore(Load, DstGEP, ResDstAlign, DstIsVolatile);
     BytesCopied += OperandSize;
   };
@@ -737,15 +738,15 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHI());
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, PartSrcAlign.value(),
-                                          PartDstAlign.value());
+                                          SrcAS, DstAS, PartSrcAlign,
+                                          PartDstAlign);
     for (auto *OpTy : RemainingOps) {
       // reverse the order of the emitted operations
       BwdResBuilder.SetInsertPoint(CopyBackwardsBB->getFirstNonPHI());
       GenerateResidualLdStPair(OpTy, BwdResBuilder, BytesCopied);
     }
   }
-  if (LoopEndCount != 0) {
+  if (BytesCopiedInLoop != 0) {
     BasicBlock *LoopBB = CopyBackwardsBB;
     BasicBlock *PredBB = OrigBB;
     if (RemainingBytes != 0) {
@@ -758,11 +759,11 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     }
     IRBuilder<> LoopBuilder(LoopBB->getTerminator());
     PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0);
-    Value *Index = LoopBuilder.CreateSub(LoopPhi, One, "bwd_index");
-    Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, Index);
+    Value *Index = LoopBuilder.CreateSub(LoopPhi, CILoopOpSize, "bwd_index");
+    Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, Index);
     Value *Element = LoopBuilder.CreateAlignedLoad(
         LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
-    Value *StoreGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, Index);
+    Value *StoreGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, Index);
     LoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
                                    DstIsVolatile);
 
@@ -774,12 +775,12 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     UncondTerm->eraseFromParent();
 
     LoopPhi->addIncoming(Index, LoopBB);
-    LoopPhi->addIncoming(TripCount, PredBB);
+    LoopPhi->addIncoming(LoopBound, PredBB);
   }
 
   // Copying forward.
   BasicBlock *FwdResidualBB = CopyForwardBB;
-  if (LoopEndCount != 0) {
+  if (BytesCopiedInLoop != 0) {
     CopyForwardBB->setName("memmove_fwd_loop");
     BasicBlock *LoopBB = CopyForwardBB;
     BasicBlock *SuccBB = ExitBB;
@@ -791,21 +792,19 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     }
     IRBuilder<> LoopBuilder(LoopBB->getTerminator());
     PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0, "fwd_index");
-    Value *LoadGEP =
-        LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopPhi);
+    Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopPhi);
     Value *Element = LoopBuilder.CreateAlignedLoad(
         LoopOpType, LoadGEP, PartSrcAlign, SrcIsVolatile, "element");
-    Value *StoreGEP =
-        LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopPhi);
+    Value *StoreGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LoopPhi);
     LoopBuilder.CreateAlignedStore(Element, StoreGEP, PartDstAlign,
                                    DstIsVolatile);
-    Value *Index = LoopBuilder.CreateAdd(LoopPhi, One);
+    Value *Index = LoopBuilder.CreateAdd(LoopPhi, CILoopOpSize);
     LoopPhi->addIncoming(Index, LoopBB);
     LoopPhi->addIncoming(Zero, OrigBB);
 
     // Replace the unconditional branch to turn LoopBB into a loop.
     Instruction *UncondTerm = LoopBB->getTerminator();
-    LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpEQ(Index, TripCount), SuccBB,
+    LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpEQ(Index, LoopBound), SuccBB,
                              LoopBB);
     UncondTerm->eraseFromParent();
   }
@@ -818,8 +817,8 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     IRBuilder<> FwdResBuilder(FwdResidualBB->getTerminator());
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, PartSrcAlign.value(),
-                                          PartDstAlign.value());
+                                          SrcAS, DstAS, PartSrcAlign,
+                                          PartDstAlign);
     for (auto *OpTy : RemainingOps)
       GenerateResidualLdStPair(OpTy, FwdResBuilder, BytesCopied);
   }
@@ -867,8 +866,8 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
 template <typename T>
 static bool canOverlap(MemTransferBase<T> *Memcpy, ScalarEvolution *SE) {
   if (SE) {
-    auto *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
-    auto *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
+    const SCEV *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
+    const SCEV *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
     if (SE->isKnownPredicateAt(CmpInst::ICMP_NE, SrcSCEV, DestSCEV, Memcpy))
       return false;
   }
@@ -968,6 +967,15 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
                    /* CopyLen */ Memset->getLength(),
                    /* SetValue */ Memset->getValue(),
                    /* Alignment */ Memset->getDestAlign().valueOrOne(),
+                   Memset->isVolatile());
+}
+
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
+  createMemSetLoop(/* InsertBefore=*/Memset,
+                   /* DstAddr=*/Memset->getRawDest(),
+                   /* CopyLen=*/Memset->getLength(),
+                   /* SetValue=*/Memset->getValue(),
+                   /* Alignment=*/Memset->getDestAlign().valueOrOne(),
                    Memset->isVolatile());
 }
 

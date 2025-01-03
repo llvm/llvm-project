@@ -1,32 +1,32 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP32,PRE4
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP64,GP64-NOT-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips4 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP64,GP64-NOT-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP64,GP64-NOT-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -O2 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r3 -mattr=+micromips -O2 -verify-machineinstrs | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR3,MM32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -O2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r6 -mattr=+micromips -O2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
 
 

@@ -126,14 +126,15 @@
 // and the SME unit try to access the same area of memory, including if the
 // access is to an area of the stack. To try to alleviate this we attempt to
 // introduce extra padding into the stack frame between FP and GPR accesses,
-// controlled by the StackHazardSize option. Without changing the layout of the
-// stack frame in the diagram above, a stack object of size StackHazardSize is
-// added between GPR and FPR CSRs. Another is added to the stack objects
-// section, and stack objects are sorted so that FPR > Hazard padding slot >
-// GPRs (where possible). Unfortunately some things are not handled well (VLA
-// area, arguments on the stack, object with both GPR and FPR accesses), but if
-// those are controlled by the user then the entire stack frame becomes GPR at
-// the start/end with FPR in the middle, surrounded by Hazard padding.
+// controlled by the aarch64-stack-hazard-size option. Without changing the
+// layout of the stack frame in the diagram above, a stack object of size
+// aarch64-stack-hazard-size is added between GPR and FPR CSRs. Another is added
+// to the stack objects section, and stack objects are sorted so that FPR >
+// Hazard padding slot > GPRs (where possible). Unfortunately some things are
+// not handled well (VLA area, arguments on the stack, objects with both GPR and
+// FPR accesses), but if those are controlled by the user then the entire stack
+// frame becomes GPR at the start/end with FPR in the middle, surrounded by
+// Hazard padding.
 //
 // An example of the prologue:
 //
@@ -208,9 +209,9 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -240,6 +241,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -272,13 +274,19 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
     cl::desc("Emit homogeneous prologue and epilogue for the size "
              "optimization (default = off)"));
 
-// Stack hazard padding size. 0 = disabled.
-static cl::opt<unsigned> StackHazardSize("aarch64-stack-hazard-size",
-                                         cl::init(0), cl::Hidden);
+// Stack hazard size for analysis remarks. StackHazardSize takes precedence.
+static cl::opt<unsigned>
+    StackHazardRemarkSize("aarch64-stack-hazard-remark-size", cl::init(0),
+                          cl::Hidden);
 // Whether to insert padding into non-streaming functions (for testing).
 static cl::opt<bool>
     StackHazardInNonStreaming("aarch64-stack-hazard-in-non-streaming",
                               cl::init(false), cl::Hidden);
+
+static cl::opt<bool> DisableMultiVectorSpillFill(
+    "aarch64-disable-multivector-spill-fill",
+    cl::desc("Disable use of LD/ST pairs for SME2 or SVE2p1"), cl::init(false),
+    cl::Hidden);
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
@@ -470,9 +478,9 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
            getSVEStackSize(MF) || LowerQRegCopyThroughMem);
 }
 
-/// hasFP - Return true if the specified function should have a dedicated frame
-/// pointer register.
-bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
+/// hasFPImpl - Return true if the specified function should have a dedicated
+/// frame pointer register.
+bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
@@ -692,7 +700,10 @@ void AArch64FrameLowering::resetCFIToInitialState(
 
   // Flip the RA sign state.
   if (MFI.shouldSignReturnAddress(MF)) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    auto CFIInst = MFI.branchProtectionPAuthLR()
+                       ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
+                       : MCCFIInstruction::createNegateRAState(nullptr);
+    CFIIndex = MF.addFrameInst(CFIInst);
     BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
   }
 
@@ -999,7 +1010,7 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   BitVector GPRsToZero(TRI.getNumRegs());
   BitVector FPRsToZero(TRI.getNumRegs());
-  bool HasSVE = STI.hasSVE();
+  bool HasSVE = STI.isSVEorStreamingSVEAvailable();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       // For GPRs, we only care to clear out the 64-bit register.
@@ -1389,6 +1400,18 @@ bool requiresGetVGCall(MachineFunction &MF) {
          !MF.getSubtarget<AArch64Subtarget>().hasSVE();
 }
 
+static bool requiresSaveVG(MachineFunction &MF) {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  // For Darwin platforms we don't save VG for non-SVE functions, even if SME
+  // is enabled with streaming mode changes.
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (ST.isTargetDarwin())
+    return ST.hasSVE();
+  return true;
+}
+
 bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
@@ -1425,8 +1448,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // functions, we need to do this for both the streaming and non-streaming
   // vector length. Move past these instructions if necessary.
   MachineFunction &MF = *MBB.getParent();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasStreamingModeChanges())
+  if (requiresSaveVG(MF))
     while (isVGInstruction(MBBI))
       ++MBBI;
 
@@ -1487,7 +1509,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
-      CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
+      CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy)
@@ -1590,6 +1613,10 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
 
 static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+}
+
+static unsigned getStackHazardSize(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().getStreamingHazardSize();
 }
 
 // Convenience function to determine whether I is an SVE callee save.
@@ -1931,12 +1958,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer bump above.
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
-    // Move past instructions generated to calculate VG
-    if (AFI->hasStreamingModeChanges())
-      while (isVGInstruction(MBBI))
-        ++MBBI;
-
-    if (CombineSPBump)
+    if (CombineSPBump &&
+        // Only fix-up frame-setup load/store instructions.
+        (!requiresSaveVG(MF) || !isVGInstruction(MBBI)))
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
     ++MBBI;
@@ -2615,9 +2639,16 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   const auto &MFI = MF.getFrameInfo();
 
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
+  StackOffset SVEStackSize = getSVEStackSize(MF);
+
+  // For VLA-area objects, just emit an offset at the end of the stack frame.
+  // Whilst not quite correct, these objects do live at the end of the frame and
+  // so it is more useful for analysis for the offset to reflect this.
+  if (MFI.isVariableSizedObjectIndex(FI)) {
+    return StackOffset::getFixed(-((int64_t)MFI.getStackSize())) - SVEStackSize;
+  }
 
   // This is correct in the absence of any SVE stack objects.
-  StackOffset SVEStackSize = getSVEStackSize(MF);
   if (!SVEStackSize)
     return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
 
@@ -2733,7 +2764,11 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       bool FPOffsetFits = !ForSimm || FPOffset >= -256;
       PreferFP |= Offset > -FPOffset && !SVEStackSize;
 
-      if (MFI.hasVarSizedObjects()) {
+      if (FPOffset >= 0) {
+        // If the FPOffset is positive, that'll always be best, as the SP/BP
+        // will be even further away.
+        UseFP = true;
+      } else if (MFI.hasVarSizedObjects()) {
         // If we have variable sized objects, we can use either FP or BP, as the
         // SP offset is unknown. We can use the base pointer if we have one and
         // FP is not preferred. If not, we're stuck with using FP.
@@ -2745,11 +2780,6 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // else we can use BP and FP, but the offset from FP won't fit.
         // That will make us scavenge registers which we can probably avoid by
         // using BP. If it won't fit for BP either, we'll scavenge anyway.
-      } else if (FPOffset >= 0) {
-        // Use SP or FP, whichever gives us the best chance of the offset
-        // being in range for direct access. If the FPOffset is positive,
-        // that'll always be best, as the SP will be even further away.
-        UseFP = true;
       } else if (MF.hasEHFunclets() && !RegInfo->hasBasePointer(MF)) {
         // Funclets access the locals contained in the parent's stack frame
         // via the frame pointer, so we have to use the FP in the parent
@@ -2833,10 +2863,12 @@ static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
 static bool produceCompactUnwindFrame(MachineFunction &MF) {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   AttributeList Attrs = MF.getFunction().getAttributes();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return Subtarget.isTargetMachO() &&
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
            Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
-         MF.getFunction().getCallingConv() != CallingConv::SwiftTail;
+         MF.getFunction().getCallingConv() != CallingConv::SwiftTail &&
+         !requiresSaveVG(MF) && AFI->getSVECalleeSavedStackSize() == 0;
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
@@ -2929,6 +2961,24 @@ unsigned findFreePredicateReg(BitVector &SavedRegs) {
   return AArch64::NoRegister;
 }
 
+// The multivector LD/ST are available only for SME or SVE2p1 targets
+bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
+                                MachineFunction &MF) {
+  if (DisableMultiVectorSpillFill)
+    return false;
+
+  SMEAttrs FuncAttrs(MF.getFunction());
+  bool IsLocallyStreaming =
+      FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
+
+  // Only when in streaming mode SME2 instructions can be safely used.
+  // It is not safe to use SME2 instructions when in streaming compatible or
+  // locally streaming mode.
+  return Subtarget.hasSVE2p1() ||
+         (Subtarget.hasSME2() &&
+          (!IsLocallyStreaming && Subtarget.isStreaming()));
+}
+
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -2940,6 +2990,7 @@ static void computeCalleeSaveRegisterPairs(
   bool IsWindows = isTargetWindows(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  unsigned StackHazardSize = getStackHazardSize(MF);
   MachineFrameInfo &MFI = MF.getFrameInfo();
   CallingConv::ID CC = MF.getFunction().getCallingConv();
   unsigned Count = CSI.size();
@@ -2994,6 +3045,7 @@ static void computeCalleeSaveRegisterPairs(
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
+    int Scale = RPI.getScale();
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
       Register NextReg = CSI[i + RegInc].getReg();
@@ -3019,9 +3071,14 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (AFI->getPredicateRegForFillSpill() != 0)
-          if (((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1))
+        if (AFI->getPredicateRegForFillSpill() != 0 &&
+            ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
+          // Calculate offset of register pair to see if pair instruction can be
+          // used.
+          int Offset = (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
+          if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
             RPI.Reg2 = NextReg;
+        }
         break;
       case RegPairInfo::VG:
         break;
@@ -3061,7 +3118,6 @@ static void computeCalleeSaveRegisterPairs(
     if (NeedsWinCFI &&
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
-    int Scale = RPI.getScale();
 
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
@@ -3111,11 +3167,24 @@ static void computeCalleeSaveRegisterPairs(
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
 
+    auto isFrameRecord = [&] {
+      if (RPI.isPaired())
+        return IsWindows ? RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR
+                         : RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP;
+      // Otherwise, look for the frame record as two unpaired registers. This is
+      // needed for -aarch64-stack-hazard-size=<val>, which disables register
+      // pairing (as the padding may be too large for the LDP/STP offset). Note:
+      // On Windows, this check works out as current reg == FP, next reg == LR,
+      // and on other platforms current reg == FP, previous reg == LR. This
+      // works out as the correct pre-increment or post-increment offsets
+      // respectively.
+      return i > 0 && RPI.Reg1 == AArch64::FP &&
+             CSI[i - 1].getReg() == AArch64::LR;
+    };
+
     // Save the offset to frame record so that the FP register can point to the
     // innermost frame record (spilled FP and LR registers).
-    if (NeedsFrameRecord &&
-        ((!IsWindows && RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
-         (IsWindows && RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR)))
+    if (NeedsFrameRecord && isFrameRecord())
       AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
@@ -3300,7 +3369,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
+      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       auto IsPPR = [](const RegPairInfo &c) {
@@ -3330,8 +3399,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           MachineMemOperand::MOStore, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale],
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3352,8 +3421,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
           .addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale],
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale],
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3478,7 +3547,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
+      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       assert(!(PPRBegin < ZPRBegin) &&
@@ -3497,8 +3566,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
           MachineMemOperand::MOLoad, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale]
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale]
+                                  // where 2*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3515,8 +3584,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       }
       MIB.addReg(Reg1, getDefRegState(true));
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset) // [sp, #offset*scale]
-                              // where factor*scale is implicit
+          .addImm(RPI.Offset) // [sp, #offset*vscale]
+                              // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -3528,13 +3597,9 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
-// Return the FrameID for a Load/Store instruction by looking at the MMO.
-static std::optional<int> getLdStFrameID(const MachineInstr &MI,
-                                         const MachineFrameInfo &MFI) {
-  if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
-    return std::nullopt;
-
-  MachineMemOperand *MMO = *MI.memoperands_begin();
+// Return the FrameID for a MMO.
+static std::optional<int> getMMOFrameID(MachineMemOperand *MMO,
+                                        const MachineFrameInfo &MFI) {
   auto *PSV =
       dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
   if (PSV)
@@ -3552,11 +3617,21 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
   return std::nullopt;
 }
 
+// Return the FrameID for a Load/Store instruction by looking at the first MMO.
+static std::optional<int> getLdStFrameID(const MachineInstr &MI,
+                                         const MachineFrameInfo &MFI) {
+  if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
+    return std::nullopt;
+
+  return getMMOFrameID(*MI.memoperands_begin(), MFI);
+}
+
 // Check if a Hazard slot is needed for the current function, and if so create
 // one for it. The index is stored in AArch64FunctionInfo->StackHazardSlotIndex,
 // which can be used to determine if any hazard padding is needed.
 void AArch64FrameLowering::determineStackHazardSlot(
     MachineFunction &MF, BitVector &SavedRegs) const {
+  unsigned StackHazardSize = getStackHazardSize(MF);
   if (StackHazardSize == 0 || StackHazardSize % 16 != 0 ||
       MF.getInfo<AArch64FunctionInfo>()->hasStackHazardSlotIndex())
     return;
@@ -3687,7 +3762,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                     SavedRegs.test(CSRegs[i ^ 1]));
   }
 
-  if (HasPairZReg && (Subtarget.hasSVE2p1() || Subtarget.hasSME2())) {
+  if (HasPairZReg && enableMultiVectorSpillFill(Subtarget, MF)) {
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // Find a suitable predicate register for the multi-vector spill/fill
     // instructions.
@@ -3736,7 +3811,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // non-streaming VG value.
   const Function &F = MF.getFunction();
   SMEAttrs Attrs(F);
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
     else
@@ -3747,7 +3822,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // StackHazardSize if so.
   determineStackHazardSlot(MF, SavedRegs);
   if (AFI->hasStackHazardSlotIndex())
-    CSStackSize += StackHazardSize;
+    CSStackSize += getStackHazardSize(MF);
 
   // Save number of saved regs, so we can easily update CSStackSize later.
   unsigned NumSavedRegs = SavedRegs.count();
@@ -3862,6 +3937,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
     unsigned &MaxCSFrameIndex) const {
   bool NeedsWinCFI = needsWinCFI(MF);
+  unsigned StackHazardSize = getStackHazardSize(MF);
   // To match the canonical windows frame layout, reverse the list of
   // callee saved registers to get them laid out by PrologEpilogInserter
   // in the right order. (PrologEpilogInserter allocates stack objects top
@@ -3889,7 +3965,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     std::vector<CalleeSavedInfo> VGSaves;
     SMEAttrs Attrs(MF.getFunction());
 
@@ -4292,26 +4368,37 @@ void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
 
   int64_t ExtraBaseRegUpdate =
       FrameRegUpdate ? (*FrameRegUpdate - FrameRegOffset.getFixed() - Size) : 0;
+  LLVM_DEBUG(dbgs() << "TagStoreEdit::emitLoop: LoopSize=" << LoopSize
+                    << ", Size=" << Size
+                    << ", ExtraBaseRegUpdate=" << ExtraBaseRegUpdate
+                    << ", FrameRegUpdate=" << FrameRegUpdate
+                    << ", FrameRegOffset.getFixed()="
+                    << FrameRegOffset.getFixed() << "\n");
   if (LoopSize < Size) {
     assert(FrameRegUpdate);
     assert(Size - LoopSize == 16);
     // Tag 16 more bytes at BaseReg and update BaseReg.
+    int64_t STGOffset = ExtraBaseRegUpdate + 16;
+    assert(STGOffset % 16 == 0 && STGOffset >= -4096 && STGOffset <= 4080 &&
+           "STG immediate out of range");
     BuildMI(*MBB, InsertI, DL,
             TII->get(ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex))
         .addDef(BaseReg)
         .addReg(BaseReg)
         .addReg(BaseReg)
-        .addImm(1 + ExtraBaseRegUpdate / 16)
+        .addImm(STGOffset / 16)
         .setMemRefs(CombinedMemRefs)
         .setMIFlags(FrameRegUpdateFlags);
   } else if (ExtraBaseRegUpdate) {
     // Update BaseReg.
+    int64_t AddSubOffset = std::abs(ExtraBaseRegUpdate);
+    assert(AddSubOffset <= 4095 && "ADD/SUB immediate out of range");
     BuildMI(
         *MBB, InsertI, DL,
         TII->get(ExtraBaseRegUpdate > 0 ? AArch64::ADDXri : AArch64::SUBXri))
         .addDef(BaseReg)
         .addReg(BaseReg)
-        .addImm(std::abs(ExtraBaseRegUpdate))
+        .addImm(AddSubOffset)
         .addImm(0)
         .setMIFlags(FrameRegUpdateFlags);
   }
@@ -4330,10 +4417,20 @@ bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
     int64_t Offset = MI.getOperand(2).getImm() << Shift;
     if (MI.getOpcode() == AArch64::SUBXri)
       Offset = -Offset;
-    int64_t AbsPostOffset = std::abs(Offset - Size);
-    const int64_t kMaxOffset =
-        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
-    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
+    int64_t PostOffset = Offset - Size;
+    // TagStoreEdit::emitLoop might emit either an ADD/SUB after the loop, or
+    // an STGPostIndex which does the last 16 bytes of tag write. Which one is
+    // chosen depends on the alignment of the loop size, but the difference
+    // between the valid ranges for the two instructions is small, so we
+    // conservatively assume that it could be either case here.
+    //
+    // Max offset of STGPostIndex, minus the 16 byte tag write folded into that
+    // instruction.
+    const int64_t kMaxOffset = 4080 - 16;
+    // Max offset of SUBXri.
+    const int64_t kMinOffset = -4095;
+    if (PostOffset <= kMaxOffset && PostOffset >= kMinOffset &&
+        PostOffset % 16 == 0) {
       *TotalOffset = Offset;
       return true;
     }
@@ -4509,7 +4606,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
       break;
 
     // Reject anything that may alias the collected instructions.
-    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects())
+    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() || MI.isCall())
       break;
   }
 
@@ -4618,10 +4715,9 @@ MachineBasicBlock::iterator emitVGSaveRestore(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
-      if (AFI->hasStreamingModeChanges())
+      if (requiresSaveVG(MF))
         II = emitVGSaveRestore(II, this);
       if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
@@ -5028,4 +5124,176 @@ void AArch64FrameLowering::inlineStackProbe(MachineFunction &MF,
     }
     MI->eraseFromParent();
   }
+}
+
+struct StackAccess {
+  enum AccessType {
+    NotAccessed = 0, // Stack object not accessed by load/store instructions.
+    GPR = 1 << 0,    // A general purpose register.
+    PPR = 1 << 1,    // A predicate register.
+    FPR = 1 << 2,    // A floating point/Neon/SVE register.
+  };
+
+  int Idx;
+  StackOffset Offset;
+  int64_t Size;
+  unsigned AccessTypes;
+
+  StackAccess() : Idx(0), Offset(), Size(0), AccessTypes(NotAccessed) {}
+
+  bool operator<(const StackAccess &Rhs) const {
+    return std::make_tuple(start(), Idx) <
+           std::make_tuple(Rhs.start(), Rhs.Idx);
+  }
+
+  bool isCPU() const {
+    // Predicate register load and store instructions execute on the CPU.
+    return AccessTypes & (AccessType::GPR | AccessType::PPR);
+  }
+  bool isSME() const { return AccessTypes & AccessType::FPR; }
+  bool isMixed() const { return isCPU() && isSME(); }
+
+  int64_t start() const { return Offset.getFixed() + Offset.getScalable(); }
+  int64_t end() const { return start() + Size; }
+
+  std::string getTypeString() const {
+    switch (AccessTypes) {
+    case AccessType::FPR:
+      return "FPR";
+    case AccessType::PPR:
+      return "PPR";
+    case AccessType::GPR:
+      return "GPR";
+    case AccessType::NotAccessed:
+      return "NA";
+    default:
+      return "Mixed";
+    }
+  }
+
+  void print(raw_ostream &OS) const {
+    OS << getTypeString() << " stack object at [SP"
+       << (Offset.getFixed() < 0 ? "" : "+") << Offset.getFixed();
+    if (Offset.getScalable())
+      OS << (Offset.getScalable() < 0 ? "" : "+") << Offset.getScalable()
+         << " * vscale";
+    OS << "]";
+  }
+};
+
+static inline raw_ostream &operator<<(raw_ostream &OS, const StackAccess &SA) {
+  SA.print(OS);
+  return OS;
+}
+
+void AArch64FrameLowering::emitRemarks(
+    const MachineFunction &MF, MachineOptimizationRemarkEmitter *ORE) const {
+
+  SMEAttrs Attrs(MF.getFunction());
+  if (Attrs.hasNonStreamingInterfaceAndBody())
+    return;
+
+  unsigned StackHazardSize = getStackHazardSize(MF);
+  const uint64_t HazardSize =
+      (StackHazardSize) ? StackHazardSize : StackHazardRemarkSize;
+
+  if (HazardSize == 0)
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  // Bail if function has no stack objects.
+  if (!MFI.hasStackObjects())
+    return;
+
+  std::vector<StackAccess> StackAccesses(MFI.getNumObjects());
+
+  size_t NumFPLdSt = 0;
+  size_t NumNonFPLdSt = 0;
+
+  // Collect stack accesses via Load/Store instructions.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (!MI.mayLoadOrStore() || MI.getNumMemOperands() < 1)
+        continue;
+      for (MachineMemOperand *MMO : MI.memoperands()) {
+        std::optional<int> FI = getMMOFrameID(MMO, MFI);
+        if (FI && !MFI.isDeadObjectIndex(*FI)) {
+          int FrameIdx = *FI;
+
+          size_t ArrIdx = FrameIdx + MFI.getNumFixedObjects();
+          if (StackAccesses[ArrIdx].AccessTypes == StackAccess::NotAccessed) {
+            StackAccesses[ArrIdx].Idx = FrameIdx;
+            StackAccesses[ArrIdx].Offset =
+                getFrameIndexReferenceFromSP(MF, FrameIdx);
+            StackAccesses[ArrIdx].Size = MFI.getObjectSize(FrameIdx);
+          }
+
+          unsigned RegTy = StackAccess::AccessType::GPR;
+          if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector) {
+            if (AArch64::PPRRegClass.contains(MI.getOperand(0).getReg()))
+              RegTy = StackAccess::PPR;
+            else
+              RegTy = StackAccess::FPR;
+          } else if (AArch64InstrInfo::isFpOrNEON(MI)) {
+            RegTy = StackAccess::FPR;
+          }
+
+          StackAccesses[ArrIdx].AccessTypes |= RegTy;
+
+          if (RegTy == StackAccess::FPR)
+            ++NumFPLdSt;
+          else
+            ++NumNonFPLdSt;
+        }
+      }
+    }
+  }
+
+  if (NumFPLdSt == 0 || NumNonFPLdSt == 0)
+    return;
+
+  llvm::sort(StackAccesses);
+  StackAccesses.erase(llvm::remove_if(StackAccesses,
+                                      [](const StackAccess &S) {
+                                        return S.AccessTypes ==
+                                               StackAccess::NotAccessed;
+                                      }),
+                      StackAccesses.end());
+
+  SmallVector<const StackAccess *> MixedObjects;
+  SmallVector<std::pair<const StackAccess *, const StackAccess *>> HazardPairs;
+
+  if (StackAccesses.front().isMixed())
+    MixedObjects.push_back(&StackAccesses.front());
+
+  for (auto It = StackAccesses.begin(), End = std::prev(StackAccesses.end());
+       It != End; ++It) {
+    const auto &First = *It;
+    const auto &Second = *(It + 1);
+
+    if (Second.isMixed())
+      MixedObjects.push_back(&Second);
+
+    if ((First.isSME() && Second.isCPU()) ||
+        (First.isCPU() && Second.isSME())) {
+      uint64_t Distance = static_cast<uint64_t>(Second.start() - First.end());
+      if (Distance < HazardSize)
+        HazardPairs.emplace_back(&First, &Second);
+    }
+  }
+
+  auto EmitRemark = [&](llvm::StringRef Str) {
+    ORE->emit([&]() {
+      auto R = MachineOptimizationRemarkAnalysis(
+          "sme", "StackHazard", MF.getFunction().getSubprogram(), &MF.front());
+      return R << formatv("stack hazard in '{0}': ", MF.getName()).str() << Str;
+    });
+  };
+
+  for (const auto &P : HazardPairs)
+    EmitRemark(formatv("{0} is too close to {1}", *P.first, *P.second).str());
+
+  for (const auto *Obj : MixedObjects)
+    EmitRemark(
+        formatv("{0} accessed by both GP and FP instructions", *Obj).str());
 }

@@ -37,14 +37,17 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
 
     SymbolTableCollection symbolTable;
     mesh::MeshOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-        op, op.getShard().getMesh());
+        op, cast<ShardingOp>(op.getSharding().getDefiningOp()).getMeshAttr());
 
     bool foundUser = false;
     for (auto user : op->getUsers()) {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
             mesh == symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-                        targetShardOp, targetShardOp.getShard().getMesh())) {
+                        targetShardOp,
+                        cast<ShardingOp>(
+                            targetShardOp.getSharding().getDefiningOp())
+                            .getMeshAttr())) {
           foundUser = true;
           break;
         }
@@ -59,17 +62,18 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
           symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-              targetShardOp, targetShardOp.getShard().getMesh()) != mesh) {
+              targetShardOp,
+              cast<ShardingOp>(targetShardOp.getSharding().getDefiningOp())
+                  .getMeshAttr()) != mesh) {
         continue;
       }
 
       ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
       ShapedType sourceShardShape =
-          shardShapedType(op.getResult().getType(), mesh, op.getShard());
+          shardShapedType(op.getResult().getType(), mesh, op.getSharding());
       TypedValue<ShapedType> sourceShard = cast<TypedValue<ShapedType>>(
           builder
-              .create<UnrealizedConversionCastOp>(sourceShardShape,
-                                                  op.getOperand())
+              .create<UnrealizedConversionCastOp>(sourceShardShape, op.getSrc())
               ->getResult(0));
       TypedValue<ShapedType> targetShard =
           reshard(builder, mesh, op, targetShardOp, sourceShard);
@@ -93,8 +97,8 @@ struct TestMeshReshardingPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     patterns.insert<TestMeshReshardingRewritePattern>(&getContext());
-    if (failed(applyPatternsAndFoldGreedily(getOperation().getOperation(),
-                                            std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(getOperation().getOperation(),
+                                     std::move(patterns)))) {
       return signalPassFailure();
     }
   }

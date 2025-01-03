@@ -244,7 +244,7 @@ LLVMTypeRef LLVMIntPtrTypeInContext(LLVMContextRef C, LLVMTargetDataRef TD);
 LLVMTypeRef LLVMIntPtrTypeForASInContext(LLVMContextRef C, LLVMTargetDataRef TD,
                                          unsigned AS);
 
-/** Computes the size of a type in bytes for a target.
+/** Computes the size of a type in bits for a target.
     See the method llvm::DataLayout::getTypeSizeInBits. */
 unsigned long long LLVMSizeOfTypeInBits(LLVMTargetDataRef TD, LLVMTypeRef Ty);
 

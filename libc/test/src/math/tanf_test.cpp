@@ -15,7 +15,6 @@
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcTanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -48,7 +47,7 @@ TEST_F(LlvmLibcTanfTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
                                    LIBC_NAMESPACE::tanf(x), 0.5);

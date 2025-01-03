@@ -60,7 +60,7 @@ public:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X]], align 1
 // CHECK-NEXT:    ret i8 [[TMP0]]
 //
@@ -72,7 +72,7 @@ public:
 // CHECK-NEXT:    store i8 [[_X:%.*]], ptr [[_X_ADDR]], align 1
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[_X_ADDR]], align 1
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[X]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -102,7 +102,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_FOO_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X]], align 2
 // CHECK-NEXT:    ret i16 [[TMP0]]
 //
@@ -114,7 +114,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    store i16 [[_X:%.*]], ptr [[_X_ADDR]], align 2
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[_X_ADDR]], align 2
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_FOO_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    store i16 [[TMP0]], ptr [[X]], align 2
 // CHECK-NEXT:    ret void
 //
@@ -147,7 +147,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds [[STRUCT_BAR:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds nuw [[STRUCT_BAR:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN3FooIiE3getEv(ptr noundef nonnull align 4 dereferenceable(4) [[FOO]])
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
@@ -158,7 +158,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[_X:%.*]], ptr [[_X_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds [[STRUCT_BAR:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds nuw [[STRUCT_BAR:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[_X_ADDR]], align 4
 // CHECK-NEXT:    call void @_ZN3FooIiE3setEi(ptr noundef nonnull align 4 dereferenceable(4) [[FOO]], i32 noundef [[TMP0]])
 // CHECK-NEXT:    ret void

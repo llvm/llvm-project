@@ -2154,6 +2154,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPInterchangeDirective = 308,
 
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPAssumeDirective = 309,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2162,7 +2166,39 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCLoopConstruct = 321,
 
-  CXCursor_LastStmt = CXCursor_OpenACCLoopConstruct,
+  /** OpenACC Combined Constructs.
+   */
+  CXCursor_OpenACCCombinedConstruct = 322,
+
+  /** OpenACC data Construct.
+   */
+  CXCursor_OpenACCDataConstruct = 323,
+
+  /** OpenACC enter data Construct.
+   */
+  CXCursor_OpenACCEnterDataConstruct = 324,
+
+  /** OpenACC exit data Construct.
+   */
+  CXCursor_OpenACCExitDataConstruct = 325,
+
+  /** OpenACC host_data Construct.
+   */
+  CXCursor_OpenACCHostDataConstruct = 326,
+
+  /** OpenACC wait Construct.
+   */
+  CXCursor_OpenACCWaitConstruct = 327,
+
+  /** OpenACC init Construct.
+   */
+  CXCursor_OpenACCInitConstruct = 328,
+
+  /** OpenACC shutdown Construct.
+   */
+  CXCursor_OpenACCShutdownConstruct = 329,
+
+  CXCursor_LastStmt = CXCursor_OpenACCShutdownConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2974,7 +3010,11 @@ enum CXTypeKind {
 
   CXType_ExtVector = 176,
   CXType_Atomic = 177,
-  CXType_BTFTagAttributed = 178
+  CXType_BTFTagAttributed = 178,
+
+  /* HLSL Types */
+  CXType_HLSLResource = 179,
+  CXType_HLSLAttributedResource = 180
 };
 
 /**

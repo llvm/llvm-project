@@ -215,6 +215,9 @@ buffer_store_d16_hi_format_x v1, off, s[12:15], -1 offset:4095
 buffer_store_lds_dword s[4:7], -1 offset:4095 lds
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+buffer_wbinvl1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_wbinvl1_vol
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -3285,6 +3288,9 @@ v_subrev_u32_e64 v255, s[12:13], v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_subrev_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swap_b16 v0.l, v0.l
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_wmma_bf16_16x16x16_bf16 v[16:19], 1.0, v[8:15], v[16:19]

@@ -94,6 +94,9 @@ static lldb_private::RegisterInfo g_register_infos_sme2[] = {
     {"zt0", nullptr, 64, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
      KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
 
+static lldb_private::RegisterInfo g_register_infos_fpmr[] = {
+    DEFINE_EXTENSION_REG(fpmr)};
+
 // Number of register sets provided by this context.
 enum {
   k_num_gpr_registers = gpr_w28 - gpr_x0 + 1,
@@ -105,6 +108,7 @@ enum {
   // SME2's ZT0 will also be added to this set if present. So this number is
   // only for SME1 registers.
   k_num_sme_register = 3,
+  k_num_fpmr_register = 1,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
 };
@@ -214,6 +218,9 @@ static const lldb_private::RegisterSet g_reg_set_mte_arm64 = {
 static const lldb_private::RegisterSet g_reg_set_sme_arm64 = {
     "Scalable Matrix Extension Registers", "sme", k_num_sme_register, nullptr};
 
+static const lldb_private::RegisterSet g_reg_set_fpmr_arm64 = {
+    "Floating Point Mode Register", "fpmr", k_num_fpmr_register, nullptr};
+
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
@@ -254,12 +261,17 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
       if (m_opt_regsets.AllSet(eRegsetMaskMTE))
         AddRegSetMTE();
 
-      // The TLS set always contains tpidr but only has tpidr2 when SME is
-      // present.
-      AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
+      if (m_opt_regsets.AllSet(eRegsetMaskTLS)) {
+        // The TLS set always contains tpidr but only has tpidr2 when SME is
+        // present.
+        AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
+      }
 
       if (m_opt_regsets.AnySet(eRegsetMaskSSVE))
         AddRegSetSME(m_opt_regsets.AnySet(eRegsetMaskZT));
+
+      if (m_opt_regsets.AllSet(eRegsetMaskFPMR))
+        AddRegSetFPMR();
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -407,6 +419,21 @@ void RegisterInfoPOSIX_arm64::AddRegSetSME(bool has_zt) {
   m_dynamic_reg_infos[GetRegNumSVEVG()].invalidate_regs = vg_invalidates;
 }
 
+void RegisterInfoPOSIX_arm64::AddRegSetFPMR() {
+  uint32_t fpmr_regnum = m_dynamic_reg_infos.size();
+  m_fpmr_regnum_collection.push_back(fpmr_regnum);
+  m_dynamic_reg_infos.push_back(g_register_infos_fpmr[0]);
+  m_dynamic_reg_infos[fpmr_regnum].byte_offset =
+      m_dynamic_reg_infos[fpmr_regnum - 1].byte_offset +
+      m_dynamic_reg_infos[fpmr_regnum - 1].byte_size;
+  m_dynamic_reg_infos[fpmr_regnum].kinds[lldb::eRegisterKindLLDB] = fpmr_regnum;
+
+  m_per_regset_regnum_range[m_register_set_count] =
+      std::make_pair(fpmr_regnum, fpmr_regnum + 1);
+  m_dynamic_reg_sets.push_back(g_reg_set_fpmr_arm64);
+  m_dynamic_reg_sets.back().registers = m_fpmr_regnum_collection.data();
+}
+
 uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLengthSVE(uint32_t sve_vq) {
   // sve_vq contains SVE Quad vector length in context of AArch64 SVE.
   // SVE register infos if enabled cannot be disabled by selecting sve_vq = 0.
@@ -530,6 +557,10 @@ bool RegisterInfoPOSIX_arm64::IsSMEReg(unsigned reg) const {
   return llvm::is_contained(m_sme_regnum_collection, reg);
 }
 
+bool RegisterInfoPOSIX_arm64::IsFPMRReg(unsigned reg) const {
+  return llvm::is_contained(m_fpmr_regnum_collection, reg);
+}
+
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
@@ -558,4 +589,8 @@ uint32_t RegisterInfoPOSIX_arm64::GetTLSOffset() const {
 
 uint32_t RegisterInfoPOSIX_arm64::GetSMEOffset() const {
   return m_register_info_p[m_sme_regnum_collection[0]].byte_offset;
+}
+
+uint32_t RegisterInfoPOSIX_arm64::GetFPMROffset() const {
+  return m_register_info_p[m_fpmr_regnum_collection[0]].byte_offset;
 }

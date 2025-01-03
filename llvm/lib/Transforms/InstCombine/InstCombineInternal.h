@@ -33,8 +33,6 @@
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
-using namespace llvm::PatternMatch;
-
 // As a default, let's assume that we want to be aggressive,
 // and attempt to traverse with no limits in attempt to sink negation.
 static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
@@ -53,7 +51,6 @@ class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class GlobalVariable;
-class LoopInfo;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
@@ -68,15 +65,15 @@ public:
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
+                   ProfileSummaryInfo *PSI, const DataLayout &DL,
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, LI) {}
+                     BFI, BPI, PSI, DL, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
-  bool prepareWorklist(Function &F,
-                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
+  bool prepareWorklist(Function &F);
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
@@ -105,6 +102,7 @@ public:
   Instruction *visitSRem(BinaryOperator &I);
   Instruction *visitFRem(BinaryOperator &I);
   bool simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I);
+  Instruction *commonIDivRemTransforms(BinaryOperator &I);
   Instruction *commonIRemTransforms(BinaryOperator &I);
   Instruction *commonIDivTransforms(BinaryOperator &I);
   Instruction *visitUDiv(BinaryOperator &I);
@@ -414,7 +412,7 @@ private:
                           bool IsAnd, bool IsLogical = false);
   Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Xor);
 
-  Value *foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd);
+  Value *foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd);
 
   Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
                                      bool IsAnd);
@@ -427,6 +425,9 @@ private:
 
   Instruction *foldLogicOfIsFPClass(BinaryOperator &Operator, Value *LHS,
                                     Value *RHS);
+
+  Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
+                          bool IsLogical);
 
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
@@ -587,6 +588,10 @@ public:
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
+  /// Common transforms for add / disjoint or
+  Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
+                                      bool NUW);
+
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
@@ -595,7 +600,8 @@ public:
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
   /// only possible if all operands to the PHI are constants).
-  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN);
+  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN,
+                             bool AllowMultipleUses = false);
 
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in
@@ -633,6 +639,11 @@ public:
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
 
+  /// If the phi is within a phi web, which is formed by the def-use chain
+  /// of phis and all the phis in the web are only used in the other phis.
+  /// In this case, these phis are dead and we will remove all of them.
+  bool foldDeadPhiWeb(PHINode &PN);
+
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
   /// insert a new pointer typed PHI and replace the original one.
@@ -642,10 +653,10 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
-  Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
-                           ICmpInst::Predicate Cond, Instruction &I);
-  Instruction *foldSelectICmp(ICmpInst::Predicate Pred, SelectInst *SI,
-                              Value *RHS, const ICmpInst &I);
+  Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
+                           Instruction &I);
+  Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
+                              const ICmpInst &I);
   bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
@@ -653,8 +664,7 @@ public:
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
-  Instruction *foldICmpAddOpConst(Value *X, const APInt &C,
-                                  ICmpInst::Predicate Pred);
+  Instruction *foldICmpAddOpConst(Value *X, const APInt &C, CmpPredicate Pred);
   Instruction *foldICmpWithCastOp(ICmpInst &ICmp);
   Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp);
 
@@ -668,7 +678,7 @@ public:
                                                    const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
-                                  Value *Z, ICmpInst::Predicate Pred);
+                                  Value *Z, CmpPredicate Pred);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -726,19 +736,21 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
-  Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
-                                   Value *Op1, ICmpInst &CxtI);
+  Instruction *foldICmpCommutative(CmpPredicate Pred, Value *Op0, Value *Op1,
+                                   ICmpInst &CxtI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
+  Instruction *foldSelectToCmp(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
+  Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,
                             Value *A, Value *B, Instruction &Outer,
                             SelectPatternFlavor SPF2, Value *C);
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
-  Instruction *foldSelectValueEquivalence(SelectInst &SI, ICmpInst &ICI);
+  Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 
@@ -782,11 +794,14 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
+  const DominatorTree &DT;
+
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
+          bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

@@ -18,8 +18,12 @@ define void @csr2() nounwind {
 ; FRAME-NEXT:    pushp %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    pushp %r15
+; FRAME-NEXT:    pushp %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popp %rbp
 ; FRAME-NEXT:    popp %r15
 ; FRAME-NEXT:    popp %rbp
 ; FRAME-NEXT:    retq
