@@ -454,6 +454,19 @@ private:
                                                    alloc.getSymbol());
   }
 
+  void setPinnedToFalse() {
+    if (!pinnedExpr)
+      return;
+    Fortran::lower::StatementContext stmtCtx;
+    mlir::Value pinned =
+        fir::getBase(converter.genExprAddr(loc, *pinnedExpr, stmtCtx));
+    mlir::Location loc = pinned.getLoc();
+    mlir::Value falseValue = builder.createBool(loc, false);
+    mlir::Value falseConv = builder.createConvert(
+        loc, fir::unwrapRefType(pinned.getType()), falseValue);
+    builder.create<fir::StoreOp>(loc, falseConv, pinned);
+  }
+
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
     bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
@@ -469,6 +482,7 @@ private:
       // can be validated.
       genInlinedAllocation(alloc, box);
       postAllocationAction(alloc);
+      setPinnedToFalse();
       return;
     }
 
@@ -482,11 +496,13 @@ private:
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (!isCudaSymbol)
+    if (!isCudaSymbol) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
-    else
+      setPinnedToFalse();
+    } else {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
+    }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
@@ -616,13 +632,16 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol())) {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
-    else if (isSource)
-      stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
-    else
-      stat = genRuntimeAllocate(builder, loc, box, errorManager);
+    } else {
+      if (isSource)
+        stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
+      else
+        stat = genRuntimeAllocate(builder, loc, box, errorManager);
+      setPinnedToFalse();
+    }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
