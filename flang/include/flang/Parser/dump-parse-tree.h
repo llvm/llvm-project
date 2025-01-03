@@ -516,6 +516,8 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCriticalDirective)
+  NODE(parser, OmpErrorDirective)
+  NODE(parser, OmpNothingDirective)
   NODE(parser, OmpDeclareTargetSpecifier)
   NODE(parser, OmpDeclareTargetWithClause)
   NODE(parser, OmpDeclareTargetWithList)
@@ -662,7 +664,7 @@ public:
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
   NODE(parser, OpenMPDepobjConstruct)
-  NODE(parser, OpenMPErrorConstruct)
+  NODE(parser, OpenMPUtilityConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
