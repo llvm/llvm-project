@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ctime_r.h"
-#include "src/__support/CPP/limits.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
