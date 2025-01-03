@@ -8,10 +8,10 @@ declare void @use(float)
 define float @test_select_frexp_basic(float %x, i1 %cond) {
 ; CHECK-LABEL: define float @test_select_frexp_basic(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_0:%.*]] = extractvalue { float, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret float [[FREXP_0]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[FREXP_0]]
+; CHECK-NEXT:    ret float [[SELECT_FREXP]]
 ;
   %sel = select i1 %cond, float 1.000000e+00, float %x
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
@@ -23,10 +23,10 @@ define float @test_select_frexp_basic(float %x, i1 %cond) {
 define float @test_select_frexp_const_false(float %x, i1 %cond) {
 ; CHECK-LABEL: define float @test_select_frexp_const_false(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_0:%.*]] = extractvalue { float, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret float [[FREXP_0]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float [[FREXP_0]], float 5.000000e-01
+; CHECK-NEXT:    ret float [[SELECT_FREXP]]
 ;
   %sel = select i1 %cond, float %x, float 1.000000e+00
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
@@ -40,9 +40,10 @@ define float @test_select_frexp_multi_use(float %x, i1 %cond) {
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    call void @use(float [[SEL]])
-; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_0:%.*]] = extractvalue { float, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret float [[FREXP_0]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[FREXP_0]]
+; CHECK-NEXT:    ret float [[SELECT_FREXP]]
 ;
   %sel = select i1 %cond, float 1.000000e+00, float %x
   call void @use(float %sel)

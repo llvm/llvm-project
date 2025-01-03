@@ -4069,6 +4069,52 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   return nullptr;
 }
 
+static Value *foldFrexpOfSelect(ExtractValueInst &EV, CallInst *FrexpCall,
+                                SelectInst *SelectInst,
+                                InstCombiner::BuilderTy &Builder) {
+  // Helper to fold frexp of select to select of frexp.
+  Value *Cond = SelectInst->getCondition();
+  Value *TrueVal = SelectInst->getTrueValue();
+  Value *FalseVal = SelectInst->getFalseValue();
+  ConstantFP *ConstOp = nullptr;
+  Value *VarOp = nullptr;
+  bool ConstIsTrue = false;
+
+  if (auto *TrueConst = dyn_cast<ConstantFP>(TrueVal)) {
+    ConstOp = TrueConst;
+    VarOp = FalseVal;
+    ConstIsTrue = true;
+  } else if (auto *FalseConst = dyn_cast<ConstantFP>(FalseVal)) {
+    ConstOp = FalseConst;
+    VarOp = TrueVal;
+    ConstIsTrue = false;
+  }
+
+  if (!ConstOp || !VarOp)
+    return nullptr;
+
+  CallInst *NewFrexp =
+      Builder.CreateCall(FrexpCall->getCalledFunction(), {VarOp}, "frexp");
+
+  Value *NewEV = Builder.CreateExtractValue(NewFrexp, 0, "mantissa");
+
+  APFloat ConstVal = ConstOp->getValueAPF();
+  int Exp = 0;
+  APFloat Mantissa = ConstVal;
+
+  if (ConstVal.isFiniteNonZero()) {
+    Mantissa = frexp(ConstVal, Exp, APFloat::rmNearestTiesToEven);
+  }
+
+  Constant *ConstantMantissa = ConstantFP::get(ConstOp->getType(), Mantissa);
+
+  Value *NewSel = Builder.CreateSelect(
+      Cond, ConstIsTrue ? ConstantMantissa : NewEV,
+      ConstIsTrue ? NewEV : ConstantMantissa, "select.frexp");
+
+  return NewSel;
+}
+
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   Value *Agg = EV.getAggregateOperand();
 
@@ -4078,7 +4124,26 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (Value *V = simplifyExtractValueInst(Agg, EV.getIndices(),
                                           SQ.getWithInstruction(&EV)))
     return replaceInstUsesWith(EV, V);
+  if (EV.getNumIndices() == 1 && EV.getIndices()[0] == 0) {
+    if (auto *FrexpCall = dyn_cast<CallInst>(Agg)) {
+      if (Function *F = FrexpCall->getCalledFunction()) {
+        if (F->getIntrinsicID() == Intrinsic::frexp) {
+          if (auto *SelInst =
+                  dyn_cast<SelectInst>(FrexpCall->getArgOperand(0))) {
+            if (isa<ConstantFP>(SelInst->getTrueValue()) ||
+                isa<ConstantFP>(SelInst->getFalseValue())) {
+              Builder.SetInsertPoint(&EV);
 
+              if (Value *Result =
+                      foldFrexpOfSelect(EV, FrexpCall, SelInst, Builder)) {
+                return replaceInstUsesWith(EV, Result);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   if (InsertValueInst *IV = dyn_cast<InsertValueInst>(Agg)) {
     // We're extracting from an insertvalue instruction, compare the indices
     const unsigned *exti, *exte, *insi, *inse;
