@@ -224,6 +224,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(declRefExpr);
   REGISTER_MATCHER(dependentNameType);
   REGISTER_MATCHER(dependentScopeDeclRefExpr);
+  REGISTER_MATCHER(dependentTemplateSpecializationType);
   REGISTER_MATCHER(declStmt);
   REGISTER_MATCHER(declaratorDecl);
   REGISTER_MATCHER(decltypeType);

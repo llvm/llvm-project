@@ -763,10 +763,6 @@ TEST_P(ImportType, ImportPackExpansion) {
                                    implicitCastExpr(has(declRefExpr()))))))));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Type,
-                                            DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
-
 TEST_P(ImportType, ImportDependentTemplateSpecialization) {
   MatchVerifier<Decl> Verifier;
   testImport("template<typename T>"
