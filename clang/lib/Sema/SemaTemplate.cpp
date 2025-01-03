@@ -928,9 +928,9 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
 
 void Sema::translateTemplateArguments(const ASTTemplateArgsPtr &TemplateArgsIn,
                                       TemplateArgumentListInfo &TemplateArgs) {
-  for (unsigned I = 0, Last = TemplateArgsIn.size(); I != Last; ++I)
-    TemplateArgs.addArgument(
-        translateTemplateArgument(*this, TemplateArgsIn[I]));
+ for (unsigned I = 0, Last = TemplateArgsIn.size(); I != Last; ++I)
+   TemplateArgs.addArgument(translateTemplateArgument(*this,
+                                                      TemplateArgsIn[I]));
 }
 
 static void maybeDiagnoseTemplateParameterShadow(Sema &SemaRef, Scope *S,

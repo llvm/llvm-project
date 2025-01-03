@@ -797,14 +797,12 @@ bool Sema::CheckParameterPacksForExpansion(
       if (isa<VarDecl>(ND))
         IsVarDeclPack = true;
       else if (isa<BindingDecl>(ND)) {
-        // find the instantiated BindingDecl and check it for a resolved pack
+        // Find the instantiated BindingDecl and check it for a resolved pack.
         llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
             CurrentInstantiationScope->findInstantiationOf(ND);
-        if (Decl *B = Instantiation->dyn_cast<Decl *>()) {
-          Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
-          if (auto *RP = dyn_cast<ResolvedUnexpandedPackExpr>(BindingExpr))
-            ResolvedPack = RP;
-        }
+        Decl *B = cast<Decl *>(*Instantiation);
+        Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
+        ResolvedPack = dyn_cast<ResolvedUnexpandedPackExpr>(BindingExpr);
         if (!ResolvedPack) {
           ShouldExpand = false;
           continue;
