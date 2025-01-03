@@ -133,14 +133,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0, nxv16p0};
 
-  getActionDefinitionsBuilder(G_ADD)
+  getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalFor({sXLen})
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .customFor(ST.is64Bit(), {s32})
       .widenScalarToNextPow2(0)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder({G_SUB, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({sXLen})
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
@@ -1338,20 +1338,21 @@ bool RISCVLegalizerInfo::legalizeCustom(
       return true;
     return Helper.lowerConstant(MI);
   }
+  case TargetOpcode::G_SUB:
   case TargetOpcode::G_ADD: {
     Helper.Observer.changingInstr(MI);
     Helper.widenScalarSrc(MI, LLT::scalar(64), 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarSrc(MI, LLT::scalar(64), 2, TargetOpcode::G_ANYEXT);
 
-    Register DstAdd = MRI.createGenericVirtualRegister(sXLen);
+    Register DstALU = MRI.createGenericVirtualRegister(sXLen);
     Register DstSext = MRI.createGenericVirtualRegister(sXLen);
 
     MachineOperand &MO = MI.getOperand(0);
     MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
-    MIRBuilder.buildSExtInReg(DstSext, DstAdd, 32);
+    MIRBuilder.buildSExtInReg(DstSext, DstALU, 32);
 
     MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, {MO}, {DstSext});
-    MO.setReg(DstAdd);
+    MO.setReg(DstALU);
 
     Helper.Observer.changedInstr(MI);
     return true;

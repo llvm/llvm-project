@@ -108,7 +108,7 @@ define i32 @sub_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: sub_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    sub a0, a0, a1
+; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i32 %a, %b
@@ -138,7 +138,7 @@ define i32 @neg_i32(i32 %a) {
 ;
 ; RV64IM-LABEL: neg_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    neg a0, a0
+; RV64IM-NEXT:    negw a0, a0
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i32 0, %a
