@@ -6846,42 +6846,39 @@ the configuration (without a prefix: ``Auto``).
 .. _WrapNamespaceBodyWithEmptyLines:
 
 **WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
-  Controls number of empty lines at the begging and at the end of
-  namespace definition.
+  Wrap namespace body with empty lines.
 
   Possible values:
 
   * ``WNBWELS_Never`` (in configuration: ``Never``)
-    Removes all empty lines at the beginning and at the end of
-    namespace definition.
+    Remove all empty lines at the beginning and the end of namespace body.
 
     .. code-block:: c++
 
       namespace N1 {
       namespace N2
-        function();
+      function();
       }
       }
 
   * ``WNBWELS_Always`` (in configuration: ``Always``)
-    Always adds an empty line at the beginning and at the end of
-    namespace definition. MaxEmptyLinesToKeep is also applied, but
-    empty lines between consecutive namespace declarations are
-    always removed.
+    Always have at least one empty line at the beginning and the end of
+    namespace body except that the number of empty lines between consecutive
+    nested namespace definitions is not increased.
 
     .. code-block:: c++
 
       namespace N1 {
       namespace N2 {
 
-        function();
+      function();
 
       }
       }
 
   * ``WNBWELS_Leave`` (in configuration: ``Leave``)
-    Keeps existing newlines at the beginning and at the end of
-    namespace definition using MaxEmptyLinesToKeep for formatting.
+    Keep existing newlines at the beginning and the end of namespace body.
+    ``MaxEmptyLinesToKeep`` still applies.
 
 
 
