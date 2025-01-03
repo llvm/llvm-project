@@ -6227,8 +6227,10 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
     if (!GeneratingReducedBMI || !CanElideDeclDef(D)) {
-      if (HasUpdatedBody) {
-        const auto *Def = cast<FunctionDecl>(D);
+      assert(!(HasUpdatedBody && HasAddedVarDefinition) &&
+             "Declaration can not be both a FunctionDecl and a VarDecl");
+      if (const auto *Def = dyn_cast<FunctionDecl>(D);
+          HasUpdatedBody && Def->doesThisDeclarationHaveABody()) {
         Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
         Record.push_back(Def->isInlined());
         Record.AddSourceLocation(Def->getInnerLocStart());
