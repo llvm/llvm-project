@@ -625,6 +625,24 @@ v_sat_pk_u8_i16_e32 v199, v5 dpp8:[7,6,5,4,3,2,1,0]
 v_sat_pk_u8_i16_e32 v199, v5 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
 
+v_sat_pk_u8_i16_e32 v199.h, v5
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sat_pk_u8_i16_e32 v199.h, v5 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sat_pk_u8_i16_e32 v199.h, v5 quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sat_pk_u8_i16_e32 v199.l, v5
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sat_pk_u8_i16_e32 v199.l, v5 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_sat_pk_u8_i16_e32 v199.l, v5 quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
 v_sin_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
