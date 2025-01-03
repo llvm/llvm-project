@@ -3949,6 +3949,23 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
 
+    // Similar to the previous rule, but this time targeting an expanded abs.
+    // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+    // as well as
+    // (sub 0, (min X, (sub 0, X))) --> (max X, (sub 0, X))
+    // Note that these two are applicable to both signed and unsigned min/max.
+    SDValue X;
+    SDValue S0;
+    auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
+    if (sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
+                                      m_UMax(m_Value(X), NegPat),
+                                      m_SMin(m_Value(X), NegPat),
+                                      m_UMin(m_Value(X), NegPat))))) {
+      unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
+      if (hasOperation(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, X, S0);
+    }
+
     // Fold neg(splat(neg(x)) -> splat(x)
     if (VT.isVector()) {
       SDValue N1S = DAG.getSplatValue(N1, true);
@@ -18921,10 +18938,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   SmallVector<SDNode *, 16> OtherUses;
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
-    for (SDNode::use_iterator UI = BasePtr->use_begin(),
-                              UE = BasePtr->use_end();
-         UI != UE; ++UI) {
-      SDUse &Use = *UI;
+    for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
       // node (important for nodes that return multiple results).
       if (Use.getUser() == Ptr.getNode() || Use != BasePtr)
@@ -18940,7 +18954,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
         break;
       }
 
-      SDValue Op1 = Use.getUser()->getOperand((UI.getOperandNo() + 1) & 1);
+      SDValue Op1 = Use.getUser()->getOperand((Use.getOperandNo() + 1) & 1);
       if (!isa<ConstantSDNode>(Op1)) {
         OtherUses.clear();
         break;
@@ -20931,11 +20945,11 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
            RootCount->second.second > StoreMergeDependenceLimit;
   };
 
-  auto TryToAddCandidate = [&](SDNode::use_iterator UseIter) {
+  auto TryToAddCandidate = [&](SDUse &Use) {
     // This must be a chain use.
-    if (UseIter.getOperandNo() != 0)
+    if (Use.getOperandNo() != 0)
       return;
-    if (auto *OtherStore = dyn_cast<StoreSDNode>(UseIter->getUser())) {
+    if (auto *OtherStore = dyn_cast<StoreSDNode>(Use.getUser())) {
       BaseIndexOffset Ptr;
       int64_t PtrDiff;
       if (CandidateMatch(OtherStore, Ptr, PtrDiff) &&
@@ -20954,19 +20968,19 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored) {
       SDNode *User = I->getUser();
-      if (I.getOperandNo() == 0 && isa<LoadSDNode>(User)) { // walk down chain
-        for (auto I2 = User->use_begin(), E2 = User->use_end(); I2 != E2; ++I2)
-          TryToAddCandidate(I2);
+      if (I->getOperandNo() == 0 && isa<LoadSDNode>(User)) { // walk down chain
+        for (SDUse &U2 : User->uses())
+          TryToAddCandidate(U2);
       }
       // Check stores that depend on the root (e.g. Store 3 in the chart above).
-      if (I.getOperandNo() == 0 && isa<StoreSDNode>(User)) {
-        TryToAddCandidate(I);
+      if (I->getOperandNo() == 0 && isa<StoreSDNode>(User)) {
+        TryToAddCandidate(*I);
       }
     }
   } else {
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored)
-      TryToAddCandidate(I);
+      TryToAddCandidate(*I);
   }
 
   return RootNode;
@@ -23091,8 +23105,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     if (ExtractIndex == BCTruncElt && BCSrc.getValueType().isScalarInteger())
       return DAG.getAnyExtOrTrunc(BCSrc, DL, ScalarVT);
 
+    // TODO: Add support for SCALAR_TO_VECTOR implicit truncation.
     if (LegalTypes && BCSrc.getValueType().isInteger() &&
-        BCSrc.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+        BCSrc.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+        BCSrc.getScalarValueSizeInBits() ==
+            BCSrc.getOperand(0).getScalarValueSizeInBits()) {
       // ext_elt (bitcast (scalar_to_vec i64 X to v2i64) to v4i32), TruncElt -->
       // trunc i64 X to i32
       SDValue X = BCSrc.getOperand(0);

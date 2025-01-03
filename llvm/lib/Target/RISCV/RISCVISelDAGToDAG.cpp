@@ -2531,29 +2531,6 @@ bool RISCVDAGToDAGISel::SelectAddrFrameIndex(SDValue Addr, SDValue &Base,
   return false;
 }
 
-// Select a frame index and an optional immediate offset from an ADD or OR.
-bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
-                                              SDValue &Offset) {
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
-  if (!CurDAG->isBaseWithConstantOffset(Addr))
-    return false;
-
-  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal)) {
-      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
-                                         Subtarget->getXLenVT());
-      Offset = CurDAG->getSignedTargetConstant(CVal, SDLoc(Addr),
-                                               Subtarget->getXLenVT());
-      return true;
-    }
-  }
-
-  return false;
-}
-
 // Fold constant addresses.
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
@@ -3236,6 +3213,35 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+
+  int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
+  if ((Imm & 0xfff) != 0xfff || Imm == -1)
+    return false;
+
+  for (const SDNode *U : N->users()) {
+    if (!ISD::isBitwiseLogicOp(U->getOpcode()))
+      return false;
+  }
+
+  // For 32-bit signed constants we already know it's a win: LUI+ADDI vs LUI.
+  // For 64-bit constants, the instruction sequences get complex,
+  // so we select inverted only if it's cheaper.
+  if (!isInt<32>(Imm)) {
+    int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                                 /*CompressionCost=*/true);
+    int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, ~Imm), 64, *Subtarget,
+                                                /*CompressionCost=*/true);
+    if (OrigImmCost <= NegImmCost)
+      return false;
+  }
+
+  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), ~Imm, *Subtarget);
+  return true;
+}
+
 static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
                                         unsigned Bits,
                                         const TargetInstrInfo *TII) {
@@ -3293,8 +3299,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
   if (Depth == 0 && !Node->getValueType(0).isScalarInteger())
     return false;
 
-  for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
-    SDNode *User = UI->getUser();
+  for (SDUse &Use : Node->uses()) {
+    SDNode *User = Use.getUser();
     // Users of this node should have already been instruction selected
     if (!User->isMachineOpcode())
       return false;
@@ -3302,7 +3308,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     // TODO: Add more opcodes?
     switch (User->getMachineOpcode()) {
     default:
-      if (vectorPseudoHasAllNBitUsers(User, UI.getOperandNo(), Bits, TII))
+      if (vectorPseudoHasAllNBitUsers(User, Use.getOperandNo(), Bits, TII))
         break;
       return false;
     case RISCV::ADDW:
@@ -3353,7 +3359,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BCLR:
     case RISCV::BINV:
       // Shift amount operands only use log2(Xlen) bits.
-      if (UI.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
+      if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;
     case RISCV::SLLI:
@@ -3417,19 +3423,19 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SH3ADD_UW:
       // The first operand to add.uw/shXadd.uw is implicitly zero extended from
       // 32 bits.
-      if (UI.getOperandNo() == 0 && Bits >=  32)
+      if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
     case RISCV::SB:
-      if (UI.getOperandNo() == 0 && Bits >= 8)
+      if (Use.getOperandNo() == 0 && Bits >= 8)
         break;
       return false;
     case RISCV::SH:
-      if (UI.getOperandNo() == 0 && Bits >= 16)
+      if (Use.getOperandNo() == 0 && Bits >= 16)
         break;
       return false;
     case RISCV::SW:
-      if (UI.getOperandNo() == 0 && Bits >= 32)
+      if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
     }

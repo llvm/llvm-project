@@ -21,6 +21,13 @@ def uimm5nonzero : RISCVOp<XLenVT>,
   let OperandType = "OPERAND_UIMM5_NONZERO";
 }
 
+def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
+  [{return (Imm > 3) && isUInt<5>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<5, "GT3">;
+  let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_UIMM5_GT3";
+}
+
 def uimm11 : RISCVUImmLeafOp<11>;
 
 //===----------------------------------------------------------------------===//
@@ -132,6 +139,17 @@ class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
   let Inst{31-25} = {funct2, imm{6-2}};
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+    : RVInstRBase<funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+                  (ins GPRNoX0:$rd, GPRNoX0:$rs1, InTyRs2:$rs2, simm5:$simm),
+                  opcodestr, "$rd, $rs1, $rs2, $simm"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> simm;
+
+  let Inst{31-25} = {simm, funct2};
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -184,6 +202,37 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcia, IsRV32], DecoderNamespace = "Xqcia"
 
+let Predicates = [HasVendorXqciac, IsRV32], DecoderNamespace = "Xqciac" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def QC_C_MULADDI : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
+                               (ins GPRC:$rd, GPRC:$rs1, uimm5:$uimm),
+                               "qc.c.muladdi", "$rd, $rs1, $uimm"> {
+    let Constraints = "$rd = $rd_wb";
+    bits<5> uimm;
+
+    let Inst{12-10} = uimm{3-1};
+    let Inst{6} = uimm{0};
+    let Inst{5} = uimm{4};
+  }
+
+  def QC_MULADDI : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+                           (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12),
+                           "qc.muladdi", "$rd, $rs1, $imm12"> {
+    let Constraints = "$rd = $rd_wb";
+  }
+
+  def QC_SHLADD : RVInstRBase<0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+                              (ins GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$shamt),
+                              "qc.shladd", "$rd, $rs1, $rs2, $shamt"> {
+    bits<5> shamt;
+
+    let Inst{31-30} = 0b01;
+    let Inst{29-25} = shamt;
+  }
+
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // Predicates = [HasVendorXqciac, IsRV32], DecoderNamespace = "Xqciac"
+
 let Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics" in {
   def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">;
   def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">;
@@ -204,6 +253,22 @@ let Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm" in {
     def QC_LWM : QCILoadMultiple<0b00, GPRNoX0, "qc.lwm">;
     def QC_LWMI : QCILoadMultiple<0b01, uimm5nonzero, "qc.lwmi">;
 } // Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm"
+
+let Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli" in {
+  def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">;
+  def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">;
+  def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">;
+  def QC_LIGE    : QCILICC<0b101, 0b01, GPRNoX0, "qc.lige">;
+  def QC_LILTU   : QCILICC<0b110, 0b01, GPRNoX0, "qc.liltu">;
+  def QC_LIGEU   : QCILICC<0b111, 0b01, GPRNoX0, "qc.ligeu">;
+
+  def QC_LIEQI   : QCILICC<0b000, 0b11, simm5, "qc.lieqi">;
+  def QC_LINEI   : QCILICC<0b001, 0b11, simm5, "qc.linei">;
+  def QC_LILTI   : QCILICC<0b100, 0b11, simm5, "qc.lilti">;
+  def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">;
+  def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">;
+  def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">;
+} // Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli"
 
 //===----------------------------------------------------------------------===//
 // Aliases

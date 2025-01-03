@@ -582,6 +582,15 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     //   Temp().ptr; // Here ptr might not dangle.
     if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
       return;
+    // Avoid false positives when the object is constructed from a conditional
+    // operator argument. A common case is:
+    //   // 'ptr' might not be owned by the Owner object.
+    //   std::string_view s = cond() ? Owner().ptr : sv;
+    if (const auto *Cond =
+            dyn_cast<AbstractConditionalOperator>(Arg->IgnoreImpCasts());
+        Cond && isPointerLikeType(Cond->getType()))
+      return;
+
     auto ReturnType = Callee->getReturnType();
 
     // Once we initialized a value with a non gsl-owner reference, it can no

@@ -186,8 +186,9 @@ template<class Callable, class ...Args>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/mutex>
+#else
 #  include <__chrono/steady_clock.h>
 #  include <__chrono/time_point.h>
 #  include <__condition_variable/condition_variable.h>
@@ -512,6 +513,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <typeinfo>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_MUTEX

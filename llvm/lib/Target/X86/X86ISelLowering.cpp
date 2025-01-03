@@ -2333,6 +2333,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setLoadExtAction(ISD::EXTLOAD, MVT::v8f64,  MVT::v8f16,  Legal);
       setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Legal);
+
+      setOperationAction(ISD::FMINIMUM, MVT::v32f16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v32f16, Custom);
     }
 
     if (Subtarget.hasVLX()) {
@@ -2377,6 +2380,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // Need to custom widen these to prevent scalarization.
       setOperationAction(ISD::LOAD,  MVT::v4f16, Custom);
       setOperationAction(ISD::STORE, MVT::v4f16, Custom);
+
+      setOperationAction(ISD::FMINIMUM, MVT::v8f16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Custom);
+
+      setOperationAction(ISD::FMINIMUM, MVT::v16f16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v16f16, Custom);
     }
   }
 
@@ -2433,6 +2442,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::FMINIMUM, VT, Custom);
+      setOperationAction(ISD::FMAXIMUM, VT, Custom);
     }
     if (Subtarget.hasAVX10_2_512()) {
       setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
@@ -2442,6 +2453,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
       setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
       setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+      setOperationAction(ISD::FMINIMUM, MVT::v32bf16, Custom);
+      setOperationAction(ISD::FMAXIMUM, MVT::v32bf16, Custom);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
       setCondCodeAction(ISD::SETOEQ, VT, Custom);
@@ -5246,7 +5259,8 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
     SmallVector<APInt> EltBits;
     if (getTargetConstantBitsFromNode(V.getOperand(0),
                                       V.getScalarValueSizeInBits(), UndefElts,
-                                      EltBits)) {
+                                      EltBits) &&
+        !ISD::isBuildVectorOfConstantSDNodes(V.getOperand(1).getNode())) {
       // Don't fold min_signed_value -> (min_signed_value - 1)
       bool MinSigned = false;
       for (APInt &Elt : EltBits) {
@@ -22868,13 +22882,12 @@ static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
 
 /// return true if \c Op has a use that doesn't just read flags.
 static bool hasNonFlagsUse(SDValue Op) {
-  for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
-       ++UI) {
-    SDNode *User = UI->getUser();
-    unsigned UOpNo = UI.getOperandNo();
+  for (SDUse &Use : Op->uses()) {
+    SDNode *User = Use.getUser();
+    unsigned UOpNo = Use.getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
       // Look past truncate.
-      UOpNo = User->use_begin().getOperandNo();
+      UOpNo = User->use_begin()->getOperandNo();
       User = User->use_begin()->getUser();
     }
 
@@ -28833,6 +28846,20 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
   SDLoc DL(Op);
+  if (Subtarget.hasAVX10_2() && TLI.isTypeLegal(VT)) {
+    unsigned Opc = 0;
+    if (VT.isVector())
+      Opc = X86ISD::VMINMAX;
+    else if (VT == MVT::f16 || VT == MVT::f32 || VT == MVT::f64)
+      Opc = X86ISD::VMINMAXS;
+
+    if (Opc) {
+      SDValue Imm =
+          DAG.getTargetConstant(Op.getOpcode() == ISD::FMAXIMUM, DL, MVT::i32);
+      return DAG.getNode(Opc, DL, VT, X, Y, Imm, Op->getFlags());
+    }
+  }
+
   uint64_t SizeInBits = VT.getScalarSizeInBits();
   APInt PreferredZero = APInt::getZero(SizeInBits);
   APInt OppositeZero = PreferredZero;
@@ -46721,11 +46748,10 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   auto OnlyUsedAsSelectCond = [](SDValue Cond) {
-    for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
-         UI != UE; ++UI)
-      if ((UI->getUser()->getOpcode() != ISD::VSELECT &&
-           UI->getUser()->getOpcode() != X86ISD::BLENDV) ||
-          UI.getOperandNo() != 0)
+    for (SDUse &Use : Cond->uses())
+      if ((Use.getUser()->getOpcode() != ISD::VSELECT &&
+           Use.getUser()->getOpcode() != X86ISD::BLENDV) ||
+          Use.getOperandNo() != 0)
         return false;
 
     return true;
@@ -54483,7 +54509,8 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
-  bool IsStrict = N->isTargetStrictFPOpcode();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  bool IsStrict = TSI.isTargetStrictFPOpcode(N->getOpcode());
   EVT VT = N->getValueType(0);
 
   // Convert a full vector load into vzload when not all bits are needed.
@@ -55104,7 +55131,10 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
-  bool IsStrict = N->isStrictFPOpcode() || N->isTargetStrictFPOpcode();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  bool IsStrict = N->isTargetOpcode()
+                      ? TSI.isTargetStrictFPOpcode(N->getOpcode())
+                      : N->isStrictFPOpcode();
 
   // Let legalize expand this if it isn't a legal type yet.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

@@ -1,4 +1,4 @@
-// REQUIRES: target={{.*(darwin|aix).*}}
+// REQUIRES: continuous-mode
 
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
 // RUN: %clang_pgogen_cont -o %t.exe %s

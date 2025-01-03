@@ -430,6 +430,21 @@ bool ISD::matchBinaryPredicate(
   return true;
 }
 
+ISD::NodeType ISD::getInverseMinMaxOpcode(unsigned MinMaxOpc) {
+  switch (MinMaxOpc) {
+  default:
+    llvm_unreachable("unrecognized opcode");
+  case ISD::UMIN:
+    return ISD::UMAX;
+  case ISD::UMAX:
+    return ISD::UMIN;
+  case ISD::SMIN:
+    return ISD::SMAX;
+  case ISD::SMAX:
+    return ISD::SMIN;
+  }
+}
+
 ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   switch (VecReduceOpcode) {
   default:
@@ -9040,12 +9055,12 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                           SDVTList VTList,
                                           ArrayRef<SDValue> Ops, EVT MemVT,
                                           MachineMemOperand *MMO) {
-  assert((Opcode == ISD::INTRINSIC_VOID ||
-          Opcode == ISD::INTRINSIC_W_CHAIN ||
-          Opcode == ISD::PREFETCH ||
-          (Opcode <= (unsigned)std::numeric_limits<int>::max() &&
-           (int)Opcode >= ISD::FIRST_TARGET_MEMORY_OPCODE)) &&
-         "Opcode is not a memory-accessing opcode!");
+  assert(
+      (Opcode == ISD::INTRINSIC_VOID || Opcode == ISD::INTRINSIC_W_CHAIN ||
+       Opcode == ISD::PREFETCH ||
+       (Opcode <= (unsigned)std::numeric_limits<int>::max() &&
+        Opcode >= ISD::BUILTIN_OP_END && TSI->isTargetMemoryOpcode(Opcode))) &&
+      "Opcode is not a memory-accessing opcode!");
 
   // Memoize the node unless it returns a glue result.
   MemIntrinsicSDNode *N;
@@ -11872,7 +11887,7 @@ bool operator<(const UseMemo &L, const UseMemo &R) {
 /// pointed to by a UseMemo is deleted, set the User to nullptr to indicate that
 /// the node already has been taken care of recursively.
 class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
-  SmallVector<UseMemo, 4> &Uses;
+  SmallVectorImpl<UseMemo> &Uses;
 
   void NodeDeleted(SDNode *N, SDNode *E) override {
     for (UseMemo &Memo : Uses)
@@ -11881,7 +11896,7 @@ class RAUOVWUpdateListener : public SelectionDAG::DAGUpdateListener {
   }
 
 public:
-  RAUOVWUpdateListener(SelectionDAG &d, SmallVector<UseMemo, 4> &uses)
+  RAUOVWUpdateListener(SelectionDAG &d, SmallVectorImpl<UseMemo> &uses)
       : SelectionDAG::DAGUpdateListener(d), Uses(uses) {}
 };
 

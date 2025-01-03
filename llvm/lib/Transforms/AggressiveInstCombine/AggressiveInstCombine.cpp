@@ -181,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -190,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source

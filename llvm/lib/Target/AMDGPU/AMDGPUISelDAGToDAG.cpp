@@ -2394,6 +2394,9 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
            Subtarget->hasScalarCompareEq64();
   }
 
+  if ((VT == MVT::f16 || VT == MVT::f32) && Subtarget->hasSALUFloatInsts())
+    return true;
+
   return false;
 }
 
@@ -3755,7 +3758,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   for (SDNode::use_iterator U = N->use_begin(), E = SDNode::use_end();
     Limit < 10 && U != E; ++U, ++Limit) {
     const TargetRegisterClass *RC =
-        getOperandRegClass(U->getUser(), U.getOperandNo());
+        getOperandRegClass(U->getUser(), U->getOperandNo());
 
     // If the register class is unknown, it could be an unknown
     // register class that needs to be an SGPR, e.g. an inline asm
@@ -3770,7 +3773,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
         unsigned Opc = User->getMachineOpcode();
         const MCInstrDesc &Desc = SII->get(Opc);
         if (Desc.isCommutable()) {
-          unsigned OpIdx = Desc.getNumDefs() + U.getOperandNo();
+          unsigned OpIdx = Desc.getNumDefs() + U->getOperandNo();
           unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
           if (SII->findCommutedOpIndices(Desc, OpIdx, CommuteIdx1)) {
             unsigned CommutedOpNo = CommuteIdx1 - Desc.getNumDefs();

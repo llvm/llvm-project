@@ -1302,8 +1302,8 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
     EVT OpVT = OpI1.getValueType();
     if (!OpVT.isSimple() || OpVT.getSimpleVT() != MVT::i1)
       continue;
-    for (auto I = N->use_begin(), E = N->use_end(); I != E; ++I) {
-      SDNode *U = I->getUser();
+    for (SDUse &Use : N->uses()) {
+      SDNode *U = Use.getUser();
       if (U->getNumValues() != 1)
         continue;
       EVT UVT = U->getValueType(0);
@@ -1316,7 +1316,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
         continue;
 
       // Potentially simplifiable operation.
-      unsigned I1N = I.getOperandNo();
+      unsigned I1N = Use.getOperandNo();
       SmallVector<SDValue,2> Ops(U->getNumOperands());
       for (unsigned i = 0, n = U->getNumOperands(); i != n; ++i)
         Ops[i] = U->getOperand(i);

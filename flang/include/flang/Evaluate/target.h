@@ -36,6 +36,13 @@ public:
   bool isBigEndian() const { return isBigEndian_; }
   void set_isBigEndian(bool isBig = true);
 
+  bool haltingSupportIsUnknownAtCompileTime() const {
+    return haltingSupportIsUnknownAtCompileTime_;
+  }
+  void set_haltingSupportIsUnknownAtCompileTime(bool yes = true) {
+    haltingSupportIsUnknownAtCompileTime_ = yes;
+  }
+
   bool areSubnormalsFlushedToZero() const {
     return areSubnormalsFlushedToZero_;
   }
@@ -49,6 +56,14 @@ public:
 
   Rounding roundingMode() const { return roundingMode_; }
   void set_roundingMode(Rounding);
+
+  void set_ieeeFeature(IeeeFeature ieeeFeature, bool yes = true) {
+    if (yes) {
+      ieeeFeatures_.set(ieeeFeature);
+    } else {
+      ieeeFeatures_.reset(ieeeFeature);
+    }
+  }
 
   std::size_t procedurePointerByteSize() const {
     return procedurePointerByteSize_;
@@ -112,6 +127,7 @@ private:
   bool isBigEndian_{false};
   bool isPPC_{false};
   bool isOSWindows_{false};
+  bool haltingSupportIsUnknownAtCompileTime_{false};
   bool areSubnormalsFlushedToZero_{false};
   bool hasSubnormalFlushingControl_[maxKind + 1]{};
   Rounding roundingMode_{defaultRounding};
@@ -123,10 +139,9 @@ private:
   std::string compilerOptionsString_;
   std::string compilerVersionString_;
   IeeeFeatures ieeeFeatures_{IeeeFeature::Denormal, IeeeFeature::Divide,
-      IeeeFeature::Flags, IeeeFeature::Halting, IeeeFeature::Inf,
-      IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
-      IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
-      IeeeFeature::UnderflowControl};
+      IeeeFeature::Flags, IeeeFeature::Inf, IeeeFeature::Io, IeeeFeature::NaN,
+      IeeeFeature::Rounding, IeeeFeature::Sqrt, IeeeFeature::Standard,
+      IeeeFeature::Subnormal, IeeeFeature::UnderflowControl};
 };
 
 } // namespace Fortran::evaluate

@@ -806,7 +806,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_BF16, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f64, Custom);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -1113,12 +1115,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   for (MVT VT : MVT::fp_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
   }
 
   // ... or truncating stores
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
 
   // ARM does not have i1 sign extending load.
   for (MVT VT : MVT::integer_valuetypes())
@@ -16219,13 +16224,12 @@ static SDValue CombineBaseUpdate(SDNode *N,
   SmallVector<BaseUpdateUser, 8> BaseUpdates;
 
   // Search for a use of the address operand that is an increment.
-  for (SDNode::use_iterator UI = Addr.getNode()->use_begin(),
-         UE = Addr.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = UI->getUser();
-    if (UI->getResNo() != Addr.getResNo() || User->getNumOperands() != 2)
+  for (SDUse &Use : Addr->uses()) {
+    SDNode *User = Use.getUser();
+    if (Use.getResNo() != Addr.getResNo() || User->getNumOperands() != 2)
       continue;
 
-    SDValue Inc = User->getOperand(UI.getOperandNo() == 1 ? 0 : 1);
+    SDValue Inc = User->getOperand(Use.getOperandNo() == 1 ? 0 : 1);
     unsigned ConstInc =
         getPointerConstIncrement(User->getOpcode(), Addr, Inc, DCI.DAG);
 
@@ -16240,15 +16244,14 @@ static SDValue CombineBaseUpdate(SDNode *N,
   if (findPointerConstIncrement(Addr.getNode(), &Base, &CInc)) {
     unsigned Offset =
         getPointerConstIncrement(Addr->getOpcode(), Base, CInc, DCI.DAG);
-    for (SDNode::use_iterator UI = Base->use_begin(), UE = Base->use_end();
-         UI != UE; ++UI) {
+    for (SDUse &Use : Base->uses()) {
 
-      SDNode *User = UI->getUser();
-      if (UI->getResNo() != Base.getResNo() || User == Addr.getNode() ||
+      SDNode *User = Use.getUser();
+      if (Use.getResNo() != Base.getResNo() || User == Addr.getNode() ||
           User->getNumOperands() != 2)
         continue;
 
-      SDValue UserInc = User->getOperand(UI.getOperandNo() == 0 ? 1 : 0);
+      SDValue UserInc = User->getOperand(Use.getOperandNo() == 0 ? 1 : 0);
       unsigned UserOffset =
           getPointerConstIncrement(User->getOpcode(), Base, UserInc, DCI.DAG);
 
