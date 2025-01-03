@@ -259,6 +259,7 @@ public:
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
+  MCOperand decodeSpecialReg96Plus(unsigned Val) const;
 
   MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
                           unsigned ImmWidth,
