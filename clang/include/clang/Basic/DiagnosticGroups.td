@@ -510,7 +510,6 @@ def PrivateModule : DiagGroup<"private-module">;
 def CXX11InlineNamespace : DiagGroup<"c++11-inline-namespace">;
 def InlineNamespaceReopenedNoninline
     : DiagGroup<"inline-namespace-reopened-noninline">;
-def InitPriorityReserved : DiagGroup<"init-priority-reserved">;
 def InvalidNoreturn : DiagGroup<"invalid-noreturn">;
 def InvalidSourceEncoding : DiagGroup<"invalid-source-encoding">;
 def KNRPromotedParameter : DiagGroup<"knr-promoted-parameter">;

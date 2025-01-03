@@ -33,7 +33,7 @@ Two goo __attribute__((init_priority(2,3))) ( 5, 6 ); // expected-error {{'init_
 
 Two coo[2]  __attribute__((init_priority(100)));
 #if !defined(SYSTEM)
-  // expected-warning@-2 {{requested 'init_priority' 100 is reserved for internal use}}
+  // expected-error@-2 {{requested 'init_priority' 100 is reserved for internal use}}
   // unknown-warning@-3 {{unknown attribute 'init_priority' ignored}}
 #endif
 
