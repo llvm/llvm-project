@@ -127,12 +127,12 @@ function (add_flangrt_library name)
   # dependency to Compiler-RT's builtin library where these are implemented.
   if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (FLANG_RT_BUILTINS_LIBRARY)
-      target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+      target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
     endif ()
   endif ()
   if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
     if (FLANG_RT_BUILTINS_LIBRARY)
-      target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}")
+      target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
     else ()
       message(WARNING "Did not find libclang_rt.builtins.lib.
         LLVM may emit builtins that are not implemented in msvcrt/ucrt and
