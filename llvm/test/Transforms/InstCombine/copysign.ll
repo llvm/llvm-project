@@ -82,7 +82,7 @@ define float @not_known_positive_sign_arg(float %x, float %y) {
 
 define float @copysign_sign_arg(float %x, float %y, float %z) {
 ; CHECK-LABEL: @copysign_sign_arg(
-; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.copysign.f32(float [[X:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = call reassoc float @llvm.copysign.f32(float %y, float %z)
