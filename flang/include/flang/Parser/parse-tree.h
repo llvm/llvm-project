@@ -4342,7 +4342,7 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
       OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
       OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
-      OpenMPRequiresConstruct>
+      OpenMPRequiresConstruct, OpenMPUtilityConstruct>
       u;
 };
 
