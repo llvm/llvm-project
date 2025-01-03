@@ -1127,6 +1127,7 @@ clang-format
 - Adds ``AllowShortNamespacesOnASingleLine`` option.
 - Adds ``VariableTemplates`` option.
 - Adds support for bash globstar in ``.clang-format-ignore``.
+- Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 
 libclang
 --------
