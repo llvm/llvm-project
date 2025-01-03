@@ -68,6 +68,12 @@ public:
 
   Kind getKind() const { return K; }
 
+  /// Get a unique identifier for this symbol.
+  /// The ID is unique across all SymExprs in a SymbolManager.
+  /// They reflect the allocation order of these SymExprs,
+  /// and are likely stable across runs.
+  /// Used as a key in SymbolRef containers and as part of identity
+  /// for SymbolData, e.g. SymbolConjured with ID = 7 is "conj_$7".
   SymbolID getSymbolID() const { return Sym; }
 
   virtual void dump() const;
