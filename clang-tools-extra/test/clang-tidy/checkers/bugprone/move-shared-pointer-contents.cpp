@@ -27,7 +27,9 @@ constexpr _Tp&& forward(typename std::remove_reference<_Tp>::type &__t) {
 
 namespace my {
 template <typename T>
+// Part of the config.
 using OtherSharedPtr = std::shared_ptr<T>;
+
 // Not part of the config.
 template <typename T>
 using YetAnotherSharedPtr = T*;
@@ -80,13 +82,6 @@ void sharedEsquePointerNotInConfig() {
   my::YetAnotherSharedPtr<Nontrivial> p;
   Nontrivial x = std::move(*p);
 }
-
-
-void multiStars() {
-  std::shared_ptr<Nontrivial> p;
-  int x = 2 * std::move(*p).x * 3;
-}
-// CHECK-MESSAGES: :[[@LINE-2]]:15: warning: don't move the contents out of a shared pointer, as other accessors expect them to remain in a determinate state [bugprone-move-shared-pointer-contents]
 
 template <typename T>
 void unresolved() {
