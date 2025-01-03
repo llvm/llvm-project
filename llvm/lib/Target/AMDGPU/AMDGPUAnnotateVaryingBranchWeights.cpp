@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 // Estimate if conditional branches for which SIAnnotateControlFlow introduced
 // amdgcn_if or amdgcn_else intrinsics are likely to have different outcomes for
-// the threads of each wavefront. If that is the case, BranchWeight metadata is
+// the lanes of each wavefront. If that is the case, BranchWeight metadata is
 // added to signal that "then" and "else" blocks are both likely to be executed.
 // This may introduce branch weights that would be self-contradictory in a
 // non-SIMT setting.
 //
 // A consequence of this is that SIPreEmitPeephole is more likely to eliminate
 // s_cbranch_execz instructions that were introduced to skip these blocks when
-// no thread in the wavefront is active for them.
+// no lane in the wavefront is active for them.
 //
 // Should only run after SIAnnotateControlFlow.
 //===----------------------------------------------------------------------===//
@@ -218,7 +218,7 @@ bool AMDGPUAnnotateVaryingBranchWeightsImpl::run(Function &F) {
 
   // reqd_work_group_size determines the size of the work group in every
   // dimension. If it is present, identify the dimensions where the workitem id
-  // differs between the threads of the same wavefront. Otherwise assume that
+  // differs between the lanes of the same wavefront. Otherwise assume that
   // only dimension 0, i.e., x, varies.
   //
   // TODO can/should we assume that workitems are grouped into waves like that?
