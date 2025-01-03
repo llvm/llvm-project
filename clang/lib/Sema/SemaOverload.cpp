@@ -4455,7 +4455,7 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                ? ImplicitConversionSequence::Better
                : ImplicitConversionSequence::Worse;
 
-  // C++23 12.2.4.3p4:
+  // C++23 [over.ics.rank]p4b3:
   // A conversion in either direction between floating-point type FP1 and
   // floating-point type FP2 is better than a conversion in the same direction
   // between FP1 and arithmetic type T3 if:

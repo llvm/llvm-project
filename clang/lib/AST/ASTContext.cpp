@@ -65,6 +65,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -152,64 +153,50 @@ constexpr unsigned CXX23FloatRankToIndex(clang::BuiltinType::Kind Kind) {
 }
 
 // C++23 6.8.6p2 [conv.rank]
-// Grid to determine the rank of a floating point type when compared with
-// another floating point type.
-constexpr std::array<std::array<FloatConvRankCompareResult, 5>, 5>
-    CXX23FloatingPointConversionRankMap = {
-        {// Float16 x Float16
-         // Float16 x BFloat16
-         // Float16 x Float
-         // Float16 x Double
-         // Float16 x LongDouble
-         {{FloatConvRankCompareResult::FRCR_Equal,
-           FloatConvRankCompareResult::FRCR_Unordered,
-           FloatConvRankCompareResult::FRCR_Lesser,
-           FloatConvRankCompareResult::FRCR_Lesser,
-           FloatConvRankCompareResult::FRCR_Lesser}},
+FloatConvRankCompareResult
+CXX23CompareFpConversionRanks(BuiltinType::Kind LHSKind,
+                              BuiltinType::Kind RHSKind, QualType LHS,
+                              QualType RHS, const ASTContext &Ctx) {
 
-         // BFloat16 x Float16
-         // BFloat16 x BFloat16
-         // BFloat16 x Float
-         // BFloat16 x Double
-         // BFloat16 x LongDouble
-         {{FloatConvRankCompareResult::FRCR_Unordered,
-           FloatConvRankCompareResult::FRCR_Equal,
-           FloatConvRankCompareResult::FRCR_Lesser,
-           FloatConvRankCompareResult::FRCR_Lesser,
-           FloatConvRankCompareResult::FRCR_Lesser}},
+  // Same types.
+  if (LHSKind == RHSKind)
+    return FloatConvRankCompareResult::FRCR_Equal;
 
-         // Float x Float16
-         // Float x BFloat16
-         // Float x Float
-         // Float x Double
-         // Float x LongDouble
-         {{FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Equal,
-           FloatConvRankCompareResult::FRCR_Lesser,
-           FloatConvRankCompareResult::FRCR_Lesser}},
+  // Special case comparision between float, double and long double.
+  if (LHSKind == BuiltinType::Float && RHSKind == BuiltinType::Double)
+    return FloatConvRankCompareResult::FRCR_Lesser;
+  if (LHSKind == BuiltinType::Double && RHSKind == BuiltinType::Float)
+    return FloatConvRankCompareResult::FRCR_Greater;
+  if (LHSKind == BuiltinType::Float && RHSKind == BuiltinType::LongDouble)
+    return FloatConvRankCompareResult::FRCR_Lesser;
+  if (LHSKind == BuiltinType::LongDouble && RHSKind == BuiltinType::Float)
+    return FloatConvRankCompareResult::FRCR_Greater;
+  if (LHSKind == BuiltinType::Double && RHSKind == BuiltinType::LongDouble)
+    return FloatConvRankCompareResult::FRCR_Lesser;
+  if (LHSKind == BuiltinType::LongDouble && RHSKind == BuiltinType::Double)
+    return FloatConvRankCompareResult::FRCR_Greater;
 
-         // Double x Float16
-         // Double x BFloat16
-         // Double x Float
-         // Double x Double
-         // Double x LongDouble
-         {{FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Equal,
-           FloatConvRankCompareResult::FRCR_Lesser}},
+  const llvm::fltSemantics &LHSSemantics = Ctx.getFloatTypeSemantics(LHS);
+  const llvm::fltSemantics &RHSSemantics = Ctx.getFloatTypeSemantics(RHS);
 
-         // LongDouble x Float16
-         // LongDouble x BFloat16
-         // LongDouble x Float
-         // LongDouble x Double
-         // LongDouble x LongDouble
-         {{FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Greater,
-           FloatConvRankCompareResult::FRCR_Equal}}}};
+  bool LHSRepresentableByRHS =
+      llvm::APFloat::isRepresentableBy(LHSSemantics, RHSSemantics);
+  bool RHSRepresentableByLHS =
+      llvm::APFloat::isRepresentableBy(RHSSemantics, LHSSemantics);
+
+  if (LHSRepresentableByRHS && !RHSRepresentableByLHS)
+    return FloatConvRankCompareResult::FRCR_Lesser;
+  if (!LHSRepresentableByRHS && RHSRepresentableByLHS)
+    return FloatConvRankCompareResult::FRCR_Greater;
+
+  if (!LHSRepresentableByRHS && !RHSRepresentableByLHS)
+    return FloatConvRankCompareResult::FRCR_Unordered;
+
+  // Both types are representable by each other, compare sub-ranks, however, as
+  // of today this scenario doesn't exist.
+  llvm_unreachable(
+      "Both types are representable by each other, compare sub-ranks");
+}
 
 /// \returns The locations that are relevant when searching for Doc comments
 /// related to \p D.
@@ -7757,7 +7744,7 @@ static FloatingRank getFloatingRank(QualType T) {
 /// point types, ignoring the domain of the type (i.e. 'double' ==
 /// '_Complex double').
 /// If LHS > RHS, return FRCR_Greater.  If LHS == RHS, return FRCR_Equal. If
-/// LHS < RHS, return FRCR_Lesser. If the values representedable by the two
+/// LHS < RHS, return FRCR_Lesser. If the values representable by the two
 /// are not subset of each other, return FRCR_Unordered. If LHS == RHS but
 /// LHS has a higher subrank than RHS return FRCR_Equal_Greater_Subrank else
 /// return FRCR_Equal_Lesser_Subrank.
@@ -7775,8 +7762,7 @@ ASTContext::getFloatingTypeOrder(QualType LHS, QualType RHS) const {
       RHSKind = CT->getElementType()->castAs<BuiltinType>()->getKind();
     else
       RHSKind = RHS->castAs<BuiltinType>()->getKind();
-    return CXX23FloatingPointConversionRankMap[CXX23FloatRankToIndex(LHSKind)]
-                                              [CXX23FloatRankToIndex(RHSKind)];
+    return CXX23CompareFpConversionRanks(LHSKind, RHSKind, LHS, RHS, *this);
   }
 
   FloatingRank LHSR = getFloatingRank(LHS);

@@ -23,6 +23,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
@@ -1038,14 +1039,17 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     case 'B':
       if (!isFPConstant)
         break; // Error for integer constant.
-      if (s + 3 < ThisTokEnd && (s[1] == 'f' || s[1] == 'F') && s[2] == '1' &&
-          s[3] == '6') {
-        if (HasSize)
-          break;
-        HasSize = true;
-        s += 3;
-        isBFloat16 = true;
-        continue;
+      if (HasSize)
+        break;
+      HasSize = true;
+
+      if ((s + 3 < ThisTokEnd) && Target.hasFullBFloat16Type()) {
+        StringRef suffix(s, 4);
+        if (suffix == "bf16" || suffix == "BF16") {
+          s += 3;
+          isBFloat16 = true;
+          continue;
+        }
       }
       break;
     case 'q':    // FP Suffix for "__float128"

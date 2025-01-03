@@ -7445,7 +7445,8 @@ isArithmeticArgumentPromotion(Sema &S, const ImplicitCastExpr *ICE) {
   if (const auto *VecTy = To->getAs<ExtVectorType>())
     To = VecTy->getElementType();
   // It's a floating promotion if the source type is float.
-  // [7.3.8p1][conv.fpprom] https://eel.is/c++draft/conv.fpprom
+  // [7.3.8p1][conv.fpprom] A prvalue of type float can be converted to a
+  // prvalue of type double. The value is unchanged.
   return (ICE->getCastKind() == CK_FloatingCast &&
           S.Context.isPromotableFloatingType(From) &&
           S.Context.getPromotedFloatingType(From) == To);

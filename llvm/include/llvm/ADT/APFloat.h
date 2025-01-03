@@ -1370,6 +1370,9 @@ public:
   /// shorter semantics, like IEEEhalf.
   float convertToFloat() const;
 
+  static bool isRepresentableBy(const fltSemantics &Sem,
+                                const fltSemantics &Other);
+
   bool operator==(const APFloat &RHS) const { return compare(RHS) == cmpEqual; }
 
   bool operator!=(const APFloat &RHS) const { return compare(RHS) != cmpEqual; }

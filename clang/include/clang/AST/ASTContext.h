@@ -3014,13 +3014,13 @@ public:
   /// of \p LHS is less than \p RHS, return FRCR_Equal_Lesser_Subrank. Subrank
   /// and Unordered comparison were introduced in C++23.
   FloatConvRankCompareResult getFloatingTypeOrder(QualType LHS,
-                                                 QualType RHS) const;
+                                                  QualType RHS) const;
 
   /// Compare the rank of two floating point types as above, but compare equal
   /// if both types have the same floating-point semantics on the target (i.e.
   /// long double and double on AArch64 will return FRCR_Equal).
   FloatConvRankCompareResult getFloatingTypeSemanticOrder(QualType LHS,
-                                                         QualType RHS) const;
+                                                          QualType RHS) const;
 
   /// C++23 6.8.2p12 [basic.fundamental]
   /// Checks if extended floating point rules apply to a pair of types.

@@ -2304,8 +2304,10 @@ bool Type::isCXX23ExtendedFloatingPointType(const ASTContext &Ctx) const {
   if (!Ctx.getLangOpts().CPlusPlus23)
     return false;
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() == BuiltinType::Float16 ||
-           BT->getKind() == BuiltinType::BFloat16;
+    return (BT->getKind() == BuiltinType::Float16 &&
+            Ctx.getTargetInfo().hasFloat16Type()) ||
+           (BT->getKind() == BuiltinType::BFloat16 &&
+            Ctx.getTargetInfo().hasFullBFloat16Type());
   if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
     return CT->getElementType()->isCXX23ExtendedFloatingPointType(Ctx);
   return false;

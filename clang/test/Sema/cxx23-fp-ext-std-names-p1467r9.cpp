@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -target-feature +fullbf16 -verify -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -triple x86_64-unknown-unknown -target-feature +fullbf16 -verify -ast-dump %s | FileCheck %s
 #include <stdarg.h>
 _Float16 f16_val_1 = 1.0bf16; // expected-error {{cannot initialize a variable of type '_Float16' with an rvalue of type '__bf16'}}
 _Float16 f16_val_2 = 1.0f; // expected-error {{cannot initialize a variable of type '_Float16' with an rvalue of type 'float'}}
