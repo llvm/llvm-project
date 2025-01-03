@@ -3366,7 +3366,7 @@ by Sean Parent in several of his talks and papers:
    describing this technique in more detail.
 #. `Sean Parent's Papers and Presentations
    <https://sean-parent.stlab.cc/papers-and-presentations>`_
-   - A GitHub project full of links to slides, video, and sometimes code.
+   - Links to slides, videos, and sometimes code.
 
 When deciding between creating a type hierarchy (with either tagged or virtual
 dispatch) and using templates or concepts-based polymorphism, consider whether
