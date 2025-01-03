@@ -464,57 +464,55 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   LLT DestTy = MRI.getType(Dst);
   LLT ScalarDestTy = DestTy.getScalarType();
 
-  if ((ScalarDestTy == LLT::float64() || ScalarDestTy == LLT::float32() ||
-       ScalarDestTy == LLT::float16()) &&
-      (MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))) {
-    Register SelectCondReg = Sel.getOperand(1).getReg();
-    MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
-    MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
+  if ((ScalarDestTy != LLT::float64() && ScalarDestTy != LLT::float32() &&
+       ScalarDestTy != LLT::float16()) ||
+      !MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))
+    return false;
 
-    const auto SelectTrueVal =
-        isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
-    if (!SelectTrueVal)
-      return false;
-    const auto SelectFalseVal =
-        isConstantOrConstantSplatVectorFP(*SelectFalse, MRI);
-    if (!SelectFalseVal)
-      return false;
+  Register SelectCondReg = Sel.getOperand(1).getReg();
+  MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
+  MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
 
-    if (SelectTrueVal->isNegative() != SelectFalseVal->isNegative())
-      return false;
+  const auto SelectTrueVal =
+      isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
+  if (!SelectTrueVal)
+    return false;
+  const auto SelectFalseVal =
+      isConstantOrConstantSplatVectorFP(*SelectFalse, MRI);
+  if (!SelectFalseVal)
+    return false;
 
-    // For f32, only non-inline constants should be transformed.
-    if (ScalarDestTy == LLT::float32() &&
-        TII.isInlineConstant(*SelectTrueVal) &&
-        TII.isInlineConstant(*SelectFalseVal))
-      return false;
+  if (SelectTrueVal->isNegative() != SelectFalseVal->isNegative())
+    return false;
 
-    int SelectTrueLog2Val = SelectTrueVal->getExactLog2Abs();
-    if (SelectTrueLog2Val == INT_MIN)
-      return false;
-    int SelectFalseLog2Val = SelectFalseVal->getExactLog2Abs();
-    if (SelectFalseLog2Val == INT_MIN)
-      return false;
+  // For f32, only non-inline constants should be transformed.
+  if (ScalarDestTy == LLT::float32() && TII.isInlineConstant(*SelectTrueVal) &&
+      TII.isInlineConstant(*SelectFalseVal))
+    return false;
 
-    MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
-      LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
-      auto NewSel = Builder.buildSelect(
-          IntDestTy, SelectCondReg,
-          Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
-          Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
+  int SelectTrueLog2Val = SelectTrueVal->getExactLog2Abs();
+  if (SelectTrueLog2Val == INT_MIN)
+    return false;
+  int SelectFalseLog2Val = SelectFalseVal->getExactLog2Abs();
+  if (SelectFalseLog2Val == INT_MIN)
+    return false;
 
-      Register XReg = MI.getOperand(1).getReg();
-      if (SelectTrueVal->isNegative()) {
-        auto NegX =
-            Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
-        Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
-      } else {
-        Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
-      }
-    };
+  MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
+    LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+    auto NewSel = Builder.buildSelect(
+        IntDestTy, SelectCondReg,
+        Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
+        Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
 
-    return true;
-  }
+    Register XReg = MI.getOperand(1).getReg();
+    if (SelectTrueVal->isNegative()) {
+      auto NegX =
+          Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
+      Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
+    } else {
+      Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
+    }
+  };
 
-  return false;
+  return true;
 }
