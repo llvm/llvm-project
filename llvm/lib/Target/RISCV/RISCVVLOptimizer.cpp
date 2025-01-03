@@ -540,7 +540,7 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VFWMSAC_VF:
   case RISCV::VFWMSAC_VV:
   case RISCV::VFWNMSAC_VF:
-  case RISCV::VFWNMSAC_VV: 
+  case RISCV::VFWNMSAC_VV:
   // Vector Widening Floating-Point Add/Subtract Instructions
   // Dest EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
   case RISCV::VFWADD_VV:
