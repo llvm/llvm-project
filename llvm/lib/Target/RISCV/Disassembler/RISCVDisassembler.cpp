@@ -695,6 +695,9 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureVendorXqciac, DecoderTableXqciac32,
       "Qualcomm uC Load-Store Address Calculation custom opcode table");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqcicli, DecoderTableXqcicli32,
+      "Qualcomm uC Conditional Load Immediate custom opcode table");
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
   return MCDisassembler::Fail;
