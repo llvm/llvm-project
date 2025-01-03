@@ -309,7 +309,7 @@ private:
     // Add new allocs and additional clone operations.
     for (Value value : valuesToFree) {
       if (!isa<BaseMemRefType>(value.getType())) {
-          continue;
+        continue;
       }
       if (failed(isa<BlockArgument>(value)
                      ? introduceBlockArgCopy(cast<BlockArgument>(value))
