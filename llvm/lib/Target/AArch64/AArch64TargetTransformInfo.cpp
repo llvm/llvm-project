@@ -2763,6 +2763,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return AdjustCost(
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
+  static const TypeConversionCostTblEntry BF16Tbl[] = {
+      {ISD::FP_ROUND, MVT::bf16, MVT::f32, 1},     // bfcvt
+      {ISD::FP_ROUND, MVT::bf16, MVT::f64, 1},     // bfcvt
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f32, 1}, // bfcvtn
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f32, 2}, // bfcvtn+bfcvtn2
+      {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 2}, // bfcvtn+fcvtn
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 3}, // fcvtn+fcvtl2+bfcvtn
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+bfcvtn
+  };
+
+  if (ST->hasBF16())
+    if (const auto *Entry = ConvertCostTableLookup(
+            BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+      return AdjustCost(Entry->Cost);
+
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i64, 1},   // xtn
@@ -2850,6 +2865,14 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::v2f64, MVT::v2f16, 2}, // fcvtl+fcvtl
       {ISD::FP_EXTEND, MVT::v4f64, MVT::v4f16, 3}, // fcvtl+fcvtl2+fcvtl
       {ISD::FP_EXTEND, MVT::v8f64, MVT::v8f16, 6}, // 2 * fcvtl+fcvtl2+fcvtl
+      //   BF16 (uses shift)
+      {ISD::FP_EXTEND, MVT::f32, MVT::bf16, 1},     // shl
+      {ISD::FP_EXTEND, MVT::f64, MVT::bf16, 2},     // shl+fcvt
+      {ISD::FP_EXTEND, MVT::v4f32, MVT::v4bf16, 1}, // shll
+      {ISD::FP_EXTEND, MVT::v8f32, MVT::v8bf16, 2}, // shll+shll2
+      {ISD::FP_EXTEND, MVT::v2f64, MVT::v2bf16, 2}, // shll+fcvtl
+      {ISD::FP_EXTEND, MVT::v4f64, MVT::v4bf16, 3}, // shll+fcvtl+fcvtl2
+      {ISD::FP_EXTEND, MVT::v8f64, MVT::v8bf16, 6}, // 2 * shll+fcvtl+fcvtl2
       // FP Ext and trunc
       {ISD::FP_ROUND, MVT::f32, MVT::f64, 1},     // fcvt
       {ISD::FP_ROUND, MVT::v2f32, MVT::v2f64, 1}, // fcvtn
@@ -2862,6 +2885,15 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::v2f16, MVT::v2f64, 2}, // fcvtn+fcvtn
       {ISD::FP_ROUND, MVT::v4f16, MVT::v4f64, 3}, // fcvtn+fcvtn2+fcvtn
       {ISD::FP_ROUND, MVT::v8f16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+fcvtn
+      //   BF16 (more complex, with +bf16 is handled above)
+      {ISD::FP_ROUND, MVT::bf16, MVT::f32, 8}, // Expansion is ~8 insns
+      {ISD::FP_ROUND, MVT::bf16, MVT::f64, 9}, // fcvtn + above
+      {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f32, 8},
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f32, 8},
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f32, 15},
+      {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 9},
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 10},
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 19},
 
       // LowerVectorINT_TO_FP:
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
