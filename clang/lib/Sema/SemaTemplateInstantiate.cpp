@@ -1364,11 +1364,10 @@ namespace {
 
   private:
     bool isSubstitutingConstraints() const {
-      return llvm::any_of(
-          llvm::reverse(SemaRef.CodeSynthesisContexts), [](auto &Context) {
-            return Context.Kind ==
-                   Sema::CodeSynthesisContext::ConstraintSubstitution;
-          });
+      return llvm::any_of(SemaRef.CodeSynthesisContexts, [](auto &Context) {
+        return Context.Kind ==
+               Sema::CodeSynthesisContext::ConstraintSubstitution;
+      });
     }
 
     // CWG2770: Function parameters should be instantiated when they are
@@ -1389,7 +1388,9 @@ namespace {
     void setEvaluateConstraints(bool B) {
       EvaluateConstraints = B;
     }
-    bool getEvaluateConstraints() const { return EvaluateConstraints; }
+    bool getEvaluateConstraints() const {
+      return EvaluateConstraints;
+    }
 
     /// Determine whether the given type \p T has already been
     /// transformed.
