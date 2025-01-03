@@ -897,7 +897,6 @@ void Type::applyTypespec(bool &Quad) {
     case 'm':
       Kind = MFloat8;
       ElementBitwidth = 8;
-      NoManglingQ = true;
       break;
     default:
       llvm_unreachable("Unhandled type code!");
