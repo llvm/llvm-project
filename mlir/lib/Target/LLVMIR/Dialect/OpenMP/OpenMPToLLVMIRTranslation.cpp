@@ -345,31 +345,37 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
         allocaInsertPoint = frame.allocaInsertPoint;
         return WalkResult::interrupt();
       });
-  if (walkResult.wasInterrupted())
-    return allocaInsertPoint;
 
   // Otherwise, insert to the entry block of the surrounding function.
-  // If the current IRBuilder InsertPoint is the function's entry, it cannot
-  // also be used for alloca insertion which would result in insertion order
-  // confusion. Create a new BasicBlock for the Builder and use the entry block
-  // for the allocs.
-  // TODO: Create a dedicated alloca BasicBlock at function creation such that
-  // we do not need to move the current InertPoint here.
-  if (builder.GetInsertBlock() ==
-      &builder.GetInsertBlock()->getParent()->getEntryBlock()) {
-    assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end() &&
-           "Assuming end of basic block");
-    llvm::BasicBlock *entryBB = llvm::BasicBlock::Create(
-        builder.getContext(), "entry", builder.GetInsertBlock()->getParent(),
-        builder.GetInsertBlock()->getNextNode());
-    builder.CreateBr(entryBB);
-    builder.SetInsertPoint(entryBB);
+  if (!walkResult.wasInterrupted()) {
+    llvm::BasicBlock &funcEntryBlock =
+        builder.GetInsertBlock()->getParent()->getEntryBlock();
+    allocaInsertPoint = llvm::OpenMPIRBuilder::InsertPointTy(
+        &funcEntryBlock, funcEntryBlock.getFirstInsertionPt());
   }
 
-  llvm::BasicBlock &funcEntryBlock =
-      builder.GetInsertBlock()->getParent()->getEntryBlock();
+  // If the current IRBuilder insertion block is the same as the alloca
+  // insertion block, it cannot also be used for alloca insertion which would
+  // result in insertion order confusion. Create a new BasicBlock for the
+  // Builder and use the entry block for the allocs.
+  //
+  // TODO: Create a dedicated alloca BasicBlock at function creation such that
+  // we do not need to move the current InertPoint here.
+  if (builder.GetInsertBlock() == allocaInsertPoint.getBlock()) {
+    assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end() &&
+           "Assuming end of basic block");
+    auto *insertCont = splitBB(
+        llvm::OpenMPIRBuilder::InsertPointTy(
+            allocaInsertPoint.getBlock(), allocaInsertPoint.getBlock()->end()),
+        true, "insert.cont");
+    builder.SetInsertPoint(insertCont, insertCont->end());
+  }
+
   return llvm::OpenMPIRBuilder::InsertPointTy(
-      &funcEntryBlock, funcEntryBlock.getFirstInsertionPt());
+      allocaInsertPoint.getBlock(),
+      allocaInsertPoint.getPoint() != allocaInsertPoint.getBlock()->end()
+          ? allocaInsertPoint.getPoint()
+          : allocaInsertPoint.getBlock()->getFirstInsertionPt());
 }
 
 /// Converts the given region that appears within an OpenMP dialect operation to
@@ -380,7 +386,8 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
 static llvm::Expected<llvm::BasicBlock *> convertOmpOpRegions(
     Region &region, StringRef blockName, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation &moduleTranslation,
-    SmallVectorImpl<llvm::PHINode *> *continuationBlockPHIs = nullptr) {
+    SmallVectorImpl<llvm::PHINode *> *continuationBlockPHIs = nullptr,
+    bool saveFirstBlockForAlloca = false) {
   llvm::BasicBlock *continuationBlock =
       splitBB(builder, true, "omp.region.cont");
   llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
@@ -441,6 +448,14 @@ static llvm::Expected<llvm::BasicBlock *> convertOmpOpRegions(
   // Convert blocks one by one in topological order to ensure
   // defs are converted before uses.
   SetVector<Block *> blocks = getBlocksSortedByDominance(region);
+  llvm::BasicBlock *firstLLVMBB = moduleTranslation.lookupBlock(blocks.front());
+  std::optional<LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame>>
+      frame;
+
+  if (saveFirstBlockForAlloca)
+    frame.emplace(moduleTranslation, llvm::OpenMPIRBuilder::InsertPointTy(
+                                         firstLLVMBB, firstLLVMBB->end()));
+
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
     // Retarget the branch of the entry block to the entry block of the
@@ -2093,15 +2108,11 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
         moduleTranslation, reductionVariableMap);
 
-    // Save the alloca insertion point on ModuleTranslation stack for use in
-    // nested regions.
-    LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
-        moduleTranslation, allocaIP);
-
     // ParallelOp has only one region associated with it.
     builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
-        opInst.getRegion(), "omp.par.region", builder, moduleTranslation);
+        opInst.getRegion(), "omp.par.region", builder, moduleTranslation,
+        /*continuationBlockPHIs=*/nullptr, /*saveFirstBlockForAlloca=*/true);
     if (!regionBlock)
       return regionBlock.takeError();
 
@@ -2186,6 +2197,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
@@ -4022,7 +4034,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
     builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> exitBlock = convertOmpOpRegions(
-        targetRegion, "omp.target", builder, moduleTranslation);
+        targetRegion, "omp.target", builder, moduleTranslation,
+        /*continuationBlockPHIs=*/nullptr, /*saveFirstBlockForAlloca=*/true);
 
     if (!exitBlock)
       return exitBlock.takeError();

@@ -26,7 +26,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: define void @_QQmain() {
 // CHECK: %[[BYCOPY_ALLOCA:.*]] = alloca ptr, align 8
 
-// CHECK: entry:                                            ; preds = %0
+// CHECK: {{.*}}:                                            ; preds = %0
 // CHECK: %[[LOAD_VAL:.*]] = load i32, ptr @_QFEi, align 4
 // CHECK: store i32 %[[LOAD_VAL]], ptr %[[BYCOPY_ALLOCA]], align 4
 // CHECK: %[[BYCOPY_LOAD:.*]] = load ptr, ptr %[[BYCOPY_ALLOCA]], align 8

@@ -39,25 +39,32 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:       omp.par.entry:
 // CHECK:         %[[VAL_9:.*]] = getelementptr { ptr }, ptr %[[VAL_10:.*]], i32 0, i32 0
 // CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_9]], align 8
-// CHECK:         %[[VAL_12:.*]] = alloca i32, align 4
-// CHECK:         %[[VAL_13:.*]] = alloca i32, align 4
-// CHECK:         %[[VAL_14:.*]] = alloca i32, align 4
-// CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
 // CHECK:         %[[VAL_16:.*]] = alloca i32, align 4
 // CHECK:         %[[VAL_17:.*]] = load i32, ptr %[[VAL_18:.*]], align 4
 // CHECK:         store i32 %[[VAL_17]], ptr %[[VAL_16]], align 4
 // CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_16]], align 4
+// CHECK:           br label %omp.par.region
+
+// CHECK:       omp.par.region:
+// CHECK:         br label %omp.par.region1
+
+// CHECK:       omp.par.region1:
+// CHECK:         %[[VAL_12:.*]] = alloca i32, align 4
+// CHECK:         %[[VAL_13:.*]] = alloca i32, align 4
+// CHECK:         %[[VAL_14:.*]] = alloca i32, align 4
+// CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
 // CHECK:         %[[VAL_20:.*]] = alloca float, align 4
 // CHECK:         %[[VAL_21:.*]] = alloca [1 x ptr], align 8
-// CHECK:         br label %[[VAL_22:.*]]
-// CHECK:       omp.reduction.init:                               ; preds = %[[VAL_23:.*]]
+// CHECK:         br label %omp.reduction.init
+
+// CHECK:       omp.reduction.init:
 // CHECK:         store float 0.000000e+00, ptr %[[VAL_20]], align 4
-// CHECK:         br label %[[VAL_24:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[VAL_22]]
-// CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.par.region1:                                  ; preds = %[[VAL_24]]
-// CHECK:         br label %[[VAL_26:.*]]
-// CHECK:       omp_section_loop.preheader:                       ; preds = %[[VAL_25]]
+// CHECK:         br label %[[CONT_BB:.*]]
+
+// CHECK:       [[CONT_BB]]:
+// CHECK:         br label %[[PRE_HEADER:omp_section_loop.preheader]]
+
+// CHECK:       [[PRE_HEADER]]:
 // CHECK:         store i32 0, ptr %[[VAL_13]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_15]], align 4
@@ -68,8 +75,9 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_30:.*]] = sub i32 %[[VAL_29]], %[[VAL_28]]
 // CHECK:         %[[VAL_31:.*]] = add i32 %[[VAL_30]], 1
 // CHECK:         br label %[[VAL_32:.*]]
-// CHECK:       omp_section_loop.header:                          ; preds = %[[VAL_33:.*]], %[[VAL_26]]
-// CHECK:         %[[VAL_34:.*]] = phi i32 [ 0, %[[VAL_26]] ], [ %[[VAL_35:.*]], %[[VAL_33]] ]
+
+// CHECK:       omp_section_loop.header:                          ; preds = %[[VAL_33:omp_section_loop.inc]], %[[PRE_HEADER]]
+// CHECK:         %[[VAL_34:.*]] = phi i32 [ 0, %[[PRE_HEADER]] ], [ %[[VAL_35:.*]], %[[VAL_33]] ]
 // CHECK:         br label %[[VAL_36:.*]]
 // CHECK:       omp_section_loop.cond:                            ; preds = %[[VAL_32]]
 // CHECK:         %[[VAL_37:.*]] = icmp ult i32 %[[VAL_34]], %[[VAL_31]]
@@ -115,14 +123,14 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:           i32 0, label %[[VAL_60:.*]]
 // CHECK:           i32 1, label %[[VAL_61:.*]]
 // CHECK:         ]
-// CHECK:       omp_section_loop.body.case3:                      ; preds = %[[VAL_38]]
+// CHECK:       [[VAL_61]]:                      ; preds = %[[VAL_38]]
 // CHECK:         br label %[[VAL_62:.*]]
-// CHECK:       omp.section.region5:                              ; preds = %[[VAL_61]]
+// CHECK:       [[VAL_62]]:                              ; preds = %[[VAL_61]]
 // CHECK:         %[[VAL_63:.*]] = load float, ptr %[[VAL_20]], align 4
 // CHECK:         %[[VAL_64:.*]] = fadd contract float %[[VAL_63]], 2.000000e+00
 // CHECK:         store float %[[VAL_64]], ptr %[[VAL_20]], align 4
 // CHECK:         br label %[[VAL_65:.*]]
-// CHECK:       omp.region.cont4:                                 ; preds = %[[VAL_62]]
+// CHECK:       [[VAL_65]]:                                 ; preds = %[[VAL_62]]
 // CHECK:         br label %[[VAL_59]]
 // CHECK:       omp_section_loop.body.case:                       ; preds = %[[VAL_38]]
 // CHECK:         br label %[[VAL_66:.*]]
@@ -131,7 +139,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_68:.*]] = fadd contract float %[[VAL_67]], 1.000000e+00
 // CHECK:         store float %[[VAL_68]], ptr %[[VAL_20]], align 4
 // CHECK:         br label %[[VAL_69:.*]]
-// CHECK:       omp.region.cont2:                                 ; preds = %[[VAL_66]]
+// CHECK:       [[VAL_69]]:                                 ; preds = %[[VAL_66]]
 // CHECK:         br label %[[VAL_59]]
 // CHECK:       omp_section_loop.body.sections.after:             ; preds = %[[VAL_65]], %[[VAL_69]], %[[VAL_38]]
 // CHECK:         br label %[[VAL_33]]

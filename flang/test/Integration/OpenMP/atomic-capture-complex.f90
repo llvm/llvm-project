@@ -13,16 +13,16 @@
 !CHECK: %[[VAL_1:.*]] = alloca { float, float }, i64 1, align 8
 !CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
 !CHECK: store { float, float } { float 2.000000e+00, float 2.000000e+00 }, ptr %[[ORIG_VAL]], align 4
-!CHECK: br label %entry
+!CHECK: br label %[[ENTRY:.*]]
 
-!CHECK: entry:
+!CHECK: [[ENTRY]]:
 !CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 !CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 !CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 !CHECK: br label %.atomic.cont
 
 !CHECK: .atomic.cont
-!CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+!CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %[[ENTRY]] ], [ %{{.*}}, %.atomic.cont ]
 !CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
 !CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
 !CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00

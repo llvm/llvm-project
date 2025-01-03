@@ -1415,16 +1415,16 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 //CHECK: {{.*}} = alloca { float, float }, i64 1, align 8
 //CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
 
-//CHECK: br label %entry
+//CHECK: br label %[[ENTRY:.*]]
 
-//CHECK: entry:
+//CHECK: [[ENTRY]]:
 //CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 //CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 //CHECK: br label %.atomic.cont
 
 //CHECK: .atomic.cont
-//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %{{.*}} ], [ %{{.*}}, %.atomic.cont ]
 //CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
 //CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
 //CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00
@@ -1467,16 +1467,16 @@ llvm.func @_QPomp_atomic_update_complex() {
 //CHECK: %[[VAL_1:.*]] = alloca { float, float }, i64 1, align 8
 //CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
 //CHECK: store { float, float } { float 2.000000e+00, float 2.000000e+00 }, ptr %[[ORIG_VAL]], align 4
-//CHECK: br label %entry
+//CHECK: br label %[[ENTRY:.*]]
 
-//CHECK: entry:							; preds = %0
+//CHECK: [[ENTRY]]:							; preds = %0
 //CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 //CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 //CHECK: br label %.atomic.cont
 
 //CHECK: .atomic.cont
-//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %{{.*}} ], [ %{{.*}}, %.atomic.cont ]
 //CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
 //CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
 //CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00
@@ -1613,7 +1613,7 @@ llvm.func @omp_atomic_update_intrinsic(%x:!llvm.ptr, %expr: i32) {
 // CHECK-LABEL: @atomic_update_cmpxchg
 // CHECK-SAME: (ptr %[[X:.*]], ptr %[[EXPR:.*]]) {
 // CHECK:  %[[AT_LOAD_VAL:.*]] = load atomic i32, ptr %[[X]] monotonic, align 4
-// CHECK:  %[[LOAD_VAL_PHI:.*]] = phi i32 [ %[[AT_LOAD_VAL]], %entry ], [ %[[LOAD_VAL:.*]], %.atomic.cont ]
+// CHECK:  %[[LOAD_VAL_PHI:.*]] = phi i32 [ %[[AT_LOAD_VAL]], %{{.*}} ], [ %[[LOAD_VAL:.*]], %.atomic.cont ]
 // CHECK:  %[[VAL_SUCCESS:.*]] = cmpxchg ptr %[[X]], i32 %[[LOAD_VAL_PHI]], i32 %{{.*}} monotonic monotonic, align 4
 // CHECK:  %[[LOAD_VAL]] = extractvalue { i32, i1 } %[[VAL_SUCCESS]], 0
 // CHECK:  br i1 %{{.*}}, label %.atomic.exit, label %.atomic.cont
@@ -2216,8 +2216,8 @@ llvm.func @omp_sections_empty() -> () {
   omp.sections {
     omp.terminator
   }
-  // CHECK-NEXT: br label %entry
-  // CHECK: entry:
+  // CHECK-NEXT: br label %[[ENTRY:.*]]
+  // CHECK: [[ENTRY]]:
   // CHECK-NEXT: ret void
   llvm.return
 }
@@ -3093,7 +3093,7 @@ llvm.func @omp_task_final(%boolexpr: i1) {
 // CHECK:         br label %[[entry:[^,]+]]
 // CHECK:       [[entry]]:
 // CHECK:         br label %[[codeRepl:[^,]+]]
-// CHECK:       [[codeRepl]]:                                         ; preds = %entry
+// CHECK:       [[codeRepl]]:
 // CHECK:         %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
 // CHECK:         %[[final_flag:.+]] = select i1 %[[boolexpr]], i32 2, i32 0
 // CHECK:         %[[task_flags:.+]] = or i32 %[[final_flag]], 1

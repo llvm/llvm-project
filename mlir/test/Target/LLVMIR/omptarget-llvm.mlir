@@ -20,7 +20,7 @@ llvm.func @_QPopenmp_target_data() {
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x ptr], align 8
 // CHECK:         %[[VAL_3:.*]] = alloca i32, i64 1, align 4
 // CHECK:         br label %[[VAL_4:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_5:.*]]
+// CHECK:       [[VAL_4]]:                                            ; preds = %[[VAL_5:.*]]
 // CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_6]], align 8
 // CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
@@ -65,7 +65,7 @@ llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
 // CHECK:         %[[VAL_1:.*]] = alloca [1 x ptr], align 8
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_3:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_4:.*]]
+// CHECK:       [[VAL_3]]:                                            ; preds = %[[VAL_4:.*]]
 // CHECK:         %[[ARR_OFFSET:.*]] = getelementptr inbounds [1024 x i32], ptr %[[ARR_DATA:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_5:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[ARR_DATA]], ptr %[[VAL_5]], align 8
@@ -151,7 +151,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         %[[VAL_9:.*]] = icmp slt i32 %[[VAL_8]], 10
 // CHECK:         %[[VAL_10:.*]] = load i32, ptr %[[VAL_6]], align 4
 // CHECK:         br label %[[VAL_11:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_12:.*]]
+// CHECK:       [[VAL_11]]:                                            ; preds = %[[VAL_12:.*]]
 // CHECK:         br i1 %[[VAL_9]], label %[[VAL_13:.*]], label %[[VAL_14:.*]]
 // CHECK:       omp_if.then:                                      ; preds = %[[VAL_11]]
 // CHECK:         %[[ARR_OFFSET1:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16:.*]], i64 0, i64 0
@@ -228,7 +228,7 @@ llvm.func @_QPopenmp_target_use_dev_ptr() {
 // CHECK:         %[[VAL_3:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_4:.*]] = alloca ptr, i64 1, align 8
 // CHECK:         br label %[[VAL_5:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_6:.*]]
+// CHECK:       [[VAL_5]]:                                            ; preds = %[[VAL_6:.*]]
 // CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_4]], ptr %[[VAL_7]], align 8
 // CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
@@ -271,7 +271,7 @@ llvm.func @_QPopenmp_target_use_dev_addr() {
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x ptr], align 8
 // CHECK:         %[[VAL_3:.*]] = alloca ptr, i64 1, align 8
 // CHECK:         br label %[[VAL_4:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_5:.*]]
+// CHECK:       [[VAL_4]]:                                            ; preds = %[[VAL_5:.*]]
 // CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_6]], align 8
 // CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
@@ -312,7 +312,7 @@ llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x ptr], align 8
 // CHECK:         %[[VAL_3:.*]] = alloca i32, i64 1, align 4
 // CHECK:         br label %[[VAL_4:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_5:.*]]
+// CHECK:       [[VAL_4]]:                                            ; preds = %[[VAL_5:.*]]
 // CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_6]], align 8
 // CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
@@ -359,7 +359,7 @@ llvm.func @_QPopenmp_target_use_dev_addr_nomap() {
 // CHECK:         %[[VAL_3:.*]] = alloca ptr, i64 1, align 8
 // CHECK:         %[[VAL_4:.*]] = alloca ptr, i64 1, align 8
 // CHECK:         br label %[[VAL_5:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_6:.*]]
+// CHECK:       [[VAL_5]]:                                            ; preds = %[[VAL_6:.*]]
 // CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_4]], ptr %[[VAL_7]], align 8
 // CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
@@ -418,7 +418,7 @@ llvm.func @_QPopenmp_target_use_dev_both() {
 // CHECK:         %[[VAL_4:.*]] = alloca ptr, i64 1, align 8
 // CHECK:         %[[VAL_5:.*]] = alloca ptr, i64 1, align 8
 // CHECK:         br label %[[VAL_6:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_7:.*]]
+// CHECK:       [[VAL_6]]:                                            ; preds = %[[VAL_7:.*]]
 // CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_4]], ptr %[[VAL_8]], align 8
 // CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
