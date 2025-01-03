@@ -33,22 +33,21 @@ Two goo __attribute__((init_priority(2,3))) ( 5, 6 ); // expected-error {{'init_
 
 Two coo[2]  __attribute__((init_priority(100)));
 #if !defined(SYSTEM)
-  // expected-error@-2 {{'init_priority' attribute requires integer constant between 101 and 65535 inclusive}}
+  // expected-warning@-2 {{requested 'init_priority' 100 is reserved for internal use}}
   // unknown-warning@-3 {{unknown attribute 'init_priority' ignored}}
 #endif
 
-Two boo[2]  __attribute__((init_priority(65536)));
-#if !defined(SYSTEM)
- // expected-error@-2 {{'init_priority' attribute requires integer constant between 101 and 65535 inclusive}}
- // unknown-warning@-3 {{unknown attribute 'init_priority' ignored}}
-#endif
+Two zoo[2]  __attribute__((init_priority(-1))); // expected-error {{'init_priority' attribute requires integer constant between 0 and 65535 inclusive}}
+// unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
+
+Two boo[2]  __attribute__((init_priority(65536))); // expected-error {{'init_priority' attribute requires integer constant between 0 and 65535 inclusive}}
+// unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
 
 Two koo[4]  __attribute__((init_priority(1.13))); // expected-error {{'init_priority' attribute requires an integer constant}}
 // unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
 
 Two func()  __attribute__((init_priority(1001))); // expected-error {{'init_priority' attribute only applies to variables}}
 // unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
-
 
 int i  __attribute__((init_priority(1001))); // expected-error {{can only use 'init_priority' attribute on file-scope definitions of objects of class type}}
 // unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
