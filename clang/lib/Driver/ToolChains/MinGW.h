@@ -13,7 +13,6 @@
 #include "Gnu.h"
 #include "LazyDetector.h"
 #include "ROCm.h"
-#include "SYCL.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Support/ErrorOr.h"
@@ -93,8 +92,6 @@ public:
                           llvm::opt::ArgStringList &CC1Args) const override;
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
-  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                          llvm::opt::ArgStringList &CC1Args) const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
@@ -108,7 +105,6 @@ protected:
 private:
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
-  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
 
   std::string Base;
   std::string GccLibDir;

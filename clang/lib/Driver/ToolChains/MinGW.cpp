@@ -491,7 +491,7 @@ static bool looksLikeMinGWSysroot(const std::string &Directory) {
 toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
-      RocmInstallation(D, Triple, Args), SYCLInstallation(D, Triple, Args) {
+      RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().Dir);
 
   std::string InstallBase =
@@ -628,11 +628,6 @@ void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                           ArgStringList &CC1Args) const {
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
-}
-
-void toolchains::MinGW::addSYCLIncludeArgs(const ArgList &DriverArgs,
-                                           ArgStringList &CC1Args) const {
-  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {
