@@ -44,6 +44,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(Delta32)
     KIND_NAME_CASE(NegDelta32)
     KIND_NAME_CASE(Delta64)
+    KIND_NAME_CASE(Branch16PCRel)
+    KIND_NAME_CASE(Branch21PCRel)
     KIND_NAME_CASE(Branch26PCRel)
     KIND_NAME_CASE(Page20)
     KIND_NAME_CASE(PageOffset12)
