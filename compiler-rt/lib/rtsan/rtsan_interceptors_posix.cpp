@@ -297,12 +297,6 @@ INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   return REAL(fdopen)(fd, mode);
 }
 
-INTERCEPTOR(FILE *, fopencookie, void *cookie, const char *mode,
-            cookie_io_functions_t funcs) {
-  __rtsan_notify_intercepted_call("fopencookie");
-  return REAL(fopencookie)(cookie, mode, funcs);
-}
-
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 INTERCEPTOR(FILE *, open_memstream, char **buf, size_t *size) {
   __rtsan_notify_intercepted_call("open_memstream");
@@ -978,7 +972,6 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(fputs);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
-  INTERCEPT_FUNCTION(fopencookie);
   RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
   RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
   INTERCEPT_FUNCTION(lseek);
