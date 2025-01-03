@@ -147,6 +147,19 @@ class FuseOp(FuseOp):
     @overload
     def __init__(
         self,
+        loop_types: Union[Type, Sequence[Type]],
+        target: Union[Operation, Value, OpView],
+        *,
+        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
+        tile_interchange: OptionalIntList = None,
+        apply_cleanup: Optional[bool] = False,
+        loc=None,
+        ip=None,
+    ):
+        ...
+    @overload
+    def __init__(
+        self,
         target: Union[Operation, Value, OpView],
         *,
         tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
