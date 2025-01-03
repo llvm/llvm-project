@@ -1,6 +1,4 @@
-///
 /// Perform several driver tests for SYCL offloading for JIT
-///
 
 /// Check the phases graph with -fsycl. Use of -fsycl enables offload
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
