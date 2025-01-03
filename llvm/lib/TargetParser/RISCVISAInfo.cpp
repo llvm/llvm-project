@@ -742,7 +742,8 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"}, {"xqcics"}, {"xqcicsr"}, {"xqcilsm"}, {"xqcisls"}};
+      {"xqcia"},   {"xqciac"},  {"xqcicli"}, {"xqcics"},
+      {"xqcicsr"}, {"xqcilsm"}, {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");

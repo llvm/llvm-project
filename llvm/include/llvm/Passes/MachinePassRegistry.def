@@ -179,7 +179,7 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
                                           PARAMS)
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "regallocfast", "RegAllocFast",
+    "regallocfast", "RegAllocFastPass",
     [](RegAllocFastPassOptions Opts) { return RegAllocFastPass(Opts); },
     [PB = this](StringRef Params) {
       return parseRegAllocFastPassOptions(*PB, Params);

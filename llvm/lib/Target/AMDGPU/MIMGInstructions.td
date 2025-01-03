@@ -917,7 +917,7 @@ class MIMG_Atomic_gfx90a<mimgopc op, string asm, RegisterClass data_rc,
 class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
-  : MIMG_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst),
+  : MIMG_gfx10<op.GFX10M, (outs DataRC:$vdst),
                !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -930,7 +930,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
 class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
-  : MIMG_nsa_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst), num_addrs,
+  : MIMG_nsa_gfx10<op.GFX10M, (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -945,7 +945,7 @@ class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
 class MIMG_Atomic_gfx11<mimgopc op, string opcode,
                         RegisterClass DataRC, RegisterClass AddrRC,
                         bit enableDisasm = 0>
-  : MIMG_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst),
+  : MIMG_gfx11<op.GFX11, (outs DataRC:$vdst),
                !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -958,7 +958,7 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
 class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
                             RegisterClass DataRC, int num_addrs,
                             bit enableDisasm = 0>
-  : MIMG_nsa_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst), num_addrs,
+  : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "GFX11", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -971,8 +971,8 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
 }
 
 class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
-                          int num_addrs, bit enableDisasm = 0>
-  : VIMAGE_gfx12<!cast<int>(op.GFX12), (outs DataRC:$vdst), num_addrs,
+                          int num_addrs, string renamed, bit enableDisasm = 0>
+  : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdst), num_addrs,
                   !if(enableDisasm, "GFX12", "")> {
   let Constraints = "$vdst = $vdata";
 
@@ -980,13 +980,9 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
                            AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
                                  CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe";
+  let AsmString = !if(!empty(renamed), opcode, renamed)#" $vdata, "#AddrAsm#
+                  ", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 }
-
-class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string renamed,
-                                  RegisterClass DataRC, int num_addrs,
-                                  bit enableDisasm = 0>
-  : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>;
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
@@ -1014,10 +1010,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1>;
-        else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1>;
+        def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, renamed>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1039,10 +1032,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, 0>;
-        else
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 2, 0>;
+        def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, renamed>;
       }
     }
     let VAddrDwords = 3 in {
@@ -1064,10 +1054,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, 0>;
-        else
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 3, 0>;
+        def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, renamed>;
       }
     }
     let VAddrDwords = 4 in {
@@ -1089,10 +1076,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, enableDasm>;
-        else
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 4, enableDasm>;
+        def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, renamed, enableDasm>;
       }
     }
   }
