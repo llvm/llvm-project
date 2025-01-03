@@ -353,6 +353,31 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
+TEST_F(RtsanFileTest, FopenCookieDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  struct fholder {
+    FILE *fp;
+    size_t read;
+  } fh = {f, 0};
+  auto CookieRead = [this](void *cookie, char *buf, size_t size) {
+    fholder *p = reinterpret_cast<fholder *>(cookie);
+    p->read = fread(static_cast<void *>(buf), 1, size, p->fp);
+    EXPECT_NE(0, p->read);
+  };
+  cookie_io_functions_t funcs = {(cookie_read_function_t *)&CookieRead, nullptr,
+                                 nullptr, nullptr};
+  auto Func = [&fh, &funcs]() {
+    FILE *f = fopencookie(&fh, "w", funcs);
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fopencookie");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 TEST_F(RtsanFileTest, OpenMemstreamDiesWhenRealtime) {
   char *buffer;
