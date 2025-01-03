@@ -1956,18 +1956,47 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
     ParmVarDecl *OldParm) {
   if (SemaRef.CurrentInstantiationScope->findInstantiationUnsafe(OldParm))
     return false;
-  // Make sure the instantiated parameters are owned by the function
-  // declaration.
+  // We're instantiating a function parameter whose associated function template
+  // has not been instantiated at this point for constraint evaluation, so make
+  // sure the instantiated parameters are owned by a function declaration such
+  // that they can be correctly 'captured' in tryCaptureVariable().
   Sema::ContextRAII Context(SemaRef, OldParm->getDeclContext());
 
-  SmallVector<QualType> PTypes;
-  Sema::ExtParameterInfoBuilder TInfoBuilder;
+  if (!OldParm->isParameterPack())
+    return !TransformFunctionTypeParam(OldParm, /*indexAdjustment=*/0,
+                                       /*NumExpansions=*/std::nullopt,
+                                       /*ExpectParameterPack=*/false);
 
-  return inherited::TransformFunctionTypeParams(
-      /*Loc=*/SourceLocation(), /*Params=*/OldParm, /*ParamTypes=*/nullptr,
-      /*ParamInfos=*/nullptr, /*PTypes=*/PTypes, /*PVars=*/nullptr,
-      TInfoBuilder, /*LastParamTransformed=*/nullptr,
-      /*IgnoreParameterIndex=*/true);
+  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+
+  // Find the parameter packs that could be expanded.
+  TypeLoc TL = OldParm->getTypeSourceInfo()->getTypeLoc();
+  PackExpansionTypeLoc ExpansionTL = TL.castAs<PackExpansionTypeLoc>();
+  TypeLoc Pattern = ExpansionTL.getPatternLoc();
+  SemaRef.collectUnexpandedParameterPacks(Pattern, Unexpanded);
+  assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
+
+  bool ShouldExpand = false;
+  bool RetainExpansion = false;
+  std::optional<unsigned> OrigNumExpansions =
+      ExpansionTL.getTypePtr()->getNumExpansions();
+  std::optional<unsigned> NumExpansions = OrigNumExpansions;
+  if (TryExpandParameterPacks(ExpansionTL.getEllipsisLoc(),
+                              Pattern.getSourceRange(), Unexpanded,
+                              ShouldExpand, RetainExpansion, NumExpansions))
+    return true;
+
+  assert(ShouldExpand && !RetainExpansion &&
+         "Shouldn't preserve pack expansion when evaluating constraints");
+  ExpandingFunctionParameterPack(OldParm);
+  for (unsigned I = 0; I != *NumExpansions; ++I) {
+    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
+    if (!TransformFunctionTypeParam(OldParm, /*indexAdjustment=*/0,
+                                    /*NumExpansions=*/OrigNumExpansions,
+                                    /*ExpectParameterPack=*/false))
+      return true;
+  }
+  return false;
 }
 
 Decl *TemplateInstantiator::TransformDefinition(SourceLocation Loc, Decl *D) {
