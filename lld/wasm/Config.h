@@ -126,17 +126,9 @@ struct Config {
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
-struct ConfigWrapper {
-  Config c;
-  Config *operator->() { return &c; }
-};
-
-// The only instance of Configuration struct.
-extern ConfigWrapper config;
-
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
-  Config &arg;
+  Config arg;
 
   llvm::SmallVector<ObjFile *, 0> objectFiles;
   llvm::SmallVector<StubFile *, 0> stubFiles;
