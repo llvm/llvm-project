@@ -239,17 +239,14 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
 /// and the IR in `module`. If it is not public or external:
-/// Process a function-like op `funcOp`, given the liveness information in `la`
-/// and the IR in `module`. Here, processing means:
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
 ///      (return values that are non-live across all callers) for removal.
-///   (4) Enqueueing the non-live arguments themselves for removal.
+///   (4) Enqueueing the non-live arguments and return values for removal.
 ///   (5) Collecting the uses of these return values in its callers for future
 ///   removal.
-///   6. Marking all its results as non-live values.
-/// iff it is not public or external.
+///   (6) Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
@@ -637,22 +634,22 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 }
 
 /// Steps to process a `BranchOpInterface` operation:
-/// 1. Iterate through each successor block of the operation.
-/// 2. For each successor block, gather all operands from all successors
-///    along with their associated liveness analysis data.
-/// 3. Identify and collect the dead operands from the branch operation
-///    as well as their corresponding arguments.
+/// Iterate through each successor block of the operation.
+/// (1) For each successor block, gather all operands from all successors.
+///     along with their associated liveness analysis data.
+/// (2) Fetch their associated liveness analysis data.
+/// (3) Identify and collect the dead operands from the branch operation
+///     as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
-  // Do (1)
   for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
     Block *successorBlock = branchOp->getSuccessor(succIdx);
 
-    // Do (2)
+    // Do (1)
     SuccessorOperands successorOperands =
         branchOp.getSuccessorOperands(succIdx);
     SmallVector<Value> operandValues;
@@ -661,46 +658,50 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
       operandValues.push_back(successorOperands[operandIdx]);
     }
 
-    // Do (3)
+    // Do (2)
     BitVector successorNonLive =
         markLives(operandValues, nonLiveSet, la).flip();
     collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
+
+    // Do (3)
     cl.blocks.push_back({successorBlock, successorNonLive});
     cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
   }
 }
 
-static void cleanUpDeadVals(RDVFinalCleanupList &RDVFinalCleanupList) {
+/// Removes dead values collected in RDVFinalCleanupList.
+/// To be run once when all dead values have been collected.
+static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   // 1. Operations
-  for (auto &op : RDVFinalCleanupList.operations) {
+  for (auto &op : list.operations) {
     op->dropAllUses();
     op->erase();
   }
 
   // 2. Values
-  for (auto &v : RDVFinalCleanupList.values) {
+  for (auto &v : list.values) {
     v.dropAllUses();
   }
 
   // 3. Functions
-  for (auto &f : RDVFinalCleanupList.functions) {
+  for (auto &f : list.functions) {
     f.funcOp.eraseArguments(f.nonLiveArgs);
     f.funcOp.eraseResults(f.nonLiveRets);
   }
 
   // 4. Operands
-  for (auto &o : RDVFinalCleanupList.operands) {
+  for (auto &o : list.operands) {
     o.op->eraseOperands(o.nonLive);
   }
 
   // 5. Results
-  for (auto &r : RDVFinalCleanupList.results) {
+  for (auto &r : list.results) {
     dropUsesAndEraseResults(r.op, r.nonLive);
   }
 
   // 6. Blocks
-  for (auto &b : RDVFinalCleanupList.blocks) {
+  for (auto &b : list.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
       continue;
@@ -713,7 +714,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &RDVFinalCleanupList) {
   }
 
   // 7. Successor Operands
-  for (auto &op : RDVFinalCleanupList.successorOperands) {
+  for (auto &op : list.successorOperands) {
     SuccessorOperands successorOperands =
         op.branch.getSuccessorOperands(op.successorIndex);
     // blocks that are accessed via multiple codepaths processed once
@@ -742,16 +743,16 @@ void RemoveDeadValues::runOnOperation() {
 
   // Maintains a list of Ops, values, branches, etc., slated for cleanup at the
   // end of this pass.
-  RDVFinalCleanupList finalRDVFinalCleanupList;
+  RDVFinalCleanupList finalCleanupList;
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalRDVFinalCleanupList);
+      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals,
-                            finalRDVFinalCleanupList);
+                            finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
-      processBranchOp(branchOp, la, deadVals, finalRDVFinalCleanupList);
+      processBranchOp(branchOp, la, deadVals, finalCleanupList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
@@ -759,11 +760,11 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
     } else {
-      processSimpleOp(op, la, deadVals, finalRDVFinalCleanupList);
+      processSimpleOp(op, la, deadVals, finalCleanupList);
     }
   });
 
-  cleanUpDeadVals(finalRDVFinalCleanupList);
+  cleanUpDeadVals(finalCleanupList);
 }
 
 std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
