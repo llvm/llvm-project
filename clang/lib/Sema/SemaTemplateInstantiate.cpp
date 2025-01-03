@@ -1388,7 +1388,7 @@ namespace {
     void setEvaluateConstraints(bool B) {
       EvaluateConstraints = B;
     }
-    bool getEvaluateConstraints() const {
+    bool getEvaluateConstraints() {
       return EvaluateConstraints;
     }
 

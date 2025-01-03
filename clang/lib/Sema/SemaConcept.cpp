@@ -1132,14 +1132,12 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   // FIXME: Add TemplateArgs through the 'Innermost' parameter once
   // the refactoring of getTemplateInstantiationArgs() relands.
   MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(Template, /*Args=*/TemplateArgs,
-                                  /*Final=*/false);
+  MLTAL.addOuterTemplateArguments(Template, std::nullopt, /*Final=*/false);
   SemaRef.getTemplateInstantiationArgs(
-      MLTAL, /*D=*/nullptr,
-      FD->getFriendObjectKind() ? FD->getLexicalDeclContext()
-                                : FD->getDeclContext(),
+      MLTAL, /*D=*/FD, FD,
       /*Final=*/false, /*Innermost=*/std::nullopt, /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+  MLTAL.replaceInnermostTemplateArguments(Template, TemplateArgs);
 
   Sema::ContextRAII SavedContext(SemaRef, FD);
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
