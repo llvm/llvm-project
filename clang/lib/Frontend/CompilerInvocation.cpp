@@ -1699,7 +1699,7 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     }
   }
 
-  if (memcmp(Opts.CoverageVersion, "408*", 4) != 0)
+  if (memcmp(Opts.CoverageVersion, "0000", 4))
     GenerateArg(Consumer, OPT_coverage_version_EQ,
                 StringRef(Opts.CoverageVersion, 4));
 
@@ -2015,7 +2015,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   } else if (Args.hasArg(OPT_fmemory_profile))
     Opts.MemoryProfileOutput = MemProfileBasename;
 
-  memcpy(Opts.CoverageVersion, "408*", 4);
   if (Opts.CoverageNotesFile.size() || Opts.CoverageDataFile.size()) {
     if (Args.hasArg(OPT_coverage_version_EQ)) {
       StringRef CoverageVersion = Args.getLastArgValue(OPT_coverage_version_EQ);

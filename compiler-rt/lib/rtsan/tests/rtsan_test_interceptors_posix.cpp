@@ -353,6 +353,7 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
 TEST_F(RtsanFileTest, FopenCookieDieWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
@@ -375,6 +376,7 @@ TEST_F(RtsanFileTest, FopenCookieDieWhenRealtime) {
   ExpectRealtimeDeath(Func, "fopencookie");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 TEST_F(RtsanFileTest, OpenMemstreamDiesWhenRealtime) {
