@@ -2060,6 +2060,26 @@ func.func @test_divf1(%arg0 : f32, %arg1 : f32) -> (f32) {
 
 // -----
 
+// CHECK-LABEL: @test_divui_mul
+//  CHECK-SAME:   (%[[ARG:.*]]: index, %{{.*}}: index)
+//       CHECK:   return %[[ARG]]
+func.func @test_divui_mul(%arg0: index, %arg1: index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw>  : index
+  %1 = arith.divui %0, %arg1 : index
+  return %1 : index
+}
+
+// CHECK-LABEL: @test_divsi_mul
+//  CHECK-SAME:   (%[[ARG:.*]]: index, %{{.*}}: index)
+//       CHECK:   return %[[ARG]]
+func.func @test_divsi_mul(%arg0: index, %arg1: index) -> index {
+  %0 = arith.muli %arg1, %arg0 overflow<nsw>  : index
+  %1 = arith.divsi %0, %arg1 : index
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: @test_cmpf(
 func.func @test_cmpf(%arg0 : f32) -> (i1, i1, i1, i1) {
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true

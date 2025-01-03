@@ -580,10 +580,28 @@ void arith::MulUIExtendedOp::getCanonicalizationPatterns(
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
+static Value foldDivMul(Value lhs, Value rhs,
+                        arith::IntegerOverflowFlags ovfFlags) {
+  auto mul = lhs.getDefiningOp<mlir::arith::MulIOp>();
+  if (!mul || !bitEnumContainsAll(mul.getOverflowFlags(), ovfFlags))
+    return {};
+
+  if (mul.getLhs() == rhs)
+    return mul.getRhs();
+
+  if (mul.getRhs() == rhs)
+    return mul.getLhs();
+
+  return {};
+}
+
 OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
   // divui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nuw))
+    return val;
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -620,6 +638,9 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   // divsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nsw))
+    return val;
 
   // Don't fold if it would overflow or if it requires a division by zero.
   bool overflowOrDiv0 = false;
