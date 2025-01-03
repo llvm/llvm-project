@@ -1,4 +1,4 @@
-static_library("Common") {
+source_set("Common") {
   deps = [
     "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/CodeGenTypes",
