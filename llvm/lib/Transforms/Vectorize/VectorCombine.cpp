@@ -1743,6 +1743,36 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinResTy,
                          OldMask, CostKind, 0, nullptr, {LHS, RHS}, &I);
 
+  // Handle shuffle(binop(shuffle(x),y),binop(z,shuffle(w))) style patterns
+  // where one use shuffles have gotten split across the binop/cmp. These
+  // often allow a major reduction in total cost that wouldn't happen as
+  // individual folds.
+  auto MergeInner = [&](Value *&Op, int Offset, MutableArrayRef<int> Mask,
+                        TTI::TargetCostKind CostKind) -> bool {
+    Value *InnerOp;
+    ArrayRef<int> InnerMask;
+    if (match(Op, m_OneUse(m_Shuffle(m_Value(InnerOp), m_Undef(),
+                                     m_Mask(InnerMask)))) &&
+        InnerOp->getType() == Op->getType() &&
+        all_of(InnerMask,
+               [NumSrcElts](int M) { return M < (int)NumSrcElts; })) {
+      for (int &M : Mask)
+        if (Offset <= M && M < (int)(Offset + NumSrcElts)) {
+          M = InnerMask[M - Offset];
+          M = 0 <= M ? M + Offset : M;
+        }
+      OldCost += TTI.getInstructionCost(cast<Instruction>(Op), CostKind);
+      Op = InnerOp;
+      return true;
+    }
+    return false;
+  };
+  bool ReducedInstCount = false;
+  ReducedInstCount |= MergeInner(X, 0, NewMask0, CostKind);
+  ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind);
+  ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
+  ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
+
   InstructionCost NewCost =
       TTI.getShuffleCost(SK0, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z}) +
       TTI.getShuffleCost(SK1, BinOpTy, NewMask1, CostKind, 0, nullptr, {Y, W});
@@ -1763,8 +1793,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   // If either shuffle will constant fold away, then fold for the same cost as
   // we will reduce the instruction count.
-  bool ReducedInstCount = (isa<Constant>(X) && isa<Constant>(Z)) ||
-                          (isa<Constant>(Y) && isa<Constant>(W));
+  ReducedInstCount |= (isa<Constant>(X) && isa<Constant>(Z)) ||
+                      (isa<Constant>(Y) && isa<Constant>(W));
   if (ReducedInstCount ? (NewCost > OldCost) : (NewCost >= OldCost))
     return false;
 
