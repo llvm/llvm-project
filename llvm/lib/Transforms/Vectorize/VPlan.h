@@ -2203,7 +2203,7 @@ class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
 
 public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
-  /// Start.
+  /// Start and VF \p VF.
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 bool IsScalarAfterVectorization, DebugLoc DL)
