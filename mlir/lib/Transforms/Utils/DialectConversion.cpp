@@ -260,7 +260,7 @@ ConversionValueMapping::lookupOrDefault(Value from,
   // If the desired values were found use them, otherwise default to the leaf
   // values.
   // Note: If `desiredTypes` is empty, this function always returns `current`.
-  return !desiredValue.empty() ? desiredValue : current;
+  return !desiredValue.empty() ? std::move(desiredValue) : std::move(current);
 }
 
 ValueVector ConversionValueMapping::lookupOrNull(Value from,
