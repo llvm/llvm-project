@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Timeout.h"
@@ -150,6 +151,11 @@ public:
 
   // If this Socket is connected then return the URI used to connect.
   virtual std::string GetRemoteConnectionURI() const { return ""; };
+
+  // If the Socket is listening then return the URI for clients to connect.
+  virtual std::vector<std::string> GetListeningConnectionURI() const {
+    return {};
+  }
 
 protected:
   Socket(SocketProtocol protocol, bool should_close);

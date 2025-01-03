@@ -113,16 +113,17 @@ static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
     // clang-format on
 
     // Return n-D ids for indexing and 1-D size + id for predicate generation.
-    return IdBuilderResult{
-        /*mappingIdOps=*/ids,
-        /*availableMappingSizes=*/
-        SmallVector<int64_t>{computeProduct(originalBasis)},
-        // `forallMappingSizes` iterate in the scaled basis, they need to be
-        // scaled back into the original basis to provide tight
-        // activeMappingSizes quantities for predication.
-        /*activeMappingSizes=*/
-        SmallVector<int64_t>{computeProduct(forallMappingSizes) * multiplicity},
-        /*activeIdOps=*/SmallVector<Value>{linearId.get<Value>()}};
+      return IdBuilderResult{
+          /*mappingIdOps=*/ids,
+          /*availableMappingSizes=*/
+          SmallVector<int64_t>{computeProduct(originalBasis)},
+          // `forallMappingSizes` iterate in the scaled basis, they need to be
+          // scaled back into the original basis to provide tight
+          // activeMappingSizes quantities for predication.
+          /*activeMappingSizes=*/
+          SmallVector<int64_t>{computeProduct(forallMappingSizes) *
+                               multiplicity},
+          /*activeIdOps=*/SmallVector<Value>{cast<Value>(linearId)}};
   };
 
   return res;
@@ -144,9 +145,8 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
     // In the 3-D mapping case, scale the first dimension by the multiplicity.
     SmallVector<Value> scaledIds = ids;
     AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
-    scaledIds[0] = affine::makeComposedFoldedAffineApply(
-                       rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]})
-                       .get<Value>();
+    scaledIds[0] = cast<Value>(affine::makeComposedFoldedAffineApply(
+        rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]}));
     // In the 3-D mapping case, unscale the first dimension by the multiplicity.
     SmallVector<int64_t> forallMappingSizeInOriginalBasis(forallMappingSizes);
     forallMappingSizeInOriginalBasis[0] *= multiplicity;

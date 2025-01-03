@@ -406,13 +406,13 @@ void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
   if (FI.Inline)
     dump(OS, *FI.Inline, Indent);
 
+  if (FI.CallSites)
+    dump(OS, *FI.CallSites, Indent);
+
   if (FI.MergedFunctions) {
     assert(Indent == 0 && "MergedFunctionsInfo should only exist at top level");
     dump(OS, *FI.MergedFunctions);
   }
-
-  if (FI.CallSites)
-    dump(OS, *FI.CallSites);
 }
 
 void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
@@ -454,10 +454,13 @@ void GsymReader::dump(raw_ostream &OS, const CallSiteInfo &CSI) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC) {
+void GsymReader::dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                      uint32_t Indent) {
+  OS.indent(Indent);
   OS << "CallSites (by relative return offset):\n";
   for (const auto &CS : CSIC.CallSites) {
-    OS.indent(2);
+    OS.indent(Indent);
+    OS << "  ";
     dump(OS, CS);
     OS << "\n";
   }

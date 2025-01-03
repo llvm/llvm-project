@@ -1449,7 +1449,7 @@ void Thread::ClearStackFrames() {
   // frames:
   // FIXME: At some point we can try to splice in the frames we have fetched
   // into the new frame as we make it, but let's not try that now.
-  if (m_curr_frames_sp && m_curr_frames_sp->GetAllFramesFetched())
+  if (m_curr_frames_sp && m_curr_frames_sp->WereAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();
 

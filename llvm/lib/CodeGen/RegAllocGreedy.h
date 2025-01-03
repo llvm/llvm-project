@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -42,7 +43,7 @@ namespace llvm {
 class AllocationOrder;
 class AnalysisUsage;
 class EdgeBundles;
-class LiveDebugVariables;
+class LiveDebugVariablesWrapperLegacy;
 class LiveIntervals;
 class LiveRegMatrix;
 class MachineBasicBlock;

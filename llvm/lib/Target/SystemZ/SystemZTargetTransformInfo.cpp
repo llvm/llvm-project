@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -1396,30 +1397,86 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   return NumVectorMemOps + NumPermutes;
 }
 
+InstructionCost getIntAddReductionCost(unsigned NumVec, unsigned ScalarBits) {
+  InstructionCost Cost = 0;
+  // Binary Tree of N/2 + N/4 + ... operations yields N - 1 operations total.
+  Cost += NumVec - 1;
+  // For integer adds, VSUM creates shorter reductions on the final vector.
+  Cost += (ScalarBits < 32) ? 3 : 2;
+  return Cost;
+}
+
+InstructionCost getFastReductionCost(unsigned NumVec, unsigned NumElems,
+                                     unsigned ScalarBits) {
+  unsigned NumEltsPerVecReg = (SystemZ::VectorBits / ScalarBits);
+  InstructionCost Cost = 0;
+  // Binary Tree of N/2 + N/4 + ... operations yields N - 1 operations total.
+  Cost += NumVec - 1;
+  // For each shuffle / arithmetic layer, we need 2 instructions, and we need
+  // log2(Elements in Last Vector) layers.
+  Cost += 2 * Log2_32_Ceil(std::min(NumElems, NumEltsPerVecReg));
+  return Cost;
+}
+
+inline bool customCostReductions(unsigned Opcode) {
+  return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
+         Opcode == Instruction::Add || Opcode == Instruction::Mul;
+}
+
+InstructionCost
+SystemZTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                           std::optional<FastMathFlags> FMF,
+                                           TTI::TargetCostKind CostKind) {
+  unsigned ScalarBits = Ty->getScalarSizeInBits();
+  // The following is only for subtargets with vector math, non-ordered
+  // reductions, and reasonable scalar sizes for int and fp add/mul.
+  if (customCostReductions(Opcode) && ST->hasVector() &&
+      !TTI::requiresOrderedReduction(FMF) &&
+      ScalarBits <= SystemZ::VectorBits) {
+    unsigned NumVectors = getNumVectorRegs(Ty);
+    unsigned NumElems = ((FixedVectorType *)Ty)->getNumElements();
+    // Integer Add is using custom code gen, that needs to be accounted for.
+    if (Opcode == Instruction::Add)
+      return getIntAddReductionCost(NumVectors, ScalarBits);
+    // The base cost is the same across all other arithmetic instructions
+    InstructionCost Cost =
+        getFastReductionCost(NumVectors, NumElems, ScalarBits);
+    // But we need to account for the final op involving the scalar operand.
+    if ((Opcode == Instruction::FAdd) || (Opcode == Instruction::FMul))
+      Cost += 1;
+    return Cost;
+  }
+  // otherwise, fall back to the standard implementation
+  return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+}
+
+InstructionCost
+SystemZTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                       FastMathFlags FMF,
+                                       TTI::TargetCostKind CostKind) {
+  // Return custom costs only on subtargets with vector enhancements.
+  if (ST->hasVectorEnhancements1()) {
+    unsigned NumVectors = getNumVectorRegs(Ty);
+    unsigned NumElems = ((FixedVectorType *)Ty)->getNumElements();
+    unsigned ScalarBits = Ty->getScalarSizeInBits();
+    InstructionCost Cost = 0;
+    // Binary Tree of N/2 + N/4 + ... operations yields N - 1 operations total.
+    Cost += NumVectors - 1;
+    // For the final vector, we need shuffle + min/max operations, and
+    // we need #Elements - 1 of them.
+    Cost += 2 * (std::min(NumElems, SystemZ::VectorBits / ScalarBits) - 1);
+    return Cost;
+  }
+  // For other targets, fall back to the standard implementation
+  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
+}
+
 static int
 getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                             const SmallVectorImpl<Type *> &ParamTys) {
   if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
     return getNumVectorRegs(RetTy); // VPERM
 
-  if (ID == Intrinsic::vector_reduce_add) {
-    // Retrieve number and size of elements for the vector op.
-    auto *VTy = cast<FixedVectorType>(ParamTys.front());
-    unsigned ScalarSize = VTy->getScalarSizeInBits();
-    // For scalar sizes >128 bits, we fall back to the generic cost estimate.
-    if (ScalarSize > SystemZ::VectorBits)
-      return -1;
-    // This many vector regs are needed to represent the input elements (V).
-    unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
-    // This many instructions are needed for the final sum of vector elems (S).
-    unsigned LastVectorHandling = (ScalarSize < 32) ? 3 : 2;
-    // We use vector adds to create a sum vector, which takes
-    // V/2 + V/4 + ... = V - 1 operations.
-    // Then, we need S operations to sum up the elements of that sum vector,
-    // for a total of V + S - 1 operations.
-    int Cost = VectorRegsNeeded + LastVectorHandling - 1;
-    return Cost;
-  }
   return -1;
 }
 

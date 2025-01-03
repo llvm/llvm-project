@@ -65,7 +65,8 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 }
 
 // Based on the LLVM function attributes, get a SPIR-V FunctionControl.
-static uint32_t getFunctionControl(const Function &F) {
+static uint32_t getFunctionControl(const Function &F,
+                                   const SPIRVSubtarget *ST) {
   MemoryEffects MemEffects = F.getMemoryEffects();
 
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
@@ -79,6 +80,11 @@ static uint32_t getFunctionControl(const Function &F) {
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Pure);
   else if (MemEffects.onlyReadsMemory())
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Const);
+
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_optnone) ||
+      ST->canUseExtension(SPIRV::Extension::SPV_EXT_optnone))
+    if (F.hasFnAttribute(Attribute::OptimizeNone))
+      FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::OptNoneEXT);
 
   return FuncControl;
 }
@@ -310,7 +316,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTy(Arg.getType())) {
+      if (isPointerTyOrWrapper(Arg.getType())) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0)
           buildOpDecorate(VRegs[i][0], MIRBuilder,
@@ -343,6 +349,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       if (Arg.hasAttribute(Attribute::ByVal)) {
         auto Attr =
             static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
+        buildOpDecorate(VRegs[i][0], MIRBuilder,
+                        SPIRV::Decoration::FuncParamAttr, {Attr});
+      }
+      if (Arg.hasAttribute(Attribute::StructRet)) {
+        auto Attr =
+            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sret);
         buildOpDecorate(VRegs[i][0], MIRBuilder,
                         SPIRV::Decoration::FuncParamAttr, {Attr});
       }
@@ -397,7 +409,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
   SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
       FTy, RetTy, ArgTypeVRegs, MIRBuilder);
-  uint32_t FuncControl = getFunctionControl(F);
+  uint32_t FuncControl = getFunctionControl(F, ST);
 
   // Add OpFunction instruction
   MachineInstrBuilder MB = MIRBuilder.buildInstr(SPIRV::OpFunction)
@@ -427,10 +439,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
-    const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    auto executionModel = getExecutionModel(STI, F);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
-                   .addImm(static_cast<uint32_t>(executionModel))
+                   .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() != GlobalValue::InternalLinkage &&

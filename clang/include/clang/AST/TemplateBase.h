@@ -484,7 +484,7 @@ private:
       Pointer;
 
   TemplateTemplateArgLocInfo *getTemplate() const {
-    return Pointer.get<TemplateTemplateArgLocInfo *>();
+    return cast<TemplateTemplateArgLocInfo *>(Pointer);
   }
 
 public:
@@ -499,10 +499,10 @@ public:
                           SourceLocation EllipsisLoc);
 
   TypeSourceInfo *getAsTypeSourceInfo() const {
-    return Pointer.get<TypeSourceInfo *>();
+    return cast<TypeSourceInfo *>(Pointer);
   }
 
-  Expr *getAsExpr() const { return Pointer.get<Expr *>(); }
+  Expr *getAsExpr() const { return cast<Expr *>(Pointer); }
 
   NestedNameSpecifierLoc getTemplateQualifierLoc() const {
     const auto *Template = getTemplate();

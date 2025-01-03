@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs=true < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs=true < %s | FileCheck %s
 ; Testing for these 5 variants of circular store:
 ;   Q6_circ_store_update_B(inputLR, pDelay, -1, nConvLength, 4);
 ;   Q6_circ_store_update_D(inputLR, pDelay, -1, nConvLength, 4);

@@ -4,6 +4,8 @@
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v3i   __attribute__((ext_vector_type(3)));
 typedef short  v4s   __attribute__((ext_vector_type(4)));
+typedef half   v4h   __attribute__((ext_vector_type(4)));
+typedef __bf16 v4y   __attribute__((ext_vector_type(4)));
 
 // GFX950-LABEL: define dso_local <2 x i32> @test_amdgcn_ds_read_b64_tr_b4_v2i32(
 // GFX950-SAME: ptr addrspace(3) nocapture noundef readonly [[INPTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
@@ -47,4 +49,25 @@ v2i test_amdgcn_ds_read_b64_tr_b8_v2i32(local v2i* inptr)
 v4s test_amdgcn_ds_read_b64_tr_b16_v2i16(local v4s* inptr)
 {
   return __builtin_amdgcn_ds_read_tr16_b64_v4i16(inptr);
+}
+
+// GFX950-LABEL: define dso_local <4 x half> @test_amdgcn_ds_read_b64_tr_b16_v2f16(
+// GFX950-SAME: ptr addrspace(3) nocapture noundef readonly [[INPTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// GFX950-NEXT:  entry:
+// GFX950-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.ds.read.tr16.b64.v4f16(ptr addrspace(3) [[INPTR]])
+// GFX950-NEXT:    ret <4 x half> [[TMP0]]
+//
+v4h test_amdgcn_ds_read_b64_tr_b16_v2f16(local v4h* inptr)
+{
+  return __builtin_amdgcn_ds_read_tr16_b64_v4f16(inptr);
+}
+
+// GFX950-LABEL: define dso_local <4 x bfloat> @test_amdgcn_ds_read_b64_tr_b16_v2bf16(
+// GFX950-SAME: ptr addrspace(3) nocapture noundef readonly [[INPTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// GFX950-NEXT:  entry:
+// GFX950-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.ds.read.tr16.b64.v4bf16(ptr addrspace(3) [[INPTR]])
+// GFX950-NEXT:    ret <4 x bfloat> [[TMP0]]
+v4y test_amdgcn_ds_read_b64_tr_b16_v2bf16(local v4y* inptr)
+{
+  return __builtin_amdgcn_ds_read_tr16_b64_v4bf16(inptr);
 }
