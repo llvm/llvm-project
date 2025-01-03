@@ -1351,6 +1351,28 @@ public:
     }
   }
 
+  /// Returns true if the underlying opcode may read from or write to memory.
+  bool opcodeMayReadOrWriteFromMemory() const {
+    if (Instruction::isBinaryOp(getOpcode()))
+      return false;
+    switch (getOpcode()) {
+    case Instruction::Or:
+    case Instruction::ICmp:
+    case Instruction::Select:
+    case VPInstruction::AnyOf:
+    case VPInstruction::Not:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
+    case VPInstruction::LogicalAnd:
+    case VPInstruction::PtrAdd:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
