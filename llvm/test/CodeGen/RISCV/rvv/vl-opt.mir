@@ -110,4 +110,17 @@ body: |
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
     %z:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, -1, 3 /* e8 */, 0
 ...
+---
+name: vmv_is_used_as_scalar_op
+body: |
+  bb.0:
+    liveins: $x1
+    ; CHECK-LABEL: name: vmv_is_used_as_scalar_op
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_MF4 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:gpr = PseudoVMV_X_S %x, 3 /* e8 */
+    %x:vr = PseudoVADD_VV_MF4 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %y:gpr = PseudoVMV_X_S %x, 3 /* e8 */
+...
 
