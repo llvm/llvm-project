@@ -2,6 +2,8 @@
 
 // REQUIRES: aarch64-registered-target
 
+#include <arm_neon.h>
+
 // Bitcast between FP8 Neon vectors
 mfloat8x8_t err_test_f8_f8(mfloat8x16_t x) {
     return (mfloat8x8_t) x;

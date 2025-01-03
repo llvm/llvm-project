@@ -2789,7 +2789,8 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
     return false;
 
   // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isNeonVectorBuiltinType())
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
