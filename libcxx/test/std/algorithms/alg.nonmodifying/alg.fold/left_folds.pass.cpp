@@ -52,8 +52,8 @@
 
 using std::ranges::fold_left;
 using std::ranges::fold_left_first;
-using std::ranges::fold_left_with_iter;
 using std::ranges::fold_left_first_with_iter;
+using std::ranges::fold_left_with_iter;
 
 template <class Result, class Range, class T>
 concept is_in_value_result =
@@ -112,21 +112,23 @@ template <std::ranges::input_range R, class F, std::equality_comparable Expected
   requires std::copyable<R>
 constexpr void check_iterator(R& r, F f, std::optional<Expected> const& expected) {
   {
-    is_in_value_result<R, std::optional<Expected>> decltype(auto) result = fold_left_first_with_iter(r.begin(), r.end(), f);
+    is_in_value_result<R, std::optional<Expected>> decltype(auto) result =
+        fold_left_first_with_iter(r.begin(), r.end(), f);
     assert(result.in == r.end());
     assert(result.value == expected);
   }
 
   {
-    auto telemetry                                        = invocable_telemetry();
-    auto f2                                               = invocable_with_telemetry(f, telemetry);
-    is_in_value_result<R, std::optional<Expected>> decltype(auto) result = fold_left_first_with_iter(r.begin(), r.end(), f2);
+    auto telemetry = invocable_telemetry();
+    auto f2        = invocable_with_telemetry(f, telemetry);
+    is_in_value_result<R, std::optional<Expected>> decltype(auto) result =
+        fold_left_first_with_iter(r.begin(), r.end(), f2);
     assert(result.in == r.end());
     assert(result.value == expected);
     if (result.value.has_value()) {
-        assert(telemetry.invocations == std::ranges::distance(r) - 1);
-        assert(telemetry.moves == 0);
-        assert(telemetry.copies == 1);
+      assert(telemetry.invocations == std::ranges::distance(r) - 1);
+      assert(telemetry.moves == 0);
+      assert(telemetry.copies == 1);
     }
   }
 
@@ -136,18 +138,17 @@ constexpr void check_iterator(R& r, F f, std::optional<Expected> const& expected
   }
 
   {
-    auto telemetry                               = invocable_telemetry();
-    auto f2                                      = invocable_with_telemetry(f, telemetry);
+    auto telemetry                                              = invocable_telemetry();
+    auto f2                                                     = invocable_with_telemetry(f, telemetry);
     std::same_as<std::optional<Expected>> decltype(auto) result = fold_left_first(r.begin(), r.end(), f2);
     assert(result == expected);
     if (result.has_value()) {
-        assert(telemetry.invocations == std::ranges::distance(r) - 1);
-        assert(telemetry.moves == 0);
-        assert(telemetry.copies == 1);
+      assert(telemetry.invocations == std::ranges::distance(r) - 1);
+      assert(telemetry.moves == 0);
+      assert(telemetry.copies == 1);
     }
   }
 }
-
 
 template <std::ranges::input_range R, class T, class F, std::equality_comparable Expected>
   requires std::copyable<R>
