@@ -252,6 +252,8 @@ def FeatureMWAITX  : SubtargetFeature<"mwaitx", "HasMWAITX", "true",
                                       "Enable MONITORX/MWAITX timer functionality">;
 def FeatureCLZERO  : SubtargetFeature<"clzero", "HasCLZERO", "true",
                                       "Enable Cache Line Zero">;
+def FeatureINVLPGB : SubtargetFeature<"invlpgb", "HasINVLPGB", "true",
+                                      "Support invlpgb/tlbsync instructions">;
 def FeatureCLDEMOTE  : SubtargetFeature<"cldemote", "HasCLDEMOTE", "true",
                                       "Enable Cache Line Demote">;
 def FeaturePTWRITE  : SubtargetFeature<"ptwrite", "HasPTWRITE", "true",
@@ -1565,6 +1567,7 @@ def ProcessorFeatures {
     !listconcat(ZNFeatures, ZN2AdditionalFeatures);
   list<SubtargetFeature> ZN3AdditionalFeatures = [FeatureFSRM,
                                                   FeatureINVPCID,
+                                                  FeatureINVLPGB,
                                                   FeaturePKU,
                                                   FeatureVAES,
                                                   FeatureVPCLMULQDQ];

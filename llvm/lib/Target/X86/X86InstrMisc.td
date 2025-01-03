@@ -1603,11 +1603,11 @@ let SchedRW = [WriteSystem] in {
   let Uses = [EAX, EDX] in
   def INVLPGB32 : I<0x01, MRM_FE, (outs), (ins),
                   "invlpgb", []>,
-                  TB, Requires<[Not64BitMode]>;
+                  TB, Requires<[HasINVLPGB, Not64BitMode]>;
   let Uses = [RAX, EDX] in
   def INVLPGB64 : I<0x01, MRM_FE, (outs), (ins),
                   "invlpgb", []>,
-                  TB, Requires<[In64BitMode]>;
+                  TB, Requires<[HasINVLPGB, In64BitMode]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -1617,7 +1617,7 @@ let SchedRW = [WriteSystem] in {
 let SchedRW = [WriteSystem] in {
   def TLBSYNC   : I<0x01, MRM_FF, (outs), (ins),
                   "tlbsync", []>,
-                  TB, Requires<[]>;
+                  TB, Requires<[HasINVLPGB]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//

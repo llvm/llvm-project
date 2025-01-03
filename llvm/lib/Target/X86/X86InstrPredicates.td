@@ -166,6 +166,7 @@ def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasRDPRU     : Predicate<"Subtarget->hasRDPRU()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
+def HasINVLPGB   : Predicate<"Subtarget->hasINVLPGB()">;
 def HasINVPCID   : Predicate<"Subtarget->hasINVPCID()">;
 def HasCX8       : Predicate<"Subtarget->hasCX8()">;
 def HasCX16      : Predicate<"Subtarget->hasCX16()">;

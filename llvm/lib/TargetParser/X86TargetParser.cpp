@@ -236,9 +236,9 @@ constexpr FeatureBitset FeaturesZNVER1 =
 constexpr FeatureBitset FeaturesZNVER2 = FeaturesZNVER1 | FeatureCLWB |
                                          FeatureRDPID | FeatureRDPRU |
                                          FeatureWBNOINVD;
-static constexpr FeatureBitset FeaturesZNVER3 = FeaturesZNVER2 |
-                                                FeatureINVPCID | FeaturePKU |
-                                                FeatureVAES | FeatureVPCLMULQDQ;
+static constexpr FeatureBitset FeaturesZNVER3 =
+    FeaturesZNVER2 | FeatureINVPCID | FeatureINVLPGB | FeaturePKU |
+    FeatureVAES | FeatureVPCLMULQDQ;
 static constexpr FeatureBitset FeaturesZNVER4 =
     FeaturesZNVER3 | FeatureAVX512F | FeatureEVEX512 | FeatureAVX512CD |
     FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA |
@@ -505,6 +505,7 @@ constexpr FeatureBitset ImpliedFeaturesCRC32 = {};
 constexpr FeatureBitset ImpliedFeaturesENQCMD = {};
 constexpr FeatureBitset ImpliedFeaturesFSGSBASE = {};
 constexpr FeatureBitset ImpliedFeaturesFXSR = {};
+constexpr FeatureBitset ImpliedFeaturesINVLPGB = {};
 constexpr FeatureBitset ImpliedFeaturesINVPCID = {};
 constexpr FeatureBitset ImpliedFeaturesLWP = {};
 constexpr FeatureBitset ImpliedFeaturesLZCNT = {};
