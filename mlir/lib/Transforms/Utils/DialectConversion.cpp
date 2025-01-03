@@ -1214,7 +1214,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       ValueRange targetMat = buildUnresolvedMaterialization(
           MaterializationKind::Target, computeInsertPoint(repl), operandLoc,
           /*valueToMap=*/Value(), /*inputs=*/unpacked,
-          /*outputType=*/legalTypes, /*originalType=*/origType,
+          /*outputTypes=*/legalTypes, /*originalType=*/origType,
           currentTypeConverter);
       remapped.push_back(targetMat);
       continue;
