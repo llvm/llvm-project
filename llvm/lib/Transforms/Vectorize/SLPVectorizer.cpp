@@ -816,20 +816,20 @@ class InstructionsState {
   Instruction *AltOp = nullptr;
 
 public:
-  Instruction *getMainOp() const { return MainOp; }
+  Instruction *getMainOp() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return MainOp;
+  }
 
-  Instruction *getAltOp() const { return AltOp; }
+  Instruction *getAltOp() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return AltOp;
+  }
 
   /// The main/alternate opcodes for the list of instructions.
-  unsigned getOpcode() const {
-    assert(valid() && "InstructionsState is invalid.");
-    return getMainOp()->getOpcode();
-  }
+  unsigned getOpcode() const { return getMainOp()->getOpcode(); }
 
-  unsigned getAltOpcode() const {
-    assert(valid() && "InstructionsState is invalid.");
-    return getAltOp()->getOpcode();
-  }
+  unsigned getAltOpcode() const { return getAltOp()->getOpcode(); }
 
   /// Some of the instructions in the list have alternate opcodes.
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
@@ -840,7 +840,7 @@ public:
   }
 
   /// Checks if the current state is valid, i.e. has non-null MainOp
-  bool valid() const { return getMainOp() && getAltOp(); }
+  bool valid() const { return MainOp && AltOp; }
 
   explicit operator bool() const { return valid(); }
 
@@ -3406,6 +3406,7 @@ private:
     }
 
     void setOperations(const InstructionsState &S) {
+      assert(S && "InstructionsState is invalid.");
       MainOp = S.getMainOp();
       AltOp = S.getAltOp();
     }
@@ -3617,7 +3618,8 @@ private:
                                      ReuseShuffleIndices.end());
     if (ReorderIndices.empty()) {
       Last->Scalars.assign(VL.begin(), VL.end());
-      Last->setOperations(S);
+      if (S)
+        Last->setOperations(S);
     } else {
       // Reorder scalars and build final mask.
       Last->Scalars.assign(VL.size(), nullptr);
@@ -3628,7 +3630,8 @@ private:
                   return VL[Idx];
                 });
       InstructionsState S = getSameOpcode(Last->Scalars, *TLI);
-      Last->setOperations(S);
+      if (S)
+        Last->setOperations(S);
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
     if (!Last->isGather()) {
