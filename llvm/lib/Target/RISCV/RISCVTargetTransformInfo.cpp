@@ -1816,11 +1816,26 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
     // one which will calculate as:
     // ScalarizeCost + Num * Cost for fixed vector,
     // InvalidCost for scalable vector.
-    if ((ValTy->getScalarSizeInBits() == 16 && !ST->hasVInstructionsF16()) ||
+    if ((ValTy->getScalarSizeInBits() == 16 &&
+         !ST->hasVInstructionsF16Minimal()) ||
         (ValTy->getScalarSizeInBits() == 32 && !ST->hasVInstructionsF32()) ||
         (ValTy->getScalarSizeInBits() == 64 && !ST->hasVInstructionsF64()))
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                        Op1Info, Op2Info, I);
+
+    if ((ValTy->getScalarSizeInBits() == 16) && !ST->hasVInstructionsF16()) {
+      // pre-widening Op1 and Op2 to f32 before comparison
+      VectorType *VecF32Ty =
+          VectorType::get(Type::getFloatTy(ValTy->getContext()),
+                          cast<VectorType>(ValTy)->getElementCount());
+
+      InstructionCost WidenCost =
+          getCastInstrCost(Instruction::FPExt, VecF32Ty, ValTy,
+                           TTI::CastContextHint::None, CostKind);
+      InstructionCost CmpCost = getCmpSelInstrCost(
+          Opcode, VecF32Ty, CondTy, VecPred, CostKind, Op1Info, Op2Info, I);
+      return WidenCost + CmpCost;
+    }
 
     // Assuming vector fp compare and mask instructions are all the same cost
     // until a need arises to differentiate them.
