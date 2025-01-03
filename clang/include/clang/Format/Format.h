@@ -5143,40 +5143,36 @@ struct FormatStyle {
   /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
 
-  /// Different styles for modify number of empty lines in
-  /// the beginning and at the of end of namespaces.
+  /// Different styles for wrapping namespace body with empty lines.
   enum WrapNamespaceBodyWithEmptyLinesStyle : int8_t {
-    /// Removes all empty lines at the beginning and at the end of
-    /// namespace definition.
+    /// Remove all empty lines at the beginning and the end of namespace body.
     /// \code
     ///   namespace N1 {
     ///   namespace N2
-    ///     function();
+    ///   function();
     ///   }
     ///   }
     /// \endcode
     WNBWELS_Never,
-    /// Always adds an empty line at the beginning and at the end of
-    /// namespace definition. MaxEmptyLinesToKeep is also applied, but
-    /// empty lines between consecutive namespace declarations are
-    /// always removed.
+    /// Always have at least one empty line at the beginning and the end of
+    /// namespace body except that the number of empty lines between consecutive
+    /// nested namespace definitions is not increased.
     /// \code
     ///   namespace N1 {
     ///   namespace N2 {
     ///
-    ///     function();
+    ///   function();
     ///
     ///   }
     ///   }
     /// \endcode
     WNBWELS_Always,
-    /// Keeps existing newlines at the beginning and at the end of
-    /// namespace definition using MaxEmptyLinesToKeep for formatting.
+    /// Keep existing newlines at the beginning and the end of namespace body.
+    /// ``MaxEmptyLinesToKeep`` still applies.
     WNBWELS_Leave
   };
 
-  /// Controls number of empty lines at the begging and at the end of
-  /// namespace definition.
+  /// Wrap namespace body with empty lines.
   /// \version 20
   WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
 
