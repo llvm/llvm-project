@@ -64,9 +64,11 @@ struct __get_aligner_instance {
 
 template <class _Tp>
 struct __atomic_ref_base {
+  using value_type = __remove_cv_t<_Tp>;
+
 private:
-  _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
-    _Tp* __ptr = std::addressof(__val);
+  _LIBCPP_HIDE_FROM_ABI static value_type* __clear_padding(value_type& __val) noexcept {
+    value_type* __ptr = std::addressof(__val);
 #  if __has_builtin(__builtin_clear_padding)
     __builtin_clear_padding(__ptr);
 #  endif
@@ -115,8 +117,6 @@ private:
   static constexpr size_t __min_alignment = (sizeof(_Tp) & (sizeof(_Tp) - 1)) || (sizeof(_Tp) > 16) ? 0 : sizeof(_Tp);
 
 public:
-  using value_type = __remove_cv_t<_Tp>;
-
   static constexpr size_t required_alignment = alignof(_Tp) > __min_alignment ? alignof(_Tp) : __min_alignment;
 
   // The __atomic_always_lock_free builtin takes into account the alignment of the pointer if provided,
