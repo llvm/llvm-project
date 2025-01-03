@@ -31,8 +31,8 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
 }
 
 // Unsupported options for SYCL device compilation.
-static std::vector<OptSpecifier> getUnsupportedOpts() {
-  std::vector<OptSpecifier> UnsupportedOpts = {
+static ArrayRef<OptSpecifier> getUnsupportedOpts() {
+  return {
       options::OPT_fsanitize_EQ,      // -fsanitize
       options::OPT_fcf_protection_EQ, // -fcf-protection
       options::OPT_fprofile_generate,
@@ -54,7 +54,6 @@ static std::vector<OptSpecifier> getUnsupportedOpts() {
       options::OPT_forder_file_instrumentation, // -forder-file-instrumentation
       options::OPT_fcs_profile_generate,        // -fcs-profile-generate
       options::OPT_fcs_profile_generate_EQ};
-  return UnsupportedOpts;
 }
 
 SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
