@@ -4,10 +4,12 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+; FIXME:  GEP flags on GEPs for reverse vector pointer need to be dropped when folding the tail.
+
 ; Function Attrs: nofree norecurse nosync nounwind memory(none)
-define i1 @fn(ptr %nno) local_unnamed_addr #0 {
+define i1 @fn(ptr %nno) #0 {
 ; CHECK-LABEL: define i1 @fn(
-; CHECK-SAME: ptr [[NNO:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[NNO:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -24,7 +26,7 @@ define i1 @fn(ptr %nno) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IV]], splat (i64 10)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [12 x i32], ptr [[NNO]], i64 0, i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -53,7 +55,7 @@ define i1 @fn(ptr %nno) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[SUM_01:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_1:%.*]], [[FOR_INC35]] ]
 ; CHECK-NEXT:    [[REM4:%.*]] = and i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i64 [[REM4]], 0
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [12 x i32], ptr [[NNO]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    br i1 [[CMP21]], label [[IF_THEN22:%.*]], label [[FOR_INC35]]
 ; CHECK:       if.then:
@@ -79,7 +81,7 @@ loop.header:                                       ; preds = %entry, %loop.latch
   %sum.01 = phi i32 [ 0, %entry ], [ %sum.1, %loop.latch ]
   %rem4 = and i64 %iv, 1
   %cmp21 = icmp eq i64 %rem4, 0
-  %gep = getelementptr inbounds nuw [12 x i32], ptr %nno, i64 0, i64 %iv
+  %gep = getelementptr inbounds nuw i32, ptr %nno, i64 %iv
   %0 = load i32, ptr %gep, align 4
   br i1 %cmp21, label %if.then, label %loop.latch
 
@@ -101,4 +103,4 @@ exit:                                        ; preds = %loop.latch
   ret i1 %cmp41
 }
 
-attributes #0 = { nofree norecurse nosync nounwind memory(none) "target-features"="+aes,+avx,+cmov,+crc32,+cx16,+cx8,+fxsr,+mmx,+pclmul,+popcnt,+prfchw,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" }
+attributes #0 = { "target-features"="+avx" }
