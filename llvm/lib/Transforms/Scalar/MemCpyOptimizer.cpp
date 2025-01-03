@@ -345,10 +345,14 @@ static bool writtenBetween(MemorySSA *MSSA, BatchAAResults &AA,
 static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
   // FIXME: MD_tbaa_struct and MD_mem_parallel_loop_access should also be
   // handled here, but combineMetadata doesn't support them yet
-  unsigned KnownIDs[] = {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                         LLVMContext::MD_noalias,
-                         LLVMContext::MD_invariant_group,
-                         LLVMContext::MD_access_group};
+  unsigned KnownIDs[] = {
+      LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,      LLVMContext::MD_invariant_group,
+      LLVMContext::MD_access_group, LLVMContext::MD_prof,
+      LLVMContext::MD_memprof,      LLVMContext::MD_callsite};
+  // FIXME: https://github.com/llvm/llvm-project/issues/121495
+  // Use custom AA metadata combining handling instead of combineMetadata, which
+  // is meant for CSE and will drop any metadata not in the KnownIDs list.
   combineMetadata(ReplInst, I, KnownIDs, true);
 }
 
