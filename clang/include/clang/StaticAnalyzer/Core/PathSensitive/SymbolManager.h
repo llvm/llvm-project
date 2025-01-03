@@ -719,10 +719,8 @@ public:
 template <>
 struct ::llvm::ImutContainerInfo<clang::ento::SymbolRef>
     : public ImutProfileInfo<clang::ento::SymbolRef> {
-  using value_type =
-      typename ImutProfileInfo<clang::ento::SymbolRef>::value_type;
-  using value_type_ref =
-      typename ImutProfileInfo<clang::ento::SymbolRef>::value_type_ref;
+  using value_type = clang::ento::SymbolRef;
+  using value_type_ref = clang::ento::SymbolRef;
   using key_type = value_type;
   using key_type_ref = value_type_ref;
   using data_type = bool;
@@ -731,14 +729,17 @@ struct ::llvm::ImutContainerInfo<clang::ento::SymbolRef>
   static key_type_ref KeyOfValue(value_type_ref D) { return D; }
   static data_type_ref DataOfValue(value_type_ref) { return true; }
 
-  static bool isEqual(key_type_ref LHS, key_type_ref RHS) {
+  static bool isEqual(clang::ento::SymbolRef LHS, clang::ento::SymbolRef RHS) {
     return LHS->getSymbolID() == RHS->getSymbolID();
   }
 
-  static bool isLess(key_type_ref LHS, key_type_ref RHS) {
+  static bool isLess(clang::ento::SymbolRef LHS, clang::ento::SymbolRef RHS) {
     return LHS->getSymbolID() < RHS->getSymbolID();
   }
 
+  // This might seem redundant, but it is required because of the way
+  // ImmutableSet is implemented through AVLTree:
+  // same as ImmutableMap, but with a non-informative "data".
   static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
 };
 
