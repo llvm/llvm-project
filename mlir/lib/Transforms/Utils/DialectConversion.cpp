@@ -74,8 +74,8 @@ chooseLaterInsertPointInBlock(OpBuilder::InsertPoint a,
 // TODO: Extend DominanceInfo API to work with block iterators.
 static OpBuilder::InsertPoint chooseLaterInsertPoint(OpBuilder::InsertPoint a,
                                                      OpBuilder::InsertPoint b) {
-  // Case 1: Same block.
-  if (a.getBlock() == b.getBlock())
+  // Case 1: Fast path: Same block. This is the most common case.
+  if (LLVM_LIKELY(a.getBlock() == b.getBlock()))
     return chooseLaterInsertPointInBlock(a, b);
 
   // Case 2: Different block, but same region.
@@ -90,12 +90,12 @@ static OpBuilder::InsertPoint chooseLaterInsertPoint(OpBuilder::InsertPoint a,
   }
 
   // Case 3: b's region contains a: choose a.
-  if (Operation *aParent = b.getBlock()->getParent()->findAncestorOpInRegion(
+  if (b.getBlock()->getParent()->findAncestorOpInRegion(
           *a.getPoint()->getParentOp()))
     return a;
 
   // Case 4: a's region contains b: choose b.
-  if (Operation *bParent = a.getBlock()->getParent()->findAncestorOpInRegion(
+  if (a.getBlock()->getParent()->findAncestorOpInRegion(
           *b.getPoint()->getParentOp()))
     return b;
 
@@ -249,6 +249,11 @@ ConversionValueMapping::lookupOrDefault(Value from,
     // Otherwise: Check if there is a mapping for the entire vector. Such
     // mappings are materializations. (N:M mapping are not supported for value
     // replacements.)
+    //
+    // Note: From a correctness point of view, materializations do not have to
+    // be stored (and looked up) in the mapping. But for performance reasons,
+    // we choose to reuse existing IR (when possible) instead of creating it
+    // multiple times.
     auto it = mapping.find(current);
     if (it == mapping.end()) {
       // No mapping found: The lookup stops here.
@@ -1514,6 +1519,18 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
     // `applySignatureConversion`.)
     return Value();
   }
+
+  // Note: `computeInsertPoint` computes the "earliest" insertion point at
+  // which all values in `repl` are defined. It is important to emit the
+  // materialization at that location because the same materialization may be
+  // reused in a different context. (That's because materializations are cached
+  // in the conversion value mapping.) The insertion point of the
+  // materialization must be valid for all future users that may be created
+  // later in the conversion process.
+  //
+  // Note: Instead of creating new IR, `buildUnresolvedMaterialization` may
+  // return an already existing, cached materialization from the conversion
+  // value mapping.
   Value castValue =
       buildUnresolvedMaterialization(MaterializationKind::Source,
                                      computeInsertPoint(repl), value.getLoc(),
