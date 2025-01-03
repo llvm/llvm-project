@@ -5,6 +5,7 @@ add_flang_library(FIRBuilder
   BoxValue.cpp
   Character.cpp
   Complex.cpp
+  CUFCommon.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
   HLFIRTools.cpp

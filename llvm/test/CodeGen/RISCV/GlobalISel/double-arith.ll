@@ -169,11 +169,10 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fsgnj_d:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, -1
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    slli a2, a2, 63
+; RV64I-NEXT:    srli a1, a1, 63
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.copysign.f64(double %a, double %b)
@@ -216,8 +215,7 @@ define i32 @fneg_d(double %a, double %b) nounwind {
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    xor a1, a0, a1
 ; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -1354,12 +1352,11 @@ define double @fsgnjx_f64(double %x, double %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    li a3, 1023
-; RV64I-NEXT:    slli a2, a2, 63
-; RV64I-NEXT:    slli a3, a3, 52
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    li a2, 1023
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    slli a2, a2, 52
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    call __muldf3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

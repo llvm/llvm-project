@@ -159,6 +159,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
+  CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
@@ -863,6 +864,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SUD_Never);
   CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
               FormatStyle::SUD_LexicographicNumeric);
+
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Never",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Never);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Always",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Always);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Leave",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Leave);
 
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.

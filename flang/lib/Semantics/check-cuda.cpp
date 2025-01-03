@@ -110,10 +110,13 @@ struct FindHostArray
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
+          !symbol.attrs().test(Fortran::semantics::Attr::PARAMETER) &&
           (!details->cudaDataAttr() ||
               (details->cudaDataAttr() &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
         return &symbol;
       }
@@ -340,13 +343,14 @@ private:
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
-          "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+          "Host array '%s' cannot be present in device context"_err_en_US,
           hostArray->name());
     }
   }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::StopStmt> &) { return; },
             [&](const common::Indirection<parser::PrintStmt> &) {},
             [&](const common::Indirection<parser::WriteStmt> &x) {
               if (x.value().format) { // Formatted write to '*' or '6'
@@ -387,13 +391,10 @@ private:
               Check(x.value());
             },
             [&](const common::Indirection<parser::AssignmentStmt> &x) {
-              if (IsCUFKernelDo) {
-                const evaluate::Assignment *assign{
-                    semantics::GetAssignment(x.value())};
-                if (assign) {
-                  ErrorIfHostSymbol(assign->lhs, source);
-                  ErrorIfHostSymbol(assign->rhs, source);
-                }
+              if (const evaluate::Assignment *
+                  assign{semantics::GetAssignment(x.value())}) {
+                ErrorIfHostSymbol(assign->lhs, source);
+                ErrorIfHostSymbol(assign->rhs, source);
               }
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));

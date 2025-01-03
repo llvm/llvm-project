@@ -259,7 +259,7 @@ bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    ICmpInst::Predicate P;
+    CmpPredicate P;
     return match(U, m_ICmp(P, m_Value(), m_Zero())) && ICmpInst::isEquality(P);
   });
 }
@@ -614,7 +614,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     // runtime of ~O(#assumes * #values).
 
     Value *RHS;
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
       continue;
@@ -1063,6 +1063,64 @@ void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
   // Finally, we know we get information from the condition and its valid,
   // so return it.
   Known = CondRes;
+}
+
+// Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
+// Returns the input and lower/upper bounds.
+static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
+                                const APInt *&CLow, const APInt *&CHigh) {
+  assert(isa<Operator>(Select) &&
+         cast<Operator>(Select)->getOpcode() == Instruction::Select &&
+         "Input should be a Select!");
+
+  const Value *LHS = nullptr, *RHS = nullptr;
+  SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;
+  if (SPF != SPF_SMAX && SPF != SPF_SMIN)
+    return false;
+
+  if (!match(RHS, m_APInt(CLow)))
+    return false;
+
+  const Value *LHS2 = nullptr, *RHS2 = nullptr;
+  SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor;
+  if (getInverseMinMaxFlavor(SPF) != SPF2)
+    return false;
+
+  if (!match(RHS2, m_APInt(CHigh)))
+    return false;
+
+  if (SPF == SPF_SMIN)
+    std::swap(CLow, CHigh);
+
+  In = LHS2;
+  return CLow->sle(*CHigh);
+}
+
+static bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
+                                         const APInt *&CLow,
+                                         const APInt *&CHigh) {
+  assert((II->getIntrinsicID() == Intrinsic::smin ||
+          II->getIntrinsicID() == Intrinsic::smax) &&
+         "Must be smin/smax");
+
+  Intrinsic::ID InverseID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+  auto *InnerII = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
+  if (!InnerII || InnerII->getIntrinsicID() != InverseID ||
+      !match(II->getArgOperand(1), m_APInt(CLow)) ||
+      !match(InnerII->getArgOperand(1), m_APInt(CHigh)))
+    return false;
+
+  if (II->getIntrinsicID() == Intrinsic::smin)
+    std::swap(CLow, CHigh);
+  return CLow->sle(*CHigh);
+}
+
+static void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
+                                          KnownBits &Known) {
+  const APInt *CLow, *CHigh;
+  if (isSignedMinMaxIntrinsicClamp(II, CLow, CHigh))
+    Known = Known.unionWith(
+        ConstantRange::getNonEmpty(*CLow, *CHigh + 1).toKnownBits());
 }
 
 static void computeKnownBitsFromOperator(const Operator *I,
@@ -1602,7 +1660,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
         if (!Known2.isConstant()) {
-          ICmpInst::Predicate Pred;
+          CmpPredicate Pred;
           const APInt *RHSC;
           BasicBlock *TrueSucc, *FalseSucc;
           // TODO: Use RHS Value and compute range from its known bits.
@@ -1804,11 +1862,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::smin(Known, Known2);
+        unionWithMinMaxIntrinsicClamp(II, Known);
         break;
       case Intrinsic::smax:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::smax(Known, Known2);
+        unionWithMinMaxIntrinsicClamp(II, Known);
         break;
       case Intrinsic::ptrmask: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
@@ -2255,7 +2315,7 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
 static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
                                              const Value *Cond,
                                              bool CondIsTrue) {
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *RHSC;
   if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
                           m_APInt(RHSC))))
@@ -2580,7 +2640,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(U, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
       continue;
 
@@ -3009,7 +3069,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       // The condition of the select dominates the true/false arm. Check if the
       // condition implies that a given arm is non-zero.
       Value *X;
-      CmpInst::Predicate Pred;
+      CmpPredicate Pred;
       if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
         return false;
 
@@ -3037,7 +3097,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return true;
       RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
       // Check if the branch on the phi excludes zero.
-      ICmpInst::Predicate Pred;
+      CmpPredicate Pred;
       Value *X;
       BasicBlock *TrueSucc, *FalseSucc;
       if (match(RecQ.CxtI,
@@ -3749,55 +3809,6 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
     return isKnownNonEqual(A, B, DemandedElts, Depth + 1, Q);
 
   return false;
-}
-
-// Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
-// Returns the input and lower/upper bounds.
-static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
-                                const APInt *&CLow, const APInt *&CHigh) {
-  assert(isa<Operator>(Select) &&
-         cast<Operator>(Select)->getOpcode() == Instruction::Select &&
-         "Input should be a Select!");
-
-  const Value *LHS = nullptr, *RHS = nullptr;
-  SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;
-  if (SPF != SPF_SMAX && SPF != SPF_SMIN)
-    return false;
-
-  if (!match(RHS, m_APInt(CLow)))
-    return false;
-
-  const Value *LHS2 = nullptr, *RHS2 = nullptr;
-  SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor;
-  if (getInverseMinMaxFlavor(SPF) != SPF2)
-    return false;
-
-  if (!match(RHS2, m_APInt(CHigh)))
-    return false;
-
-  if (SPF == SPF_SMIN)
-    std::swap(CLow, CHigh);
-
-  In = LHS2;
-  return CLow->sle(*CHigh);
-}
-
-static bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
-                                         const APInt *&CLow,
-                                         const APInt *&CHigh) {
-  assert((II->getIntrinsicID() == Intrinsic::smin ||
-          II->getIntrinsicID() == Intrinsic::smax) && "Must be smin/smax");
-
-  Intrinsic::ID InverseID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
-  auto *InnerII = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
-  if (!InnerII || InnerII->getIntrinsicID() != InverseID ||
-      !match(II->getArgOperand(1), m_APInt(CLow)) ||
-      !match(InnerII->getArgOperand(1), m_APInt(CHigh)))
-    return false;
-
-  if (II->getIntrinsicID() == Intrinsic::smin)
-    std::swap(CLow, CHigh);
-  return CLow->sle(*CHigh);
 }
 
 /// For vector constants, loop over the elements and find the constant with the
@@ -4895,7 +4906,7 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
                                 KnownFromContext);
     return;
   }
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *LHS;
   uint64_t ClassVal = 0;
   const APFloat *CRHS;
@@ -4906,10 +4917,10 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
     if (CmpVal == V)
       KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
   } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(
-                             m_Value(LHS), m_ConstantInt(ClassVal)))) {
+                             m_Specific(V), m_ConstantInt(ClassVal)))) {
     FPClassTest Mask = static_cast<FPClassTest>(ClassVal);
     KnownFromContext.knownNot(CondIsTrue ? ~Mask : Mask);
-  } else if (match(Cond, m_ICmp(Pred, m_ElementWiseBitCast(m_Value(LHS)),
+  } else if (match(Cond, m_ICmp(Pred, m_ElementWiseBitCast(m_Specific(V)),
                                 m_APInt(RHS)))) {
     bool TrueIfSigned;
     if (!isSignBitCheck(Pred, *RHS, TrueIfSigned))
@@ -5135,7 +5146,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     FPClassTest MaskIfFalse = fcAllFlags;
     uint64_t ClassVal = 0;
     const Function *F = cast<Instruction>(Op)->getFunction();
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *CmpLHS, *CmpRHS;
     if (F && match(Cond, m_FCmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
       // If the select filters out a value based on the class, it no longer
@@ -8571,7 +8582,7 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
 bool llvm::isKnownInversion(const Value *X, const Value *Y) {
   // Handle X = icmp pred A, B, Y = icmp pred A, C.
   Value *A, *B, *C;
-  ICmpInst::Predicate Pred1, Pred2;
+  CmpPredicate Pred1, Pred2;
   if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
       !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
     return false;
@@ -8803,40 +8814,10 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
-/// Helps to match a select pattern in case of a type mismatch.
-///
-/// The function processes the case when type of true and false values of a
-/// select instruction differs from type of the cmp instruction operands because
-/// of a cast instruction. The function checks if it is legal to move the cast
-/// operation after "select". If yes, it returns the new second value of
-/// "select" (with the assumption that cast is moved):
-/// 1. As operand of cast instruction when both values of "select" are same cast
-/// instructions.
-/// 2. As restored constant (by applying reverse cast operation) when the first
-/// value of the "select" is a cast operation and the second value is a
-/// constant.
-/// NOTE: We return only the new second value because the first value could be
-/// accessed as operand of cast instruction.
-static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
-                              Instruction::CastOps *CastOp) {
-  auto *Cast1 = dyn_cast<CastInst>(V1);
-  if (!Cast1)
-    return nullptr;
-
-  *CastOp = Cast1->getOpcode();
-  Type *SrcTy = Cast1->getSrcTy();
-  if (auto *Cast2 = dyn_cast<CastInst>(V2)) {
-    // If V1 and V2 are both the same cast from the same type, look through V1.
-    if (*CastOp == Cast2->getOpcode() && SrcTy == Cast2->getSrcTy())
-      return Cast2->getOperand(0);
-    return nullptr;
-  }
-
-  auto *C = dyn_cast<Constant>(V2);
-  if (!C)
-    return nullptr;
-
+static Value *lookThroughCastConst(CmpInst *CmpI, Type *SrcTy, Constant *C,
+                                   Instruction::CastOps *CastOp) {
   const DataLayout &DL = CmpI->getDataLayout();
+
   Constant *CastedTo = nullptr;
   switch (*CastOp) {
   case Instruction::ZExt:
@@ -8912,6 +8893,63 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
   return CastedTo;
 }
 
+/// Helps to match a select pattern in case of a type mismatch.
+///
+/// The function processes the case when type of true and false values of a
+/// select instruction differs from type of the cmp instruction operands because
+/// of a cast instruction. The function checks if it is legal to move the cast
+/// operation after "select". If yes, it returns the new second value of
+/// "select" (with the assumption that cast is moved):
+/// 1. As operand of cast instruction when both values of "select" are same cast
+/// instructions.
+/// 2. As restored constant (by applying reverse cast operation) when the first
+/// value of the "select" is a cast operation and the second value is a
+/// constant. It is implemented in lookThroughCastConst().
+/// 3. As one operand is cast instruction and the other is not. The operands in
+/// sel(cmp) are in different type integer.
+/// NOTE: We return only the new second value because the first value could be
+/// accessed as operand of cast instruction.
+static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
+                              Instruction::CastOps *CastOp) {
+  auto *Cast1 = dyn_cast<CastInst>(V1);
+  if (!Cast1)
+    return nullptr;
+
+  *CastOp = Cast1->getOpcode();
+  Type *SrcTy = Cast1->getSrcTy();
+  if (auto *Cast2 = dyn_cast<CastInst>(V2)) {
+    // If V1 and V2 are both the same cast from the same type, look through V1.
+    if (*CastOp == Cast2->getOpcode() && SrcTy == Cast2->getSrcTy())
+      return Cast2->getOperand(0);
+    return nullptr;
+  }
+
+  auto *C = dyn_cast<Constant>(V2);
+  if (C)
+    return lookThroughCastConst(CmpI, SrcTy, C, CastOp);
+
+  Value *CastedTo = nullptr;
+  if (*CastOp == Instruction::Trunc) {
+    if (match(CmpI->getOperand(1), m_ZExtOrSExt(m_Specific(V2)))) {
+      // Here we have the following case:
+      //   %y_ext = sext iK %y to iN
+      //   %cond = cmp iN %x, %y_ext
+      //   %tr = trunc iN %x to iK
+      //   %narrowsel = select i1 %cond, iK %tr, iK %y
+      //
+      // We can always move trunc after select operation:
+      //   %y_ext = sext iK %y to iN
+      //   %cond = cmp iN %x, %y_ext
+      //   %widesel = select i1 %cond, iN %x, iN %y_ext
+      //   %tr = trunc iN %widesel to iK
+      assert(V2->getType() == Cast1->getType() &&
+             "V2 and Cast1 should be the same type.");
+      CastedTo = CmpI->getOperand(1);
+    }
+  }
+
+  return CastedTo;
+}
 SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
                                              Instruction::CastOps *CastOp,
                                              unsigned Depth) {
@@ -10054,7 +10092,7 @@ void llvm::findValuesAffectedByCondition(
     if (!Visited.insert(V).second)
       continue;
 
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *A, *B, *X;
 
     if (IsAssume) {

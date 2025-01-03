@@ -1279,10 +1279,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // |    for.body <---- (md2)
   // |_______|  |______|
   if (Instruction *TI = BB->getTerminator())
-    if (TI->hasMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata())
       for (BasicBlock *Pred : predecessors(BB))
         if (Instruction *PredTI = Pred->getTerminator())
-          if (PredTI->hasMetadata(LLVMContext::MD_loop))
+          if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
   if (BBKillable)
@@ -1345,12 +1345,15 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
-  // If the unconditional branch we replaced contains llvm.loop metadata, we
-  // add the metadata to the branch instructions in the predecessors.
+  // If the unconditional branch we replaced contains non-debug llvm.loop
+  // metadata, we add the metadata to the branch instructions in the
+  // predecessors.
   if (Instruction *TI = BB->getTerminator())
-    if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata()) {
+      MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
       for (BasicBlock *Pred : predecessors(BB))
         Pred->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
+    }
 
   if (BBKillable) {
     // Everything that jumped to BB now goes to Succ.
@@ -3305,6 +3308,9 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   return Changed;
 }
 
+// FIXME: https://github.com/llvm/llvm-project/issues/121495
+// Once external callers of this function are removed, either inline into
+// combineMetadataForCSE, or internalize and remove KnownIDs parameter.
 void llvm::combineMetadata(Instruction *K, const Instruction *J,
                            ArrayRef<unsigned> KnownIDs, bool DoesKMove) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
@@ -3317,6 +3323,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
 
     switch (Kind) {
       default:
+        // FIXME: https://github.com/llvm/llvm-project/issues/121495
+        // Change to removing only explicitly listed other metadata, and assert
+        // on unknown metadata, to avoid inadvertently dropping newly added
+        // metadata types.
         K->setMetadata(Kind, nullptr); // Remove unknown metadata
         break;
       case LLVMContext::MD_dbg:
@@ -3375,6 +3385,12 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         if (DoesKMove)
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        break;
+      case LLVMContext::MD_memprof:
+        K->setMetadata(Kind, MDNode::getMergedMemProfMetadata(KMD, JMD));
+        break;
+      case LLVMContext::MD_callsite:
+        K->setMetadata(Kind, MDNode::getMergedCallsiteMetadata(KMD, JMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
@@ -3439,7 +3455,9 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_nontemporal,
                          LLVMContext::MD_noundef,
                          LLVMContext::MD_mmra,
-                         LLVMContext::MD_noalias_addrspace};
+                         LLVMContext::MD_noalias_addrspace,
+                         LLVMContext::MD_memprof,
+                         LLVMContext::MD_callsite};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 

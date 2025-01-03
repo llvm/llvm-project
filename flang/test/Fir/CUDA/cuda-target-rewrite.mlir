@@ -27,3 +27,27 @@ gpu.module @testmod {
 // CHECK-LABEL: gpu.func @_QPtest
 // CHECK-SAME: (%arg0: f64, %arg1: f64) -> tuple<f64, f64> {
 // CHECK: gpu.return %{{.*}} : tuple<f64, f64>
+
+
+// -----
+module attributes {gpu.container_module} {
+
+gpu.module @testmod {
+  gpu.func @_QPtest(%arg0: complex<f64>) -> () kernel {
+    gpu.return
+  }
+}
+
+func.func @main(%arg0: complex<f64>) {
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(0 : i32) : i32
+  gpu.launch_func  @testmod::@_QPtest blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64 dynamic_shared_memory_size %1 args(%arg0 : complex<f64>)
+  return
+}
+
+}
+
+// CHECK-LABEL: gpu.func @_QPtest
+// CHECK-SAME: (%arg0: f64, %arg1: f64) kernel {
+// CHECK: gpu.return
+// CHECK: gpu.launch_func  @testmod::@_QPtest blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i64 dynamic_shared_memory_size %{{.*}} args(%{{.*}} : f64, %{{.*}} : f64)

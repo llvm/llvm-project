@@ -831,7 +831,7 @@ struct LinalgFoldUnitExtentDimsPass
     }
     linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
     populateMoveInitOperandsToInputPattern(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+    (void)applyPatternsGreedily(op, std::move(patterns));
   }
 };
 

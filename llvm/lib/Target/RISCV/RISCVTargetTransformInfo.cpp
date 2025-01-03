@@ -1663,7 +1663,7 @@ InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
     return 0;
 
   if (OpInfo.isUniform())
-    // vmv.x.i, vmv.v.x, or vfmv.v.f
+    // vmv.v.i, vmv.v.x, or vfmv.v.f
     // We ignore the cost of the scalar constant materialization to be consistent
     // with how we treat scalar constants themselves just above.
     return 1;
@@ -1978,6 +1978,34 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       SlideCost = 0;
     else if (Opcode == Instruction::InsertElement)
       SlideCost = 1; // With a constant index, we do not need to use addi.
+  }
+
+  // When the vector needs to split into multiple register groups and the index
+  // exceeds single vector register group, we need to insert/extract the element
+  // via stack.
+  if (LT.first > 1 &&
+      ((Index == -1U) || (Index >= LT.second.getVectorMinNumElements() &&
+                          LT.second.isScalableVector()))) {
+    Type *ScalarType = Val->getScalarType();
+    Align VecAlign = DL.getPrefTypeAlign(Val);
+    Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+    // Extra addi for unknown index.
+    InstructionCost IdxCost = Index == -1U ? 1 : 0;
+
+    // Store all split vectors into stack and load the target element.
+    if (Opcode == Instruction::ExtractElement)
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+             getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+                             CostKind) +
+             IdxCost;
+
+    // Store all split vectors into stack and store the target element and load
+    // vectors back.
+    return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Load, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
+                           CostKind) +
+           IdxCost;
   }
 
   // Extract i64 in the target that has XLEN=32 need more instruction.
@@ -2301,6 +2329,15 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
 }
 
+TTI::AddressingModeKind
+RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
+                                         ScalarEvolution *SE) const {
+  if (ST->hasVendorXCVmem() && !ST->is64Bit())
+    return TTI::AMK_PostIndexed;
+
+  return BasicTTIImplBase::getPreferredAddressingMode(L, SE);
+}
+
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                                  const TargetTransformInfo::LSRCost &C2) {
   // RISC-V specific here are "instruction number 1st priority".
@@ -2418,6 +2455,8 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   switch (II->getIntrinsicID()) {
   case Intrinsic::fma:
   case Intrinsic::vp_fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::vp_fmuladd:
     return Operand == 0 || Operand == 1;
   case Intrinsic::vp_shl:
   case Intrinsic::vp_lshr:
@@ -2519,16 +2558,21 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   // TODO: Enable expansion when unaligned access is not supported after we fix
   // issues in ExpandMemcmp.
-  if (!(ST->enableUnalignedScalarMem() &&
-        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+  if (!ST->enableUnalignedScalarMem())
+    return Options;
+
+  if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
-  if (ST->is64Bit())
+  if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
-  else
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
     Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
   return Options;
 }
