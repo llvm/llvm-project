@@ -21,8 +21,8 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE15:.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[PRED_SDIV_CONTINUE15]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_SDIV_CONTINUE15]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
@@ -76,8 +76,8 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK:       [[PRED_SDIV_CONTINUE15]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i16> [ [[TMP17]], %[[PRED_SDIV_CONTINUE13]] ], [ [[TMP20]], %[[PRED_SDIV_IF14]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i16> zeroinitializer, <4 x i16> [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT17]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP23:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT17]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT17]], splat (i1 true)
+; CHECK-NEXT:    [[TMP23:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT17]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP24]] = or <4 x i1> [[VEC_PHI]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25]] = or <4 x i1> [[VEC_PHI1]], [[TMP23]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -91,8 +91,8 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i16> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP_LATCH:.*]] ]

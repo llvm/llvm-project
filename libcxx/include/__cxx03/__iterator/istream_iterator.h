@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
-#define _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ISTREAM_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_ISTREAM_ITERATOR_H
 
-#include <__config>
-#include <__fwd/istream.h>
-#include <__fwd/string.h>
-#include <__iterator/default_sentinel.h>
-#include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/istream.h>
+#include <__cxx03/__fwd/string.h>
+#include <__cxx03/__iterator/default_sentinel.h>
+#include <__cxx03/__iterator/iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -98,4 +98,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const istream_iterator<_Tp, _CharT,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_ISTREAM_ITERATOR_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STRING_H
-#define _LIBCPP_STRING_H
+#ifndef _LIBCPP___CXX03_STRING_H
+#define _LIBCPP___CXX03_STRING_H
 
 /*
     string.h synopsis
@@ -51,7 +51,7 @@ size_t strlen(const char* s);
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -107,4 +107,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD char* strstr(char* __s1,
 } // extern "C++"
 #endif
 
-#endif // _LIBCPP_STRING_H
+#endif // _LIBCPP___CXX03_STRING_H

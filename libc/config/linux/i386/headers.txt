@@ -1,0 +1,3 @@
+set(TARGET_PUBLIC_HEADERS
+  libc.include.assert
+)

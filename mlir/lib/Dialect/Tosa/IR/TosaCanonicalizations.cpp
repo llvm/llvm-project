@@ -878,8 +878,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
 OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
   // If the pad is all zeros we can fold this operation away.
   if (adaptor.getPadding() && getInput1().getType() == getType()) {
-    auto densePad = llvm::cast<DenseElementsAttr>(adaptor.getPadding());
-    if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
+    auto densePad = llvm::dyn_cast<DenseElementsAttr>(adaptor.getPadding());
+    if (densePad && densePad.isSplat() &&
+        densePad.getSplatValue<APInt>().isZero()) {
       return getInput1();
     }
   }
@@ -1000,10 +1001,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
         input.getType().getElementType() == resultTy.getElementType())
       return input.reshape(resultTy);
   }
-
-  // Transpose does not change the input type.
-  if (getInput1().getType() != getType())
-    return {};
 
   // Transpose is not the identity transpose.
   SmallVector<int32_t> perms;

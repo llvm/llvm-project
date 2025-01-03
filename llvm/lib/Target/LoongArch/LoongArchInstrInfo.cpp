@@ -391,9 +391,6 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   //
   // The following instruction patterns are prohibited from being reordered:
   //
-  // * pcaddu18 $ra, %call36(s)
-  //   jirl     $ra, $ra, 0
-  //
   // * pcalau12i $a0, %pc_hi20(s)
   //   addi.d $a1, $zero, %pc_lo12(s)
   //   lu32i.d $a1, %pc64_lo20(s)
@@ -413,10 +410,6 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // boundaries, and the instructions between them are guaranteed to be
   // ordered according to data dependencies.
   switch (MI.getOpcode()) {
-  case LoongArch::PCADDU18I:
-    if (MI.getOperand(1).getTargetFlags() == LoongArchII::MO_CALL36)
-      return true;
-    break;
   case LoongArch::PCALAU12I: {
     auto AddI = std::next(MII);
     if (AddI == MIE || AddI->getOpcode() != LoongArch::ADDI_D)
@@ -658,7 +651,10 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_DESC_LD, "loongarch-desc-ld"},
       {MO_DESC_CALL, "loongarch-desc-call"},
       {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
-      {MO_GD_PC_HI, "loongarch-gd-pc-hi"}};
+      {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
+      {MO_LE_HI_R, "loongarch-le-hi-r"},
+      {MO_LE_ADD_R, "loongarch-le-add-r"},
+      {MO_LE_LO_R, "loongarch-le-lo-r"}};
   return ArrayRef(TargetFlags);
 }
 

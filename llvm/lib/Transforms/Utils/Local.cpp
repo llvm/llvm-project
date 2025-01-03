@@ -1034,8 +1034,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
     return false;
 
   if (any_of(BBPreds, [](const BasicBlock *Pred) {
-        return isa<PHINode>(Pred->begin()) &&
-               isa<IndirectBrInst>(Pred->getTerminator());
+        return isa<IndirectBrInst>(Pred->getTerminator());
       }))
     return false;
 
@@ -1280,10 +1279,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // |    for.body <---- (md2)
   // |_______|  |______|
   if (Instruction *TI = BB->getTerminator())
-    if (TI->hasMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata())
       for (BasicBlock *Pred : predecessors(BB))
         if (Instruction *PredTI = Pred->getTerminator())
-          if (PredTI->hasMetadata(LLVMContext::MD_loop))
+          if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
   if (BBKillable)
@@ -1346,12 +1345,15 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
-  // If the unconditional branch we replaced contains llvm.loop metadata, we
-  // add the metadata to the branch instructions in the predecessors.
+  // If the unconditional branch we replaced contains non-debug llvm.loop
+  // metadata, we add the metadata to the branch instructions in the
+  // predecessors.
   if (Instruction *TI = BB->getTerminator())
-    if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata()) {
+      MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
       for (BasicBlock *Pred : predecessors(BB))
         Pred->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
+    }
 
   if (BBKillable) {
     // Everything that jumped to BB now goes to Succ.
@@ -1645,7 +1647,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
-  // intead.
+  // instead.
   if (DII->isAddressOfVariable()) {
     // DII should have exactly 1 location when it is an address.
     assert(DII->getNumVariableLocationOps() == 1 &&
@@ -1672,7 +1674,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
-  // intead.
+  // instead.
   if (DVR->isAddressOfVariable()) {
     // DVR should have exactly 1 location when it is an address.
     assert(DVR->getNumVariableLocationOps() == 1 &&
@@ -1696,7 +1698,7 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
   if (!UseNewDbgInfoFormat) {
     auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
                                                   (Instruction *)nullptr);
-    DbgVal.get<Instruction *>()->insertBefore(Instr);
+    cast<Instruction *>(DbgVal)->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -1713,7 +1715,7 @@ static void insertDbgValueOrDbgVariableRecordAfter(
   if (!UseNewDbgInfoFormat) {
     auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
                                                   (Instruction *)nullptr);
-    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
+    cast<Instruction *>(DbgVal)->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -2178,11 +2180,9 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
         auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
-        auto NewDI = NewDbgValueMap.find({Parent, DbgII});
-        if (NewDI == NewDbgValueMap.end()) {
-          auto *NewDbgII = cast<DbgVariableIntrinsic>(DbgII->clone());
-          NewDI = NewDbgValueMap.insert({{Parent, DbgII}, NewDbgII}).first;
-        }
+        auto [NewDI, Inserted] = NewDbgValueMap.try_emplace({Parent, DbgII});
+        if (Inserted)
+          NewDI->second = cast<DbgVariableIntrinsic>(DbgII->clone());
         DbgVariableIntrinsic *NewDbgII = NewDI->second;
         // If PHI contains VI as an operand more than once, we may
         // replaced it in NewDbgII; confirm that it is present.
@@ -3308,6 +3308,9 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   return Changed;
 }
 
+// FIXME: https://github.com/llvm/llvm-project/issues/121495
+// Once external callers of this function are removed, either inline into
+// combineMetadataForCSE, or internalize and remove KnownIDs parameter.
 void llvm::combineMetadata(Instruction *K, const Instruction *J,
                            ArrayRef<unsigned> KnownIDs, bool DoesKMove) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
@@ -3320,6 +3323,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
 
     switch (Kind) {
       default:
+        // FIXME: https://github.com/llvm/llvm-project/issues/121495
+        // Change to removing only explicitly listed other metadata, and assert
+        // on unknown metadata, to avoid inadvertently dropping newly added
+        // metadata types.
         K->setMetadata(Kind, nullptr); // Remove unknown metadata
         break;
       case LLVMContext::MD_dbg:
@@ -3328,18 +3335,22 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->mergeDIAssignID(J);
         break;
       case LLVMContext::MD_tbaa:
-        K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
         break;
       case LLVMContext::MD_alias_scope:
-        K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
         break;
       case LLVMContext::MD_noalias:
       case LLVMContext::MD_mem_parallel_loop_access:
-        K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
         break;
       case LLVMContext::MD_access_group:
-        K->setMetadata(LLVMContext::MD_access_group,
-                       intersectAccessGroups(K, J));
+        if (DoesKMove)
+          K->setMetadata(LLVMContext::MD_access_group,
+                         intersectAccessGroups(K, J));
         break;
       case LLVMContext::MD_range:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
@@ -3375,6 +3386,12 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
+      case LLVMContext::MD_memprof:
+        K->setMetadata(Kind, MDNode::getMergedMemProfMetadata(KMD, JMD));
+        break;
+      case LLVMContext::MD_callsite:
+        K->setMetadata(Kind, MDNode::getMergedCallsiteMetadata(KMD, JMD));
+        break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
         break;
@@ -3390,6 +3407,11 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_prof:
         if (DoesKMove)
           K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
+        break;
+      case LLVMContext::MD_noalias_addrspace:
+        if (DoesKMove)
+          K->setMetadata(Kind,
+                         MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
         break;
     }
   }
@@ -3432,7 +3454,10 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_prof,
                          LLVMContext::MD_nontemporal,
                          LLVMContext::MD_noundef,
-                         LLVMContext::MD_mmra};
+                         LLVMContext::MD_mmra,
+                         LLVMContext::MD_noalias_addrspace,
+                         LLVMContext::MD_memprof,
+                         LLVMContext::MD_callsite};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -3507,6 +3532,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // operation, which is clearly not wanted and not needed.
   else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
+
+  // Handle attributes.
+  if (auto *CB1 = dyn_cast<CallBase>(ReplInst)) {
+    if (auto *CB2 = dyn_cast<CallBase>(I)) {
+      bool Success = CB1->tryIntersectAttributes(CB2);
+      assert(Success && "We should not be trying to sink callbases "
+                        "with non-intersectable attributes");
+      // For NDEBUG Compile.
+      (void)Success;
+    }
+  }
 
   // FIXME: If both the original and replacement value are part of the
   // same control-flow region (meaning that the execution of one

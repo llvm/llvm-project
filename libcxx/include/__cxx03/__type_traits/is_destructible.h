@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_DESTRUCTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_DESTRUCTIBLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_DESTRUCTIBLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_DESTRUCTIBLE_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/remove_all_extents.h>
-#include <__utility/declval.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_function.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/remove_all_extents.h>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -94,4 +94,4 @@ inline constexpr bool is_destructible_v = is_destructible<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_DESTRUCTIBLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_DESTRUCTIBLE_H

@@ -9,7 +9,7 @@
 // RUN: %clang -MD -MF - %t.dir/test.c -fsyntax-only -I %t.dir/subdir | FileCheck %s
 // CHECK: test.o:
 // CHECK-NEXT: \test.c
-// CHECK-NEXT: \SubDir\X.h
+// CHECK-NEXT: \subdir\x.h
 // File x.h must appear only once (case insensitive check).
 // CHECK-NOT: {{\\|/}}{{x|X}}.{{h|H}}
 

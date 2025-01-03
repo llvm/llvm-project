@@ -164,42 +164,7 @@ static constexpr fltSemantics semFloat4E2M1FN = {
     2, 0, 2, 4, fltNonfiniteBehavior::FiniteOnly};
 static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
-
-/* The IBM double-double semantics. Such a number consists of a pair of IEEE
-   64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
-   (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
-   Therefore it has two 53-bit mantissa parts that aren't necessarily adjacent
-   to each other, and two 11-bit exponents.
-
-   Note: we need to make the value different from semBogus as otherwise
-   an unsafe optimization may collapse both values to a single address,
-   and we heavily rely on them having distinct addresses.             */
 static constexpr fltSemantics semPPCDoubleDouble = {-1, 0, 0, 128};
-
-/* These are legacy semantics for the fallback, inaccrurate implementation of
-   IBM double-double, if the accurate semPPCDoubleDouble doesn't handle the
-   operation. It's equivalent to having an IEEE number with consecutive 106
-   bits of mantissa and 11 bits of exponent.
-
-   It's not equivalent to IBM double-double. For example, a legit IBM
-   double-double, 1 + epsilon:
-
-     1 + epsilon = 1 + (1 >> 1076)
-
-   is not representable by a consecutive 106 bits of mantissa.
-
-   Currently, these semantics are used in the following way:
-
-     semPPCDoubleDouble -> (IEEEdouble, IEEEdouble) ->
-     (64-bit APInt, 64-bit APInt) -> (128-bit APInt) ->
-     semPPCDoubleDoubleLegacy -> IEEE operations
-
-   We use bitcastToAPInt() to get the bit representation (in APInt) of the
-   underlying IEEEdouble, then use the APInt constructor to construct the
-   legacy IEEE float.
-
-   TODO: Implement all operations in semPPCDoubleDouble, and delete these
-   semantics.  */
 static constexpr fltSemantics semPPCDoubleDoubleLegacy = {1023, -1022 + 53,
                                                           53 + 53, 128};
 
@@ -217,6 +182,8 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return IEEEquad();
   case S_PPCDoubleDouble:
     return PPCDoubleDouble();
+  case S_PPCDoubleDoubleLegacy:
+    return PPCDoubleDoubleLegacy();
   case S_Float8E5M2:
     return Float8E5M2();
   case S_Float8E5M2FNUZ:
@@ -261,6 +228,8 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_IEEEquad;
   else if (&Sem == &llvm::APFloat::PPCDoubleDouble())
     return S_PPCDoubleDouble;
+  else if (&Sem == &llvm::APFloat::PPCDoubleDoubleLegacy())
+    return S_PPCDoubleDoubleLegacy;
   else if (&Sem == &llvm::APFloat::Float8E5M2())
     return S_Float8E5M2;
   else if (&Sem == &llvm::APFloat::Float8E5M2FNUZ())
@@ -298,6 +267,9 @@ const fltSemantics &APFloatBase::IEEEdouble() { return semIEEEdouble; }
 const fltSemantics &APFloatBase::IEEEquad() { return semIEEEquad; }
 const fltSemantics &APFloatBase::PPCDoubleDouble() {
   return semPPCDoubleDouble;
+}
+const fltSemantics &APFloatBase::PPCDoubleDoubleLegacy() {
+  return semPPCDoubleDoubleLegacy;
 }
 const fltSemantics &APFloatBase::Float8E5M2() { return semFloat8E5M2; }
 const fltSemantics &APFloatBase::Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
@@ -373,6 +345,14 @@ bool APFloatBase::semanticsHasZero(const fltSemantics &semantics) {
 
 bool APFloatBase::semanticsHasSignedRepr(const fltSemantics &semantics) {
   return semantics.hasSignedRepr;
+}
+
+bool APFloatBase::semanticsHasInf(const fltSemantics &semantics) {
+  return semantics.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754;
+}
+
+bool APFloatBase::semanticsHasNaN(const fltSemantics &semantics) {
+  return semantics.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
 }
 
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
@@ -3566,7 +3546,7 @@ APInt IEEEFloat::convertF80LongDoubleAPFloatToAPInt() const {
   return APInt(80, words);
 }
 
-APInt IEEEFloat::convertPPCDoubleDoubleAPFloatToAPInt() const {
+APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
   assert(semantics == (const llvm::fltSemantics *)&semPPCDoubleDoubleLegacy);
   assert(partCount()==2);
 
@@ -3788,7 +3768,7 @@ APInt IEEEFloat::bitcastToAPInt() const {
     return convertQuadrupleAPFloatToAPInt();
 
   if (semantics == (const llvm::fltSemantics *)&semPPCDoubleDoubleLegacy)
-    return convertPPCDoubleDoubleAPFloatToAPInt();
+    return convertPPCDoubleDoubleLegacyAPFloatToAPInt();
 
   if (semantics == (const llvm::fltSemantics *)&semFloat8E5M2)
     return convertFloat8E5M2APFloatToAPInt();
@@ -3892,7 +3872,7 @@ void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
   }
 }
 
-void IEEEFloat::initFromPPCDoubleDoubleAPInt(const APInt &api) {
+void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   opStatus fs;
@@ -3947,7 +3927,6 @@ void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
   // Handle fcNormal...
   category = fcNormal;
   exponent = myexponent - 127; // 127 is bias
-  return;
 }
 template <const fltSemantics &S>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
@@ -4112,7 +4091,7 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
   if (Sem == &semIEEEquad)
     return initFromQuadrupleAPInt(api);
   if (Sem == &semPPCDoubleDoubleLegacy)
-    return initFromPPCDoubleDoubleAPInt(api);
+    return initFromPPCDoubleDoubleLegacyAPInt(api);
   if (Sem == &semFloat8E5M2)
     return initFromFloat8E5M2APInt(api);
   if (Sem == &semFloat8E5M2FNUZ)
@@ -4138,7 +4117,7 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
   if (Sem == &semFloat4E2M1FN)
     return initFromFloat4E2M1FNAPInt(api);
 
-  llvm_unreachable(nullptr);
+  llvm_unreachable("unsupported semantics");
 }
 
 /// Make this number the largest magnitude normal number in the given

@@ -11,8 +11,8 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[ARG1:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds half, ptr [[ARG:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x half> [[TMP1]], <half 0xH5380, half 0xH5380>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x half> [[TMP2]], <half 0xH57F0, half 0xH57F0>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x half> [[TMP1]], splat (half 0xH5380)
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x half> [[TMP2]], splat (half 0xH57F0)
 ; CHECK-NEXT:    store <2 x half> [[TMP3]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_WRAP_ITER_H
-#define _LIBCPP___ITERATOR_WRAP_ITER_H
+#ifndef _LIBCPP___CXX03___ITERATOR_WRAP_ITER_H
+#define _LIBCPP___CXX03___ITERATOR_WRAP_ITER_H
 
-#include <__compare/ordering.h>
-#include <__compare/three_way_comparable.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
-#include <__memory/pointer_traits.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_convertible.h>
-#include <cstddef>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/three_way_comparable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -241,4 +241,4 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_WRAP_ITER_H
+#endif // _LIBCPP___CXX03___ITERATOR_WRAP_ITER_H

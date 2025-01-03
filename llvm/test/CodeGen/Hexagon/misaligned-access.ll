@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; Check that the mis-aligned load doesn't cause compiler to assert.
 
 @g0 = common global i32 0, align 4

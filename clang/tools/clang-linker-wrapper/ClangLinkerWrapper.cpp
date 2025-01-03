@@ -174,12 +174,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "LinkerWrapperOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "LinkerWrapperOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -189,7 +190,8 @@ static constexpr OptTable::Info InfoTable[] = {
 
 class WrapperOptTable : public opt::GenericOptTable {
 public:
-  WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
+  WrapperOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 
 const OptTable &getOptTable() {
@@ -214,33 +216,6 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   logAllUnhandledErrors(std::move(E),
                         WithColor::error(errs(), LinkerExecutable));
   exit(EXIT_FAILURE);
-}
-
-/// Create an extra user-specified \p OffloadFile.
-/// TODO: We should find a way to wrap these as libraries instead.
-Expected<OffloadFile> getInputBitcodeLibrary(StringRef Input) {
-  auto [Device, Path] = StringRef(Input).split('=');
-  auto [String, Arch] = Device.rsplit('-');
-  auto [Kind, Triple] = String.split('-');
-
-  llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> ImageOrError =
-      llvm::MemoryBuffer::getFileOrSTDIN(Path);
-  if (std::error_code EC = ImageOrError.getError())
-    return createFileError(Path, EC);
-
-  OffloadingImage Image{};
-  Image.TheImageKind = IMG_Bitcode;
-  Image.TheOffloadKind = getOffloadKind(Kind);
-  Image.StringData["triple"] = Triple;
-  Image.StringData["arch"] = Arch;
-  Image.Image = std::move(*ImageOrError);
-
-  std::unique_ptr<MemoryBuffer> Binary =
-      MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image));
-  auto NewBinaryOrErr = OffloadBinary::create(*Binary);
-  if (!NewBinaryOrErr)
-    return NewBinaryOrErr.takeError();
-  return OffloadFile(std::move(*NewBinaryOrErr), std::move(Binary));
 }
 
 std::string getMainExecutable(const char *Name) {
@@ -529,14 +504,14 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
         {"-Xlinker",
          Args.MakeArgString("--plugin-opt=" + StringRef(Arg->getValue()))});
 
-  if (!Triple.isNVPTX())
+  if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
-  if (!Triple.isAMDGPU() && !Triple.isNVPTX()) {
+  if (!Triple.isAMDGPU() && !Triple.isNVPTX() && !Triple.isSPIRV()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
@@ -600,17 +575,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
-  for (StringRef Arg : Args.getAllArgValues(OPT_builtin_bitcode_EQ)) {
-    if (llvm::Triple(Arg.split('=').first) == Triple)
-      CmdArgs.append({"-Xclang", "-mlink-builtin-bitcode", "-Xclang",
-                      Args.MakeArgString(Arg.split('=').second)});
-  }
-
-  // The OpenMPOpt pass can introduce new calls and is expensive, we do
-  // not want this when running CodeGen through clang.
-  if (Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ))
-    CmdArgs.append({"-mllvm", "-openmp-opt-disable"});
-
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
 
@@ -631,33 +595,13 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::spirv64:
   case Triple::systemz:
+  case Triple::loongarch64:
     return generic::clang(InputFiles, Args);
   default:
     return createStringError(Triple.getArchName() +
                              " linking is not supported");
-  }
-}
-
-void diagnosticHandler(const DiagnosticInfo &DI) {
-  std::string ErrStorage;
-  raw_string_ostream OS(ErrStorage);
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-
-  switch (DI.getSeverity()) {
-  case DS_Error:
-    WithColor::error(errs(), LinkerExecutable) << ErrStorage << "\n";
-    break;
-  case DS_Warning:
-    WithColor::warning(errs(), LinkerExecutable) << ErrStorage << "\n";
-    break;
-  case DS_Note:
-    WithColor::note(errs(), LinkerExecutable) << ErrStorage << "\n";
-    break;
-  case DS_Remark:
-    WithColor::remark(errs()) << ErrStorage << "\n";
-    break;
   }
 }
 
@@ -1382,13 +1326,6 @@ getDeviceInput(const ArgList &Args) {
       if (Extracted)
         break;
     }
-  }
-
-  for (StringRef Library : Args.getAllArgValues(OPT_bitcode_library_EQ)) {
-    auto FileOrErr = getInputBitcodeLibrary(Library);
-    if (!FileOrErr)
-      return FileOrErr.takeError();
-    InputFiles[*FileOrErr].push_back(std::move(*FileOrErr));
   }
 
   SmallVector<SmallVector<OffloadFile>> InputsForTarget;

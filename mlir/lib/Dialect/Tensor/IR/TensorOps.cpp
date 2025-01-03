@@ -142,8 +142,8 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
     size_t idx = mixedSizes.size() - size.index() - 1;
     // Rank-reduced dims must have a static unit dimension.
     bool isStaticUnitSize =
-        size.value().is<Attribute>() &&
-        llvm::cast<IntegerAttr>(size.value().get<Attribute>()).getInt() == 1;
+        isa<Attribute>(size.value()) &&
+        llvm::cast<IntegerAttr>(cast<Attribute>(size.value())).getInt() == 1;
 
     if (shapePos < 0) {
       // There are no more dims in the reduced shape. All remaining sizes must
@@ -615,6 +615,54 @@ LogicalResult ConcatOp::verify() {
   return success();
 }
 
+FailureOr<SmallVector<Value>> ConcatOp::decomposeOperation(OpBuilder &builder) {
+  size_t numInputs = getInputs().size();
+  uint64_t concatDim = getDim();
+
+  SmallVector<SmallVector<OpFoldResult>> inputShapes;
+  inputShapes.reserve(numInputs);
+  SmallVector<OpFoldResult> concatOffsets;
+  concatOffsets.reserve(numInputs);
+  SmallVector<OpFoldResult> outputShape;
+
+  AffineExpr addExpr =
+      builder.getAffineSymbolExpr(0) + builder.getAffineSymbolExpr(1);
+  OpFoldResult zero = builder.getIndexAttr(0);
+  Location loc = getLoc();
+  for (auto [index, input] : llvm::enumerate(getInputs())) {
+    SmallVector<OpFoldResult> inputShape =
+        tensor::getMixedSizes(builder, input.getLoc(), input);
+    if (index == 0) {
+      outputShape = inputShape;
+      concatOffsets.push_back(zero);
+    } else {
+      concatOffsets.push_back(outputShape[concatDim]);
+      outputShape[concatDim] = affine::makeComposedFoldedAffineApply(
+          builder, loc, addExpr,
+          {outputShape[concatDim], inputShape[concatDim]});
+    }
+    inputShapes.emplace_back(std::move(inputShape));
+  }
+
+  Value replacement = builder.create<tensor::EmptyOp>(
+      loc, outputShape, getType().getElementType());
+
+  int64_t rank = getType().getRank();
+  OpFoldResult one = builder.getIndexAttr(1);
+  SmallVector<OpFoldResult> strides(rank, one);
+  SmallVector<OpFoldResult> offsets(rank, zero);
+  for (auto [index, input] : llvm::enumerate(getInputs())) {
+    offsets[concatDim] = concatOffsets[index];
+    auto insertSlice = builder.create<tensor::InsertSliceOp>(
+        loc, input, replacement, offsets, inputShapes[index], strides);
+    replacement = insertSlice.getResult();
+  }
+  if (replacement.getType() != getType()) {
+    replacement = builder.create<tensor::CastOp>(loc, getType(), replacement);
+  }
+  return SmallVector<Value>{replacement};
+}
+
 LogicalResult
 ConcatOp::reifyResultShapes(OpBuilder &builder,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
@@ -980,7 +1028,10 @@ struct FoldEmptyTensorWithDimOp : public OpRewritePattern<DimOp> {
     auto emptyTensorOp = dimOp.getSource().getDefiningOp<EmptyOp>();
     if (!emptyTensorOp || !maybeConstantIndex)
       return failure();
-    if (!emptyTensorOp.getType().isDynamicDim(*maybeConstantIndex))
+    auto emptyTensorType = emptyTensorOp.getType();
+    if (*maybeConstantIndex < 0 ||
+        *maybeConstantIndex >= emptyTensorType.getRank() ||
+        !emptyTensorType.isDynamicDim(*maybeConstantIndex))
       return failure();
     rewriter.replaceOp(dimOp,
                        emptyTensorOp.getDynamicSize(*maybeConstantIndex));
@@ -1128,11 +1179,16 @@ LogicalResult ExtractOp::verify() {
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
-  // If this is a splat elements attribute, simply return the value. All of
-  // the elements of a splat attribute are the same.
-  if (Attribute tensor = adaptor.getTensor())
+  if (Attribute tensor = adaptor.getTensor()) {
+    // If this is a splat elements attribute, simply return the value.
+    // All of the elements of a splat attribute are the same.
     if (auto splatTensor = llvm::dyn_cast<SplatElementsAttr>(tensor))
       return splatTensor.getSplatValue<Attribute>();
+
+    // If this is a dense resource elements attribute, return.
+    if (isa<DenseResourceElementsAttr>(tensor))
+      return {};
+  }
 
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
@@ -1956,7 +2012,8 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
 
     // Only constant dimension values are supported.
     std::optional<int64_t> dim = dimOp.getConstantIndex();
-    if (!dim.has_value())
+    if (!dim.has_value() ||
+        dim.value() >= collapseShapeOp.getResultType().getRank())
       return failure();
 
     // Skip static dims. These are folded to constant ops.
@@ -3927,9 +3984,11 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
                               : packOrUnPack.getSourceType();
   size_t packedRank = packedType.getRank();
   // Require output rank to match input rank + number of blocking factors.
-  if (unpackedRank + mixedTiles.size() != packedRank) {
+  size_t expectedPackedRank = unpackedRank + mixedTiles.size();
+  if (expectedPackedRank != packedRank) {
     return op->emitError(
-        "packed rank must equal unpacked rank + tiling factors");
+               "packed rank != (unpacked rank + num tiling factors), got ")
+           << packedRank << " != " << expectedPackedRank;
   }
 
   // Verify result shape is greater than the minimum expected
@@ -4698,6 +4757,113 @@ OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // Common Canonicalizers and Folders.
 //===----------------------------------------------------------------------===//
+bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
+  // 1. InsertSliceOp has its own logic about folding tensor.cast ops.
+  // 2. Exclude DPS ops that are also LoopLike from this interface as they
+  // might need special handling of attached regions.
+  if (isa<InsertSliceOp>(op.getOperation()) ||
+      isa<LoopLikeOpInterface>(op.getOperation()))
+    return false;
+
+  // If no operand comes from a tensor::CastOp and can be folded then fail.
+  bool hasTensorCastOperand =
+      llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
+        if (llvm::isa<BlockArgument>(opOperand.get()))
+          return false;
+        auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
+        return castOp && canFoldIntoConsumerOp(castOp);
+      });
+
+  return hasTensorCastOperand;
+}
+
+static SmallVector<Value> getNewOperands(DestinationStyleOpInterface op,
+                                         SmallVector<Type> &newResTy) {
+  SmallVector<Value> newOperands;
+  newOperands.reserve(op->getNumOperands());
+
+  // Assumes that the result has dpsInits followed by nonDpsInits.
+  int64_t dpsInitIdx = 0;
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
+    bool fold = canFoldIntoConsumerOp(tensorCastOp);
+    newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
+    if (op.isDpsInit(&opOperand) &&
+        !llvm::isa<MemRefType>(newOperands.back().getType()))
+      newResTy[dpsInitIdx++] = newOperands.back().getType();
+  }
+  return newOperands;
+}
+
+/// Folds a tensor.cast op into a consuming tensor::PackOp op if the
+/// `tensor.cast` has source that is more static than the consuming op.
+///
+/// Example:
+/// ```mlir
+///   %1 = tensor.cast %0 : tensor<8x16xf32> to tensor<?x?xf32>
+///   %2 = tensor.pack %1 ... : tensor<?x?xf32> ...
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %2 = tensor.pack %0 ... : tensor<8x16xf32> ...
+/// ```
+struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
+  using OpRewritePattern<PackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PackOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!foldTensorCastPrecondition(op))
+      return failure();
+
+    SmallVector<Type> newResultTypes(op->getResultTypes());
+    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+
+    // Get the updated mixed-tile-sizes attribute.
+    SmallVector<OpFoldResult> newMixedTileSizes;
+    for (auto it : llvm::zip(cast<ShapedType>(newResultTypes[0])
+                                 .getShape()
+                                 .take_back(op.getMixedTiles().size()),
+                             op.getMixedTiles())) {
+      int64_t shape = std::get<0>(it);
+      if (shape == ShapedType::kDynamic) {
+        newMixedTileSizes.push_back(std::get<1>(it));
+        continue;
+      }
+
+      if (Attribute attr =
+              llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
+        // Already a constant
+        newMixedTileSizes.push_back(std::get<1>(it));
+      } else {
+        int64_t tileSize = getConstantIntValue(std::get<1>(it)).value();
+        assert(tileSize == shape && "tile size and dim size don't match!");
+        (void)tileSize;
+        newMixedTileSizes.push_back(
+            (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+      }
+    }
+
+    // Clone op.
+    PackOp newOp = rewriter.create<PackOp>(
+        op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
+        newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+
+    // Replace op.
+    Value oldResult = op.getResult();
+    Value newResult = newOp.getResult();
+    Value replacement = (newResult.getType() != oldResult.getType())
+                            ? rewriter.create<tensor::CastOp>(
+                                  op->getLoc(), oldResult.getType(), newResult)
+                            : newResult;
+
+    rewriter.replaceOp(op, {replacement});
+
+    return success();
+  }
+};
 
 /// Folds a tensor.cast op into a consuming DestinationStyleOpInterface op if
 /// the `tensor.cast` has source that is more static than the consuming op.
@@ -4722,42 +4888,17 @@ struct FoldTensorCastProducerOp
 
   LogicalResult matchAndRewrite(DestinationStyleOpInterface op,
                                 PatternRewriter &rewriter) const override {
-    // InsertSliceOp has its own logic about folding tensor.cast ops.
-    if (isa<InsertSliceOp>(op.getOperation()))
+
+    // Reject tensor::PackOp - there's dedicated pattern for that instead.
+    if (!foldTensorCastPrecondition(op) || dyn_cast<tensor::PackOp>(*op))
       return failure();
 
-    // Exclude DPS ops that are also LoopLike from this interface as they
-    // might need special handling of attached regions.
-    if (isa<LoopLikeOpInterface>(op.getOperation()))
-      return failure();
+    SmallVector<Type> newResultTypes(op->getResultTypes());
+    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
 
-    // If no operand comes from a tensor::CastOp and can be folded then fail.
-    bool hasTensorCastOperand =
-        llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
-          if (llvm::isa<BlockArgument>(opOperand.get()))
-            return false;
-          auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
-          return castOp && canFoldIntoConsumerOp(castOp);
-        });
-    if (!hasTensorCastOperand)
-      return failure();
+    // Clone op
+    auto newOp = clone(rewriter, op, newResultTypes, newOperands);
 
-    SmallVector<Type, 4> newResultTypes(op->getResultTypes());
-    SmallVector<Value, 4> newOperands;
-    newOperands.reserve(op->getNumOperands());
-    // Assumes that the result has dpsInits followed by nonDpsInits.
-    int64_t dpsInitIdx = 0;
-    for (OpOperand &opOperand : op->getOpOperands()) {
-      auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
-      bool fold = canFoldIntoConsumerOp(tensorCastOp);
-      newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
-      if (op.isDpsInit(&opOperand) &&
-          !llvm::isa<MemRefType>(newOperands.back().getType()))
-        newResultTypes[dpsInitIdx++] = newOperands.back().getType();
-    }
-
-    // Clone op.
-    Operation *newOp = clone(rewriter, op, newResultTypes, newOperands);
     SmallVector<Value, 4> replacements;
     replacements.reserve(newOp->getNumResults());
     for (auto [oldResult, newResult] :
@@ -4781,6 +4922,7 @@ struct FoldTensorCastProducerOp
 
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
+  results.add<FoldTensorCastPackOp>(getContext());
   results.add<FoldTensorCastProducerOp>(getContext());
 }
 

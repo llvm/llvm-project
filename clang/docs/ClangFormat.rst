@@ -33,7 +33,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
   Clang-format options:
 
     --Werror                       - If set, changes formatting warnings to errors
-    --Wno-error=<value>            - If set don't error out on the specified warning type.
+    --Wno-error=<value>            - If set, don't error out on the specified warning type.
       =unknown                     -   If set, unknown format options are only warned about.
                                        This can be used to enable formatting, even if the
                                        configuration contains unknown (newer) options.
@@ -49,7 +49,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                      supported:
                                        CSharp: .cs
                                        Java: .java
-                                       JavaScript: .mjs .js .ts
+                                       JavaScript: .js .mjs .cjs .ts
                                        Json: .json
                                        Objective-C: .m .mm
                                        Proto: .proto .protodevel
@@ -150,6 +150,7 @@ names. It has the following format:
 * Patterns follow the rules specified in `POSIX 2.13.1, 2.13.2, and Rule 1 of
   2.13.3 <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/
   V3_chap02.html#tag_18_13>`_.
+* Bash globstar (``**``) is supported.
 * A pattern is negated if it starts with a bang (``!``).
 
 To match all files in a directory, use e.g. ``foo/bar/*``. To match all files in
@@ -363,8 +364,3 @@ those as well).
 
 These commands use the file paths shown in the diff output
 so they will only work from the root of the repository.
-
-Current State of Clang Format for LLVM
-======================================
-
-The following table :doc:`ClangFormattedStatus` shows the current status of clang-formatting for the entire LLVM source tree.

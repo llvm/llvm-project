@@ -41,6 +41,28 @@ def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDecomposeTensorPackUnpackPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pack_unpack",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to decompose tensor.pack and tensor.unpack into e.g.
+    tensor::PadOp, linalg::transposeOp Ops. Requires all outer dims to be unit.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyDecomposeTensorPadPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pad",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to decompose tensor.pad into e.g. tensor::EmptyOp,
+    linalg::FillOp and tensor::InsertSliceOp.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyFoldUnitExtentDimsViaReshapesPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.fold_unit_extent_dims_via_reshapes",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -418,9 +440,10 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
 
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
-  let assemblyFormat =
-      "$target attr-dict `:` "
-      "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -455,9 +478,10 @@ def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
 
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
-  let assemblyFormat =
-      "$target attr-dict `:` "
-      "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -500,7 +524,7 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   let assemblyFormat = [{
     $target
     (`iterator_interchange` `=` $iterator_interchange^)? attr-dict
-    `:` custom<SemiFunctionType>(type($target), type($transformed))
+    `:` custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
   let hasVerifier = 1;
 
@@ -535,7 +559,8 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
     Return handles to the newly produced pad, expand_shape and transpose ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target);
+  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target,
+                       DefaultValuedAttr<BoolAttr, "true">:$lowerPadLikeWithInsertSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
                       Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
@@ -575,7 +600,8 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
     Return handles to the newly produced empty, transpose, collapse_shape and extract_slice ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target);
+  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target,
+                       DefaultValuedAttr<BoolAttr, "true">:$lowerUnpadLikeWithExtractSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
@@ -701,8 +727,10 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
                          { target_size = 10, dimension = 1 }
                        : !transform.any_op, !transform.param<i64>,
                          !transform.param<i64>, !transform.param<i64>
-    %low, %high = structured.split %target after %split { dimension = 1 }
+    %handles = structured.split %target after %split { dimension = 1 }
                 : !transform.any_op, !transform.param<i64>
+    %low, %high = transform.split_handle %handles : (!transform.any_op)
+                      -> (!transform.any_op, !transform.any_op)
     %tiled_low, %loop1 = structured.tile_using_for %low [0, %sz1]
                        : (!transform.any_op, !transform.param<i64>)
                       -> (!transform.any_op, !transform.any_op)
@@ -1233,9 +1261,10 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
                        OptionalAttr<I64Attr>:$alignment);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat =
-    "$target attr-dict `:`"
-    "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -1269,9 +1298,10 @@ def ReplaceOp : Op<Transform_Dialect, "structured.replace",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$replacement);
   let regions = (region SizedRegion<1>:$bodyRegion);
-  let assemblyFormat =
-      "$target attr-dict-with-keyword regions `:` "
-      "custom<SemiFunctionType>(type($target), type($replacement))";
+  let assemblyFormat = [{
+      $target attr-dict-with-keyword regions `:`
+      custom<SemiFunctionType>(type($target), type($replacement), "false")
+  }];
   let hasVerifier = 1;
 }
 
@@ -1310,9 +1340,10 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$result);
 
-  let assemblyFormat =
-    "$target attr-dict `:`"
-    "custom<SemiFunctionType>(type($target), type($result))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($result), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -1447,21 +1478,24 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
     operations pointed to by the target handle.
 
     The operation consumes the target handle, but preserves the chunk size
-    handle if provided. Without the `multiway` attribute, it produces two
-    new handles pointing to the two parts of the structured op after splitting,
-    in the same order as the target operand, with the first handle
-    corresponding to the part with lower iteration space indices.
+    handle if provided. Without the `multiway` attribute, it produces a
+    new handle that is a list of the two parts of the structured op after
+    splitting, whose lower index part corresponding to the part with lower
+    iteration space indices.
 
     Multiway split mode is enabled by specifying the `multiway` attribute.
     In this mode a single `target` op is split into multiple parts covering
     the iteration space of the specified dimension. `static_chunk_sizes` and
     `dynamic_chunk_sizes` in this case is a list of chunk sizes that the given
-    dimension should be split into. With `multiway` it produces two handles;
-    the first handle is a list of the multiple parts of the structured op
+    dimension should be split into. With `multiway` it also produces a handle;
+    The result handle is a list of the multiple parts of the structured op
     after splitting, where the target dimensions for each linalg op in the
     list corresponds to the chunk sizes specfied in the input split list.
     If the chunk sizes do not cover the entire iteration space, the leftover
-    chunk is the last payload in the first handle. The second handle is empty.
+    chunk is the last payload in the result handle.
+
+    As the result handle is most of time a list, an `transform.split_handle`
+    is needed to access individual handle.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -1469,8 +1503,7 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
                        Optional<TransformAnyParamTypeOrAnyHandle>:$dynamic_chunk_sizes,
                        I64Attr:$static_chunk_sizes,
                        UnitAttr:$multiway);
-  let results = (outs TransformHandleTypeInterface:$first,
-                      TransformHandleTypeInterface:$second);
+  let results = (outs TransformHandleTypeInterface:$split_list);
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -1732,8 +1765,8 @@ def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_u
   let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes);
   let results = (outs Variadic<TransformHandleTypeInterface>:$fill_op,
-                      TransformHandleTypeInterface:$split_linalg_op,
-                      TransformHandleTypeInterface:$combining_linalg_op,
+                      TransformHandleTypeInterface:$split_op,
+                      TransformHandleTypeInterface:$combining_op,
                       TransformHandleTypeInterface:$for_op);
 
   let builders = [
@@ -1751,7 +1784,7 @@ def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_u
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::linalg::LinalgOp target,
+        Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

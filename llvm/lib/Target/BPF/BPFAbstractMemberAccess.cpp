@@ -303,7 +303,7 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         DimSize *= CI->getSExtValue();
       }
   }

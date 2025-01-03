@@ -9,6 +9,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -63,12 +64,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
-  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 const opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -78,7 +80,8 @@ const opt::OptTable::Info InfoTable[] = {
 
 class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
 public:
-  GSYMUtilOptTable() : GenericOptTable(InfoTable) {
+  GSYMUtilOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -96,6 +99,8 @@ static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool StoreMergedFunctionInfo = false;
+static bool LoadDwarfCallSites = false;
+static std::string CallSiteYamlPath;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -177,6 +182,18 @@ static void parseArgs(int argc, char **argv) {
 
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
   StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
+
+  if (Args.hasArg(OPT_callsites_yaml_file_EQ)) {
+    CallSiteYamlPath = Args.getLastArgValue(OPT_callsites_yaml_file_EQ);
+    if (CallSiteYamlPath.empty()) {
+      llvm::errs()
+          << ToolName
+          << ": --callsites-yaml-file option requires a non-empty argument.\n";
+      std::exit(1);
+    }
+  }
+
+  LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
 }
 
 /// @}
@@ -351,7 +368,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym, LoadDwarfCallSites);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
@@ -369,6 +386,11 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   // Get the UUID and convert symbol table to GSYM.
   if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
     return Err;
+
+  // If any call site YAML files were specified, load them now.
+  if (!CallSiteYamlPath.empty())
+    if (auto Err = Gsym.loadCallSitesFromYAML(CallSiteYamlPath))
+      return Err;
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
   // duplicate FunctionInfo entries where we might have found an entry from

@@ -696,7 +696,7 @@ val named_struct_type : llcontext -> string -> lltype
 
 (** [struct_set_body ty elts ispacked] sets the body of the named struct [ty]
     to the [elts] elements.
-    See the moethd [llvm::StructType::setBody]. *)
+    See the method [llvm::StructType::setBody]. *)
 val struct_set_body : lltype -> lltype array -> bool -> unit
 
 (** [struct_element_types sty] returns the constituent types of the struct type
@@ -765,6 +765,18 @@ val void_type : llcontext -> lltype
 (** [label_type c] creates a type of a basic block in the context [c]. See
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
+
+(** [x86_amx_type c] creates an X86 AMX type in the context [c]. See
+    [llvm::Type::getX86_AMXTy]. *)
+val x86_amx_type : llcontext -> lltype
+
+(** [token_type c] creates a token type in the context [c]. See
+    [llvm::Type::getTokenTy]. *)
+val token_type : llcontext -> lltype
+
+(** [metadata_type c] creates a metadata type in the context [c]. See
+    [llvm::Type::getMetadataTy]. *)
+val metadata_type : llcontext -> lltype
 
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.

@@ -232,14 +232,23 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
 
 bool AArch64TargetInfo::validateGlobalRegisterVariable(
     StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
-  if ((RegName == "sp") || RegName.starts_with("x")) {
+  if (RegName == "sp") {
     HasSizeMismatch = RegSize != 64;
     return true;
-  } else if (RegName.starts_with("w")) {
-    HasSizeMismatch = RegSize != 32;
-    return true;
   }
-  return false;
+  if (RegName.starts_with("w"))
+    HasSizeMismatch = RegSize != 32;
+  else if (RegName.starts_with("x"))
+    HasSizeMismatch = RegSize != 64;
+  else
+    return false;
+  StringRef RegNum = RegName.drop_front();
+  // Check if the register is reserved. See also
+  // AArch64TargetLowering::getRegisterByName().
+  return RegNum == "0" ||
+         (RegNum == "18" &&
+          llvm::AArch64::isX18ReservedByDefault(getTriple())) ||
+         getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
@@ -447,6 +456,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__ARM_FP16_FORMAT_IEEE", "1");
   Builder.defineMacro("__ARM_FP16_ARGS", "1");
 
+  // Clang supports arm_neon_sve_bridge.h
+  Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
+
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
@@ -464,16 +476,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (FPU & SveMode)
     Builder.defineMacro("__ARM_FEATURE_SVE", "1");
 
-  if ((FPU & NeonMode) && (FPU & SveMode))
-    Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
-
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
 
   if (HasSVE2p1)
     Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
 
-  if (HasSVE2 && HasSVE2AES)
+  if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
   if (HasSVE2 && HasSVE2BitPerm)
@@ -705,24 +714,14 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   return std::nullopt;
 }
 
-unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  if (Name == "default")
-    return 0;
-  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return Ext->Priority;
-  return 0;
-}
-
-unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
-  // Take the maximum priority as per feature cost, so more features win.
-  constexpr unsigned MaxFMVPriority = 1000;
-  return MaxFMVPriority;
+unsigned AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  return llvm::AArch64::getFMVPriority(Features);
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
   // FMV extensions which imply no backend features do not affect codegen.
   if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return !Ext->Features.empty();
+    return Ext->ID.has_value();
   return false;
 }
 
@@ -765,13 +764,11 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("i8mm", HasMatMul)
       .Case("bf16", HasBFloat16)
       .Case("sve", FPU & SveMode)
-      .Case("sve-bf16", FPU & SveMode && HasBFloat16)
-      .Case("sve-i8mm", FPU & SveMode && HasMatMul)
       .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
-      .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
+      .Case("sve-aes", HasSVEAES)
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
@@ -863,12 +860,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2p1 = true;
     }
-    if (Feature == "+sve2-aes") {
+    if (Feature == "+sve-aes") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2AES = true;
+      HasSVEAES = true;
     }
     if (Feature == "+sve2-sha3") {
       FPU |= NeonMode;
@@ -1716,7 +1711,7 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
 
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+  DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 
 TargetInfo::BuiltinVaListKind

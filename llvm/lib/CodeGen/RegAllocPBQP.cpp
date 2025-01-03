@@ -64,7 +64,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -122,7 +121,7 @@ public:
       : MachineFunctionPass(ID), customPassID(cPassID) {
     initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveStacksPass(*PassRegistry::getPassRegistry());
+    initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
     initializeVirtRegMapWrapperLegacyPass(*PassRegistry::getPassRegistry());
   }
 
@@ -551,8 +550,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   //au.addRequiredID(SplitCriticalEdgesID);
   if (customPassID)
     au.addRequiredID(*customPassID);
-  au.addRequired<LiveStacks>();
-  au.addPreserved<LiveStacks>();
+  au.addRequired<LiveStacksWrapperLegacy>();
+  au.addPreserved<LiveStacksWrapperLegacy>();
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();

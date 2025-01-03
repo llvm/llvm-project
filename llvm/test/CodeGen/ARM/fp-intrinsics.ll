@@ -146,6 +146,13 @@ define float @tan_f32(float %x) #0 {
   ret float %val
 }
 
+; CHECK-LABEL: atan2_f32:
+; CHECK: bl atan2f
+define float @atan2_f32(float %x, float %y) #0 {
+  %val = call float @llvm.experimental.constrained.atan2.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
 ; CHECK-LABEL: pow_f32:
 ; CHECK: bl powf
 define float @pow_f32(float %x, float %y) #0 {
@@ -610,6 +617,13 @@ define double @tan_f64(double %x) #0 {
   ret double %val
 }
 
+; CHECK-LABEL: atan2_f64:
+; CHECK: bl atan2
+define double @atan2_f64(double %x, double %y) #0 {
+  %val = call double @llvm.experimental.constrained.atan2.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
 ; CHECK-LABEL: pow_f64:
 ; CHECK: bl pow
 define double @pow_f64(double %x, double %y) #0 {
@@ -1038,6 +1052,7 @@ declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, meta
 declare float @llvm.experimental.constrained.sin.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.cos.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.tan.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.atan2.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.pow.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.log.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.log10.f32(float, metadata, metadata)
@@ -1072,6 +1087,7 @@ declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, me
 declare double @llvm.experimental.constrained.sin.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.atan2.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.log.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.log10.f64(double, metadata, metadata)

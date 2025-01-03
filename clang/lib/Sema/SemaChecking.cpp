@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -25,7 +26,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/NSAPI.h"
@@ -38,7 +38,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -50,8 +49,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/SyncScope.h"
-#include "clang/Basic/TargetBuiltins.h"
-#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
@@ -66,7 +63,6 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLoongArch.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaNVPTX.h"
@@ -93,7 +89,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -105,7 +100,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -2212,7 +2206,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
-             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn}))
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn,
+             llvm::Triple::ppc, llvm::Triple::ppc64, llvm::Triple::ppcle,
+             llvm::Triple::ppc64le}))
       return ExprError();
     break;
 
@@ -2971,6 +2967,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_counted_by_ref:
+    if (BuiltinCountedByRef(TheCall))
+      return ExprError();
+    break;
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -3223,6 +3223,53 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
         << ParamName << (FDecl != nullptr) << FDecl;
 }
 
+void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
+                                  const Expr *ThisArg,
+                                  ArrayRef<const Expr *> Args) {
+  if (!FD || Args.empty())
+    return;
+  auto GetArgAt = [&](int Idx) -> const Expr * {
+    if (Idx == LifetimeCaptureByAttr::GLOBAL ||
+        Idx == LifetimeCaptureByAttr::UNKNOWN)
+      return nullptr;
+    if (IsMemberFunction && Idx == 0)
+      return ThisArg;
+    return Args[Idx - IsMemberFunction];
+  };
+  auto HandleCaptureByAttr = [&](const LifetimeCaptureByAttr *Attr,
+                                 unsigned ArgIdx) {
+    if (!Attr)
+      return;
+
+    Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
+    for (int CapturingParamIdx : Attr->params()) {
+      // lifetime_capture_by(this) case is handled in the lifetimebound expr
+      // initialization codepath.
+      if (CapturingParamIdx == LifetimeCaptureByAttr::THIS &&
+          isa<CXXConstructorDecl>(FD))
+        continue;
+      Expr *Capturing = const_cast<Expr *>(GetArgAt(CapturingParamIdx));
+      CapturingEntity CE{Capturing};
+      // Ensure that 'Captured' outlives the 'Capturing' entity.
+      checkCaptureByLifetime(*this, CE, Captured);
+    }
+  };
+  for (unsigned I = 0; I < FD->getNumParams(); ++I)
+    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
+                        I + IsMemberFunction);
+  // Check when the implicit object param is captured.
+  if (IsMemberFunction) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc())
+      HandleCaptureByAttr(ATL.getAttrAs<LifetimeCaptureByAttr>(), 0);
+  }
+}
+
 void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
@@ -3263,7 +3310,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
   }
-
+  if (FD)
+    checkLifetimeCaptureBy(FD, IsMemberFunction, ThisArg, Args);
   if (FDecl || Proto) {
     CheckNonNullArguments(*this, FDecl, Proto, Args, Loc);
 
@@ -5272,9 +5320,11 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
   {
     ExprResult FirstArgResult =
         DefaultFunctionArrayLvalueConversion(FirstArg);
-    if (checkBuiltinArgument(*this, TheCall, 0))
+    if (!FirstArgResult.get()->getType()->isPointerType()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_assume_aligned_invalid_arg)
+          << TheCall->getSourceRange();
       return true;
-    /// In-place updation of FirstArg by checkBuiltinArgument is ignored.
+    }
     TheCall->setArg(0, FirstArgResult.get());
   }
 
@@ -5571,6 +5621,94 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
     return Diag(TheCall->getBeginLoc(), diag::err_builtin_setjmp_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
   return false;
+}
+
+bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
+  if (checkArgCount(TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = UsualUnaryConversions(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  // For simplicity, we support only limited expressions for the argument.
+  // Specifically a pointer to a flexible array member:'ptr->array'. This
+  // allows us to reject arguments with complex casting, which really shouldn't
+  // be a huge problem.
+  const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
+  if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
+
+  if (Arg->HasSideEffects(Context))
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_has_side_effects)
+           << Arg->getSourceRange();
+
+  if (const auto *ME = dyn_cast<MemberExpr>(Arg)) {
+    if (!ME->isFlexibleArrayMemberLike(
+            Context, getLangOpts().getStrictFlexArraysLevel()))
+      return Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+             << Arg->getSourceRange();
+
+    if (auto *CATy =
+            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+      const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
+      if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+        TheCall->setType(Context.getPointerType(CountFD->getType()));
+        return false;
+      }
+    }
+  } else {
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
+  }
+
+  TheCall->setType(Context.getPointerType(Context.VoidTy));
+  return false;
+}
+
+/// The result of __builtin_counted_by_ref cannot be assigned to a variable.
+/// It allows leaking and modification of bounds safety information.
+bool Sema::CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                           BuiltinCountedByRefKind K) {
+  const CallExpr *CE =
+      E ? dyn_cast<CallExpr>(E->IgnoreParenImpCasts()) : nullptr;
+  if (!CE || CE->getBuiltinCallee() != Builtin::BI__builtin_counted_by_ref)
+    return false;
+
+  switch (K) {
+  case AssignmentKind:
+  case InitializerKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 0 << E->getSourceRange();
+    break;
+  case FunctionArgKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 1 << E->getSourceRange();
+    break;
+  case ReturnArgKind:
+    Diag(E->getExprLoc(),
+         diag::err_builtin_counted_by_ref_cannot_leak_reference)
+        << 2 << E->getSourceRange();
+    break;
+  case ArraySubscriptKind:
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 0 << E->getSourceRange();
+    break;
+  case BinaryExprKind:
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_use)
+        << 1 << E->getSourceRange();
+    break;
+  }
+
+  return true;
 }
 
 namespace {
@@ -6453,27 +6591,33 @@ void CheckFormatHandler::HandleNonStandardConversionSpecifier(
 
 void CheckFormatHandler::HandlePosition(const char *startPos,
                                         unsigned posLen) {
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
-                               getLocationOfByte(startPos),
-                               /*IsStringLocation*/true,
-                               getSpecifierRange(startPos, posLen));
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_non_standard_positional_arg, SourceLocation()))
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
 }
 
 void CheckFormatHandler::HandleInvalidPosition(
     const char *startSpecifier, unsigned specifierLen,
     analyze_format_string::PositionContext p) {
-  EmitFormatDiagnostic(
-      S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
-      getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
-      getSpecifierRange(startSpecifier, specifierLen));
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_invalid_positional_specifier, SourceLocation()))
+    EmitFormatDiagnostic(
+        S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
+        getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
+        getSpecifierRange(startSpecifier, specifierLen));
 }
 
 void CheckFormatHandler::HandleZeroPosition(const char *startPos,
                                             unsigned posLen) {
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
-                               getLocationOfByte(startPos),
-                               /*IsStringLocation*/true,
-                               getSpecifierRange(startPos, posLen));
+  if (!S.getDiagnostics().isIgnored(diag::warn_format_zero_positional_specifier,
+                                    SourceLocation()))
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
 }
 
 void CheckFormatHandler::HandleNullChar(const char *nullCharacter) {
@@ -7944,8 +8088,9 @@ static void CheckFormatString(
   }
 
   if (Type == Sema::FST_Printf || Type == Sema::FST_NSString ||
-      Type == Sema::FST_FreeBSDKPrintf || Type == Sema::FST_OSLog ||
-      Type == Sema::FST_OSTrace || Type == Sema::FST_Syslog) {
+      Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf ||
+      Type == Sema::FST_OSLog || Type == Sema::FST_OSTrace ||
+      Type == Sema::FST_Syslog) {
     CheckPrintfHandler H(
         S, FExpr, OrigFormatExpr, Type, firstDataArg, numDataArgs,
         (Type == Sema::FST_NSString || Type == Sema::FST_OSTrace), Str, APK,
@@ -7954,7 +8099,7 @@ static void CheckFormatString(
 
     if (!analyze_format_string::ParsePrintfString(
             H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
-            Type == Sema::FST_FreeBSDKPrintf))
+            Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf))
       H.DoneProcessing();
   } else if (Type == Sema::FST_Scanf) {
     CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
@@ -8900,7 +9045,12 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
           << Call->getCallee()->getSourceRange());
     else if (const auto *RT = PointeeTy->getAs<RecordType>()) {
 
-      bool IsTriviallyCopyableCXXRecord =
+      // FIXME: Do not consider incomplete types even though they may be
+      // completed later. GCC does not diagnose such code, but we may want to
+      // consider diagnosing it in the future, perhaps under a different, but
+      // related, diagnostic group.
+      bool MayBeTriviallyCopyableCXXRecord =
+          RT->isIncompleteType() ||
           RT->desugar().isTriviallyCopyableType(Context);
 
       if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
@@ -8910,7 +9060,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                                 << ArgIdx << FnName << PointeeTy << 0);
         SearchNonTrivialToInitializeField::diag(PointeeTy, Dest, *this);
       } else if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
-                 !IsTriviallyCopyableCXXRecord && ArgIdx == 0) {
+                 !MayBeTriviallyCopyableCXXRecord && ArgIdx == 0) {
         // FIXME: Limiting this warning to dest argument until we decide
         // whether it's valid for source argument too.
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
@@ -8923,7 +9073,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                                 << ArgIdx << FnName << PointeeTy << 1);
         SearchNonTrivialToCopyField::diag(PointeeTy, Dest, *this);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
-                 !IsTriviallyCopyableCXXRecord && ArgIdx == 0) {
+                 !MayBeTriviallyCopyableCXXRecord && ArgIdx == 0) {
         // FIXME: Limiting this warning to dest argument until we decide
         // whether it's valid for source argument too.
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
@@ -11952,7 +12102,8 @@ void Sema::CheckForIntOverflow (const Expr *E) {
              New && New->isArray()) {
       if (auto ArraySize = New->getArraySize())
         Exprs.push_back(*ArraySize);
-    }
+    } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(OriginalE))
+      Exprs.push_back(MTE->getSubExpr());
   } while (!Exprs.empty());
 }
 

@@ -32,19 +32,19 @@ using namespace llvm::dxil;
 
 namespace {
 
-struct DXILArgSelect {
-  enum class Type {
-    Index,
-    I32,
-    I8,
-  };
-  Type Type = Type::Index;
-  int Value = -1;
-};
 struct DXILIntrinsicSelect {
   StringRef Intrinsic;
-  SmallVector<DXILArgSelect, 4> Args;
+  SmallVector<const Record *> ArgSelectRecords;
 };
+
+static StringRef StripIntrinArgSelectTypePrefix(StringRef Type) {
+  StringRef Prefix = "IntrinArgSelect_";
+  if (!Type.starts_with(Prefix)) {
+    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
+                    "'IntrinArgSelect_'");
+  }
+  return Type.substr(Prefix.size());
+}
 
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
@@ -185,63 +185,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
                            OpName);
   }
 
-  {
-    DXILIntrinsicSelect IntrSelect;
-    IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("LLVMIntrinsic"));
-    if (IntrSelect.Intrinsic.size())
-      IntrinsicSelects.emplace_back(std::move(IntrSelect));
-  }
-
-  auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsic_selects");
+  auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
   if (IntrinsicSelectRecords.size()) {
-    if (IntrinsicSelects.size()) {
-      PrintFatalError(
-          R, Twine("LLVMIntrinsic and intrinsic_selects cannot be both "
-                   "defined for DXIL operation - ") +
-                 OpName);
-    } else {
-      for (const Record *R : IntrinsicSelectRecords) {
-        DXILIntrinsicSelect IntrSelect;
-        IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("intrinsic"));
-        auto Args = R->getValueAsListOfDefs("args");
-        for (const Record *Arg : Args) {
-          bool IsI8 = Arg->getValueAsBit("is_i8");
-          bool IsI32 = Arg->getValueAsBit("is_i32");
-          int Index = Arg->getValueAsInt("index");
-          const Record *ValueRec = Arg->getValueAsOptionalDef("value");
-
-          DXILArgSelect ArgSelect;
-          if (IsI8) {
-            if (!ValueRec) {
-              PrintFatalError(R, Twine("'value' must be defined for i8 "
-                                       "ArgSelect for DXIL operation - ") +
-                                     OpName);
-            }
-            ArgSelect.Type = DXILArgSelect::Type::I8;
-            ArgSelect.Value = ValueRec->getValueAsInt("value");
-          } else if (IsI32) {
-            if (!ValueRec) {
-              PrintFatalError(R, Twine("'value' must be defined for i32 "
-                                       "ArgSelect for DXIL operation - ") +
-                                     OpName);
-            }
-            ArgSelect.Type = DXILArgSelect::Type::I32;
-            ArgSelect.Value = ValueRec->getValueAsInt("value");
-          } else {
-            if (Index < 0) {
-              PrintFatalError(
-                  R, Twine("Index in ArgSelect<index> must be equal to or "
-                           "greater than 0 for DXIL operation - ") +
-                         OpName);
-            }
-            ArgSelect.Type = DXILArgSelect::Type::Index;
-            ArgSelect.Value = Index;
-          }
-
-          IntrSelect.Args.emplace_back(std::move(ArgSelect));
-        }
-        IntrinsicSelects.emplace_back(std::move(IntrSelect));
+    for (const Record *R : IntrinsicSelectRecords) {
+      DXILIntrinsicSelect IntrSelect;
+      IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("intrinsic"));
+      auto Args = R->getValueAsListOfDefs("arg_selects");
+      for (const Record *ArgSelect : Args) {
+        IntrSelect.ArgSelectRecords.emplace_back(ArgSelect);
       }
+      IntrinsicSelects.emplace_back(std::move(IntrSelect));
     }
   }
 }
@@ -451,6 +404,7 @@ static void emitDXILOpFunctionTypes(ArrayRef<DXILOperationDesc> Ops,
 /// \param Output stream
 static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
                                  raw_ostream &OS) {
+
   OS << "#ifdef DXIL_OP_INTRINSIC\n";
   OS << "\n";
   for (const auto &Op : Ops) {
@@ -459,27 +413,33 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
     }
     for (const DXILIntrinsicSelect &MappedIntr : Op.IntrinsicSelects) {
       OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
-         << ", Intrinsic::" << MappedIntr.Intrinsic;
-      for (const DXILArgSelect &ArgSelect : MappedIntr.Args) {
-        OS << ", (ArgSelect { ";
-        switch (ArgSelect.Type) {
-        case DXILArgSelect::Type::Index:
-          OS << "ArgSelect::Type::Index, ";
-          break;
-        case DXILArgSelect::Type::I8:
-          OS << "ArgSelect::Type::I8, ";
-          break;
-        case DXILArgSelect::Type::I32:
-          OS << "ArgSelect::Type::I32, ";
-          break;
-        }
-        OS << ArgSelect.Value << "})";
+         << ", Intrinsic::" << MappedIntr.Intrinsic << ", ";
+      for (const Record *ArgSelect : MappedIntr.ArgSelectRecords) {
+        std::string Type =
+            ArgSelect->getValueAsDef("type")->getNameInitAsString();
+        int Value = ArgSelect->getValueAsInt("value");
+        OS << "(IntrinArgSelect{"
+           << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type)
+           << "," << Value << "}), ";
       }
       OS << ")\n";
     }
   }
   OS << "\n";
   OS << "#undef DXIL_OP_INTRINSIC\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit the IntrinArgSelect type for DirectX intrinsic to DXIL Op lowering
+static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
+                                            raw_ostream &OS) {
+  OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
+  for (const Record *Records :
+       Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
+    StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
+    OS << "DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(" << StrippedName << ")\n";
+  }
+  OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
   OS << "#endif\n\n";
 }
 
@@ -623,6 +583,7 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOpClasses(Records, OS);
   emitDXILOpParamTypes(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
+  emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
   OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
   emitDXILOperationTableDataStructs(Records, OS);

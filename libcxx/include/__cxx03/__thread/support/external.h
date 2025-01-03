@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_SUPPORT_EXTERNAL_H
-#define _LIBCPP___THREAD_SUPPORT_EXTERNAL_H
+#ifndef _LIBCPP___CXX03___THREAD_SUPPORT_EXTERNAL_H
+#define _LIBCPP___CXX03___THREAD_SUPPORT_EXTERNAL_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
 #endif
 
-#include <__external_threading>
+#include <__cxx03/__external_threading>
 
-#endif // _LIBCPP___THREAD_SUPPORT_EXTERNAL_H
+#endif // _LIBCPP___CXX03___THREAD_SUPPORT_EXTERNAL_H

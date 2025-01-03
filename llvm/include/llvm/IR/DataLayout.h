@@ -82,11 +82,16 @@ public:
     /// representation (e.g. they may be relocated by a copying garbage
     /// collector and thus have different addresses at different times).
     bool HasUnstableRepresentation;
-    /// Pointers in this address spacs are non-integral, i.e. don't have a
+    /// Pointers in this address space are non-integral, i.e. don't have a
     /// integer representation that simply maps to the address. An example of
-    /// this would be fat pointers with bounds information or CHERI capabilities
-    /// that include metadata as well as one out-of-band validity bit.
+    /// this would be e.g. AMDGPU buffer fat pointers with bounds information
+    /// and various flags or CHERI capabilities that contain bounds+permissions.
     bool HasNonIntegralRepresentation;
+    /// Pointers in this address space have additional state bits that are
+    /// located at a target-defined location when stored in memory. An example
+    /// of this would be CHERI capabilities where the validity bit is stored
+    /// separately from the pointer address+bounds information.
+    bool HasExternalState;
     bool operator==(const PointerSpec &Other) const;
   };
 
@@ -152,7 +157,8 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool HasUnstableRepr, bool HasNonIntegralRepr);
+                      bool HasUnstableRepr, bool HasNonIntegralRepr,
+                      bool HasExternalState);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -334,9 +340,6 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
 
-  /// Returns the maximum index size over all address spaces.
-  unsigned getMaxIndexSize() const;
-
   // Index size in bytes used for address calculation,
   /// rounded up to a whole number of bytes.
   unsigned getIndexSize(unsigned AS) const;
@@ -378,6 +381,18 @@ public:
   /// these pointers cannot be re-created from just an integer value.
   bool hasNonIntegralRepresentation(unsigned AddrSpace) const {
     return getPointerSpec(AddrSpace).HasNonIntegralRepresentation;
+  }
+
+  /// Returns whether this address space has external state (implies being
+  /// a non-integral pointer representation).
+  /// These pointer types must be loaded and stored using appropriate
+  /// instructions and cannot use integer loads/stores as this would not
+  /// propagate the out-of-band state. An example of such a pointer type is a
+  /// CHERI capability that contain bounds, permissions and an out-of-band
+  /// validity bit that is invalidated whenever an integer/FP store is performed
+  /// to the associated memory location.
+  bool hasExternalState(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasExternalState;
   }
 
   /// Returns whether passes should avoid introducing `inttoptr` instructions
@@ -429,11 +444,6 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSpec(AS).BitWidth;
-  }
-
-  /// Returns the maximum index size over all address spaces.
-  unsigned getMaxIndexSizeInBits() const {
-    return getMaxIndexSize() * 8;
   }
 
   /// Size in bits of index used for address calculation in getelementptr.

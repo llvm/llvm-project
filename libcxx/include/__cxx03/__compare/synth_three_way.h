@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
-#define _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
+#ifndef _LIBCPP___CXX03___COMPARE_SYNTH_THREE_WAY_H
+#define _LIBCPP___CXX03___COMPARE_SYNTH_THREE_WAY_H
 
-#include <__compare/ordering.h>
-#include <__compare/three_way_comparable.h>
-#include <__concepts/boolean_testable.h>
-#include <__config>
-#include <__utility/declval.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/three_way_comparable.h>
+#include <__cxx03/__concepts/boolean_testable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,4 +49,4 @@ using __synth_three_way_result = decltype(std::__synth_three_way(std::declval<_T
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
+#endif // _LIBCPP___CXX03___COMPARE_SYNTH_THREE_WAY_H

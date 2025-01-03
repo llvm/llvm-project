@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BYTESWAP_H
-#define _LIBCPP___BIT_BYTESWAP_H
+#ifndef _LIBCPP___CXX03___BIT_BYTESWAP_H
+#define _LIBCPP___CXX03___BIT_BYTESWAP_H
 
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <cstdint>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -50,4 +50,4 @@ template <integral _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BYTESWAP_H
+#endif // _LIBCPP___CXX03___BIT_BYTESWAP_H

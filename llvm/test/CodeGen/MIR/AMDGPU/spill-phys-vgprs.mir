@@ -1,0 +1,63 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa --start-before=si-lower-sgpr-spills --stop-after=prologepilog -o - %s | FileCheck %s
+
+# CHECK: csr_sgpr_spill
+# CHECK: spillPhysVGPRs
+# CHECK-NEXT: - '$vgpr0'
+---
+name: csr_sgpr_spill
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: false
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    S_NOP 0
+  bb.1:
+    $sgpr40 = S_MOV_B32 0
+    $sgpr41 = S_MOV_B32 1
+
+...
+
+# CHECK-LABEL: name: parse_none
+# CHECK: machineFunctionInfo:
+# CHECK-NOT: spillPhysVGPRs
+---
+name: parse_none
+machineFunctionInfo:
+  spillPhysVGPRs: []
+body: |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+# CHECK-LABEL: name: parse_one
+# CHECK: machineFunctionInfo:
+# CHECK: spillPhysVGPRs
+# CHECK-NEXT: - '$vgpr0'
+---
+name: parse_one
+machineFunctionInfo:
+  spillPhysVGPRs: ['$vgpr0']
+body: |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+# CHECK-LABEL: name: parse_two
+# CHECK: machineFunctionInfo:
+# CHECK: spillPhysVGPRs
+# CHECK-NEXT: - '$vgpr0'
+# CHECK-NEXT: - '$vgpr1'
+---
+name: parse_two
+machineFunctionInfo:
+  spillPhysVGPRs: ['$vgpr0', '$vgpr1']
+body: |
+  bb.0:
+    S_ENDPGM 0
+
+...

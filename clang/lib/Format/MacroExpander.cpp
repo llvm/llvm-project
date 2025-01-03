@@ -233,6 +233,10 @@ MacroExpander::expand(FormatToken *ID,
   if (Result.size() > 1) {
     ++Result[0]->MacroCtx->StartOfExpansion;
     ++Result[Result.size() - 2]->MacroCtx->EndOfExpansion;
+  } else {
+    // If the macro expansion is empty, mark the start and end.
+    Result[0]->MacroCtx->StartOfExpansion = 1;
+    Result[0]->MacroCtx->EndOfExpansion = 1;
   }
   return Result;
 }

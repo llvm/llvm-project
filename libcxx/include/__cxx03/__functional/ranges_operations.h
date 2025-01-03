@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
-#define _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_RANGES_OPERATIONS_H
+#define _LIBCPP___CXX03___FUNCTIONAL_RANGES_OPERATIONS_H
 
-#include <__concepts/equality_comparable.h>
-#include <__concepts/totally_ordered.h>
-#include <__config>
-#include <__type_traits/desugars_to.h>
-#include <__utility/forward.h>
+#include <__cxx03/__concepts/equality_comparable.h>
+#include <__cxx03/__concepts/totally_ordered.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/desugars_to.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -106,4 +106,4 @@ inline const bool __desugars_to_v<__less_tag, ranges::less, _Tp, _Up> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_RANGES_OPERATIONS_H

@@ -78,12 +78,6 @@ enum dwarf_regnums {
 };
 
 static const RegisterInfo g_register_infos_mips64[] = {
-    //  NAME      ALT    SZ OFF ENCODING        FORMAT         EH_FRAME
-    //  DWARF                   GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE
-    //  ========  ======  == === =============  ==========     =============
-    //  =================       ====================        =================
-    //  ====================
     {"r0",
      "zero",
      8,
