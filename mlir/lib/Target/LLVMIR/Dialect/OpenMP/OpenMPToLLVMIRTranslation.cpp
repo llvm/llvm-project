@@ -1891,6 +1891,59 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
+  // The following loop is workaround until we private ops' alloca regions to be
+  // "pure". See
+  // https://discourse.llvm.org/t/rfc-openmp-supporting-delayed-task-execution-with-firstprivate-variables/83084/7
+  // and https://discourse.llvm.org/t/delayed-privatization-for-omp-wsloop/83989
+  // for more info.
+  for (auto [privateVar, privateDeclOp] :
+       llvm::zip_equal(mlirPrivateVars, privateDecls)) {
+    llvm::Value *llvmValue = moduleTranslation.lookupValue(privateVar);
+    bool isAllocArgUsed =
+        !privateDeclOp.getAllocRegion().args_begin()->use_empty();
+
+    // If the alloc region argument is not used, we can skip the workaround.
+    if (!isAllocArgUsed)
+      continue;
+
+    llvm::Instruction *definingInst =
+        llvm::dyn_cast<llvm::Instruction>(llvmValue);
+
+    // If the alloc region argument is not defined by an op, it has to dominate
+    // the current alloc IP. So we skip the workaround.
+    if (!definingInst)
+      continue;
+
+    llvm::BasicBlock *definingBlock = definingInst->getParent();
+    llvm::Function *definingFun = definingBlock->getParent();
+    llvm::Function *allocaFun = allocaIP.getBlock()->getParent();
+
+    // If the alloc region argument is defined in a different function that
+    // current one where allocs are being inserted (for example, we are building
+    // the outlined function of a target region), we skip the workaround.
+    if (definingFun != allocaFun)
+      continue;
+
+    llvm::DominatorTree dt(*definingFun);
+    // If the defining instruction of the alloc region argument dominates the
+    // alloca insertion point already, we can skip the workaround.
+    if (dt.dominates(definingInst, allocaIP.getPoint()))
+      continue;
+
+    // If all the above conditions are violated, then we have to move the alloca
+    // insertion point below the defining instruction.
+
+    if (definingBlock->getTerminator() == nullptr) {
+      assert(builder.GetInsertBlock() == definingBlock);
+      builder.SetInsertPoint(splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
+                                         definingBlock, definingBlock->end()),
+                                     true, "omp.region.after_defining_block"));
+    }
+
+    allocaIP = llvm::OpenMPIRBuilder::InsertPointTy(
+        definingBlock, definingBlock->getTerminator()->getIterator());
+  }
+
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
 
