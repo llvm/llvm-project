@@ -117,8 +117,6 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
   return years;
 }
 
-volatile int file_usage = 0;
-
 void release_file(ErrorOr<File *> error_or_file) {
   file_usage = 0;
   error_or_file.value()->close();
@@ -287,60 +285,6 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
       tm->tm_hour += offset;
       tm->tm_isdst = dst;
   return 0;
-}
-
-timezone::tzset *get_localtime(struct tm *tm) {
-  char *tz_filename = get_env_var("TZ");
-  if ((tz_filename == nullptr) == 1 || tz_filename[0] == '\0') {
-    static char localtime[] = "/etc/localtime";
-    tz_filename = localtime;
-  } else {
-    char tmp[64];
-    char prefix[21] = "/usr/share/zoneinfo/";
-    size_t i = 0;
-    while (prefix[i] != '\0') {
-      tmp[i] = prefix[i];
-      i++;
-    }
-
-    i = 0;
-    while (tz_filename[i] != '\0') {
-      tmp[i + 20] = tz_filename[i];
-      i++;
-    }
-
-    tz_filename = tmp;
-    while (tz_filename[i] != '\0') {
-      if (tz_filename[i] == (char)0xFFFFFFAA) {
-        tz_filename[i] = '\0';
-      }
-      i++;
-    }
-  }
-
-  ErrorOr<File *> error_or_file = acquire_file(tz_filename);
-  File *file = error_or_file.value();
-
-  timezone::tzset *ptr_tzset = timezone::get_tzset(file);
-  if (ptr_tzset == nullptr) {
-    release_file(file);
-    return nullptr;
-  }
-
-  for (size_t i = 0; i < *ptr_tzset->ttinfo->size; i++) {
-    if (is_dst(tm) == ptr_tzset->ttinfo[i].tt_isdst) {
-      ptr_tzset->global_offset =
-          static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_utoff / 3600);
-      ptr_tzset->global_isdst =
-          static_cast<int8_t>(ptr_tzset->ttinfo[i].tt_isdst);
-    }
-  }
-
-  if (file_usage == 1) {
-    release_file(file);
-  }
-
-  return ptr_tzset;
 }
 
 unsigned char is_dst(struct tm *tm) {

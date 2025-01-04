@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/ctime.h"
+#include "src/time/linux/localtime_utils.h"
+#include "src/time/linux/timezone.h"
 #include "test/UnitTest/Test.h"
 
 extern char **environ;
