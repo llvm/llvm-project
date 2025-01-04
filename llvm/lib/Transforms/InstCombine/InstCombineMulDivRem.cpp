@@ -2066,14 +2066,18 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   bool ShiftByX = false;
 
   // If V is not nullptr, it will be matched using m_Specific.
-  auto MatchShiftOrMulXC = [](Value *Op, Value *&V, APInt &C) -> bool {
+  auto MatchShiftOrMulXC = [](Value *Op, Value *&V, APInt &C,
+                              bool &PreserveNSW) -> bool {
     const APInt *Tmp = nullptr;
     if ((!V && match(Op, m_Mul(m_Value(V), m_APInt(Tmp)))) ||
         (V && match(Op, m_Mul(m_Specific(V), m_APInt(Tmp)))))
       C = *Tmp;
     else if ((!V && match(Op, m_Shl(m_Value(V), m_APInt(Tmp)))) ||
-             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp)))))
+             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp))))) {
       C = APInt(Tmp->getBitWidth(), 1) << *Tmp;
+      // We cannot preserve NSW when shifting by BW - 1.
+      PreserveNSW = Tmp->ult(Tmp->getBitWidth() - 1);
+    }
     if (Tmp != nullptr)
       return true;
 
@@ -2095,7 +2099,9 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
     return false;
   };
 
-  if (MatchShiftOrMulXC(Op0, X, Y) && MatchShiftOrMulXC(Op1, X, Z)) {
+  bool Op0PreserveNSW = true, Op1PreserveNSW = true;
+  if (MatchShiftOrMulXC(Op0, X, Y, Op0PreserveNSW) &&
+      MatchShiftOrMulXC(Op1, X, Z, Op1PreserveNSW)) {
     // pass
   } else if (MatchShiftCX(Op0, Y, X) && MatchShiftCX(Op1, Z, X)) {
     ShiftByX = true;
@@ -2108,7 +2114,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   OverflowingBinaryOperator *BO0 = cast<OverflowingBinaryOperator>(Op0);
   // TODO: We may be able to deduce more about nsw/nuw of BO0/BO1 based on Y >=
   // Z or Z >= Y.
-  bool BO0HasNSW = BO0->hasNoSignedWrap();
+  bool BO0HasNSW = Op0PreserveNSW && BO0->hasNoSignedWrap();
   bool BO0HasNUW = BO0->hasNoUnsignedWrap();
   bool BO0NoWrap = IsSRem ? BO0HasNSW : BO0HasNUW;
 
@@ -2131,7 +2137,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   };
 
   OverflowingBinaryOperator *BO1 = cast<OverflowingBinaryOperator>(Op1);
-  bool BO1HasNSW = BO1->hasNoSignedWrap();
+  bool BO1HasNSW = Op1PreserveNSW && BO1->hasNoSignedWrap();
   bool BO1HasNUW = BO1->hasNoUnsignedWrap();
   bool BO1NoWrap = IsSRem ? BO1HasNSW : BO1HasNUW;
   // (rem (mul X, Y), (mul nuw/nsw X, Z))

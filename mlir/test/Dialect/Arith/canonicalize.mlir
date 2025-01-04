@@ -2060,6 +2060,70 @@ func.func @test_divf1(%arg0 : f32, %arg1 : f32) -> (f32) {
 
 // -----
 
+func.func @fold_divui_of_muli_0(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
+  %1 = arith.divui %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divui_of_muli_0(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG1]]
+
+func.func @fold_divui_of_muli_1(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
+  %1 = arith.divui %0, %arg1 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divui_of_muli_1(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG0]]
+
+func.func @fold_divsi_of_muli_0(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nsw> : index
+  %1 = arith.divsi %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divsi_of_muli_0(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG1]]
+
+func.func @fold_divsi_of_muli_1(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nsw> : index
+  %1 = arith.divsi %0, %arg1 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divsi_of_muli_1(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG0]]
+
+// Do not fold divui(mul(a, v), v) -> a with nuw attribute.
+func.func @no_fold_divui_of_muli(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.divui %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @no_fold_divui_of_muli
+//       CHECK:   %[[T0:.+]] = arith.muli
+//       CHECK:   %[[T1:.+]] = arith.divui %[[T0]],
+//       CHECK:   return %[[T1]]
+
+// Do not fold divsi(mul(a, v), v) -> a with nuw attribute.
+func.func @no_fold_divsi_of_muli(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.divsi %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @no_fold_divsi_of_muli
+//       CHECK:   %[[T0:.+]] = arith.muli
+//       CHECK:   %[[T1:.+]] = arith.divsi %[[T0]],
+//       CHECK:   return %[[T1]]
+
+// -----
+
 // CHECK-LABEL: @test_cmpf(
 func.func @test_cmpf(%arg0 : f32) -> (i1, i1, i1, i1) {
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true

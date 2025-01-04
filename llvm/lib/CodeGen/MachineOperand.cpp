@@ -1170,6 +1170,9 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (getFlags() & MachineMemOperand::MOTargetFlag3)
       OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag3)
          << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag4)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag4)
+         << "\" ";
   } else {
     if (getFlags() & MachineMemOperand::MOTargetFlag1)
       OS << "\"MOTargetFlag1\" ";
@@ -1177,6 +1180,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "\"MOTargetFlag2\" ";
     if (getFlags() & MachineMemOperand::MOTargetFlag3)
       OS << "\"MOTargetFlag3\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag4)
+      OS << "\"MOTargetFlag4\" ";
   }
 
   assert((isLoad() || isStore()) &&

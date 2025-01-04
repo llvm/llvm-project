@@ -11,13 +11,14 @@
 import yaml
 import argparse
 from pathlib import Path
-from header import HeaderFile
+
+from enumeration import Enumeration
+from function import Function
 from gpu_headers import GpuHeaderFile as GpuHeader
-from class_implementation.classes.macro import Macro
-from class_implementation.classes.type import Type
-from class_implementation.classes.function import Function
-from class_implementation.classes.enumeration import Enumeration
-from class_implementation.classes.object import Object
+from header import HeaderFile
+from macro import Macro
+from object import Object
+from type import Type
 
 
 def yaml_to_classes(yaml_data, header_class, entry_points=None):

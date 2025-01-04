@@ -1915,6 +1915,8 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         // Accept an immediate representing a named Sys Reg if it satisfies the
         // the required features.
         for (auto &Reg : Range) {
+          if (Reg.IsAltName || Reg.IsDeprecatedName)
+            continue;
           if (Reg.haveRequiredFeatures(STI->getFeatureBits()))
             return RISCVOperand::createSysReg(Reg.Name, S, Imm);
         }
@@ -1952,22 +1954,27 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       return ParseStatus::Failure;
 
     const auto *SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
-    if (!SysReg)
-      SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
-    if (!SysReg)
-      if ((SysReg = RISCVSysReg::lookupSysRegByDeprecatedName(Identifier)))
-        Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
-                       SysReg->Name + "'");
 
-    // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
+      if (SysReg->IsDeprecatedName) {
+        // Lookup the undeprecated name.
+        auto Range = RISCVSysReg::lookupSysRegByEncoding(SysReg->Encoding);
+        for (auto &Reg : Range) {
+          if (Reg.IsAltName || Reg.IsDeprecatedName)
+            continue;
+          Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
+                         Reg.Name + "'");
+        }
+      }
+
+      // Accept a named Sys Reg if the required features are present.
       const auto &FeatureBits = getSTI().getFeatureBits();
       if (!SysReg->haveRequiredFeatures(FeatureBits)) {
         const auto *Feature = llvm::find_if(RISCVFeatureKV, [&](auto Feature) {
           return SysReg->FeaturesRequired[Feature.Value];
         });
         auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
-        if (SysReg->isRV32Only && FeatureBits[RISCV::Feature64Bit]) {
+        if (SysReg->IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
           ErrorMsg += "is RV32 only";
           if (Feature != std::end(RISCVFeatureKV))
             ErrorMsg += " and ";

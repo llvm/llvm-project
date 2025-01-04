@@ -376,6 +376,12 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
   return Prio;
 }
 
+unsigned DummyPriorityAdvisor::getPriority(const LiveInterval &LI) const {
+  // Prioritize by virtual register number, lowest first.
+  Register Reg = LI.reg();
+  return ~Reg.virtRegIndex();
+}
+
 const LiveInterval *RAGreedy::dequeue() { return dequeue(Queue); }
 
 const LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
