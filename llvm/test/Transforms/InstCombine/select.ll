@@ -4564,6 +4564,25 @@ define i32 @src_no_trans_select_xor_eq0_or_xor(i32 %x, i32 %y) {
   ret i32 %cond
 }
 
+define i32 @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(i32 noundef %x, i32 noundef %y, i32 %c) {
+; CHECK-LABEL: @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[C:%.*]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[OR]], [[NOT]]
+; CHECK-NEXT:    ret i32 [[AND1]]
+;
+entry:
+  %xor = xor i32 %y, %x
+  %cmp = icmp eq i32 %xor, %c
+  %and = and i32 %x, %y
+  %or = or disjoint i32 %y, %x
+  %not = xor i32 %c, -1
+  %and1 = and i32 %or, %not
+  %cond = select i1 %cmp, i32 %and, i32 %and1
+  ret i32 %cond
+}
+
 ; (X == C) ? X : Y -> (X == C) ? C : Y
 ; Fixed #77553
 define i32 @src_select_xxory_eq0_xorxy_y(i32 %x, i32 %y) {
