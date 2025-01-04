@@ -1740,25 +1740,12 @@ bool arith::BitcastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (!areValidCastInputsAndOutputs(inputs, outputs))
     return false;
 
-  auto srcType =
-      getTypeIfLikeOrMemRef<IntegerType, IndexType, FloatType>(inputs.front());
-  auto dstType =
-      getTypeIfLikeOrMemRef<IntegerType, IndexType, FloatType>(outputs.front());
+  auto srcType = getTypeIfLikeOrMemRef<IntegerType, FloatType>(inputs.front());
+  auto dstType = getTypeIfLikeOrMemRef<IntegerType, FloatType>(outputs.front());
   if (!srcType || !dstType)
     return false;
 
-  unsigned srcWidth, dstWidth;
-  if (auto indexTy = dyn_cast<IndexType>(srcType))
-    srcWidth = IndexType::kInternalStorageBitWidth;
-  else
-    srcWidth = srcType.getIntOrFloatBitWidth();
-
-  if (auto indexTy = dyn_cast<IndexType>(dstType))
-    dstWidth = IndexType::kInternalStorageBitWidth;
-  else
-    dstWidth = dstType.getIntOrFloatBitWidth();
-
-  return srcWidth == dstWidth;
+  return srcType.getIntOrFloatBitWidth() == dstType.getIntOrFloatBitWidth();
 }
 
 OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {

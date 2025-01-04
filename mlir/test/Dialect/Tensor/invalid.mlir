@@ -807,3 +807,19 @@ func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
   %0 = tensor.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x?x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
+// -----
+
+func.func @bitcast_index_0(%arg0 : tensor<?xi64>) -> tensor<?xindex> {
+  // expected-error @+1 {{'tensor.bitcast' op operand type 'tensor<?xi64>' and result type 'tensor<?xindex>' are cast incompatible}}
+  %0 = tensor.bitcast %arg0 : tensor<?xi64> to tensor<?xindex>
+  return %0 : tensor<?xindex>
+}
+
+// -----
+
+func.func @bitcast_index_1(%arg0 : tensor<?xindex>) -> tensor<?xi64> {
+  // expected-error @+1 {{'tensor.bitcast' op operand type 'tensor<?xindex>' and result type 'tensor<?xi64>' are cast incompatible}}
+  %0 = tensor.bitcast %arg0 : tensor<?xindex> to tensor<?xi64>
+  return %0 : tensor<?xi64>
+}
