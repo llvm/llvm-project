@@ -2099,9 +2099,9 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
     return false;
   };
 
-  bool Op0PreserveNSW = true, Op1PreserveNSW = true;
+  bool Op0PreserveNSW = true, Unused;
   if (MatchShiftOrMulXC(Op0, X, Y, Op0PreserveNSW) &&
-      MatchShiftOrMulXC(Op1, X, Z, Op1PreserveNSW)) {
+      MatchShiftOrMulXC(Op1, X, Z, Unused)) {
     // pass
   } else if (MatchShiftCX(Op0, Y, X) && MatchShiftCX(Op1, Z, X)) {
     ShiftByX = true;
@@ -2137,7 +2137,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   };
 
   OverflowingBinaryOperator *BO1 = cast<OverflowingBinaryOperator>(Op1);
-  bool BO1HasNSW = Op1PreserveNSW && BO1->hasNoSignedWrap();
+  bool BO1HasNSW = BO1->hasNoSignedWrap();
   bool BO1HasNUW = BO1->hasNoUnsignedWrap();
   bool BO1NoWrap = IsSRem ? BO1HasNSW : BO1HasNUW;
   // (rem (mul X, Y), (mul nuw/nsw X, Z))
