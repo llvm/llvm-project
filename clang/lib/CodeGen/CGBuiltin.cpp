@@ -4865,6 +4865,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Triple::x86_64:
       return RValue::get(EmitSpecialRegisterBuiltin(
           *this, E, Int64Ty, VoidPtrTy, NormalRead, "rsp"));
+    case Triple::riscv32:
+    case Triple::riscv64: {
+      llvm::IntegerType *SPRegIntTy =
+          getTarget().getTriple().getArchPointerBitWidth() == 64 ? Int64Ty
+                                                                 : Int32Ty;
+      return RValue::get(EmitSpecialRegisterBuiltin(
+          *this, E, SPRegIntTy, VoidPtrTy, NormalRead, "sp"));
+    }
     default:
       ErrorUnsupported(E, "__builtin_stack_address");
       return GetUndefRValue(E->getType());
