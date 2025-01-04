@@ -8,7 +8,19 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows loadconfig-short.s -o loadconfig-short.obj
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows loadconfig-short.s -o loadconfig-short-arm64ec.obj
 
-// RUN: lld-link -machine:arm64x -out:out.dll -dll -noentry loadconfig.obj test.obj
+// RUN: lld-link -machine:arm64x -out:out-warn.dll -dll -noentry test.obj \
+// RUN:           2>&1 | FileCheck --check-prefixes=WARN-LOADCFG,WARN-EC-LOADCFG %s
+// WARN-LOADCFG:    lld-link: warning: native version of '_load_config_used' is missing for ARM64X target
+// WARN-EC-LOADCFG: lld-link: warning: EC version of '_load_config_used' is missing
+
+// RUN: lld-link -machine:arm64x -out:out-nonative.dll -dll -noentry loadconfig-ec.obj chpe.obj \
+// RUN:           2>&1 | FileCheck --check-prefixes=WARN-LOADCFG --implicit-check-not EC %s
+
+// RUN: lld-link -machine:arm64ec -out:out-ec.dll -dll -noentry chpe.obj \
+// RUN:           2>&1 | FileCheck --check-prefixes=WARN-EC-LOADCFG --implicit-check-not native %s
+
+// RUN: lld-link -machine:arm64x -out:out.dll -dll -noentry loadconfig.obj test.obj \
+// RUN:           2>&1 | FileCheck --check-prefixes=WARN-EC-LOADCFG --implicit-check-not native %s
 
 // RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=DYNRELOCS %s
 // DYNRELOCS:      DynamicValueRelocTableOffset: 0xC

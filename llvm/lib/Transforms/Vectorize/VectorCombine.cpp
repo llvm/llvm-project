@@ -128,6 +128,8 @@ private:
   bool shrinkType(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
+    LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
+    LLVM_DEBUG(dbgs() << "         With: " << New << '\n');
     Old.replaceAllUsesWith(&New);
     if (auto *NewI = dyn_cast<Instruction>(&New)) {
       New.takeName(&Old);
@@ -139,10 +141,17 @@ private:
 
   void eraseInstruction(Instruction &I) {
     LLVM_DEBUG(dbgs() << "VC: Erasing: " << I << '\n');
-    for (Value *Op : I.operands())
-      Worklist.pushValue(Op);
+    SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
     I.eraseFromParent();
+
+    // Push remaining users of the operands and then the operand itself - allows
+    // further folds that were hindered by OneUse limits.
+    for (Value *Op : Ops)
+      if (auto *OpI = dyn_cast<Instruction>(Op)) {
+        Worklist.pushUsersToWorkList(*OpI);
+        Worklist.pushValue(OpI);
+      }
   }
 };
 } // namespace
@@ -1335,6 +1344,10 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
                              MemoryLocation::get(SI), AA))
       return false;
 
+    // Ensure we add the load back to the worklist BEFORE its users so they can
+    // erased in the correct order.
+    Worklist.push(Load);
+
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
     Value *GEP = Builder.CreateInBoundsGEP(
@@ -1360,8 +1373,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
 
-  auto *VecTy = cast<VectorType>(I.getType());
   auto *LI = cast<LoadInst>(&I);
+  auto *VecTy = cast<VectorType>(LI->getType());
   if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
@@ -1401,7 +1414,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       LastCheckedInst = UI;
     }
 
-    auto ScalarIdx = canScalarizeAccess(VecTy, UI->getOperand(1), &I, AC, DT);
+    auto ScalarIdx =
+        canScalarizeAccess(VecTy, UI->getIndexOperand(), LI, AC, DT);
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
@@ -1409,7 +1423,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       ScalarIdx.discard();
     }
 
-    auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
+    auto *Index = dyn_cast<ConstantInt>(UI->getIndexOperand());
     OriginalCost +=
         TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
                                Index ? Index->getZExtValue() : -1);
@@ -1422,10 +1436,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (ScalarizedCost >= OriginalCost)
     return false;
 
+  // Ensure we add the load back to the worklist BEFORE its users so they can
+  // erased in the correct order.
+  Worklist.push(LI);
+
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
-    Value *Idx = EI->getOperand(1);
+    Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
     auto It = NeedFreeze.find(EI);
@@ -1725,6 +1743,36 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinResTy,
                          OldMask, CostKind, 0, nullptr, {LHS, RHS}, &I);
 
+  // Handle shuffle(binop(shuffle(x),y),binop(z,shuffle(w))) style patterns
+  // where one use shuffles have gotten split across the binop/cmp. These
+  // often allow a major reduction in total cost that wouldn't happen as
+  // individual folds.
+  auto MergeInner = [&](Value *&Op, int Offset, MutableArrayRef<int> Mask,
+                        TTI::TargetCostKind CostKind) -> bool {
+    Value *InnerOp;
+    ArrayRef<int> InnerMask;
+    if (match(Op, m_OneUse(m_Shuffle(m_Value(InnerOp), m_Undef(),
+                                     m_Mask(InnerMask)))) &&
+        InnerOp->getType() == Op->getType() &&
+        all_of(InnerMask,
+               [NumSrcElts](int M) { return M < (int)NumSrcElts; })) {
+      for (int &M : Mask)
+        if (Offset <= M && M < (int)(Offset + NumSrcElts)) {
+          M = InnerMask[M - Offset];
+          M = 0 <= M ? M + Offset : M;
+        }
+      OldCost += TTI.getInstructionCost(cast<Instruction>(Op), CostKind);
+      Op = InnerOp;
+      return true;
+    }
+    return false;
+  };
+  bool ReducedInstCount = false;
+  ReducedInstCount |= MergeInner(X, 0, NewMask0, CostKind);
+  ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind);
+  ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
+  ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
+
   InstructionCost NewCost =
       TTI.getShuffleCost(SK0, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z}) +
       TTI.getShuffleCost(SK1, BinOpTy, NewMask1, CostKind, 0, nullptr, {Y, W});
@@ -1745,8 +1793,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   // If either shuffle will constant fold away, then fold for the same cost as
   // we will reduce the instruction count.
-  bool ReducedInstCount = (isa<Constant>(X) && isa<Constant>(Z)) ||
-                          (isa<Constant>(Y) && isa<Constant>(W));
+  ReducedInstCount |= (isa<Constant>(X) && isa<Constant>(Z)) ||
+                      (isa<Constant>(Y) && isa<Constant>(W));
   if (ReducedInstCount ? (NewCost > OldCost) : (NewCost >= OldCost))
     return false;
 

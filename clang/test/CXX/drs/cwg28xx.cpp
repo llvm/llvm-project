@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,cxx11-23,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,cxx11-23,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
 
@@ -47,12 +47,17 @@ void f() {
 #endif
 } // namespace cwg2813
 
-namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
-
-#if __cpp_constexpr >= 202306L
+namespace cwg2819 { // cwg2819: 19 c++26
+#if __cplusplus >= 201103L
+  // CWG 2024-04-19: This issue is not a DR.
   constexpr void* p = nullptr;
-  constexpr int* q = static_cast<int*>(p);
-  static_assert(q == nullptr);
+  constexpr int* q = static_cast<int*>(p); // #cwg2819-q
+  // cxx11-23-error@-1 {{constexpr variable 'q' must be initialized by a constant expression}}
+  //   cxx11-23-note@-2 {{cast from 'void *' is not allowed in a constant expression}}
+  static_assert(q == nullptr, "");
+  // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   cxx11-23-note@-2 {{initializer of 'q' is not a constant expression}}
+  //   cxx11-23-note@#cwg2819-q {{declared here}}
 #endif
 }
 
