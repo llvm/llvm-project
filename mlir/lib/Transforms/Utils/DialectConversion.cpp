@@ -1040,10 +1040,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationRewrite *>
       unresolvedMaterializations;
 
-  /// A set of all N:1 materializations that were added to work around
-  /// incomplete 1:N support in the dialect conversion driver.
-  DenseSet<UnrealizedConversionCastOp> nTo1TempMaterializations;
-
   /// The current type converter, or nullptr if no type converter is currently
   /// active.
   const TypeConverter *currentTypeConverter = nullptr;
@@ -1180,7 +1176,6 @@ void UnresolvedMaterializationRewrite::rollback() {
   if (!mappedValues.empty())
     rewriterImpl.mapping.erase(mappedValues);
   rewriterImpl.unresolvedMaterializations.erase(getOperation());
-  rewriterImpl.nTo1TempMaterializations.erase(getOperation());
   op->erase();
 }
 
