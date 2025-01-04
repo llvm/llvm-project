@@ -283,6 +283,8 @@ def err_unexpected_qualified_namespace_alias : Error<
   "namespace alias must be a single identifier">;
 def err_unexpected_nested_namespace_attribute : Error<
   "attributes cannot be specified on a nested namespace definition">;
+def err_attribute_after_namespace : Error<
+  "standard attributes cannot appear after the namespace name">;
 def err_inline_namespace_alias : Error<"namespace alias cannot be inline">;
 def err_namespace_nonnamespace_scope : Error<
   "namespaces can only be defined in global or namespace scope">;

@@ -81,7 +81,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   ParsedAttributes attrs(AttrFactory);
 
-  auto ReadAttributes = [&] {
+  auto ReadAttributes = [&](bool TrailingAttrs) {
     bool MoreToParse;
     do {
       MoreToParse = false;
@@ -90,6 +90,9 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
         MoreToParse = true;
       }
       if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
+        if (TrailingAttrs)
+          Diag(Tok.getLocation(), diag::err_attribute_after_namespace);
+
         Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                     ? diag::warn_cxx14_compat_ns_enum_attribute
                                     : diag::ext_ns_enum_attribute)
@@ -100,7 +103,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     } while (MoreToParse);
   };
 
-  ReadAttributes();
+  ReadAttributes(/*TrailingAttrs*/ false);
 
   if (Tok.is(tok::identifier)) {
     Ident = Tok.getIdentifierInfo();
@@ -126,7 +129,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     }
   }
 
-  ReadAttributes();
+  ReadAttributes(/*TrailingAttrs*/ true);
 
   SourceLocation attrLoc = attrs.Range.getBegin();
 
