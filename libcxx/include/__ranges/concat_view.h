@@ -67,8 +67,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class... __Tp>
-using __extract_last = __Tp...[sizeof...(__Tp) - 1];
+template <class... _Tp>
+using __extract_last = _Tp...[sizeof...(_Tp) - 1];
 
 template <class _Tp, class... _Tail>
 constexpr bool __derived_from_pack =
@@ -248,64 +248,64 @@ public:
   base_iter it_;
   __maybe_const<_Const, concat_view>* parent_ = nullptr;
 
-  template <std::size_t _N>
+  template <std::size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void satisfy() {
-    if constexpr (_N < (sizeof...(_Views) - 1)) {
-      if (std::get<_N>(it_) == ranges::end(std::get<_N>(parent_->__views_))) {
-        it_.template emplace<_N + 1>(ranges::begin(std::get<_N + 1>(parent_->__views_)));
-        satisfy<_N + 1>();
+    if constexpr (_Idx < (sizeof...(_Views) - 1)) {
+      if (std::get<_Idx>(it_) == ranges::end(std::get<_Idx>(parent_->__views_))) {
+        it_.template emplace<_Idx + 1>(ranges::begin(std::get<_Idx + 1>(parent_->__views_)));
+        satisfy<_Idx + 1>();
       }
     }
   }
 
-  template <std::size_t _N>
+  template <std::size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void prev() {
-    if constexpr (_N == 0) {
+    if constexpr (_Idx == 0) {
       --std::get<0>(it_);
     } else {
-      if (std::get<_N>(it_) == ranges::begin(std::get<_N>(parent_->__views_))) {
-        using prev_view = __maybe_const<_Const, tuple_element_t<_N - 1, tuple<_Views...>>>;
+      if (std::get<_Idx>(it_) == ranges::begin(std::get<_Idx>(parent_->__views_))) {
+        using prev_view = __maybe_const<_Const, tuple_element_t<_Idx - 1, tuple<_Views...>>>;
         if constexpr (common_range<prev_view>) {
-          it_.emplace<_N - 1>(ranges::end(std::get<_N - 1>(parent_->__views_)));
+          it_.template emplace<_Idx - 1>(ranges::end(std::get<_Idx - 1>(parent_->__views_)));
         } else {
-          it_.emplace<_N - 1>(ranges::__next(
-              ranges::begin(std::get<_N - 1>(parent_->__views_)), ranges::size(std::get<_N - 1>(parent_->__views_))));
+          it_.template emplace<_Idx - 1>(ranges::__next(
+              ranges::begin(std::get<_Idx - 1>(parent_->__views_)), ranges::size(std::get<_Idx - 1>(parent_->__views_))));
         }
-        prev<_N - 1>();
+        prev<_Idx - 1>();
       } else {
-        --std::get<_N>(it_);
+        --std::get<_Idx>(it_);
       }
     }
   }
 
-  template <std::size_t _N>
+  template <std::size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void advance_fwd(difference_type __offset, difference_type __steps) {
-    using underlying_diff_type = iter_difference_t<variant_alternative_t<_N, base_iter>>;
-    if constexpr (_N == sizeof...(_Views) - 1) {
-      std::get<_N>(it_) += static_cast<underlying_diff_type>(__steps);
+    using underlying_diff_type = iter_difference_t<variant_alternative_t<_Idx, base_iter>>;
+    if constexpr (_Idx == sizeof...(_Views) - 1) {
+      std::get<_Idx>(it_) += static_cast<underlying_diff_type>(__steps);
     } else {
-      difference_type __n_size = ranges::size(std::get<_N>(parent_->__views_));
+      difference_type __n_size = ranges::size(std::get<_Idx>(parent_->__views_));
       if (__offset + __steps < __n_size) {
-        std::get<_N>(it_) += static_cast<underlying_diff_type>(__steps);
+        std::get<_Idx>(it_) += static_cast<underlying_diff_type>(__steps);
       } else {
-        it_.template emplace<_N + 1>(ranges::begin(std::get<_N + 1>(parent_->__views_)));
-        advance_fwd<_N + 1>(0, __offset + __steps - __n_size);
+        it_.template emplace<_Idx + 1>(ranges::begin(std::get<_Idx + 1>(parent_->__views_)));
+        advance_fwd<_Idx + 1>(0, __offset + __steps - __n_size);
       }
     }
   }
 
-  template <std::size_t _N>
+  template <std::size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void advance_bwd(difference_type __offset, difference_type __steps) {
-    using underlying_diff_type = iter_difference_t<variant_alternative_t<_N, base_iter>>;
-    if constexpr (_N == 0) {
-      std::get<_N>(it_) -= static_cast<underlying_diff_type>(__steps);
+    using underlying_diff_type = iter_difference_t<variant_alternative_t<_Idx, base_iter>>;
+    if constexpr (_Idx == 0) {
+      std::get<_Idx>(it_) -= static_cast<underlying_diff_type>(__steps);
     } else {
       if (__offset >= __steps) {
-        std::get<_N>(it_) -= static_cast<underlying_diff_type>(__steps);
+        std::get<_Idx>(it_) -= static_cast<underlying_diff_type>(__steps);
       } else {
-        auto __prev_size = ranges::__distance(std::get<_N - 1>(parent_->__views_));
-        it_.emplace<_N - 1>(ranges::begin(std::get<_N - 1>(parent_->__views_)) + __prev_size);
-        advance_bwd<_N - 1>(__prev_size, __steps - __offset);
+        auto __prev_size = ranges::__distance(std::get<_Idx - 1>(parent_->__views_));
+        it_.template emplace<_Idx - 1>(ranges::begin(std::get<_Idx - 1>(parent_->__views_)) + __prev_size);
+        advance_bwd<_Idx - 1>(__prev_size, __steps - __offset);
       }
     }
   }
@@ -316,9 +316,9 @@ public:
     ((__index == _Is ? (__func(std::integral_constant<size_t, _Is>{}), 0) : 0), ...);
   }
 
-  template <size_t _N, typename _Func>
+  template <size_t _Idx, typename _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr void apply_fn_with_const_index(size_t __index, _Func&& __func) {
-    apply_fn_with_const_index(__index, std::forward<_Func>(__func), std::make_index_sequence<_N>{});
+    apply_fn_with_const_index(__index, std::forward<_Func>(__func), std::make_index_sequence<_Idx>{});
   }
 
   template <class... _Args>
@@ -412,10 +412,10 @@ public:
           [&](auto& __active_it) {
             apply_fn_with_const_index<std::tuple_size_v<decltype(parent_->__views_)>>(
                 __active_index, [&](auto __index_constant) {
-                  constexpr size_t __I  = __index_constant.value;
-                  auto& __active_view   = std::get<__I>(parent_->__views_);
+                  constexpr size_t __i  = __index_constant.value;
+                  auto& __active_view   = std::get<__i>(parent_->__views_);
                   difference_type __idx = __active_it - ranges::begin(__active_view);
-                  advance_fwd<__I>(__idx, __n);
+                  advance_fwd<__i>(__idx, __n);
                 });
           },
           it_);
@@ -426,10 +426,10 @@ public:
           [&](auto& __active_it) {
             apply_fn_with_const_index<std::tuple_size_v<decltype(parent_->__views_)>>(
                 __active_index, [&](auto __index_constant) {
-                  constexpr size_t __I  = __index_constant.value;
-                  auto& __active_view   = std::get<__I>(parent_->__views_);
+                  constexpr size_t __i  = __index_constant.value;
+                  auto& __active_view   = std::get<__i>(parent_->__views_);
                   difference_type __idx = __active_it - ranges::begin(__active_view);
-                  advance_bwd<__I>(__idx, -__n);
+                  advance_bwd<__i>(__idx, -__n);
                 });
           },
           it_);
@@ -529,14 +529,14 @@ public:
     if (__ix > __iy) {
       std::visit(
           [&](auto& __it_x, auto& __it_y) {
-            __it_x.apply_fn_with_const_index<std::tuple_size_v<decltype(__x.parent_->__views_)>>(
-                __ix, [&](auto index_constant) {
-                  constexpr size_t __index_x = index_constant.value;
+            __it_x.apply_fn_with_const_index<tuple_size_v<decltype(__x.parent_->__views_)>>(
+                __ix, [&](auto __index_constant_x) {
+                  constexpr size_t __index_x = __index_constant_x.value;
                   auto __dx = ranges::__distance(ranges::begin(std::get<__index_x>(__x.parent_->__views_)), __it_x);
 
-                  __it_y.apply_fn_with_const_index<std::tuple_size_v<decltype(__y.parent_->__views_)>>(
-                      __iy, [&](auto index_constant) {
-                        constexpr size_t __index_y = index_constant.value;
+                  __it_y.apply_fn_with_const_index<tuple_size_v<decltype(__y.parent_->__views_)>>(
+                      __iy, [&](auto __index_constant_y) {
+                        constexpr size_t __index_y = __index_constant_y.value;
                         auto __dy =
                             ranges::__distance(ranges::begin(std::get<__index_y>(__y.parent_->__views_)), __it_y);
                         difference_type __s = 0;
@@ -601,9 +601,9 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <class... _Views>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... views) const noexcept(
-      noexcept(concat_view(std::forward<_Views>(views)...))) -> decltype(concat_view(std::forward<_Views>(views)...)) {
-    return concat_view(std::forward<_Views>(views)...);
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... __views) const noexcept(
+      noexcept(concat_view(std::forward<_Views>(__views)...))) -> decltype(concat_view(std::forward<_Views>(__views)...)) {
+    return concat_view(std::forward<_Views>(__views)...);
   }
 };
 } // namespace __concat
