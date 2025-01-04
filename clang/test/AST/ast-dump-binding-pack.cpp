@@ -10,49 +10,65 @@
 template <unsigned N>
 void foo() {
   int arr[4] = {1, 2, 3, 4};
-  auto [x, ...rest, y] = arr;
-  int arr_2 = {rest...};
+  auto [binding_1, ...binding_rest, binding_4] = arr;
+  int arr_2[] = {binding_rest...};
 };
 
 // CHECK-LABEL: FunctionTemplateDecl {{.*}} foo
-// CHECK-NEXT: NonTypeTemplateParmDecl
-// CHECK-NEXT: FunctionDecl {{.*}} foo
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: DeclStmt
-// CHECK-NEXT: VarDecl
-// CHECK-NEXT: InitListExpr
-// CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: DeclStmt
-// CHECK-NEXT: DecompositionDecl {{.*}} 'int[4]'
-// CHECK-NEXT: ArrayInitLoopExpr {{.*}} 'int[4]'
-// CHECK-NEXT: OpaqueValueExpr
-// CHECK-NEXT: DeclRefExpr
+// CHECK-LABEL: BindingDecl {{.*}} binding_1
+// CHECK-NEXT: ArraySubscriptExpr {{.*}}
 // CHECK-NEXT: ImplicitCastExpr
-// CHECK-NEXT: ArraySubscriptExpr
-// CHECK-NEXT: ImplicitCastExpr
-// CHECK-NEXT: OpaqueValueExpr
-// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Var {{.*}} 'arr' 'int[4]'
-// CHECK-NEXT: ArrayInitIndexExpr {{.*}} 'unsigned long'
-// CHECK-NEXT: BindingDecl {{.*}} x 'int'
-// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
-// CHECK-NEXT: ImplicitCastExpr
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int[4]' lvalue Decomposition {{.*}} 'int[4]'
+// CHECK-NEXT: DeclRefExpr {{.*}}
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
-// CHECK-NEXT: BindingDecl {{.*}} rest 'type-parameter-0-0...'
-// CHECK-NEXT: ResolvedUnexpandedPackExpr {{.*}} 'int[4]'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue Binding {{.*}} 'rest' 'int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue Binding {{.*}} 'rest' 'int'
-// CHECK-NEXT: BindingDecl {{.*}} y 'int'
-// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int[4]' lvalue Decomposition {{.*}} 'int[4]'
+// CHECK-NOT: BindingDecl
+// CHECK-LABEL: BindingDecl {{.*}} binding_rest
+// CHECK-NEXT: ResolvedUnexpandedPackExpr
+// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Binding {{.*}} 'binding_rest'
+// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Binding {{.*}} 'binding_rest'
+// CHECK-NOT: BindingDecl
+// CHECK-LABEL: BindingDecl {{.*}} binding_4
+// CHECK-NEXT: ArraySubscriptExpr
+// CHECK-NEXT: ImplicitCastExpr {{.*}}
+// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Decomposition {{.*}}
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
-// CHECK-NEXT: DeclStmt
-// CHECK-NEXT: VarDecl {{.*}} arr_2 'int'
-// CHECK-NEXT: InitListExpr {{.*}} 'void'
+// CHECK-NOT: BindingDecl
+// CHECK-LABEL: VarDecl {{.*}} arr_2
+// CHECK-NEXT: InitListExpr
 // CHECK-NEXT: PackExpansionExpr {{.*}} '<dependent type>' lvalue
-// CHECK-NEXT: DeclRefExpr {{.*}} 'type-parameter-0-0' lvalue Binding {{.*}} 'rest'
+// CHECK-NEXT: DeclRefExpr {{.*}} lvalue Binding {{.*}} 'binding_rest'
+
+struct tag_t { };
+template <unsigned N>
+void bar() {
+  auto [...empty_binding_pack] = tag_t{};
+  static_assert(sizeof...(empty_binding_pack) == 0);
+};
+
+// CHECK-LABEL: FunctionTemplateDecl {{.*}} bar
+// CHECK-NOT: BindingDecl
+// CHECK-LABEL: BindingDecl {{.*}} empty_binding_pack
+// CHECK-NEXT: ResolvedUnexpandedPackExpr
+// CHECK-NOT: DeclRefExpr {{.*}} 'empty_binding_pack'
+// CHECK-NOT: BindingDecl
+// CHECK: DeclStmt
+
+struct int_pair { int x; int y; };
+template <typename T>
+void baz() {
+  auto [binding_1, binding_2, ...empty_binding_pack] = T{};
+  static_assert(sizeof...(empty_binding_pack) == 0);
+};
+
+void(*f)() = baz<int_pair>;
+
+// CHECK-LABEL: FunctionDecl {{.*}} baz {{.*}} implicit_instantiation
+// CHECK-NEXT: TemplateArgument type 'int_pair'
+// CHECK: BindingDecl {{.*}} binding_1
+// CHECK: BindingDecl {{.*}} binding_2
+// CHECK-NOT: BindingDecl
+// CHECK-LABEL: BindingDecl {{.*}} empty_binding_pack
+// CHECK-NEXT: ResolvedUnexpandedPackExpr
+// CHECK-NOT: DeclRefExpr {{.*}} 'empty_binding_pack'
+// CHECK-NOT: BindingDecl
+// CHECK: DeclStmt
 #endif
