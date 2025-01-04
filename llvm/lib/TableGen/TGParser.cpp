@@ -4421,6 +4421,7 @@ bool TGParser::CheckTemplateArgValues(
     const Record *ArgsRec) {
   ArrayRef<const Init *> TArgs = ArgsRec->getTemplateArgs();
 
+  bool HasError = false;
   for (const ArgumentInit *&Value : Values) {
     const Init *ArgName = nullptr;
     if (Value->isPositional())
@@ -4439,16 +4440,16 @@ bool TGParser::CheckTemplateArgValues(
                "result of template arg value cast has wrong type");
         Value = Value->cloneWithValue(CastValue);
       } else {
-        PrintFatalError(Loc, "Value specified for template argument '" +
-                                 Arg->getNameInitAsString() + "' is of type " +
-                                 ArgValue->getType()->getAsString() +
+        HasError |= Error(Loc, "Value specified for template argument '" +
+                                Arg->getNameInitAsString() + "' is of type " +
+                                ArgValue->getType()->getAsString() +
                                  "; expected type " + ArgType->getAsString() +
                                  ": " + ArgValue->getAsString());
       }
     }
   }
 
-  return false;
+  return HasError;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
