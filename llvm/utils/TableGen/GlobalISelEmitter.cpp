@@ -1306,13 +1306,18 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
 
     if (R->getName() == "undef_tied_input") {
       std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N.getSimpleType(0));
+      if (!OpTyOrNone)
+        return failedImport("unsupported type");
+
       unsigned TempRegID = M.allocateTempRegID();
       M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone, TempRegID);
+
       auto I = M.insertAction<BuildMIAction>(
           InsertPt, M.allocateOutputInsnID(),
           &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
       auto &ImpDefBuilder = static_cast<BuildMIAction &>(**I);
       ImpDefBuilder.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
+
       MIBuilder.addRenderer<TempRegRenderer>(TempRegID);
       return Error::success();
     }
