@@ -607,15 +607,30 @@ TEST_F(RtsanOpenedFileTest, FputsDiesWhenRealtime) {
 TEST_F(RtsanFileTest, FflushDiesWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
-  int r = fwrite("abc", 1, 3, f);
-  EXPECT_THAT(r, Eq(3));
+  int written = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(written, Eq(3));
   auto Func = [&f]() {
-    int r = fflush(f);
-    EXPECT_THAT(r, Eq(0));
+    int res = fflush(f);
+    EXPECT_THAT(res, Eq(0));
   };
   ExpectRealtimeDeath(Func, "fflush");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#if SANITIZER_APPLE
+TEST_F(RtsanFileTest, FpurgeDiesWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  int written = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(written, Eq(3));
+  auto Func = [&f]() {
+    int res = fpurge(f);
+    EXPECT_THAT(res, Eq(0));
+  };
+  ExpectRealtimeDeath(Func, "fpurge");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST_F(RtsanOpenedFileTest, ReadDiesWhenRealtime) {
   auto Func = [this]() {

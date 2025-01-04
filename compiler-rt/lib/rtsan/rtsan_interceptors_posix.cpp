@@ -297,6 +297,13 @@ INTERCEPTOR(int, fflush, FILE *stream) {
   return REAL(fflush)(stream);
 }
 
+#if SANITIZER_APPLE
+INTERCEPTOR(int, fpurge, FILE *stream) {
+  __rtsan_notify_intercepted_call("fpurge");
+  return REAL(fpurge)(stream);
+}
+#endif
+
 INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   __rtsan_notify_intercepted_call("fdopen");
   return REAL(fdopen)(fd, mode);
