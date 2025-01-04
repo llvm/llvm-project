@@ -10263,6 +10263,22 @@ INTERCEPTOR(SSIZE_T, freadlink, int fd, char *buf, SIZE_T bufsiz) {
 #  define INIT_FREADLINK
 #endif
 
+#if SANITIZER_INTERCEPT_FPURGE
+INTERCEPTOR(int, fpurge, __sanitizer_FILE *fp) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fflush, fp);
+  if (fp)
+    unpoison_file(fp);
+  int res = REAL(fpurge)(fp);
+  if (fp) {
+    const FileMetadata *m = GetInterceptorMetadata(fp);
+    if (m)
+      COMMON_INTERCEPTOR_INITIALIZE_RANGE(*m->addr, *m->size);
+  }
+  return res;
+}
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
