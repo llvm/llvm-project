@@ -56248,12 +56248,11 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
 
   if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64) {
-    // Create an undefined value of type v2f32
-    SDValue UndefV2F32Value = DAG.getUNDEF(MVT::v2f32);
+    SDValue V2F32Value = DAG.getUNDEF(SrcVT);
 
-    // Concatenate the original v2f32 input and undef v2f32 to create v4f32
+    // Concatenate the original v2f32 input and V2F32Value to create v4f32
     SDValue NewSrc = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                                 N->getOperand(0), UndefV2F32Value);
+                                 N->getOperand(0), V2F32Value);
 
     // Select the FP_TO_SINT_SAT/FP_TO_UINT_SAT node
     if (IsSigned)
