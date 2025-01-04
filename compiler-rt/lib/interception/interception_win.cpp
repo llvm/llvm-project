@@ -930,17 +930,17 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 5;
   }
 
-//  switch (0xFFFFFFFFFFFFULL & *(u64*)(address)) {
-//    case 0x841f0f2e6666:  // 66 66 2e 0f 1f 84 YY XX XX XX XX
-//                          // data16 cs nop WORD PTR [rax+rax*1 + XX XX XX XX]
-//      return 11;
-//  }
-//
-//  switch (*(u64*)(address)) {
-//    case 0x841f0f2e66666666:  // 66 66 66 66 2e 0f 1f 84 YY XX XX XX XX
-//                              // data16 data16 data16 cs nop WORD PTR [rax+rax*1 + XX XX XX XX]
-//      return 13;
-//  }
+  switch (0xFFFFFFFFFFFFULL & *(u64*)(address)) {
+    case 0x841f0f2e6666:  // 66 66 2e 0f 1f 84 YY XX XX XX XX
+                          // data16 cs nop WORD PTR [rax+rax*1 + XX XX XX XX]
+      return 11;
+  }
+
+  switch (*(u64*)(address)) {
+    case 0x841f0f2e66666666:  // 66 66 66 66 2e 0f 1f 84 YY XX XX XX XX
+                              // data16 data16 data16 cs nop WORD PTR [rax+rax*1 + XX XX XX XX]
+      return 13;
+  }
 
 #else
 
