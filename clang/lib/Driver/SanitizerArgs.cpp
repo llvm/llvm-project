@@ -111,7 +111,7 @@ enum BinaryMetadataFeature {
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
 /// invalid components. Returns a SanitizerMask.
 static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
-                                    bool DiagnoseErrors);
+                                    bool DiagnoseErrors, SanitizerMaskWeights Weights);
 
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
@@ -260,7 +260,7 @@ static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
-                  int OptOutID) {
+                  int OptOutID, SanitizerMaskWeights Weights) {
   assert(!(AlwaysIn & AlwaysOut) &&
          "parseSanitizeArgs called with contradictory in/out requirements");
 
@@ -271,7 +271,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
   SanitizerMask DiagnosedAlwaysOutViolations;
   for (const auto *Arg : Args) {
     if (Arg->getOption().matches(OptInID)) {
-      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
+      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors, Weights);
       // Report error if user explicitly tries to opt-in to an always-out
       // sanitizer.
       if (SanitizerMask KindsToDiagnose =
@@ -287,7 +287,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
       Output |= expandSanitizerGroups(Add);
       Arg->claim();
     } else if (Arg->getOption().matches(OptOutID)) {
-      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
+      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors, Weights);
       // Report error if user explicitly tries to opt-out of an always-in
       // sanitizer.
       if (SanitizerMask KindsToDiagnose =
@@ -320,7 +320,15 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   // (not even in recover mode) in order to avoid the need for a ubsan runtime.
   return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
                            NeverTrap, options::OPT_fsanitize_trap_EQ,
-                           options::OPT_fno_sanitize_trap_EQ);
+                           options::OPT_fno_sanitize_trap_EQ, nullptr);
+}
+
+static SanitizerMask parseNoSanitizeHotArgs(const Driver &D,
+                                            const llvm::opt::ArgList &Args,
+                                            bool DiagnoseErrors,
+                                            SanitizerMaskWeights Weights) {
+  return parseSanitizeArgs(D, Args, DiagnoseErrors, {}, {}, {},
+                           options::OPT_fno_sanitize_top_hot_EQ, -1, Weights);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -403,7 +411,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   for (const llvm::opt::Arg *Arg : llvm::reverse(Args)) {
     if (Arg->getOption().matches(options::OPT_fsanitize_EQ)) {
       Arg->claim();
-      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
+      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors, nullptr);
 
       if (RemoveObjectSizeAtO0) {
         AllRemove |= SanitizerKind::ObjectSize;
@@ -573,7 +581,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Kinds |= Add;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_EQ)) {
       Arg->claim();
-      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
+      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors, nullptr);
       AllRemove |= expandSanitizerGroups(Remove);
     }
   }
@@ -698,7 +706,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask RecoverableKinds = parseSanitizeArgs(
       D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
       Unrecoverable, options::OPT_fsanitize_recover_EQ,
-      options::OPT_fno_sanitize_recover_EQ);
+      options::OPT_fno_sanitize_recover_EQ, nullptr);
   RecoverableKinds |= AlwaysRecoverable;
   RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
@@ -710,8 +718,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask MergeKinds =
       parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, {}, {},
                         options::OPT_fsanitize_merge_handlers_EQ,
-                        options::OPT_fno_sanitize_merge_handlers_EQ);
+                        options::OPT_fno_sanitize_merge_handlers_EQ, nullptr);
   MergeKinds &= Kinds;
+
+  // Parse -fno-sanitize-top-hot flags
+  SanitizerMask HotMask = parseNoSanitizeHotArgs (D, Args, DiagnoseErrors, TopHot);
+  (void)HotMask;
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
@@ -1132,6 +1144,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
          "Overlap between recoverable and trapping sanitizers");
 
   MergeHandlers.Mask |= MergeKinds;
+
+  // Zero out TopHot for unused sanitizers
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
+     if (!(Sanitizers.Mask & SanitizerMask::bitPosToMask(i)))
+       TopHot[i] = 0;
+  }
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {
@@ -1141,6 +1159,18 @@ static std::string toString(const clang::SanitizerSet &Sanitizers) {
     if (!Res.empty())                                                          \
       Res += ",";                                                              \
     Res += NAME;                                                               \
+  }
+#include "clang/Basic/Sanitizers.def"
+  return Res;
+}
+
+static std::string toString(const clang::SanitizerMaskWeights &Weights) {
+  std::string Res;
+#define SANITIZER(NAME, ID)                                                    \
+  if (Weights[SanitizerKind::SO_##ID]) {                                     \
+    if (!Res.empty())                                                          \
+      Res += ",";                                                              \
+    Res += std::string(NAME) + "=" + std::to_string(Weights[SanitizerKind::SO_##ID]);                                                               \
   }
 #include "clang/Basic/Sanitizers.def"
   return Res;
@@ -1296,6 +1326,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (!MergeHandlers.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
+
+  std::string TopHotStr = toString(TopHot);
+  if (TopHotStr != "")
+    CmdArgs.push_back(
+        Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotStr));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1463,7 +1498,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 }
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
-                             bool DiagnoseErrors) {
+                             bool DiagnoseErrors, SanitizerMaskWeights Weights) {
   assert(
       (A->getOption().matches(options::OPT_fsanitize_EQ) ||
        A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
@@ -1472,7 +1507,8 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
        A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ)) &&
+       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
@@ -1482,8 +1518,13 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
     if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
         0 == strcmp("all", Value))
       Kind = SanitizerMask();
-    else
+    else if (A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) {
+      assert(Weights && "Null weights parameter provided for parsing fno_sanitize_top_hot!");
+      Kind = parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Weights);
+    } else {
+      assert((!Weights) && "Non-null weights parameter erroneously provided!");
       Kind = parseSanitizerValue(Value, /*AllowGroups=*/true);
+    }
 
     if (Kind)
       Kinds |= Kind;
@@ -1586,12 +1627,12 @@ std::string lastArgumentForMask(const Driver &D, const llvm::opt::ArgList &Args,
     const auto *Arg = *I;
     if (Arg->getOption().matches(options::OPT_fsanitize_EQ)) {
       SanitizerMask AddKinds =
-          expandSanitizerGroups(parseArgValues(D, Arg, false));
+          expandSanitizerGroups(parseArgValues(D, Arg, false, nullptr));
       if (AddKinds & Mask)
         return describeSanitizeArg(Arg, Mask);
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_EQ)) {
       SanitizerMask RemoveKinds =
-          expandSanitizerGroups(parseArgValues(D, Arg, false));
+          expandSanitizerGroups(parseArgValues(D, Arg, false, nullptr));
       Mask &= ~RemoveKinds;
     }
   }

@@ -1796,6 +1796,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
        serializeSanitizerKinds(Opts.SanitizeMergeHandlers))
     GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
+  SmallVector<StringRef, 4> Values;
+  serializeSanitizerMaskWeights(Opts.NoSanitizeTopHot, Values);
+  for (StringRef Sanitizer : Values)
+    GenerateArg(Consumer, OPT_fno_sanitize_top_hot_EQ, Sanitizer);
+
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 

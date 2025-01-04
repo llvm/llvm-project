@@ -2649,6 +2649,13 @@ def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-unde
   HelpText<"Strip (or keep only, if negative) a given number of path components "
            "when emitting check metadata.">,
   MarshallingInfoInt<CodeGenOpts<"EmitCheckPathComponentsToStrip">, "0", "int">;
+def fno_sanitize_top_hot_EQ
+    : CommaJoined<["-"], "fno-sanitize-top-hot=">,
+      Group<f_clang_Group>,
+      HelpText<"Skip sanitization for the fraction of top hottest code "
+               "(0.0 [default] = do not skip any sanitization; "
+               "0.1 = skip the hottest 10% of code; "
+               "1.0 = skip all sanitization)">;
 
 } // end -f[no-]sanitize* flags
 

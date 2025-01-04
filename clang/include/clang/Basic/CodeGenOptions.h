@@ -384,6 +384,10 @@ public:
   /// the expense of debuggability).
   SanitizerSet SanitizeMergeHandlers;
 
+  /// Set of top hotness thresholds, specifying the fraction of code that is
+  /// excluded from sanitization (0 = skip none, 0.1 = skip hottest 10%, 1.0 = skip all).
+  SanitizerMaskWeights NoSanitizeTopHot = {0};
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
