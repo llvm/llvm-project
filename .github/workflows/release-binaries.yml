@@ -173,7 +173,7 @@ jobs:
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
-  build-release-package
+  build-release-package:
     name: "Build Release Package"
     needs: prepare
     if: >-
