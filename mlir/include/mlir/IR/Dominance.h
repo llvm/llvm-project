@@ -187,6 +187,17 @@ public:
   /// dominance" of ops, the single block is considered to properly dominate
   /// itself in a graph region.
   bool properlyDominates(Block *a, Block *b) const;
+
+  bool properlyDominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                         Block::iterator bIt, bool enclosingOk = true) const {
+    return super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
+  }
+
+  bool dominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                 Block::iterator bIt, bool enclosingOk = true) const {
+    return (aBlock == bBlock && aIt == bIt) ||
+           super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
+  }
 };
 
 /// A class for computing basic postdominance information.
@@ -209,6 +220,18 @@ public:
   /// Return true if the specified block A postdominates block B.
   bool postDominates(Block *a, Block *b) const {
     return a == b || properlyPostDominates(a, b);
+  }
+
+  bool properlyPostDominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                             Block::iterator bIt,
+                             bool enclosingOk = true) const {
+    return super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
+  }
+
+  bool postDominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                     Block::iterator bIt, bool enclosingOk = true) const {
+    return (aBlock == bBlock && aIt == bIt) ||
+           super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
   }
 };
 
