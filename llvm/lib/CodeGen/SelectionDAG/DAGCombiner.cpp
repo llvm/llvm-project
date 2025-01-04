@@ -24291,8 +24291,8 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   EVT SVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
 
   // Keep track of what we encounter.
-  bool AnyInteger = false;
-  bool AnyFP = false;
+  EVT AnyFPVT;
+
   for (const SDValue &Op : N->ops()) {
     if (ISD::BITCAST == Op.getOpcode() &&
         !Op.getOperand(0).getValueType().isVector())
@@ -24306,27 +24306,23 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
     // If it's neither, bail out, it could be something weird like x86mmx.
     EVT LastOpVT = Ops.back().getValueType();
     if (LastOpVT.isFloatingPoint())
-      AnyFP = true;
-    else if (LastOpVT.isInteger())
-      AnyInteger = true;
-    else
+      AnyFPVT = LastOpVT;
+    else if (!LastOpVT.isInteger())
       return SDValue();
   }
 
   // If any of the operands is a floating point scalar bitcast to a vector,
   // use floating point types throughout, and bitcast everything.
   // Replace UNDEFs by another scalar UNDEF node, of the final desired type.
-  if (AnyFP) {
-    SVT = EVT::getFloatingPointVT(OpVT.getSizeInBits());
-    if (AnyInteger) {
-      for (SDValue &Op : Ops) {
-        if (Op.getValueType() == SVT)
-          continue;
-        if (Op.isUndef())
-          Op = DAG.getNode(ISD::UNDEF, DL, SVT);
-        else
-          Op = DAG.getBitcast(SVT, Op);
-      }
+  if (AnyFPVT != EVT()) {
+    SVT = AnyFPVT;
+    for (SDValue &Op : Ops) {
+      if (Op.getValueType() == SVT)
+        continue;
+      if (Op.isUndef())
+        Op = DAG.getNode(ISD::UNDEF, DL, SVT);
+      else
+        Op = DAG.getBitcast(SVT, Op);
     }
   }
 
