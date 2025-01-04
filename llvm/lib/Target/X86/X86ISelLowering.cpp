@@ -33685,15 +33685,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     SDValue Op = N->getOperand(0);
     EVT OpVT = Op.getValueType();
-    SDValue V4I32;
+    SDValue Res;
 
     if (VT == MVT::v2i32 && OpVT == MVT::v2f64) {
-      SDValue V4f32 = DAG.getNode(X86ISD::VFPROUND, dl, MVT::v4f32, Op);
       if (IsSigned)
-        V4I32 = DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v4i32, V4f32);
+        Res = DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v4i32, Op);
       else
-        V4I32 = DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v4i32, V4f32);
-      Results.push_back(V4I32);
+        Res = DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v4i32, Op);
+      Results.push_back(Res);
       return;
     }
     break;
@@ -56249,15 +56248,18 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
 
   if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64) {
-    // Convert v2f32 to v2f64
-    SDValue V2F64 =
-        DAG.getNode(ISD::FP_EXTEND, dl, MVT::v2f64, N->getOperand(0));
+    // Create an undefined value of type v2f32
+    SDValue UndefV2F32Value = DAG.getUNDEF(MVT::v2f32);
+
+    // Concatenate the original v2f32 input and undef v2f32 to create v4f32
+    SDValue NewSrc = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
+                                 N->getOperand(0), UndefV2F32Value);
 
     // Select the FP_TO_SINT_SAT/FP_TO_UINT_SAT node
     if (IsSigned)
-      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v2i64, V2F64);
+      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v2i64, NewSrc);
 
-    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v2i64, V2F64);
+    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v2i64, NewSrc);
   }
   return SDValue();
 }

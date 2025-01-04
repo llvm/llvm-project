@@ -117,7 +117,6 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 define <2 x i32> @test_signed_v2i32_v2f64(<2 x double> %d) nounwind {
 ; CHECK-LABEL: test_signed_v2i32_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0
 ; CHECK-NEXT:    vcvttpd2dqs %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call  <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %d)
@@ -157,7 +156,6 @@ define <4 x i64> @test_signed_v4i64_v4f64(<4 x double> %f) nounwind {
 define <2 x i32> @test_unsigned_v2i32_v2f64(<2 x double> %d) nounwind {
 ; CHECK-LABEL: test_unsigned_v2i32_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0
 ; CHECK-NEXT:    vcvttpd2udqs %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call  <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> %d)
@@ -235,7 +233,6 @@ define <8 x i32> @test_unsigned_v8i32_v8f32(<8 x float> %f) nounwind {
 define <2 x i64> @test_signed_v2i64_v2f32(<2 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v2i64_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; CHECK-NEXT:    vcvttps2qqs %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call  <2 x i64> @llvm.fptosi.sat.v2i64.v2f32(<2 x float> %f)
@@ -255,7 +252,6 @@ define <4 x i64> @test_signed_v4i64_v4f32(<4 x float> %f) nounwind {
 define <2 x i64> @test_unsigned_v2i64_v2f32(<2 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v2i64_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; CHECK-NEXT:    vcvttps2uqqs %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call  <2 x i64> @llvm.fptoui.sat.v2i64.v2f32(<2 x float> %f)
