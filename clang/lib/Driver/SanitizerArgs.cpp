@@ -111,7 +111,8 @@ enum BinaryMetadataFeature {
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
 /// invalid components. Returns a SanitizerMask.
 static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
-                                    bool DiagnoseErrors, SanitizerMaskWeights Weights);
+                                    bool DiagnoseErrors,
+                                    SanitizerMaskWeights Weights);
 
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
@@ -722,7 +723,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeKinds &= Kinds;
 
   // Parse -fno-sanitize-top-hot flags
-  SanitizerMask HotMask = parseNoSanitizeHotArgs (D, Args, DiagnoseErrors, TopHot);
+  SanitizerMask HotMask =
+      parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, TopHot);
   (void)HotMask;
 
   // Setup ignorelist files.
@@ -1147,8 +1149,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Zero out TopHot for unused sanitizers
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
-     if (!(Sanitizers.Mask & SanitizerMask::bitPosToMask(i)))
-       TopHot[i] = 0;
+    if (!(Sanitizers.Mask & SanitizerMask::bitPosToMask(i)))
+      TopHot[i] = 0;
   }
 }
 
@@ -1167,10 +1169,11 @@ static std::string toString(const clang::SanitizerSet &Sanitizers) {
 static std::string toString(const clang::SanitizerMaskWeights &Weights) {
   std::string Res;
 #define SANITIZER(NAME, ID)                                                    \
-  if (Weights[SanitizerKind::SO_##ID]) {                                     \
+  if (Weights[SanitizerKind::SO_##ID]) {                                       \
     if (!Res.empty())                                                          \
       Res += ",";                                                              \
-    Res += std::string(NAME) + "=" + std::to_string(Weights[SanitizerKind::SO_##ID]);                                                               \
+    Res += std::string(NAME) + "=" +                                           \
+           std::to_string(Weights[SanitizerKind::SO_##ID]);                    \
   }
 #include "clang/Basic/Sanitizers.def"
   return Res;
@@ -1329,8 +1332,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   std::string TopHotStr = toString(TopHot);
   if (TopHotStr != "")
-    CmdArgs.push_back(
-        Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotStr));
+    CmdArgs.push_back(Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotStr));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1498,18 +1500,18 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 }
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
-                             bool DiagnoseErrors, SanitizerMaskWeights Weights) {
-  assert(
-      (A->getOption().matches(options::OPT_fsanitize_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
-       A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
-       A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
-       A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) &&
-      "Invalid argument in parseArgValues!");
+                             bool DiagnoseErrors,
+                             SanitizerMaskWeights Weights) {
+  assert((A->getOption().matches(options::OPT_fsanitize_EQ) ||
+          A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
+          A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
+          A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
+          A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
+          A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
+          A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
+          A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
+          A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) &&
+         "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
@@ -1519,7 +1521,9 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
         0 == strcmp("all", Value))
       Kind = SanitizerMask();
     else if (A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) {
-      assert(Weights && "Null weights parameter provided for parsing fno_sanitize_top_hot!");
+      assert(
+          Weights &&
+          "Null weights parameter provided for parsing fno_sanitize_top_hot!");
       Kind = parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Weights);
     } else {
       assert((!Weights) && "Non-null weights parameter erroneously provided!");

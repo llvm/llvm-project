@@ -36,31 +36,34 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
   return ParsedKind;
 }
 
-SanitizerMask clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups, SanitizerMaskWeights Weights) {
+SanitizerMask clang::parseSanitizerWeightedValue(StringRef Value,
+                                                 bool AllowGroups,
+                                                 SanitizerMaskWeights Weights) {
   SanitizerMask ParsedKind = llvm::StringSwitch<SanitizerMask>(Value)
-#define SANITIZER(NAME, ID) .StartsWith(NAME"=", SanitizerKind::ID)
+#define SANITIZER(NAME, ID) .StartsWith(NAME "=", SanitizerKind::ID)
 #define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
-  .StartsWith(NAME"=", AllowGroups ? SanitizerKind::ID##Group : SanitizerMask())
+  .StartsWith(NAME "=",                                                        \
+              AllowGroups ? SanitizerKind::ID##Group : SanitizerMask())
 #include "clang/Basic/Sanitizers.def"
-    .Default(SanitizerMask());
+                                 .Default(SanitizerMask());
 
   if (ParsedKind && Weights) {
-      size_t equalsIndex = Value.find_first_of('=');
-      if (equalsIndex != llvm::StringLiteral::npos) {
-          double arg;
-          if (   (Value.size() > (equalsIndex + 1))
-              && !Value.substr(equalsIndex + 1).getAsDouble(arg)) {
-              // AllowGroups is already taken into account for ParsedKind,
-              // hence we unconditionally expandSanitizerGroups.
-              SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
+    size_t equalsIndex = Value.find_first_of('=');
+    if (equalsIndex != llvm::StringLiteral::npos) {
+      double arg;
+      if ((Value.size() > (equalsIndex + 1)) &&
+          !Value.substr(equalsIndex + 1).getAsDouble(arg)) {
+        // AllowGroups is already taken into account for ParsedKind,
+        // hence we unconditionally expandSanitizerGroups.
+        SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
 
-              for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
-                  if(ExpandedKind & SanitizerMask::bitPosToMask(i)) {
-                      Weights[i] = arg;
-                  }
-              }
+        for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
+          if (ExpandedKind & SanitizerMask::bitPosToMask(i)) {
+            Weights[i] = arg;
           }
+        }
       }
+    }
   }
 
   return ParsedKind;
@@ -75,10 +78,11 @@ void clang::serializeSanitizerSet(SanitizerSet Set,
 }
 
 void clang::serializeSanitizerMaskWeights(const SanitizerMaskWeights Weights,
-                                  SmallVectorImpl<StringRef> &Values) {
+                                          SmallVectorImpl<StringRef> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
-  if (Weights[SanitizerKind::SO_##ID])                                              \
-    Values.push_back(std::string(NAME) + "=" + std::to_string(Weights[SanitizerKind::SO_##ID]));
+  if (Weights[SanitizerKind::SO_##ID])                                         \
+    Values.push_back(std::string(NAME) + "=" +                                 \
+                     std::to_string(Weights[SanitizerKind::SO_##ID]));
 #include "clang/Basic/Sanitizers.def"
 }
 
