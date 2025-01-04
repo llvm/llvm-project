@@ -4564,7 +4564,7 @@ define i32 @src_no_trans_select_xor_eq0_or_xor(i32 %x, i32 %y) {
   ret i32 %cond
 }
 
-define i32 @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(i32 noundef %x, i32 noundef %y, i32 %c) {
+define i32 @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(i32 %x, i32 %y, i32 %c) {
 ; CHECK-LABEL: @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
@@ -4584,6 +4584,61 @@ entry:
   %not = xor i32 %c, -1
   %and1 = and i32 %or, %not
   %cond = select i1 %cmp, i32 %and, i32 %and1
+  ret i32 %cond
+}
+
+define i32 @negative_inner_disjoint_or2(i32 %x, i32 %y, i32 %c) {
+; CHECK-LABEL: @negative_inner_disjoint_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[XOR]], [[C:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[OR]], [[C]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 [[AND1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+entry:
+  %xor = xor i32 %y, %x
+  %cmp = icmp eq i32 %xor, %c
+  %and = and i32 %x, %y
+  %or = or disjoint i32 %y, %x
+  %and1 = xor i32 %or, %c
+  %cond = select i1 %cmp, i32 %and, i32 %and1
+  ret i32 %cond
+}
+
+define i32 @positive_outer_disjoint_or1(i32 %x, i32 %y, i32 %c) {
+; CHECK-LABEL: @positive_outer_disjoint_or1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[AND]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+entry:
+  %xor = and i32 %y, %x
+  %cmp = icmp eq i32 %xor, %c
+  %or = or i32 %y, %x
+  %and = xor i32 %y, %x
+  %or1 = or disjoint i32 %and, %c
+  %cond = select i1 %cmp, i32 %or, i32 %or1
+  ret i32 %cond
+}
+
+define i32 @positive_outer_disjoint_or2(i32 %x, i32 %y, i32 %c) {
+; CHECK-LABEL: @positive_outer_disjoint_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[AND]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+entry:
+  %xor = xor i32 %y, %x
+  %cmp = icmp eq i32 %xor, %c
+  %or = or i32 %y, %x
+  %and = and i32 %y, %x
+  %or1 = or disjoint i32 %and, %c
+  %cond = select i1 %cmp, i32 %or, i32 %or1
   ret i32 %cond
 }
 
