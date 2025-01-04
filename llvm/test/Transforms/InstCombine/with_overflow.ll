@@ -1064,3 +1064,160 @@ define i8 @smul_7(i8 %x, ptr %p) {
   store i1 %ov, ptr %p
   ret i8 %r
 }
+
+define i8 @uadd_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @uadd_assume_no_overflow(
+; CHECK-NEXT:    [[CALL1:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = extractvalue { i8, i1 } [[CALL1]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i8 [[CALL]]
+;
+  %call = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i8 %ret
+}
+
+define i8 @sadd_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @sadd_assume_no_overflow(
+; CHECK-NEXT:    [[CALL1:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = extractvalue { i8, i1 } [[CALL1]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i8 [[CALL]]
+;
+  %call = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i8 %ret
+}
+
+define i8 @usub_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @usub_assume_no_overflow(
+; CHECK-NEXT:    [[CALL1:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = extractvalue { i8, i1 } [[CALL1]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i8 [[CALL]]
+;
+  %call = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i8 %ret
+}
+
+define i8 @ssub_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @ssub_assume_no_overflow(
+; CHECK-NEXT:    [[CALL1:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = extractvalue { i8, i1 } [[CALL1]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i8 [[CALL]]
+;
+  %call = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i8 %ret
+}
+
+define i8 @umul_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @umul_assume_no_overflow(
+; CHECK-NEXT:    [[CALL1:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = extractvalue { i8, i1 } [[CALL1]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i8 [[CALL]]
+;
+  %call = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i8 %ret
+}
+
+define i8 @smul_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @smul_assume_no_overflow(
+; CHECK-NEXT:    [[CALL1:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = extractvalue { i8, i1 } [[CALL1]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i8 [[CALL]]
+;
+  %call = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i8 %ret
+}
+
+define i1 @ephemeral_call_assume_no_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @ephemeral_call_assume_no_overflow(
+; CHECK-NEXT:    [[CALL:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %call = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  ret i1 %not
+}
+
+define i8 @neg_assume_overflow(i8 noundef %a, i8 noundef %b) {
+; CHECK-LABEL: @neg_assume_overflow(
+; CHECK-NEXT:    [[CALL:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL]], 1
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i8, i1 } [[CALL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[OVERFLOW]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %call = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  call void @llvm.assume(i1 %overflow)
+  ret i8 %ret
+}
+
+define i8 @neg_assume_not_guaranteed_to_execute(i8 noundef %a, i8 noundef %b, i1 %cond) {
+; CHECK-LABEL: @neg_assume_not_guaranteed_to_execute(
+; CHECK-NEXT:    [[CALL:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[CALL]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OVERFLOW]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i8, i1 } [[CALL]], 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %call = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 %b)
+  %overflow = extractvalue { i8, i1 } %call, 1
+  %ret = extractvalue { i8, i1 } %call, 0
+  br i1 %cond, label %bb1, label %bb2
+bb1:
+  %not = xor i1 %overflow, true
+  call void @llvm.assume(i1 %not)
+  br label %bb2
+bb2:
+  ret i8 %ret
+}
