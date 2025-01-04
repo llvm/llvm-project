@@ -7177,10 +7177,33 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
   return CR1.intersectWith(CR2, RangeType);
 }
 
+static bool isKnownToNotOverflowFromAssume(const SimplifyQuery &Q) {
+  // Use of assumptions is context-sensitive. If we don't have a context, we
+  // cannot use them!
+  if (!Q.AC || !Q.CxtI)
+    return false;
+
+  for (AssumptionCache::ResultElem &Elem : Q.AC->assumptionsFor(Q.CxtI)) {
+    if (!Elem.Assume)
+      continue;
+
+    AssumeInst *I = cast<AssumeInst>(Elem.Assume);
+    if (match(I->getArgOperand(0),
+              m_Not(m_ExtractValue<1>(m_Specific(Q.CxtI)))) &&
+        isValidAssumeForContext(I, Q.CxtI, /*DT=*/nullptr,
+                                /*AllowEphemerals=*/true))
+      return true;
+  }
+  return false;
+}
+
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
                                                    const SimplifyQuery &SQ,
                                                    bool IsNSW) {
+  if (isKnownToNotOverflowFromAssume(SQ))
+    return OverflowResult::NeverOverflows;
+
   KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, SQ);
   KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, SQ);
 
@@ -7196,6 +7219,9 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
 OverflowResult llvm::computeOverflowForSignedMul(const Value *LHS,
                                                  const Value *RHS,
                                                  const SimplifyQuery &SQ) {
+  if (isKnownToNotOverflowFromAssume(SQ))
+    return OverflowResult::NeverOverflows;
+
   // Multiplying n * m significant bits yields a result of n + m significant
   // bits. If the total number of significant bits does not exceed the
   // result bit width (minus 1), there is no overflow.
@@ -7236,6 +7262,9 @@ OverflowResult
 llvm::computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
                                     const WithCache<const Value *> &RHS,
                                     const SimplifyQuery &SQ) {
+  if (isKnownToNotOverflowFromAssume(SQ))
+    return OverflowResult::NeverOverflows;
+
   ConstantRange LHSRange =
       computeConstantRangeIncludingKnownBits(LHS, /*ForSigned=*/false, SQ);
   ConstantRange RHSRange =
@@ -7250,6 +7279,9 @@ computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
   if (Add && Add->hasNoSignedWrap()) {
     return OverflowResult::NeverOverflows;
   }
+
+  if (isKnownToNotOverflowFromAssume(SQ))
+    return OverflowResult::NeverOverflows;
 
   // If LHS and RHS each have at least two sign bits, the addition will look
   // like
@@ -7305,6 +7337,9 @@ computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
 OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    const Value *RHS,
                                                    const SimplifyQuery &SQ) {
+  if (isKnownToNotOverflowFromAssume(SQ))
+    return OverflowResult::NeverOverflows;
+
   // X - (X % ?)
   // The remainder of a value can't have greater magnitude than itself,
   // so the subtraction can't overflow.
@@ -7338,6 +7373,9 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
 OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,
                                                  const Value *RHS,
                                                  const SimplifyQuery &SQ) {
+  if (isKnownToNotOverflowFromAssume(SQ))
+    return OverflowResult::NeverOverflows;
+
   // X - (X % ?)
   // The remainder of a value can't have greater magnitude than itself,
   // so the subtraction can't overflow.
@@ -10179,6 +10217,9 @@ void llvm::findValuesAffectedByCondition(
     } else if (match(V, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
+      AddAffected(A);
+    } else if (IsAssume && match(V, m_Not(m_ExtractValue<1>(m_Value(A)))) &&
+               isa<WithOverflowInst>(A)) {
       AddAffected(A);
     }
   }
