@@ -4375,7 +4375,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   // vectorization.
 
   // Only check preferFixedOverScalableIfEqualCost() when A is scalable
-  // and B isn't.
+  // but B isn't.
   bool PreferScalable = true;
   if (A.Width.isScalable() && !B.Width.isScalable())
     PreferScalable = !TTI.preferFixedOverScalableIfEqualCost();
