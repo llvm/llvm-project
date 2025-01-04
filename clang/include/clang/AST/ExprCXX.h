@@ -5326,6 +5326,8 @@ public:
 class ResolvedUnexpandedPackExpr final
     : public Expr,
       private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Stmt *> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
   friend TrailingObjects;
 
   SourceLocation BeginLoc;

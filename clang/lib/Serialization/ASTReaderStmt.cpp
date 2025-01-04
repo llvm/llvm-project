@@ -2204,6 +2204,11 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
 void ASTStmtReader::VisitResolvedUnexpandedPackExpr(
     ResolvedUnexpandedPackExpr *E) {
   VisitExpr(E);
+  E->NumExprs = Record.readInt();
+  E->BeginLoc = readSourceLocation();
+  auto **Exprs = E->getExprs();
+  for (unsigned I = 0; I < E->NumExprs; ++I)
+    Exprs[I] = Record.readExpr();
 }
 
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
