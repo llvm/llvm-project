@@ -840,7 +840,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // The vector loop region only executes once. If possible, completely remove
   // the region, otherwise replace the terminator controlling the latch with
   // (BranchOnCond true).
-  Term->eraseFromParent();
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
   if (all_of(
@@ -873,6 +872,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     ExitingVPBB->appendRecipe(BOC);
   }
 
+  Term->eraseFromParent();
   VPlanTransforms::removeDeadRecipes(Plan);
 
   Plan.setVF(BestVF);
