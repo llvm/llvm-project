@@ -15,6 +15,7 @@ include "clang/Basic/BuiltinsBase.td"
 class X86Builtin<string prototype> : TargetBuiltin {
   let Spellings = ["__builtin_ia32_" # NAME];
   let Prototype = prototype;
+  let EnableOpenCLLong = 1;
 }
 
 class X86NoPrefixBuiltin<string prototype> : TargetBuiltin {
@@ -29,7 +30,9 @@ class X86LibBuiltin<string prototype> : TargetLibBuiltin {
 
 def rdpmc : X86Builtin<"unsigned long long int(int)">;
 def rdtsc : X86Builtin<"unsigned long long int()">;
-def __rdtsc : X86NoPrefixBuiltin<"unsigned long long int()">;
+def __rdtsc : X86NoPrefixBuiltin<"unsigned long long int()"> {
+  let EnableOpenCLLong = 1;
+}
 def rdtscp : X86Builtin<"unsigned long long int(unsigned int*)">;
 
 // Undefined Values
@@ -1023,7 +1026,7 @@ let Features = "rdpid", Attributes = [NoThrow] in {
   def rdpid : X86Builtin<"unsigned int()">;
 }
 
-let Features = "rdpru", Attributes = [NoThrow] in {
+let Features = "rdpru", Attributes = [NoThrow], EnableOpenCLLong = 0 in {
   def rdpru : X86Builtin<"unsigned long long int(int)">;
 }
 

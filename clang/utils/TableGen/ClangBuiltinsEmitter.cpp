@@ -31,7 +31,8 @@ enum class BuiltinType {
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
-      : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution) {
+      : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution),
+        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
   }
 
@@ -109,7 +110,7 @@ private:
     } else if (T.consume_back("&")) {
       ParseType(T);
       Type += "&";
-    } else if (T.consume_front("long long")) {
+    } else if (EnableOpenCLLong && T.consume_front("long long")) {
       Type += "O";
       ParseType(T);
     } else if (T.consume_front("long")) {
@@ -202,6 +203,7 @@ public:
 private:
   SMLoc Loc;
   StringRef Substitution;
+  bool EnableOpenCLLong;
   std::string Type;
 };
 

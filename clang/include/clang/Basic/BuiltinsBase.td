@@ -88,6 +88,8 @@ class Builtin {
   // On some platforms, some functions are actually macros. In that case we need
   // to #undef them.
   bit RequiresUndef = 0;
+  // Enables builtins to generate `long long` outside of OpenCL and `long` inside.
+  bit EnableOpenCLLong = 0;
 }
 
 class CustomEntry {
