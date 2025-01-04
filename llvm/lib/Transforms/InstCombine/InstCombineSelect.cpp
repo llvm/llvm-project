@@ -3910,12 +3910,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
       if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
-        IRBuilder<>::FastMathFlagGuard FMFG(Builder);
         // FIXME: The FMF should propagate from the select, not the fcmp.
-        Builder.setFastMathFlags(FCmp->getFastMathFlags());
-        Value *NewCond = Builder.CreateFCmp(InvPred, Cmp0, Cmp1,
-                                            FCmp->getName() + ".inv");
-        Value *NewSel = Builder.CreateSelect(NewCond, FalseVal, TrueVal);
+        Value *NewCond = Builder.CreateFCmpFMF(InvPred, Cmp0, Cmp1, FCmp,
+                                               FCmp->getName() + ".inv");
+        Value *NewSel =
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FCmp);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -4080,15 +4079,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
-        if (CmpInst::isIntPredicate(MinMaxPred)) {
+        if (CmpInst::isIntPredicate(MinMaxPred))
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
-        } else {
-          IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-          auto FMF =
-              cast<FPMathOperator>(SI.getCondition())->getFastMathFlags();
-          Builder.setFastMathFlags(FMF);
-          Cmp = Builder.CreateFCmp(MinMaxPred, LHS, RHS);
-        }
+        else
+          Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
+                                      cast<Instruction>(SI.getCondition()));
 
         Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
         if (!IsCastNeeded)

@@ -1638,10 +1638,8 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
       !match(OpPredicate, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
                               m_ConstantInt<AArch64SVEPredPattern::all>())))
     return std::nullopt;
-  IRBuilderBase::FastMathFlagGuard FMFGuard(IC.Builder);
-  IC.Builder.setFastMathFlags(II.getFastMathFlags());
-  auto BinOp =
-      IC.Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2));
+  auto BinOp = IC.Builder.CreateBinOpFMF(
+      BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
   return IC.replaceInstUsesWith(II, BinOp);
 }
 
