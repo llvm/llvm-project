@@ -33693,9 +33693,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       else
         Res = DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v4i32, Op);
       Results.push_back(Res);
-      return;
     }
-    break;
+    return;
   }
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
