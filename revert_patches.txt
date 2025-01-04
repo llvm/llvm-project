@@ -28,3 +28,7 @@ Ron , Dhruva, Joseph
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
+revert: breaks oclTst
+b2adeae8 [AMDGPU][MC] Allow null where 128b or larger dst reg is expected
+Ron and Brox
+---
