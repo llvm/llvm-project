@@ -150,8 +150,8 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
-    libc.hdr.types.time_t
-    libc.hdr.types.struct_tm
+    libc.src.stdio.fopen
+    libc.src.time.clock_gettime
 )
 
 add_entrypoint_object(
@@ -163,8 +163,7 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
-    libc.hdr.types.time_t
-    libc.hdr.types.struct_tm
+    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -175,11 +174,9 @@ add_entrypoint_object(
     mktime.h
   DEPENDS
     .time_utils
-    .time_constants
     libc.include.time
     libc.src.errno.errno
-    libc.hdr.types.time_t
-    libc.hdr.types.struct_tm
+    libc.src.stdio.fopen
 )
 
 add_subdirectory(strftime_core) #TODO: Move to top
