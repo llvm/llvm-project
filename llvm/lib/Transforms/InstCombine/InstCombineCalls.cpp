@@ -2677,8 +2677,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
       Builder.setFastMathFlags(II->getFastMathFlags() &
                                cast<Instruction>(Sign)->getFastMathFlags());
-      Value *CopySign =
-          Builder.CreateBinaryIntrinsic(Intrinsic::copysign, Mag, X);
+      Value *CopySign = Builder.CreateCopySign(Mag, X);
       return replaceInstUsesWith(*II, CopySign);
     }
 

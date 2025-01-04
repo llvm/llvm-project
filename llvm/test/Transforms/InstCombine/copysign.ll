@@ -100,6 +100,16 @@ define float @copysign_sign_arg_nnan(float %x, float %y, float %z) {
   ret float %r
 }
 
+define float @copysign_sign_arg_mixed(float %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_sign_arg_mixed(
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.copysign.f32(float [[X:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = call ninf nsz float @llvm.copysign.f32(float %y, float %z)
+  %r = call nnan nsz float @llvm.copysign.f32(float %x, float %s)
+  ret float %r
+}
+
 define float @fneg_mag(float %x, float %y) {
 ; CHECK-LABEL: @fneg_mag(
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
