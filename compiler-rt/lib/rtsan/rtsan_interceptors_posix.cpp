@@ -325,37 +325,6 @@ INTERCEPTOR(FILE *, fmemopen, void *buf, size_t size, const char *mode) {
 #define RTSAN_MAYBE_INTERCEPT_FMEMOPEN
 #endif
 
-#if SANITIZER_INTERCEPT_SETVBUF
-INTERCEPTOR(void, setbuf, FILE *stream, char *buf) {
-  __rtsan_notify_intercepted_call("setbuf");
-  return REAL(setbuf)(stream, buf);
-}
-
-INTERCEPTOR(void, setbuffer, FILE *stream, char *buf, size_t size) {
-  __rtsan_notify_intercepted_call("setbuffer");
-  return REAL(setbuffer)(stream, buf, size);
-}
-
-INTERCEPTOR(void, setlinebuf, FILE *stream) {
-  __rtsan_notify_intercepted_call("setlinebuf");
-  return REAL(setlinebuf)(stream);
-}
-
-INTERCEPTOR(int, setvbuf, FILE *stream, char *buf, int mode, size_t size) {
-  __rtsan_notify_intercepted_call("setvbuf");
-  return REAL(setvbuf)(stream, buf, mode, size);
-}
-#define RTSAN_MAYBE_INTERCEPT_SETBUF INTERCEPT_FUNCTION(setbuf)
-#define RTSAN_MAYBE_INTERCEPT_SETBUFFER INTERCEPT_FUNCTION(setbuffer)
-#define RTSAN_MAYBE_INTERCEPT_SETLINEBUF INTERCEPT_FUNCTION(setlinebuf)
-#define RTSAN_MAYBE_INTERCEPT_SETVBUF INTERCEPT_FUNCTION(setvbuf)
-#else
-#define RTSAN_MAYBE_INTERCEPT_SETBUF
-#define RTSAN_MAYBE_INTERCEPT_SETBUFFER
-#define RTSAN_MAYBE_INTERCEPT_SETLINEBUF
-#define RTSAN_MAYBE_INTERCEPT_SETVBUF
-#endif
-
 INTERCEPTOR(int, puts, const char *s) {
   __rtsan_notify_intercepted_call("puts");
   return REAL(puts)(s);
@@ -1017,10 +986,6 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE;
   RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
   RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
-  RTSAN_MAYBE_INTERCEPT_SETBUF;
-  RTSAN_MAYBE_INTERCEPT_SETBUFFER;
-  RTSAN_MAYBE_INTERCEPT_SETLINEBUF;
-  RTSAN_MAYBE_INTERCEPT_SETVBUF;
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
