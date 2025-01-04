@@ -361,10 +361,10 @@ TEST_F(RtsanFileTest, FopenCookieDieWhenRealtime) {
     FILE *fp;
     size_t read;
   } fh = {f, 0};
-  auto CookieRead = [this](void *cookie, char *buf, size_t size) {
+  auto CookieRead = [](void *cookie, char *buf, size_t size) {
     fholder *p = reinterpret_cast<fholder *>(cookie);
     p->read = fread(static_cast<void *>(buf), 1, size, p->fp);
-    EXPECT_NE(0, p->read);
+    EXPECT_NE(0u, p->read);
   };
   cookie_io_functions_t funcs = {(cookie_read_function_t *)&CookieRead, nullptr,
                                  nullptr, nullptr};
