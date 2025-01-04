@@ -165,9 +165,10 @@ jobs:
               build_runs_on="depot-macos-14"
             fi
             test_runs_on="${{ inputs.runs-on }}"
+            ;;
           *)
-            runs_on="${{ inputs.runs-on }}"
-            multi_stage="true"
+            test_runs_on="${{ inputs.runs-on }}"
+            build_runs_on=$test_runs_on
             ;;
         esac
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
