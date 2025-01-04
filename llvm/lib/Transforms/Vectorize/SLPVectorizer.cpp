@@ -812,8 +812,8 @@ namespace {
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// The main/alternate instruction. MainOp is also VL0.
-  Instruction *MainOp = nullptr;
-  Instruction *AltOp = nullptr;
+  Instruction *MainOp;
+  Instruction *AltOp;
 
 public:
   Instruction *getMainOp() const {
@@ -844,10 +844,9 @@ public:
 
   explicit operator bool() const { return valid(); }
 
-  InstructionsState() = delete;
+  InstructionsState() : InstructionsState(nullptr, nullptr) {}
   InstructionsState(Instruction *MainOp, Instruction *AltOp)
       : MainOp(MainOp), AltOp(AltOp) {}
-  static InstructionsState invalid() { return {nullptr, nullptr}; }
 };
 
 } // end anonymous namespace
@@ -909,17 +908,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI) {
   // Make sure these are all Instructions.
   if (!all_of(VL, IsaPred<Instruction, PoisonValue>))
-    return InstructionsState::invalid();
+    return InstructionsState();
 
   auto *It = find_if(VL, IsaPred<Instruction>);
   if (It == VL.end())
-    return InstructionsState::invalid();
+    return InstructionsState();
 
   Value *V = *It;
   unsigned InstCnt = std::count_if(It, VL.end(), IsaPred<Instruction>);
   if ((VL.size() > 2 && !isa<PHINode>(V) && InstCnt < VL.size() / 2) ||
       (VL.size() == 2 && InstCnt < 2))
-    return InstructionsState::invalid();
+    return InstructionsState();
 
   bool IsCastOp = isa<CastInst>(V);
   bool IsBinOp = isa<BinaryOperator>(V);
@@ -962,7 +961,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
     if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
-      return InstructionsState::invalid();
+      return InstructionsState();
   }
   bool AnyPoison = InstCnt != VL.size();
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
@@ -974,7 +973,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     // TODO: do some smart analysis of the CallInsts to exclude divide-like
     // intrinsics/functions only.
     if (AnyPoison && (I->isIntDivRem() || I->isFPDivRem() || isa<CallInst>(I)))
-      return InstructionsState::invalid();
+      return InstructionsState();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
       if (InstOpcode == Opcode || InstOpcode == AltOpcode)
@@ -1046,28 +1045,28 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
         if (Gep->getNumOperands() != 2 ||
             Gep->getOperand(0)->getType() != IBase->getOperand(0)->getType())
-          return InstructionsState::invalid();
+          return InstructionsState();
       } else if (auto *EI = dyn_cast<ExtractElementInst>(I)) {
         if (!isVectorLikeInstWithConstOps(EI))
-          return InstructionsState::invalid();
+          return InstructionsState();
       } else if (auto *LI = dyn_cast<LoadInst>(I)) {
         auto *BaseLI = cast<LoadInst>(IBase);
         if (!LI->isSimple() || !BaseLI->isSimple())
-          return InstructionsState::invalid();
+          return InstructionsState();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
         auto *CallBase = cast<CallInst>(IBase);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
-          return InstructionsState::invalid();
+          return InstructionsState();
         if (Call->hasOperandBundles() &&
             (!CallBase->hasOperandBundles() ||
              !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
                          Call->op_begin() + Call->getBundleOperandsEndIndex(),
                          CallBase->op_begin() +
                              CallBase->getBundleOperandsStartIndex())))
-          return InstructionsState::invalid();
+          return InstructionsState();
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
         if (ID != BaseID)
-          return InstructionsState::invalid();
+          return InstructionsState();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
           if (Mappings.size() != BaseMappings.size() ||
@@ -1077,12 +1076,12 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
               Mappings.front().Shape.VF != BaseMappings.front().Shape.VF ||
               Mappings.front().Shape.Parameters !=
                   BaseMappings.front().Shape.Parameters)
-            return InstructionsState::invalid();
+            return InstructionsState();
         }
       }
       continue;
     }
-    return InstructionsState::invalid();
+    return InstructionsState();
   }
 
   return InstructionsState(cast<Instruction>(V),
