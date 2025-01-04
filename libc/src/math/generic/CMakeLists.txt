@@ -4380,6 +4380,7 @@ add_object_library(
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
