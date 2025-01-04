@@ -403,6 +403,56 @@ TEST_F(RtsanFileTest, FmemOpenDiesWhenRealtime) {
 }
 #endif
 
+#if SANITIZER_INTERCEPT_SETVBUF
+TEST_F(RtsanFileTest, SetbufDieWhenRealtime) {
+  char buffer[BUFSIZ];
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [&f, &buffer]() { setbuf(f, buffer); };
+
+  ExpectRealtimeDeath(Func, "setbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetbufferDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [&f, &buffer, &size]() { setbuffer(f, buffer, size); };
+
+  ExpectRealtimeDeath(Func, "setbuffer");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetvbufDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [&f, &buffer, &size]() {
+    int r = setvbuf(f, buffer, _IOFBF, size);
+    EXPECT_THAT(r, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "setvbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetlinebufDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [&f]() { setlinebuf(f); };
+
+  ExpectRealtimeDeath(Func, "setlinebuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 class RtsanOpenedFileTest : public RtsanFileTest {
 protected:
   void SetUp() override {
