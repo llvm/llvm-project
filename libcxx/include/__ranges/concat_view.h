@@ -67,8 +67,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class... __Tp> 
-using __extract_last = __Tp...[sizeof...(__Tp) - 1]; 
+template <class... __Tp>
+using __extract_last = __Tp...[sizeof...(__Tp) - 1];
 
 template <class _Tp, class... _Tail>
 constexpr bool __derived_from_pack =
@@ -537,7 +537,8 @@ public:
                   __it_y.apply_fn_with_const_index<std::tuple_size_v<decltype(__y.parent_->__views_)>>(
                       __iy, [&](auto index_constant) {
                         constexpr size_t __index_y = index_constant.value;
-                        auto __dy = ranges::__distance(ranges::begin(std::get<__index_y>(__y.parent_->__views_)), __it_y);
+                        auto __dy =
+                            ranges::__distance(ranges::begin(std::get<__index_y>(__y.parent_->__views_)), __it_y);
                         difference_type __s = 0;
                         for (size_t __idx = __index_y + 1; __idx < __index_x; __idx++) {
                           __s += ranges::size(std::get<__idx>(__x.parent_->__views_));
