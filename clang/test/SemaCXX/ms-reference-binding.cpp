@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-microsoft-reference-binding -verify -fms-reference-binding %s
-// RUN: %clang_cc1 -DEXTWARN -fsyntax-only -verify -fms-reference-binding %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -Wno-microsoft-reference-binding -verify -fms-reference-binding %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -DEXTWARN -fsyntax-only -verify -fms-reference-binding %s
 
 #ifdef EXTWARN
 
@@ -48,6 +48,10 @@ A(&&fARvalueRefArray())[1];
 
 void fADefaultArgRef2(A& = fARvalueRef());
 
+// expected-note@+2 {{candidate function [with T = int] not viable: expects an lvalue for 1st argument}}
+template<class T>
+void fTRef(T&) {}
+
 void fARef(A&) {}
 void fAAliasRef(AAlias&) {}
 
@@ -67,6 +71,10 @@ void fIntConstArray(const int (&)[1]);
 namespace NS {
   void fARef(A&) {}
   void fAAliasRef(AAlias&) {}
+
+  // expected-note@+2 {{candidate function [with T = int] not viable: expects an lvalue for 1st argument}}
+  template<class T>
+  void fTRef(T&) {}
 
   // expected-note@+2 {{passing argument to parameter here}}
   // expected-note@+1 {{passing argument to parameter here}}
@@ -92,8 +100,12 @@ void test1() {
   fIntRef(0); // expected-error{{no matching function for call to 'fIntRef'}}
   fDoubleRef(0.0); // expected-error{{no matching function for call to 'fDoubleRef'}}
 
+  fTRef(0); // expected-error{{no matching function for call to 'fTRef'}}
+
   NS::fIntRef(0); // expected-error{{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   NS::fDoubleRef(0.0); // expected-error{{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
+
+  NS::fTRef(0); // expected-error{{no matching function for call to 'fTRef'}}
 
   int i2 = 2;
   double& rd3 = i2; // expected-error{{non-const lvalue reference to type 'double' cannot bind to a value of unrelated type 'int'}}
@@ -125,6 +137,9 @@ void test3() {
   fARef(A());
   fARef(static_cast<A&&>(a1));
 
+  fTRef(A());
+  fTRef(static_cast<A&&>(a1));
+
   fAAliasRef(A());
   fAAliasRef(static_cast<A&&>(a1));
   fAAliasRef(AAlias());
@@ -138,6 +153,9 @@ void test3() {
 
   NS::fARef(A());
   NS::fARef(static_cast<A&&>(a1));
+
+  NS::fTRef(A());
+  NS::fTRef(static_cast<A&&>(a1));
 
   NS::fAAliasRef(A());
   NS::fAAliasRef(static_cast<A&&>(a1));
@@ -288,5 +306,25 @@ void test9() {
   J& j1 = J_ONE; // expected-error{{non-const lvalue reference to type 'J' cannot bind to a temporary of type 'J'}}
   const J& j2 = J_ONE;
 }
+
+#if defined(__x86_64__)
+
+typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16)));
+
+__m128 fm128();
+
+// expected-note@+1 {{candidate function not viable: expects an lvalue for 1st argument}}
+void fm128Ref(__m128&);
+
+// NOTE: Vector types can successfully be bound on msvc since vector types are not built-in types but are unions.
+//       We do not implement the msvc model of vector intrinsics so this is expected divergence.
+void testm128() {
+
+    fm128Ref(fm128()); // expected-error{{no matching function for call to 'fm128Ref'}}
+
+    __m128& v0 = fm128(); // expected-error{{non-const lvalue reference to type '__m128' (vector of 4 'float' values) cannot bind to a temporary of type '__m128'}}
+}
+
+#endif
 
 #endif
