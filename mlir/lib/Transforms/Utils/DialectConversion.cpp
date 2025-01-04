@@ -103,8 +103,8 @@ namespace {
 
 /// Helper class to make it possible to use `ValueVector` as a key in DenseMap.
 struct ValueVectorMapInfo {
-  static ValueVector getEmptyKey() { return ValueVector{}; }
-  static ValueVector getTombstoneKey() { return ValueVector{}; }
+  static ValueVector getEmptyKey() { return ValueVector{Value()}; }
+  static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
     return ::llvm::hash_combine_range(val.begin(), val.end());
   }
