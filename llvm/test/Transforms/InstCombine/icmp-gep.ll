@@ -709,3 +709,47 @@ define i1 @pointer_icmp_aligned_with_offset_negative(ptr align 8 %a, ptr align 8
   %cmp = icmp eq ptr %gep, %a2
   ret i1 %cmp
 }
+
+define i1 @gep_diff_base_same_indices(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %x, i64 %z
+  %gep2 = getelementptr i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices_nuw(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i8, ptr %x, i64 %z
+  %gep2 = getelementptr nuw i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices_nusw(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices_nusw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nusw i8, ptr %x, i64 %z
+  %gep2 = getelementptr nusw i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices_nuw_nusw(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices_nuw_nusw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i8, ptr %x, i64 %z
+  %gep2 = getelementptr nusw i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
