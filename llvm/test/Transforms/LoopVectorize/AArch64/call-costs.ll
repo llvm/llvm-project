@@ -127,24 +127,99 @@ define void @call_scalarized(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @call_scalarized(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE8:.*]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 100, [[INDEX]]
+; CHECK-NEXT:    [[IV:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[GEP_SRC]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP3]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[GEP_SRC]], i32 -2
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP5]], i32 -1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x double> [[WIDE_LOAD]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <2 x double> [[WIDE_LOAD1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = fcmp une <2 x double> [[REVERSE]], splat (double 4.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp une <2 x double> [[REVERSE2]], splat (double 4.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp ugt <2 x double> [[REVERSE]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ugt <2 x double> [[REVERSE2]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <2 x i1> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = xor <2 x i1> [[TMP11]], splat (i1 true)
+; CHECK-NEXT:    [[TMP14:%.*]] = xor <2 x i1> [[TMP12]], splat (i1 true)
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP13]], i32 0
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[REVERSE]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = call double @llvm.sqrt.f64(double [[TMP18]])
+; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP17]], align 8
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP13]], i32 1
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK:       [[PRED_STORE_IF3]]:
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], -1
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x double> [[REVERSE]], i32 1
+; CHECK-NEXT:    [[TMP25:%.*]] = call double @llvm.sqrt.f64(double [[TMP24]])
+; CHECK-NEXT:    store double [[TMP25]], ptr [[TMP23]], align 8
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; CHECK:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK:       [[PRED_STORE_IF5]]:
+; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], -2
+; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[TMP27]], -1
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x double> [[REVERSE2]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = call double @llvm.sqrt.f64(double [[TMP30]])
+; CHECK-NEXT:    store double [[TMP31]], ptr [[TMP29]], align 8
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <2 x i1> [[TMP14]], i32 1
+; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8]]
+; CHECK:       [[PRED_STORE_IF7]]:
+; CHECK-NEXT:    [[TMP33:%.*]] = add i64 [[OFFSET_IDX]], -3
+; CHECK-NEXT:    [[TMP34:%.*]] = add i64 [[TMP33]], -1
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <2 x double> [[REVERSE2]], i32 1
+; CHECK-NEXT:    [[TMP37:%.*]] = call double @llvm.sqrt.f64(double [[TMP36]])
+; CHECK-NEXT:    store double [[TMP37]], ptr [[TMP35]], align 8
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
+; CHECK:       [[PRED_STORE_CONTINUE8]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP38]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 100, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], -1
+; CHECK-NEXT:    [[GEP_SRC1:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT1]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC1]], align 8
 ; CHECK-NEXT:    [[CMP295:%.*]] = fcmp une double [[L]], 4.000000e+00
 ; CHECK-NEXT:    [[CMP299:%.*]] = fcmp ugt double [[L]], 0.000000e+00
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP295]], [[CMP299]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[L]])
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr double, ptr [[DST]], i64 [[IV_NEXT1]]
 ; CHECK-NEXT:    store double [[SQRT]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -235,4 +310,6 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.

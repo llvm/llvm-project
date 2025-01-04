@@ -84,37 +84,33 @@ define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP3]], i32 0
-; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
-; DEFAULT-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[WIDE_LOAD]])
-; DEFAULT-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[WIDE_LOAD1]])
-; DEFAULT-NEXT:    [[TMP9:%.*]] = fcmp ogt <2 x double> [[TMP7]], splat (double 1.000000e+00)
-; DEFAULT-NEXT:    [[TMP10:%.*]] = fcmp ogt <2 x double> [[TMP8]], splat (double 1.000000e+00)
-; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
+; DEFAULT-NEXT:    [[TMP4:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[WIDE_LOAD]])
+; DEFAULT-NEXT:    [[TMP6:%.*]] = fcmp ogt <4 x double> [[TMP4]], splat (double 1.000000e+00)
+; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; DEFAULT-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; DEFAULT:       pred.store.if:
 ; DEFAULT-NEXT:    store i32 0, ptr [[DST]], align 4
 ; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; DEFAULT:       pred.store.continue:
-; DEFAULT-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
+; DEFAULT-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP6]], i32 1
 ; DEFAULT-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
-; DEFAULT:       pred.store.if2:
+; DEFAULT:       pred.store.if1:
 ; DEFAULT-NEXT:    store i32 0, ptr [[DST]], align 4
 ; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; DEFAULT:       pred.store.continue3:
-; DEFAULT-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
+; DEFAULT:       pred.store.continue2:
+; DEFAULT-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i32 2
 ; DEFAULT-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; DEFAULT:       pred.store.if4:
+; DEFAULT:       pred.store.if3:
 ; DEFAULT-NEXT:    store i32 0, ptr [[DST]], align 4
 ; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; DEFAULT:       pred.store.continue5:
-; DEFAULT-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
+; DEFAULT:       pred.store.continue4:
+; DEFAULT-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
 ; DEFAULT-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
-; DEFAULT:       pred.store.if6:
+; DEFAULT:       pred.store.if5:
 ; DEFAULT-NEXT:    store i32 0, ptr [[DST]], align 4
 ; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; DEFAULT:       pred.store.continue7:
+; DEFAULT:       pred.store.continue6:
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

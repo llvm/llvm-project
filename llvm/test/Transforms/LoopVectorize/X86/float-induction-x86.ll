@@ -21,7 +21,7 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    br i1 [[CMP4]], label [[ITER_CHECK:%.*]], label [[FOR_END:%.*]]
 ; AUTO_VEC:       iter.check:
 ; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[N]] to i64
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AUTO_VEC:       vector.main.loop.iter.check:
 ; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[N]], 32
@@ -57,27 +57,27 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[DOTCAST7:%.*]] = uitofp nneg i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP6:%.*]] = fmul fast float [[DOTCAST7]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[IND_END8:%.*]] = fadd fast float [[TMP6]], 1.000000e+00
-; AUTO_VEC-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[ZEXT]], 28
+; AUTO_VEC-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[ZEXT]], 24
 ; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[FOR_BODY]], label [[VEC_EPILOG_PH]]
 ; AUTO_VEC:       vec.epilog.ph:
 ; AUTO_VEC-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AUTO_VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi float [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AUTO_VEC-NEXT:    [[N_VEC3:%.*]] = and i64 [[ZEXT]], 2147483644
+; AUTO_VEC-NEXT:    [[N_VEC3:%.*]] = and i64 [[ZEXT]], 2147483640
 ; AUTO_VEC-NEXT:    [[DOTCAST5:%.*]] = uitofp nneg i64 [[N_VEC3]] to float
 ; AUTO_VEC-NEXT:    [[TMP7:%.*]] = fmul fast float [[DOTCAST5]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[IND_END6:%.*]] = fadd fast float [[TMP7]], 1.000000e+00
-; AUTO_VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[BC_RESUME_VAL]], i64 0
-; AUTO_VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; AUTO_VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <4 x float> [[DOTSPLAT]], <float 0.000000e+00, float 5.000000e-01, float 1.000000e+00, float 1.500000e+00>
+; AUTO_VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[BC_RESUME_VAL]], i64 0
+; AUTO_VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x float> [[DOTSPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
+; AUTO_VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <8 x float> [[DOTSPLAT]], <float 0.000000e+00, float 5.000000e-01, float 1.000000e+00, float 1.500000e+00, float 2.000000e+00, float 2.500000e+00, float 3.000000e+00, float 3.500000e+00>
 ; AUTO_VEC-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vec.epilog.vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; AUTO_VEC-NEXT:    [[VEC_IND11:%.*]] = phi <4 x float> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[VEC_IND7:%.*]] = phi <8 x float> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT8:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX10]]
-; AUTO_VEC-NEXT:    store <4 x float> [[VEC_IND11]], ptr [[TMP8]], align 4
-; AUTO_VEC-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX10]], 4
-; AUTO_VEC-NEXT:    [[VEC_IND_NEXT12]] = fadd fast <4 x float> [[VEC_IND11]], splat (float 2.000000e+00)
+; AUTO_VEC-NEXT:    store <8 x float> [[VEC_IND7]], ptr [[TMP8]], align 4
+; AUTO_VEC-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX10]], 8
+; AUTO_VEC-NEXT:    [[VEC_IND_NEXT8]] = fadd fast <8 x float> [[VEC_IND7]], splat (float 4.000000e+00)
 ; AUTO_VEC-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[N_VEC3]]
 ; AUTO_VEC-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AUTO_VEC:       vec.epilog.middle.block:
@@ -393,7 +393,7 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    br i1 [[CMP_NOT11]], label [[FOR_COND_CLEANUP:%.*]], label [[ITER_CHECK:%.*]]
 ; AUTO_VEC:       iter.check:
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; AUTO_VEC:       vector.main.loop.iter.check:
 ; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[N]], 32
@@ -437,29 +437,29 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[DOTCAST10:%.*]] = uitofp nneg i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP11:%.*]] = fmul reassoc float [[DOTCAST10]], 4.200000e+01
 ; AUTO_VEC-NEXT:    [[IND_END11:%.*]] = fadd reassoc float [[TMP11]], 1.000000e+00
-; AUTO_VEC-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 28
+; AUTO_VEC-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 24
 ; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[FOR_BODY]], label [[VEC_EPILOG_PH]]
 ; AUTO_VEC:       vec.epilog.ph:
 ; AUTO_VEC-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AUTO_VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi float [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AUTO_VEC-NEXT:    [[N_VEC6:%.*]] = and i64 [[TMP0]], 4294967292
+; AUTO_VEC-NEXT:    [[N_VEC6:%.*]] = and i64 [[TMP0]], 4294967288
 ; AUTO_VEC-NEXT:    [[DOTCAST8:%.*]] = uitofp nneg i64 [[N_VEC6]] to float
 ; AUTO_VEC-NEXT:    [[TMP12:%.*]] = fmul reassoc float [[DOTCAST8]], 4.200000e+01
 ; AUTO_VEC-NEXT:    [[IND_END9:%.*]] = fadd reassoc float [[TMP12]], 1.000000e+00
-; AUTO_VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[BC_RESUME_VAL]], i64 0
-; AUTO_VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; AUTO_VEC-NEXT:    [[INDUCTION:%.*]] = fadd reassoc <4 x float> [[DOTSPLAT]], <float 0.000000e+00, float 4.200000e+01, float 8.400000e+01, float 1.260000e+02>
+; AUTO_VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[BC_RESUME_VAL]], i64 0
+; AUTO_VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x float> [[DOTSPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
+; AUTO_VEC-NEXT:    [[INDUCTION:%.*]] = fadd reassoc <8 x float> [[DOTSPLAT]], <float 0.000000e+00, float 4.200000e+01, float 8.400000e+01, float 1.260000e+02, float 1.680000e+02, float 2.100000e+02, float 2.520000e+02, float 2.940000e+02>
 ; AUTO_VEC-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vec.epilog.vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX13:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; AUTO_VEC-NEXT:    [[VEC_IND14:%.*]] = phi <4 x float> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[VEC_IND10:%.*]] = phi <8 x float> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[P]], i64 [[INDEX13]]
-; AUTO_VEC-NEXT:    [[WIDE_LOAD16:%.*]] = load <4 x float>, ptr [[TMP13]], align 4
-; AUTO_VEC-NEXT:    [[TMP14:%.*]] = fadd reassoc <4 x float> [[VEC_IND14]], [[WIDE_LOAD16]]
-; AUTO_VEC-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP13]], align 4
-; AUTO_VEC-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX13]], 4
-; AUTO_VEC-NEXT:    [[VEC_IND_NEXT15]] = fadd reassoc <4 x float> [[VEC_IND14]], splat (float 1.680000e+02)
+; AUTO_VEC-NEXT:    [[WIDE_LOAD12:%.*]] = load <8 x float>, ptr [[TMP13]], align 4
+; AUTO_VEC-NEXT:    [[TMP17:%.*]] = fadd reassoc <8 x float> [[VEC_IND10]], [[WIDE_LOAD12]]
+; AUTO_VEC-NEXT:    store <8 x float> [[TMP17]], ptr [[TMP13]], align 4
+; AUTO_VEC-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX13]], 8
+; AUTO_VEC-NEXT:    [[VEC_IND_NEXT11]] = fadd reassoc <8 x float> [[VEC_IND10]], splat (float 3.360000e+02)
 ; AUTO_VEC-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC6]]
 ; AUTO_VEC-NEXT:    br i1 [[TMP15]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; AUTO_VEC:       vec.epilog.middle.block:

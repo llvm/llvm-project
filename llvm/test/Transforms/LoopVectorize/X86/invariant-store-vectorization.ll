@@ -386,15 +386,22 @@ for.end:                                          ; preds = %for.body
 define void @test_store_of_final_reduction_value(i64 %x, ptr %dst) {
 ; CHECK-LABEL: @test_store_of_final_reduction_value(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV4:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED_NEXT]] = mul i64 [[RED]], [[X:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP47:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
+; CHECK-NEXT:    [[RED_NEXT:%.*]] = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    store i64 [[RED_NEXT]], ptr [[DST:%.*]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV4]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV4]], 1
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP1]], !llvm.loop [[LOOP48:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
