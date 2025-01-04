@@ -886,6 +886,7 @@ Bug Fixes to C++ Support
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 - Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
+- Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 
 Bug Fixes to AST Handling
@@ -1113,6 +1114,8 @@ AST Matchers
 
 - Add ``dependentNameType`` matcher to match a dependent name type.
 
+- Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
+
 clang-format
 ------------
 
@@ -1127,6 +1130,7 @@ clang-format
 - Adds ``AllowShortNamespacesOnASingleLine`` option.
 - Adds ``VariableTemplates`` option.
 - Adds support for bash globstar in ``.clang-format-ignore``.
+- Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 
 libclang
 --------
@@ -1156,6 +1160,13 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- In loops where the loop condition is opaque (i.e. the analyzer cannot
+  determine whether it's true or false), the analyzer will no longer assume
+  execution paths that perform more that two iterations. These unjustified
+  assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
+  the FFMPEG codebase) in loops where the programmer intended only two or three
+  steps but the analyzer wasn't able to understand that the loop is limited.
 
 Improvements
 ^^^^^^^^^^^^

@@ -614,6 +614,14 @@ void OmpStructureChecker::Leave(const parser::OpenMPConstruct &) {
   deferredNonVariables_.clear();
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
+  EnterDirectiveNest(DeclarativeNest);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeConstruct &x) {
+  ExitDirectiveNest(DeclarativeNest);
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   loopStack_.push_back(&x);
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
@@ -1688,13 +1696,23 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPErrorConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPErrorConstruct &x) {
+void OmpStructureChecker::Leave(const parser::OmpErrorDirective &x) {
   dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::At &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_at);
+  if (GetDirectiveNest(DeclarativeNest) > 0) {
+    if (x.v.v == parser::OmpAtClause::ActionTime::Execution) {
+      context_.Say(GetContext().clauseSource,
+          "The ERROR directive with AT(EXECUTION) cannot appear in the specification part"_err_en_US);
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
@@ -2856,7 +2874,6 @@ CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
 CHECK_SIMPLE_CLAUSE(Use, OMPC_use)
 CHECK_SIMPLE_CLAUSE(Novariants, OMPC_novariants)
 CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
-CHECK_SIMPLE_CLAUSE(At, OMPC_at)
 CHECK_SIMPLE_CLAUSE(Severity, OMPC_severity)
 CHECK_SIMPLE_CLAUSE(Message, OMPC_message)
 CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)

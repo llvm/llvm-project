@@ -54,6 +54,59 @@ module m
     print*,threadIdx%x
     stop ! ok
   end subroutine
+
+  attributes(global) subroutine cycletest()
+    integer :: i
+    do i = 1, 10
+      cycle ! ok
+    end do
+  end subroutine
+
+  attributes(global) subroutine gototest()
+    integer :: i
+    goto 10
+    10 print *, "X is negative!" 
+  end subroutine
+
+  attributes(global) subroutine exittest()
+    integer :: i
+    do i = 1, 10
+      if (i == 1) then
+        exit ! ok
+      end if
+    end do
+  end subroutine
+
+  attributes(global) subroutine selectcasetest()
+    integer :: i
+    select case(i)
+    case (1)
+      print*,'main'
+    case default
+      print*, 'default'
+    end select
+  end subroutine
+
+  subroutine host()
+    integer :: i
+    !$cuf kernel do
+    do i = 1, 10
+      !ERROR: Statement may not appear in cuf kernel code
+      cycle
+    end do
+
+    !$cuf kernel do
+    do i = 1, 10
+      if (i == 1) then
+        !ERROR: Statement may not appear in cuf kernel code
+        exit ! ok
+      end if
+
+      !ERROR: Statement may not appear in cuf kernel code
+      goto 10
+      10 print *, "X is negative!"
+    end do
+  end subroutine
 end
 
 program main
