@@ -374,7 +374,9 @@ define <2 x i8> @srem_XY_XZ_with_CY_gt_CZ_no_nuw_out(<2 x i8> %X) {
 
 define i8 @srem_XY_XZ_with_CY_gt_CZ_drop_nsw(i8 noundef %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_drop_nsw(
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[BO0:%.*]] = mul nsw i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[BO1:%.*]] = shl nsw i8 [[X]], 7
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO1]], [[BO0]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul nsw i8 %X, 127
