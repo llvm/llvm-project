@@ -895,7 +895,7 @@ const struct InstructionSizeData {
     { 5, {0xB9, 0x71, 0x72, 0x73, 0x74}, 0, "b9 XX XX XX XX : mov ecx, XX XX XX XX"},
     { 5, {0xBA, 0x71, 0x72, 0x73, 0x74}, 0, "ba XX XX XX XX : mov edx, XX XX XX XX"},
     { 6, {0x81, 0xEC, 0x72, 0x73, 0x74, 0x75}, 0, "81 EC XX XX XX XX : sub esp, XX XX XX XX"},
-    { 6, {0xFF, 0x89, 0x72, 0x73, 0x74, 0x75}, 0, "FF 89 XX XX XX XX : dec dword ptr [ecx+ XX XX XX XX]"},
+    { 6, {0xFF, 0x89, 0x72, 0x73, 0x74, 0x75}, 0, "FF 89 XX XX XX XX : dec dword ptr [ecx + XX XX XX XX]"},
     { 7, {0x8D, 0xA4, 0x24, 0x73, 0x74, 0x75, 0x76}, 0, "8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]"},
 #if SANITIZER_WINDOWS_x64
     // sorted list

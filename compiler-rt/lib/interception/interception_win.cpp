@@ -661,7 +661,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xC1F6:  // F6 C1 XX : test cl, XX
       return 3;
 
-    case 0x89FF:  // FF 89 XX XX XX XX : dec dword ptr [ecx+ XX XX XX XX]
+    case 0x89FF:  // FF 89 XX XX XX XX : dec dword ptr [ecx + XX XX XX XX]
     case 0xEC81:  // 81 EC XX XX XX XX : sub esp, XX XX XX XX
       return 6;
 
