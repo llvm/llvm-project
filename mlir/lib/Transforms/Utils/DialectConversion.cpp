@@ -1430,13 +1430,8 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     UnrealizedConversionCastOp *castOp) {
   assert((!originalType || kind == MaterializationKind::Target) &&
          "original type is valid only for target materializations");
-
-  // Avoid materializing an unnecessary cast.
-  if (TypeRange(inputs) == outputTypes) {
-    if (!valuesToMap.empty())
-      mapping.map(std::move(valuesToMap), inputs);
-    return inputs;
-  }
+  assert(TypeRange(inputs) != outputTypes &&
+         "materialization is not necessary");
 
   // Create an unresolved materialization. We use a new OpBuilder to avoid
   // tracking the materialization like we do for other operations.
@@ -1455,7 +1450,9 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
 
 Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
     Value value, const TypeConverter *converter) {
-  // Find a replacement value with the same type.
+  // Try to find a replacement value with the same type in the conversion value
+  // mapping. This includes cached materializations. We try to reuse those
+  // instead of generating duplicate IR.
   ValueVector repl = mapping.lookupOrNull(value, value.getType());
   if (!repl.empty())
     return repl.front();
@@ -1489,10 +1486,6 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // in the conversion value mapping.) The insertion point of the
   // materialization must be valid for all future users that may be created
   // later in the conversion process.
-  //
-  // Note: Instead of creating new IR, `buildUnresolvedMaterialization` may
-  // return an already existing, cached materialization from the conversion
-  // value mapping.
   Value castValue =
       buildUnresolvedMaterialization(MaterializationKind::Source,
                                      computeInsertPoint(repl), value.getLoc(),
