@@ -160,7 +160,7 @@ jobs:
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ input.runs-on }}"
+              build_runs_on="${{ inputs.runs-on }}"
             else
               build_runs_on="depot-macos-14"
             fi
