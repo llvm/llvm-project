@@ -216,9 +216,10 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan,
-                                   Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(CanonicalIVTy) {}
+      CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
+      TypeAnalysis(CanonicalIVTy) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -486,11 +487,9 @@ void VPBasicBlock::execute(VPTransformState *State) {
   };
 
   // 1. Create an IR basic block.
-  if (this == getPlan()->getVectorPreheader() ||
-      (Replica && this == getParent()->getEntry()) ||
+  if ((Replica && this == getParent()->getEntry()) ||
       IsReplicateRegion(getSingleHierarchicalPredecessor())) {
     // Reuse the previous basic block if the current VPBB is either
-    //  * the vector preheader,
     //  * the entry to a replicate region, or
     //  * the exit of a replicate region.
     State->CFG.VPBB2IRBB[this] = NewBB;
@@ -502,8 +501,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     // Register NewBB in its loop. In innermost loops its the same for all
     // BB's.
-    if (State->CurrentVectorLoop)
-      State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
+    if (State->CurrentParentLoop)
+      State->CurrentParentLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
 
     State->CFG.PrevBB = NewBB;
@@ -713,17 +712,17 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   if (!isReplicator()) {
     // Create and register the new vector loop.
-    Loop *PrevLoop = State->CurrentVectorLoop;
-    State->CurrentVectorLoop = State->LI->AllocateLoop();
+    Loop *PrevLoop = State->CurrentParentLoop;
+    State->CurrentParentLoop = State->LI->AllocateLoop();
     BasicBlock *VectorPH = State->CFG.VPBB2IRBB[getPreheaderVPBB()];
     Loop *ParentLoop = State->LI->getLoopFor(VectorPH);
 
     // Insert the new loop into the loop nest and register the new basic blocks
     // before calling any utilities such as SCEV that require valid LoopInfo.
     if (ParentLoop)
-      ParentLoop->addChildLoop(State->CurrentVectorLoop);
+      ParentLoop->addChildLoop(State->CurrentParentLoop);
     else
-      State->LI->addTopLevelLoop(State->CurrentVectorLoop);
+      State->LI->addTopLevelLoop(State->CurrentParentLoop);
 
     // Visit the VPBlocks connected to "this", starting from it.
     for (VPBlockBase *Block : RPOT) {
@@ -731,7 +730,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
       Block->execute(State);
     }
 
-    State->CurrentVectorLoop = PrevLoop;
+    State->CurrentParentLoop = PrevLoop;
     return;
   }
 
@@ -948,21 +947,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   }
 }
 
-/// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
-/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
-/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
-static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
-  for (auto &R : make_early_inc_range(*VPBB)) {
-    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
-    R.moveBefore(*IRVPBB, IRVPBB->end());
-  }
-
-  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
-  // VPBB is now dead and will be cleaned up when the plan gets destroyed.
-}
-
 /// Generate the code inside the preheader and body of the vectorized loop.
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
@@ -970,24 +954,12 @@ void VPlan::execute(VPTransformState *State) {
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
-  BasicBlock *VectorPreHeader = State->CFG.PrevBB;
-  State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
+  BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
-
-  // Replace regular VPBB's for the vector preheader, middle and scalar
-  // preheader blocks with VPIRBasicBlocks wrapping their IR blocks. The IR
-  // blocks are created during skeleton creation, so we can only create the
-  // VPIRBasicBlocks now during VPlan execution rather than earlier during VPlan
-  // construction.
-  BasicBlock *MiddleBB = State->CFG.ExitBB;
-  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
-  replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
-  replaceVPBBWithIRVPBB(getMiddleBlock(), MiddleBB);
-  replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');
@@ -997,6 +969,8 @@ void VPlan::execute(VPTransformState *State) {
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
   // execution.
+  BasicBlock *MiddleBB = State->CFG.ExitBB;
+  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();

@@ -3203,11 +3203,12 @@ struct FormatStyle {
   /// \version 19
   KeepEmptyLinesStyle KeepEmptyLines;
 
-  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
   /// \version 17
   // bool KeepEmptyLinesAtEOF;
 
-  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  /// This option is **deprecated**. See ``AtStartOfBlock`` of
+  /// ``KeepEmptyLines``.
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
 
@@ -5042,8 +5043,8 @@ struct FormatStyle {
   /// \version 3.7
   unsigned TabWidth;
 
-  /// A vector of non-keyword identifiers that should be interpreted as
-  /// template names.
+  /// A vector of non-keyword identifiers that should be interpreted as template
+  /// names.
   ///
   /// A ``<`` after a template name is annotated as a template opener instead of
   /// a binary operator.
@@ -5103,6 +5104,15 @@ struct FormatStyle {
   /// \version 3.7
   UseTabStyle UseTab;
 
+  /// A vector of non-keyword identifiers that should be interpreted as variable
+  /// template names.
+  ///
+  /// A ``)`` after a variable template instantiation is **not** annotated as
+  /// the closing parenthesis of C-style cast operator.
+  ///
+  /// \version 20
+  std::vector<std::string> VariableTemplates;
+
   /// For Verilog, put each port on its own line in module instantiations.
   /// \code
   ///    true:
@@ -5133,6 +5143,39 @@ struct FormatStyle {
   /// For example: BOOST_PP_STRINGIZE
   /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
+
+  /// Different styles for wrapping namespace body with empty lines.
+  enum WrapNamespaceBodyWithEmptyLinesStyle : int8_t {
+    /// Remove all empty lines at the beginning and the end of namespace body.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2
+    ///   function();
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Never,
+    /// Always have at least one empty line at the beginning and the end of
+    /// namespace body except that the number of empty lines between consecutive
+    /// nested namespace definitions is not increased.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2 {
+    ///
+    ///   function();
+    ///
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Always,
+    /// Keep existing newlines at the beginning and the end of namespace body.
+    /// ``MaxEmptyLinesToKeep`` still applies.
+    WNBWELS_Leave
+  };
+
+  /// Wrap namespace body with empty lines.
+  /// \version 20
+  WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
 
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
@@ -5314,10 +5357,11 @@ struct FormatStyle {
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
            TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
+           WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

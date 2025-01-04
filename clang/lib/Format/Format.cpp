@@ -839,6 +839,18 @@ template <> struct ScalarEnumerationTraits<FormatStyle::UseTabStyle> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<
+    FormatStyle::WrapNamespaceBodyWithEmptyLinesStyle> {
+  static void
+  enumeration(IO &IO,
+              FormatStyle::WrapNamespaceBodyWithEmptyLinesStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::WNBWELS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::WNBWELS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::WNBWELS_Leave);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle> {
   static void mapping(IO &IO, FormatStyle &Style) {
     // When reading, read the language first, we need it for getPredefinedStyle.
@@ -1166,10 +1178,13 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
     IO.mapOptional("UseTab", Style.UseTab);
+    IO.mapOptional("VariableTemplates", Style.VariableTemplates);
     IO.mapOptional("VerilogBreakBetweenInstancePorts",
                    Style.VerilogBreakBetweenInstancePorts);
     IO.mapOptional("WhitespaceSensitiveMacros",
                    Style.WhitespaceSensitiveMacros);
+    IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
+                   Style.WrapNamespaceBodyWithEmptyLines);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
@@ -1638,6 +1653,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.WhitespaceSensitiveMacros.push_back("NS_SWIFT_NAME");
   LLVMStyle.WhitespaceSensitiveMacros.push_back("PP_STRINGIZE");
   LLVMStyle.WhitespaceSensitiveMacros.push_back("STRINGIZE");
+  LLVMStyle.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Leave;
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
