@@ -731,14 +731,6 @@ namespace AArch64TLBI {
   #include "AArch64GenSystemOperands.inc"
 }
 
-namespace AArch64PRCTX {
-  struct PRCTX : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_PRCTX_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
-
 namespace AArch64II {
 /// Target Operand Flag enum.
 enum TOF {
