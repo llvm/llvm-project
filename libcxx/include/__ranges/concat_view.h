@@ -67,17 +67,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class _Tp, class... _Tail>
-struct __extract_last : __extract_last<_Tail...> {};
-
-template <class _Tp>
-struct __extract_last<_Tp> {
-  using type = _Tp;
-};
+template<class... __Tp> 
+using __extract_last = __Tp...[sizeof...(__Tp) - 1]; 
 
 template <class _Tp, class... _Tail>
 constexpr bool __derived_from_pack =
-    __derived_from_pack<_Tp, typename __extract_last<_Tail...>::type> && __derived_from_pack<_Tail...>;
+    __derived_from_pack<_Tp, __extract_last<_Tail...>> && __derived_from_pack<_Tail...>;
 
 template <class _Tp, class _IterCategory>
 constexpr bool __derived_from_pack<_Tp, _IterCategory> = derived_from<_Tp, _IterCategory>;
