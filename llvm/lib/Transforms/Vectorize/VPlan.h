@@ -3668,6 +3668,8 @@ public:
   const VPBlockBase *getEntry() const { return Entry; }
   VPBlockBase *getEntry() { return Entry; }
 
+  /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
+  /// EntryBlock must have no predecessors.
   void setEntry(VPBlockBase *EntryBlock) {
     assert(EntryBlock->getPredecessors().empty() &&
            "Entry block cannot have predecessors.");
@@ -3809,8 +3811,6 @@ public:
 
   ~VPlan();
 
-  /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
-  /// EntryBlock must have no predecessors.
   void setEntry(VPBasicBlock *VPBB) {
     Entry = VPBB;
     VPBB->setPlan(this);

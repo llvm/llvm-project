@@ -447,6 +447,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState::CFGState &CFG) {
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
 }
+
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
