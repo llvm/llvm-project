@@ -953,7 +953,7 @@ TLI_DEFINE_VECFUNC("erfc", "Sleef_erfcdx_u15rvvm2",  SCALABLE(2), NOMASK, "_ZGVr
 TLI_DEFINE_VECFUNC("erfcf", "Sleef_erfcfx_u15rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 
 TLI_DEFINE_VECFUNC("exp", "Sleef_expdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
-TLI_DEFINE_VECFUNC("llvm.exp.f64", "Sleef_expdx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "Sleef_expdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("expf", "Sleef_expfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("llvm.exp.f32", "Sleef_expfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 
