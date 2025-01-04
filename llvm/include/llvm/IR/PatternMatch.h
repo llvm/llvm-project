@@ -1844,9 +1844,9 @@ struct m_ZeroMask {
 };
 
 struct m_SpecificMask {
-  ArrayRef<int> &MaskRef;
-  m_SpecificMask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
-  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+  ArrayRef<int> Val;
+  m_SpecificMask(ArrayRef<int> Val) : Val(Val) {}
+  bool match(ArrayRef<int> Mask) { return Val == Mask; }
 };
 
 struct m_SplatOrPoisonMask {
