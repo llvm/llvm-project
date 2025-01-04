@@ -922,6 +922,49 @@ namespace cwg155 { // cwg155: dup 632
   // expected-warning@-1 {{braces around scalar initializer}}
 }
 
+namespace cwg156 { // cwg156: partial
+namespace ex1 {
+struct A {
+  operator int();
+} a;
+void foo() {
+  typedef int T;
+  a.operator T(); // T is found using unqualified lookup
+                  // after qualified lookup in A fails.
+}
+} // namespace ex1
+
+namespace ex2 {
+struct A {
+  typedef int T;
+  operator T();
+};
+struct B : A {
+  operator T();
+} b;
+void foo() {
+  b.A::operator T(); // FIXME: qualified lookup should find T in A.
+  // expected-error@-1 {{unknown type name 'T'}}
+}
+} // namespace ex2
+
+namespace ex3 {
+template <class T1> struct A {
+  operator T1();
+};
+template <class T2> struct B : A<T2> {
+  operator T2();
+  void foo() {
+    // In both cases, during instantiation, qualified lookup for T2 wouldn't be able
+    // to find anything, so T2 has to be found by unqualified lookup.
+    // After that, 'operator T2()' is found in A<T2> by qualfied lookup.
+    T2 a = A<T2>::operator T2();
+    T2 b = ((A<T2> *)this)->operator T2();
+  }
+};
+} // namespace ex3
+} // namespace cwg156
+
 // cwg158 is in cwg158.cpp
 
 namespace cwg159 { // cwg159: 3.5
