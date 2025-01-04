@@ -672,6 +672,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
   switch (0x00FFFFFF & *(u32 *)address) {
     case 0x244C8D:  // 8D 4C 24 XX : lea ecx, [esp + XX]
+    case 0x2474FF:  // FF 74 24 XX : push qword ptr [rsp + XX]
       return 4;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;

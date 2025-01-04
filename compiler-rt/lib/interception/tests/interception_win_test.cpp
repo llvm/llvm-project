@@ -890,6 +890,7 @@ const struct InstructionSizeData {
     { 3, {0x8B, 0x75, 0x72}, 0, "8B 75 XX : mov XX(%ebp), esp"},
     { 3, {0xc2, 0x71, 0x72}, 0, "C2 XX XX : ret XX (needed for registering weak functions)"},
     { 4, {0x8D, 0x4C, 0x24, 0x73}, 0, "8D 4C 24 XX : lea ecx, [esp + XX]"},
+    { 4, {0xFF, 0x74, 0x24, 0x73}, 0, "FF 74 24 XX : push qword ptr [rsp + XX]"},
     { 5, {0x68, 0x71, 0x72, 0x73, 0x74}, 0, "68 XX XX XX XX : push imm32"},
     { 5, {0xb8, 0x71, 0x72, 0x73, 0x74}, 0, "b8 XX XX XX XX : mov eax, XX XX XX XX"},
     { 5, {0xB9, 0x71, 0x72, 0x73, 0x74}, 0, "b9 XX XX XX XX : mov ecx, XX XX XX XX"},
