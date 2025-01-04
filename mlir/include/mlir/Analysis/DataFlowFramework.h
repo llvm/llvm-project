@@ -332,9 +332,11 @@ public:
   /// does not exist.
   template <typename StateT, typename AnchorT>
   const StateT *lookupState(AnchorT anchor) const {
-    auto it =
-        analysisStates.find({LatticeAnchor(anchor), TypeID::get<StateT>()});
-    if (it == analysisStates.end())
+    const auto &mapIt = analysisStates.find(LatticeAnchor(anchor));
+    if (mapIt == analysisStates.end())
+      return nullptr;
+    auto it = mapIt->second.find(TypeID::get<StateT>());
+    if (it == mapIt->second.end())
       return nullptr;
     return static_cast<const StateT *>(it->second.get());
   }
@@ -343,11 +345,7 @@ public:
   template <typename AnchorT>
   void eraseState(AnchorT anchor) {
     LatticeAnchor la(anchor);
-
-    for (auto it = analysisStates.begin(); it != analysisStates.end(); ++it) {
-      if (it->first.first == la)
-        analysisStates.erase(it);
-    }
+    analysisStates.erase(LatticeAnchor(anchor));
   }
 
   // Erase all analysis states
@@ -426,7 +424,8 @@ private:
 
   /// A type-erased map of lattice anchors to associated analysis states for
   /// first-class lattice anchors.
-  DenseMap<std::pair<LatticeAnchor, TypeID>, std::unique_ptr<AnalysisState>>
+  DenseMap<LatticeAnchor, DenseMap<TypeID, std::unique_ptr<AnalysisState>>,
+           DenseMapInfo<LatticeAnchor::ParentTy>>
       analysisStates;
 
   /// Allow the base child analysis class to access the internals of the solver.
@@ -643,7 +642,7 @@ AnalysisT *DataFlowSolver::load(Args &&...args) {
 template <typename StateT, typename AnchorT>
 StateT *DataFlowSolver::getOrCreateState(AnchorT anchor) {
   std::unique_ptr<AnalysisState> &state =
-      analysisStates[{LatticeAnchor(anchor), TypeID::get<StateT>()}];
+      analysisStates[LatticeAnchor(anchor)][TypeID::get<StateT>()];
   if (!state) {
     state = std::unique_ptr<StateT>(new StateT(anchor));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -688,10 +687,6 @@ struct DenseMapInfo<mlir::ProgramPoint> {
     return lhs == rhs;
   }
 };
-
-template <>
-struct DenseMapInfo<mlir::LatticeAnchor>
-    : public DenseMapInfo<mlir::LatticeAnchor::ParentTy> {};
 
 // Allow llvm::cast style functions.
 template <typename To>
