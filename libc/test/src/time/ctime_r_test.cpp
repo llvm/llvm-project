@@ -8,6 +8,8 @@
 
 #include "src/__support/File/file.h"
 #include "src/errno/libc_errno.h"
+#include "src/time/linux/localtime_utils.h"
+#include "src/time/linux/timezone.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"

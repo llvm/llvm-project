@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_TIME_TIMEZONE_H
-#define LLVM_LIBC_SRC_TIME_TIMEZONE_H
+#ifndef LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
+#define LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
 
 #include "src/__support/File/file.h"
 #include "src/__support/common.h"
@@ -54,4 +54,4 @@ tzset *get_tzset(File *file);
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_TIME_TIMEZONE_H
+#endif // LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
