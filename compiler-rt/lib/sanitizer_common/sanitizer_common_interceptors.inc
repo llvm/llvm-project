@@ -1439,7 +1439,7 @@ INTERCEPTOR(char *, ctime_s, char *result, size_t result_size,
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  char *res = REAL(ctime_r)(result, result_size, timep);
+  char *res = REAL(ctime_s)(result, result_size, timep);
   if (res) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, timep, sizeof(*timep));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, internal_strlen(res) + 1);

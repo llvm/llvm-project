@@ -3578,13 +3578,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "ctime_s",
         Signature(ArgTypes{CharPtrTy,
-                           BufferSize(ArgNo(1), BVF.getValue(26, IntTy)),
+                           BufferSize(ArgNo(0), BVF.getValue(26, IntTy)),
                            ConstTime_tPtrTy},
                   RetType{CharPtrTy}),
         Summary(NoEvalCall)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(BufferSize(
-                /*Buffer=*/ArgNo(1),
+                /*Buffer=*/ArgNo(0),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
     .ArgConstraint(NotNull(ArgNo(2)))
 
