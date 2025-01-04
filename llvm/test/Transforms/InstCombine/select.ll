@@ -4567,10 +4567,14 @@ define i32 @src_no_trans_select_xor_eq0_or_xor(i32 %x, i32 %y) {
 define i32 @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(i32 noundef %x, i32 noundef %y, i32 %c) {
 ; CHECK-LABEL: @src_no_trans_select_xor_eqc_and_disjoint_or_and_notc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[C:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[XOR]], [[C:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[C]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[OR]], [[NOT]]
-; CHECK-NEXT:    ret i32 [[AND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 [[AND1]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %xor = xor i32 %y, %x

@@ -1853,12 +1853,13 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
                  XorOps = Instruction::Xor, NoOps = 0;
   enum NotMask { None = 0, NotInner, NotRHS };
 
+  // We cannot refine TrueVal to FalseVal when the inner instruction contains
+  // disjoint or.
   auto matchFalseVal = [&](unsigned OuterOpc, unsigned InnerOpc,
                            unsigned NotMask) {
-    auto matchInner = m_c_BinOp(InnerOpc, m_Specific(X), m_Specific(Y));
-    if (OuterOpc == NoOps)
-      return match(CmpRHS, m_Zero()) && match(FalseVal, matchInner);
-
+    auto matchInner =
+        m_CombineAnd(m_c_BinOp(InnerOpc, m_Specific(X), m_Specific(Y)),
+                     m_Unless(m_DisjointOr(m_Value(), m_Value())));
     if (NotMask == NotInner) {
       return match(FalseVal, m_c_BinOp(OuterOpc, m_NotForbidPoison(matchInner),
                                        m_Specific(CmpRHS)));
