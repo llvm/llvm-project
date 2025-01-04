@@ -1850,7 +1850,7 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
     return nullptr;
 
   const unsigned AndOps = Instruction::And, OrOps = Instruction::Or,
-                 XorOps = Instruction::Xor, NoOps = 0;
+                 XorOps = Instruction::Xor;
   enum NotMask { None = 0, NotInner, NotRHS };
 
   // We cannot refine TrueVal to FalseVal when the inner instruction contains
@@ -1860,16 +1860,13 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
     auto matchInner =
         m_CombineAnd(m_c_BinOp(InnerOpc, m_Specific(X), m_Specific(Y)),
                      m_Unless(m_DisjointOr(m_Value(), m_Value())));
-    if (NotMask == NotInner) {
+    if (NotMask == NotInner)
       return match(FalseVal, m_c_BinOp(OuterOpc, m_NotForbidPoison(matchInner),
                                        m_Specific(CmpRHS)));
-    } else if (NotMask == NotRHS) {
+    if (NotMask == NotRHS)
       return match(FalseVal, m_c_BinOp(OuterOpc, matchInner,
                                        m_NotForbidPoison(m_Specific(CmpRHS))));
-    } else {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, matchInner, m_Specific(CmpRHS)));
-    }
+    return match(FalseVal, m_c_BinOp(OuterOpc, matchInner, m_Specific(CmpRHS)));
   };
 
   // (X&Y)==C ? X|Y : X^Y -> (X^Y)|C : X^Y  or (X^Y)^ C : X^Y
