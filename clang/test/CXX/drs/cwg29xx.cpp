@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
-namespace cwg2913 { // cwg2913: 20 tentatively ready 2024-08-16
+namespace cwg2913 { // cwg2913: 20
 
 #if __cplusplus >= 202002L
 
@@ -26,7 +26,7 @@ R(T, T) requires true -> R<T>; // expected-error {{expected function body after 
 
 } // namespace cwg2913
 
-namespace cwg2915 { // cwg2915: 20 tentatively ready 2024-08-16
+namespace cwg2915 { // cwg2915: 20
 #if __cplusplus >= 202302L
 struct A {
   void f(this void); // expected-error {{explicit object parameter cannot have 'void' type}}
@@ -61,7 +61,7 @@ void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
 
-namespace cwg2922 { // cwg2922: 20 tentatively ready 2024-07-10
+namespace cwg2922 { // cwg2922: 20
 union U { int a, b; };
 constexpr U nondeterministic(bool i) {
   if(i) {
