@@ -14,7 +14,7 @@ namespace LIBC_NAMESPACE_DECL {
 // windows only, implemented in gnu/linux for compatibility reasons
 LLVM_LIBC_FUNCTION(int, localtime_s, (const time_t *timer, struct tm *input)) {
   if (timer == nullptr) {
-    return nullptr;
+    return -1;
   }
 
   return time_utils::localtime_s_internal(timer, input);
