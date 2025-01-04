@@ -604,6 +604,19 @@ TEST_F(RtsanOpenedFileTest, FputsDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanFileTest, FflushDiesWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  int r = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(r, Eq(3));
+  auto Func = [&f]() {
+    int r = fflush(f);
+    EXPECT_THAT(r, Eq(0));
+  };
+  ExpectRealtimeDeath(Func, "fflush");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST_F(RtsanOpenedFileTest, ReadDiesWhenRealtime) {
   auto Func = [this]() {
     char c{};
