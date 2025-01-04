@@ -2041,7 +2041,9 @@ void UnwrappedLineParser::parseStructuralElement(
                 ? FormatTok->NewlinesBefore > 0
                 : CommentsBeforeNextToken.front()->NewlinesBefore > 0;
 
-        if (FollowedByNewline && (Text.size() >= 5 || FunctionLike) &&
+        if (FollowedByNewline &&
+            (Text.size() >= 5 ||
+             (FunctionLike && FormatTok->isNot(tok::l_paren))) &&
             tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
           if (PreviousToken->isNot(TT_UntouchableMacroFunc))
             PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
