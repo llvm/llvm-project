@@ -24,9 +24,13 @@ extern Two goo;
 extern Two coo[];
 extern Two koo[];
 
+// unknown-system-no-diagnostics
+
 Two foo __attribute__((init_priority(101))) ( 5, 6 );
- // unknown-system-no-diagnostics
- // unknown-warning@-2 {{unknown attribute 'init_priority' ignored}}
+// unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
+
+Two loo __attribute__((init_priority(65535))) ( 5, 6 );
+// unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
 
 Two goo __attribute__((init_priority(2,3))) ( 5, 6 ); // expected-error {{'init_priority' attribute takes one argument}}
 // unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
