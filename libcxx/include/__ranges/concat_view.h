@@ -58,6 +58,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26
@@ -133,9 +136,9 @@ concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
 template <bool _Const, class... _Tp>
 struct __apply_drop_first;
 
-template <bool _Const, class Head, class... Tail>
-struct __apply_drop_first<_Const, Head, Tail...> {
-  static constexpr bool value = (sized_range<__maybe_const<_Const, Tail>> && ...);
+template <bool _Const, class _Head, class... _Tail>
+struct __apply_drop_first<_Const, _Head, _Tail...> {
+  static constexpr bool value = (sized_range<__maybe_const<_Const, _Tail>> && ...);
 };
 
 template <input_range... _Views>
@@ -619,5 +622,7 @@ inline constexpr auto concat = __concat::__fn{};
 #endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_CONCAT_VIEW_H
