@@ -17,6 +17,7 @@
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -39,6 +40,7 @@
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -77,6 +79,7 @@ func.func @emitc_switch_ptrdiff_t() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -99,6 +102,7 @@ func.func @emitc_switch_ptrdiff_t() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -138,6 +142,7 @@ func.func @emitc_switch_ssize_t() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -160,6 +165,7 @@ func.func @emitc_switch_ssize_t() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -199,6 +205,7 @@ func.func @emitc_switch_size_t() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -221,6 +228,7 @@ func.func @emitc_switch_size_t() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -260,6 +268,7 @@ func.func @emitc_switch_index() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -282,6 +291,7 @@ func.func @emitc_switch_index() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -322,6 +332,7 @@ func.func @emitc_switch_opaque() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -344,6 +355,7 @@ func.func @emitc_switch_opaque() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -383,6 +395,7 @@ func.func @emitc_switch_i1() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -405,6 +418,7 @@ func.func @emitc_switch_i1() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -444,6 +458,7 @@ func.func @emitc_switch_i8() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -466,6 +481,7 @@ func.func @emitc_switch_i8() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -505,6 +521,7 @@ func.func @emitc_switch_ui8() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -527,6 +544,7 @@ func.func @emitc_switch_ui8() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -566,6 +584,7 @@ func.func @emitc_switch_i16() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -588,6 +607,7 @@ func.func @emitc_switch_i16() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -627,6 +647,7 @@ func.func @emitc_switch_ui16() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -649,6 +670,7 @@ func.func @emitc_switch_ui16() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -688,6 +710,7 @@ func.func @emitc_switch_i32() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -710,6 +733,7 @@ func.func @emitc_switch_i32() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -749,6 +773,7 @@ func.func @emitc_switch_ui32() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -771,6 +796,7 @@ func.func @emitc_switch_ui32() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }
@@ -810,6 +836,7 @@ func.func @emitc_switch_i64() {
 // CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
 // CPP-DEFAULT:         return;
 // CPP-DEFAULT:       }
 
@@ -832,6 +859,7 @@ func.func @emitc_switch_i64() {
 // CPP-DECLTOP:           v2 = 4.200000000e+01f;
 // CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         return;
 // CPP-DECLTOP:       }

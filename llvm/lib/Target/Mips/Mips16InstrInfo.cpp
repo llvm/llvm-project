@@ -22,11 +22,8 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
@@ -69,7 +66,8 @@ Register Mips16InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  MCRegister SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
 
   if (Mips::CPU16RegsRegClass.contains(DestReg) &&

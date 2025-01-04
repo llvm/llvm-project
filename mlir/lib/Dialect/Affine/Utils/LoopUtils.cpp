@@ -129,8 +129,13 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   auto *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
-      auto constOp = topBuilder.create<arith::ConstantIndexOp>(
+      auto func = forOp->getParentOfType<FunctionOpInterface>();
+      OpBuilder builder(forOp->getContext());
+      if (func)
+        builder.setInsertionPointToStart(&func.getFunctionBody().front());
+      else
+        builder.setInsertionPoint(forOp);
+      auto constOp = builder.create<arith::ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
     } else {
@@ -313,8 +318,8 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
         GreedyRewriteConfig config;
         config.strictMode = GreedyRewriteStrictness::ExistingOps;
         bool erased;
-        (void)applyOpPatternsAndFold(res.getOperation(), std::move(patterns),
-                                     config, /*changed=*/nullptr, &erased);
+        (void)applyOpPatternsGreedily(res.getOperation(), std::move(patterns),
+                                      config, /*changed=*/nullptr, &erased);
         if (!erased && !prologue)
           prologue = res;
         if (!erased)
@@ -1379,7 +1384,7 @@ mlir::affine::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
 // input[i] should move from position i -> permMap[i]. Returns the position in
 // `input` that becomes the new outermost loop.
-unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
+unsigned mlir::affine::permuteLoops(ArrayRef<AffineForOp> input,
                                     ArrayRef<unsigned> permMap) {
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
@@ -1406,8 +1411,8 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
   // Move the innermost loop body to the loop that would be the innermost in the
   // permuted nest (only if the innermost loop is going to change).
   if (permMap.back() != input.size() - 1) {
-    auto *destBody = input[invPermMap.back().second].getBody();
-    auto *srcBody = input.back().getBody();
+    Block *destBody = ((AffineForOp)input[invPermMap.back().second]).getBody();
+    Block *srcBody = ((AffineForOp)input.back()).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      srcBody->getOperations(), srcBody->begin(),
                                      std::prev(srcBody->end()));
@@ -1437,7 +1442,7 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
       continue;
 
     // Move input[i] to its surrounding loop in the transformed nest.
-    auto *destBody = input[parentPosInInput].getBody();
+    auto *destBody = ((AffineForOp)input[parentPosInInput]).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      input[i]->getBlock()->getOperations(),
                                      Block::iterator(input[i]));
@@ -1936,8 +1941,8 @@ static LogicalResult generateCopy(
   *nBegin = begin;
   *nEnd = end;
 
-  func::FuncOp f = begin->getParentOfType<func::FuncOp>();
-  OpBuilder topBuilder(f.getBody());
+  auto f = begin->getParentOfType<FunctionOpInterface>();
+  OpBuilder topBuilder(f.getFunctionBody());
   Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
   *sizeInBytes = 0;
@@ -1956,8 +1961,9 @@ static LogicalResult generateCopy(
   OpBuilder &b = region.isWrite() ? epilogue : prologue;
 
   // Builder to create constants at the top level.
-  auto func = copyPlacementBlock->getParent()->getParentOfType<func::FuncOp>();
-  OpBuilder top(func.getBody());
+  auto func =
+      copyPlacementBlock->getParent()->getParentOfType<FunctionOpInterface>();
+  OpBuilder top(func.getFunctionBody());
 
   auto loc = region.loc;
   auto memref = region.memref;
@@ -2067,7 +2073,7 @@ static LogicalResult generateCopy(
     // fastMemRefType is a constant shaped memref.
     auto maySizeInBytes = getIntOrFloatMemRefSizeInBytes(fastMemRefType);
     // We don't account for things of unknown size.
-    *sizeInBytes = maySizeInBytes ? *maySizeInBytes : 0;
+    *sizeInBytes = maySizeInBytes.value_or(0);
 
     LLVM_DEBUG(emitRemarkForBlock(*block)
                << "Creating fast buffer of type " << fastMemRefType
@@ -2298,21 +2304,26 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
 
   // Walk this range of operations  to gather all memory regions.
   block->walk(begin, end, [&](Operation *opInst) {
+    Value memref;
+    MemRefType memrefType;
     // Gather regions to allocate to buffers in faster memory space.
     if (auto loadOp = dyn_cast<AffineLoadOp>(opInst)) {
-      if ((filterMemRef.has_value() && filterMemRef != loadOp.getMemRef()) ||
-          (loadOp.getMemRefType().getMemorySpaceAsInt() !=
-           copyOptions.slowMemorySpace))
-        return;
+      memref = loadOp.getMemRef();
+      memrefType = loadOp.getMemRefType();
     } else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst)) {
-      if ((filterMemRef.has_value() && filterMemRef != storeOp.getMemRef()) ||
-          storeOp.getMemRefType().getMemorySpaceAsInt() !=
-              copyOptions.slowMemorySpace)
-        return;
-    } else {
-      // Neither load nor a store op.
-      return;
+      memref = storeOp.getMemRef();
+      memrefType = storeOp.getMemRefType();
     }
+    // Neither load nor a store op.
+    if (!memref)
+      return;
+
+    auto memorySpaceAttr =
+        dyn_cast_or_null<IntegerAttr>(memrefType.getMemorySpace());
+    if ((filterMemRef.has_value() && filterMemRef != memref) ||
+        (memorySpaceAttr &&
+         memrefType.getMemorySpaceAsInt() != copyOptions.slowMemorySpace))
+      return;
 
     // Compute the MemRefRegion accessed.
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
@@ -2771,4 +2782,16 @@ LogicalResult affine::coalescePerfectlyNestedAffineLoops(AffineForOp op) {
       end = start + 1;
   }
   return result;
+}
+
+int64_t mlir::affine::numEnclosingInvariantLoops(OpOperand &operand) {
+  int64_t count = 0;
+  Operation *currentOp = operand.getOwner();
+  while (auto loopOp = currentOp->getParentOfType<LoopLikeOpInterface>()) {
+    if (!loopOp.isDefinedOutsideOfLoop(operand.get()))
+      break;
+    currentOp = loopOp;
+    count++;
+  }
+  return count;
 }

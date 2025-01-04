@@ -41,6 +41,18 @@ func.func @rocdl.sched_barrier() {
   llvm.return
 }
 
+func.func @rocdl_sched_group_barrier() {
+  // CHECK: rocdl.sched.group.barrier
+  rocdl.sched.group.barrier 8, 1, 0
+  llvm.return
+}
+
+func.func @rocdl_iglp_opt() {
+  // CHECK: rocdl.iglp.opt
+  rocdl.iglp.opt 0
+  llvm.return
+}
+
 func.func @rocdl.setprio() {
   // CHECK: rocdl.s.setprio
   rocdl.s.setprio 0
@@ -352,6 +364,39 @@ llvm.func @rocdl.s.barrier() {
   rocdl.s.barrier
   llvm.return
 }
+
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK: rocdl.s.barrier.signal -1
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK: rocdl.s.barrier.wait -1
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK: rocdl.s.wait.dscnt 0
+  rocdl.s.wait.dscnt 0
+  llvm.return
+}
+
+// -----
+
+llvm.func @rocdl.readlane(%src : f32) -> f32 {
+  %cst0 = llvm.mlir.constant(0 : i32) : i32
+
+  // CHECK-LABEL: rocdl.readlane
+  // CHECK: rocdl.readlane %{{.*}} %{{.*}}
+  %ret = rocdl.readlane %src, %cst0 : (f32, i32) -> f32
+  llvm.return %ret : f32
+}
+
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}

@@ -19,15 +19,14 @@ target_compile_definitions(llvmlibc_rpc_server PUBLIC
                            LIBC_COPT_ARRAY_ARG_LIST
                            LIBC_COPT_PRINTF_DISABLE_WRITE_INT
                            LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
+                           LIBC_COPT_PRINTF_DISABLE_STRERROR
                            LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Install the server and associated header.
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc_rpc_server.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        COMPONENT libc-headers)
-install(FILES ${LIBC_SOURCE_DIR}/include/llvm-libc-types/rpc_opcodes_t.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        RENAME llvmlibc_rpc_opcodes.h
+install(FILES ${LIBC_SOURCE_DIR}/shared/rpc.h
+              ${LIBC_SOURCE_DIR}/shared/rpc_util.h
+              ${LIBC_SOURCE_DIR}/shared/rpc_opcodes.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/shared
         COMPONENT libc-headers)
 install(TARGETS llvmlibc_rpc_server
         ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"

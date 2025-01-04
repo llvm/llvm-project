@@ -144,11 +144,11 @@ public:
   virtual void emitPersonality(const MCSymbol *Personality);
   virtual void emitPersonalityIndex(unsigned Index);
   virtual void emitHandlerData();
-  virtual void emitSetFP(unsigned FpReg, unsigned SpReg,
+  virtual void emitSetFP(MCRegister FpReg, MCRegister SpReg,
                          int64_t Offset = 0);
-  virtual void emitMovSP(unsigned Reg, int64_t Offset = 0);
+  virtual void emitMovSP(MCRegister Reg, int64_t Offset = 0);
   virtual void emitPad(int64_t Offset);
-  virtual void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  virtual void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                            bool isVector);
   virtual void emitUnwindRaw(int64_t StackOffset,
                              const SmallVectorImpl<uint8_t> &Opcodes);
@@ -313,6 +313,8 @@ public:
   void setAllowAutoPadding(bool v) { AllowAutoPadding = v; }
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
 
+  MCSymbol *emitLineTableLabel();
+
   /// When emitting an object file, create and emit a real label. When emitting
   /// textual assembly, this should do nothing to avoid polluting our output.
   virtual MCSymbol *emitCFILabel();
@@ -422,7 +424,7 @@ public:
   /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
-  bool popSection();
+  virtual bool popSection();
 
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
@@ -441,7 +443,7 @@ public:
 
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.
-  virtual StringRef getMnemonic(MCInst &MI) { return ""; }
+  virtual StringRef getMnemonic(const MCInst &MI) const { return ""; }
 
   /// Emit a label for \p Symbol into the current section.
   ///
@@ -912,6 +914,9 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
+  /// This implements the '.loc_label Name' directive.
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
+
   /// Associate a filename with a specified logical file number, and also
   /// specify that file's checksum information.  This implements the '.cv_file 4
   /// "foo.c"' assembler directive. Returns true on success.
@@ -1019,7 +1024,10 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
+  virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
+                                SMLoc Loc = {});
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProc(SMLoc Loc = SMLoc());
@@ -1119,7 +1127,8 @@ public:
   virtual void emitDwarfLineStartLabel(MCSymbol *StartSym);
 
   /// Emit the debug line end entry.
-  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) {}
+  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                                     MCSymbol *EndLabel = nullptr) {}
 
   /// If targets does not support representing debug line section by .loc/.file
   /// directives in assembly output, we need to populate debug line section with
@@ -1128,9 +1137,6 @@ public:
                                         const MCSymbol *LastLabel,
                                         const MCSymbol *Label,
                                         unsigned PointerSize) {}
-
-  /// Do finalization for the streamer at the end of a section.
-  virtual void doFinalizationAtSectionEnd(MCSection *Section) {}
 };
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for

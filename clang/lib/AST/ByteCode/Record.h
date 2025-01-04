@@ -30,6 +30,7 @@ public:
     unsigned Offset;
     const Descriptor *Desc;
     bool isBitField() const { return Decl->isBitField(); }
+    bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
   };
 
   /// Describes a base class.
@@ -54,6 +55,8 @@ public:
   const std::string getName() const;
   /// Checks if the record is a union.
   bool isUnion() const { return IsUnion; }
+  /// Checks if the record is an anonymous union.
+  bool isAnonymousUnion() const { return IsAnonymousUnion; }
   /// Returns the size of the record.
   unsigned getSize() const { return BaseSize; }
   /// Returns the full size of the record, including records.
@@ -134,6 +137,8 @@ private:
   unsigned VirtualSize;
   /// If this record is a union.
   bool IsUnion;
+  /// If this is an anonymous union.
+  bool IsAnonymousUnion;
 };
 
 } // namespace interp

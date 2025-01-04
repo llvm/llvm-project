@@ -480,4 +480,225 @@ define i1 @test_select_inverse_nonconst4(i64 %x, i64 %y, i64 %z, i1 %cond) {
   ret i1 %sel
 }
 
+define i1 @test_select_inverse_samesign_true_arm(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_true_arm(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp samesign ult i64 %x, %y
+  %cmp2 = icmp uge i64 %x, %y
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @test_select_inverse_samesign_false_arm(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_false_arm(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign uge i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp ult i64 %x, %y
+  %cmp2 = icmp samesign uge i64 %x, %y
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @test_select_inverse_samesign_both(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_both(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign uge i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[COND:%.*]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp samesign ult i64 %x, %y
+  %cmp2 = icmp samesign uge i64 %x, %y
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @test_select_inverse_samesign_false_arm_rhsc_same_sign(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_false_arm_rhsc_same_sign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[X:%.*]], 11
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i64 [[X]], 10
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp ult i64 %x, 11
+  %cmp2 = icmp samesign ugt i64 %x, 10
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @test_select_inverse_samesign_true_arm_rhsc_same_sign(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_true_arm_rhsc_same_sign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[X:%.*]], 11
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X]], 10
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp samesign ult i64 %x, 11
+  %cmp2 = icmp ugt i64 %x, 10
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @test_select_inverse_samesign_both_rhsc_same_sign(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_both_rhsc_same_sign(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i64 [[X:%.*]], 10
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[COND:%.*]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp samesign ult i64 %x, 11
+  %cmp2 = icmp samesign ugt i64 %x, 10
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @test_select_inverse_samesign_both_rhsc_diff_sign(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: @test_select_inverse_samesign_both_rhsc_diff_sign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign sgt i64 [[X]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+  %cmp1 = icmp samesign slt i64 %x, 0
+  %cmp2 = icmp samesign sgt i64 %x, -1
+  %sel = select i1 %cond, i1 %cmp1, i1 %cmp2
+  ret i1 %sel
+}
+
+define i1 @sel_icmp_two_cmp(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[A3:%.*]], [[A4:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_two_cmp_extra_use1(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp_extra_use1(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    call void @use.i8(i8 [[V1]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[A1]], [[A2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[A3:%.*]], [[A4:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  call void @use.i8(i8 %v1)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_two_cmp_extra_use2(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp_extra_use2(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A3:%.*]], i32 [[A4:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V1]], i8 [[V2]]
+; CHECK-NEXT:    call void @use.i8(i8 [[SEL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  call void @use.i8(i8 %sel)
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_two_cmp_not_const(i1 %c, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i8 %b) {
+; CHECK-LABEL: @sel_icmp_two_cmp_not_const(
+; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A1:%.*]], i32 [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A3:%.*]], i32 [[A4:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8 [[V1]], i8 [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SEL]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v1 = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %v2 = call i8 @llvm.scmp(i32 %a3, i32 %a4)
+  %sel = select i1 %c, i8 %v1, i8 %v2
+  %cmp = icmp sle i8 %sel, %b
+  ret i1 %cmp
+}
+
+define <2 x i1> @sel_icmp_two_cmp_vec(i1 %c, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3, <2 x i32> %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp_vec(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule <2 x i32> [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle <2 x i32> [[A3:%.*]], [[A4:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[C:%.*]], <2 x i1> [[CMP1]], <2 x i1> [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %v1 = call <2 x i8> @llvm.ucmp(<2 x i32> %a1, <2 x i32> %a2)
+  %v2 = call <2 x i8> @llvm.scmp(<2 x i32> %a3, <2 x i32> %a4)
+  %sel = select i1 %c, <2 x i8> %v1, <2 x i8> %v2
+  %cmp = icmp sle <2 x i8> %sel, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @sel_icmp_two_cmp_vec_nonsplat(i1 %c, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3, <2 x i32> %a4) {
+; CHECK-LABEL: @sel_icmp_two_cmp_vec_nonsplat(
+; CHECK-NEXT:    [[V1:%.*]] = call <2 x i8> @llvm.ucmp.v2i8.v2i32(<2 x i32> [[A1:%.*]], <2 x i32> [[A2:%.*]])
+; CHECK-NEXT:    [[V2:%.*]] = call <2 x i8> @llvm.scmp.v2i8.v2i32(<2 x i32> [[A3:%.*]], <2 x i32> [[A4:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <2 x i8> [[V1]], <2 x i8> [[V2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[SEL]], <i8 1, i8 2>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %v1 = call <2 x i8> @llvm.ucmp(<2 x i32> %a1, <2 x i32> %a2)
+  %v2 = call <2 x i8> @llvm.scmp(<2 x i32> %a3, <2 x i32> %a4)
+  %sel = select i1 %c, <2 x i8> %v1, <2 x i8> %v2
+  %cmp = icmp sle <2 x i8> %sel, <i8 0, i8 1>
+  ret <2 x i1> %cmp
+}
+
+define i1 @sel_icmp_cmp_and_simplify(i1 %c, i32 %a1, i32 %a2) {
+; CHECK-LABEL: @sel_icmp_cmp_and_simplify(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %sel = select i1 %c, i8 %v, i8 0
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_cmp_and_no_simplify(i1 %c, i32 %a1, i32 %a2, i8 %b) {
+; CHECK-LABEL: @sel_icmp_cmp_and_no_simplify(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %sel = select i1 %c, i8 %v, i8 %b
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
+define i1 @sel_icmp_cmp_and_no_simplify_comm(i1 %c, i32 %a1, i32 %a2, i8 %b) {
+; CHECK-LABEL: @sel_icmp_cmp_and_no_simplify_comm(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.ucmp(i32 %a1, i32 %a2)
+  %sel = select i1 %c, i8 %b, i8 %v
+  %cmp = icmp sle i8 %sel, 0
+  ret i1 %cmp
+}
+
 declare void @use(i1)
+declare void @use.i8(i8)

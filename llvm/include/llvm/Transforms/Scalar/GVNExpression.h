@@ -315,6 +315,12 @@ public:
     return EB->getExpressionType() == ET_Call;
   }
 
+  bool equals(const Expression &Other) const override;
+  bool exactlyEquals(const Expression &Other) const override {
+    return Expression::exactlyEquals(Other) &&
+           cast<CallExpression>(Other).Call == Call;
+  }
+
   // Debugging support
   void printInternal(raw_ostream &OS, bool PrintEType) const override {
     if (PrintEType)

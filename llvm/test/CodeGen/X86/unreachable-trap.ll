@@ -1,7 +1,15 @@
 ; RUN: llc -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc -o - %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefixes=CHECK
-; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 ; RUN: llc -o - %s -mtriple=x86_64-apple-darwin | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
+
+; On PS4/PS5, always emit trap instructions regardless of of trap-unreachable or no-trap-after-noreturn.
+; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 -trap-unreachable | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-sie-ps5 -trap-unreachable | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 -trap-unreachable=false | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-sie-ps5 -trap-unreachable=false | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 -trap-unreachable -no-trap-after-noreturn=false | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-sie-ps5 -trap-unreachable -no-trap-after-noreturn=false | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+
 ; RUN: llc --trap-unreachable -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 ; RUN: llc --trap-unreachable -global-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 ; RUN: llc --trap-unreachable -fast-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN

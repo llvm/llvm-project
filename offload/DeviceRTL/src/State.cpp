@@ -13,13 +13,13 @@
 #include "Allocator.h"
 #include "Configuration.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
 
@@ -84,14 +84,14 @@ struct SharedMemorySmartStackTy {
 
   /// Deallocate the last allocation made by the encountering thread and pointed
   /// to by \p Ptr from the stack. Each thread can call this function.
-  void pop(void *Ptr, uint32_t Bytes);
+  void pop(void *Ptr, uint64_t Bytes);
 
 private:
   /// Compute the size of the storage space reserved for a thread.
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
-    return utils::align_down((state::SharedScratchpadSize / NumLanesInBlock),
-                             allocator::ALIGNMENT);
+    return utils::alignDown((state::SharedScratchpadSize / NumLanesInBlock),
+                            allocator::ALIGNMENT);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -121,7 +121,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
   /// FIXME: The stack shouldn't require worst-case padding. Alignment needs to
   /// be passed in as an argument and the stack rewritten to support it.
-  uint64_t AlignedBytes = utils::align_up(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -148,8 +148,8 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   return GlobalMemory;
 }
 
-void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
-  uint64_t AlignedBytes = utils::align_up(Bytes, allocator::ALIGNMENT);
+void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
+  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
   if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;

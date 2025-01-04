@@ -46,9 +46,15 @@ struct IntPointer {
   uint64_t Value;
 
   IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
-enum class Storage { Block, Int, Fn };
+struct TypeidPointer {
+  const Type *TypePtr;
+  const Type *TypeInfoType;
+};
+
+enum class Storage { Block, Int, Fn, Typeid };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -106,6 +112,12 @@ public:
       : Offset(Offset), StorageKind(Storage::Fn) {
     PointeeStorage.Fn = FunctionPointer(F);
   }
+  Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::Typeid) {
+    PointeeStorage.Typeid.TypePtr = TypePtr;
+    PointeeStorage.Typeid.TypeInfoType = TypeInfoType;
+  }
+  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
   void operator=(const Pointer &P);
@@ -137,7 +149,7 @@ public:
     if (isIntegralPointer())
       return asIntPointer().Value + (Offset * elemSize());
     if (isFunctionPointer())
-      return asFunctionPointer().getIntegerRepresentation();
+      return asFunctionPointer().getIntegerRepresentation() + Offset;
     return reinterpret_cast<uint64_t>(asBlockPointer().Pointee) + Offset;
   }
 
@@ -241,9 +253,8 @@ public:
     if (asBlockPointer().Base != Offset)
       return *this;
 
-    // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, asBlockPointer().Base, asBlockPointer().Base);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
@@ -262,6 +273,8 @@ public:
       return asBlockPointer().Pointee == nullptr;
     if (isFunctionPointer())
       return asFunctionPointer().isZero();
+    if (isTypeidPointer())
+      return false;
     assert(isIntegralPointer());
     return asIntPointer().Value == 0 && Offset == 0;
   }
@@ -283,7 +296,7 @@ public:
   const Descriptor *getDeclDesc() const {
     if (isIntegralPointer())
       return asIntPointer().Desc;
-    if (isFunctionPointer())
+    if (isFunctionPointer() || isTypeidPointer())
       return nullptr;
 
     assert(isBlockPointer());
@@ -336,6 +349,9 @@ public:
 
   /// Returns the type of the innermost field.
   QualType getType() const {
+    if (isTypeidPointer())
+      return QualType(PointeeStorage.Typeid.TypeInfoType, 0);
+
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
       // Unfortunately, complex and vector types are not array types in clang,
       // but they are for us.
@@ -420,13 +436,23 @@ public:
   }
   /// Checks if the pointer points to an array.
   bool isArrayElement() const {
-    if (isBlockPointer())
-      return inArray() && asBlockPointer().Base != Offset;
+    if (!isBlockPointer())
+      return false;
+
+    const BlockPointer &BP = asBlockPointer();
+    if (inArray() && BP.Base != Offset)
+      return true;
+
+    // Might be a narrow()'ed element in a composite array.
+    // Check the inline descriptor.
+    if (BP.Base >= sizeof(InlineDescriptor) && getInlineDesc()->IsArrayElement)
+      return true;
+
     return false;
   }
   /// Pointer points directly to a block.
   bool isRoot() const {
-    if (isZero() || isIntegralPointer())
+    if (isZero() || !isBlockPointer())
       return true;
     return (asBlockPointer().Base ==
                 asBlockPointer().Pointee->getDescriptor()->getMetadataSize() ||
@@ -456,6 +482,7 @@ public:
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
   bool isFunctionPointer() const { return StorageKind == Storage::Fn; }
+  bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
 
   /// Returns the record descriptor of a class.
   const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
@@ -491,6 +518,14 @@ public:
     }
     return false;
   }
+  /// Checks if the storage has been dynamically allocated.
+  bool isDynamic() const {
+    if (isBlockPointer()) {
+      assert(asBlockPointer().Pointee);
+      return asBlockPointer().Pointee->isDynamic();
+    }
+    return false;
+  }
   /// Checks if the storage is a static temporary.
   bool isStaticTemporary() const { return isStatic() && isTemporary(); }
 
@@ -506,9 +541,7 @@ public:
       return false;
 
     assert(isBlockPointer());
-    if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
-      return VD->isWeak();
-    return false;
+    return asBlockPointer().Pointee->isWeak();
   }
   /// Checks if an object was initialized.
   bool isInitialized() const;
@@ -551,7 +584,7 @@ public:
   }
 
   /// Returns the byte offset from the start.
-  unsigned getByteOffset() const {
+  uint64_t getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
     if (isOnePastEnd())
@@ -588,7 +621,7 @@ public:
 
   /// Checks if the index is one past end.
   bool isOnePastEnd() const {
-    if (isIntegralPointer() || isFunctionPointer())
+    if (!isBlockPointer())
       return false;
 
     if (!asBlockPointer().Pointee)
@@ -614,6 +647,8 @@ public:
 
   /// Checks if the pointer is pointing to a zero-size array.
   bool isZeroSizeArray() const {
+    if (isFunctionPointer())
+      return false;
     if (const auto *Desc = getFieldDesc())
       return Desc->isZeroSizeArray();
     return false;
@@ -633,15 +668,6 @@ public:
                                     asBlockPointer().Base + sizeof(InitMapPtr));
 
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
-  }
-
-  /// Dereferences a primitive element.
-  template <typename T> T &elem(unsigned I) const {
-    assert(I < getNumElems());
-    assert(isBlockPointer());
-    assert(asBlockPointer().Pointee);
-    return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
-                                 sizeof(InitMapPtr))[I];
   }
 
   /// Whether this block can be read from at all. This is only true for
@@ -682,6 +708,10 @@ public:
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
+  /// Whether this points to a block that's been created for a "literal lvalue",
+  /// i.e. a non-MaterializeTemporaryExpr Expr.
+  bool pointsToLiteral() const;
+
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
 
@@ -693,12 +723,12 @@ private:
   friend struct InitMap;
   friend class DynamicAllocator;
 
-  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
-
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
+    assert(isBlockPointer());
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
     assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
+    assert(asBlockPointer().Base >= sizeof(InlineDescriptor));
     return getDescriptor(asBlockPointer().Base);
   }
 
@@ -732,6 +762,7 @@ private:
     BlockPointer BS;
     IntPointer Int;
     FunctionPointer Fn;
+    TypeidPointer Typeid;
   } PointeeStorage;
   Storage StorageKind = Storage::Int;
 };

@@ -5180,10 +5180,10 @@ int main(int argc, const char **argv) {
   thread_info client_data;
 
 #ifdef __MVS__
-  if (enableAutoConversion(fileno(stdout)) == -1)
+  if (enablezOSAutoConversion(fileno(stdout)) == -1)
     fprintf(stderr, "Setting conversion on stdout failed\n");
 
-  if (enableAutoConversion(fileno(stderr)) == -1)
+  if (enablezOSAutoConversion(fileno(stderr)) == -1)
     fprintf(stderr, "Setting conversion on stderr failed\n");
 #endif
 

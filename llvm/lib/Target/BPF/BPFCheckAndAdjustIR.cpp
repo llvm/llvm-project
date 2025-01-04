@@ -21,9 +21,7 @@
 
 #include "BPF.h"
 #include "BPFCORE.h"
-#include "BPFTargetMachine.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -31,7 +29,6 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -440,7 +437,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     auto *GEPTy = cast<PointerType>(GEP->getType());
     auto *NewGEP = GEP->clone();
     NewGEP->insertAfter(GEP);
-    NewGEP->mutateType(GEPTy->getPointerTo(0));
+    NewGEP->mutateType(PointerType::getUnqual(GEPTy->getContext()));
     NewGEP->setOperand(GEP->getPointerOperandIndex(), WrappedPtr);
     NewGEP->setName(GEP->getName());
     Cache[ToWrap] = NewGEP;
@@ -452,8 +449,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     IB.SetInsertPoint(*InsnPtr->getInsertionPointAfterDef());
   else
     IB.SetInsertPoint(F->getEntryBlock().getFirstInsertionPt());
-  auto *PtrTy = cast<PointerType>(ToWrap->getType());
-  auto *ASZeroPtrTy = PtrTy->getPointerTo(0);
+  auto *ASZeroPtrTy = IB.getPtrTy(0);
   auto *ACast = IB.CreateAddrSpaceCast(ToWrap, ASZeroPtrTy, ToWrap->getName());
   Cache[ToWrap] = ACast;
   return ACast;

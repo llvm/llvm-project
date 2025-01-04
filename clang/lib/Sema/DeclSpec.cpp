@@ -22,9 +22,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include <cstring>
 using namespace clang;
 
@@ -1346,8 +1343,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
                               S.getLocForEndOfToken(getTypeSpecComplexLoc()),
                                                  " double");
       TypeSpecType = TST_double;   // _Complex -> _Complex double.
-    } else if (TypeSpecType == TST_int || TypeSpecType == TST_char ||
-               TypeSpecType == TST_bitint) {
+    } else if (TypeSpecType == TST_int || TypeSpecType == TST_char) {
       // Note that this intentionally doesn't include _Complex _Bool.
       if (!S.getLangOpts().CPlusPlus)
         S.Diag(TSTLoc, diag::ext_integer_complex);
@@ -1418,7 +1414,11 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // specifier in a pre-C++11 dialect of C++ or in a pre-C23 dialect of C.
   if (!S.getLangOpts().CPlusPlus11 && !S.getLangOpts().C23 &&
       TypeSpecType == TST_auto)
-    S.Diag(TSTLoc, diag::ext_auto_type_specifier);
+    S.Diag(TSTLoc, diag::ext_auto_type_specifier) << /*C++*/ 0;
+  if (S.getLangOpts().HLSL &&
+      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202y &&
+      TypeSpecType == TST_auto)
+    S.Diag(TSTLoc, diag::ext_hlsl_auto_type_specifier) << /*HLSL*/ 1;
   if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&
       StorageClassSpec == SCS_auto)
     S.Diag(StorageClassSpecLoc, diag::warn_auto_storage_class)

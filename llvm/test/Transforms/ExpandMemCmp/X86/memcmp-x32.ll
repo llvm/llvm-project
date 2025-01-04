@@ -71,11 +71,7 @@ define i32 @cmp4(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; X32-NEXT:    [[TMP4:%.*]] = load i32, ptr [[Y:%.*]], align 1
 ; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
 ; X32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
-; X32-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP5]], [[TMP6]]
-; X32-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP5]], [[TMP6]]
-; X32-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP7]] to i32
-; X32-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP8]] to i32
-; X32-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    [[TMP11:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[TMP5]], i32 [[TMP6]])
 ; X32-NEXT:    ret i32 [[TMP11]]
 ;
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i32 4)

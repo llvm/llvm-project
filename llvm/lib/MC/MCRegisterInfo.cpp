@@ -83,8 +83,8 @@ public:
 };
 } // namespace
 
-ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
-  auto &Aliases = RegAliasesCache[R];
+ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCRegister R) const {
+  auto &Aliases = RegAliasesCache[R.id()];
   if (!Aliases.empty())
     return Aliases;
 
@@ -99,7 +99,7 @@ ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
   // Always put "self" at the end, so the iterator can choose to ignore it.
   // For registers without aliases, it also serves as a sentinel value that
   // tells us to not recompute the alias set.
-  Aliases.push_back(R);
+  Aliases.push_back(R.id());
   Aliases.shrink_to_fit();
   return Aliases;
 }
@@ -141,7 +141,7 @@ unsigned MCRegisterInfo::getSubRegIndex(MCRegister Reg,
   return 0;
 }
 
-int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
+int64_t MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHL2DwarfRegs : L2DwarfRegs;
   unsigned Size = isEH ? EHL2DwarfRegsSize : L2DwarfRegsSize;
 
@@ -151,24 +151,28 @@ int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I == M+Size || I->FromReg != RegNum)
     return -1;
-  return I->ToReg;
+  // Consumers need to be able to detect -1 and -2, but at various points
+  // the numbers move between unsigned and signed representations, as well as
+  // between 32- and 64-bit representations. We need to convert first to int
+  // before int64_t for proper sign handling.
+  return int64_t(int(I->ToReg));
 }
 
-std::optional<unsigned> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
-                                                      bool isEH) const {
+std::optional<MCRegister> MCRegisterInfo::getLLVMRegNum(uint64_t RegNum,
+                                                        bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHDwarf2LRegs : Dwarf2LRegs;
   unsigned Size = isEH ? EHDwarf2LRegsSize : Dwarf2LRegsSize;
 
   if (!M)
     return std::nullopt;
-  DwarfLLVMRegPair Key = { RegNum, 0 };
+  DwarfLLVMRegPair Key = {unsigned(RegNum), 0};
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I != M + Size && I->FromReg == RegNum)
-    return I->ToReg;
+    return MCRegister::from(I->ToReg);
   return std::nullopt;
 }
 
-int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
+int64_t MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(uint64_t RegNum) const {
   // On ELF platforms, DWARF EH register numbers are the same as DWARF
   // other register numbers.  On Darwin x86, they differ and so need to be
   // mapped.  The .cfi_* directives accept integer literals as well as
@@ -177,7 +181,7 @@ int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
   // a corresponding LLVM register number at all.  So if we can't map the
   // EH register number to an LLVM register number, assume it's just a
   // valid DWARF register number as is.
-  if (std::optional<unsigned> LRegNum = getLLVMRegNum(RegNum, true)) {
+  if (std::optional<MCRegister> LRegNum = getLLVMRegNum(RegNum, true)) {
     int DwarfRegNum = getDwarfRegNum(*LRegNum, false);
     if (DwarfRegNum == -1)
       return RegNum;
@@ -214,5 +218,12 @@ bool MCRegisterInfo::regsOverlap(MCRegister RegA, MCRegister RegB) const {
     if (*IA == *IB)
       return true;
   } while (*IA < *IB ? ++IA != EA : ++IB != EB);
+  return false;
+}
+
+bool MCRegisterInfo::isArtificialRegUnit(unsigned Unit) const {
+  for (MCRegUnitRootIterator Root(Unit, this); Root.isValid(); ++Root)
+    if (isArtificial(*Root))
+      return true;
   return false;
 }

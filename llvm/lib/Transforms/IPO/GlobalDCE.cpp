@@ -186,9 +186,9 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   LLVM_DEBUG(dbgs() << "Scanning type.checked.load intrinsics\n");
   Function *TypeCheckedLoadFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      &M, Intrinsic::type_checked_load_relative);
 
   auto scan = [&](Function *CheckedLoadFunc) {
     if (!CheckedLoadFunc)

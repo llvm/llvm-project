@@ -337,6 +337,10 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
+    if (!dstTy)
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "expected n-D vector type.");
+
     if (extractOp.getVector().getType().isScalable() ||
         cast<VectorType>(dstTy).isScalable())
       return rewriter.notifyMatchFailure(extractOp,
@@ -477,7 +481,6 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
 
     return builder.create<vector::ShapeCastOp>(loc, type, inputs.front());
   };
-  typeConverter.addArgumentMaterialization(materializeCast);
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
   target.markUnknownOpDynamicallyLegal(
@@ -496,7 +499,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned int targetBitWidth) {
   target.addDynamicallyLegalOp<vector::ShuffleOp>(
       [=](vector::ShuffleOp shuffleOp) -> bool {

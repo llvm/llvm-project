@@ -1,7 +1,7 @@
 ; During lowering of HVX instruction for 64B vector, the rotation
 ; direction for VROR (as part of concat of vectors lowering) is fixed.
 
-; RUN: llc -march=hexagon -O2 %s -o - | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 %s -o - | FileCheck %s
 
 ; CHECK: vec.epilog.ph
 ; CHECK: r{{.*}} = {{.*}}#48

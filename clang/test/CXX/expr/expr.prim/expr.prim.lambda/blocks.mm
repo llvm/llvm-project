@@ -119,17 +119,16 @@ namespace PR13117 {
 
     template<typename ... Args> static void f1()
     {
-      (void)^(Args args) { // expected-error{{block contains unexpanded parameter pack 'Args'}}
+      (void)^(Args args) { // expected-error{{expression contains unexpanded parameter pack 'Args'}}
       };
     }
 
     template<typename ... Args> static void f2()
     {
-      // FIXME: Allow this.
       f(
-        ^(Args args) // expected-error{{block contains unexpanded parameter pack 'Args'}}
+        ^(Args args)
         { }
-        ... // expected-error{{pack expansion does not contain any unexpanded parameter packs}}
+        ...
       );
     }
 

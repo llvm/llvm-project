@@ -162,8 +162,7 @@ define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
   ret i32 %m
@@ -194,8 +193,7 @@ define i32 @length4(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   ret i32 %m
@@ -259,6 +257,36 @@ define i1 @length4_gt(ptr %X, ptr %Y) nounwind {
   ret i1 %c
 }
 
+define i1 @length4_le(ptr %X, ptr %Y) nounwind {
+; CHECK-LABEL: length4_le:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    rev w8, w8
+; CHECK-NEXT:    rev w9, w9
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    ret
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
+  %c = icmp slt i32 %m, 1
+  ret i1 %c
+}
+
+define i1 @length4_ge(ptr %X, ptr %Y) nounwind {
+; CHECK-LABEL: length4_ge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    rev w8, w8
+; CHECK-NEXT:    rev w9, w9
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    ret
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
+  %c = icmp sgt i32 %m, -1
+  ret i1 %c
+}
+
 define i1 @length4_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length4_eq_const:
 ; CHECK:       // %bb.0:
@@ -286,8 +314,7 @@ define i32 @length5(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
   ret i32 %m
@@ -341,8 +368,7 @@ define i32 @length6(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 6) nounwind
   ret i32 %m
@@ -375,18 +401,18 @@ define i32 @length7(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB24_3
+; CHECK-NEXT:    b.ne .LBB26_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldur w8, [x0, #3]
 ; CHECK-NEXT:    ldur w9, [x1, #3]
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB24_3
+; CHECK-NEXT:    b.ne .LBB26_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB24_3: // %res_block
+; CHECK-NEXT:  .LBB26_3: // %res_block
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -403,18 +429,18 @@ define i1 @length7_lt(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB25_3
+; CHECK-NEXT:    b.ne .LBB27_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldur w8, [x0, #3]
 ; CHECK-NEXT:    ldur w9, [x1, #3]
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB25_3
+; CHECK-NEXT:    b.ne .LBB27_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB25_3: // %res_block
+; CHECK-NEXT:  .LBB27_3: // %res_block
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -450,8 +476,7 @@ define i32 @length8(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) nounwind
   ret i32 %m
@@ -494,13 +519,13 @@ define i32 @length9(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB30_2
+; CHECK-NEXT:    b.ne .LBB32_2
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldrb w8, [x0, #8]
 ; CHECK-NEXT:    ldrb w9, [x1, #8]
 ; CHECK-NEXT:    sub w0, w8, w9
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB30_2: // %res_block
+; CHECK-NEXT:  .LBB32_2: // %res_block
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
 ; CHECK-NEXT:    ret
@@ -532,7 +557,7 @@ define i32 @length10(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB32_3
+; CHECK-NEXT:    b.ne .LBB34_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldrh w8, [x0, #8]
 ; CHECK-NEXT:    ldrh w9, [x1, #8]
@@ -541,11 +566,11 @@ define i32 @length10(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    lsr w9, w9, #16
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB32_3
+; CHECK-NEXT:    b.ne .LBB34_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB32_3: // %res_block
+; CHECK-NEXT:  .LBB34_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -578,18 +603,18 @@ define i32 @length11(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB34_3
+; CHECK-NEXT:    b.ne .LBB36_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldur x8, [x0, #3]
 ; CHECK-NEXT:    ldur x9, [x1, #3]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB34_3
+; CHECK-NEXT:    b.ne .LBB36_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB34_3: // %res_block
+; CHECK-NEXT:  .LBB36_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -638,18 +663,18 @@ define i32 @length12(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB37_3
+; CHECK-NEXT:    b.ne .LBB39_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr w8, [x0, #8]
 ; CHECK-NEXT:    ldr w9, [x1, #8]
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB37_3
+; CHECK-NEXT:    b.ne .LBB39_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB37_3: // %res_block
+; CHECK-NEXT:  .LBB39_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -698,18 +723,18 @@ define i32 @length15(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB40_3
+; CHECK-NEXT:    b.ne .LBB42_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldur x8, [x0, #7]
 ; CHECK-NEXT:    ldur x9, [x1, #7]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB40_3
+; CHECK-NEXT:    b.ne .LBB42_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB40_3: // %res_block
+; CHECK-NEXT:  .LBB42_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -726,18 +751,18 @@ define i1 @length15_lt(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB41_3
+; CHECK-NEXT:    b.ne .LBB43_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldur x8, [x0, #7]
 ; CHECK-NEXT:    ldur x9, [x1, #7]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB41_3
+; CHECK-NEXT:    b.ne .LBB43_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB41_3: // %res_block
+; CHECK-NEXT:  .LBB43_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -758,7 +783,7 @@ define i32 @length15_const(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    movk x8, #12594, lsl #48
 ; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    b.ne .LBB42_3
+; CHECK-NEXT:    b.ne .LBB44_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    mov x8, #13365 // =0x3435
 ; CHECK-NEXT:    ldur x9, [x0, #7]
@@ -767,11 +792,11 @@ define i32 @length15_const(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    movk x8, #14393, lsl #48
 ; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    b.ne .LBB42_3
+; CHECK-NEXT:    b.ne .LBB44_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB42_3: // %res_block
+; CHECK-NEXT:  .LBB44_3: // %res_block
 ; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -806,7 +831,7 @@ define i1 @length15_gt_const(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    movk x8, #12594, lsl #48
 ; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    b.ne .LBB44_3
+; CHECK-NEXT:    b.ne .LBB46_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    mov x8, #13365 // =0x3435
 ; CHECK-NEXT:    ldur x9, [x0, #7]
@@ -815,15 +840,15 @@ define i1 @length15_gt_const(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    movk x8, #14393, lsl #48
 ; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    b.ne .LBB44_3
+; CHECK-NEXT:    b.ne .LBB46_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB44_4
-; CHECK-NEXT:  .LBB44_3: // %res_block
+; CHECK-NEXT:    b .LBB46_4
+; CHECK-NEXT:  .LBB46_3: // %res_block
 ; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB44_4: // %endblock
+; CHECK-NEXT:  .LBB46_4: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -841,18 +866,18 @@ define i32 @length16(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB45_3
+; CHECK-NEXT:    b.ne .LBB47_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB45_3
+; CHECK-NEXT:    b.ne .LBB47_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB45_3: // %res_block
+; CHECK-NEXT:  .LBB47_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -883,18 +908,18 @@ define i1 @length16_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB47_3
+; CHECK-NEXT:    b.ne .LBB49_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB47_3
+; CHECK-NEXT:    b.ne .LBB49_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB47_3: // %res_block
+; CHECK-NEXT:  .LBB49_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -913,22 +938,22 @@ define i1 @length16_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB48_3
+; CHECK-NEXT:    b.ne .LBB50_3
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB48_3
+; CHECK-NEXT:    b.ne .LBB50_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB48_4
-; CHECK-NEXT:  .LBB48_3: // %res_block
+; CHECK-NEXT:    b .LBB50_4
+; CHECK-NEXT:  .LBB50_3: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB48_4: // %endblock
+; CHECK-NEXT:  .LBB50_4: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -967,25 +992,25 @@ define i32 @length24(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB50_4
+; CHECK-NEXT:    b.ne .LBB52_4
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB50_4
+; CHECK-NEXT:    b.ne .LBB52_4
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB50_4
+; CHECK-NEXT:    b.ne .LBB52_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB50_4: // %res_block
+; CHECK-NEXT:  .LBB52_4: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -1019,25 +1044,25 @@ define i1 @length24_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB52_4
+; CHECK-NEXT:    b.ne .LBB54_4
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB52_4
+; CHECK-NEXT:    b.ne .LBB54_4
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB52_4
+; CHECK-NEXT:    b.ne .LBB54_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB52_4: // %res_block
+; CHECK-NEXT:  .LBB54_4: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -1056,29 +1081,29 @@ define i1 @length24_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB53_4
+; CHECK-NEXT:    b.ne .LBB55_4
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB53_4
+; CHECK-NEXT:    b.ne .LBB55_4
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB53_4
+; CHECK-NEXT:    b.ne .LBB55_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB53_5
-; CHECK-NEXT:  .LBB53_4: // %res_block
+; CHECK-NEXT:    b .LBB55_5
+; CHECK-NEXT:  .LBB55_4: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB53_5: // %endblock
+; CHECK-NEXT:  .LBB55_5: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -1122,32 +1147,32 @@ define i32 @length31(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB55_5
+; CHECK-NEXT:    b.ne .LBB57_5
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB55_5
+; CHECK-NEXT:    b.ne .LBB57_5
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB55_5
+; CHECK-NEXT:    b.ne .LBB57_5
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldur x8, [x0, #23]
 ; CHECK-NEXT:    ldur x9, [x1, #23]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB55_5
+; CHECK-NEXT:    b.ne .LBB57_5
 ; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB55_5: // %res_block
+; CHECK-NEXT:  .LBB57_5: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -1184,32 +1209,32 @@ define i1 @length31_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB57_5
+; CHECK-NEXT:    b.ne .LBB59_5
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB57_5
+; CHECK-NEXT:    b.ne .LBB59_5
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB57_5
+; CHECK-NEXT:    b.ne .LBB59_5
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldur x8, [x0, #23]
 ; CHECK-NEXT:    ldur x9, [x1, #23]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB57_5
+; CHECK-NEXT:    b.ne .LBB59_5
 ; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB57_5: // %res_block
+; CHECK-NEXT:  .LBB59_5: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -1228,36 +1253,36 @@ define i1 @length31_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB58_5
+; CHECK-NEXT:    b.ne .LBB60_5
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB58_5
+; CHECK-NEXT:    b.ne .LBB60_5
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB58_5
+; CHECK-NEXT:    b.ne .LBB60_5
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldur x8, [x0, #23]
 ; CHECK-NEXT:    ldur x9, [x1, #23]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB58_5
+; CHECK-NEXT:    b.ne .LBB60_5
 ; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB58_6
-; CHECK-NEXT:  .LBB58_5: // %res_block
+; CHECK-NEXT:    b .LBB60_6
+; CHECK-NEXT:  .LBB60_5: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB58_6: // %endblock
+; CHECK-NEXT:  .LBB60_6: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -1327,32 +1352,32 @@ define i32 @length32(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB61_5
+; CHECK-NEXT:    b.ne .LBB63_5
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB61_5
+; CHECK-NEXT:    b.ne .LBB63_5
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB61_5
+; CHECK-NEXT:    b.ne .LBB63_5
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB61_5
+; CHECK-NEXT:    b.ne .LBB63_5
 ; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB61_5: // %res_block
+; CHECK-NEXT:  .LBB63_5: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -1388,32 +1413,32 @@ define i1 @length32_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB63_5
+; CHECK-NEXT:    b.ne .LBB65_5
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB63_5
+; CHECK-NEXT:    b.ne .LBB65_5
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB63_5
+; CHECK-NEXT:    b.ne .LBB65_5
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB63_5
+; CHECK-NEXT:    b.ne .LBB65_5
 ; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB63_5: // %res_block
+; CHECK-NEXT:  .LBB65_5: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -1432,36 +1457,36 @@ define i1 @length32_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB64_5
+; CHECK-NEXT:    b.ne .LBB66_5
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB64_5
+; CHECK-NEXT:    b.ne .LBB66_5
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB64_5
+; CHECK-NEXT:    b.ne .LBB66_5
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB64_5
+; CHECK-NEXT:    b.ne .LBB66_5
 ; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB64_6
-; CHECK-NEXT:  .LBB64_5: // %res_block
+; CHECK-NEXT:    b .LBB66_6
+; CHECK-NEXT:  .LBB66_5: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB64_6: // %endblock
+; CHECK-NEXT:  .LBB66_6: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -1528,46 +1553,46 @@ define i32 @length48(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB67_7
+; CHECK-NEXT:    b.ne .LBB69_7
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB67_7
+; CHECK-NEXT:    b.ne .LBB69_7
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB67_7
+; CHECK-NEXT:    b.ne .LBB69_7
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB67_7
+; CHECK-NEXT:    b.ne .LBB69_7
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB67_7
+; CHECK-NEXT:    b.ne .LBB69_7
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB67_7
+; CHECK-NEXT:    b.ne .LBB69_7
 ; CHECK-NEXT:  // %bb.6:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB67_7: // %res_block
+; CHECK-NEXT:  .LBB69_7: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -1606,46 +1631,46 @@ define i1 @length48_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB69_7
+; CHECK-NEXT:    b.ne .LBB71_7
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB69_7
+; CHECK-NEXT:    b.ne .LBB71_7
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB69_7
+; CHECK-NEXT:    b.ne .LBB71_7
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB69_7
+; CHECK-NEXT:    b.ne .LBB71_7
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB69_7
+; CHECK-NEXT:    b.ne .LBB71_7
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB69_7
+; CHECK-NEXT:    b.ne .LBB71_7
 ; CHECK-NEXT:  // %bb.6:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB69_7: // %res_block
+; CHECK-NEXT:  .LBB71_7: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -1664,50 +1689,50 @@ define i1 @length48_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB70_7
+; CHECK-NEXT:    b.ne .LBB72_7
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB70_7
+; CHECK-NEXT:    b.ne .LBB72_7
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB70_7
+; CHECK-NEXT:    b.ne .LBB72_7
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB70_7
+; CHECK-NEXT:    b.ne .LBB72_7
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB70_7
+; CHECK-NEXT:    b.ne .LBB72_7
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB70_7
+; CHECK-NEXT:    b.ne .LBB72_7
 ; CHECK-NEXT:  // %bb.6:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB70_8
-; CHECK-NEXT:  .LBB70_7: // %res_block
+; CHECK-NEXT:    b .LBB72_8
+; CHECK-NEXT:  .LBB72_7: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB70_8: // %endblock
+; CHECK-NEXT:  .LBB72_8: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -1785,60 +1810,60 @@ define i32 @length63(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.6: // %loadbb6
 ; CHECK-NEXT:    ldr x8, [x0, #48]
 ; CHECK-NEXT:    ldr x9, [x1, #48]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.7: // %loadbb7
 ; CHECK-NEXT:    ldur x8, [x0, #55]
 ; CHECK-NEXT:    ldur x9, [x1, #55]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB73_9
+; CHECK-NEXT:    b.ne .LBB75_9
 ; CHECK-NEXT:  // %bb.8:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB73_9: // %res_block
+; CHECK-NEXT:  .LBB75_9: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -1883,60 +1908,60 @@ define i1 @length63_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.6: // %loadbb6
 ; CHECK-NEXT:    ldr x8, [x0, #48]
 ; CHECK-NEXT:    ldr x9, [x1, #48]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.7: // %loadbb7
 ; CHECK-NEXT:    ldur x8, [x0, #55]
 ; CHECK-NEXT:    ldur x9, [x1, #55]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB75_9
+; CHECK-NEXT:    b.ne .LBB77_9
 ; CHECK-NEXT:  // %bb.8:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB75_9: // %res_block
+; CHECK-NEXT:  .LBB77_9: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -1955,64 +1980,64 @@ define i1 @length63_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.6: // %loadbb6
 ; CHECK-NEXT:    ldr x8, [x0, #48]
 ; CHECK-NEXT:    ldr x9, [x1, #48]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.7: // %loadbb7
 ; CHECK-NEXT:    ldur x8, [x0, #55]
 ; CHECK-NEXT:    ldur x9, [x1, #55]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB76_9
+; CHECK-NEXT:    b.ne .LBB78_9
 ; CHECK-NEXT:  // %bb.8:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB76_10
-; CHECK-NEXT:  .LBB76_9: // %res_block
+; CHECK-NEXT:    b .LBB78_10
+; CHECK-NEXT:  .LBB78_9: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB76_10: // %endblock
+; CHECK-NEXT:  .LBB78_10: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -2076,60 +2101,60 @@ define i32 @length64(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.6: // %loadbb6
 ; CHECK-NEXT:    ldr x8, [x0, #48]
 ; CHECK-NEXT:    ldr x9, [x1, #48]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.7: // %loadbb7
 ; CHECK-NEXT:    ldr x8, [x0, #56]
 ; CHECK-NEXT:    ldr x9, [x1, #56]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB78_9
+; CHECK-NEXT:    b.ne .LBB80_9
 ; CHECK-NEXT:  // %bb.8:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB78_9: // %res_block
+; CHECK-NEXT:  .LBB80_9: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w0, w8, hs
@@ -2172,60 +2197,60 @@ define i1 @length64_lt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.6: // %loadbb6
 ; CHECK-NEXT:    ldr x8, [x0, #48]
 ; CHECK-NEXT:    ldr x9, [x1, #48]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.7: // %loadbb7
 ; CHECK-NEXT:    ldr x8, [x0, #56]
 ; CHECK-NEXT:    ldr x9, [x1, #56]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB80_9
+; CHECK-NEXT:    b.ne .LBB82_9
 ; CHECK-NEXT:  // %bb.8:
 ; CHECK-NEXT:    lsr w0, wzr, #31
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB80_9: // %res_block
+; CHECK-NEXT:  .LBB82_9: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
@@ -2244,64 +2269,64 @@ define i1 @length64_gt(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.1: // %loadbb1
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr x9, [x1, #8]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.2: // %loadbb2
 ; CHECK-NEXT:    ldr x8, [x0, #16]
 ; CHECK-NEXT:    ldr x9, [x1, #16]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.3: // %loadbb3
 ; CHECK-NEXT:    ldr x8, [x0, #24]
 ; CHECK-NEXT:    ldr x9, [x1, #24]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.4: // %loadbb4
 ; CHECK-NEXT:    ldr x8, [x0, #32]
 ; CHECK-NEXT:    ldr x9, [x1, #32]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.5: // %loadbb5
 ; CHECK-NEXT:    ldr x8, [x0, #40]
 ; CHECK-NEXT:    ldr x9, [x1, #40]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.6: // %loadbb6
 ; CHECK-NEXT:    ldr x8, [x0, #48]
 ; CHECK-NEXT:    ldr x9, [x1, #48]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.7: // %loadbb7
 ; CHECK-NEXT:    ldr x8, [x0, #56]
 ; CHECK-NEXT:    ldr x9, [x1, #56]
 ; CHECK-NEXT:    rev x8, x8
 ; CHECK-NEXT:    rev x9, x9
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB81_9
+; CHECK-NEXT:    b.ne .LBB83_9
 ; CHECK-NEXT:  // %bb.8:
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b .LBB81_10
-; CHECK-NEXT:  .LBB81_9: // %res_block
+; CHECK-NEXT:    b .LBB83_10
+; CHECK-NEXT:  .LBB83_9: // %res_block
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    cneg w8, w8, hs
-; CHECK-NEXT:  .LBB81_10: // %endblock
+; CHECK-NEXT:  .LBB83_10: // %endblock
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret

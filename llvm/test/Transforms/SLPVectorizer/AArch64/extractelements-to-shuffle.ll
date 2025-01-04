@@ -33,8 +33,8 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[PA_ADDR_0271]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds i32, ptr [[PB_ADDR_0270]], i64 4
 ; CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NOT_I242:%.*]] = xor <4 x i32> [[TMP5]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[TMP4]], splat (i32 -1)
+; CHECK-NEXT:    [[NOT_I242:%.*]] = xor <4 x i32> [[TMP5]], splat (i32 -1)
 ; CHECK-NEXT:    [[AND_I243:%.*]] = and <4 x i32> [[NOT_I242]], [[NOT_I]]
 ; CHECK-NEXT:    [[AND_I245:%.*]] = and <4 x i32> [[TMP4]], [[NOT_I242]]
 ; CHECK-NEXT:    [[AND_I247:%.*]] = and <4 x i32> [[TMP5]], [[NOT_I]]

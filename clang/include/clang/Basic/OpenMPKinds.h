@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OPENMPKINDS_H
 
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
@@ -222,6 +223,13 @@ enum OpenMPDoacrossClauseModifier {
   OMPC_DOACROSS_unknown
 };
 
+/// OpenMP modifiers for 'allocate' clause.
+enum OpenMPAllocateClauseModifier {
+#define OPENMP_ALLOCATE_MODIFIER(Name) OMPC_ALLOCATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ALLOCATE_unknown
+};
+
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
 struct OMPInteropInfo final {
@@ -389,5 +397,9 @@ bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
 bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 }
 
+template <>
+struct llvm::enum_iteration_traits<clang::OpenMPDefaultmapClauseKind> {
+  static constexpr bool is_iterable = true;
+};
 #endif
 

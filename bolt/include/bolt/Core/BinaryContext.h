@@ -28,6 +28,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -71,14 +72,15 @@ struct SegmentInfo {
   uint64_t FileOffset;        /// Offset in the file.
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
+  bool IsExecutable;          /// Is the executable bit set on the Segment?
 
   void print(raw_ostream &OS) const {
-    OS << "SegmentInfo { Address: 0x"
-       << Twine::utohexstr(Address) << ", Size: 0x"
-       << Twine::utohexstr(Size) << ", FileOffset: 0x"
+    OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
+       << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
+       << "}";
   };
 };
 
@@ -275,11 +277,10 @@ class BinaryContext {
   void deregisterSectionName(const BinarySection &Section);
 
 public:
-  static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(Triple TheTriple, StringRef InputFileName,
-                      SubtargetFeatures *Features, bool IsPIC,
-                      std::unique_ptr<DWARFContext> DwCtx,
-                      JournalingStreams Logger);
+  static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
+      Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
+      StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
+      std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -371,6 +372,7 @@ public:
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
+  std::shared_ptr<orc::SymbolStringPool> getSymbolStringPool() { return SSP; }
   /// Return true if relocations against symbol with a given name
   /// must be created.
   bool forceSymbolRelocations(StringRef SymbolName) const;
@@ -630,6 +632,8 @@ public:
 
   std::unique_ptr<Triple> TheTriple;
 
+  std::shared_ptr<orc::SymbolStringPool> SSP;
+
   const Target *TheTarget;
 
   std::string TripleName;
@@ -722,12 +726,28 @@ public:
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};
-    ///   the number of matched basic blocks
-    uint32_t NumMatchedBlocks{0};
+    ///   the number of exactly matched basic blocks
+    uint32_t NumExactMatchedBlocks{0};
+    ///   the number of loosely matched basic blocks
+    uint32_t NumLooseMatchedBlocks{0};
+    ///   the number of exactly pseudo probe matched basic blocks
+    uint32_t NumPseudoProbeExactMatchedBlocks{0};
+    ///   the number of loosely pseudo probe matched basic blocks
+    uint32_t NumPseudoProbeLooseMatchedBlocks{0};
+    ///   the number of call matched basic blocks
+    uint32_t NumCallMatchedBlocks{0};
     ///   the total count of samples in the profile
     uint64_t StaleSampleCount{0};
-    ///   the count of matched samples
-    uint64_t MatchedSampleCount{0};
+    ///   the count of exactly matched samples
+    uint64_t ExactMatchedSampleCount{0};
+    ///   the count of loosely matched samples
+    uint64_t LooseMatchedSampleCount{0};
+    ///   the count of exactly pseudo probe matched samples
+    uint64_t PseudoProbeExactMatchedSampleCount{0};
+    ///   the count of loosely pseudo probe matched samples
+    uint64_t PseudoProbeLooseMatchedSampleCount{0};
+    ///   the count of call matched samples
+    uint64_t CallMatchedSampleCount{0};
     ///   the number of stale functions that have matching number of blocks in
     ///   the profile
     uint64_t NumStaleFuncsWithEqualBlockCount{0};
@@ -790,8 +810,10 @@ public:
 
   BinaryContext(std::unique_ptr<MCContext> Ctx,
                 std::unique_ptr<DWARFContext> DwCtx,
-                std::unique_ptr<Triple> TheTriple, const Target *TheTarget,
-                std::string TripleName, std::unique_ptr<MCCodeEmitter> MCE,
+                std::unique_ptr<Triple> TheTriple,
+                std::shared_ptr<orc::SymbolStringPool> SSP,
+                const Target *TheTarget, std::string TripleName,
+                std::unique_ptr<MCCodeEmitter> MCE,
                 std::unique_ptr<MCObjectFileInfo> MOFI,
                 std::unique_ptr<const MCAsmInfo> AsmInfo,
                 std::unique_ptr<const MCInstrInfo> MII,

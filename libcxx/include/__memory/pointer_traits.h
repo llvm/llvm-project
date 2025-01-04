@@ -11,17 +11,19 @@
 #define _LIBCPP___MEMORY_POINTER_TRAITS_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_class.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -48,17 +50,17 @@ struct __pointer_traits_element_type {};
 
 template <class _Ptr>
 struct __pointer_traits_element_type<_Ptr, true> {
-  typedef _LIBCPP_NODEBUG typename _Ptr::element_type type;
+  using type _LIBCPP_NODEBUG = typename _Ptr::element_type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class... _Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, true> {
-  typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::element_type type;
+  using type _LIBCPP_NODEBUG = typename _Sp<_Tp, _Args...>::element_type;
 };
 
 template <template <class, class...> class _Sp, class _Tp, class... _Args>
 struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, false> {
-  typedef _LIBCPP_NODEBUG _Tp type;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
 
 template <class _Tp, class = void>
@@ -69,12 +71,12 @@ struct __has_difference_type<_Tp, __void_t<typename _Tp::difference_type> > : tr
 
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
 struct __pointer_traits_difference_type {
-  typedef _LIBCPP_NODEBUG ptrdiff_t type;
+  using type _LIBCPP_NODEBUG = ptrdiff_t;
 };
 
 template <class _Ptr>
 struct __pointer_traits_difference_type<_Ptr, true> {
-  typedef _LIBCPP_NODEBUG typename _Ptr::difference_type type;
+  using type _LIBCPP_NODEBUG = typename _Ptr::difference_type;
 };
 
 template <class _Tp, class _Up>
@@ -94,18 +96,18 @@ public:
 template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind {
 #ifndef _LIBCPP_CXX03_LANG
-  typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up> type;
+  using type _LIBCPP_NODEBUG = typename _Tp::template rebind<_Up>;
 #else
-  typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up>::other type;
+  using type _LIBCPP_NODEBUG = typename _Tp::template rebind<_Up>::other;
 #endif
 };
 
 template <template <class, class...> class _Sp, class _Tp, class... _Args, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true> {
 #ifndef _LIBCPP_CXX03_LANG
-  typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
+  using type _LIBCPP_NODEBUG = typename _Sp<_Tp, _Args...>::template rebind<_Up>;
 #else
-  typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
+  using type _LIBCPP_NODEBUG = typename _Sp<_Tp, _Args...>::template rebind<_Up>::other;
 #endif
 };
 

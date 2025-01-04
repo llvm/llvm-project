@@ -78,16 +78,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::SubOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.create<arith::SubIOp>(loc, resultTypes, args);
 
-  // tosa::MulOp
-  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy)) {
-    if (dyn_cast<tosa::MulOp>(op).getShift() != 0) {
-      (void)rewriter.notifyMatchFailure(op,
-                                        "Cannot have shift value for float");
-      return nullptr;
-    }
-    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
-  }
-
   // tosa::IntDivOp
   if (isa<tosa::IntDivOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.create<arith::DivSIOp>(loc, resultTypes, args);
@@ -98,6 +88,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         rewriter.create<arith::ConstantOp>(loc, FloatAttr::get(elementTy, 1));
     return rewriter.create<arith::DivFOp>(loc, resultTypes, one, args[0]);
   }
+
+  // tosa::MulOp
+  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy))
+    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
 
   if (isa<tosa::MulOp>(op) && isa<IntegerType>(elementTy)) {
     Value a = args[0];
@@ -139,19 +133,22 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::NegateOp>(op) && isa<FloatType>(elementTy))
     return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
 
-  if (isa<tosa::NegateOp>(op) && isa<IntegerType>(elementTy) &&
-      !cast<tosa::NegateOp>(op).getQuantizationInfo()) {
-    auto constant =
-        rewriter.create<arith::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
-    return rewriter.create<arith::SubIOp>(loc, resultTypes, constant, args[0]);
-  }
+  if (isa<tosa::NegateOp>(op) && isa<IntegerType>(elementTy)) {
+    int64_t inZp = 0, outZp = 0;
 
-  if (isa<tosa::NegateOp>(op) && isa<IntegerType>(elementTy) &&
-      cast<tosa::NegateOp>(op).getQuantizationInfo()) {
-    auto quantizationInfo = cast<tosa::NegateOp>(op).getQuantizationInfo();
+    if (cast<tosa::NegateOp>(op).getQuantizationInfo()) {
+      auto quantizationInfo = cast<tosa::NegateOp>(op).getQuantizationInfo();
+      inZp = quantizationInfo.value().getInputZp();
+      outZp = quantizationInfo.value().getOutputZp();
+    }
+
     int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
-    int64_t inZp = quantizationInfo.value().getInputZp();
-    int64_t outZp = quantizationInfo.value().getOutputZp();
+    if (!inZp && !outZp) {
+      auto constant = rewriter.create<arith::ConstantOp>(
+          loc, IntegerAttr::get(elementTy, 0));
+      return rewriter.create<arith::SubIOp>(loc, resultTypes, constant,
+                                            args[0]);
+    }
 
     // Compute the maximum value that can occur in the intermediate buffer.
     int64_t zpAdd = inZp + outZp;
@@ -402,17 +399,19 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     if (intTy.isUnsignedInteger()) {
       minRepresentable = 0;
       if (intTy.getIntOrFloatBitWidth() <= 63) {
-        maxRepresentable = (int64_t)APInt::getMaxValue(intTy.getIntOrFloatBitWidth())
-                          .getZExtValue();
+        maxRepresentable =
+            (int64_t)APInt::getMaxValue(intTy.getIntOrFloatBitWidth())
+                .getZExtValue();
       }
-    } else if(intTy.getIntOrFloatBitWidth() <= 64) {
+    } else if (intTy.getIntOrFloatBitWidth() <= 64) {
       // Ensure that min & max fit into signed n-bit constants.
       minRepresentable = APInt::getSignedMinValue(intTy.getIntOrFloatBitWidth())
-                            .getSExtValue();
+                             .getSExtValue();
       maxRepresentable = APInt::getSignedMaxValue(intTy.getIntOrFloatBitWidth())
-                            .getSExtValue();
+                             .getSExtValue();
     }
-    // Ensure that the bounds are representable as n-bit signed/unsigned integers.
+    // Ensure that the bounds are representable as n-bit signed/unsigned
+    // integers.
     min = std::max(min, minRepresentable);
     max = std::max(max, minRepresentable);
     min = std::min(min, maxRepresentable);
@@ -556,9 +555,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
-                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                           .getSExtValue() +
-                       1));
+                   static_cast<double>(
+                       APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                           .getSExtValue()) +
+                       1.0f));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIntegerAttr(
@@ -701,9 +701,9 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
 
   // Filter operands with dynamic dimension
   auto operandsWithDynamicDim =
-      llvm::to_vector(llvm::make_filter_range(operands, [&](Value operand) {
+      llvm::filter_to_vector(operands, [&](Value operand) {
         return cast<RankedTensorType>(operand.getType()).isDynamicDim(dim);
-      }));
+      });
 
   // If no operand has a dynamic dimension, it means all sizes were 1
   if (operandsWithDynamicDim.empty())
@@ -1153,6 +1153,9 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
+
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
       if (outputTy.isDynamicDim(i)) {
@@ -1258,14 +1261,7 @@ public:
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
           if (valueTy.getIntOrFloatBitWidth() < 32) {
-            if (valueTy.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(
-                              nestedLoc,
-                              nestedBuilder.getIntegerType(
-                                  valueTy.getIntOrFloatBitWidth()),
-                              value)
-                          .getResult(0);
+            if (op.getInputUnsigned()) {
               value = nestedBuilder.create<arith::ExtUIOp>(
                   nestedLoc, nestedBuilder.getI32Type(), value);
             } else {
@@ -1294,7 +1290,7 @@ public:
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
           // Unsigned integers have a difference output value.
-          if (outIntType.isUnsignedInteger()) {
+          if (op.getOutputUnsigned()) {
             intMin = 0;
             intMax = APInt::getMaxValue(outBitWidth).getZExtValue();
           }
@@ -1311,13 +1307,6 @@ public:
             value = nestedBuilder.create<arith::TruncIOp>(
                 nestedLoc, rewriter.getIntegerType(outIntType.getWidth()),
                 value);
-
-            if (outIntType.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(nestedLoc,
-                                                              outIntType, value)
-                          .getResult(0);
-            }
           }
 
           nestedBuilder.create<linalg::YieldOp>(loc, value);
@@ -1825,7 +1814,7 @@ public:
   LogicalResult matchAndRewrite(tosa::ReverseOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-    Value input = op.getInput();
+    Value input = op.getInput1();
     auto inputTy = cast<ShapedType>(input.getType());
     auto resultTy = cast<ShapedType>(op.getType());
     auto axis = op.getAxis();
@@ -2156,7 +2145,7 @@ public:
   LogicalResult matchAndRewrite(tosa::TableOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-    Value input = op.getInput();
+    Value input = op.getInput1();
     Value table = op.getTable();
     auto inputTy = cast<ShapedType>(input.getType());
     auto tableTy = cast<ShapedType>(table.getType());
@@ -2583,7 +2572,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),

@@ -54,6 +54,10 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
   }
 }
 
+static inline RT_API_ATTRS char32_t GetSeparatorChar(const DataEdit &edit) {
+  return edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
+}
+
 template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
@@ -70,6 +74,7 @@ static RT_API_ATTRS bool EditBOZInput(
   // Count significant digits after any leading white space & zeroes
   int digits{0};
   int significantBits{0};
+  const char32_t comma{GetSeparatorChar(edit)};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -84,7 +89,7 @@ static RT_API_ATTRS bool EditBOZInput(
     } else if (LOG2_BASE >= 4 && ch >= '8' && ch <= '9') {
     } else if (LOG2_BASE >= 4 && ch >= 'A' && ch <= 'F') {
     } else if (LOG2_BASE >= 4 && ch >= 'a' && ch <= 'f') {
-    } else if (ch == ',') {
+    } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
       io.GetIoErrorHandler().SignalError(
@@ -92,7 +97,6 @@ static RT_API_ATTRS bool EditBOZInput(
       return false;
     }
     if (digits++ == 0) {
-      significantBits = 4;
       if (ch >= '0' && ch <= '1') {
         significantBits = 1;
       } else if (ch >= '2' && ch <= '3') {
@@ -120,7 +124,11 @@ static RT_API_ATTRS bool EditBOZInput(
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
-  int shift{((digits - 1) * LOG2_BASE) & 7};
+  int bitsAfterFirstDigit{(digits - 1) * LOG2_BASE};
+  int shift{bitsAfterFirstDigit & 7};
+  if (shift + (significantBits - bitsAfterFirstDigit) > 8) {
+    shift = shift - 8; // misaligned octal
+  }
   while (digits > 0) {
     char32_t ch{*io.NextInField(remaining, edit)};
     int digit{0};
@@ -177,8 +185,8 @@ static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
   return sign;
 }
 
-RT_API_ATTRS bool EditIntegerInput(
-    IoStatementState &io, const DataEdit &edit, void *n, int kind) {
+RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
+    void *n, int kind, bool isSigned) {
   RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
@@ -206,9 +214,15 @@ RT_API_ATTRS bool EditIntegerInput(
   Fortran::common::optional<int> remaining;
   Fortran::common::optional<char32_t> next;
   char sign{ScanNumericPrefix(io, edit, next, remaining)};
+  if (sign == '-' && !isSigned) {
+    io.GetIoErrorHandler().SignalError("Negative sign in UNSIGNED input field");
+    return false;
+  }
   common::UnsignedInt128 value{0};
   bool any{!!sign};
   bool overflow{false};
+  const char32_t comma{GetSeparatorChar(edit)};
+  static constexpr auto maxu128{~common::UnsignedInt128{0}};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -221,14 +235,27 @@ RT_API_ATTRS bool EditIntegerInput(
     int digit{0};
     if (ch >= '0' && ch <= '9') {
       digit = ch - '0';
-    } else if (ch == ',') {
+    } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
+      if (edit.modes.inNamelist && ch == GetRadixPointChar(edit)) {
+        // Ignore any fractional part that might appear in NAMELIST integer
+        // input, like a few other Fortran compilers do.
+        // TODO: also process exponents?  Some compilers do, but they obviously
+        // can't just be ignored.
+        while ((next = io.NextInField(remaining, edit))) {
+          if (*next < '0' || *next > '9') {
+            break;
+          }
+        }
+        if (!next || *next == comma) {
+          break;
+        }
+      }
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in INTEGER input field", ch);
       return false;
     }
-    static constexpr auto maxu128{~common::UnsignedInt128{0}};
     static constexpr auto maxu128OverTen{maxu128 / 10};
     static constexpr int maxLastDigit{
         static_cast<int>(maxu128 - (maxu128OverTen * 10))};
@@ -243,8 +270,13 @@ RT_API_ATTRS bool EditIntegerInput(
         "Integer value absent from NAMELIST or list-directed input");
     return false;
   }
-  auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
-  overflow |= value >= maxForKind && (value > maxForKind || sign != '-');
+  if (isSigned) {
+    auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
+    overflow |= value >= maxForKind && (value > maxForKind || sign != '-');
+  } else {
+    auto maxForKind{maxu128 >> (((16 - kind) * 8) + (isSigned ? 1 : 0))};
+    overflow |= value >= maxForKind;
+  }
   if (overflow) {
     io.GetIoErrorHandler().SignalError(IostatIntegerInputOverflow,
         "Decimal input overflows INTEGER(%d) variable", kind);
@@ -956,14 +988,10 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
     return false;
   }
   // Undelimited list-directed character input: stop at a value separator
-  // or the end of the current record.  Subtlety: the "remaining" count
-  // here is a dummy that's used to avoid the interpretation of separators
-  // in NextInField.
-  Fortran::common::optional<int> remaining{length > 0 ? maxUTF8Bytes : 0};
-  while (Fortran::common::optional<char32_t> next{
-      io.NextInField(remaining, edit)}) {
+  // or the end of the current record.
+  while (auto ch{io.GetCurrentChar(byteCount)}) {
     bool isSep{false};
-    switch (*next) {
+    switch (*ch) {
     case ' ':
     case '\t':
     case '/':
@@ -983,11 +1011,17 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
       break;
     }
     if (isSep) {
-      remaining = 0;
-    } else {
-      *x++ = *next;
-      remaining = --length > 0 ? maxUTF8Bytes : 0;
+      break;
     }
+    if (length > 0) {
+      *x++ = *ch;
+      --length;
+    } else if (edit.IsNamelist()) {
+      // GNU compatibility
+      break;
+    }
+    io.HandleRelativePosition(byteCount);
+    io.GotChar(byteCount);
   }
   Fortran::runtime::fill_n(x, length, ' ');
   return true;

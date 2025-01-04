@@ -1,0 +1,45 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "lib",
+    srcs = glob(["*.cpp"]),
+    hdrs = glob(["*.h"]),
+    includes = ["."],
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:index",
+        "//clang:lex",
+        "//clang:tooling",
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-doc",
+    srcs = ["tool/ClangDocMain.cpp"],
+    stamp = 0,
+    deps = [
+        ":lib",
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:driver",
+        "//clang:frontend",
+        "//clang:tooling",
+        "//llvm:Support",
+    ],
+)

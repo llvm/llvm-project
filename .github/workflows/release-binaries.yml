@@ -83,7 +83,7 @@ jobs:
         USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
       shell: bash
       run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
     - name: Collect Variables
       id: vars
@@ -102,8 +102,8 @@ jobs:
           release_version="$trimmed"
           ref="llvmorg-$release_version"
         else
-          release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-${{ github.sha }}"
-          ref=${{ github.sha }}
+          release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-$GITHUB_SHA"
+          ref="$GITHUB_SHA"
         fi
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
@@ -114,20 +114,20 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
-        release_binary_basename="LLVM-$release_version-${{ runner.os }}-${{ runner.arch }}"
+        release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
         # Detect necessary CMake flags
-        target="${{ runner.os }}-${{ runner.arch }}"
+        target="$RUNNER_OS-$RUNNER_ARCH"
         echo "enable-pgo=false" >> $GITHUB_OUTPUT
         target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
-        if [ "${{ runner.os }}" = "macOS" ]; then
+        if [ "$RUNNER_OS" = "macOS" ]; then
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
-          if [ "${{ runner.arch }}" = "ARM64" ]; then
+          if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
           else
             arches=x86_64
@@ -135,17 +135,9 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
-        # x86 macOS and x86 Windows have trouble building flang, so disable it.
-        # Windows: https://github.com/llvm/llvm-project/issues/100202
-        # macOS: 'rebase opcodes terminated early at offset 1 of 80016' when building __fortran_builtins.mod
         build_flang="true"
 
-        if [ "$target" = "Windows-X64" ]; then
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS=\"clang;lld;lldb;clang-tools-extra;bolt;polly;mlir\""
-          build_flang="false"
-        fi
-
-        if [ "${{ runner.os }}" = "Windows" ]; then
+        if [ "$RUNNER_OS" = "Windows" ]; then
           # The build times out on Windows, so we need to disable LTO.
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
@@ -336,7 +328,7 @@ jobs:
       run: |
         # Build some of the mlir tools that take a long time to link
         if [ "${{ needs.prepare.outputs.build-flang }}" = "true" ]; then
-          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang-new bbc
+          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang bbc
         fi
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ \
             mlir-bytecode-parser-fuzzer \
@@ -428,6 +420,14 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
+    - name: Checkout Release Scripts
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        sparse-checkout: |
+          llvm/utils/release/github-upload-release.py
+          llvm/utils/git/requirements.txt
+        sparse-checkout-cone-mode: false
+
     - name: 'Download artifact'
       uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
       with:
@@ -450,11 +450,14 @@ jobs:
         name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
         path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
 
+    - name: Install Python Requirements
+      run: |
+        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
     - name: Upload Release
       shell: bash
       run: |
-        sudo apt install python3-github
-        ./llvm-project/llvm/utils/release/github-upload-release.py \
+        ./llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \

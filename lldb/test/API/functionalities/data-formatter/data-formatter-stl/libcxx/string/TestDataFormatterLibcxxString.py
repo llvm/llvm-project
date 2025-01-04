@@ -100,6 +100,16 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             "s", result_type=ns + "::wstring", result_summary='L"hello world! מזל טוב!"'
         )
 
+        self.expect_expr(
+            "q", result_type=ns + "::string", result_summary='"hello world"'
+        )
+
+        self.expect_expr(
+            "Q",
+            result_type=ns + "::string",
+            result_summary='"quite a long std::strin with lots of info inside it"',
+        )
+
         self.expect(
             "frame variable",
             substrs=[

@@ -95,7 +95,7 @@ const RegisterInfo *NativeRegisterContextDBReg_x86::GetDR(int num) const {
 Status NativeRegisterContextDBReg_x86::IsWatchpointHit(uint32_t wp_index,
                                                        bool &is_hit) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Status::FromErrorString("Watchpoint index out of range");
 
   RegisterValue dr6;
   Status error = ReadRegister(GetDR(6), dr6);
@@ -128,7 +128,7 @@ NativeRegisterContextDBReg_x86::GetWatchpointHitIndex(uint32_t &wp_index,
 Status NativeRegisterContextDBReg_x86::IsWatchpointVacant(uint32_t wp_index,
                                                           bool &is_vacant) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Status::FromErrorString("Watchpoint index out of range");
 
   RegisterValue dr7;
   Status error = ReadRegister(GetDR(7), dr7);
@@ -144,7 +144,7 @@ Status NativeRegisterContextDBReg_x86::SetHardwareWatchpointWithIndex(
     lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
 
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Status::FromErrorString("Watchpoint index out of range");
 
   // Read only watchpoints aren't supported on x86_64. Fall back to read/write
   // waitchpoints instead.
@@ -154,16 +154,16 @@ Status NativeRegisterContextDBReg_x86::SetHardwareWatchpointWithIndex(
     watch_flags = 3;
 
   if (watch_flags != 1 && watch_flags != 3)
-    return Status("Invalid read/write bits for watchpoint");
+    return Status::FromErrorString("Invalid read/write bits for watchpoint");
   if (size != 1 && size != 2 && size != 4 && size != 8)
-    return Status("Invalid size for watchpoint");
+    return Status::FromErrorString("Invalid size for watchpoint");
 
   bool is_vacant;
   Status error = IsWatchpointVacant(wp_index, is_vacant);
   if (error.Fail())
     return error;
   if (!is_vacant)
-    return Status("Watchpoint index not vacant");
+    return Status::FromErrorString("Watchpoint index not vacant");
 
   RegisterValue dr7, drN;
   error = ReadRegister(GetDR(7), dr7);
@@ -219,7 +219,7 @@ bool NativeRegisterContextDBReg_x86::ClearHardwareWatchpoint(
 
 Status NativeRegisterContextDBReg_x86::ClearWatchpointHit(uint32_t wp_index) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Status::FromErrorString("Watchpoint index out of range");
 
   RegisterValue dr6;
   Status error = ReadRegister(GetDR(6), dr6);

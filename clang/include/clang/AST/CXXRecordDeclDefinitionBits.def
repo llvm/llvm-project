@@ -249,4 +249,8 @@ FIELD(HasDeclaredCopyAssignmentWithConstParam, 1, MERGE_OR)
 /// base classes or fields have a no-return destructor
 FIELD(IsAnyDestructorNoReturn, 1, NO_MERGE)
 
+/// Whether the record type is intangible (if any base classes or fields have
+/// type that is intangible). HLSL only.
+FIELD(IsHLSLIntangible, 1, NO_MERGE)
+
 #undef FIELD

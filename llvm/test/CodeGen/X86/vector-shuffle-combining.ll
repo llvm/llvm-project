@@ -3533,6 +3533,22 @@ define <4 x i32> @PR63700(i128 %0) {
   ret <4 x i32> %shuffle.i11
 }
 
+define <16 x i8> @PR107289(<16 x i8> %0) {
+; SSE-LABEL: PR107289:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pslldq {{.*#+}} xmm0 = zero,xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR107289:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpslldq {{.*#+}} xmm0 = zero,xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; AVX-NEXT:    retq
+  %src = bitcast <16 x i8> %0 to i128
+  %shl = shl i128 %src, 8
+  %res = bitcast i128 %shl to <16 x i8>
+  ret <16 x i8> %res
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
@@ -3640,10 +3656,10 @@ entry:
 define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB141_1: # %CF242
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB142_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB141_1
+; CHECK-NEXT:    jmp .LBB142_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>

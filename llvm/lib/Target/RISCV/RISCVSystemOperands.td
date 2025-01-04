@@ -19,12 +19,6 @@ include "llvm/TableGen/SearchableTable.td"
 
 class SysReg<string name, bits<12> op> {
   string Name = name;
-  // A maximum of one alias is supported right now.
-  string AltName = name;
-  // A maximum of one deprecated name is supported right now.  Unlike the
-  // `AltName` alias, a `DeprecatedName` generates a diagnostic when the name is
-  // used to encourage software to migrate away from the name.
-  string DeprecatedName = "";
   bits<12> Encoding = op;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read and Write = 0, 1, 2; Read-Only = 3.
@@ -37,14 +31,16 @@ class SysReg<string name, bits<12> op> {
   // bits<6> Number = op{5 - 0};
   code FeaturesRequired = [{ {} }];
   bit isRV32Only = 0;
+  bit isAltName = 0;
+  bit isDeprecatedName = 0;
 }
 
 def SysRegsList : GenericTable {
   let FilterClass = "SysReg";
   // FIXME: add "ReadWrite", "Mode", "Extra", "Number" fields when needed.
   let Fields = [
-    "Name", "AltName", "DeprecatedName", "Encoding", "FeaturesRequired",
-    "isRV32Only",
+    "Name", "Encoding", "FeaturesRequired",
+    "isRV32Only", "isAltName", "isDeprecatedName"
   ];
 
   let PrimaryKey = [ "Encoding" ];
@@ -55,16 +51,6 @@ def SysRegsList : GenericTable {
 def lookupSysRegByName : SearchIndex {
   let Table = SysRegsList;
   let Key = [ "Name" ];
-}
-
-def lookupSysRegByAltName : SearchIndex {
-  let Table = SysRegsList;
-  let Key = [ "AltName" ];
-}
-
-def lookupSysRegByDeprecatedName : SearchIndex {
-  let Table = SysRegsList;
-  let Key = [ "DeprecatedName" ];
 }
 
 // The following CSR encodings match those given in Tables 2.2,
@@ -123,15 +109,17 @@ def : SysReg<"senvcfg", 0x10A>;
 def : SysReg<"sscratch", 0x140>;
 def : SysReg<"sepc", 0x141>;
 def : SysReg<"scause", 0x142>;
-let DeprecatedName = "sbadaddr" in
 def : SysReg<"stval", 0x143>;
+let isDeprecatedName = 1 in
+def : SysReg<"sbadaddr", 0x143>;
 def : SysReg<"sip", 0x144>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Protection and Translation
 //===----------------------------------------------------------------------===//
-let DeprecatedName = "sptbr" in
 def : SysReg<"satp", 0x180>;
+let isDeprecatedName = 1 in
+def : SysReg<"sptbr", 0x180>;
 
 //===----------------------------------------------------------------------===//
 // Quality-of-Service(QoS) Identifiers (Ssqosid)
@@ -245,8 +233,9 @@ def : SysReg<"mstatush", 0x310>;
 def : SysReg<"mscratch", 0x340>;
 def : SysReg<"mepc", 0x341>;
 def : SysReg<"mcause", 0x342>;
-let DeprecatedName = "mbadaddr" in
 def : SysReg<"mtval", 0x343>;
+let isDeprecatedName = 1 in
+def : SysReg<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
@@ -298,8 +287,9 @@ foreach i = 3...31 in
 //===----------------------------------------------------------------------===//
 // Machine Counter Setup
 //===----------------------------------------------------------------------===//
-let AltName = "mucounteren" in // Privileged spec v1.9.1 Name
 def : SysReg<"mcountinhibit", 0x320>;
+let isAltName = 1 in
+def : SysReg<"mucounteren", 0x320>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
 foreach i = 3...31 in
@@ -323,7 +313,10 @@ def : SysReg<"tselect", 0x7A0>;
 def : SysReg<"tdata1", 0x7A1>;
 def : SysReg<"tdata2", 0x7A2>;
 def : SysReg<"tdata3", 0x7A3>;
+def : SysReg<"tinfo", 0x7A4>;
+def : SysReg<"tcontrol", 0x7A5>;
 def : SysReg<"mcontext", 0x7A8>;
+def : SysReg<"mscontext", 0x7AA>;
 
 //===----------------------------------------------------------------------===//
 // Debug Mode Registers
@@ -333,8 +326,9 @@ def : SysReg<"dpc", 0x7B1>;
 
 // "dscratch" is an alternative name for "dscratch0" which appeared in earlier
 // drafts of the RISC-V debug spec
-let AltName = "dscratch" in
 def : SysReg<"dscratch0", 0x7B2>;
+let isAltName = 1 in
+def : SysReg<"dscratch", 0x7B2>;
 def : SysReg<"dscratch1", 0x7B3>;
 
 //===----------------------------------------------------------------------===//
@@ -455,3 +449,12 @@ def : SysReg<"mnscratch", 0x740>;
 def : SysReg<"mnepc", 0x741>;
 def : SysReg<"mncause", 0x742>;
 def : SysReg<"mnstatus", 0x744>;
+
+//===-----------------------------------------------
+// Control Transfer Records CSRs
+//===-----------------------------------------------
+def : SysReg<"sctrctl", 0x14e>;
+def : SysReg<"sctrstatus", 0x14f>;
+def : SysReg<"sctrdepth", 0x15f>;
+def : SysReg<"vsctrctl", 0x24e>;
+def : SysReg<"mctrctl", 0x34e>;

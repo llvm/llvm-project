@@ -31,21 +31,17 @@ template <class _Tp>
 using __make_unsigned_t = __make_unsigned(_Tp);
 
 #else
-// clang-format off
-typedef __type_list<unsigned char,
-        __type_list<unsigned short,
-        __type_list<unsigned int,
-        __type_list<unsigned long,
-        __type_list<unsigned long long,
-#  ifndef _LIBCPP_HAS_NO_INT128
-        __type_list<__uint128_t,
+using __unsigned_types =
+    __type_list<unsigned char,
+                unsigned short,
+                unsigned int,
+                unsigned long,
+                unsigned long long
+#  if _LIBCPP_HAS_INT128
+                ,
+                __uint128_t
 #  endif
-        __nat
-#  ifndef _LIBCPP_HAS_NO_INT128
-        >
-#  endif
-        > > > > > __unsigned_types;
-// clang-format on
+                >;
 
 template <class _Tp, bool = is_integral<_Tp>::value || is_enum<_Tp>::value>
 struct __make_unsigned{};
@@ -65,7 +61,7 @@ template <> struct __make_unsigned<  signed long,      true> {typedef unsigned l
 template <> struct __make_unsigned<unsigned long,      true> {typedef unsigned long      type;};
 template <> struct __make_unsigned<  signed long long, true> {typedef unsigned long long type;};
 template <> struct __make_unsigned<unsigned long long, true> {typedef unsigned long long type;};
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
 template <> struct __make_unsigned<__int128_t,         true> {typedef __uint128_t        type;};
 template <> struct __make_unsigned<__uint128_t,        true> {typedef __uint128_t        type;};
 #  endif
@@ -86,12 +82,10 @@ template <class _Tp>
 using make_unsigned_t = __make_unsigned_t<_Tp>;
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr __make_unsigned_t<_Tp> __to_unsigned_like(_Tp __x) noexcept {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __make_unsigned_t<_Tp> __to_unsigned_like(_Tp __x) _NOEXCEPT {
   return static_cast<__make_unsigned_t<_Tp> >(__x);
 }
-#endif
 
 template <class _Tp, class _Up>
 using __copy_unsigned_t = __conditional_t<is_unsigned<_Tp>::value, __make_unsigned_t<_Up>, _Up>;

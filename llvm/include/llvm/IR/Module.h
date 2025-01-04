@@ -62,7 +62,7 @@ class VersionTuple;
 /// constant references to global variables in the module.  When a global
 /// variable is destroyed, it should have no entries in the GlobalList.
 /// The main container class for the LLVM Intermediate Representation.
-class LLVM_EXTERNAL_VISIBILITY Module {
+class LLVM_ABI Module {
   /// @name Types And Enumerations
   /// @{
 public:
@@ -256,9 +256,12 @@ public:
   /// The module destructor. This will dropAllReferences.
   ~Module();
 
-/// @}
-/// @name Module Level Accessors
-/// @{
+  /// Move assignment.
+  Module &operator=(Module &&Other);
+
+  /// @}
+  /// @name Module Level Accessors
+  /// @{
 
   /// Get the module identifier which is, essentially, the name of the module.
   /// @returns the module identifier as a string

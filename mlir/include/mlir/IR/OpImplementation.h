@@ -641,6 +641,12 @@ public:
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
 
+  /// Parse a '-' token.
+  virtual ParseResult parseMinus() = 0;
+
+  /// Parse a '-' token if present.
+  virtual ParseResult parseOptionalMinus() = 0;
+
   /// Parse a '*' token.
   virtual ParseResult parseStar() = 0;
 
@@ -743,7 +749,9 @@ public:
     // zero for non-negated integers.
     result =
         (IntT)uintResult.sextOrTrunc(sizeof(IntT) * CHAR_BIT).getLimitedValue();
-    if (APInt(uintResult.getBitWidth(), result) != uintResult)
+    if (APInt(uintResult.getBitWidth(), result,
+              /*isSigned=*/std::is_signed_v<IntT>,
+              /*implicitTrunc=*/true) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
   }
@@ -1596,7 +1604,8 @@ public:
     size_t typeSize = llvm::range_size(types);
     if (operandSize != typeSize)
       return emitError(loc)
-             << operandSize << " operands present, but expected " << typeSize;
+             << "number of operands and types do not match: got " << operandSize
+             << " operands and " << typeSize << " types";
 
     for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))

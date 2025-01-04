@@ -159,15 +159,11 @@ public:
   // memcpy as per section 3 of the SPIR spec.
   bool useFP16ConversionIntrinsics() const override { return false; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
   std::string_view getClobbers() const override { return ""; }
 
-  ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
-  }
+  ArrayRef<const char *> getGCCRegNames() const override { return {}; }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {
@@ -175,7 +171,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -314,8 +310,8 @@ public:
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -335,8 +331,11 @@ public:
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
-    resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
+    // SPIR-V has core support for atomic ops, and Int32 is always available;
+    // we take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
+    resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
+                    "v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -356,8 +355,11 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
+    // SPIR-V has core support for atomic ops, and Int64 is always available;
+    // we take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -380,9 +382,10 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    AddrSpaceMap = &SPIRDefIsGenMap;
 
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0");
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+                    "v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0");
 
     BFloat16Width = BFloat16Align = 16;
     BFloat16Format = &llvm::APFloat::BFloat();
@@ -411,6 +414,10 @@ public:
                         MacroBuilder &Builder) const override;
 
   void setAuxTarget(const TargetInfo *Aux) override;
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    TargetInfo::adjust(Diags, Opts);
+  }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
 };

@@ -328,17 +328,17 @@ Release Patch Rules
 Below are the rules regarding patching the release branch:
 
 #. Patches applied to the release branch may only be applied by the release
-   manager, the official release testers or the code owners with approval from
+   manager, the official release testers or the maintainers with approval from
    the release manager.
 
-#. Release managers are encouraged, but not required, to get approval from code
-   owners before approving patches.  If there is no code owner or the code owner
-   is unreachable then release managers can ask approval from patch reviewers or
-   other developers active in that area.
+#. Release managers are encouraged, but not required, to get approval from a
+   maintainer before approving patches.  If there are no reachable maintainers
+   then release managers can ask approval from patch reviewers or other
+   developers active in that area.
 
 #. *Before RC1* Patches should be limited to bug fixes, important optimization
    improvements, or completion of features that were started before the branch
-   was created.  As with all phases, release managers and code owners can reject
+   was created.  As with all phases, release managers and maintainers can reject
    patches that are deemed too invasive.
 
 #. *Before RC2* Patches should be limited to bug fixes or backend specific

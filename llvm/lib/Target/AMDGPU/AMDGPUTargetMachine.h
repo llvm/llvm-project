@@ -15,10 +15,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 
 #include "GCNSubtarget.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <utility>
 
@@ -28,7 +28,7 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
-class AMDGPUTargetMachine : public LLVMTargetMachine {
+class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
@@ -36,11 +36,8 @@ protected:
   StringRef getFeatureString(const Function &F) const;
 
 public:
-  static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
-  static bool DisableStructurizer;
-  static bool EnableStructurizerWorkarounds;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
@@ -126,7 +123,7 @@ public:
 
 class AMDGPUPassConfig : public TargetPassConfig {
 public:
-  AMDGPUPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM);
+  AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM);
 
   AMDGPUTargetMachine &getAMDGPUTargetMachine() const {
     return getTM<AMDGPUTargetMachine>();
@@ -175,8 +172,10 @@ public:
   void addIRPasses(AddIRPass &) const;
   void addCodeGenPrepare(AddIRPass &) const;
   void addPreISel(AddIRPass &addPass) const;
+  void addILPOpts(AddMachinePass &) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
+  void addMachineSSAOptimization(AddMachinePass &) const;
 
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used

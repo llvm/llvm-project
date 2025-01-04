@@ -218,7 +218,7 @@ TABLES_HPP_TEMPLATE = """
 
 #include <__algorithm/ranges_upper_bound.h>
 #include <__config>
-#include <cstddef>
+#include <__cstddef/ptrdiff_t.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -235,7 +235,7 @@ namespace __escaped_output_table {{
 // clang-format on
 }} // namespace __escaped_output_table
 
-#endif //_LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

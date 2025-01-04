@@ -344,6 +344,14 @@ public:
     return getIntrinsicID() == Intrinsic::dbg_declare;
   }
 
+  /// Determine if this describes the value of a local variable. It is true for
+  /// dbg.value, but false for dbg.declare, which describes its address, and
+  /// false for dbg.assign, which describes a combination of the variable's
+  /// value and address.
+  bool isValueOfVariable() const {
+    return getIntrinsicID() == Intrinsic::dbg_value;
+  }
+
   void setKillLocation() {
     // TODO: When/if we remove duplicate values from DIArgLists, we don't need
     // this set anymore.
@@ -560,9 +568,9 @@ public:
   /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
   /// \p Params. Additionally, the load and gather intrinsics require
   /// \p ReturnType to be specified.
-  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
-                                           Type *ReturnType,
-                                           ArrayRef<Value *> Params);
+  static Function *getOrInsertDeclarationForParams(Module *M, Intrinsic::ID,
+                                                   Type *ReturnType,
+                                                   ArrayRef<Value *> Params);
 
   static std::optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
   static std::optional<unsigned> getVectorLengthParamPos(
@@ -1255,6 +1263,41 @@ public:
   }
 };
 
+/// This is the base class for llvm.experimental.memset.pattern
+class MemSetPatternIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
+private:
+  enum { ARG_VOLATILE = 3 };
+
+public:
+  ConstantInt *getVolatileCst() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(ARG_VOLATILE)));
+  }
+
+  bool isVolatile() const { return !getVolatileCst()->isZero(); }
+
+  void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
+
+  // Methods for support of type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_memset_pattern;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This class wraps the llvm.experimental.memset.pattern intrinsic.
+class MemSetPatternInst : public MemSetBase<MemSetPatternIntrinsic> {
+public:
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_memset_pattern;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This class wraps the llvm.memcpy/memmove intrinsics.
 class MemTransferInst : public MemTransferBase<MemIntrinsic> {
 public:
@@ -1495,11 +1538,21 @@ public:
       return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
     return false;
   }
-  // The name of the instrumented function.
+
+  // The name of the instrumented function, assuming it is a global variable.
   GlobalVariable *getName() const {
-    return cast<GlobalVariable>(
-        const_cast<Value *>(getArgOperand(0))->stripPointerCasts());
+    return cast<GlobalVariable>(getNameValue());
   }
+
+  // The "name" operand of the profile instrumentation instruction - this is the
+  // operand that can be used to relate the instruction to the function it
+  // belonged to at instrumentation time.
+  Value *getNameValue() const {
+    return const_cast<Value *>(getArgOperand(0))->stripPointerCasts();
+  }
+
+  void setNameValue(Value *V) { setArgOperand(0, V); }
+
   // The hash of the CFG for the instrumented function.
   ConstantInt *getHash() const {
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
@@ -1519,6 +1572,7 @@ public:
   ConstantInt *getNumCounters() const;
   // The index of the counter that this instruction acts on.
   ConstantInt *getIndex() const;
+  void setIndex(uint32_t Idx);
 };
 
 /// This represents the llvm.instrprof.cover intrinsic.
@@ -1568,7 +1622,14 @@ public:
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
+  // We instrument direct calls (but not to intrinsics), or indirect calls.
+  static bool canInstrumentCallsite(const CallBase &CB) {
+    return !CB.isInlineAsm() &&
+           (CB.isIndirectCall() ||
+            (CB.getCalledFunction() && !CB.getCalledFunction()->isIntrinsic()));
+  }
   Value *getCallee() const;
+  void setCallee(Value *Callee);
 };
 
 /// This represents the llvm.instrprof.timestamp intrinsic.

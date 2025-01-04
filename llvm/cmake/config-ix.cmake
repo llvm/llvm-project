@@ -158,6 +158,24 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
+# Newer POSIX functions aren't available without the appropriate defines.
+# Usually those are set by the use of -std=gnuXX, but one can also use the
+# newer functions with -std=c(++)XX, i.e. without the GNU language extensions.
+# Keep this at the top to make sure we don't add _GNU_SOURCE dependent checks
+# before adding it.
+check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
+if(LLVM_USING_GLIBC)
+  add_compile_definitions(_GNU_SOURCE)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+
+  # enable 64bit off_t on 32bit systems using glibc
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_compile_definitions(_FILE_OFFSET_BITS=64)
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
+  endif()
+endif()
+
+# include checks
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
 check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
@@ -435,17 +453,6 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
-check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-if( LLVM_USING_GLIBC )
-  add_compile_definitions(_GNU_SOURCE)
-  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
-# enable 64bit off_t on 32bit systems using glibc
-  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_compile_definitions(_FILE_OFFSET_BITS=64)
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
-  endif()
-endif()
-
 # This check requires _GNU_SOURCE.
 if (NOT PURE_WINDOWS)
   if (LLVM_PTHREAD_LIB)
@@ -453,6 +460,8 @@ if (NOT PURE_WINDOWS)
   endif()
   check_symbol_exists(pthread_getname_np pthread.h HAVE_PTHREAD_GETNAME_NP)
   check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
+  check_symbol_exists(pthread_get_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_GET_NAME_NP)
+  check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
   if (LLVM_PTHREAD_LIB)
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
   endif()

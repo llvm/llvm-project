@@ -26,6 +26,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -278,12 +279,14 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
     Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath));
+        CI.getFrontendOpts().ModuleOutputPath,
+        +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
   }
 
   Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile));
+      CI.getFrontendOpts().OutputFile,
+      +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -1107,7 +1110,6 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
-  case Language::RenderScript:
     // We can't do anything with these.
     return;
   }

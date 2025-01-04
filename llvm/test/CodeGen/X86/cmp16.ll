@@ -13,6 +13,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=X64,X64-FAST
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s --check-prefixes=X64,X64-FAST
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 | FileCheck %s --check-prefixes=X64,X64-FAST
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s --check-prefixes=X64,X64-FAST
 
 define i1 @cmp16_reg_eq_reg(i16 %a0, i16 %a1) {
 ; X86-GENERIC-LABEL: cmp16_reg_eq_reg:

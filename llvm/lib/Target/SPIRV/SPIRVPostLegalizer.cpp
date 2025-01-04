@@ -55,14 +55,6 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
 } // namespace llvm
 
-static bool isMetaInstrGET(unsigned Opcode) {
-  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_ID64 ||
-         Opcode == SPIRV::GET_fID || Opcode == SPIRV::GET_fID64 ||
-         Opcode == SPIRV::GET_pID32 || Opcode == SPIRV::GET_pID64 ||
-         Opcode == SPIRV::GET_vID || Opcode == SPIRV::GET_vfID ||
-         Opcode == SPIRV::GET_vpID32 || Opcode == SPIRV::GET_vpID64;
-}
-
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
   case TargetOpcode::G_SMAX:
@@ -104,10 +96,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
-            MRI.setType(ResVReg,
-                        LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
-            GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
+            setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
           }
         }
       } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
@@ -116,34 +105,20 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // registers, we must decorate them as if they were introduced in a
         // non-automatic way
         Register ResVReg = I.getOperand(0).getReg();
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(ResVReg);
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (!ResVType) {
-          // Set type of the defined register
-          ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
-          // Check if we have type defined for operands of the new instruction
-          if (!ResVType)
-            continue;
-          // Set type & class
-          MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
-          MRI.setType(ResVReg,
-                      LLT::scalar(GR->getScalarOrVectorBitWidth(ResVType)));
-          GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
-        }
+        if (MRI.getRegClassOrNull(ResVReg))
+          continue;
+        assert(GR->getSPIRVTypeForVReg(ResVReg) == nullptr);
+        // Check if we have type defined for operands of the new instruction
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
+        if (!ResVType)
+          continue;
+        // Set type & class
+        setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
-          // Check if the instruction newly generated or already processed
-          MachineInstr *NextMI = I.getNextNode();
-          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
-            continue;
-          // Restore usual instructions pattern for the newly inserted
-          // instruction
-          MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
-                                       ? &SPIRV::iIDRegClass
-                                       : &SPIRV::ANYIDRegClass);
-          MRI.setType(ResVReg, LLT::scalar(32));
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
           processInstr(I, MIB, MRI, GR);
         }
@@ -182,23 +157,6 @@ void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
   visit(MF, *MF.begin(), op);
 }
 
-// Sorts basic blocks by dominance to respect the SPIR-V spec.
-void sortBlocks(MachineFunction &MF) {
-  MachineDominatorTree MDT(MF);
-
-  std::unordered_map<MachineBasicBlock *, size_t> Order;
-  Order.reserve(MF.size());
-
-  size_t Index = 0;
-  visit(MF, [&Order, &Index](MachineBasicBlock *MBB) { Order[MBB] = Index++; });
-
-  auto Comparator = [&Order](MachineBasicBlock &LHS, MachineBasicBlock &RHS) {
-    return Order[&LHS] < Order[&RHS];
-  };
-
-  MF.sort(Comparator);
-}
-
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
@@ -207,7 +165,6 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
 
   processNewInstrs(MF, GR, MIB);
-  sortBlocks(MF);
 
   return true;
 }

@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define GET_GICOMBINER_DEPS
@@ -49,8 +48,7 @@ protected:
   const RegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
   const SIInstrInfo &TII;
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
 
 public:
   AMDGPURegBankCombinerImpl(
@@ -454,6 +452,12 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
+  // unnecessary.
+  CInfo.EnableFullDCE = false;
   AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *KB, /*CSEInfo*/ nullptr,
                                  RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();

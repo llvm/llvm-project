@@ -259,6 +259,16 @@ CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 ///  Dbg Intrinsic utilities
 ///
 
+/// Creates and inserts a dbg_value record intrinsic before a store
+/// that has an associated llvm.dbg.value intrinsic.
+void InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
+                                DIBuilder &Builder);
+
+/// Creates and inserts an llvm.dbg.value intrinsic before a store
+/// that has an associated llvm.dbg.value intrinsic.
+void InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
+                                DIBuilder &Builder);
+
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
@@ -402,6 +412,11 @@ Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
+/// DO NOT CALL EXTERNALLY.
+/// FIXME: https://github.com/llvm/llvm-project/issues/121495
+/// Once external callers of this function are removed, either inline into
+/// combineMetadataForCSE, or internalize and remove KnownIDs parameter.
+///
 /// Combine the metadata of two instructions so that K can replace J. Some
 /// metadata kinds can only be kept if K does not move, meaning it dominated
 /// J in the original IR.

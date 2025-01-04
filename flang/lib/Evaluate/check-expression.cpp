@@ -412,6 +412,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           symbol.owner().context().ShouldWarn(
               common::LanguageFeature::LogicalIntegerAssignment)) {
         context.messages().Say(
+            common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -525,6 +526,11 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
+    const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
+    bool isInitialized{semantics::IsSaved(ultimate) &&
+        !IsAllocatable(ultimate) && object &&
+        (ultimate.test(Symbol::Flag::InDataStmt) ||
+            object->init().has_value())};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -554,6 +560,17 @@ public:
       }
     } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
       return std::nullopt; // host association is in play
+    } else if (isInitialized &&
+        context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::SavedLocalInSpecExpr)) {
+      if (!scope_.IsModuleFile() &&
+          context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::SavedLocalInSpecExpr)) {
+        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
+            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+            ultimate.name().ToString());
+      }
+      return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       if (object->commonBlock()) {
@@ -781,8 +798,9 @@ bool CheckSpecificationExprHelper::IsPermissibleInquiry(
 template <typename A>
 void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
     FoldingContext &context, bool forElementalFunctionResult) {
-  if (auto why{CheckSpecificationExprHelper{
-          scope, context, forElementalFunctionResult}(x)}) {
+  CheckSpecificationExprHelper helper{
+      scope, context, forElementalFunctionResult};
+  if (auto why{helper(x)}) {
     context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
         forElementalFunctionResult ? " for elemental function result" : "",
         *why);
@@ -890,7 +908,58 @@ public:
   Result operator()(const ComplexPart &x) const {
     return x.complex().Rank() == 0;
   }
-  Result operator()(const Substring &) const { return std::nullopt; }
+  Result operator()(const Substring &x) const {
+    if (x.Rank() == 0) {
+      return true; // scalar substring always contiguous
+    }
+    // Substrings with rank must have DataRefs as their parents
+    const DataRef &parentDataRef{DEREF(x.GetParentIf<DataRef>())};
+    std::optional<std::int64_t> len;
+    if (auto lenExpr{parentDataRef.LEN()}) {
+      len = ToInt64(Fold(context_, std::move(*lenExpr)));
+      if (len) {
+        if (*len <= 0) {
+          return true; // empty substrings
+        } else if (*len == 1) {
+          // Substrings can't be incomplete; is base array contiguous?
+          return (*this)(parentDataRef);
+        }
+      }
+    }
+    std::optional<std::int64_t> upper;
+    bool upperIsLen{false};
+    if (auto upperExpr{x.upper()}) {
+      upper = ToInt64(Fold(context_, common::Clone(*upperExpr)));
+      if (upper) {
+        if (*upper < 1) {
+          return true; // substring(n:0) empty
+        }
+        upperIsLen = len && *upper >= *len;
+      } else if (const auto *inquiry{
+                     UnwrapConvertedExpr<DescriptorInquiry>(*upperExpr)};
+                 inquiry && inquiry->field() == DescriptorInquiry::Field::Len) {
+        upperIsLen =
+            &parentDataRef.GetLastSymbol() == &inquiry->base().GetLastSymbol();
+      }
+    } else {
+      upperIsLen = true; // substring(n:)
+    }
+    if (auto lower{ToInt64(Fold(context_, x.lower()))}) {
+      if (*lower == 1 && upperIsLen) {
+        // known complete substring; is base contiguous?
+        return (*this)(parentDataRef);
+      } else if (upper) {
+        if (*upper < *lower) {
+          return true; // empty substring(3:2)
+        } else if (*lower > 1) {
+          return false; // known incomplete substring
+        } else if (len && *upper < *len) {
+          return false; // known incomplete substring
+        }
+      }
+    }
+    return std::nullopt; // contiguity not known
+  }
 
   Result operator()(const ProcedureRef &x) const {
     if (auto chars{characteristics::Procedure::Characterize(
@@ -1085,44 +1154,53 @@ class StmtFunctionChecker
 public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
+
+  static constexpr auto feature{
+      common::LanguageFeature::StatementFunctionExtensions};
+
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
       : Base{*this}, sf_{sf}, context_{context} {
-    if (!context_.languageFeatures().IsEnabled(
-            common::LanguageFeature::StatementFunctionExtensions)) {
+    if (!context_.languageFeatures().IsEnabled(feature)) {
       severity_ = parser::Severity::Error;
-    } else if (context_.languageFeatures().ShouldWarn(
-                   common::LanguageFeature::StatementFunctionExtensions)) {
+    } else if (context_.languageFeatures().ShouldWarn(feature)) {
       severity_ = parser::Severity::Portability;
     }
   }
   using Base::operator();
 
+  Result Return(parser::Message &&msg) const {
+    if (severity_) {
+      msg.set_severity(*severity_);
+      if (*severity_ != parser::Severity::Error) {
+        msg.set_languageFeature(feature);
+      }
+    }
+    return std::move(msg);
+  }
+
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain an array constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain an array constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const StructureConstructor &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a structure constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a structure constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const TypeParamInquiry &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
@@ -1144,21 +1222,18 @@ public:
               proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
-            auto msg{
-                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
-            msg.set_severity(*severity_);
-            return parser::Message{
-                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+            return Return(parser::Message{sf_.name(),
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
+                sf_.name(), symbol->name()});
           }
         }
       }
     }
     if (proc.Rank() > 0) {
       if (severity_) {
-        auto msg{
-            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
-        msg.set_severity(*severity_);
-        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        return Return(parser::Message{sf_.name(),
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US,
+            sf_.name()});
       }
     }
     return std::nullopt;
@@ -1170,10 +1245,9 @@ public:
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
         if (severity_) {
-          auto msg{
-              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
-          msg.set_severity(*severity_);
-          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+          return Return(parser::Message{sf_.name(),
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
+              sf_.name()});
         }
       }
     }

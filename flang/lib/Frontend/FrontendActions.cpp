@@ -21,6 +21,7 @@
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -77,7 +78,9 @@
 #include <memory>
 #include <system_error>
 
-#include "flang/Tools/CLOptions.inc"
+namespace llvm {
+extern cl::opt<bool> PrintPipelinePasses;
+} // namespace llvm
 
 using namespace Fortran::frontend;
 
@@ -146,7 +149,7 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
          (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
-static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
+static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   const std::vector<std::string> &libs =
       ci.getInvocation().getCodeGenOpts().DependentLibs;
   if (libs.empty()) {
@@ -168,7 +171,7 @@ static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
 // Add to MLIR code target specific items which are dependent on target
 // configuration specified by the user.
 // Clang equivalent function: AMDGPUTargetCodeGenInfo::emitTargetGlobals
-static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
+static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp mlirModule,
                                        CompilerInstance &ci) {
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
@@ -230,7 +233,7 @@ bool CodeGenAction::beginSourceFileAction() {
     llvm::SMDiagnostic err;
     llvmModule = llvm::parseIRFile(getCurrentInput().getFile(), err, *llvmCtx);
     if (!llvmModule || llvm::verifyModule(*llvmModule, &llvm::errs())) {
-      err.print("flang-new", llvm::errs());
+      err.print("flang", llvm::errs());
       unsigned diagID = ci.getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "Could not parse IR");
       ci.getDiagnostics().Report(diagID);
@@ -266,7 +269,7 @@ bool CodeGenAction::beginSourceFileAction() {
       return false;
     }
 
-    mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
+    mlirModule = std::move(module);
     const llvm::DataLayout &dl = targetMachine.createDataLayout();
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
@@ -298,22 +301,22 @@ bool CodeGenAction::beginSourceFileAction() {
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
       ci.getInvocation().getFrontendOpts().features, targetMachine,
-      ci.getInvocation().getTargetOpts().cpuToTuneFor);
-
-  // Fetch module from lb, so we can set
-  mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
+      ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(*mlirModule,
+    setOffloadModuleInterfaceAttributes(lb.getModule(),
                                         ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(*mlirModule,
+    setOpenMPVersionAttribute(lb.getModule(),
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getSemanticsContext());
+
+  // Fetch module from lb, so we can set
+  mlirModule = lb.getModuleAndRelease();
 
   // Add target specific items like dependent libraries, target specific
   // constants etc.
@@ -323,6 +326,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
+  (void)mlir::applyPassManagerCLOptions(pm);
   // Add OpenMP-related passes
   // WARNING: These passes must be run immediately after the lowering to ensure
   // that the FIR is correct with respect to OpenMP operations/attributes.
@@ -420,7 +424,7 @@ void PrintPreprocessedAction::executeAction() {
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.isOutputStreamNull()) {
     // Send the output to the pre-defined output buffer.
-    ci.writeOutputStream(outForPP.str());
+    ci.writeOutputStream(buf);
     return;
   }
 
@@ -431,7 +435,7 @@ void PrintPreprocessedAction::executeAction() {
     return;
   }
 
-  (*os) << outForPP.str();
+  (*os) << buf;
 }
 
 void DebugDumpProvenanceAction::executeAction() {
@@ -711,7 +715,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(pm, level);
+  fir::createHLFIRToFIRPassPipeline(
+      pm,
+      ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP),
+      level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   if (!mlir::succeeded(pm.run(*mlirModule))) {
@@ -751,7 +759,7 @@ getRISCVVScaleRange(CompilerInstance &ci) {
       outputErrMsg << errMsg.getMessage();
     });
     ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
-        << outputErrMsg.str();
+        << buffer;
     return std::nullopt;
   }
 
@@ -824,8 +832,12 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
-  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
-    config.NSWOnLoopVarInc = true;
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP))
+    config.EnableOpenMP = true;
+
+  if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+    config.NSWOnLoopVarInc = false;
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -949,6 +961,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
+
+  // Cleanup
+  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
@@ -1015,8 +1030,25 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   else if (action == BackendActionTy::Backend_EmitLL)
     mpm.addPass(llvm::PrintModulePass(os));
 
+  // FIXME: This should eventually be replaced by a first-class driver option.
+  // This should be done for both flang and clang simultaneously.
+  // Print a textual, '-passes=' compatible, representation of pipeline if
+  // requested. In this case, don't run the passes. This mimics the behavior of
+  // clang.
+  if (llvm::PrintPipelinePasses) {
+    mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
+      auto passName = pic.getPassNameForClassName(className);
+      return passName.empty() ? className : passName;
+    });
+    llvm::outs() << "\n";
+    return;
+  }
+
   // Run the passes.
   mpm.run(*llvmModule, mam);
+
+  // Cleanup
+  delete tlii;
 }
 
 // This class handles optimization remark messages requested if
@@ -1072,8 +1104,7 @@ public:
     msgStream << diagInfo.getMsg();
 
     // Emit message.
-    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName())
-                         << msgStream.str();
+    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName()) << msg;
   }
 
   void optimizationRemarkHandler(

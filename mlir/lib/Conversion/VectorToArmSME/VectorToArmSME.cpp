@@ -199,8 +199,8 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
 ///   %broadcast_to_tile = scf.for %tile_slice_index = %c0 to %num_tile_slices
 ///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
 ///   {
-///     %tile_update = arm_sme.move_vector_to_tile_slice
-///        %broadcast_to_1d, %iter_tile, %tile_slice_index :
+///     %tile_update = arm_sme.insert_tile_slice
+///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
 ///        vector<[4]xi32> into vector<[4]x[4]xi32>
 ///     scf.yield %tile_update : vector<[4]x[4]xi32>
 ///   }
@@ -238,9 +238,9 @@ struct BroadcastOpToArmSMELowering
 
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value
+      // Create 'arm_sme.insert_tile_slice' to broadcast the value
       // to each tile slice.
-      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+      auto nextTile = b.create<arm_sme::InsertTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
@@ -267,8 +267,8 @@ struct BroadcastOpToArmSMELowering
 ///   %broadcast_to_tile = scf.for %tile_slice_index = %c0 to %num_tile_slices
 ///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
 ///   {
-///     %tile_update = arm_sme.move_vector_to_tile_slice
-///        %broadcast_to_1d, %iter_tile, %tile_slice_index :
+///     %tile_update = arm_sme.insert_tile_slice
+///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
 ///        vector<[4]xi32> into vector<[4]x[4]xi32>
 ///     scf.yield %tile_update : vector<[4]x[4]xi32>
 ///   }
@@ -299,7 +299,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+      auto nextTile = b.create<arm_sme::InsertTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
@@ -497,7 +497,7 @@ struct VectorOuterProductToArmSMELowering
   }
 };
 
-/// Lower `vector.extract` using `arm_sme.move_tile_slice_to_vector`.
+/// Lower `vector.extract` using `arm_sme.extract_tile_slice`.
 ///
 /// Example:
 /// ```
@@ -505,7 +505,7 @@ struct VectorOuterProductToArmSMELowering
 /// ```
 /// Becomes:
 /// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
+/// %slice = arm_sme.extract_tile_slice %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
 /// %el = vector.extract %slice[%col] : i32 from vector<[4]xi32>
 /// ```
@@ -531,27 +531,26 @@ struct VectorExtractToArmSMELowering
     }
 
     Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
-    auto moveTileSliceToVector =
-        rewriter.create<arm_sme::MoveTileSliceToVectorOp>(loc, sourceVector,
-                                                          sliceIndex);
+    auto extractTileSlice = rewriter.create<arm_sme::ExtractTileSliceOp>(
+        loc, sourceVector, sliceIndex);
 
     if (position.size() == 1) {
       // Single index case: Extracts a 1D slice.
-      rewriter.replaceOp(extractOp, moveTileSliceToVector);
+      rewriter.replaceOp(extractOp, extractTileSlice);
       return success();
     }
 
     // Two indices case: Extracts a single element.
     assert(position.size() == 2);
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, moveTileSliceToVector, position[1]);
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, extractTileSlice,
+                                                   position[1]);
 
     return success();
   }
 };
 
-/// Lower `vector.insert` using `arm_sme.move_vector_to_tile_slice` and
-/// `arm_sme.move_tile_slice_to_vector`.
+/// Lower `vector.insert` using `arm_sme.insert_tile_slice` and
+/// `arm_sme.extract_tile_slice`.
 ///
 /// Example:
 /// ```
@@ -560,10 +559,10 @@ struct VectorExtractToArmSMELowering
 /// ```
 /// Becomes:
 /// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
+/// %slice = arm_sme.extract_tile_slice %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
 /// %new_slice = vector.insert %el, %slice[%col] : i32 into vector<[4]xi32>
-/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %row
+/// %new_tile = arm_sme.insert_tile_slice %new_slice, %tile[%row]
 ///               : vector<[4]xi32> into vector<[4]x[4]xi32>
 /// ```
 struct VectorInsertToArmSMELowering
@@ -594,21 +593,21 @@ struct VectorInsertToArmSMELowering
     if (position.size() == 2) {
       // Two indices case: Insert single element into tile.
       // We need to first extract the existing slice and update the element.
-      tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+      tileSlice = rewriter.create<arm_sme::ExtractTileSliceOp>(
           loc, insertOp.getDest(), sliceIndex);
       tileSlice = rewriter.create<vector::InsertOp>(loc, source, tileSlice,
                                                     position[1]);
     }
 
     // Insert the slice into the destination tile.
-    rewriter.replaceOpWithNewOp<arm_sme::MoveVectorToTileSliceOp>(
+    rewriter.replaceOpWithNewOp<arm_sme::InsertTileSliceOp>(
         insertOp, tileSlice, insertOp.getDest(), sliceIndex);
     return success();
   }
 };
 
 /// Lowers `vector.print` of a tile into a loop over the rows of the tile,
-/// extracting them via `arm_sme.move_tile_slice_to_vector`, then printing with
+/// extracting them via `arm_sme.extract_tile_slice`, then printing with
 /// a 1D `vector.print`.
 ///
 ///  BEFORE:
@@ -623,7 +622,7 @@ struct VectorInsertToArmSMELowering
 ///  %vscale = vector.vscale
 ///  %svl_s = arith.muli %c4, %vscale : index
 ///  scf.for %i = %c0 to %svl_s step %c1 {
-///    %tile_slice = arm_sme.move_tile_slice_to_vector %tile[%i]
+///    %tile_slice = arm_sme.extract_tile_slice %tile[%i]
 ///                     : vector<[4]xf32> from vector<[4]x[4]xf32>
 ///    vector.print %tile_slice : vector<[4]xf32>
 ///  }
@@ -655,7 +654,7 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
       rewriter.setInsertionPointToStart(forOp.getBody());
       // Extract the current row from the tile.
       Value rowIndex = forOp.getInductionVar();
-      auto tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+      auto tileSlice = rewriter.create<arm_sme::ExtractTileSliceOp>(
           loc, printOp.getSource(), rowIndex);
       // Print the row with a 1D vector.print.
       rewriter.create<vector::PrintOp>(loc, tileSlice,
@@ -667,11 +666,11 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
   }
 };
 
-/// Folds a MoveTileSliceToVectorOp + TransferWriteOp to a StoreTileSliceOp.
+/// Folds a ExtractTileSliceOp + TransferWriteOp to a StoreTileSliceOp.
 ///
 ///  BEFORE:
 ///  ```mlir
-///  %slice = arm_sme.move_tile_slice_to_vector %tile[%index]
+///  %slice = arm_sme.extract_tile_slice %tile[%index]
 ///             : vector<[4]xf32> from vector<[4]x[4]xf32>
 ///  vector.transfer_write %slice, %memref[%i, %j], %mask {in_bounds = [true]}
 ///             : vector<[4]xf32>, memref<?x?xf32>
@@ -694,11 +693,11 @@ struct FoldTransferWriteOfExtractTileSlice
       return rewriter.notifyMatchFailure(writeOp,
                                          "not inbounds transfer write");
 
-    auto moveTileSlice =
-        writeOp.getVector().getDefiningOp<arm_sme::MoveTileSliceToVectorOp>();
-    if (!moveTileSlice)
+    auto extractTileSlice =
+        writeOp.getVector().getDefiningOp<arm_sme::ExtractTileSliceOp>();
+    if (!extractTileSlice)
       return rewriter.notifyMatchFailure(
-          writeOp, "vector to store not from MoveTileSliceToVectorOp");
+          writeOp, "vector to store not from ExtractTileSliceOp");
 
     AffineMap map = writeOp.getPermutationMap();
     if (!map.isMinorIdentity())
@@ -713,9 +712,9 @@ struct FoldTransferWriteOfExtractTileSlice
     }
 
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
-        writeOp, moveTileSlice.getTile(), moveTileSlice.getTileSliceIndex(),
-        mask, writeOp.getSource(), writeOp.getIndices(),
-        moveTileSlice.getLayout());
+        writeOp, extractTileSlice.getTile(),
+        extractTileSlice.getTileSliceIndex(), mask, writeOp.getSource(),
+        writeOp.getIndices(), extractTileSlice.getLayout());
     return success();
   }
 };

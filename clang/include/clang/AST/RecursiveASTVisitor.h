@@ -652,9 +652,11 @@ bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
 
 #undef DISPATCH_STMT
 
+// Inlining this method can lead to large code size and compile-time increases
+// without any benefit to runtime performance.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S,
-                                                DataRecursionQueue *Queue) {
+LLVM_ATTRIBUTE_NOINLINE bool
+RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S, DataRecursionQueue *Queue) {
   if (!S)
     return true;
 
@@ -1146,6 +1148,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
+                  { TRY_TO(TraverseType(T->getWrappedType())); })
+
 DEF_TRAVERSE_TYPE(ParenType, { TRY_TO(TraverseType(T->getInnerType())); })
 
 DEF_TRAVERSE_TYPE(MacroQualifiedType,
@@ -1443,6 +1448,9 @@ DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(ElaboratedType, {
@@ -2143,8 +2151,11 @@ DEF_TRAVERSE_DECL(DecompositionDecl, {
 })
 
 DEF_TRAVERSE_DECL(BindingDecl, {
-  if (getDerived().shouldVisitImplicitCode())
+  if (getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseStmt(D->getBinding()));
+    if (const auto HoldingVar = D->getHoldingVar())
+      TRY_TO(TraverseDecl(HoldingVar));
+  }
 })
 
 DEF_TRAVERSE_DECL(MSPropertyDecl, { TRY_TO(TraverseDeclaratorHelper(D)); })
@@ -2859,6 +2870,7 @@ DEF_TRAVERSE_STMT(ParenListExpr, {})
 DEF_TRAVERSE_STMT(SYCLUniqueStableNameExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
+DEF_TRAVERSE_STMT(OpenACCAsteriskSizeExpr, {})
 DEF_TRAVERSE_STMT(PredefinedExpr, {})
 DEF_TRAVERSE_STMT(ShuffleVectorExpr, {})
 DEF_TRAVERSE_STMT(ConvertVectorExpr, {})
@@ -3335,6 +3347,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *E : C->getSizesRefs())
+    TRY_TO(TraverseStmt(E));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPPermutationClause(
+    OMPPermutationClause *C) {
+  for (Expr *E : C->getArgsRefs())
     TRY_TO(TraverseStmt(E));
   return true;
 }
@@ -4032,15 +4052,6 @@ bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
 
   for (const auto *C : Clauses)
     TRY_TO(VisitOpenACCClause(C));
-//    if (const auto *WithCond = dyn_cast<OopenACCClauseWithCondition>(C);
-//        WithCond && WIthCond->hasConditionExpr()) {
-//      TRY_TO(TraverseStmt(WithCond->getConditionExpr());
-//    } else if (const auto *
-//  }
-//  OpenACCClauseWithCondition::getConditionExpr/hasConditionExpr
-//OpenACCClauseWithExprs::children (might be null?)
-  // TODO OpenACC: When we have Clauses with expressions, we should visit them
-  // here.
   return true;
 }
 
@@ -4048,6 +4059,30 @@ DEF_TRAVERSE_STMT(OpenACCComputeConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 DEF_TRAVERSE_STMT(OpenACCLoopConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCCombinedConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCDataConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCEnterDataConstruct,
+                  { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCExitDataConstruct,
+                  { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCHostDataConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCWaitConstruct, {
+  if (S->hasDevNumExpr())
+    TRY_TO(TraverseStmt(S->getDevNumExpr()));
+  for (auto *E : S->getQueueIdExprs())
+    TRY_TO(TraverseStmt(E));
+  TRY_TO(VisitOpenACCClauseList(S->clauses()));
+})
+DEF_TRAVERSE_STMT(OpenACCInitConstruct,
+                  { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCShutdownConstruct,
+                  { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+
+// Traverse HLSL: Out argument expression
+DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})
 
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods

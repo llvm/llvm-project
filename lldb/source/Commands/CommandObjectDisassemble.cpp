@@ -51,13 +51,13 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'C':
     if (option_arg.getAsInteger(0, num_lines_context))
-      error.SetErrorStringWithFormat("invalid num context lines string: \"%s\"",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid num context lines string: \"%s\"", option_arg.str().c_str());
     break;
 
   case 'c':
     if (option_arg.getAsInteger(0, num_instructions))
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "invalid num of instructions string: \"%s\"",
           option_arg.str().c_str());
     break;
@@ -114,10 +114,19 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
                           llvm::Triple::x86_64)) {
       flavor_string.assign(std::string(option_arg));
     } else
-      error.SetErrorStringWithFormat("Disassembler flavors are currently only "
-                                     "supported for x86 and x86_64 targets.");
+      error = Status::FromErrorStringWithFormat(
+          "Disassembler flavors are currently only "
+          "supported for x86 and x86_64 targets.");
     break;
   }
+
+  case 'X':
+    cpu_string = std::string(option_arg);
+    break;
+
+  case 'Y':
+    features_string = std::string(option_arg);
+    break;
 
   case 'r':
     raw = true;
@@ -175,20 +184,27 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   Target *target =
       execution_context ? execution_context->GetTargetPtr() : nullptr;
 
-  // This is a hack till we get the ability to specify features based on
-  // architecture.  For now GetDisassemblyFlavor is really only valid for x86
-  // (and for the llvm assembler plugin, but I'm papering over that since that
-  // is the only disassembler plugin we have...
   if (target) {
+    // This is a hack till we get the ability to specify features based on
+    // architecture.  For now GetDisassemblyFlavor is really only valid for x86
+    // (and for the llvm assembler plugin, but I'm papering over that since that
+    // is the only disassembler plugin we have...
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
             llvm::Triple::x86_64) {
       flavor_string.assign(target->GetDisassemblyFlavor());
-    } else
+    } else {
       flavor_string.assign("default");
-
-  } else
+    }
+    if (const char *cpu = target->GetDisassemblyCPU())
+      cpu_string.assign(cpu);
+    if (const char *features = target->GetDisassemblyFeatures())
+      features_string.assign(features);
+  } else {
     flavor_string.assign("default");
+    cpu_string.assign("default");
+    features_string.assign("default");
+  }
 
   arch.Clear();
   some_location_specified = false;
@@ -452,9 +468,11 @@ void CommandObjectDisassemble::DoExecute(Args &command,
 
   const char *plugin_name = m_options.GetPluginName();
   const char *flavor_string = m_options.GetFlavorString();
+  const char *cpu_string = m_options.GetCPUString();
+  const char *features_string = m_options.GetFeaturesString();
 
-  DisassemblerSP disassembler =
-      Disassembler::FindPlugin(m_options.arch, flavor_string, plugin_name);
+  DisassemblerSP disassembler = Disassembler::FindPlugin(
+      m_options.arch, flavor_string, cpu_string, features_string, plugin_name);
 
   if (!disassembler) {
     if (plugin_name) {
@@ -523,7 +541,8 @@ void CommandObjectDisassemble::DoExecute(Args &command,
     }
     if (Disassembler::Disassemble(
             GetDebugger(), m_options.arch, plugin_name, flavor_string,
-            m_exe_ctx, cur_range.GetBaseAddress(), limit, m_options.show_mixed,
+            cpu_string, features_string, m_exe_ctx, cur_range.GetBaseAddress(),
+            limit, m_options.show_mixed,
             m_options.show_mixed ? m_options.num_lines_context : 0, options,
             result.GetOutputStream())) {
       result.SetStatus(eReturnStatusSuccessFinishResult);

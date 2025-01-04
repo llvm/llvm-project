@@ -1181,7 +1181,7 @@ class MDNode : public Metadata {
 
 protected:
   MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt);
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
   ~MDNode() = default;
 
   void *operator new(size_t Size, size_t NumOps, StorageType Storage);
@@ -1456,6 +1456,7 @@ public:
   static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
   static MDNode *getMostGenericFPMath(MDNode *A, MDNode *B);
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
+  static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
@@ -1463,6 +1464,8 @@ public:
   static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
                                        const Instruction *AInstr,
                                        const Instruction *BInstr);
+  static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.
