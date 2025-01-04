@@ -32,7 +32,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator, class _Sentinel>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator __partial_sort_impl(
+_LIBCPP_HIDE_FROM_ABI _RandomAccessIterator __partial_sort_impl(
     _RandomAccessIterator __first, _RandomAccessIterator __middle, _Sentinel __last, _Compare&& __comp) {
   if (__first == __middle) {
     return _IterOps<_AlgPolicy>::next(__middle, __last);
@@ -54,7 +54,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator __part
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator, class _Sentinel>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+_LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
 __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Sentinel __last, _Compare& __comp) {
   if (__first == __middle)
     return _IterOps<_AlgPolicy>::next(__middle, __last);
@@ -70,7 +70,7 @@ __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _S
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void partial_sort(
+inline _LIBCPP_HIDE_FROM_ABI void partial_sort(
     _RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last, _Compare __comp) {
   static_assert(std::is_copy_constructible<_RandomAccessIterator>::value, "Iterators must be copy constructible.");
   static_assert(std::is_copy_assignable<_RandomAccessIterator>::value, "Iterators must be copy assignable.");
@@ -79,7 +79,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void partial_sort(
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+inline _LIBCPP_HIDE_FROM_ABI void
 partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last) {
   std::partial_sort(__first, __middle, __last, __less<>());
 }
