@@ -3257,6 +3257,17 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
       });
 }
 
+/// Matches the dependent name of a dependent scope decl ref expr
+///
+/// Given:
+/// \code
+///  template <class T> class X : T { void f() { T::v; } };
+/// \endcode
+/// \c dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
+AST_MATCHER_P(DependentScopeDeclRefExpr, hasDependentName, std::string, N) {
+  return Node.getDeclName().getAsString() == N;
+}
+
 /// Matches C++ classes that are directly or indirectly derived from a class
 /// matching \c Base, or Objective-C classes that directly or indirectly
 /// subclass a class matching \c Base.
