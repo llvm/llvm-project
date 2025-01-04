@@ -1116,9 +1116,7 @@ def Most : DiagGroup<"most", [
     PrivateExtern,
     SelTypeCast,
     ExternCCompat,
-    UserDefinedWarnings,
-    PreferredTypeBitFieldEnumConversion,
-    PreferredTypeBitFieldWidth 
+    UserDefinedWarnings
  ]>;
 
 // Thread Safety warnings
