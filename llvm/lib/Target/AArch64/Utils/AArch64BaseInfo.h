@@ -371,7 +371,8 @@ namespace AArch64SVCR {
   struct SVCR : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_SVCR_DECL
+  #define GET_SVCRValues_DECL
+  #define GET_SVCRsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -379,7 +380,8 @@ namespace AArch64AT{
   struct AT : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_AT_DECL
+  #define GET_ATValues_DECL
+  #define GET_ATsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -387,7 +389,8 @@ namespace AArch64DB {
   struct DB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DB_DECL
+  #define GET_DBValues_DECL
+  #define GET_DBsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -395,7 +398,8 @@ namespace AArch64DBnXS {
   struct DBnXS : SysAliasImm {
     using SysAliasImm::SysAliasImm;
   };
-  #define GET_DBNXS_DECL
+  #define GET_DBnXSValues_DECL
+  #define GET_DBnXSsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -403,7 +407,8 @@ namespace  AArch64DC {
   struct DC : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DC_DECL
+  #define GET_DCValues_DECL
+  #define GET_DCsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -411,7 +416,8 @@ namespace  AArch64IC {
   struct IC : SysAliasReg {
     using SysAliasReg::SysAliasReg;
   };
-  #define GET_IC_DECL
+  #define GET_ICValues_DECL
+  #define GET_ICsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -419,7 +425,8 @@ namespace  AArch64ISB {
   struct ISB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_ISB_DECL
+  #define GET_ISBValues_DECL
+  #define GET_ISBsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -427,7 +434,8 @@ namespace  AArch64TSB {
   struct TSB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_TSB_DECL
+  #define GET_TSBValues_DECL
+  #define GET_TSBsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -435,7 +443,8 @@ namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PRFM_DECL
+  #define GET_PRFMValues_DECL
+  #define GET_PRFMsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -443,7 +452,8 @@ namespace AArch64SVEPRFM {
   struct SVEPRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-#define GET_SVEPRFM_DECL
+#define GET_SVEPRFMValues_DECL
+#define GET_SVEPRFMsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -451,7 +461,8 @@ namespace AArch64RPRFM {
 struct RPRFM : SysAlias {
   using SysAlias::SysAlias;
 };
-#define GET_RPRFM_DECL
+#define GET_RPRFMValues_DECL
+#define GET_RPRFMsList_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64RPRFM
 
@@ -460,7 +471,8 @@ namespace AArch64SVEPredPattern {
     const char *Name;
     uint16_t Encoding;
   };
-#define GET_SVEPREDPAT_DECL
+#define GET_SVEPREDPATValues_DECL
+#define GET_SVEPREDPATsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -469,7 +481,8 @@ namespace AArch64SVEVecLenSpecifier {
     const char *Name;
     uint16_t Encoding;
   };
-#define GET_SVEVECLENSPECIFIER_DECL
+#define GET_SVEVECLENSPECIFIERValues_DECL
+#define GET_SVEVECLENSPECIFIERsList_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64SVEVecLenSpecifier
 
@@ -556,7 +569,8 @@ namespace AArch64ExactFPImm {
     int Enum;
     const char *Repr;
   };
-#define GET_EXACTFPIMM_DECL
+#define GET_ExactFPImmValues_DECL
+#define GET_ExactFPImmsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -564,13 +578,15 @@ namespace AArch64PState {
   struct PStateImm0_15 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PSTATEIMM0_15_DECL
+  #define GET_PStateImm0_15Values_DECL
+  #define GET_PStateImm0_15sList_DECL
   #include "AArch64GenSystemOperands.inc"
 
   struct PStateImm0_1 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PSTATEIMM0_1_DECL
+  #define GET_PStateImm0_1Values_DECL
+  #define GET_PStateImm0_1sList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -578,7 +594,8 @@ namespace AArch64PSBHint {
   struct PSB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PSB_DECL
+  #define GET_PSBValues_DECL
+  #define GET_PSBsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -595,7 +612,8 @@ struct PHint {
   }
 };
 
-#define GET_PHINT_DECL
+#define GET_PHintValues_DECL
+#define GET_PHintsList_DECL
 #include "AArch64GenSystemOperands.inc"
 
 const PHint *lookupPHintByName(StringRef);
@@ -606,7 +624,8 @@ namespace AArch64BTIHint {
   struct BTI : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_BTI_DECL
+  #define GET_BTIValues_DECL
+  #define GET_BTIsList_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 
@@ -713,7 +732,8 @@ namespace AArch64SysReg {
     }
   };
 
-  #define GET_SYSREG_DECL
+  #define GET_SysRegsList_DECL
+  #define GET_SysRegValues_DECL
   #include "AArch64GenSystemOperands.inc"
 
   const SysReg *lookupSysRegByName(StringRef);
