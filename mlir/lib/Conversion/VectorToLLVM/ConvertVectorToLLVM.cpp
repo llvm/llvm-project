@@ -1099,10 +1099,7 @@ public:
     for (unsigned idx = 0; idx < positionVec.size(); ++idx) {
       if (auto position = llvm::dyn_cast<Value>(positionVec[idx])) {
         auto defOp = position.getDefiningOp();
-        while (true) {
-          if (!defOp) {
-            break;
-          }
+        while (defOp) {
           if (llvm::isa<arith::ConstantOp, LLVM::ConstantOp>(defOp)) {
             Attribute value =
                 defOp->getAttr(arith::ConstantOp::getAttributeNames()[0]);
@@ -1254,6 +1251,25 @@ public:
 
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
+    for (unsigned idx = 0; idx < positionVec.size(); ++idx) {
+      if (auto position = llvm::dyn_cast<Value>(positionVec[idx])) {
+        auto defOp = position.getDefiningOp();
+        while (defOp) {
+          if (llvm::isa<arith::ConstantOp, LLVM::ConstantOp>(defOp)) {
+            Attribute value =
+                defOp->getAttr(arith::ConstantOp::getAttributeNames()[0]);
+            positionVec[idx] = OpFoldResult{
+                rewriter.getI64IntegerAttr(cast<IntegerAttr>(value).getInt())};
+            break;
+          } else if (auto unrealizedCastOp =
+                         llvm::dyn_cast<UnrealizedConversionCastOp>(defOp)) {
+            defOp = unrealizedCastOp.getOperand(0).getDefiningOp();
+          } else {
+            break;
+          }
+        }
+      }
+    }
 
     // Overwrite entire vector with value. Should be handled by folder, but
     // just to be safe.
@@ -1265,8 +1281,9 @@ public:
 
     // One-shot insertion of a vector into an array (only requires insertvalue).
     if (isa<VectorType>(sourceType)) {
-      if (insertOp.hasDynamicPosition())
+      if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
         return failure();
+      }
 
       Value inserted = rewriter.create<LLVM::InsertValueOp>(
           loc, adaptor.getDest(), adaptor.getSource(), getAsIntegers(position));
@@ -1278,8 +1295,9 @@ public:
     Value extracted = adaptor.getDest();
     auto oneDVectorType = destVectorType;
     if (position.size() > 1) {
-      if (insertOp.hasDynamicPosition())
+      if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
         return failure();
+      }
 
       oneDVectorType = reducedVectorTypeBack(destVectorType);
       extracted = rewriter.create<LLVM::ExtractValueOp>(
@@ -1293,8 +1311,9 @@ public:
 
     // Potential insertion of resulting 1-D vector into array.
     if (position.size() > 1) {
-      if (insertOp.hasDynamicPosition())
+      if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
         return failure();
+      }
 
       inserted = rewriter.create<LLVM::InsertValueOp>(
           loc, adaptor.getDest(), inserted,
