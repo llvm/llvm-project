@@ -179,7 +179,7 @@ jobs:
     needs: prepare
     if: >-
       github.repository == 'llvm/llvm-project'
-    runs-on: ${{ needs.prepare.outputs.runs-on }}
+    runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
     - name: Checkout Actions
@@ -322,8 +322,8 @@ jobs:
         upload \
         --files ${{ needs.prepare.outputs.release-binary-filename }}*
 
-  test-stage3:
-    name: "Test Stage 3"
+  test-release:
+    name: "Test Release"
     needs:
       - prepare
       - build-release-package
