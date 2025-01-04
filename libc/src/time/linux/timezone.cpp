@@ -11,8 +11,8 @@
 #include <unistd.h>
 
 #include "src/__support/common.h"
-#include "src/time/time_utils.h"
 #include "src/time/linux/timezone.h"
+#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
