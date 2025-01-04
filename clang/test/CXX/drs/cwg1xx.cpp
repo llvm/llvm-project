@@ -1074,6 +1074,26 @@ namespace cwg169 { // cwg169: yes
   };
 }
 
+namespace cwg170 { // cwg170: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : A { int i; };
+struct C : A {};
+struct D : C {};
+
+constexpr int f(int A::*) { return 0; }
+constexpr int g(int C::*) { return 0; }
+constexpr int h(int D::*) { return 0; }
+
+constexpr auto p = static_cast<int A::*>(&B::i);
+constexpr auto q = f(p);
+constexpr auto r = g(p);
+// since-cxx11-error@-1 {{constexpr variable 'r' must be initialized by a constant expression}}
+constexpr auto s = h(p);
+// since-cxx11-error@-1 {{constexpr variable 's' must be initialized by a constant expression}}
+#endif
+} // namespace cwg170
+
 namespace { // cwg171: 3.4
   int cwg171a;
 }
