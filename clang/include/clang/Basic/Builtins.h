@@ -102,6 +102,9 @@ public:
   /// e.g. "__builtin_abs".
   llvm::StringRef getName(unsigned ID) const { return getRecord(ID).Name; }
 
+  /// Return a quoted name for the specified builtin for use in diagnostics.
+  std::string getQuotedName(unsigned ID) const;
+
   /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const { return getRecord(ID).Type; }
 

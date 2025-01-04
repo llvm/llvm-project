@@ -487,11 +487,9 @@ void VPBasicBlock::execute(VPTransformState *State) {
   };
 
   // 1. Create an IR basic block.
-  if (this == getPlan()->getVectorPreheader() ||
-      (Replica && this == getParent()->getEntry()) ||
+  if ((Replica && this == getParent()->getEntry()) ||
       IsReplicateRegion(getSingleHierarchicalPredecessor())) {
     // Reuse the previous basic block if the current VPBB is either
-    //  * the vector preheader,
     //  * the entry to a replicate region, or
     //  * the exit of a replicate region.
     State->CFG.VPBB2IRBB[this] = NewBB;
