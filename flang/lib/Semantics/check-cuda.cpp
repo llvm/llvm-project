@@ -110,10 +110,13 @@ struct FindHostArray
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
+          !symbol.attrs().test(Fortran::semantics::Attr::PARAMETER) &&
           (!details->cudaDataAttr() ||
               (details->cudaDataAttr() &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
         return &symbol;
       }
@@ -299,6 +302,14 @@ private:
             [&](const common::Indirection<parser::IfConstruct> &x) {
               Check(x.value());
             },
+            [&](const common::Indirection<parser::CaseConstruct> &x) {
+              const auto &caseList{
+                  std::get<std::list<parser::CaseConstruct::Case>>(
+                      x.value().t)};
+              for (const parser::CaseConstruct::Case &c : caseList) {
+                Check(std::get<parser::Block>(c.t));
+              }
+            },
             [&](const auto &x) {
               if (auto source{parser::GetSource(x)}) {
                 context_.Say(*source,
@@ -340,13 +351,29 @@ private:
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
-          "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+          "Host array '%s' cannot be present in device context"_err_en_US,
           hostArray->name());
+    }
+  }
+  void ErrorInCUFKernel(parser::CharBlock source) {
+    if (IsCUFKernelDo) {
+      context_.Say(
+          source, "Statement may not appear in cuf kernel code"_err_en_US);
     }
   }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::CycleStmt> &) {
+              ErrorInCUFKernel(source);
+            },
+            [&](const common::Indirection<parser::ExitStmt> &) {
+              ErrorInCUFKernel(source);
+            },
+            [&](const common::Indirection<parser::GotoStmt> &) {
+              ErrorInCUFKernel(source);
+            },
+            [&](const common::Indirection<parser::StopStmt> &) { return; },
             [&](const common::Indirection<parser::PrintStmt> &) {},
             [&](const common::Indirection<parser::WriteStmt> &x) {
               if (x.value().format) { // Formatted write to '*' or '6'
@@ -387,13 +414,10 @@ private:
               Check(x.value());
             },
             [&](const common::Indirection<parser::AssignmentStmt> &x) {
-              if (IsCUFKernelDo) {
-                const evaluate::Assignment *assign{
-                    semantics::GetAssignment(x.value())};
-                if (assign) {
-                  ErrorIfHostSymbol(assign->lhs, source);
-                  ErrorIfHostSymbol(assign->rhs, source);
-                }
+              if (const evaluate::Assignment *
+                  assign{semantics::GetAssignment(x.value())}) {
+                ErrorIfHostSymbol(assign->lhs, source);
+                ErrorIfHostSymbol(assign->rhs, source);
               }
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));

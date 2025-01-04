@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_SWAP_H
-#define _LIBCPP___UTILITY_SWAP_H
+#ifndef _LIBCPP___CXX03___UTILITY_SWAP_H
+#define _LIBCPP___CXX03___UTILITY_SWAP_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_assignable.h>
@@ -56,4 +56,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_SWAP_H
+#endif // _LIBCPP___CXX03___UTILITY_SWAP_H

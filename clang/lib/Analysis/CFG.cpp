@@ -760,6 +760,7 @@ private:
   void cleanupConstructionContext(Expr *E);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
+
   CFGBlock *createBlock(bool add_successor = true);
   CFGBlock *createNoReturnBlock();
 
@@ -818,15 +819,21 @@ private:
     B->appendStmt(const_cast<Stmt*>(S), cfg->getBumpVectorContext());
   }
 
-  void appendConstructor(CFGBlock *B, CXXConstructExpr *CE) {
+  void appendConstructor(CXXConstructExpr *CE) {
+    CXXConstructorDecl *C = CE->getConstructor();
+    if (C && C->isNoReturn())
+      Block = createNoReturnBlock();
+    else
+      autoCreateBlock();
+
     if (const ConstructionContext *CC =
             retrieveAndCleanupConstructionContext(CE)) {
-      B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
+      Block->appendConstructor(CE, CC, cfg->getBumpVectorContext());
       return;
     }
 
     // No valid construction context found. Fall back to statement.
-    B->appendStmt(CE, cfg->getBumpVectorContext());
+    Block->appendStmt(CE, cfg->getBumpVectorContext());
   }
 
   void appendCall(CFGBlock *B, CallExpr *CE) {
@@ -4832,9 +4839,7 @@ CFGBlock *CFGBuilder::VisitCXXConstructExpr(CXXConstructExpr *C,
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
   findConstructionContextsForArguments(C);
-
-  autoCreateBlock();
-  appendConstructor(Block, C);
+  appendConstructor(C);
 
   return VisitChildren(C);
 }
@@ -4892,16 +4897,15 @@ CFGBlock *CFGBuilder::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *E,
   return Visit(E->getSubExpr(), asc);
 }
 
-CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *C,
+CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E,
                                                   AddStmtChoice asc) {
   // If the constructor takes objects as arguments by value, we need to properly
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
-  findConstructionContextsForArguments(C);
+  findConstructionContextsForArguments(E);
+  appendConstructor(E);
 
-  autoCreateBlock();
-  appendConstructor(Block, C);
-  return VisitChildren(C);
+  return VisitChildren(E);
 }
 
 CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,

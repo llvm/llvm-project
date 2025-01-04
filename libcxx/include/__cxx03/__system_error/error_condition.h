@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
 
 #include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
@@ -127,4 +127,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<error_condition> : public __unary_function<erro
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H

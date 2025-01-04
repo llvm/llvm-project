@@ -10,6 +10,7 @@
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"

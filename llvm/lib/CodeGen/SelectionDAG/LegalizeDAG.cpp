@@ -1394,7 +1394,7 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   Visited.insert(Op.getNode());
   Worklist.push_back(Idx.getNode());
   SDValue StackPtr, Ch;
-  for (SDNode *User : Vec.getNode()->uses()) {
+  for (SDNode *User : Vec.getNode()->users()) {
     if (StoreSDNode *ST = dyn_cast<StoreSDNode>(User)) {
       if (ST->isIndexed() || ST->isTruncatingStore() ||
           ST->getValue() != Vec)
@@ -2104,7 +2104,7 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
     InChain = TCChain;
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, isSigned);
+  bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, isSigned);
   CLI.setDebugLoc(SDLoc(Node))
       .setChain(InChain)
       .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
@@ -2135,7 +2135,7 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = Op;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, isSigned);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, isSigned);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
@@ -2293,7 +2293,7 @@ static bool useSinCos(SDNode *Node) {
     ? ISD::FCOS : ISD::FSIN;
 
   SDValue Op0 = Node->getOperand(0);
-  for (const SDNode *User : Op0.getNode()->uses()) {
+  for (const SDNode *User : Op0.getNode()->users()) {
     if (User == Node)
       continue;
     // The other user might have been turned into sincos already.
@@ -2330,10 +2330,10 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
   const int Precision = APFloat::semanticsPrecision(FltSem);
 
-  const SDValue MaxExp = DAG.getConstant(MaxExpVal, dl, ExpVT);
-  const SDValue MinExp = DAG.getConstant(MinExpVal, dl, ExpVT);
+  const SDValue MaxExp = DAG.getSignedConstant(MaxExpVal, dl, ExpVT);
+  const SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
 
-  const SDValue DoubleMaxExp = DAG.getConstant(2 * MaxExpVal, dl, ExpVT);
+  const SDValue DoubleMaxExp = DAG.getSignedConstant(2 * MaxExpVal, dl, ExpVT);
 
   const APFloat One(FltSem, "1.0");
   APFloat ScaleUpK = scalbn(One, MaxExpVal, APFloat::rmNearestTiesToEven);
@@ -2375,7 +2375,7 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   SDValue IncN0 = DAG.getNode(ISD::ADD, dl, ExpVT, N, Increment0, NUW_NSW);
 
   SDValue ClampMinVal =
-      DAG.getConstant(3 * MinExpVal + 2 * Precision, dl, ExpVT);
+      DAG.getSignedConstant(3 * MinExpVal + 2 * Precision, dl, ExpVT);
   SDValue ClampN_Small = DAG.getNode(ISD::SMAX, dl, ExpVT, N, ClampMinVal);
   SDValue IncN1 =
       DAG.getNode(ISD::ADD, dl, ExpVT, ClampN_Small, Increment1, NSW);
@@ -2385,8 +2385,8 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   SDValue ScaleDown1 = DAG.getNode(ISD::FMUL, dl, VT, ScaleDown0, ScaleDownVal);
 
   SDValue ScaleDownTwice = DAG.getSetCC(
-      dl, SetCCVT, N, DAG.getConstant(2 * MinExpVal + Precision, dl, ExpVT),
-      ISD::SETULT);
+      dl, SetCCVT, N,
+      DAG.getSignedConstant(2 * MinExpVal + Precision, dl, ExpVT), ISD::SETULT);
 
   SDValue SelectN_Small =
       DAG.getNode(ISD::SELECT, dl, ExpVT, ScaleDownTwice, IncN1, IncN0);
@@ -4794,7 +4794,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
                              NVT, Node->getOperand(IsStrict ? 1 : 0));
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setSExt(Signed);
+    CallOptions.setIsSigned(Signed);
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, dl, Chain);
     Results.push_back(Tmp.first);
@@ -5277,7 +5277,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1,
-                         DAG.getIntPtrConstant(0, dl));
+                         DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
     Results.push_back(Tmp1);
     break;
   }
@@ -5425,7 +5425,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp1 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp3, Tmp1, Tmp2});
     Tmp1 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp1.getValue(1), Tmp1, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp1.getValue(1), Tmp1,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp1);
     Results.push_back(Tmp1.getValue(1));
     break;
@@ -5450,7 +5451,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp4 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp4, Tmp1, Tmp2, Tmp3});
     Tmp4 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp4.getValue(1), Tmp4, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp4.getValue(1), Tmp4,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp4);
     Results.push_back(Tmp4.getValue(1));
     break;
@@ -5472,13 +5474,27 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(isTrunc, dl, /*isTarget=*/true)));
     break;
   }
+  case ISD::STRICT_FLDEXP: {
+    Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(1)});
+    Tmp2 = Node->getOperand(2);
+    Tmp3 = DAG.getNode(ISD::STRICT_FLDEXP, dl, {NVT, MVT::Other},
+                       {Tmp1.getValue(1), Tmp1, Tmp2});
+    Tmp4 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
+                       {Tmp3.getValue(1), Tmp3,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
+    Results.push_back(Tmp4);
+    Results.push_back(Tmp4.getValue(1));
+    break;
+  }
   case ISD::STRICT_FPOWI:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
                        {Node->getOperand(0), Node->getOperand(1)});
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp1.getValue(1), Tmp1, Node->getOperand(2)});
     Tmp3 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp2.getValue(1), Tmp2, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp2.getValue(1), Tmp2,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
     break;
@@ -5562,7 +5578,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp1.getValue(1), Tmp1});
     Tmp3 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp2.getValue(1), Tmp2, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp2.getValue(1), Tmp2,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
     break;

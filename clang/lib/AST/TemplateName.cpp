@@ -151,13 +151,13 @@ TemplateName::NameKind TemplateName::getKind() const {
     return Template;
   }
 
-  if (Storage.is<DependentTemplateName *>())
+  if (isa<DependentTemplateName *>(Storage))
     return DependentTemplate;
-  if (Storage.is<QualifiedTemplateName *>())
+  if (isa<QualifiedTemplateName *>(Storage))
     return QualifiedTemplate;
 
-  UncommonTemplateNameStorage *uncommon
-    = Storage.get<UncommonTemplateNameStorage*>();
+  UncommonTemplateNameStorage *uncommon =
+      cast<UncommonTemplateNameStorage *>(Storage);
   if (uncommon->getAsOverloadedStorage())
     return OverloadedTemplate;
   if (uncommon->getAsAssumedTemplateName())

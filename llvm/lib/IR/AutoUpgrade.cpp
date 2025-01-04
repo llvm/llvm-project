@@ -5559,7 +5559,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
-  if (T.isSPARC() || (T.isMIPS64() && !DL.contains("m:m"))) {
+  if (T.isSPARC() || (T.isMIPS64() && !DL.contains("m:m")) || T.isPPC64() ||
+      T.isWasm()) {
     // Mips64 with o32 ABI did not add "-i128:128".
     // Add "-i128:128"
     std::string I64 = "-i64:64";

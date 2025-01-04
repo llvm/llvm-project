@@ -313,9 +313,8 @@ define void @one_dimensional_with_store(ptr %a, ptr %b, ptr %c, i32 %N) {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w9, w10
 ; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    csinv w9, w9, wzr, hs
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    sub w9, w9, w10
 ; CHECK-NEXT:    strb w9, [x2], #1
 ; CHECK-NEXT:    b.ne .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %for.exit
@@ -499,16 +498,16 @@ for.exit:                                 ; preds = %for.body
 
 @a = external local_unnamed_addr global i32, align 4
 
-; FIXME: Load hoisted out of the loop across memory barriers.
+; Make sure the load is not hoisted out of the loop across memory barriers.
 define i32 @load_between_memory_barriers() {
 ; CHECK-LABEL: load_between_memory_barriers:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
-; CHECK-NEXT:    ldr w0, [x8]
 ; CHECK-NEXT:  .LBB8_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    //MEMBARRIER
+; CHECK-NEXT:    ldr w0, [x8]
 ; CHECK-NEXT:    //MEMBARRIER
 ; CHECK-NEXT:    cbz w0, .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %exit

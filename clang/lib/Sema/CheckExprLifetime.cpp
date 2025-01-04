@@ -9,6 +9,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -203,6 +204,7 @@ struct IndirectLocalPathEntry {
     GslPointerInit,
     GslPointerAssignment,
     DefaultArg,
+    ParenAggInit,
   } Kind;
   Expr *E;
   union {
@@ -253,9 +255,35 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  if (auto *RD = Type->getAsCXXRecordDecl())
-    return RD->hasAttr<T>();
-  return false;
+  auto *RD = Type->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // Generally, if a primary template class declaration is annotated with an
+  // attribute, all its specializations generated from template instantiations
+  // should inherit the attribute.
+  //
+  // However, since lifetime analysis occurs during parsing, we may encounter
+  // cases where a full definition of the specialization is not required. In
+  // such cases, the specialization declaration remains incomplete and lacks the
+  // attribute. Therefore, we fall back to checking the primary template class.
+  //
+  // Note: it is possible for a specialization declaration to have an attribute
+  // even if the primary template does not.
+  //
+  // FIXME: What if the primary template and explicit specialization
+  // declarations have conflicting attributes? We should consider diagnosing
+  // this scenario.
+  bool Result = RD->hasAttr<T>();
+
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
+
+  return Result;
+}
+
+bool isPointerLikeType(QualType QT) {
+  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
+         QT->isNullPtrType();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
@@ -274,11 +302,6 @@ static bool isInStlNamespace(const Decl *D) {
     }
 
   return DC->isStdNamespace();
-}
-
-static bool isPointerLikeType(QualType Type) {
-  return isRecordWithAttr<PointerAttr>(Type) || Type->isPointerType() ||
-         Type->isNullPtrType();
 }
 
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
@@ -344,6 +367,8 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
+      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+        return false;
       return OO == OverloadedOperatorKind::OO_Subscript ||
              OO == OverloadedOperatorKind::OO_Star;
     }
@@ -490,7 +515,7 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
       if (MD && MD->isCXXInstanceMember())
         LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
       else
-        LHST = MD->getParamDecl(0)->getType();
+        LHST = FD->getParamDecl(0)->getType();
       if (Ctx.hasSameType(RetT, LHST))
         return true;
     }
@@ -498,7 +523,7 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
   return false;
 }
 
-static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
@@ -557,6 +582,15 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     //   Temp().ptr; // Here ptr might not dangle.
     if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
       return;
+    // Avoid false positives when the object is constructed from a conditional
+    // operator argument. A common case is:
+    //   // 'ptr' might not be owned by the Owner object.
+    //   std::string_view s = cond() ? Owner().ptr : sv;
+    if (const auto *Cond =
+            dyn_cast<AbstractConditionalOperator>(Arg->IgnoreImpCasts());
+        Cond && isPointerLikeType(Cond->getType()))
+      return;
+
     auto ReturnType = Callee->getReturnType();
 
     // Once we initialized a value with a non gsl-owner reference, it can no
@@ -622,6 +656,26 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       Arg = DAE->getExpr();
     }
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    else if (const auto *CaptureAttr =
+                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             CaptureAttr && isa<CXXConstructorDecl>(Callee) &&
+             llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
+               return ArgIdx == LifetimeCaptureByAttr::THIS;
+             }))
+      // `lifetime_capture_by(this)` in a class constructor has the same
+      // semantics as `lifetimebound`:
+      //
+      // struct Foo {
+      //   const int& a;
+      //   // Equivalent to Foo(const int& t [[clang::lifetimebound]])
+      //   Foo(const int& t [[clang::lifetime_capture_by(this)]]) : a(t) {}
+      // };
+      //
+      // In the implementation, `lifetime_capture_by` is treated as an alias for
+      // `lifetimebound` and shares the same code path. This implies the emitted
+      // diagnostics will be emitted under `-Wdangling`, not
+      // `-Wdangling-capture`.
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
@@ -961,6 +1015,17 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
   if (isa<CallExpr>(Init) || isa<CXXConstructExpr>(Init))
     return visitFunctionCallArguments(Path, Init, Visit);
 
+  if (auto *CPE = dyn_cast<CXXParenListInitExpr>(Init)) {
+    RevertToOldSizeRAII RAII(Path);
+    Path.push_back({IndirectLocalPathEntry::ParenAggInit, CPE});
+    for (auto *I : CPE->getInitExprs()) {
+      if (I->isGLValue())
+        visitLocalsRetainedByReferenceBinding(Path, I, RK_ReferenceBinding,
+                                              Visit);
+      else
+        visitLocalsRetainedByInitializer(Path, I, Visit, true);
+    }
+  }
   switch (Init->getStmtClass()) {
   case Stmt::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(Init);
@@ -1035,14 +1100,13 @@ enum PathLifetimeKind {
 /// supposed to lifetime-extend along.
 static PathLifetimeKind
 shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
-  PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
       return PathLifetimeKind::Extend;
-    else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
+    if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
-  return Kind;
+  return PathLifetimeKind::Extend;
 }
 
 /// Find the range for the first interesting entry in the path at or after I.
@@ -1057,6 +1121,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslPointerAssignment:
+    case IndirectLocalPathEntry::ParenAggInit:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
       break;
@@ -1097,6 +1162,86 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
   }
   return false;
 }
+// Result of analyzing the Path for GSLPointer.
+enum AnalysisResult {
+  // Path does not correspond to a GSLPointer.
+  NotGSLPointer,
+
+  // A relevant case was identified.
+  Report,
+  // Stop the entire traversal.
+  Abandon,
+  // Skip this step and continue traversing inner AST nodes.
+  Skip,
+};
+// Analyze cases where a GSLPointer is initialized or assigned from a
+// temporary owner object.
+static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
+                                               Local L) {
+  if (!pathOnlyHandlesGslPointer(Path))
+    return NotGSLPointer;
+
+  // At this point, Path represents a series of operations involving a
+  // GSLPointer, either in the process of initialization or assignment.
+
+  // Note: A LifetimeBoundCall can appear interleaved in this sequence.
+  // For example:
+  //    const std::string& Ref(const std::string& a [[clang::lifetimebound]]);
+  //    string_view abc = Ref(std::string());
+  // The "Path" is [GSLPointerInit, LifetimeboundCall], where "L" is the
+  // temporary "std::string()" object. We need to check the return type of the
+  // function with the lifetimebound attribute.
+  if (Path.back().Kind == IndirectLocalPathEntry::LifetimeBoundCall) {
+    // The lifetimebound applies to the implicit object parameter of a method.
+    const FunctionDecl *FD =
+        llvm::dyn_cast_or_null<FunctionDecl>(Path.back().D);
+    // The lifetimebound applies to a function parameter.
+    if (const auto *PD = llvm::dyn_cast<ParmVarDecl>(Path.back().D))
+      FD = llvm::dyn_cast<FunctionDecl>(PD->getDeclContext());
+
+    if (isa_and_present<CXXConstructorDecl>(FD)) {
+      // Constructor case: the parameter is annotated with lifetimebound
+      //   e.g., GSLPointer(const S& s [[clang::lifetimebound]])
+      // We still respect this case even the type S is not an owner.
+      return Report;
+    }
+    // Check the return type, e.g.
+    //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
+    if (FD &&
+        ((FD->getReturnType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
+         isPointerLikeType(FD->getReturnType())))
+      return Report;
+
+    return Abandon;
+  }
+
+  if (isa<DeclRefExpr>(L)) {
+    // We do not want to follow the references when returning a pointer
+    // originating from a local owner to avoid the following false positive:
+    //   int &p = *localUniquePtr;
+    //   someContainer.add(std::move(localUniquePtr));
+    //   return p;
+    if (!pathContainsInit(Path) && isRecordWithAttr<OwnerAttr>(L->getType()))
+      return Report;
+    return Abandon;
+  }
+
+  // The GSLPointer is from a temporary object.
+  auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
+
+  bool IsGslPtrValueFromGslTempOwner =
+      MTE && !MTE->getExtendingDecl() &&
+      isRecordWithAttr<OwnerAttr>(MTE->getType());
+  // Skipping a chain of initializing gsl::Pointer annotated objects.
+  // We are looking only for the final source to find out if it was
+  // a local or temporary owner or the address of a local
+  // variable/param.
+  if (!IsGslPtrValueFromGslTempOwner)
+    return Skip;
+  return Report;
+}
 
 static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
   return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
@@ -1134,27 +1279,17 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
 
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
-    bool IsGslPtrValueFromGslTempOwner = false;
-    if (pathOnlyHandlesGslPointer(Path)) {
-      if (isa<DeclRefExpr>(L)) {
-        // We do not want to follow the references when returning a pointer
-        // originating from a local owner to avoid the following false positive:
-        //   int &p = *localUniquePtr;
-        //   someContainer.add(std::move(localUniquePtr));
-        //   return p;
-        if (pathContainsInit(Path) ||
-            !isRecordWithAttr<OwnerAttr>(L->getType()))
-          return false;
-      } else {
-        IsGslPtrValueFromGslTempOwner =
-            MTE && !MTE->getExtendingDecl() &&
-            isRecordWithAttr<OwnerAttr>(MTE->getType());
-        // Skipping a chain of initializing gsl::Pointer annotated objects.
-        // We are looking only for the final source to find out if it was
-        // a local or temporary owner or the address of a local variable/param.
-        if (!IsGslPtrValueFromGslTempOwner)
-          return true;
-      }
+    bool IsGslPtrValueFromGslTempOwner = true;
+    switch (analyzePathForGSLPointer(Path, L)) {
+    case Abandon:
+      return false;
+    case Skip:
+      return true;
+    case NotGSLPointer:
+      IsGslPtrValueFromGslTempOwner = false;
+      LLVM_FALLTHROUGH;
+    case Report:
+      break;
     }
 
     switch (LK) {
@@ -1368,6 +1503,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       switch (Elem.Kind) {
       case IndirectLocalPathEntry::AddressOf:
       case IndirectLocalPathEntry::LValToRVal:
+      case IndirectLocalPathEntry::ParenAggInit:
         // These exist primarily to mark the path as not permitting or
         // supporting lifetime extension.
         break;

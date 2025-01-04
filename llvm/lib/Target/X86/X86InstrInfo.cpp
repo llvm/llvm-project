@@ -451,13 +451,10 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
     return -(I->getOperand(1).getImm());
   }
 
-  // Handle other opcodes we reasonably expect to see in call
-  // sequences. Note this may include spill/restore of FP/BP.
+  // Currently handle only PUSHes we can reasonably expect to see
+  // in call sequences
   switch (MI.getOpcode()) {
   default:
-    assert(!(MI.modifiesRegister(X86::RSP, &RI) ||
-             MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP)) &&
-           "Unhandled opcode in getSPAdjust");
     return 0;
   case X86::PUSH32r:
   case X86::PUSH32rmm:
@@ -469,30 +466,6 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
   case X86::PUSH64rmr:
   case X86::PUSH64i32:
     return 8;
-  case X86::POP32r:
-  case X86::POP32rmm:
-  case X86::POP32rmr:
-    return -4;
-  case X86::POP64r:
-  case X86::POP64rmm:
-  case X86::POP64rmr:
-    return -8;
-  // FIXME: (implement and) use isAddImmediate in the
-  // default case instead of the following ADD/SUB cases.
-  case X86::ADD32ri:
-  case X86::ADD32ri8:
-  case X86::ADD64ri32:
-    if (MI.getOperand(0).getReg() == X86::RSP &&
-        MI.getOperand(1).getReg() == X86::RSP)
-      return -MI.getOperand(2).getImm();
-    return 0;
-  case X86::SUB32ri:
-  case X86::SUB32ri8:
-  case X86::SUB64ri32:
-    if (MI.getOperand(0).getReg() == X86::RSP &&
-        MI.getOperand(1).getReg() == X86::RSP)
-      return MI.getOperand(2).getImm();
-    return 0;
   }
 }
 
@@ -6998,16 +6971,16 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSSZrri:
   case X86::VGETMANTSSZrrib:
   case X86::VGETMANTSSZrmi:
-  case X86::VRNDSCALESDZr:
-  case X86::VRNDSCALESDZr_Int:
-  case X86::VRNDSCALESDZrb_Int:
-  case X86::VRNDSCALESDZm:
-  case X86::VRNDSCALESDZm_Int:
-  case X86::VRNDSCALESSZr:
-  case X86::VRNDSCALESSZr_Int:
-  case X86::VRNDSCALESSZrb_Int:
-  case X86::VRNDSCALESSZm:
-  case X86::VRNDSCALESSZm_Int:
+  case X86::VRNDSCALESDZrri:
+  case X86::VRNDSCALESDZrri_Int:
+  case X86::VRNDSCALESDZrrib_Int:
+  case X86::VRNDSCALESDZrmi:
+  case X86::VRNDSCALESDZrmi_Int:
+  case X86::VRNDSCALESSZrri:
+  case X86::VRNDSCALESSZrri_Int:
+  case X86::VRNDSCALESSZrrib_Int:
+  case X86::VRNDSCALESSZrmi:
+  case X86::VRNDSCALESSZrmi_Int:
   case X86::VRCP14SDZrr:
   case X86::VRCP14SDZrm:
   case X86::VRCP14SSZrr:
@@ -7025,11 +6998,11 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSHZrri:
   case X86::VGETMANTSHZrrib:
   case X86::VGETMANTSHZrmi:
-  case X86::VRNDSCALESHZr:
-  case X86::VRNDSCALESHZr_Int:
-  case X86::VRNDSCALESHZrb_Int:
-  case X86::VRNDSCALESHZm:
-  case X86::VRNDSCALESHZm_Int:
+  case X86::VRNDSCALESHZrri:
+  case X86::VRNDSCALESHZrri_Int:
+  case X86::VRNDSCALESHZrrib_Int:
+  case X86::VRNDSCALESHZrmi:
+  case X86::VRNDSCALESHZrmi_Int:
   case X86::VSQRTSHZr:
   case X86::VSQRTSHZr_Int:
   case X86::VSQRTSHZrb_Int:
@@ -7673,8 +7646,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::CVTSS2SDrr_Int:
     case X86::VCVTSS2SDrr_Int:
     case X86::VCVTSS2SDZrr_Int:
-    case X86::VCVTSS2SDZrr_Intk:
-    case X86::VCVTSS2SDZrr_Intkz:
+    case X86::VCVTSS2SDZrrk_Int:
+    case X86::VCVTSS2SDZrrkz_Int:
     case X86::CVTSS2SIrr_Int:
     case X86::CVTSS2SI64rr_Int:
     case X86::VCVTSS2SIrr_Int:
@@ -7727,21 +7700,21 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::SUBSSrr_Int:
     case X86::VSUBSSrr_Int:
     case X86::VSUBSSZrr_Int:
-    case X86::VADDSSZrr_Intk:
-    case X86::VADDSSZrr_Intkz:
-    case X86::VCMPSSZrri_Intk:
-    case X86::VDIVSSZrr_Intk:
-    case X86::VDIVSSZrr_Intkz:
-    case X86::VMAXSSZrr_Intk:
-    case X86::VMAXSSZrr_Intkz:
-    case X86::VMINSSZrr_Intk:
-    case X86::VMINSSZrr_Intkz:
-    case X86::VMULSSZrr_Intk:
-    case X86::VMULSSZrr_Intkz:
-    case X86::VSQRTSSZr_Intk:
-    case X86::VSQRTSSZr_Intkz:
-    case X86::VSUBSSZrr_Intk:
-    case X86::VSUBSSZrr_Intkz:
+    case X86::VADDSSZrrk_Int:
+    case X86::VADDSSZrrkz_Int:
+    case X86::VCMPSSZrrik_Int:
+    case X86::VDIVSSZrrk_Int:
+    case X86::VDIVSSZrrkz_Int:
+    case X86::VMAXSSZrrk_Int:
+    case X86::VMAXSSZrrkz_Int:
+    case X86::VMINSSZrrk_Int:
+    case X86::VMINSSZrrkz_Int:
+    case X86::VMULSSZrrk_Int:
+    case X86::VMULSSZrrkz_Int:
+    case X86::VSQRTSSZrk_Int:
+    case X86::VSQRTSSZrkz_Int:
+    case X86::VSUBSSZrrk_Int:
+    case X86::VSUBSSZrrkz_Int:
     case X86::VFMADDSS4rr_Int:
     case X86::VFNMADDSS4rr_Int:
     case X86::VFMSUBSS4rr_Int:
@@ -7770,30 +7743,30 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SSZr_Int:
     case X86::VFMSUB231SSZr_Int:
     case X86::VFNMSUB231SSZr_Int:
-    case X86::VFMADD132SSZr_Intk:
-    case X86::VFNMADD132SSZr_Intk:
-    case X86::VFMADD213SSZr_Intk:
-    case X86::VFNMADD213SSZr_Intk:
-    case X86::VFMADD231SSZr_Intk:
-    case X86::VFNMADD231SSZr_Intk:
-    case X86::VFMSUB132SSZr_Intk:
-    case X86::VFNMSUB132SSZr_Intk:
-    case X86::VFMSUB213SSZr_Intk:
-    case X86::VFNMSUB213SSZr_Intk:
-    case X86::VFMSUB231SSZr_Intk:
-    case X86::VFNMSUB231SSZr_Intk:
-    case X86::VFMADD132SSZr_Intkz:
-    case X86::VFNMADD132SSZr_Intkz:
-    case X86::VFMADD213SSZr_Intkz:
-    case X86::VFNMADD213SSZr_Intkz:
-    case X86::VFMADD231SSZr_Intkz:
-    case X86::VFNMADD231SSZr_Intkz:
-    case X86::VFMSUB132SSZr_Intkz:
-    case X86::VFNMSUB132SSZr_Intkz:
-    case X86::VFMSUB213SSZr_Intkz:
-    case X86::VFNMSUB213SSZr_Intkz:
-    case X86::VFMSUB231SSZr_Intkz:
-    case X86::VFNMSUB231SSZr_Intkz:
+    case X86::VFMADD132SSZrk_Int:
+    case X86::VFNMADD132SSZrk_Int:
+    case X86::VFMADD213SSZrk_Int:
+    case X86::VFNMADD213SSZrk_Int:
+    case X86::VFMADD231SSZrk_Int:
+    case X86::VFNMADD231SSZrk_Int:
+    case X86::VFMSUB132SSZrk_Int:
+    case X86::VFNMSUB132SSZrk_Int:
+    case X86::VFMSUB213SSZrk_Int:
+    case X86::VFNMSUB213SSZrk_Int:
+    case X86::VFMSUB231SSZrk_Int:
+    case X86::VFNMSUB231SSZrk_Int:
+    case X86::VFMADD132SSZrkz_Int:
+    case X86::VFNMADD132SSZrkz_Int:
+    case X86::VFMADD213SSZrkz_Int:
+    case X86::VFNMADD213SSZrkz_Int:
+    case X86::VFMADD231SSZrkz_Int:
+    case X86::VFNMADD231SSZrkz_Int:
+    case X86::VFMSUB132SSZrkz_Int:
+    case X86::VFNMSUB132SSZrkz_Int:
+    case X86::VFMSUB213SSZrkz_Int:
+    case X86::VFNMSUB213SSZrkz_Int:
+    case X86::VFMSUB231SSZrkz_Int:
+    case X86::VFNMSUB231SSZrkz_Int:
     case X86::VFIXUPIMMSSZrri:
     case X86::VFIXUPIMMSSZrrik:
     case X86::VFIXUPIMMSSZrrikz:
@@ -7817,9 +7790,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESSZrri:
     case X86::VREDUCESSZrrik:
     case X86::VREDUCESSZrrikz:
-    case X86::VRNDSCALESSZr_Int:
-    case X86::VRNDSCALESSZr_Intk:
-    case X86::VRNDSCALESSZr_Intkz:
+    case X86::VRNDSCALESSZrri_Int:
+    case X86::VRNDSCALESSZrrik_Int:
+    case X86::VRNDSCALESSZrrikz_Int:
     case X86::VRSQRT14SSZrr:
     case X86::VRSQRT14SSZrrk:
     case X86::VRSQRT14SSZrrkz:
@@ -7846,8 +7819,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::CVTSD2SSrr_Int:
     case X86::VCVTSD2SSrr_Int:
     case X86::VCVTSD2SSZrr_Int:
-    case X86::VCVTSD2SSZrr_Intk:
-    case X86::VCVTSD2SSZrr_Intkz:
+    case X86::VCVTSD2SSZrrk_Int:
+    case X86::VCVTSD2SSZrrkz_Int:
     case X86::CVTSD2SIrr_Int:
     case X86::CVTSD2SI64rr_Int:
     case X86::VCVTSD2SIrr_Int:
@@ -7896,21 +7869,21 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::SUBSDrr_Int:
     case X86::VSUBSDrr_Int:
     case X86::VSUBSDZrr_Int:
-    case X86::VADDSDZrr_Intk:
-    case X86::VADDSDZrr_Intkz:
-    case X86::VCMPSDZrri_Intk:
-    case X86::VDIVSDZrr_Intk:
-    case X86::VDIVSDZrr_Intkz:
-    case X86::VMAXSDZrr_Intk:
-    case X86::VMAXSDZrr_Intkz:
-    case X86::VMINSDZrr_Intk:
-    case X86::VMINSDZrr_Intkz:
-    case X86::VMULSDZrr_Intk:
-    case X86::VMULSDZrr_Intkz:
-    case X86::VSQRTSDZr_Intk:
-    case X86::VSQRTSDZr_Intkz:
-    case X86::VSUBSDZrr_Intk:
-    case X86::VSUBSDZrr_Intkz:
+    case X86::VADDSDZrrk_Int:
+    case X86::VADDSDZrrkz_Int:
+    case X86::VCMPSDZrrik_Int:
+    case X86::VDIVSDZrrk_Int:
+    case X86::VDIVSDZrrkz_Int:
+    case X86::VMAXSDZrrk_Int:
+    case X86::VMAXSDZrrkz_Int:
+    case X86::VMINSDZrrk_Int:
+    case X86::VMINSDZrrkz_Int:
+    case X86::VMULSDZrrk_Int:
+    case X86::VMULSDZrrkz_Int:
+    case X86::VSQRTSDZrk_Int:
+    case X86::VSQRTSDZrkz_Int:
+    case X86::VSUBSDZrrk_Int:
+    case X86::VSUBSDZrrkz_Int:
     case X86::VFMADDSD4rr_Int:
     case X86::VFNMADDSD4rr_Int:
     case X86::VFMSUBSD4rr_Int:
@@ -7939,30 +7912,30 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SDZr_Int:
     case X86::VFMSUB231SDZr_Int:
     case X86::VFNMSUB231SDZr_Int:
-    case X86::VFMADD132SDZr_Intk:
-    case X86::VFNMADD132SDZr_Intk:
-    case X86::VFMADD213SDZr_Intk:
-    case X86::VFNMADD213SDZr_Intk:
-    case X86::VFMADD231SDZr_Intk:
-    case X86::VFNMADD231SDZr_Intk:
-    case X86::VFMSUB132SDZr_Intk:
-    case X86::VFNMSUB132SDZr_Intk:
-    case X86::VFMSUB213SDZr_Intk:
-    case X86::VFNMSUB213SDZr_Intk:
-    case X86::VFMSUB231SDZr_Intk:
-    case X86::VFNMSUB231SDZr_Intk:
-    case X86::VFMADD132SDZr_Intkz:
-    case X86::VFNMADD132SDZr_Intkz:
-    case X86::VFMADD213SDZr_Intkz:
-    case X86::VFNMADD213SDZr_Intkz:
-    case X86::VFMADD231SDZr_Intkz:
-    case X86::VFNMADD231SDZr_Intkz:
-    case X86::VFMSUB132SDZr_Intkz:
-    case X86::VFNMSUB132SDZr_Intkz:
-    case X86::VFMSUB213SDZr_Intkz:
-    case X86::VFNMSUB213SDZr_Intkz:
-    case X86::VFMSUB231SDZr_Intkz:
-    case X86::VFNMSUB231SDZr_Intkz:
+    case X86::VFMADD132SDZrk_Int:
+    case X86::VFNMADD132SDZrk_Int:
+    case X86::VFMADD213SDZrk_Int:
+    case X86::VFNMADD213SDZrk_Int:
+    case X86::VFMADD231SDZrk_Int:
+    case X86::VFNMADD231SDZrk_Int:
+    case X86::VFMSUB132SDZrk_Int:
+    case X86::VFNMSUB132SDZrk_Int:
+    case X86::VFMSUB213SDZrk_Int:
+    case X86::VFNMSUB213SDZrk_Int:
+    case X86::VFMSUB231SDZrk_Int:
+    case X86::VFNMSUB231SDZrk_Int:
+    case X86::VFMADD132SDZrkz_Int:
+    case X86::VFNMADD132SDZrkz_Int:
+    case X86::VFMADD213SDZrkz_Int:
+    case X86::VFNMADD213SDZrkz_Int:
+    case X86::VFMADD231SDZrkz_Int:
+    case X86::VFNMADD231SDZrkz_Int:
+    case X86::VFMSUB132SDZrkz_Int:
+    case X86::VFNMSUB132SDZrkz_Int:
+    case X86::VFMSUB213SDZrkz_Int:
+    case X86::VFNMSUB213SDZrkz_Int:
+    case X86::VFMSUB231SDZrkz_Int:
+    case X86::VFNMSUB231SDZrkz_Int:
     case X86::VFIXUPIMMSDZrri:
     case X86::VFIXUPIMMSDZrrik:
     case X86::VFIXUPIMMSDZrrikz:
@@ -7986,9 +7959,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESDZrri:
     case X86::VREDUCESDZrrik:
     case X86::VREDUCESDZrrikz:
-    case X86::VRNDSCALESDZr_Int:
-    case X86::VRNDSCALESDZr_Intk:
-    case X86::VRNDSCALESDZr_Intkz:
+    case X86::VRNDSCALESDZrri_Int:
+    case X86::VRNDSCALESDZrrik_Int:
+    case X86::VRNDSCALESDZrrikz_Int:
     case X86::VRSQRT14SDZrr:
     case X86::VRSQRT14SDZrrk:
     case X86::VRSQRT14SDZrrkz:
@@ -8016,19 +7989,19 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VMINSHZrr_Int:
     case X86::VMULSHZrr_Int:
     case X86::VSUBSHZrr_Int:
-    case X86::VADDSHZrr_Intk:
-    case X86::VADDSHZrr_Intkz:
-    case X86::VCMPSHZrri_Intk:
-    case X86::VDIVSHZrr_Intk:
-    case X86::VDIVSHZrr_Intkz:
-    case X86::VMAXSHZrr_Intk:
-    case X86::VMAXSHZrr_Intkz:
-    case X86::VMINSHZrr_Intk:
-    case X86::VMINSHZrr_Intkz:
-    case X86::VMULSHZrr_Intk:
-    case X86::VMULSHZrr_Intkz:
-    case X86::VSUBSHZrr_Intk:
-    case X86::VSUBSHZrr_Intkz:
+    case X86::VADDSHZrrk_Int:
+    case X86::VADDSHZrrkz_Int:
+    case X86::VCMPSHZrrik_Int:
+    case X86::VDIVSHZrrk_Int:
+    case X86::VDIVSHZrrkz_Int:
+    case X86::VMAXSHZrrk_Int:
+    case X86::VMAXSHZrrkz_Int:
+    case X86::VMINSHZrrk_Int:
+    case X86::VMINSHZrrkz_Int:
+    case X86::VMULSHZrrk_Int:
+    case X86::VMULSHZrrkz_Int:
+    case X86::VSUBSHZrrk_Int:
+    case X86::VSUBSHZrrkz_Int:
     case X86::VFMADD132SHZr_Int:
     case X86::VFNMADD132SHZr_Int:
     case X86::VFMADD213SHZr_Int:
@@ -8041,30 +8014,30 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SHZr_Int:
     case X86::VFMSUB231SHZr_Int:
     case X86::VFNMSUB231SHZr_Int:
-    case X86::VFMADD132SHZr_Intk:
-    case X86::VFNMADD132SHZr_Intk:
-    case X86::VFMADD213SHZr_Intk:
-    case X86::VFNMADD213SHZr_Intk:
-    case X86::VFMADD231SHZr_Intk:
-    case X86::VFNMADD231SHZr_Intk:
-    case X86::VFMSUB132SHZr_Intk:
-    case X86::VFNMSUB132SHZr_Intk:
-    case X86::VFMSUB213SHZr_Intk:
-    case X86::VFNMSUB213SHZr_Intk:
-    case X86::VFMSUB231SHZr_Intk:
-    case X86::VFNMSUB231SHZr_Intk:
-    case X86::VFMADD132SHZr_Intkz:
-    case X86::VFNMADD132SHZr_Intkz:
-    case X86::VFMADD213SHZr_Intkz:
-    case X86::VFNMADD213SHZr_Intkz:
-    case X86::VFMADD231SHZr_Intkz:
-    case X86::VFNMADD231SHZr_Intkz:
-    case X86::VFMSUB132SHZr_Intkz:
-    case X86::VFNMSUB132SHZr_Intkz:
-    case X86::VFMSUB213SHZr_Intkz:
-    case X86::VFNMSUB213SHZr_Intkz:
-    case X86::VFMSUB231SHZr_Intkz:
-    case X86::VFNMSUB231SHZr_Intkz:
+    case X86::VFMADD132SHZrk_Int:
+    case X86::VFNMADD132SHZrk_Int:
+    case X86::VFMADD213SHZrk_Int:
+    case X86::VFNMADD213SHZrk_Int:
+    case X86::VFMADD231SHZrk_Int:
+    case X86::VFNMADD231SHZrk_Int:
+    case X86::VFMSUB132SHZrk_Int:
+    case X86::VFNMSUB132SHZrk_Int:
+    case X86::VFMSUB213SHZrk_Int:
+    case X86::VFNMSUB213SHZrk_Int:
+    case X86::VFMSUB231SHZrk_Int:
+    case X86::VFNMSUB231SHZrk_Int:
+    case X86::VFMADD132SHZrkz_Int:
+    case X86::VFNMADD132SHZrkz_Int:
+    case X86::VFMADD213SHZrkz_Int:
+    case X86::VFNMADD213SHZrkz_Int:
+    case X86::VFMADD231SHZrkz_Int:
+    case X86::VFNMADD231SHZrkz_Int:
+    case X86::VFMSUB132SHZrkz_Int:
+    case X86::VFNMSUB132SHZrkz_Int:
+    case X86::VFMSUB213SHZrkz_Int:
+    case X86::VFNMSUB213SHZrkz_Int:
+    case X86::VFMSUB231SHZrkz_Int:
+    case X86::VFNMSUB231SHZrkz_Int:
       return false;
     default:
       return true;
@@ -9516,25 +9489,25 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVSDZrm:
   case X86::VDIVSDZrr:
   case X86::VDIVSDZrm_Int:
-  case X86::VDIVSDZrm_Intk:
-  case X86::VDIVSDZrm_Intkz:
+  case X86::VDIVSDZrmk_Int:
+  case X86::VDIVSDZrmkz_Int:
   case X86::VDIVSDZrr_Int:
-  case X86::VDIVSDZrr_Intk:
-  case X86::VDIVSDZrr_Intkz:
+  case X86::VDIVSDZrrk_Int:
+  case X86::VDIVSDZrrkz_Int:
   case X86::VDIVSDZrrb_Int:
-  case X86::VDIVSDZrrb_Intk:
-  case X86::VDIVSDZrrb_Intkz:
+  case X86::VDIVSDZrrbk_Int:
+  case X86::VDIVSDZrrbkz_Int:
   case X86::VDIVSSZrm:
   case X86::VDIVSSZrr:
   case X86::VDIVSSZrm_Int:
-  case X86::VDIVSSZrm_Intk:
-  case X86::VDIVSSZrm_Intkz:
+  case X86::VDIVSSZrmk_Int:
+  case X86::VDIVSSZrmkz_Int:
   case X86::VDIVSSZrr_Int:
-  case X86::VDIVSSZrr_Intk:
-  case X86::VDIVSSZrr_Intkz:
+  case X86::VDIVSSZrrk_Int:
+  case X86::VDIVSSZrrkz_Int:
   case X86::VDIVSSZrrb_Int:
-  case X86::VDIVSSZrrb_Intk:
-  case X86::VDIVSSZrrb_Intkz:
+  case X86::VDIVSSZrrbk_Int:
+  case X86::VDIVSSZrrbkz_Int:
   case X86::VSQRTPDZ128m:
   case X86::VSQRTPDZ128mb:
   case X86::VSQRTPDZ128mbk:
@@ -9597,26 +9570,26 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VSQRTPSZrkz:
   case X86::VSQRTSDZm:
   case X86::VSQRTSDZm_Int:
-  case X86::VSQRTSDZm_Intk:
-  case X86::VSQRTSDZm_Intkz:
+  case X86::VSQRTSDZmk_Int:
+  case X86::VSQRTSDZmkz_Int:
   case X86::VSQRTSDZr:
   case X86::VSQRTSDZr_Int:
-  case X86::VSQRTSDZr_Intk:
-  case X86::VSQRTSDZr_Intkz:
+  case X86::VSQRTSDZrk_Int:
+  case X86::VSQRTSDZrkz_Int:
   case X86::VSQRTSDZrb_Int:
-  case X86::VSQRTSDZrb_Intk:
-  case X86::VSQRTSDZrb_Intkz:
+  case X86::VSQRTSDZrbk_Int:
+  case X86::VSQRTSDZrbkz_Int:
   case X86::VSQRTSSZm:
   case X86::VSQRTSSZm_Int:
-  case X86::VSQRTSSZm_Intk:
-  case X86::VSQRTSSZm_Intkz:
+  case X86::VSQRTSSZmk_Int:
+  case X86::VSQRTSSZmkz_Int:
   case X86::VSQRTSSZr:
   case X86::VSQRTSSZr_Int:
-  case X86::VSQRTSSZr_Intk:
-  case X86::VSQRTSSZr_Intkz:
+  case X86::VSQRTSSZrk_Int:
+  case X86::VSQRTSSZrkz_Int:
   case X86::VSQRTSSZrb_Int:
-  case X86::VSQRTSSZrb_Intk:
-  case X86::VSQRTSSZrb_Intkz:
+  case X86::VSQRTSSZrbk_Int:
+  case X86::VSQRTSSZrbkz_Int:
 
   case X86::VGATHERDPDYrm:
   case X86::VGATHERDPDZ128rm:

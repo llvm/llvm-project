@@ -51,8 +51,7 @@ add_clang_library(clang-cpp
 
 configure_file(simple_version_script.map.in simple_version_script.map)
 
-if (NOT APPLE AND NOT MSVC AND NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD)
-  # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(clang-cpp PRIVATE LINKER:--version-script,${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
 endif()
 

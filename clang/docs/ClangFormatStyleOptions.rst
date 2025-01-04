@@ -2249,6 +2249,11 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, ``while (true) continue;`` can be put on a single
   line.
 
+.. _AllowShortNamespacesOnASingleLine:
+
+**AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
+  If ``true``, ``namespace a { class b; }`` can be put on a single line.
+
 .. _AlwaysBreakAfterDefinitionReturnType:
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlwaysBreakAfterDefinitionReturnType>`
@@ -3920,9 +3925,9 @@ the configuration (without a prefix: ``Auto``).
   lists.
 
   Important differences:
-  - No spaces inside the braced list.
-  - No line break before the closing brace.
-  - Indentation with the continuation indent, not with the block indent.
+  * No spaces inside the braced list.
+  * No line break before the closing brace.
+  * Indentation with the continuation indent, not with the block indent.
 
   Fundamentally, C++11 braced lists are formatted exactly like function
   calls would be formatted in their place. If the braced list follows a name
@@ -4265,10 +4270,10 @@ the configuration (without a prefix: ``Auto``).
   When guessing whether a #include is the "main" include (to assign
   category 0, see above), use this regex of allowed suffixes to the header
   stem. A partial match is done, so that:
-  - "" means "arbitrary suffix"
-  - "$" means "no suffix"
+  * ``""`` means "arbitrary suffix"
+  * ``"$"`` means "no suffix"
 
-  For example, if configured to "(_test)?$", then a header a.h would be seen
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
   as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
@@ -4817,12 +4822,13 @@ the configuration (without a prefix: ``Auto``).
 .. _KeepEmptyLinesAtEOF:
 
 **KeepEmptyLinesAtEOF** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <KeepEmptyLinesAtEOF>`
-  This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
 
 .. _KeepEmptyLinesAtTheStartOfBlocks:
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
-  This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtStartOfBlock`` of
+  ``KeepEmptyLines``.
 
 .. _KeepFormFeed:
 
@@ -5474,21 +5480,21 @@ the configuration (without a prefix: ``Auto``).
 
 **QualifierOrder** (``List of Strings``) :versionbadge:`clang-format 14` :ref:`¶ <QualifierOrder>`
   The order in which the qualifiers appear.
-  Order is an array that can contain any of the following:
+  The order is an array that can contain any of the following:
 
-    * const
-    * inline
-    * static
-    * friend
-    * constexpr
-    * volatile
-    * restrict
-    * type
+    * ``const``
+    * ``inline``
+    * ``static``
+    * ``friend``
+    * ``constexpr``
+    * ``volatile``
+    * ``restrict``
+    * ``type``
 
 
   .. note::
 
-   It **must** contain ``type``.
+   It must contain ``type``.
 
   Items to the left of ``type`` will be placed to the left of the type and
   aligned in the order supplied. Items to the right of ``type`` will be
@@ -6806,12 +6812,11 @@ the configuration (without a prefix: ``Auto``).
 .. _StatementMacros:
 
 **StatementMacros** (``List of Strings``) :versionbadge:`clang-format 8` :ref:`¶ <StatementMacros>`
-  A vector of macros that should be interpreted as complete
-  statements.
+  A vector of macros that should be interpreted as complete statements.
 
-  Typical macros are expressions, and require a semi-colon to be
-  added; sometimes this is not the case, and this allows to make
-  clang-format aware of such cases.
+  Typical macros are expressions and require a semicolon to be added.
+  Sometimes this is not the case, and this allows to make clang-format aware
+  of such cases.
 
   For example: Q_UNUSED
 
@@ -6887,8 +6892,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TemplateNames:
 
 **TemplateNames** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <TemplateNames>`
-  A vector of non-keyword identifiers that should be interpreted as
-  template names.
+  A vector of non-keyword identifiers that should be interpreted as template
+  names.
 
   A ``<`` after a template name is annotated as a template opener instead of
   a binary operator.
@@ -6955,6 +6960,15 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _VariableTemplates:
+
+**VariableTemplates** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <VariableTemplates>`
+  A vector of non-keyword identifiers that should be interpreted as variable
+  template names.
+
+  A ``)`` after a variable template instantiation is **not** annotated as
+  the closing parenthesis of C-style cast operator.
+
 .. _VerilogBreakBetweenInstancePorts:
 
 **VerilogBreakBetweenInstancePorts** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <VerilogBreakBetweenInstancePorts>`
@@ -6990,6 +7004,45 @@ the configuration (without a prefix: ``Auto``).
     WhitespaceSensitiveMacros: [STRINGIZE, PP_STRINGIZE]
 
   For example: BOOST_PP_STRINGIZE
+
+.. _WrapNamespaceBodyWithEmptyLines:
+
+**WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
+  Wrap namespace body with empty lines.
+
+  Possible values:
+
+  * ``WNBWELS_Never`` (in configuration: ``Never``)
+    Remove all empty lines at the beginning and the end of namespace body.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2
+      function();
+      }
+      }
+
+  * ``WNBWELS_Always`` (in configuration: ``Always``)
+    Always have at least one empty line at the beginning and the end of
+    namespace body except that the number of empty lines between consecutive
+    nested namespace definitions is not increased.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2 {
+
+      function();
+
+      }
+      }
+
+  * ``WNBWELS_Leave`` (in configuration: ``Leave``)
+    Keep existing newlines at the beginning and the end of namespace body.
+    ``MaxEmptyLinesToKeep`` still applies.
+
+
 
 .. END_FORMAT_STYLE_OPTIONS
 

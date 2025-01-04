@@ -2022,7 +2022,11 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
       mlirAttr = builder.getI64IntegerAttr(llvmAttr.getValueAsInt());
     else if (llvmAttr.isEnumAttribute())
       mlirAttr = builder.getUnitAttr();
-    else
+    else if (llvmAttr.isConstantRangeAttribute()) {
+      const llvm::ConstantRange &value = llvmAttr.getValueAsConstantRange();
+      mlirAttr = builder.getAttr<LLVM::ConstantRangeAttr>(value.getLower(),
+                                                          value.getUpper());
+    } else
       llvm_unreachable("unexpected parameter attribute kind");
     paramAttrs.push_back(builder.getNamedAttr(mlirName, mlirAttr));
   }

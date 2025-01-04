@@ -14,11 +14,14 @@ add_header_library(
     libc.src.__support.CPP.type_traits
 )
 
-add_header_library(
+add_object_library(
   freelist
   HDRS
     freelist.h
+  SRCS
+    freelist.cpp
   DEPENDS
+    .block
     libc.src.__support.fixedvector
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
@@ -26,13 +29,38 @@ add_header_library(
     libc.src.__support.CPP.span
 )
 
-add_header_library(
-  freelist_heap
+add_object_library(
+  freetrie
   HDRS
-    freelist_heap.h
+    freetrie.h
+  SRCS
+    freetrie.cpp
   DEPENDS
     .block
     .freelist
+)
+
+add_header_library(
+  freestore
+  HDRS
+    freestore.h
+  DEPENDS
+    .freetrie
+)
+
+add_object_library(
+  freelist_heap
+  SRCS
+    freelist_heap.cpp
+  HDRS
+    freelist_heap.h
+  COMPILE_OPTIONS
+    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
+  DEPENDS
+    .block
+    .freelist
+    .freestore
+    .freetrie
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
     libc.src.__support.CPP.optional
@@ -213,6 +241,11 @@ add_header_library(
   complex_type
   HDRS
     complex_type.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_header_library(

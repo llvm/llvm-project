@@ -148,9 +148,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   LLT DstTy = MRI.getType(R);
 
   // Handle the case where this is called on a register that does not have a
-  // type constraint (i.e. it has a register class constraint instead). This is
-  // unlikely to occur except by looking through copies but it is possible for
-  // the initial register being queried to be in this state.
+  // type constraint. For example, it may be post-ISel or this target might not
+  // preserve the type when early-selecting instructions.
   if (!DstTy.isValid()) {
     Known = KnownBits();
     return;
@@ -254,6 +253,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
+        Known2 = Known2.anyextOrTrunc(BitWidth);
         Known = Known.intersectWith(Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.
@@ -537,7 +537,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(SrcReg, SrcOpKnown, SubDemandedElts, Depth + 1);
 
     if (SrcTy.isVector())
-      Known = SrcOpKnown;
+      Known = std::move(SrcOpKnown);
     else
       Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
     break;

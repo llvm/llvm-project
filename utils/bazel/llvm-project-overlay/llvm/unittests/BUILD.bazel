@@ -697,7 +697,7 @@ cc_test(
     ],
     linkstatic = 1,
     tags = [
-        "local",  # Not compatible with the sandbox on MacOS
+        "no-sandbox",  # FileSystemTest.permissions not compatible with the sandbox on MacOS
     ],
     deps = [
         "//llvm:AllTargetsCodeGens",

@@ -17,6 +17,13 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
+extern "C" {
+// Users can specify their default options upon building the instrumented
+// binaries by provide a definition of this function.
+SANITIZER_INTERFACE_ATTRIBUTE
+const char *__xray_default_options();
+}
+
 namespace __xray {
 
 struct Flags {

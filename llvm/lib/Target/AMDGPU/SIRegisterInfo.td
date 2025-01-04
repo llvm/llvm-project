@@ -809,6 +809,9 @@ def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16,
   let BaseClassOrder = 32;
 }
 
+def SGPR_NULL128 : SIReg<"null">;
+def SGPR_NULL256 : SIReg<"null">;
+
 let GeneratePressureSet = 0 in {
 def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
   (add SReg_32, LDS_DIRECT_CLASS)> {
@@ -885,6 +888,7 @@ multiclass SRegClass<int numRegs,
                      list<ValueType> regTypes,
                      SIRegisterTuples regList,
                      SIRegisterTuples ttmpList = regList,
+                     bit hasNull = 0,
                      int copyCost = !sra(!add(numRegs, 1), 1)> {
   defvar hasTTMP = !ne(regList, ttmpList);
   defvar suffix = !cast<string>(!mul(numRegs, 32));
@@ -901,24 +905,33 @@ multiclass SRegClass<int numRegs,
       }
     }
 
-    def SReg_ # suffix :
+    def SReg_ # suffix # !if(hasNull, "_XNULL", ""):
       SIRegisterClass<"AMDGPU", regTypes, 32,
-                    !con(!dag(add, [!cast<RegisterClass>(sgprName)], ["sgpr"]),
-                    !if(hasTTMP,
-                        !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
-                        (add)))> {
+                      !con((add !cast<RegisterClass>(sgprName)),
+                           !if(hasTTMP,
+                               (add !cast<RegisterClass>(ttmpName)),
+                               (add)))> {
       let isAllocatable = 0;
       let BaseClassOrder = !mul(numRegs, 32);
+    }
+
+    if hasNull then {
+      def SReg_ # suffix :
+        SIRegisterClass<"AMDGPU", regTypes, 32,
+                        (add !cast<RegisterClass>("SReg_" # suffix # "_XNULL"), !cast<Register>("SGPR_NULL" # suffix))> {
+        let isAllocatable = 0;
+        let BaseClassOrder = !mul(numRegs, 32);
+      }
     }
   }
 }
 
 defm "" : SRegClass<3, Reg96Types.types, SGPR_96Regs, TTMP_96Regs>;
-defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs>;
+defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs, /*hasNull*/ true>;
 defm "" : SRegClass<5, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
 defm "" : SRegClass<6, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
 defm "" : SRegClass<7, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
-defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs>;
+defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
 defm "" : SRegClass<9, [v9i32, v9f32], SGPR_288Regs, TTMP_288Regs>;
 defm "" : SRegClass<10, [v10i32, v10f32], SGPR_320Regs, TTMP_320Regs>;
 defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
@@ -1249,7 +1262,10 @@ def VRegSrc_32 : SrcReg9<VGPR_32, "OPW32">;
 def VRegSrc_64 : SrcReg9<VReg_64, "OPW64">;
 def VRegSrc_96 : SrcReg9<VReg_96, "OPW96">;
 def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
+def VRegSrc_192: SrcReg9<VReg_192, "OPW192">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
+def VRegSrc_512: SrcReg9<VReg_512, "OPW512">;
+def VRegSrc_1024: SrcReg9<VReg_1024, "OPW1024">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
 // True 16 Operands
@@ -1346,11 +1362,14 @@ class AVSrcOperand<RegisterClass regClass, string width>
 def AVSrc_32 : AVSrcOperand<AV_32, "OPW32">;
 def AVSrc_64 : AVSrcOperand<AV_64, "OPW64">;
 def AVSrc_128 : AVSrcOperand<AV_128, "OPW128">;
+def AVSrc_192 : AVSrcOperand<AV_192, "OPW192">;
+def AVSrc_256 : AVSrcOperand<AV_256, "OPW256">;
 
 class AVDstOperand<RegisterClass regClass, string width>
   : AVOperand<regClass, "decodeAV10", width>;
 
 def AVDst_128 : AVDstOperand<AV_128, "OPW128">;
+def AVDst_256 : AVDstOperand<AV_256, "OPW256">;
 def AVDst_512 : AVDstOperand<AV_512, "OPW512">;
 
 class AVLdStOperand<RegisterClass regClass, string width>
