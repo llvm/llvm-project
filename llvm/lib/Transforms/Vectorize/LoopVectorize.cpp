@@ -8953,14 +8953,73 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
   }
 }
 
+/// Return true if \p VPV is an optimizable IV or IV use. That is, if \p VPV is
+/// either an untruncated wide induction, or if it increments a wide induction
+/// by its step.
+static bool isOptimizableIVOrUse(VPValue *VPV) {
+  VPRecipeBase *Def = VPV->getDefiningRecipe();
+  if (!Def)
+    return false;
+  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Def);
+  if (WideIV) {
+    // VPV itself is a wide induction, separately compute the end value for exit
+    // users if it is not a truncated IV.
+    return isa<VPWidenPointerInductionRecipe>(WideIV) ||
+           !cast<VPWidenIntOrFpInductionRecipe>(WideIV)->getTruncInst();
+  }
+
+  // Check if VPV is an optimizable induction increment.
+  if (Def->getNumOperands() != 2)
+    return false;
+  WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(0));
+  if (!WideIV)
+    WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(1));
+  if (!WideIV)
+    return false;
+
+  using namespace VPlanPatternMatch;
+  auto &ID = WideIV->getInductionDescriptor();
+
+  // Check if VPV increments the induction by the induction step.
+  VPValue *IVStep = WideIV->getStepValue();
+  switch (ID.getInductionOpcode()) {
+  case Instruction::Add:
+    return match(VPV, m_c_Binary<Instruction::Add>(m_Specific(WideIV),
+                                                   m_Specific(IVStep)));
+  case Instruction::FAdd:
+    return match(VPV, m_c_Binary<Instruction::FAdd>(m_Specific(WideIV),
+                                                    m_Specific(IVStep)));
+  case Instruction::FSub:
+    return match(VPV, m_Binary<Instruction::FSub>(m_Specific(WideIV),
+                                                  m_Specific(IVStep)));
+  case Instruction::Sub: {
+    // IVStep will be the negated step of the subtraction. Check if Step == -1 *
+    // IVStep.
+    VPValue *Step;
+    if (!match(VPV, m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) ||
+        !Step->isLiveIn() || !IVStep->isLiveIn())
+      return false;
+    auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
+    auto *IVStepCI = dyn_cast<ConstantInt>(IVStep->getLiveInIRValue());
+    return StepCI && IVStepCI &&
+           StepCI->getValue() == (-1 * IVStepCI->getValue());
+  }
+  default:
+    return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
+           match(VPV, m_GetElementPtr(m_Specific(WideIV),
+                                      m_Specific(WideIV->getStepValue())));
+  }
+  llvm_unreachable("should have been covered by switch above");
+}
+
 // Collect VPIRInstructions for phis in the exit blocks that are modeled
 // in VPlan and add the exiting VPValue as operand. Some exiting values are not
 // modeled explicitly yet and won't be included. Those are un-truncated
 // VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
 // increments.
-static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
-    Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
-    const MapVector<PHINode *, InductionDescriptor> &Inductions) {
+static SetVector<VPIRInstruction *>
+collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
+                         VPlan &Plan) {
   auto *MiddleVPBB = Plan.getMiddleBlock();
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
@@ -8985,18 +9044,9 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
         // Exit values for inductions are computed and updated outside of VPlan
         // and independent of induction recipes.
         // TODO: Compute induction exit values in VPlan.
-        if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
-             !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-            isa<VPWidenPointerInductionRecipe>(V) ||
-            (isa<Instruction>(IncomingValue) &&
-             OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
-             any_of(IncomingValue->users(), [&Inductions](User *U) {
-               auto *P = dyn_cast<PHINode>(U);
-               return P && Inductions.contains(P);
-             }))) {
-          if (ExitVPBB->getSinglePredecessor() == MiddleVPBB)
-            continue;
-        }
+        if (isOptimizableIVOrUse(V) &&
+            ExitVPBB->getSinglePredecessor() == MiddleVPBB)
+          continue;
         ExitUsersToFix.insert(ExitIRI);
         ExitIRI->addOperand(V);
       }
@@ -9331,8 +9381,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock, RecipeBuilder);
   }
   addScalarResumePhis(RecipeBuilder, *Plan);
-  SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
-      OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
+  SetVector<VPIRInstruction *> ExitUsersToFix =
+      collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
     reportVectorizationFailure(
