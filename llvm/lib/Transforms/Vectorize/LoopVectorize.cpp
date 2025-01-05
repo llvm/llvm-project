@@ -7785,16 +7785,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   BestVPlan.execute(&State);
 
-  auto *ExitVPBB = BestVPlan.getMiddleBlock();
+  auto *MiddleVPBB = BestVPlan.getMiddleBlock();
   // 2.5 When vectorizing the epilogue, fix reduction and induction resume
   // values from the additional bypass block.
   if (VectorizingEpilogue) {
     assert(!ILV.Legal->hasUncountableEarlyExit() &&
            "Epilogue vectorisation not yet supported with early exits");
     BasicBlock *BypassBlock = ILV.getAdditionalBypassBlock();
-    for (VPRecipeBase &R : *ExitVPBB) {
+    for (VPRecipeBase &R : *MiddleVPBB) {
       fixReductionScalarResumeWhenVectorizingEpilog(
-          &R, State, State.CFG.VPBB2IRBB[ExitVPBB], BypassBlock);
+          &R, State, State.CFG.VPBB2IRBB[MiddleVPBB], BypassBlock);
     }
     BasicBlock *PH = OrigLoop->getLoopPreheader();
     for (const auto &[IVPhi, _] : Legal->getInductionVars()) {
@@ -7840,7 +7840,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 4. Adjust branch weight of the branch in the middle block.
   auto *MiddleTerm =
-      cast<BranchInst>(State.CFG.VPBB2IRBB[ExitVPBB]->getTerminator());
+      cast<BranchInst>(State.CFG.VPBB2IRBB[MiddleVPBB]->getTerminator());
   if (MiddleTerm->isConditional() &&
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
     // Assume that `Count % VectorTripCount` is equally distributed.

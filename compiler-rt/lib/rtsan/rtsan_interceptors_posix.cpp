@@ -297,11 +297,16 @@ INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   return REAL(fdopen)(fd, mode);
 }
 
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
 INTERCEPTOR(FILE *, fopencookie, void *cookie, const char *mode,
             cookie_io_functions_t funcs) {
   __rtsan_notify_intercepted_call("fopencookie");
   return REAL(fopencookie)(cookie, mode, funcs);
 }
+#define RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE INTERCEPT_FUNCTION(fopencookie)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE
+#endif
 
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 INTERCEPTOR(FILE *, open_memstream, char **buf, size_t *size) {
@@ -978,7 +983,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(fputs);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
-  INTERCEPT_FUNCTION(fopencookie);
+  RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE;
   RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
   RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
   INTERCEPT_FUNCTION(lseek);

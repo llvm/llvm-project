@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Basic/CodeGenIntrinsics.h"
-#include "Basic/SequenceToOffsetTable.h"
+#include "CodeGenIntrinsics.h"
+#include "SequenceToOffsetTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
