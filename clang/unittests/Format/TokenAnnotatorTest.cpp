@@ -3635,6 +3635,13 @@ TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, AfterPPDirective) {
+  auto Tokens = annotate("#error -- My error message");
+
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minusminus, TT_AfterPPDirective);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

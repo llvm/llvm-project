@@ -25,6 +25,7 @@ namespace clang {
 namespace format {
 
 #define LIST_TOKEN_TYPES                                                       \
+  TYPE(AfterPPDirective)                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \

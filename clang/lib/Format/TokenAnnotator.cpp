@@ -4941,6 +4941,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_ModulePartitionColon)) {
       return true;
     }
+
+    if (Right.is(TT_AfterPPDirective))
+      return true;
+
     // No space between import foo:bar but keep a space between import :bar;
     if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
       return false;
