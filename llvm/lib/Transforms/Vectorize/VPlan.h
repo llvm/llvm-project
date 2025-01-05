@@ -3853,9 +3853,13 @@ public:
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
-  /// Returns the preheader of the vector loop region.
+  /// Returns the preheader of the vector loop region, if one exists, or null
+  /// otherwise.
   VPBasicBlock *getVectorPreheader() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+    VPRegionBlock *VectorRegion = getVectorLoopRegion();
+    return VectorRegion
+               ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
+               : nullptr;
   }
 
   /// Returns the VPRegionBlock of the vector loop.
