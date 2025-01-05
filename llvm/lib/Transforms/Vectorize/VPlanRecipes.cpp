@@ -2328,6 +2328,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 Value *VPScalarCastRecipe ::generate(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(vputils::onlyFirstLaneUsed(this) &&
          "Codegen only implemented for first lane.");
   switch (Opcode) {
