@@ -46,6 +46,8 @@ Improvements and New Features
 - The performance of ``map::map(const map&)`` has been improved up to 2.3x
 - The performance of ``map::operator=(const map&)`` has been improved by up to 11x
 
+- The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
+
 Deprecations and Removals
 -------------------------
 
