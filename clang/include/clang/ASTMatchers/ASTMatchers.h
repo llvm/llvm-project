@@ -3257,7 +3257,7 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
       });
 }
 
-/// Matches the dependent name of a dependent scope decl ref expr
+/// Matches the dependent name of a DependentScopeDeclRefExpr
 ///
 /// Given:
 /// \code

@@ -2235,7 +2235,7 @@ TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
                  Constructor1Arg));
 }
 
-TEST_P(ASTMatchersTest, hasDependentName_DependentScopeDeclRefExpr) {
+TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
   if (!GetParam().isCXX() || GetParam().hasDelayedTemplateParsing()) {
     // FIXME: Fix this test to work with delayed template parsing.
     return;
@@ -2244,10 +2244,13 @@ TEST_P(ASTMatchersTest, hasDependentName_DependentScopeDeclRefExpr) {
   EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
                       dependentScopeDeclRefExpr(hasDependentName("v"))));
 
-  EXPECT_TRUE(
-      matches("template <typename T> struct S { static T Foo; };"
-              "template <typename T> void declToImport() { (void)S<T>::Foo; }",
-              dependentScopeDeclRefExpr(hasDependentName("Foo"))));
+  EXPECT_TRUE(matches("template <typename T> struct S { static T Foo; };"
+                      "template <typename T> void x() { (void)S<T>::Foo; }",
+                      dependentScopeDeclRefExpr(hasDependentName("Foo"))));
+
+  EXPECT_TRUE(matches("template <typename T> struct S { static T foo(); };"
+                      "template <typename T> void x() { S<T>::foo; }",
+                      dependentScopeDeclRefExpr(hasDependentName("foo"))));
 }
 
 TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
