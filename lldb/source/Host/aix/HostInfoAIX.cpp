@@ -7,18 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/aix/HostInfoAIX.h"
-#include "lldb/Host/Config.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
-#include "llvm/Support/Threading.h"
-#include <climits>
-#include <cstdio>
-#include <cstring>
-#include <sys/utsname.h>
-#include <unistd.h>
-#include <algorithm>
-#include <mutex>
 
 using namespace lldb_private;
 

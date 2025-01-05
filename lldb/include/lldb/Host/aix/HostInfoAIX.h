@@ -11,8 +11,6 @@
 
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
 
