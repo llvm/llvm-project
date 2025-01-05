@@ -1498,6 +1498,8 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
               auto *CastR = cast<VPWidenCastRecipe>(CR);
               VPID = VPIntrinsic::getForOpcode(CastR->getOpcode());
             }
+
+            // Not all intrinsics have a corresponding VP intrinsic.
             if (VPID == Intrinsic::not_intrinsic)
               return nullptr;
             assert(VPIntrinsic::getMaskParamPos(VPID) &&
