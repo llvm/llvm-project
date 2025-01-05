@@ -143,6 +143,8 @@ private:
     case TT_StructLBrace:
     case TT_UnionLBrace:
       return ST_Class;
+    case TT_CompoundRequirementLBrace:
+      return ST_CompoundRequirement;
     default:
       return ST_Other;
     }
@@ -2076,7 +2078,7 @@ private:
             TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
-            TT_BracedListLBrace)) {
+            TT_CompoundRequirementLBrace, TT_BracedListLBrace)) {
       CurrentToken->setType(TT_Unknown);
     }
     CurrentToken->Role.reset();
@@ -2792,6 +2794,16 @@ private:
       return true;
     }
 
+    auto IsNonVariableTemplate = [](const FormatToken &Tok) {
+      if (Tok.isNot(TT_TemplateCloser))
+        return false;
+      const auto *Less = Tok.MatchingParen;
+      if (!Less)
+        return false;
+      const auto *BeforeLess = Less->getPreviousNonComment();
+      return BeforeLess && BeforeLess->isNot(TT_VariableTemplate);
+    };
+
     // Heuristically try to determine whether the parentheses contain a type.
     auto IsQualifiedPointerOrReference = [](const FormatToken *T,
                                             const LangOptions &LangOpts) {
@@ -2825,10 +2837,11 @@ private:
       }
       return T && T->is(TT_PointerOrReference);
     };
-    bool ParensAreType =
-        BeforeRParen->isOneOf(TT_TemplateCloser, TT_TypeDeclarationParen) ||
-        BeforeRParen->isTypeName(LangOpts) ||
-        IsQualifiedPointerOrReference(BeforeRParen, LangOpts);
+
+    bool ParensAreType = IsNonVariableTemplate(*BeforeRParen) ||
+                         BeforeRParen->is(TT_TypeDeclarationParen) ||
+                         BeforeRParen->isTypeName(LangOpts) ||
+                         IsQualifiedPointerOrReference(BeforeRParen, LangOpts);
     bool ParensCouldEndDecl =
         AfterRParen->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
     if (ParensAreType && !ParensCouldEndDecl)
@@ -3088,6 +3101,9 @@ private:
         return TT_BinaryOperator;
       }
     }
+
+    if (!Scopes.empty() && Scopes.back() == ST_CompoundRequirement)
+      return TT_BinaryOperator;
 
     return TT_PointerOrReference;
   }
@@ -4930,6 +4946,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_ModulePartitionColon)) {
       return true;
     }
+
+    if (Right.is(TT_AfterPPDirective))
+      return true;
+
     // No space between import foo:bar but keep a space between import :bar;
     if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
       return false;

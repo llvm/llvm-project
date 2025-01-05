@@ -96,7 +96,6 @@ add_clang_library(clangTidyBugproneModule STATIC
 
   LINK_LIBS
   clangTidy
-  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
 
   DEPENDS
