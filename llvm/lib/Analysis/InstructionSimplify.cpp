@@ -4397,7 +4397,7 @@ static Value *simplifyWithOpsReplaced(Value *V,
       // (Op == -1) ? -1 : (Op | (binop C, Op) --> Op | (binop C, Op)
       Constant *Absorber = ConstantExpr::getBinOpAbsorber(Opcode, I->getType());
       if ((NewOps[0] == Absorber || NewOps[1] == Absorber) &&
-          all_of(ValidReplacements,
+          any_of(ValidReplacements,
                  [=](const auto &Rep) { return impliesPoison(BO, Rep.first); }))
         return Absorber;
     }
@@ -4617,19 +4617,18 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
 
 /// Try to simplify a select instruction when its condition operand is an
 /// integer equality or floating-point equivalence comparison.
-static Value *simplifySelectWithEquivalence(Value *CmpLHS, Value *CmpRHS,
-                                            Value *TrueVal, Value *FalseVal,
-                                            const SimplifyQuery &Q,
-                                            unsigned MaxRecurse) {
+static Value *simplifySelectWithEquivalence(
+    ArrayRef<std::pair<Value *, Value *>> Replacements, Value *TrueVal,
+    Value *FalseVal, const SimplifyQuery &Q, unsigned MaxRecurse) {
   Value *SimplifiedFalseVal =
-      simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
+      simplifyWithOpReplaced(FalseVal, Replacements, Q.getWithoutUndef(),
                              /* AllowRefinement */ false,
                              /* DropFlags */ nullptr, MaxRecurse);
   if (!SimplifiedFalseVal)
     SimplifiedFalseVal = FalseVal;
 
   Value *SimplifiedTrueVal =
-      simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+      simplifyWithOpReplaced(TrueVal, Replacements, Q,
                              /* AllowRefinement */ true,
                              /* DropFlags */ nullptr, MaxRecurse);
   if (!SimplifiedTrueVal)
@@ -4729,10 +4728,10 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (Value *V = simplifySelectWithEquivalence(CmpLHS, CmpRHS, TrueVal,
+    if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, TrueVal,
                                                  FalseVal, Q, MaxRecurse))
       return V;
-    if (Value *V = simplifySelectWithEquivalence(CmpRHS, CmpLHS, TrueVal,
+    if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, TrueVal,
                                                  FalseVal, Q, MaxRecurse))
       return V;
 
@@ -4742,11 +4741,14 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_Zero())) {
       // (X | Y) == 0 implies X == 0 and Y == 0.
-      if (Value *V = simplifySelectWithEquivalence(X, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(
+              {{X, CmpRHS}, {Y, CmpRHS}}, TrueVal, FalseVal, Q, MaxRecurse))
         return V;
-      if (Value *V = simplifySelectWithEquivalence(Y, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence({{X, CmpRHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
+        return V;
+      if (Value *V = simplifySelectWithEquivalence({{Y, CmpRHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
         return V;
     }
 
@@ -4754,11 +4756,14 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(CmpLHS, m_And(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_AllOnes())) {
       // (X & Y) == -1 implies X == -1 and Y == -1.
-      if (Value *V = simplifySelectWithEquivalence(X, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(
+              {{X, CmpRHS}, {Y, CmpRHS}}, TrueVal, FalseVal, Q, MaxRecurse))
         return V;
-      if (Value *V = simplifySelectWithEquivalence(Y, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence({{X, CmpRHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
+        return V;
+      if (Value *V = simplifySelectWithEquivalence({{Y, CmpRHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
         return V;
     }
   }
@@ -4787,11 +4792,11 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
   // This transforms is safe if at least one operand is known to not be zero.
   // Otherwise, the select can change the sign of a zero operand.
   if (IsEquiv) {
-    if (Value *V =
-            simplifySelectWithEquivalence(CmpLHS, CmpRHS, T, F, Q, MaxRecurse))
+    if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, T, F, Q,
+                                                 MaxRecurse))
       return V;
-    if (Value *V =
-            simplifySelectWithEquivalence(CmpRHS, CmpLHS, T, F, Q, MaxRecurse))
+    if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, T, F, Q,
+                                                 MaxRecurse))
       return V;
   }
 
