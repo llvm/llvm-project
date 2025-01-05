@@ -14,9 +14,7 @@ define i8 @add-shl-sdiv-scalar0(i8 %x) {
 
 define i8 @add-shl-sdiv-scalar0_commuted(i8 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-scalar0_commuted(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[SL:%.*]] = shl i8 [[SD]], 2
-; CHECK-NEXT:    [[RZ:%.*]] = add i8 [[X]], [[SL]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i8 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i8 [[RZ]]
 ;
   %sd = sdiv i8 %x, -4

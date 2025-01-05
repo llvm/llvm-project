@@ -1625,12 +1625,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // ((X s/ C1) << C2) + X => X s% -C1 where -C1 is 1 << C2
   const APInt *C1, *C2;
-  if (match(LHS, m_Shl(m_SDiv(m_Specific(RHS), m_APInt(C1)), m_APInt(C2)))) {
+  if (match(&I, m_c_Add(m_Shl(m_SDiv(m_Value(A), m_APInt(C1)), m_APInt(C2)),
+                        m_Deferred(A)))) {
     APInt one(C2->getBitWidth(), 1);
     APInt minusC1 = -(*C1);
     if (minusC1 == (one << *C2)) {
-      Constant *NewRHS = ConstantInt::get(RHS->getType(), minusC1);
-      return BinaryOperator::CreateSRem(RHS, NewRHS);
+      Constant *NewRHS = ConstantInt::get(A->getType(), minusC1);
+      return BinaryOperator::CreateSRem(A, NewRHS);
     }
   }
 
