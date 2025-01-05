@@ -96,7 +96,7 @@ public:
     CheckFactories.registerCheck<ReplaceDisallowCopyAndAssignMacroCheck>(
         "modernize-replace-disallow-copy-and-assign-macro");
     CheckFactories.registerCheck<ReplaceWithStdCopyCheck>(
-        "modernize-replace-with-stdcopy");
+        "modernize-replace-with-std-copy");
     CheckFactories.registerCheck<ReplaceRandomShuffleCheck>(
         "modernize-replace-random-shuffle");
     CheckFactories.registerCheck<ReturnBracedInitListCheck>(

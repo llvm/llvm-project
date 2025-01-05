@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s modernize-replace-with-std-copy %t
+// RUN: %check_clang_tidy %s modernize-replace-with-std-copy %t -- \
+// RUN:   -config='{CheckOptions: {modernize-replace-with-std-copy.FlagMemcpy: true}}'
 
 // possible call scenarios, infeasible to cover all
 // replacement type:

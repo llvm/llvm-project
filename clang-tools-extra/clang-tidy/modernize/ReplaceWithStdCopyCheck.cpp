@@ -23,30 +23,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 
-template <>
-struct OptionEnumMapping<
-    enum modernize::ReplaceWithStdCopyCheck::FlaggableCallees> {
-  static llvm::ArrayRef<std::pair<
-      modernize::ReplaceWithStdCopyCheck::FlaggableCallees, StringRef>>
-  getEnumMapping() {
-    static constexpr std::pair<
-        modernize::ReplaceWithStdCopyCheck::FlaggableCallees, StringRef>
-        Mapping[] = {
-            {modernize::ReplaceWithStdCopyCheck::FlaggableCallees::
-                 MemmoveAndMemcpy,
-             "MemmoveAndMemcpy"},
-            {modernize::ReplaceWithStdCopyCheck::FlaggableCallees::OnlyMemmove,
-             "OnlyMemmove"},
-        };
-    return {Mapping};
-  }
-};
-
 namespace modernize {
 namespace {
 
 constexpr llvm::StringLiteral ExpressionRef = "::std::memcpy";
-constexpr llvm::StringLiteral StdCopyHeader = "<algorithm>";
 constexpr llvm::StringLiteral ReturnValueDiscardedRef =
     "ReturnValueDiscardedRef";
 
@@ -57,8 +37,11 @@ struct Refs {
   llvm::StringLiteral AsCArray;
   size_t FallbackParameterIdx;
   llvm::StringLiteral ValueType;
+  llvm::StringLiteral PtrCastFnReturnType;
+  llvm::StringLiteral AsSmartPtr;
 };
-
+// rn matchers have a problem with binding types correctly, clang-query build up
+// the matchers from this file tmrw for debugging
 template <typename RefsT> auto createPtrArgMatcher() {
   constexpr Refs Refs = RefsT::Refs;
 
@@ -72,31 +55,38 @@ template <typename RefsT> auto createPtrArgMatcher() {
                         "::std::basic_string_view", "::std::span");
   }();
 
-  auto ValueTypeM = type().bind(Refs.ValueType);
-
   auto AllowedContainerTypeM = hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(recordDecl(classTemplateSpecializationDecl(
           AllowedContainerNamesM,
-          hasTemplateArgument(
-              0, templateArgument(refersToType(
-                     hasUnqualifiedDesugaredType(ValueTypeM)))))))));
+          hasTemplateArgument(0, templateArgument(refersToType(
+                                     qualType().bind(Refs.ValueType)))))))));
+
+  auto CArrayTypeM = arrayType(hasElementType(qualType().bind(Refs.ValueType)));
 
   auto VariantContainerM =
       expr(hasType(AllowedContainerTypeM)).bind(Refs.AsContainer);
-  auto VariantCArrayM =
-      expr(hasType(arrayType(hasElementType(ValueTypeM)))).bind(Refs.AsCArray);
 
-  auto StdDataReturnM = returns(pointerType(pointee(
-      hasUnqualifiedDesugaredType(equalsBoundNode(Refs.ValueType.str())))));
+  auto VariantCArrayM = expr(hasType(CArrayTypeM)).bind(Refs.AsCArray);
+
+  auto VariantSmartPtrM =
+      expr(hasType(pointerType(pointee(recordType(hasDeclaration(cxxRecordDecl(
+               isSameOrDerivedFrom(classTemplateSpecializationDecl(
+                   hasAnyName("::std::unique_ptr", "::std::shared_ptr"),
+                   hasTemplateArgument(0, refersToType(CArrayTypeM)))))))))))
+          .bind(Refs.AsSmartPtr);
+  auto VariantRawPtrM =
+      expr(hasType(pointerType(pointee(qualType().bind(Refs.ValueType)))));
+
+  auto StdDataReturnM =
+      returns(pointerType(pointee(qualType().bind(Refs.PtrCastFnReturnType))));
 
   auto StdDataMemberDeclM =
       cxxMethodDecl(hasName("data"), parameterCountIs(0), StdDataReturnM);
   // ,unless(isConst()) // __jm__ ONLY difference between Dest
   // and Source calls, but maybe don't include it?
 
-  auto StdDataFreeDeclM = functionDecl(
-      hasName("::std::data"), parameterCountIs(1),
-      StdDataReturnM); // __jm__ possibly elaborate on argument type here?
+  auto StdDataFreeDeclM = functionDecl(hasAnyName("::std::data", "::data"),
+                                       parameterCountIs(1), StdDataReturnM);
 
   auto StdDataMemberCallM = cxxMemberCallExpr(
       callee(StdDataMemberDeclM), argumentCountIs(0),
@@ -109,46 +99,62 @@ template <typename RefsT> auto createPtrArgMatcher() {
 
   // the last expr() in anyOf assumes previous matchers are ran eagerly from
   // left to right, still need to test this is the actual behaviour
-  return expr(
-      anyOf(StdDataMemberCallM, StdDataFreeCallM, VariantCArrayM, expr()));
+  return expr(anyOf(StdDataMemberCallM, StdDataFreeCallM, VariantCArrayM,
+                    VariantSmartPtrM, VariantRawPtrM));
 }
 
 namespace tag {
+struct RawPtr {};
 struct Container {};
 struct CArray {};
-struct RawPtr {};
+struct SmartPtr {};
 } // namespace tag
 struct PtrArg {
-  std::variant<tag::Container, tag::CArray, tag::RawPtr> Tag;
-  const Expr *Node;
+  std::variant<tag::RawPtr, tag::Container, tag::CArray, tag::SmartPtr> Tag;
+  const Expr &Node;
 };
 
 template <typename RefT>
-auto extractNode(const CallExpr &CallNode,
-                 const MatchFinder::MatchResult &Result) -> PtrArg {
+PtrArg extractNode(const CallExpr &CallNode,
+                   const MatchFinder::MatchResult &Result) {
   constexpr Refs Refs = RefT::Refs;
-  if (const auto *Node = Result.Nodes.getNodeAs<Expr>(Refs.AsCArray))
-    return {tag::CArray{}, Node};
-  if (const auto *Node = Result.Nodes.getNodeAs<Expr>(Refs.AsContainer))
-    return {tag::Container{}, Node};
-  return {tag::RawPtr{}, CallNode.getArg(Refs.FallbackParameterIdx)};
+  if (const auto *Node = Result.Nodes.getNodeAs<Expr>(Refs.AsCArray);
+      Node != nullptr)
+    return {tag::CArray{}, *Node};
+  if (const auto *Node = Result.Nodes.getNodeAs<Expr>(Refs.AsContainer);
+      Node != nullptr)
+    return {tag::Container{}, *Node};
+  if (const auto *Node = Result.Nodes.getNodeAs<Expr>(Refs.AsSmartPtr);
+      Node != nullptr)
+    return {tag::SmartPtr{}, *Node};
+  return {tag::RawPtr{}, *CallNode.getArg(Refs.FallbackParameterIdx)};
 }
 
 template <typename RefT>
-QualType extractValueType(const MatchFinder::MatchResult &Result) {
-  return *Result.Nodes.getNodeAs<QualType>(RefT::Refs.ValueType);
+const QualType *extractValueType(const MatchFinder::MatchResult &Result) {
+  constexpr Refs Refs = RefT::Refs;
+  const auto *MaybeRetType =
+      Result.Nodes.getNodeAs<QualType>(Refs.PtrCastFnReturnType);
+  const auto *ValueType = Result.Nodes.getNodeAs<QualType>(Refs.ValueType);
+  llvm::errs() << "MaybeRetType: " << (MaybeRetType == nullptr) << '\n';
+  llvm::errs() << "ValueType: " << (ValueType == nullptr) << '\n';
+
+  // checking equality is done here as opposed to when matching because the
+  // equalsBoundNode matcher depends on the match order and the
+  // PtrCastFnReturnType is only present in some scenarios
+  if (MaybeRetType != nullptr and
+      MaybeRetType->getCanonicalType() != ValueType->getCanonicalType())
+    return nullptr;
+  return ValueType;
 }
 } // namespace ptrarg
 
 namespace dst {
-constexpr size_t argIndex = 0;
+constexpr size_t ArgIndex = 0;
 struct RefT {
   static constexpr ptrarg::Refs Refs = {
-      "Dst::AsContainer",
-      "Dst::AsCArray",
-      0,
-      "Dst::ValueType",
-  };
+      "Dst::AsContainer",         "Dst::AsCArray",  0, "Dst::ValueType",
+      "Dst::PtrCastFnReturnType", "Dst::AsSmartPtr"};
 };
 
 auto createMatcher() { return ptrarg::createPtrArgMatcher<RefT>(); }
@@ -162,15 +168,12 @@ auto extractValueType(const MatchFinder::MatchResult &Result) {
 } // namespace dst
 
 namespace src {
-constexpr size_t argIndex = 1;
+constexpr size_t ArgIndex = 1;
 
 struct SrcRefsT {
   static constexpr ptrarg::Refs Refs = {
-      "Src::AsContainer",
-      "Src::AsCArray",
-      1,
-      "Src::ValueType",
-  };
+      "Src::AsContainer",         "Src::AsCArray",  1, "Src::ValueType",
+      "Src::PtrCastFnReturnType", "Src::AsSmartPtr"};
 };
 
 auto createMatcher() { return ptrarg::createPtrArgMatcher<SrcRefsT>(); }
@@ -184,7 +187,7 @@ auto extractValueType(const MatchFinder::MatchResult &Result) {
 } // namespace src
 
 namespace size {
-constexpr size_t argIndex = 2;
+constexpr size_t ArgIndex = 2;
 // cases:
 // 1. sizeof(T) where T is a type
 // 2. sizeof(rec) where rec is a CArray
@@ -193,14 +196,14 @@ constexpr size_t argIndex = 2;
 // 5. other expr
 namespace variant {
 struct SizeOfExpr {
-  const Expr *Arg;
+  const Expr &Arg;
 };
 struct NSizeOfExpr {
-  const Expr *N;
-  const Expr *Arg;
+  const Expr &N;
+  const Expr &Arg;
 };
 struct Strlen {
-  const Expr *Arg;
+  const Expr &Arg;
 };
 } // namespace variant
 using SizeArg = std::variant<variant::SizeOfExpr, variant::NSizeOfExpr,
@@ -227,36 +230,41 @@ static constexpr struct Refs {
 };
 
 auto createMatcher() {
-  auto NSizeOfT =
+  auto NSizeOfExprM =
       binaryOperator(hasOperatorName("*"),
                      hasOperands(expr().bind(Refs.N),
                                  sizeOfExpr(has(expr().bind(Refs.SizeOfArg)))));
-  auto Strlen = callExpr(callee(functionDecl(hasAnyName(
-                             "::strlen", "::std::strlen", "::wcslen",
-                             "::std::wcslen", "::strnlen_s", "::std::strnlen_s",
-                             "::wcsnlen_s", "::std::wcsnlen_s"))),
-                         hasArgument(0, expr().bind(Refs.StrlenArg)));
-  auto StrlenPlusOne = binaryOperator(
-      hasOperatorName("+"), hasOperands(Strlen, integerLiteral(equals(1))));
+  auto StrlenM =
+      callExpr(callee(functionDecl(hasAnyName(
+                   "::strlen", "::std::strlen", "::wcslen", "::std::wcslen",
+                   "::strnlen_s", "::std::strnlen_s", "::wcsnlen_s",
+                   "::std::wcsnlen_s"))),
+               hasArgument(0, expr().bind(Refs.StrlenArg)));
+  auto StrlenPlusOneM = binaryOperator(
+      hasOperatorName("+"), hasOperands(StrlenM, integerLiteral(equals(1))));
 
-  auto SizeOfExpr = sizeOfExpr(hasArgumentOfType(type().bind(Refs.SizeOfArg)));
+  auto SizeOfExprM = sizeOfExpr(has(expr().bind(Refs.SizeOfArg)));
 
-  return expr(anyOf(NSizeOfT, Strlen, StrlenPlusOne, SizeOfExpr));
+  return expr(anyOf(NSizeOfExprM, StrlenM, StrlenPlusOneM, SizeOfExprM));
 }
 
 SizeArg extractNode(const CallExpr &CallNode,
                     const MatchFinder::MatchResult &Result) {
+  llvm::errs() << __LINE__ << '\n';
   if (const auto *SizeOfArgNode = Result.Nodes.getNodeAs<Expr>(Refs.SizeOfArg);
       SizeOfArgNode != nullptr) {
+    llvm::errs() << __LINE__ << '\n';
     if (const auto *NNode = Result.Nodes.getNodeAs<Expr>(Refs.N);
         NNode != nullptr)
-      return variant::NSizeOfExpr{NNode, SizeOfArgNode};
-    return variant::SizeOfExpr{SizeOfArgNode};
+      return variant::NSizeOfExpr{*NNode, *SizeOfArgNode};
+    llvm::errs() << __LINE__ << '\n';
+    return variant::SizeOfExpr{*SizeOfArgNode};
   }
+  llvm::errs() << __LINE__ << '\n';
   if (const auto *StrlenArgNode = Result.Nodes.getNodeAs<Expr>(Refs.StrlenArg);
-      StrlenArgNode != nullptr) {
-    return variant::Strlen{StrlenArgNode};
-  }
+      StrlenArgNode != nullptr)
+    return variant::Strlen{*StrlenArgNode};
+  llvm::errs() << __LINE__ << '\n';
   return CallNode.getArg(2);
 }
 // 1. N * sizeof(type) (commutative) - issue warning but no fixit, or fixit
@@ -268,6 +276,15 @@ SizeArg extractNode(const CallExpr &CallNode,
 
 } // namespace size
 
+auto createCalleeMatcher(bool FlagMemcpy) {
+  if (FlagMemcpy)
+    return hasAnyName("::memmove", "::std::memmove", "::memcpy",
+                      "::std::memcpy", "::wmemmove", "::std::wmemmove",
+                      "::wmemcpy", "::std::wmemcpy");
+  return hasAnyName("::memmove", "::std::memmove", "::wmemmove",
+                    "::std::wmemmove");
+}
+
 } // namespace
 
 ReplaceWithStdCopyCheck::ReplaceWithStdCopyCheck(StringRef Name,
@@ -276,15 +293,14 @@ ReplaceWithStdCopyCheck::ReplaceWithStdCopyCheck(StringRef Name,
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
-      FlaggableCallees_(Options.getLocalOrGlobal("FlaggableCallees",
-                                                 FlaggableCalleesDefault)) {}
+      FlagMemcpy(Options.getLocalOrGlobal("FlagMemcpy", false)) {}
 
 void ReplaceWithStdCopyCheck::registerMatchers(MatchFinder *Finder) {
   const auto ReturnValueUsedM =
       hasParent(compoundStmt().bind(ReturnValueDiscardedRef));
 
   const auto OffendingDeclM =
-      functionDecl(parameterCountIs(3), hasAnyName(getFlaggableCallees()));
+      functionDecl(parameterCountIs(3), createCalleeMatcher(FlagMemcpy));
 
   // cases:
   // 1. One of the arguments is definitely a collection and the other a pointer
@@ -292,13 +308,12 @@ void ReplaceWithStdCopyCheck::registerMatchers(MatchFinder *Finder) {
   // 2. Both source and dest are pointers, but size is of the form ((N :=
   // expr()) * sizeof(bytelike())) - match (false positive if N \in {0, 1})
 
-  const auto Expression =
-      callExpr(callee(OffendingDeclM),
-               anyOf(optionally(ReturnValueUsedM),
-                     allOf(hasArgument(0, dst::createMatcher()),
-                           hasArgument(1, src::createMatcher()),
-                           hasArgument(2, size::createMatcher()))));
-  Finder->addMatcher(Expression.bind(ExpressionRef), this);
+  const auto ExpressionM = callExpr(
+      callee(OffendingDeclM), optionally(ReturnValueUsedM),
+      allOf(optionally(hasArgument(dst::ArgIndex, dst::createMatcher())),
+            optionally(hasArgument(src::ArgIndex, src::createMatcher())),
+            optionally(hasArgument(size::ArgIndex, size::createMatcher()))));
+  Finder->addMatcher(ExpressionM.bind(ExpressionRef), this);
 }
 
 void ReplaceWithStdCopyCheck::registerPPCallbacks(
@@ -308,132 +323,186 @@ void ReplaceWithStdCopyCheck::registerPPCallbacks(
 
 void ReplaceWithStdCopyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
-  Options.store(Opts, "FlaggableCallees", FlaggableCallees_);
+  Options.store(Opts, "FlagMemcpy", FlagMemcpy);
 }
-
-#include "llvm/Support/Debug.h"
-#define DEBUG_TYPE "clang-tidy"
 
 void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &CallNode = *Result.Nodes.getNodeAs<CallExpr>(ExpressionRef);
+  llvm::errs() << __LINE__ << ' '
+               << Lexer::getSourceText(
+                      CharSourceRange::getTokenRange(CallNode.getSourceRange()),
+                      *Result.SourceManager, getLangOpts())
+               << '\n';
 
-  auto dstVT = dst::extractValueType(Result);
-  auto srcVT = src::extractValueType(Result);
+  auto Dst = dst::extractNode(CallNode, Result);
+  auto Src = src::extractNode(CallNode, Result);
+  auto Size = size::extractNode(CallNode, Result);
 
-  // basis for converting size argument to std::copy_n's when issuing fixit
-  auto valueTypeWidth = Result.Context->getTypeSizeInChars(dstVT);
-
-  // Don't report cases where value type widths differ, as this might indicate
-  // [de]serialization and hard to reason about replacements using std::copy[_n]
-  if (valueTypeWidth != Result.Context->getTypeSizeInChars(srcVT))
+  const auto *DstVT = dst::extractValueType(Result);
+  if (DstVT == nullptr)
+    return;
+  const auto *SrcVT = src::extractValueType(Result);
+  if (SrcVT == nullptr)
     return;
 
-  auto dst = dst::extractNode(CallNode, Result);
-  auto src = src::extractNode(CallNode, Result);
-  auto size = size::extractNode(CallNode, Result);
-
-  // only have this function return a non-empty optional if the form of the size
-  // argument strongly indicates collection-related usage
-  auto exprAsString = [&](const Expr *Node) {
+  auto ExprAsString = [&](const Expr &Node) {
     return Lexer::getSourceText(
-               CharSourceRange::getTokenRange(Node->getSourceRange()),
+               CharSourceRange::getTokenRange(Node.getSourceRange()),
                *Result.SourceManager, getLangOpts())
         .str();
   };
 
-  auto extractComponents = [&]() -> std::optional<size::SizeComponents> {
+  // only have this function return a non-empty optional if the form of the size
+  // argument strongly indicates collection-related usage
+  auto ExtractComponents = [&]() -> std::optional<size::SizeComponents> {
     if (const auto *NSizeOfExprNode =
-            std::get_if<size::variant::NSizeOfExpr>(&size);
+            std::get_if<size::variant::NSizeOfExpr>(&Size);
         NSizeOfExprNode != nullptr) {
       auto &[N, Arg] = *NSizeOfExprNode;
-      auto sizeOfArgWidth = Result.Context->getTypeSizeInChars(Arg->getType());
-      return {{sizeOfArgWidth, exprAsString(N)}};
+      auto SizeOfArgWidth = Result.Context->getTypeSizeInChars(Arg.getType());
+      return {{SizeOfArgWidth, ExprAsString(N)}};
     }
-    if (const auto *StrlenNode = std::get_if<size::variant::Strlen>(&size);
+    if (const auto *StrlenNode = std::get_if<size::variant::Strlen>(&Size);
         StrlenNode != nullptr) {
-      auto strlenArgTypeWidth = Result.Context->getTypeSizeInChars(
-          StrlenNode->Arg->getType()->getPointeeType());
-      return {{strlenArgTypeWidth, exprAsString(CallNode.getArg(2))}};
+      auto StrlenArgTypeWidth = Result.Context->getTypeSizeInChars(
+          StrlenNode->Arg.getType()->getPointeeType());
+      return {{StrlenArgTypeWidth, ExprAsString(*CallNode.getArg(2))}};
     }
     return std::nullopt;
   };
 
-  if (auto maybeComponents = extractComponents(); maybeComponents.has_value()) {
-    auto [unit, nExpr] = *maybeComponents;
-    if (unit != valueTypeWidth) {
-      // __jm__ tricky to offer a helpful fixit here, as the size argument
-      // doesn't seem to be related to the pointee types of src and dst
-      return;
-    }
-    // __jm__ makes sense to assume
-  }
-  // might be a reinterpretation call, only other case where we don't flag
-  if (std::holds_alternative<ptrarg::tag::RawPtr>(dst.Tag) and
-      std::holds_alternative<ptrarg::tag::RawPtr>(src.Tag)) {
-    // not supported yet, need to come up with a robust heuristic first
-    return;
-  }
+  bool DstIsRawPtr = std::holds_alternative<ptrarg::tag::RawPtr>(Dst.Tag);
+  bool SrcIsRawPtr = std::holds_alternative<ptrarg::tag::RawPtr>(Src.Tag);
 
-  // both src and dst are collection expressions, enough to wrap them in
-  // std::begin calls
+  auto CheckIsFalsePositive = [&]() {
+    // This case could be supported but it requires a robust heuristic
+    // over the form of the size argument
+    // to deduce we are dealing with pointers to collections
+    // When only one of the arguments is a raw pointer, then there are still
+    // valid scenarios in which it is a singleton to be memmoved over, like
+    // [de]serialization.
+    return DstIsRawPtr or SrcIsRawPtr;
+  };
+  if (CheckIsFalsePositive())
+    return;
+
   auto Diag = diag(CallNode.getExprLoc(), "prefer std::copy_n to %0")
               << cast<NamedDecl>(CallNode.getCalleeDecl());
 
-  // don't issue a fixit if the result of the call is used
-  if (bool IsReturnValueUsed =
-          Result.Nodes.getNodeAs<Stmt>(ReturnValueDiscardedRef) == nullptr;
-      IsReturnValueUsed)
+  // basis for converting size argument to std::copy_n's when issuing fixit
+  auto DstTypeWidth = Result.Context->getTypeSizeInChars(*DstVT);
+  auto SrcTypeWidth = Result.Context->getTypeSizeInChars(*SrcVT);
+
+  auto CheckIsFixable = [&]() {
+    // If the width types differ, it's hard to reason about what would be a
+    // helpful replacement, so just don't issue a fixit in this case
+    if (DstTypeWidth != SrcTypeWidth)
+      return false;
+
+    // don't issue a fixit if the result of the call is used
+    if (bool IsReturnValueUsed =
+            Result.Nodes.getNodeAs<Stmt>(ReturnValueDiscardedRef) == nullptr;
+        IsReturnValueUsed)
+      return false;
+
+    return true;
+  };
+  if (not CheckIsFixable())
     return;
 
-  Diag << FixItHint::CreateRemoval(CallNode.getSourceRange());
-  std::string srcFixit = "std::cbegin(" + exprAsString(src.Node) + ")";
-  std::string dstFixit = "std::begin(" + exprAsString(dst.Node) + ")";
+  // From here we can assume dst and src have equal value type widths
+  const auto &ValueTypeWidth = DstTypeWidth;
 
-  auto calleeIsWideVariant =
+  auto SrcFixit = [&]() {
+    auto AsString = ExprAsString(Src.Node);
+    if (SrcIsRawPtr)
+      return AsString;
+    return "std::cbegin(" + AsString + ")";
+  }();
+
+  auto DstFixit = [&]() {
+    auto AsString = ExprAsString(Dst.Node);
+    if (DstIsRawPtr)
+      return AsString;
+    return "std::begin(" + AsString + ")";
+  }();
+
+  llvm::errs() << "SrcFixit: " << SrcFixit << '\n'
+               << "DstFixit: " << DstFixit << '\n';
+  auto CalleeIsWideVariant =
       CallNode.getDirectCallee()->getParamDecl(0)->getType()->isWideCharType();
 
-  auto calleeUnit = [&]() {
-    if (calleeIsWideVariant) {
+  auto CalleeUnit = [&]() {
+    if (CalleeIsWideVariant) {
       return Result.Context->getTypeSizeInChars(
           (Result.Context->getWideCharType()));
     }
     return CharUnits::One();
   }();
-  auto sizeFixit = [&]() -> std::string {
-    if (valueTypeWidth == calleeUnit) {
-      return exprAsString(CallNode.getArg(size::argIndex));
+  llvm::errs() << __LINE__ << Size.index() << '\n';
+
+  llvm::errs() << __LINE__ << " CalleeUnit: " << CalleeUnit.getQuantity()
+               << '\n';
+  auto SizeFixit = [&]() -> std::string {
+    if (ValueTypeWidth == CalleeUnit) {
+      // replace sizeof(CArray) with the more modern std::size(CArray)
+      if (const auto *SizeOfExprNode =
+              std::get_if<size::variant::SizeOfExpr>(&Size);
+          SizeOfExprNode != nullptr and
+          SizeOfExprNode->Arg.getType()->isArrayType()) {
+        return "std::size(" + ExprAsString(SizeOfExprNode->Arg) + ")";
+      }
+
+      return ExprAsString(*CallNode.getArg(size::ArgIndex));
     }
     // try to factor out the unit from the size expression
-    if (auto maybeSizeComponents = extractComponents();
-        maybeSizeComponents.has_value() and
-        maybeSizeComponents->Unit == valueTypeWidth) {
-      return maybeSizeComponents->NExpr;
+    if (auto MaybeSizeComponents = ExtractComponents();
+        MaybeSizeComponents.has_value() and
+        MaybeSizeComponents->Unit == ValueTypeWidth) {
+      return MaybeSizeComponents->NExpr;
     }
-    // last resort, divide by valueTypeWidth
-    return exprAsString(CallNode.getArg(size::argIndex)) + " / " + "sizeof(" +
-           dstVT.getAsString() + ")";
+    // last resort, divide by ValueTypeWidth
+    return ExprAsString(*CallNode.getArg(size::ArgIndex)) + " / " + "sizeof(" +
+           DstVT->getAsString() + ")";
   }();
+  llvm::errs() << "SizeFixit: " << SizeFixit << '\n';
 
-  Diag << FixItHint::CreateInsertion(CallNode.getEndLoc(),
-                                     "std::copy_n(" + srcFixit + ", " +
-                                         sizeFixit + ", " + dstFixit + ");");
+  Diag << FixItHint::CreateRemoval(CallNode.getSourceRange())
+       << FixItHint::CreateInsertion(CallNode.getBeginLoc(),
+                                     "std::copy_n(" + SrcFixit + ", " +
+                                         SizeFixit + ", " + DstFixit + ");")
+       << Inserter.createIncludeInsertion(
+              Result.SourceManager->getFileID(CallNode.getBeginLoc()),
+              "<algorithm>");
+
+  // Modern containers will include a std::[c]begin declaration with their
+  // header, but not c-arrays (or smart pointers to c-arrays), so need to ensure
+  // they are included.
+  auto IsCArrayOrWrapper = [](const decltype(ptrarg::PtrArg::Tag) &Tag) {
+    return std::holds_alternative<ptrarg::tag::CArray>(Tag) or
+           std::holds_alternative<ptrarg::tag::SmartPtr>(Tag);
+  };
+
+  if (IsCArrayOrWrapper(Dst.Tag) and IsCArrayOrWrapper(Src.Tag))
+    Diag << Inserter.createIncludeInsertion(
+        Result.SourceManager->getFileID(CallNode.getBeginLoc()), "<iterator>");
 
   // if (const auto *NSizeofExprNode =
   //         std::get_if<size::variant::NSizeOfExpr>(&size);
   //     NSizeofExprNode != nullptr) {
   //   auto &[N, Arg] = *NSizeofExprNode;
-  //   auto sizeOfArgWidth = Result.Context->getTypeSizeInChars(Arg->getType());
+  //   auto SizeOfArgWidth = Result.Context->getTypeSizeInChars(Arg->getType());
   //   issueFixitIfWidthsMatch(dst.Node, src.Node,
-  //                           {sizeOfArgWidth, exprAsString(N)});
+  //                           {SizeOfArgWidth, ExprAsString(N)});
   //   return;
   // }
   // if (const auto *StrlenNode = std::get_if<size::variant::Strlen>(&size);
   //     StrlenNode != nullptr) {
-  //   auto strlenArgTypeWidth = Result.Context->getTypeSizeInChars(
+  //   auto StrlenArgTypeWidth = Result.Context->getTypeSizeInChars(
   //       StrlenNode->Arg->getType()->getPointeeType());
   //   issueFixitIfWidthsMatch(
   //       dst.Node, src.Node,
-  //       {strlenArgTypeWidth, exprAsString(CallNode.getArg(2))});
+  //       {StrlenArgTypeWidth, ExprAsString(CallNode.getArg(2))});
   //   return;
   // }
   // if (const auto *SizeOfExprNode =
@@ -443,15 +512,15 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
   //   if (SizeOfExprNode->Arg->getType()->isArrayType()) {
   //     issueFixitIfWidthsMatch(
   //         dst.Node, src.Node,
-  //         {CharUnits::One(), exprAsString(CallNode.getArg(2))});
+  //         {CharUnits::One(), ExprAsString(CallNode.getArg(2))});
   //     return;
   //   }
   //   // __jm__ weird bc we assume dst and src are collections
   //   // if Arg turns out to have the same type as dst or src then just suggest
   //   // copy via the assignment operator
-  //   if (auto argType = Arg->getType(); argType == dstVT or argType == srcVT)
+  //   if (auto argType = Arg->getType(); argType == DstVT or argType == SrcVT)
   //   {
-  //     issueFixit{valueTypeWidth, exprAsString(CallNode.getArg(2))};
+  //     issueFixit{ValueTypeWidth, ExprAsString(CallNode.getArg(2))};
   //     return;
   //   }
   //   // __jm__ only flag this as suspicious with a further explanation in the
@@ -489,7 +558,7 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
   //    equal to vtw, essentialy fallthrough to 3
 
   // 3. N * sizeof(expr) is okay when expr is a type with width ==
-  // valueTypeWidth and N may be verbatim lifted into copy_n's third argument
+  // ValueTypeWidth and N may be verbatim lifted into copy_n's third argument
 
   // to make sure we can issue a FixIt, need to be pretty sure we're dealing
   // with a collection and it is a byte collection
@@ -538,8 +607,6 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
   // } else {
   // }
 
-  Diag << Inserter.createIncludeInsertion(
-      Result.SourceManager->getFileID(CallNode.getBeginLoc()), StdCopyHeader);
   {
     // using namespace std::literals;
     // Diag << FixItHint::CreateReplacement(
@@ -562,17 +629,7 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
     //      ")")
     //         .str());
   }
-  // dest source size -> source size dest
 }
 
-llvm::ArrayRef<StringRef> ReplaceWithStdCopyCheck::getFlaggableCallees() const {
-  switch (FlaggableCallees_) {
-  case FlaggableCallees::OnlyMemmove:
-    return {"::memmove", "::std::memmove", "::wmemmove", "::std::wmemmove"};
-  case FlaggableCallees::MemmoveAndMemcpy:
-    return {"::memmove",  "::std::memmove",  "::memcpy",  "::std::memcpy",
-            "::wmemmove", "::std::wmemmove", "::wmemcpy", "::std::wmemcpy"};
-  }
-}
 } // namespace modernize
 } // namespace clang::tidy
