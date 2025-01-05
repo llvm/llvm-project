@@ -1326,6 +1326,9 @@ TEST_F(FileSystemTest, Remove) {
 
   ASSERT_NO_ERROR(fs::remove_directories("D:/footest"));
 
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(BaseDir) + "/foo/bar/baz"));
+  ASSERT_FALSE(fs::exists(Twine(BaseDir) + "/foo/bar/baz"));
+
   ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
   ASSERT_FALSE(fs::exists(BaseDir));
 }

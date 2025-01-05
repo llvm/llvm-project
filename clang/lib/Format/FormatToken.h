@@ -25,6 +25,7 @@ namespace clang {
 namespace format {
 
 #define LIST_TOKEN_TYPES                                                       \
+  TYPE(AfterPPDirective)                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
@@ -186,6 +187,7 @@ namespace format {
   TYPE(UnionLBrace)                                                            \
   TYPE(UnionRBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  TYPE(VariableTemplate)                                                       \
   /* Like in 'assign x = 0, y = 1;' . */                                       \
   TYPE(VerilogAssignComma)                                                     \
   /* like in begin : block */                                                  \

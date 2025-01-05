@@ -946,7 +946,7 @@ void Writer::appendECImportTables() {
 
   const uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
 
-  // IAT is always placed at the begining of .rdata section and its size
+  // IAT is always placed at the beginning of .rdata section and its size
   // is aligned to 4KB. Insert it here, after all merges all done.
   if (PartialSection *importAddresses = findPartialSection(".idata$5", rdata)) {
     if (!rdataSec->chunks.empty())
