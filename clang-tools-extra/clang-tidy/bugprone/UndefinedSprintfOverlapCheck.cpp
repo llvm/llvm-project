@@ -31,26 +31,28 @@ UndefinedSprintfOverlapCheck::UndefinedSprintfOverlapCheck(
 
 void UndefinedSprintfOverlapCheck::registerMatchers(MatchFinder *Finder) {
   auto FirstArg = declRefExpr(to(varDecl().bind("firstArgDecl")));
-  auto OtherRefToArg = declRefExpr(to(varDecl(equalsBoundNode("firstArgDecl"))));
+  auto OtherRefToArg =
+      declRefExpr(to(varDecl(equalsBoundNode("firstArgDecl"))));
   Finder->addMatcher(
       callExpr(
           callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
-          hasArgument(
-                  0, expr(anyOf(FirstArg,
-                                arraySubscriptExpr(
-                                    hasBase(FirstArg),
-                                    hasIndex(integerLiteral().bind("index"))),
-                                memberExpr(member(decl().bind("member")),
+          hasArgument(0,
+                      expr(anyOf(FirstArg,
+                                 arraySubscriptExpr(
+                                     hasBase(FirstArg),
+                                     hasIndex(integerLiteral().bind("index"))),
+                                 memberExpr(member(decl().bind("member")),
                                             hasObjectExpression(FirstArg))))
                           .bind("firstArgExpr")),
-              hasAnyArgument(expr(
-                  unless(equalsBoundNode("firstArgExpr")),
-                  anyOf(OtherRefToArg,
-                        arraySubscriptExpr(hasBase(OtherRefToArg),
-                                            hasIndex(integerLiteral(
-                                                hasSameValueAs("index")))),
-                        memberExpr(member(decl(equalsBoundNode("member"))),
-                                    hasObjectExpression(OtherRefToArg)))).bind("secondArgExpr"))),
+          hasAnyArgument(
+              expr(unless(equalsBoundNode("firstArgExpr")),
+                   anyOf(OtherRefToArg,
+                         arraySubscriptExpr(
+                             hasBase(OtherRefToArg),
+                             hasIndex(integerLiteral(hasSameValueAs("index")))),
+                         memberExpr(member(decl(equalsBoundNode("member"))),
+                                    hasObjectExpression(OtherRefToArg))))
+                  .bind("secondArgExpr"))),
       this);
 }
 
@@ -60,13 +62,14 @@ void UndefinedSprintfOverlapCheck::check(
   const auto *SecondArg = Result.Nodes.getNodeAs<Expr>("secondArgExpr");
   const auto *FnDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
 
-  const llvm::StringRef FirstArgText =
-      Lexer::getSourceText(CharSourceRange::getTokenRange(FirstArg->getSourceRange()),
-                           *Result.SourceManager, getLangOpts());
+  const llvm::StringRef FirstArgText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(FirstArg->getSourceRange()),
+      *Result.SourceManager, getLangOpts());
 
-  diag(SecondArg->getBeginLoc(),
-       "argument '%0' overlaps the first argument in %1, which is undefined behavior")
-      << FirstArgText << FnDecl << FirstArg->getSourceRange() << SecondArg->getSourceRange();
+  diag(SecondArg->getBeginLoc(), "argument '%0' overlaps the first argument in "
+                                 "%1, which is undefined behavior")
+      << FirstArgText << FnDecl << FirstArg->getSourceRange()
+      << SecondArg->getSourceRange();
 }
 
 void UndefinedSprintfOverlapCheck::storeOptions(
