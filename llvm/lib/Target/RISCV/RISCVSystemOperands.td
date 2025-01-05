@@ -148,6 +148,8 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
+let isRV32Only = 1 in
+def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -158,8 +160,6 @@ def : SysReg<"hip", 0x644>;
 def : SysReg<"hvip", 0x645>;
 def : SysReg<"htinst", 0x64A>;
 def : SysReg<"hgeip", 0xE12>;
-let isRV32Only = 1 in
-def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Configuration
@@ -226,8 +226,10 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
-let isRV32Only = 1 in
+let isRV32Only = 1 in {
 def : SysReg<"mstatush", 0x310>;
+def : SysReg<"medelegh", 0x312>;
+} // isRV32Only
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling
@@ -241,8 +243,6 @@ def : SysReg<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
-let isRV32Only = 1 in
-def : SysReg<"medelegh", 0x312>;
 
 //===----------------------------------------------------------------------===//
 // Machine Configuration
