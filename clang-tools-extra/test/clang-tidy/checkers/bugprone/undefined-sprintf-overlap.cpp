@@ -33,7 +33,9 @@ void first_arg_overlaps() {
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: argument 'c' overlaps the first argument in 'snprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
 
   char buf2[10];
-  snprintf(buf, sizeof(buf), "%s", buf2);
+  sprintf(buf, "%s", buf2);
+  sprintf(buf, "%s", buf2, buf);
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: argument 'buf' overlaps the first argument in 'sprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
 
   st_t st1, st2;
   sprintf(st1.buf, "%s", st1.buf);

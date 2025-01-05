@@ -13,7 +13,8 @@
 
 namespace clang::tidy::bugprone {
 
-/// FIXME: Write a short description.
+/// Warns if any arguments to the ``sprintf`` family of functions overlap with
+/// the destination buffer (the first argument).
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/undefined-sprintf-overlap.html
@@ -25,6 +26,9 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
+  }
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus || LangOpts.C99;
   }
 
 private:

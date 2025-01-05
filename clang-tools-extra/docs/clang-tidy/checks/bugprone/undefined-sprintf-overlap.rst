@@ -4,7 +4,7 @@ bugprone-undefined-sprintf-overlap
 ==================================
 
 Warns if any arguments to the ``sprintf`` family of functions overlap with the
-first argument.
+destination buffer (the first argument).
 
 .. code-block:: c++
 
