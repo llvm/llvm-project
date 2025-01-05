@@ -44,7 +44,7 @@ set(ASAN_UNITTEST_COMMON_LINK_FLAGS
 
 # -gline-tables-only must be enough for ASan, so use it if possible.
 if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
-  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gline-tables-only)
+  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -g)
 else()
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -g)
 endif()
