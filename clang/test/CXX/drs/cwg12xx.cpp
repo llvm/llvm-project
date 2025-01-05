@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx17,since-cxx14,since-cxx11,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
 
 // cwg1200: na
 
