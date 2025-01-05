@@ -174,6 +174,26 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3)
 #endif
 } // namespace cwg2759
 
+#if __cplusplus >= 202002L
+namespace cwg2770 { // cwg2770: 20
+template<typename T>
+struct B {
+  static_assert(sizeof(T) == 1);
+  using type = int;
+};
+
+template<typename T>
+int f(T t, typename B<T>::type u) requires (sizeof(t) == 1);
+
+template<typename T>
+int f(T t, long);
+
+int i = f(1, 2);
+int j = f('a', 2);
+
+} // namespace cwg2770
+#endif
+
 namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L
 template <typename T = int>
