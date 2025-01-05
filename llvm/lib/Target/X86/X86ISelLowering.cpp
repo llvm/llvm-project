@@ -341,8 +341,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
   if (Subtarget.hasAVX10_2()) {
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Legal);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
+    for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
+                   MVT::v4i64}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
+    }
+    if (Subtarget.hasAVX10_2_512()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
+    }
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
@@ -2656,6 +2665,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::UINT_TO_FP,
                        ISD::STRICT_SINT_TO_FP,
                        ISD::STRICT_UINT_TO_FP,
+                       ISD::FP_TO_SINT_SAT,
+                       ISD::FP_TO_UINT_SAT,
                        ISD::SETCC,
                        ISD::MUL,
                        ISD::XOR,
@@ -33665,6 +33676,26 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT: {
+    if (!Subtarget.hasAVX10_2())
+      return;
+
+    bool IsSigned = Opc == ISD::FP_TO_SINT_SAT;
+    EVT VT = N->getValueType(0);
+    SDValue Op = N->getOperand(0);
+    EVT OpVT = Op.getValueType();
+    SDValue Res;
+
+    if (VT == MVT::v2i32 && OpVT == MVT::v2f64) {
+      if (IsSigned)
+        Res = DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v4i32, Op);
+      else
+        Res = DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v4i32, Op);
+      Results.push_back(Res);
+    }
+    return;
+  }
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
@@ -34645,6 +34676,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VPERMV3)
   NODE_NAME_CASE(VPERMI)
   NODE_NAME_CASE(VPTERNLOG)
+  NODE_NAME_CASE(FP_TO_SINT_SAT)
+  NODE_NAME_CASE(FP_TO_UINT_SAT)
   NODE_NAME_CASE(VFIXUPIMM)
   NODE_NAME_CASE(VFIXUPIMM_SAE)
   NODE_NAME_CASE(VFIXUPIMMS)
@@ -56202,6 +56235,33 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Custom handling for VCVTTPS2QQS/VCVTTPS2UQQS
+static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX10_2())
+    return SDValue();
+
+  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT_SAT;
+  EVT SrcVT = N->getOperand(0).getValueType();
+  EVT DstVT = N->getValueType(0);
+  SDLoc dl(N);
+
+  if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64) {
+    SDValue V2F32Value = DAG.getUNDEF(SrcVT);
+
+    // Concatenate the original v2f32 input and V2F32Value to create v4f32
+    SDValue NewSrc = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
+                                 N->getOperand(0), V2F32Value);
+
+    // Select the FP_TO_SINT_SAT/FP_TO_UINT_SAT node
+    if (IsSigned)
+      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v2i64, NewSrc);
+
+    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v2i64, NewSrc);
+  }
+  return SDValue();
+}
+
 static bool needCarryOrOverflowFlag(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
@@ -59315,6 +59375,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT: return combineFP_TO_xINT_SAT(N, DAG, Subtarget);
     // clang-format on
   }
 
