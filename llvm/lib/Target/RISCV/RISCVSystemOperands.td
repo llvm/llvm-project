@@ -158,6 +158,7 @@ def : SysReg<"hip", 0x644>;
 def : SysReg<"hvip", 0x645>;
 def : SysReg<"htinst", 0x64A>;
 def : SysReg<"hgeip", 0xE12>;
+let isRV32Only = 1 in
 def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
@@ -240,6 +241,7 @@ def : SysReg<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
+let isRV32Only = 1 in
 def : SysReg<"medelegh", 0x312>;
 
 //===----------------------------------------------------------------------===//
