@@ -2,7 +2,9 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace cwg1110 { // cwg1110: 3.1
 #if __cplusplus >= 201103L
