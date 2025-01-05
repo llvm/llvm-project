@@ -3,18 +3,19 @@
 modernize-replace-with-stdcopy
 ===================================
 
-Replaces all occurrences of the C ``memcpy`` function with ``std::copy``
+Replaces all occurrences of the C ``memmove`` function and its wide-char variant with ``std::copy_n``.
+Replacement of ``memcpy`` is optionally also supported.
 
 Example:
 
 .. code-block:: c++
 
   /*!
-   * \param destination Pointer to the destination array where the content is to be copied
-   * \param source Pointer to the source of data to be copied
-   * \param num Number of bytes to copy
+   * \param dst Pointer to the destination array where the content is to be copied
+   * \param src Pointer to the source of data to be copied
+   * \param size Number of bytes to copy
    */
-  memcpy(destination, source, num);
+  memcpy(dst, src, size);
 
 becomes
 
@@ -25,7 +26,7 @@ becomes
    * \param source Pointer to the source of data to be copied
    * \param num Number of bytes to copy
    */
-  std::copy(source, source + (num / sizeof *source), destination);
+  std::copy_n(std::cbegin(src), size, std::begin(dst));
 
 Bytes to iterator conversion
 ----------------------------
@@ -36,7 +37,7 @@ In order to make the check working, it will convert the size parameter to an ite
 Header inclusion
 ----------------
 
-``std::copy`` being provided by the ``algorithm`` header file, this check will include it if needed.
+``std::copy_n`` is provided by the ``algorithm`` header file, this check will include it if needed.
 
 Options
 -------
