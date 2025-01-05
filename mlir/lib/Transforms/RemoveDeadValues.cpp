@@ -634,7 +634,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 }
 
 /// Steps to process a `BranchOpInterface` operation:
-/// Iterate through each successor block of the operation.
+/// Iterate through each successor block of `branchOp`.
 /// (1) For each successor block, gather all operands from all successors.
 /// (2) Fetch their associated liveness analysis data and collect for future
 /// removal. 
