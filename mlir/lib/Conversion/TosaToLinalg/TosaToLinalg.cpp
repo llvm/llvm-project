@@ -600,30 +600,33 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 static Value expandRank(PatternRewriter &rewriter, Location loc, Value tensor,
                         int64_t rank) {
   // No need to expand if we are already at the desired rank
-  auto shapedType = dyn_cast<ShapedType>(tensor.getType());
-  assert(shapedType && shapedType.hasRank() && "expected a ranked shaped type");
-  int64_t numExtraDims = rank - shapedType.getRank();
+  auto tensorType = dyn_cast<RankedTensorType>(tensor.getType());
+  assert(tensorType && "expected a ranked tensor type");
+  int64_t tensorRank = tensorType.getRank();
+  int64_t numExtraDims = rank - tensorRank;
   assert(numExtraDims >= 0 && "cannot expand tensor to a lower rank");
   if (!numExtraDims)
     return tensor;
 
   // Compute reassociation indices
-  SmallVector<SmallVector<int64_t, 2>> reassociationIndices(
-      shapedType.getRank());
+  SmallVector<ReassociationIndices> reassociationIndices(tensorRank);
   int64_t index = 0;
-  for (index = 0; index <= numExtraDims; index++)
-    reassociationIndices[0].push_back(index);
-  for (size_t position = 1; position < reassociationIndices.size(); position++)
-    reassociationIndices[position].push_back(index++);
+  if (tensorRank != 0) {
+    for (index = 0; index <= numExtraDims; index++)
+      reassociationIndices[0].push_back(index);
+    for (size_t position = 1; position < reassociationIndices.size();
+         position++)
+      reassociationIndices[position].push_back(index++);
+  }
 
   // Compute result type
   SmallVector<int64_t> resultShape;
   for (index = 0; index < numExtraDims; index++)
     resultShape.push_back(1);
-  for (auto size : shapedType.getShape())
+  for (auto size : tensorType.getShape())
     resultShape.push_back(size);
   auto resultType =
-      RankedTensorType::get(resultShape, shapedType.getElementType());
+      RankedTensorType::get(resultShape, tensorType.getElementType());
 
   // Emit 'tensor.expand_shape' op
   return rewriter.create<tensor::ExpandShapeOp>(loc, resultType, tensor,
