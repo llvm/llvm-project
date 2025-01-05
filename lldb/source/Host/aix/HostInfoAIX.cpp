@@ -26,21 +26,9 @@ void HostInfoAIX::Initialize(SharedLibraryDirectoryHelper *helper) {
   HostInfoPosix::Initialize(helper);
 }
 
-void HostInfoAIX::Terminate() {
-  HostInfoBase::Terminate();
-}
+void HostInfoAIX::Terminate() { HostInfoBase::Terminate(); }
 
 FileSpec HostInfoAIX::GetProgramFileSpec() {
   static FileSpec g_program_filespec;
-
-  if (!g_program_filespec) {
-    char exe_path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-    if (len > 0) {
-      exe_path[len] = 0;
-      g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
-    }
-  }
-
   return g_program_filespec;
 }
