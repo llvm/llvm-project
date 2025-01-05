@@ -297,7 +297,7 @@ define double @test_fabs_select1(double %a) {
 define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
 ; CHECK-LABEL: @test_fabs_select1_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp uno <2 x double> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> [[A]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> splat (double 0x7FF8000000000000), <2 x double> [[A]]
 ; CHECK-NEXT:    ret <2 x double> [[SEL2]]
 ;
   %cond = fcmp uno <2 x double> %a, zeroinitializer

@@ -10,8 +10,11 @@
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
+#include "DXILResourceAnalysis.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -77,11 +80,13 @@ namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
-  DXILResourceMap &DRM;
+  DXILBindingMap &DBM;
+  DXILResourceTypeMap &DRTM;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
+  OpLowerer(Module &M, DXILBindingMap &DBM, DXILResourceTypeMap &DRTM)
+      : M(M), OpBuilder(M), DBM(DBM), DRTM(DRTM) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -106,36 +111,36 @@ public:
     return false;
   }
 
-  struct ArgSelect {
+  struct IntrinArgSelect {
     enum class Type {
-      Index,
-      I8,
-      I32,
+#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(name) name,
+#include "DXILOperation.inc"
     };
-    Type Type = Type::Index;
-    int Value = -1;
+    Type Type;
+    int Value;
   };
 
-  [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
-                                           ArrayRef<ArgSelect> ArgSelects) {
+  [[nodiscard]] bool
+  replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                        ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
+           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
       if (ArgSelects.size()) {
-        for (const ArgSelect &A : ArgSelects) {
+        for (const IntrinArgSelect &A : ArgSelects) {
           switch (A.Type) {
-          case ArgSelect::Type::Index:
+          case IntrinArgSelect::Type::Index:
             Args.push_back(CI->getArgOperand(A.Value));
             break;
-          case ArgSelect::Type::I8:
+          case IntrinArgSelect::Type::I8:
             Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
             break;
-          case ArgSelect::Type::I32:
+          case IntrinArgSelect::Type::I32:
             Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
             break;
-          default:
-            llvm_unreachable("Invalid type of intrinsic arg select.");
           }
         }
       } else if (IsVectorArgExpansion) {
@@ -186,7 +191,7 @@ public:
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
     CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
-        Intrinsic::dx_cast_handle, {Ty, V->getType()}, {V});
+        Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
   }
@@ -211,7 +216,7 @@ public:
       // Otherwise, we're the second handle in a pair. Forward the arguments and
       // remove the (second) cast.
       CallInst *Def = cast<CallInst>(Cast->getOperand(0));
-      assert(Def->getIntrinsicID() == Intrinsic::dx_cast_handle &&
+      assert(Def->getIntrinsicID() == Intrinsic::dx_resource_casthandle &&
              "Unbalanced pair of temporary handle casts");
       Cast->replaceAllUsesWith(Def->getOperand(0));
       Cast->eraseFromParent();
@@ -230,6 +235,25 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call
+  // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
+        Value *V = Store->getOperand(1);
+        Store->eraseFromParent();
+        if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+          if (GV->use_empty()) {
+            GV->removeDeadConstantUsers();
+            GV->eraseFromParent();
+          }
+      }
+    }
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -238,14 +262,21 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DRM.find(CI);
-      assert(It != DRM.end() && "Resource not in map?");
-      dxil::ResourceInfo &RI = *It;
+      auto *It = DBM.find(CI);
+      assert(It != DBM.end() && "Resource not in map?");
+      dxil::ResourceBindingInfo &RI = *It;
+
       const auto &Binding = RI.getBinding();
+      dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
+
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
 
       std::array<Value *, 4> Args{
-          ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
-          ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
+          ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
+          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -253,6 +284,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -262,16 +295,26 @@ public:
 
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DRM.find(CI);
-      assert(It != DRM.end() && "Resource not in map?");
-      dxil::ResourceInfo &RI = *It;
+      auto *It = DBM.find(CI);
+      assert(It != DBM.end() && "Resource not in map?");
+      dxil::ResourceBindingInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
-      std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+      dxil::ResourceClass RC = RTI.getResourceClass();
+
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
@@ -279,10 +322,9 @@ public:
       uint32_t UpperBound = Binding.Size == Unbounded
                                 ? Unbounded
                                 : Binding.LowerBound + Binding.Size - 1;
-      Constant *ResBind = OpBuilder.getResBind(
-          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
-      std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
-                                      CI->getArgOperand(4)};
+      Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
+                                               Binding.Space, RC);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -298,6 +340,8 @@ public:
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
 
+      removeResourceGlobals(CI);
+
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
 
@@ -305,8 +349,9 @@ public:
     });
   }
 
-  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
-  /// taking into account binding information from DXILResourceAnalysis.
+  /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
+  /// model and taking into account binding information from
+  /// DXILResourceBindingAnalysis.
   bool lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
@@ -489,6 +534,38 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerUpdateCounter(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Op1 = CI->getArgOperand(1);
+
+      std::array<Value *, 2> Args{Handle, Op1};
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
+
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerGetPointer(Function &F) {
+    // These should have already been handled in DXILResourceAccess, so we can
+    // just clean up the dead prototype.
+    assert(F.user_empty() && "getpointer operations should have been removed");
+    F.eraseFromParent();
+    return false;
+  }
+
   [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -510,23 +587,47 @@ public:
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
-      Value *Data0 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
-      Value *Data1 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
-      Value *Data2 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
-      Value *Data3 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
 
-      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
-                                  Data1,  Data2,  Data3,  Mask};
+      // Since we're post-scalarizer, we likely have a vector that's constructed
+      // solely for the argument of the store. If so, just use the scalar values
+      // from before they're inserted into the temporary.
+      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI) {
+        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+        if (!IndexOp)
+          break;
+        size_t IndexVal = IndexOp->getZExtValue();
+        assert(IndexVal < 4 && "Too many elements for buffer store");
+        DataElements[IndexVal] = IEI->getOperand(1);
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      }
+
+      // If for some reason we weren't able to forward the arguments from the
+      // scalarizer artifact, then we need to actually extract elements from the
+      // vector.
+      for (int I = 0, E = 4; I != E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] =
+              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+
+      std::array<Value *, 8> Args{
+          Handle,          Index0,          Index1,          DataElements[0],
+          DataElements[1], DataElements[2], DataElements[3], Mask};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
+      // Clean up any leftover `insertelement`s
+      IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI && IEI->use_empty()) {
+        InsertElementInst *Tmp = IEI;
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        Tmp->eraseFromParent();
+      }
+
       return Error::success();
     });
   }
@@ -611,21 +712,27 @@ public:
         continue;
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |=                                                               \
-        replaceFunctionWithOp(F, OpCode, ArrayRef<ArgSelect>{__VA_ARGS__});    \
+    HasErrors |= replaceFunctionWithOp(                                        \
+        F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
-      case Intrinsic::dx_handle_fromBinding:
+      case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
-      case Intrinsic::dx_typedBufferLoad:
+      case Intrinsic::dx_resource_getpointer:
+        HasErrors |= lowerGetPointer(F);
+        break;
+      case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
         break;
-      case Intrinsic::dx_typedBufferLoad_checkbit:
+      case Intrinsic::dx_resource_loadchecked_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
-      case Intrinsic::dx_typedBufferStore:
+      case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_resource_updatecounter:
+        HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when
       // https://github.com/llvm/llvm-project/issues/113192 is fixed
@@ -652,13 +759,16 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
-  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DRM).lowerIntrinsics();
+  bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceAnalysis>();
+  PA.preserve<DXILResourceBindingAnalysis>();
+  PA.preserve<DXILMetadataAnalysis>();
+  PA.preserve<ShaderFlagsAnalysis>();
   return PA;
 }
 
@@ -666,18 +776,24 @@ namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
-    DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+    DXILBindingMap &DBM =
+        getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    return OpLowerer(M, DRM).lowerIntrinsics();
+    return OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.addRequired<DXILResourceWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceMDWrapper>();
+    AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;
@@ -685,7 +801,8 @@ char DXILOpLoweringLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)
 

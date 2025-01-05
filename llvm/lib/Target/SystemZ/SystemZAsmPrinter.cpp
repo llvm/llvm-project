@@ -15,6 +15,7 @@
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZHLASMInstPrinter.h"
 #include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMCInstLower.h"
 #include "TargetInfo/SystemZTargetInfo.h"
@@ -31,7 +32,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
-#include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -662,6 +662,23 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerPATCHPOINT(*MI, Lower);
     return;
 
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    LowerPATCHABLE_FUNCTION_ENTER(*MI, Lower);
+    return;
+
+  case TargetOpcode::PATCHABLE_RET:
+    LowerPATCHABLE_RET(*MI, Lower);
+    return;
+
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    llvm_unreachable("PATCHABLE_FUNCTION_EXIT should never be emitted");
+
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // TODO: Define a trampoline `__xray_FunctionTailExit` and differentiate a
+    // normal function exit from a tail exit.
+    llvm_unreachable("Tail call is handled in the normal case. See comments "
+                     "around this assert.");
+
   case SystemZ::EXRL_Pseudo: {
     unsigned TargetInsOpc = MI->getOperand(0).getImm();
     Register LenMinus1Reg = MI->getOperand(1).getReg();
@@ -687,6 +704,11 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstBuilder(SystemZ::EXRL).addReg(LenMinus1Reg).addExpr(Dot));
     return;
   }
+
+  // EH_SjLj_Setup is a dummy terminator instruction of size 0.
+  // It is used to handle the clobber register for builtin setjmp.
+  case SystemZ::EH_SjLj_Setup:
+    return;
 
   default:
     Lower.lower(MI, LoweredMI);
@@ -842,6 +864,84 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
   while (EncodedBytes < NumBytes)
     EncodedBytes += EmitNop(OutContext, *OutStreamer, NumBytes - EncodedBytes,
                             getSubtargetInfo());
+}
+
+void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
+    const MachineInstr &MI, SystemZMCInstLower &Lower) {
+  // .begin:
+  //   j .end    # -> stmg    %r2, %r15, 16(%r15)
+  //   nop
+  //   llilf   %2, FuncID
+  //   brasl   %r14, __xray_FunctionEntry@GOT
+  // .end:
+  //
+  // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
+  // of instructions change.
+  bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+  MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
+      HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
+  MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
+  MCSymbol *EndOfSled = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(BeginOfSled);
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::J)
+                     .addExpr(MCSymbolRefExpr::create(EndOfSled, OutContext)));
+  EmitNop(OutContext, *OutStreamer, 2, getSubtargetInfo());
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::BRASL)
+                     .addReg(SystemZ::R14D)
+                     .addExpr(MCSymbolRefExpr::create(
+                         FuncEntry, MCSymbolRefExpr::VK_PLT, OutContext)));
+  OutStreamer->emitLabel(EndOfSled);
+  recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
+}
+
+void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
+                                           SystemZMCInstLower &Lower) {
+  unsigned OpCode = MI.getOperand(0).getImm();
+  MCSymbol *FallthroughLabel = nullptr;
+  if (OpCode == SystemZ::CondReturn) {
+    FallthroughLabel = OutContext.createTempSymbol();
+    int64_t Cond0 = MI.getOperand(1).getImm();
+    int64_t Cond1 = MI.getOperand(2).getImm();
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRC)
+                                     .addImm(Cond0)
+                                     .addImm(Cond1 ^ Cond0)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         FallthroughLabel, OutContext)));
+  }
+  // .begin:
+  //   br %r14    # -> stmg    %r2, %r15, 24(%r15)
+  //   nop
+  //   nop
+  //   llilf   %2,FuncID
+  //   j       __xray_FunctionExit@GOT
+  //
+  // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
+  // of instructions change.
+  bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+  MCSymbol *FuncExit = OutContext.getOrCreateSymbol(
+      HasVectorFeature ? "__xray_FunctionExitVec" : "__xray_FunctionExit");
+  MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->emitLabel(BeginOfSled);
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D));
+  EmitNop(OutContext, *OutStreamer, 4, getSubtargetInfo());
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::J)
+                     .addExpr(MCSymbolRefExpr::create(
+                         FuncExit, MCSymbolRefExpr::VK_PLT, OutContext)));
+  if (FallthroughLabel)
+    OutStreamer->emitLabel(FallthroughLabel);
+  recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
 // The *alignment* of 128-bit vector types is different between the software

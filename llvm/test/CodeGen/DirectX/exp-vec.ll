@@ -3,7 +3,7 @@
 ; Make sure dxil operation function calls for exp are generated for float and half.
 
 ; CHECK-LABEL: exp_float4
-; CHECK: fmul <4 x float> <float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000>,  %{{.*}}
+; CHECK: fmul <4 x float> splat (float 0x3FF7154760000000),  %{{.*}}
 ; CHECK: call <4 x float> @llvm.exp2.v4f32(<4 x float>  %{{.*}})
 define noundef <4 x float> @exp_float4(<4 x float> noundef %p0) {
 entry:

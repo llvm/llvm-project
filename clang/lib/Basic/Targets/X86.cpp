@@ -30,7 +30,7 @@ static constexpr Builtin::Info BuiltinInfoX86[] = {
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsX86.def"
+#include "clang/Basic/BuiltinsX86.inc"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
@@ -420,6 +420,16 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXTILE = true;
     } else if (Feature == "+amx-complex") {
       HasAMXCOMPLEX = true;
+    } else if (Feature == "+amx-fp8") {
+      HasAMXFP8 = true;
+    } else if (Feature == "+amx-movrs") {
+      HasAMXMOVRS = true;
+    } else if (Feature == "+amx-transpose") {
+      HasAMXTRANSPOSE = true;
+    } else if (Feature == "+amx-avx512") {
+      HasAMXAVX512 = true;
+    } else if (Feature == "+amx-tf32") {
+      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -649,6 +659,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_GraniterapidsD:
   case CK_Emeraldrapids:
   case CK_Clearwaterforest:
+  case CK_Diamondrapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -939,6 +950,16 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_FP16__");
   if (HasAMXCOMPLEX)
     Builder.defineMacro("__AMX_COMPLEX__");
+  if (HasAMXFP8)
+    Builder.defineMacro("__AMX_FP8__");
+  if (HasAMXMOVRS)
+    Builder.defineMacro("__AMX_MOVRS__");
+  if (HasAMXTRANSPOSE)
+    Builder.defineMacro("__AMX_TRANSPOSE__");
+  if (HasAMXAVX512)
+    Builder.defineMacro("__AMX_AVX512__");
+  if (HasAMXTF32)
+    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1064,11 +1085,16 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
       .Case("adx", true)
       .Case("aes", true)
+      .Case("amx-avx512", true)
       .Case("amx-bf16", true)
       .Case("amx-complex", true)
       .Case("amx-fp16", true)
+      .Case("amx-fp8", true)
       .Case("amx-int8", true)
+      .Case("amx-movrs", true)
+      .Case("amx-tf32", true)
       .Case("amx-tile", true)
+      .Case("amx-transpose", true)
       .Case("avx", true)
       .Case("avx10.1-256", true)
       .Case("avx10.1-512", true)
@@ -1128,6 +1154,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pconfig", true)
       .Case("pku", true)
       .Case("popcnt", true)
+      .Case("prefer-256-bit", true)
       .Case("prefetchi", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
@@ -1182,11 +1209,16 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
+      .Case("amx-avx512", HasAMXAVX512)
       .Case("amx-bf16", HasAMXBF16)
       .Case("amx-complex", HasAMXCOMPLEX)
       .Case("amx-fp16", HasAMXFP16)
+      .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
+      .Case("amx-movrs", HasAMXMOVRS)
+      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
+      .Case("amx-transpose", HasAMXTRANSPOSE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1-256", HasAVX10_1)
       .Case("avx10.1-512", HasAVX10_1_512)
@@ -1325,19 +1357,26 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  // Valid CPUs have a 'key feature' that compares just better than its key
-  // feature.
-  using namespace llvm::X86;
-  CPUKind Kind = parseArchX86(Name);
-  if (Kind != CK_None) {
-    ProcessorFeatures KeyFeature = getKeyFeature(Kind);
-    return (getFeaturePriority(KeyFeature) << 1) + 1;
-  }
+unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  auto getPriority = [](StringRef Feature) -> unsigned {
+    // Valid CPUs have a 'key feature' that compares just better than its key
+    // feature.
+    using namespace llvm::X86;
+    CPUKind Kind = parseArchX86(Feature);
+    if (Kind != CK_None) {
+      ProcessorFeatures KeyFeature = getKeyFeature(Kind);
+      return (getFeaturePriority(KeyFeature) << 1) + 1;
+    }
+    // Now we know we have a feature, so get its priority and shift it a few so
+    // that we have sufficient room for the CPUs (above).
+    return getFeaturePriority(getFeature(Feature)) << 1;
+  };
 
-  // Now we know we have a feature, so get its priority and shift it a few so
-  // that we have sufficient room for the CPUs (above).
-  return getFeaturePriority(getFeature(Name)) << 1;
+  unsigned Priority = 0;
+  for (StringRef Feature : Features)
+    if (!Feature.empty())
+      Priority = std::max(Priority, getPriority(Feature));
+  return Priority;
 }
 
 bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
@@ -1613,6 +1652,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_GraniterapidsD:
     case CK_Emeraldrapids:
     case CK_Clearwaterforest:
+    case CK_Diamondrapids:
     case CK_KNL:
     case CK_KNM:
     // K7

@@ -250,6 +250,36 @@ The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence us
 
 The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
 
+Address Space Intrinsics
+------------------------
+
+'``llvm.nvvm.isspacep.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i1 @llvm.nvvm.isspacep.const(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.global(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.local(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.shared(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.isspacep.*``' intrinsics determine whether the provided generic
+pointer references memory which falls within a particular address space.
+
+Semantics:
+""""""""""
+
+If the given pointer in the generic address space refers to memory which falls
+within the state space of the intrinsic (and therefore could be safely address
+space casted to this space), 1 is returned, otherwise 0 is returned.
+
 Arithmetic Intrinsics
 ---------------------
 
@@ -378,6 +408,420 @@ right, and the least significant bits are extracted to produce a result that is
 the same size as the original arguments. The shift amount is the minimum of the
 value of %n and the bit width of the integer type.
 
+'``llvm.nvvm.flo.u.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.flo.u.i32(i32 %a, i1 %shiftamt)
+    declare i32 @llvm.nvvm.flo.u.i64(i64 %a, i1 %shiftamt)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.flo.u``' family of intrinsics identifies the bit position of the
+leading one, returning either it's offset from the most or least significant bit.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.flo.u``' family of intrinsics returns the bit position of the
+most significant 1. If %shiftamt is true, The result is the shift amount needed
+to left-shift the found bit into the most-significant bit position, otherwise
+the result is the shift amount needed to right-shift the found bit into the
+least-significant bit position. 0xffffffff is returned if no 1 bit is found.
+
+'``llvm.nvvm.flo.s.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.flo.s.i32(i32 %a, i1 %shiftamt)
+    declare i32 @llvm.nvvm.flo.s.i64(i64 %a, i1 %shiftamt)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.flo.s``' family of intrinsics identifies the bit position of the
+leading non-sign bit, returning either it's offset from the most or least
+significant bit.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.flo.s``' family of intrinsics returns the bit position of the
+most significant 0 for negative inputs and the most significant 1 for 
+non-negative inputs. If %shiftamt is true, The result is the shift amount needed
+to left-shift the found bit into the most-significant bit position, otherwise
+the result is the shift amount needed to right-shift the found bit into the
+least-significant bit position. 0xffffffff is returned if no 1 bit is found.
+
+TMA family of Intrinsics
+------------------------
+
+'``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous copy of tensor data from
+global memory to shared::cluster memory (indicated by the ``g2s`` prefix)
+in ``tile`` mode. In tile mode, the multi-dimensional layout of the
+source tensor is preserved at the destination. The dimension of the
+tensor data ranges from 1d to 5d with the coordinates specified
+by the ``i32 %d0 ... i32 %d4`` arguments.
+
+* The last two arguments to these intrinsics are boolean flags
+  indicating support for cache_hint and/or multicast modifiers.
+  These flag arguments must be compile-time constants. The backend
+  looks through these flags and lowers the intrinsics appropriately.
+
+* The Nth argument (denoted by ``i1 flag_ch``) when set, indicates
+  a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+* The [N-1]th argument (denoted by ``i1 flag_mc``) when set, indicates
+  the presence of a multicast mask (``i16 %mc``) and generates the PTX
+  instruction with the ``.multicast::cluster`` modifier.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.[3-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.[3-5]d``' intrinsics
+correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous copy of tensor data from
+global memory to shared::cluster memory (indicated by the ``g2s`` prefix)
+in ``im2col`` mode. In im2col mode, some dimensions of the source tensor
+are unrolled into a single dimensional column at the destination. In this
+mode, the tensor has to be at least three-dimensional. Along with the tensor
+coordinates, im2col offsets are also specified (denoted by
+``i16 im2col0...i16 %im2col2``). The number of im2col offsets is two less
+than the number of dimensions of the tensor operation. The last two arguments
+to these intrinsics are boolean flags, with the same functionality as described
+in the ``tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous copy of tensor data from
+shared::cta to global memory (indicated by the ``s2g`` prefix)
+in ``tile`` mode. The dimension of the tensor data ranges from 1d to 5d
+with the coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[3-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.3d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous copy of tensor data from
+shared::cta to global memory (indicated by the ``s2g`` prefix)
+in ``im2col`` mode. In this mode, the tensor has to be at least
+three-dimensional. Unlike the ``g2s`` variants, there are no
+im2col_offsets for these intrinsics. The last argument to these
+intrinsics is a boolean flag, with the same functionality as
+described in the ``s2g.tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
+of PTX instructions. These instructions initiate an asynchronous prefetch
+of tensor data from global memory to the L2 cache. In tile mode, the
+multi-dimensional layout of the source tensor is preserved at the destination.
+The dimension of the tensor data ranges from 1d to 5d with the coordinates
+specified by the ``i32 %d0 ... i32 %d4`` arguments.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``' intrinsics
+correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
+of PTX instructions. These instructions initiate an asynchronous prefetch
+of tensor data from global memory to the L2 cache. In im2col mode, some
+dimensions of the source tensor are unrolled into a single dimensional
+column at the destination. In this mode, the tensor has to be at least
+three-dimensional. Along with the tensor coordinates, im2col offsets are
+also specified (denoted by ``i16 im2col0...i16 %im2col2``). The number
+of im2col offsets is two less than the number of dimensions of the tensor
+operation. The last argument to these intrinsics is a boolean flag, with
+the same functionality as described in the ``tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.min.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.max.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.inc.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.dec.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.and.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.or.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.xor.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.[1-5]d``' intrinsics
+correspond to the ``cp.reduce.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous reduction operation of tensor data
+in global memory with the tensor data in shared{::cta} memory, using ``tile`` mode.
+The dimension of the tensor data ranges from 1d to 5d with the coordinates
+specified by the ``i32 %d0 ... i32 %d4`` arguments. The supported reduction
+operations are {add, min, max, inc, dec, and, or, xor} as described in the
+``tile.1d`` intrinsics.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].im2col.[3-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.3d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.[3-5]d``' intrinsics
+correspond to the ``cp.reduce.async.bulk.tensor.[3-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous reduction operation of tensor data
+in global memory with the tensor data in shared{::cta} memory, using ``im2col`` mode.
+In this mode, the tensor has to be at least three-dimensional. The supported reduction
+operations supported are the same as the ones in the tile mode. The last argument to
+these intrinsics is a boolean flag, with the same functionality as described in the
+``tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+
+Warp Group Intrinsics
+---------------------
+
+'``llvm.nvvm.wgmma.fence.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.fence.sync.aligned()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.fence.sync.aligned``' intrinsic generates the
+``wgmma.fence.sync.aligned`` PTX instruction, which establishes an ordering
+between prior accesses to any warpgroup registers and subsequent accesses to
+the same registers by a ``wgmma.mma_async`` instruction.
+
+The ``wgmma.fence`` instruction must be issued by all warps of the warpgroup in
+the following locations:
+
+* Before the first ``wgmma.mma_async`` operation in a warpgroup.
+* Between a register access by a thread in the warpgroup and any
+  ``wgmma.mma_async`` instruction that accesses the same registers, except when
+  these are accumulator register accesses across multiple ``wgmma.mma_async``
+  instructions of the same shape in which case an ordering guarantee is
+  provided by default.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`_.
+
+'``llvm.nvvm.wgmma.commit_group.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.commit_group.sync.aligned``' intrinsic generates the
+``wgmma.commit_group.sync.aligned`` PTX instruction, which creates a new
+wgmma-group per warpgroup and batches all prior ``wgmma.mma_async``
+instructions initiated by the executing warp but not committed to any
+wgmma-group into the new wgmma-group. If there are no uncommitted ``wgmma
+mma_async`` instructions then, ``wgmma.commit_group`` results in an empty
+wgmma-group.
+
+An executing thread can wait for the completion of all ``wgmma.mma_async``
+operations in a wgmma-group by using ``wgmma.wait_group``.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`_.
+
+'``llvm.nvvm.wgmma.wait_group.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 immarg N)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.wait_group.sync.aligned``' intrinsic generates the
+``wgmma.commit_group.sync.aligned N`` PTX instruction, which will cause the
+executing thread to wait until only ``N`` or fewer of the most recent
+wgmma-groups are pending and all the prior wgmma-groups committed by the
+executing threads are complete. For example, when ``N`` is 0, the executing
+thread waits on all the prior wgmma-groups to complete. Operand ``N`` is an
+integer constant.
+
+Accessing the accumulator register or the input register containing the
+fragments of matrix A of a ``wgmma.mma_async`` instruction without first
+performing a ``wgmma.wait_group`` instruction that waits on a wgmma-group
+including that ``wgmma.mma_async`` instruction is undefined behavior.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
 
 Other Intrinsics
 ----------------

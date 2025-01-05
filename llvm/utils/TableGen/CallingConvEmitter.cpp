@@ -163,9 +163,9 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
         O << Indent << "if (MCRegister Reg = State.AllocateReg(" << Name
           << ")) {\n";
         if (SwiftAction)
-          AssignedSwiftRegsMap[CurrentAction].insert(Name);
+          AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
         else
-          AssignedRegsMap[CurrentAction].insert(Name);
+          AssignedRegsMap[CurrentAction].insert(std::move(Name));
       } else {
         O << Indent << "static const MCPhysReg RegList" << ++Counter
           << "[] = {\n";
@@ -378,10 +378,11 @@ void CallingConvEmitter::emitArgRegisterLists(raw_ostream &O) {
         const std::string &InnerCCName = InnerEntry.first;
         std::set<std::string> &InnerRegisters = InnerEntry.second;
 
-        if (InnerRegisters.find(CCName) != InnerRegisters.end()) {
-          AssignedRegsMap[InnerCCName].insert(AssignedRegsMap[CCName].begin(),
-                                              AssignedRegsMap[CCName].end());
-          InnerRegisters.erase(CCName);
+        auto It = InnerRegisters.find(CCName);
+        if (It != InnerRegisters.end()) {
+          const auto &Src = AssignedRegsMap[CCName];
+          AssignedRegsMap[InnerCCName].insert(Src.begin(), Src.end());
+          InnerRegisters.erase(It);
         }
       }
 

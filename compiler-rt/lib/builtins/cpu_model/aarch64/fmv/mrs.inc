@@ -45,8 +45,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SSBS2);
   if (hwcap2 & HWCAP2_MTE)
     setCPUFeature(FEAT_MEMTAG2);
-  if (hwcap2 & HWCAP2_MTE3)
-    setCPUFeature(FEAT_MEMTAG3);
   if (hwcap2 & HWCAP2_SVEPMULL)
     setCPUFeature(FEAT_SVE_PMULL128);
   if (hwcap2 & HWCAP2_SVEBITPERM)
@@ -63,24 +61,14 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_RNG);
   if (hwcap2 & HWCAP2_I8MM)
     setCPUFeature(FEAT_I8MM);
-  if (hwcap2 & HWCAP2_EBF16)
-    setCPUFeature(FEAT_EBF16);
-  if (hwcap2 & HWCAP2_SVE_EBF16)
-    setCPUFeature(FEAT_SVE_EBF16);
-  if (hwcap2 & HWCAP2_DGH)
-    setCPUFeature(FEAT_DGH);
   if (hwcap2 & HWCAP2_FRINT)
     setCPUFeature(FEAT_FRINTTS);
-  if (hwcap2 & HWCAP2_SVEI8MM)
-    setCPUFeature(FEAT_SVE_I8MM);
   if (hwcap2 & HWCAP2_SVEF32MM)
     setCPUFeature(FEAT_SVE_F32MM);
   if (hwcap2 & HWCAP2_SVEF64MM)
     setCPUFeature(FEAT_SVE_F64MM);
   if (hwcap2 & HWCAP2_BTI)
     setCPUFeature(FEAT_BTI);
-  if (hwcap2 & HWCAP2_RPRES)
-    setCPUFeature(FEAT_RPRES);
   if (hwcap2 & HWCAP2_WFXT)
     setCPUFeature(FEAT_WFXT);
   if (hwcap2 & HWCAP2_SME)
@@ -119,8 +107,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_RCPC3);
   if (hwcap2 & HWCAP2_BF16)
     setCPUFeature(FEAT_BF16);
-  if (hwcap2 & HWCAP2_SVEBF16)
-    setCPUFeature(FEAT_SVE_BF16);
   if (hwcap & HWCAP_SVE)
     setCPUFeature(FEAT_SVE);
   if (hwcap2 & HWCAP2_SVE2)

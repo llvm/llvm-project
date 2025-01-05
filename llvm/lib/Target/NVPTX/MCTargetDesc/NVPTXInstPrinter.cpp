@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/NVPTXInstPrinter.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/NVVMIntrinsicFlags.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -22,7 +22,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/FormattedStream.h"
 #include <cctype>
 using namespace llvm;
 
@@ -373,6 +372,12 @@ void NVPTXInstPrinter::printOffseti32imm(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
+                                      raw_ostream &O, const char *Modifier) {
+  int64_t Imm = MI->getOperand(OpNum).getImm();
+  O << formatHex(Imm) << "U";
+}
+
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
                                        raw_ostream &O, const char *Modifier) {
   const MCOperand &Op = MI->getOperand(OpNum);
@@ -411,4 +416,40 @@ void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
     O << ".rc16";
     return;
   }
+}
+
+void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
+                                             raw_ostream &O,
+                                             const char *Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using RedTy = llvm::nvvm::TMAReductionOp;
+
+  switch (static_cast<RedTy>(MO.getImm())) {
+  case RedTy::ADD:
+    O << ".add";
+    return;
+  case RedTy::MIN:
+    O << ".min";
+    return;
+  case RedTy::MAX:
+    O << ".max";
+    return;
+  case RedTy::INC:
+    O << ".inc";
+    return;
+  case RedTy::DEC:
+    O << ".dec";
+    return;
+  case RedTy::AND:
+    O << ".and";
+    return;
+  case RedTy::OR:
+    O << ".or";
+    return;
+  case RedTy::XOR:
+    O << ".xor";
+    return;
+  }
+  llvm_unreachable(
+      "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
 }

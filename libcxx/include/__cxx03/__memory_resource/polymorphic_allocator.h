@@ -6,25 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
-#define _LIBCPP___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
+#define _LIBCPP___CXX03___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
 
-#include <__assert>
-#include <__config>
-#include <__fwd/pair.h>
-#include <__memory_resource/memory_resource.h>
-#include <__utility/exception_guard.h>
-#include <cstddef>
-#include <limits>
-#include <new>
-#include <tuple>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/pair.h>
+#include <__cxx03/__memory_resource/memory_resource.h>
+#include <__cxx03/__utility/exception_guard.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/limits>
+#include <__cxx03/new>
+#include <__cxx03/tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17
 
@@ -228,4 +228,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H

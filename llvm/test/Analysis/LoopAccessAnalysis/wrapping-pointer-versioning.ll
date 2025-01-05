@@ -22,7 +22,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; LAA-LABEL: f1
 ; LAA: Memory dependences are safe{{$}}
 ; LAA: SCEV assumptions:
-; LAA-NEXT: {0,+,2}<%for.body> Added Flags: <nusw>
+; LAA:      {0,+,2}<%for.body> Added Flags: <nusw>
 ; LAA-NEXT: {%a,+,4}<%for.body> Added Flags: <nusw>
 
 ; The expression for %mul_ext as analyzed by SCEV is
@@ -243,7 +243,7 @@ for.end:                                          ; preds = %for.body
 ; LAA: Memory dependences are safe{{$}}
 ; LAA: SCEV assumptions:
 ; LAA-NEXT: {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nssw>
-; LAA-NEXT: {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body> Added Flags: <nusw>
+; LAA-EMPTY:
 
 ; LAA: [PSE]  %arrayidxA = getelementptr inbounds i16, ptr %a, i32 %mul:
 ; LAA-NEXT: ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)

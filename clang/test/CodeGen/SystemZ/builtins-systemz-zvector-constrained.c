@@ -238,19 +238,19 @@ void test_float(void) {
   // (emulated)
   vd = vec_ctd(vsl, 1);
   // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> <double 5.000000e-01, double 5.000000e-01>, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 5.000000e-01), metadata !{{.*}})
   // (emulated)
   vd = vec_ctd(vul, 1);
   // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> <double 5.000000e-01, double 5.000000e-01>, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 5.000000e-01), metadata !{{.*}})
   // (emulated)
   vd = vec_ctd(vsl, 31);
   // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> <double 0x3E00000000000000, double 0x3E00000000000000>, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 0x3E00000000000000), metadata !{{.*}})
   // (emulated)
   vd = vec_ctd(vul, 31);
   // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %{{.*}}, metadata !{{.*}})
-  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> <double 0x3E00000000000000, double 0x3E00000000000000>, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> [[VAL]], <2 x double> splat (double 0x3E00000000000000), metadata !{{.*}})
   // (emulated)
 
   vsl = vec_ctsl(vd, 0);
@@ -260,19 +260,19 @@ void test_float(void) {
   // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
   // (emulated)
   vsl = vec_ctsl(vd, 1);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> {{.*}}, <2 x double> <double 2.000000e+00, double 2.000000e+00>, metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> {{.*}}, <2 x double> splat (double 2.000000e+00), metadata !{{.*}})
   // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
   // (emulated)
   vul = vec_ctul(vd, 1);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> <double 2.000000e+00, double 2.000000e+00>, metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 2.000000e+00), metadata !{{.*}})
   // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
   // (emulated)
   vsl = vec_ctsl(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> <double 0x41E0000000000000, double 0x41E0000000000000>, metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 0x41E0000000000000), metadata !{{.*}})
   // CHECK: call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
   // (emulated)
   vul = vec_ctul(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> <double 0x41E0000000000000, double 0x41E0000000000000>, metadata !{{.*}})
+  // CHECK: [[VAL:%[^ ]+]] = tail call <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double> %{{.*}}, <2 x double> splat (double 0x41E0000000000000), metadata !{{.*}})
   // CHECK: call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double> [[VAL]], metadata !{{.*}})
   // (emulated)
 

@@ -1,5 +1,5 @@
 
-; RUN: llc -debugger-tune=gdb -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN: llc -debugger-tune=gdb -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s
 
 source_filename = "2.c"
@@ -45,6 +45,7 @@ entry:
 ; CHECK:               .file   "2.c"
 ; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:          .rename ..text..[PR],""
+; CHECK-NEXT:          .machine "COM"
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar
 ; CHECK-NEXT:          .align  2

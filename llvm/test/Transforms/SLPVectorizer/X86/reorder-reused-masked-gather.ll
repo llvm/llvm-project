@@ -7,7 +7,7 @@ define void @test(ptr noalias %0, ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x ptr> [[TMP2]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, <8 x ptr> [[TMP3]], <8 x i64> <i64 15, i64 4, i64 5, i64 0, i64 2, i64 6, i64 7, i64 8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP0:%.*]], i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> [[TMP4]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x float> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> [[TMP4]], i32 4, <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x float> [[TMP6]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 0, i32 1, i32 2, i32 0, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x float> [[TMP6]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x float> [[TMP8]], <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 1, i32 24, i32 0, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

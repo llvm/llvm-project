@@ -1158,29 +1158,39 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   return nullptr;
 }
 
-/// This function implements the transforms common to both integer division
-/// instructions (udiv and sdiv). It is called by the visitors to those integer
-/// division instructions.
-/// Common integer divide transforms
-Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
+/// Common integer divide/remainder transforms
+Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
+  assert(I.isIntDivRem() && "Unexpected instruction");
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // If any element of a constant divisor fixed width vector is zero or undef
+  // the behavior is undefined and we can fold the whole op to poison.
+  auto *Op1C = dyn_cast<Constant>(Op1);
+  Type *Ty = I.getType();
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (Op1C && VTy) {
+    unsigned NumElts = VTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = Op1C->getAggregateElement(i);
+      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
+        return replaceInstUsesWith(I, PoisonValue::get(Ty));
+    }
+  }
+
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
-
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  bool IsSigned = I.getOpcode() == Instruction::SDiv;
-  Type *Ty = I.getType();
 
   // The RHS is known non-zero.
   if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I))
     return replaceOperand(I, 1, V);
 
-  // Handle cases involving: [su]div X, (select Cond, Y, Z)
-  // This does not apply for fdiv.
+  // Handle cases involving: div/rem X, (select Cond, Y, Z)
   if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
   // If the divisor is a select-of-constants, try to constant fold all div ops:
-  // C / (select Cond, TrueC, FalseC) --> select Cond, (C / TrueC), (C / FalseC)
+  // C div/rem (select Cond, TrueC, FalseC) --> select Cond, (C div/rem TrueC),
+  // (C div/rem FalseC)
   // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
   if (match(Op0, m_ImmConstant()) &&
       match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
@@ -1188,6 +1198,21 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
                                           /*FoldWithMultiUse*/ true))
       return R;
   }
+
+  return nullptr;
+}
+
+/// This function implements the transforms common to both integer division
+/// instructions (udiv and sdiv). It is called by the visitors to those integer
+/// division instructions.
+/// Common integer divide transforms
+Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
+  if (Instruction *Res = commonIDivRemTransforms(I))
+    return Res;
+
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  bool IsSigned = I.getOpcode() == Instruction::SDiv;
+  Type *Ty = I.getType();
 
   const APInt *C2;
   if (match(Op1, m_APInt(C2))) {
@@ -2041,14 +2066,18 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   bool ShiftByX = false;
 
   // If V is not nullptr, it will be matched using m_Specific.
-  auto MatchShiftOrMulXC = [](Value *Op, Value *&V, APInt &C) -> bool {
+  auto MatchShiftOrMulXC = [](Value *Op, Value *&V, APInt &C,
+                              bool &PreserveNSW) -> bool {
     const APInt *Tmp = nullptr;
     if ((!V && match(Op, m_Mul(m_Value(V), m_APInt(Tmp)))) ||
         (V && match(Op, m_Mul(m_Specific(V), m_APInt(Tmp)))))
       C = *Tmp;
     else if ((!V && match(Op, m_Shl(m_Value(V), m_APInt(Tmp)))) ||
-             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp)))))
+             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp))))) {
       C = APInt(Tmp->getBitWidth(), 1) << *Tmp;
+      // We cannot preserve NSW when shifting by BW - 1.
+      PreserveNSW = Tmp->ult(Tmp->getBitWidth() - 1);
+    }
     if (Tmp != nullptr)
       return true;
 
@@ -2070,7 +2099,9 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
     return false;
   };
 
-  if (MatchShiftOrMulXC(Op0, X, Y) && MatchShiftOrMulXC(Op1, X, Z)) {
+  bool Op0PreserveNSW = true, Op1PreserveNSW = true;
+  if (MatchShiftOrMulXC(Op0, X, Y, Op0PreserveNSW) &&
+      MatchShiftOrMulXC(Op1, X, Z, Op1PreserveNSW)) {
     // pass
   } else if (MatchShiftCX(Op0, Y, X) && MatchShiftCX(Op1, Z, X)) {
     ShiftByX = true;
@@ -2083,7 +2114,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   OverflowingBinaryOperator *BO0 = cast<OverflowingBinaryOperator>(Op0);
   // TODO: We may be able to deduce more about nsw/nuw of BO0/BO1 based on Y >=
   // Z or Z >= Y.
-  bool BO0HasNSW = BO0->hasNoSignedWrap();
+  bool BO0HasNSW = Op0PreserveNSW && BO0->hasNoSignedWrap();
   bool BO0HasNUW = BO0->hasNoUnsignedWrap();
   bool BO0NoWrap = IsSRem ? BO0HasNSW : BO0HasNUW;
 
@@ -2106,7 +2137,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   };
 
   OverflowingBinaryOperator *BO1 = cast<OverflowingBinaryOperator>(Op1);
-  bool BO1HasNSW = BO1->hasNoSignedWrap();
+  bool BO1HasNSW = Op1PreserveNSW && BO1->hasNoSignedWrap();
   bool BO1HasNUW = BO1->hasNoUnsignedWrap();
   bool BO1NoWrap = IsSRem ? BO1HasNSW : BO1HasNUW;
   // (rem (mul X, Y), (mul nuw/nsw X, Z))
@@ -2138,28 +2169,10 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
 /// remainder instructions.
 /// Common integer remainder transforms
 Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
-  if (Instruction *Phi = foldBinopWithPhiOperands(I))
-    return Phi;
+  if (Instruction *Res = commonIDivRemTransforms(I))
+    return Res;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  // The RHS is known non-zero.
-  if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I))
-    return replaceOperand(I, 1, V);
-
-  // Handle cases involving: rem X, (select Cond, Y, Z)
-  if (simplifyDivRemOfSelectWithZeroOp(I))
-    return &I;
-
-  // If the divisor is a select-of-constants, try to constant fold all rem ops:
-  // C % (select Cond, TrueC, FalseC) --> select Cond, (C % TrueC), (C % FalseC)
-  // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
-  if (match(Op0, m_ImmConstant()) &&
-      match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
-    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1),
-                                          /*FoldWithMultiUse*/ true))
-      return R;
-  }
 
   if (isa<Constant>(Op1)) {
     if (Instruction *Op0I = dyn_cast<Instruction>(Op0)) {

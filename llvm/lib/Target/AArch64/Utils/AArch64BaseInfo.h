@@ -700,8 +700,8 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 
 namespace AArch64SysReg {
   struct SysReg {
-    const char *Name;
-    const char *AltName;
+    const char Name[32];
+    const char AltName[32];
     unsigned Encoding;
     bool Readable;
     bool Writeable;
@@ -728,14 +728,6 @@ namespace AArch64TLBI {
     using SysAliasReg::SysAliasReg;
   };
   #define GET_TLBITable_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64PRCTX {
-  struct PRCTX : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_PRCTX_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 

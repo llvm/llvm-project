@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_MEMORY_ORDER_H
-#define _LIBCPP___ATOMIC_MEMORY_ORDER_H
+#ifndef _LIBCPP___CXX03___ATOMIC_MEMORY_ORDER_H
+#define _LIBCPP___CXX03___ATOMIC_MEMORY_ORDER_H
 
-#include <__config>
-#include <__type_traits/is_same.h>
-#include <__type_traits/underlying_type.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/underlying_type.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -62,4 +62,4 @@ enum memory_order {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_MEMORY_ORDER_H
+#endif // _LIBCPP___CXX03___ATOMIC_MEMORY_ORDER_H

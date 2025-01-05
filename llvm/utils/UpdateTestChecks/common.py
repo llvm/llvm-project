@@ -2470,6 +2470,7 @@ def get_autogennote_suffix(parser, args):
             "verbose",
             "force_update",
             "reset_variable_names",
+            "llvm_mc_binary",
         ):
             continue
         value = getattr(args, action.dest)

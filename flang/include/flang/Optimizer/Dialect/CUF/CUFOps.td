@@ -140,6 +140,17 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   let hasVerifier = 1;
 }
 
+def cuf_SyncDescriptorOp : cuf_Op<"sync_descriptor", []> {
+  let summary =
+      "Synchronize the host and device descriptor of a Fortran pointer";
+
+  let arguments = (ins SymbolRefAttr:$globalName);
+
+  let assemblyFormat = [{
+    $globalName attr-dict
+  }];
+}
+
 def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   let summary = "Represent a data transfer between host and device memory";
 
@@ -162,7 +173,7 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
 
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
                        Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
-                       Optional<fir_ShapeType>:$shape,
+                       Optional<AnyShapeOrShiftType>:$shape,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
   let assemblyFormat = [{

@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
-#define _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#ifndef _LIBCPP___CXX03___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#define _LIBCPP___CXX03___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 // Patch over lack of extended locale support
 typedef void* locale_t;
@@ -32,4 +32,4 @@ inline _LIBCPP_HIDE_FROM_ABI locale_t uselocale(locale_t) { return NULL; }
 #define LC_ALL_MASK                                                                                                    \
   (LC_COLLATE_MASK | LC_CTYPE_MASK | LC_MONETARY_MASK | LC_NUMERIC_MASK | LC_TIME_MASK | LC_MESSAGES_MASK)
 
-#endif // _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#endif // _LIBCPP___CXX03___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H

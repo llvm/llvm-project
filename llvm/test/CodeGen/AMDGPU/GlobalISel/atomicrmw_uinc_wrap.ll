@@ -4,6 +4,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12 %s
 
 ; FIXME: Merge with other test. DS offset folding doesn't work due to
 ; register bank copies, and no return optimization is missing.
@@ -16,8 +17,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s2, s[6:7], 0x2
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dword s2, s[8:9], 0x2
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -31,8 +32,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ;
 ; VI-LABEL: lds_atomic_inc_ret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[6:7], 0x8
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -46,8 +47,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ;
 ; GFX9-LABEL: lds_atomic_inc_ret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[6:7], 0x8
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -59,11 +60,11 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ;
 ; GFX10-LABEL: lds_atomic_inc_ret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x8
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u32 v0, v0, v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -74,10 +75,10 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ;
 ; GFX11-LABEL: lds_atomic_inc_ret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x8
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x8
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s0
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ds_inc_rtn_u32 v0, v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -85,6 +86,18 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_ret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s2
+; GFX12-NEXT:    ds_inc_rtn_u32 v0, v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
@@ -93,8 +106,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_ret_i32_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s2, s[6:7], 0x2
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dword s2, s[8:9], 0x2
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -108,8 +121,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 ;
 ; VI-LABEL: lds_atomic_inc_ret_i32_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[6:7], 0x8
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -123,8 +136,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 ;
 ; GFX9-LABEL: lds_atomic_inc_ret_i32_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[6:7], 0x8
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
@@ -136,11 +149,11 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 ;
 ; GFX10-LABEL: lds_atomic_inc_ret_i32_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x8
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u32 v0, v1, v0 offset:16
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -151,10 +164,10 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 ;
 ; GFX11-LABEL: lds_atomic_inc_ret_i32_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x8
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x8
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, s0
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ds_inc_rtn_u32 v0, v1, v0 offset:16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -162,6 +175,18 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_ret_i32_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, s2
+; GFX12-NEXT:    ds_inc_rtn_u32 v0, v1, v0 offset:16
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(3) %gep, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result, ptr addrspace(1) %out, align 4
@@ -171,7 +196,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_noret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; CI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -182,7 +207,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
 ;
 ; VI-LABEL: lds_atomic_inc_noret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -193,7 +218,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
 ;
 ; GFX9-LABEL: lds_atomic_inc_noret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -203,7 +228,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
 ;
 ; GFX10-LABEL: lds_atomic_inc_noret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -214,13 +239,23 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
 ;
 ; GFX11-LABEL: lds_atomic_inc_noret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s0
 ; GFX11-NEXT:    ds_inc_u32 v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_noret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s0
+; GFX12-NEXT:    ds_inc_u32 v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i32 42 syncscope("agent") seq_cst, align 4
   ret void
 }
@@ -228,7 +263,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(ptr addrspace(3) %ptr) #1 {
 define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_noret_i32_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; CI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -239,7 +274,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
 ;
 ; VI-LABEL: lds_atomic_inc_noret_i32_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -250,7 +285,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
 ;
 ; GFX9-LABEL: lds_atomic_inc_noret_i32_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
@@ -260,7 +295,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
 ;
 ; GFX10-LABEL: lds_atomic_inc_noret_i32_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s0
@@ -271,13 +306,23 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
 ;
 ; GFX11-LABEL: lds_atomic_inc_noret_i32_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, s0
 ; GFX11-NEXT:    ds_inc_u32 v1, v0 offset:16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_noret_i32_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, s0
+; GFX12-NEXT:    ds_inc_u32 v1, v0 offset:16
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(3) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(3) %gep, i32 42 syncscope("agent") seq_cst, align 4
   ret void
@@ -286,7 +331,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
 define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
@@ -301,7 +346,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
 ;
 ; VI-LABEL: global_atomic_inc_ret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
@@ -316,7 +361,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -328,7 +373,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -341,7 +386,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, v0, s[2:3] glc
@@ -350,6 +395,17 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v1, v0, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
@@ -358,7 +414,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr 
 define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i32_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s2, s2, 16
@@ -375,7 +431,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
 ;
 ; VI-LABEL: global_atomic_inc_ret_i32_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s2, s2, 16
@@ -392,7 +448,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i32_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -404,7 +460,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i32_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -417,7 +473,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i32_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, v0, s[2:3] offset:16 glc
@@ -426,6 +482,17 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i32_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v1, v0, s[2:3] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result, ptr addrspace(1) %out, align 4
@@ -435,7 +502,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset(ptr addrspace(1) %ou
 define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i32_offset_sistem:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s2, s2, 16
@@ -452,7 +519,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
 ;
 ; VI-LABEL: global_atomic_inc_ret_i32_offset_sistem:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s2, s2, 16
@@ -469,7 +536,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i32_offset_sistem:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -481,7 +548,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i32_offset_sistem:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -494,7 +561,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i32_offset_sistem:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, v0, s[2:3] offset:16 glc
@@ -503,6 +570,18 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i32_offset_sistem:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v1, v0, s[2:3] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i32 42 seq_cst, align 4
   store i32 %result, ptr addrspace(1) %out, align 4
@@ -512,7 +591,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_sistem(ptr addrspace
 define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -524,7 +603,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
 ;
 ; VI-LABEL: global_atomic_inc_noret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -536,7 +615,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -547,7 +626,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -559,7 +638,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v1, v0, s[0:1]
@@ -567,6 +646,16 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v1, v0, s[0:1] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i32 42 syncscope("agent") seq_cst, align 4
   ret void
 }
@@ -574,7 +663,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32(ptr addrspace(1) %ptr) #1
 define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i32_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s0, s0, 16
@@ -588,7 +677,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
 ;
 ; VI-LABEL: global_atomic_inc_noret_i32_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s0, s0, 16
@@ -602,7 +691,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i32_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -613,7 +702,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i32_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -625,7 +714,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i32_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v1, v0, s[0:1] offset:16
@@ -633,6 +722,16 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i32_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v1, v0, s[0:1] offset:16 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4
   ret void
@@ -641,7 +740,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset(ptr addrspace(1) %
 define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i32_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s0, s0, 16
@@ -655,7 +754,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
 ;
 ; VI-LABEL: global_atomic_inc_noret_i32_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s0, s0, 16
@@ -669,7 +768,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i32_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -680,7 +779,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i32_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -692,7 +791,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i32_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v1, v0, s[0:1] offset:16
@@ -700,6 +799,17 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i32_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, 0
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v1, v0, s[0:1] offset:16 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i32 42 seq_cst, align 4
   ret void
@@ -708,7 +818,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_system(ptr addrspa
 define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v3, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -730,7 +840,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
 ;
 ; VI-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v3, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -752,7 +862,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -764,7 +874,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -777,7 +887,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -788,6 +898,19 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i32_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v1, v0, v1, s[2:3] offset:20 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id
@@ -800,7 +923,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(ptr addrspace
 define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -817,7 +940,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
 ;
 ; VI-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -834,7 +957,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -845,7 +968,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -857,7 +980,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -867,6 +990,18 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i32_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u32 v0, v1, s[0:1] offset:20 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
   %gep = getelementptr i32, ptr addrspace(1) %gep.tid, i32 5
@@ -877,7 +1012,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
 define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #1 {
 ; CI-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v2, 9
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -895,7 +1030,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 ;
 ; VI-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 9
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -913,7 +1048,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 ;
 ; GFX9-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 9
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -929,7 +1064,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 9
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u32 v1, v1, v2 offset:8
@@ -943,7 +1078,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 ; GFX11-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 9 :: v_dual_lshlrev_b32 v1, 2, v0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, 2, v0
@@ -956,6 +1091,23 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[2:3]
 ; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_inc_shl_base_lds_0_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_dual_mov_b32 v2, 9 :: v_dual_lshlrev_b32 v1, 2, v0
+; GFX12-NEXT:    v_add_nc_u32_e32 v0, 2, v0
+; GFX12-NEXT:    ds_inc_rtn_u32 v1, v1, v2 offset:8
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_store_b32 v2, v0, s[2:3]
+; GFX12-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX12-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #2
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds0, i32 0, i32 %idx.0
@@ -968,8 +1120,8 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(ptr addrspace(1) %out, 
 define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_ret_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s2, s[6:7], 0x2
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dword s2, s[8:9], 0x2
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -984,8 +1136,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ;
 ; VI-LABEL: lds_atomic_inc_ret_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[6:7], 0x8
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -1000,8 +1152,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ;
 ; GFX9-LABEL: lds_atomic_inc_ret_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[6:7], 0x8
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1014,12 +1166,12 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ;
 ; GFX10-LABEL: lds_atomic_inc_ret_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x8
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1]
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1030,11 +1182,11 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ;
 ; GFX11-LABEL: lds_atomic_inc_ret_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x8
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1042,6 +1194,19 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_ret_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
+; GFX12-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1]
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i64 42 syncscope("agent") seq_cst, align 8
   store i64 %result, ptr addrspace(1) %out, align 4
   ret void
@@ -1050,8 +1215,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_ret_i64_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s2, s[6:7], 0x2
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dword s2, s[8:9], 0x2
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -1066,8 +1231,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 ;
 ; VI-LABEL: lds_atomic_inc_ret_i64_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[6:7], 0x8
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -1082,8 +1247,8 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 ;
 ; GFX9-LABEL: lds_atomic_inc_ret_i64_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[6:7], 0x8
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1096,12 +1261,12 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 ;
 ; GFX10-LABEL: lds_atomic_inc_ret_i64_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x8
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1] offset:32
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1112,11 +1277,11 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 ;
 ; GFX11-LABEL: lds_atomic_inc_ret_i64_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x8
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1] offset:32
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1124,6 +1289,19 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_ret_i64_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
+; GFX12-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1] offset:32
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(3) %gep, i64 42 syncscope("agent") seq_cst, align 8
   store i64 %result, ptr addrspace(1) %out, align 4
@@ -1133,7 +1311,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_noret_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; CI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -1145,7 +1323,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 ;
 ; VI-LABEL: lds_atomic_inc_noret_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -1157,7 +1335,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 ;
 ; GFX9-LABEL: lds_atomic_inc_noret_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1168,7 +1346,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 ;
 ; GFX10-LABEL: lds_atomic_inc_noret_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1180,7 +1358,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 ;
 ; GFX11-LABEL: lds_atomic_inc_noret_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
@@ -1188,6 +1366,17 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_noret_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    ds_inc_u64 v2, v[0:1]
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i64 42 syncscope("agent") seq_cst, align 8
   ret void
 }
@@ -1195,7 +1384,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64(ptr addrspace(3) %ptr) #1 {
 define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: lds_atomic_inc_noret_i64_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; CI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -1207,7 +1396,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
 ;
 ; VI-LABEL: lds_atomic_inc_noret_i64_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s0, s[6:7], 0x0
+; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -1219,7 +1408,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
 ;
 ; GFX9-LABEL: lds_atomic_inc_noret_i64_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1230,7 +1419,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
 ;
 ; GFX10-LABEL: lds_atomic_inc_noret_i64_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x0
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1242,7 +1431,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
 ;
 ; GFX11-LABEL: lds_atomic_inc_noret_i64_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
@@ -1250,6 +1439,17 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: lds_atomic_inc_noret_i64_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    ds_inc_u64 v2, v[0:1] offset:32
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(3) %gep, i64 42 syncscope("agent") seq_cst, align 8
   ret void
@@ -1258,7 +1458,7 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i64_offset(ptr addrspace(3) %ptr
 define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1274,7 +1474,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
 ;
 ; VI-LABEL: global_atomic_inc_ret_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1290,7 +1490,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -1303,7 +1503,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
@@ -1317,7 +1517,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1327,6 +1527,18 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v[0:1], v2, v[0:1], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 42 syncscope("agent") seq_cst, align 8
   store i64 %result, ptr addrspace(1) %out, align 4
   ret void
@@ -1335,7 +1547,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr 
 define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i64_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1353,7 +1565,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
 ;
 ; VI-LABEL: global_atomic_inc_ret_i64_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1371,7 +1583,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i64_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -1384,7 +1596,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i64_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
@@ -1398,7 +1610,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i64_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1408,6 +1620,18 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i64_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v[0:1], v2, v[0:1], s[2:3] offset:32 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8
   store i64 %result, ptr addrspace(1) %out, align 4
@@ -1417,7 +1641,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset(ptr addrspace(1) %ou
 define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i64_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1435,7 +1659,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
 ;
 ; VI-LABEL: global_atomic_inc_ret_i64_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1453,7 +1677,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i64_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -1466,7 +1690,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i64_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
@@ -1480,7 +1704,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i64_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1490,6 +1714,19 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i64_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v[0:1], v2, v[0:1], s[2:3] offset:32 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 42 seq_cst, align 8
   store i64 %result, ptr addrspace(1) %out, align 4
@@ -1499,7 +1736,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_system(ptr addrspace
 define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1512,7 +1749,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
 ;
 ; VI-LABEL: global_atomic_inc_noret_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1525,7 +1762,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -1537,7 +1774,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
@@ -1550,7 +1787,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1559,6 +1796,17 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 42 syncscope("agent") seq_cst, align 8
   ret void
 }
@@ -1566,7 +1814,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64(ptr addrspace(1) %ptr) #1
 define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i64_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1581,7 +1829,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
 ;
 ; VI-LABEL: global_atomic_inc_noret_i64_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1596,7 +1844,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i64_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -1608,7 +1856,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i64_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
@@ -1621,7 +1869,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i64_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1630,6 +1878,17 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i64_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v2, v[0:1], s[0:1] offset:32 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8
   ret void
@@ -1638,7 +1897,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset(ptr addrspace(1) %
 define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i64_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1653,7 +1912,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
 ;
 ; VI-LABEL: global_atomic_inc_noret_i64_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1668,7 +1927,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i64_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -1680,7 +1939,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i64_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
@@ -1693,7 +1952,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i64_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1702,6 +1961,18 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i64_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v2, v[0:1], s[0:1] offset:32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr addrspace(1) %gep, i64 42 seq_cst, align 8
   ret void
@@ -1710,7 +1981,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_system(ptr addrspa
 define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_ret_i64_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
@@ -1733,7 +2004,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
 ;
 ; VI-LABEL: global_atomic_inc_ret_i64_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
@@ -1756,7 +2027,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
 ;
 ; GFX9-LABEL: global_atomic_inc_ret_i64_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
@@ -1769,7 +2040,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
 ;
 ; GFX10-LABEL: global_atomic_inc_ret_i64_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
@@ -1783,7 +2054,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
 ;
 ; GFX11-LABEL: global_atomic_inc_ret_i64_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1795,6 +2066,20 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_ret_i64_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v2, 3, v2
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v[0:1], v2, v[0:1], s[2:3] offset:40 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr addrspace(1) %ptr, i32 %id
   %out.gep = getelementptr i64, ptr addrspace(1) %out, i32 %id
@@ -1807,7 +2092,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(ptr addrspace
 define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspace(1) %ptr) #1 {
 ; CI-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1825,7 +2110,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
 ;
 ; VI-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1843,7 +2128,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
 ;
 ; GFX9-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -1855,7 +2140,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
 ;
 ; GFX10-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -1868,7 +2153,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
 ;
 ; GFX11-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1879,6 +2164,19 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: global_atomic_inc_noret_i64_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v2, 3, v2
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_atomic_inc_u64 v2, v[0:1], s[0:1] offset:40 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr addrspace(1) %ptr, i32 %id
   %gep = getelementptr i64, ptr addrspace(1) %gep.tid, i32 5
@@ -1889,7 +2187,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(ptr addrspa
 define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
@@ -1904,7 +2202,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
@@ -1919,7 +2217,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -1934,7 +2232,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -1950,7 +2248,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
@@ -1961,6 +2259,19 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    flat_atomic_inc_u32 v2, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr %ptr, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result, ptr %out, align 4
   ret void
@@ -1969,7 +2280,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #1 {
 define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i32_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s2, s2, 16
@@ -1986,7 +2297,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i32_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s2, s2, 16
@@ -2003,7 +2314,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i32_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -2018,7 +2329,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i32_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_add_u32 s2, s2, 16
@@ -2036,7 +2347,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i32_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
@@ -2047,6 +2358,19 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i32_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    flat_atomic_inc_u32 v2, v[0:1], v2 offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result, ptr %out, align 4
@@ -2056,7 +2380,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #1
 define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i32_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s2, s2, 16
@@ -2073,7 +2397,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i32_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s2, s2, 16
@@ -2090,7 +2414,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i32_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -2105,7 +2429,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i32_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_add_u32 s2, s2, 16
@@ -2123,7 +2447,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i32_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
@@ -2134,6 +2458,20 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i32_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    flat_atomic_inc_u32 v2, v[0:1], v2 offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 42 seq_cst, align 4
   store i32 %result, ptr %out, align 4
@@ -2143,7 +2481,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_system(ptr %out, ptr %
 define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2155,7 +2493,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2167,7 +2505,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -2179,7 +2517,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -2193,7 +2531,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -2203,6 +2541,17 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %result = atomicrmw uinc_wrap ptr %ptr, i32 42 syncscope("agent") seq_cst, align 4
   ret void
 }
@@ -2210,7 +2559,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) #1 {
 define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i32_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s0, s0, 16
@@ -2224,7 +2573,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i32_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s0, s0, 16
@@ -2238,7 +2587,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i32_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -2250,7 +2599,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i32_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_add_u32 s0, s0, 16
@@ -2266,7 +2615,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i32_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -2276,6 +2625,17 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i32_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:16 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4
   ret void
@@ -2284,7 +2644,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) #1 {
 define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i32_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v2, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s0, s0, 16
@@ -2298,7 +2658,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i32_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v2, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s0, s0, 16
@@ -2312,7 +2672,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i32_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -2324,7 +2684,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i32_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_add_u32 s0, s0, 16
@@ -2340,7 +2700,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i32_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -2350,6 +2710,18 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i32_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:16 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 42 seq_cst, align 4
   ret void
@@ -2358,7 +2730,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_system(ptr %ptr) #1 
 define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CI-NEXT:    v_mov_b32_e32 v3, 42
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2380,7 +2752,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v3, 42
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2402,7 +2774,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2422,7 +2794,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2445,7 +2817,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 42 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
@@ -2464,6 +2836,27 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v3
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v3, 42 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    flat_atomic_inc_u32 v3, v[0:1], v3 offset:20 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    flat_store_b32 v[0:1], v3
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr %ptr, i32 %id
   %out.gep = getelementptr i32, ptr %out, i32 %id
@@ -2476,7 +2869,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2493,7 +2886,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2510,7 +2903,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -2525,7 +2918,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -2544,7 +2937,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
@@ -2560,6 +2953,23 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:20 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr %ptr, i32 %id
   %gep = getelementptr i32, ptr %gep.tid, i32 5
@@ -2570,7 +2980,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #1 
 define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #1 {
 ; CI-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v1, 9
 ; CI-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
@@ -2589,7 +2999,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 ;
 ; VI-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v1, 9
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
@@ -2609,7 +3019,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 ; GFX9-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 9
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2626,7 +3036,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 9
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u64 v[1:2], v3, v[1:2] offset:16
@@ -2642,7 +3052,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 3, v2
 ; GFX11-NEXT:    v_add_nc_u32_e32 v2, 2, v2
@@ -2655,6 +3065,25 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    global_store_b32 v3, v2, s[2:3]
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_inc_shl_base_lds_0_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 9
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    v_lshlrev_b32_e32 v3, 3, v2
+; GFX12-NEXT:    v_add_nc_u32_e32 v2, 2, v2
+; GFX12-NEXT:    ds_inc_rtn_u64 v[0:1], v3, v[0:1] offset:16
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v3, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_store_b32 v3, v2, s[2:3]
+; GFX12-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #2
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i64], ptr addrspace(3) @lds1, i32 0, i32 %idx.0
@@ -2667,7 +3096,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(ptr addrspace(1) %out, 
 define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2688,7 +3117,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2709,7 +3138,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2725,7 +3154,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2742,7 +3171,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
@@ -2754,7 +3183,21 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw uinc_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
+; GFX12-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12-NEXT:    flat_atomic_inc_u64 v[0:1], v[2:3], v[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
+; GFX12-NEXT:    s_endpgm
+  %result = atomicrmw uinc_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
   store i64 %result, ptr %out, align 4
   ret void
 }
@@ -2762,7 +3205,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #1 {
 define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i64_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2785,7 +3228,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i64_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2808,7 +3251,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i64_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2824,7 +3267,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i64_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2843,7 +3286,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i64_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
@@ -2855,8 +3298,22 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i64_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
+; GFX12-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12-NEXT:    flat_atomic_inc_u64 v[0:1], v[2:3], v[0:1] offset:32 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
-  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
   store i64 %result, ptr %out, align 4
   ret void
 }
@@ -2864,7 +3321,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #1
 define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i64_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2887,7 +3344,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i64_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2910,7 +3367,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i64_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2926,7 +3383,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i64_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2945,7 +3402,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i64_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
@@ -2957,8 +3414,23 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i64_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
+; GFX12-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    flat_atomic_inc_u64 v[0:1], v[2:3], v[0:1] offset:32 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
-  %result = atomicrmw uinc_wrap ptr %gep, i64 42 seq_cst, align 8
+  %result = atomicrmw uinc_wrap ptr %gep, i64 42 seq_cst, align 8, !noalias.addrspace !0
   store i64 %result, ptr %out, align 4
   ret void
 }
@@ -2966,7 +3438,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_system(ptr %out, ptr %
 define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2979,7 +3451,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2992,7 +3464,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3005,7 +3477,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3020,7 +3492,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3031,14 +3503,26 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw uinc_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1] scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
+  %result = atomicrmw uinc_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
   ret void
 }
 
 define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i64_offset:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3053,7 +3537,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i64_offset:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3068,7 +3552,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i64_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3081,7 +3565,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i64_offset:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3098,7 +3582,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i64_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3109,15 +3593,27 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i64_offset:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1] offset:32 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
-  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
   ret void
 }
 
 define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i64_offset_system:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3132,7 +3628,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i64_offset_system:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3147,7 +3643,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i64_offset_system:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3160,7 +3656,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i64_offset_system:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3177,7 +3673,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i64_offset_system:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3188,15 +3684,28 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_system(ptr %ptr) #1 
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i64_offset_system:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 42
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
-  %result = atomicrmw uinc_wrap ptr %gep, i64 42 seq_cst, align 8
+  %result = atomicrmw uinc_wrap ptr %gep, i64 42 seq_cst, align 8, !noalias.addrspace !0
   ret void
 }
 
 define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
@@ -3222,7 +3731,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ;
 ; VI-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
@@ -3248,7 +3757,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ;
 ; GFX9-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -3269,7 +3778,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ;
 ; GFX10-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -3293,7 +3802,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ;
 ; GFX11-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
@@ -3313,11 +3822,33 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v4, 3, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    flat_atomic_inc_u64 v[0:1], v[0:1], v[2:3] offset:40 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr %ptr, i32 %id
   %out.gep = getelementptr i64, ptr %out, i32 %id
   %gep = getelementptr i64, ptr %gep.tid, i32 5
-  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
   store i64 %result, ptr %out.gep, align 4
   ret void
 }
@@ -3325,7 +3856,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 {
 ; CI-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -3343,7 +3874,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 
 ;
 ; VI-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -3361,7 +3892,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 
 ;
 ; GFX9-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -3377,7 +3908,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 
 ;
 ; GFX10-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -3397,7 +3928,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 
 ;
 ; GFX11-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
@@ -3413,18 +3944,35 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #1 
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 42
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v4, 3, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    flat_atomic_inc_u64 v[0:1], v[2:3] offset:40 scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr %ptr, i32 %id
   %gep = getelementptr i64, ptr %gep.tid, i32 5
-  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw uinc_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
   ret void
 }
 
 define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(3) %ptr) #1 {
 ; CI-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s4, s[6:7], 0x4
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CI-NEXT:    s_load_dword s4, s[8:9], 0x4
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3443,8 +3991,8 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
 ;
 ; VI-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[6:7], 0x10
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; VI-NEXT:    s_load_dword s4, s[8:9], 0x10
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3463,8 +4011,8 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
 ;
 ; GFX9-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s4, s[6:7], 0x10
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX9-NEXT:    s_load_dword s4, s[8:9], 0x10
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
@@ -3479,11 +4027,11 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
 ;
 ; GFX10-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x10
+; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x10
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_inc_rtn_u32 v2, v0, v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3498,10 +4046,10 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
 ;
 ; GFX11-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x10
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x10
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s0
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ds_inc_rtn_u32 v2, v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3514,6 +4062,25 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
 ; GFX11-NEXT:    global_store_b32 v1, v2, s[0:1]
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: nocse_lds_atomic_inc_ret_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x10
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s0
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    ds_inc_rtn_u32 v2, v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    ds_inc_rtn_u32 v0, v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_store_b32 v1, v2, s[0:1]
+; GFX12-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX12-NEXT:    s_endpgm
   %result0 = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i32 42 syncscope("agent") seq_cst, align 4
   %result1 = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i32 42 syncscope("agent") seq_cst, align 4
   store i32 %result0, ptr addrspace(1) %out0, align 4
@@ -3524,5 +4091,8 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(ptr addrspace(1) %out0, 
 attributes #0 = { nounwind speculatable willreturn memory(none) }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind memory(none) }
+
+!0 = !{i32 5, i32 6}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}

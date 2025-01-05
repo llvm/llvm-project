@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_STOP_TOKEN_H
-#define _LIBCPP___STOP_TOKEN_STOP_TOKEN_H
+#ifndef _LIBCPP___CXX03___STOP_TOKEN_STOP_TOKEN_H
+#define _LIBCPP___CXX03___STOP_TOKEN_STOP_TOKEN_H
 
-#include <__config>
-#include <__stop_token/intrusive_shared_ptr.h>
-#include <__stop_token/stop_state.h>
+#include <__cxx03/__config>
+#include <__cxx03/__stop_token/intrusive_shared_ptr.h>
+#include <__cxx03/__stop_token/stop_state.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -60,4 +60,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STOP_TOKEN_STOP_TOKEN_H
+#endif // _LIBCPP___CXX03___STOP_TOKEN_STOP_TOKEN_H

@@ -79,7 +79,7 @@ public:
 
   static constexpr size_t sizeToAlloc(unsigned NumBits) {
     assert(NumBits < 20 && "Tries should have fewer than ~1M slots");
-    size_t Count = 1u << NumBits;
+    unsigned Count = 1u << NumBits;
     return totalSizeToAlloc<LazyAtomicPointer<TrieNode>>(Count);
   }
 

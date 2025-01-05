@@ -6,30 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING_CHAR_TRAITS_H
-#define _LIBCPP___STRING_CHAR_TRAITS_H
+#ifndef _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
+#define _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
 
-#include <__algorithm/fill_n.h>
-#include <__algorithm/find.h>
-#include <__algorithm/find_end.h>
-#include <__algorithm/find_first_of.h>
-#include <__algorithm/min.h>
-#include <__assert>
-#include <__compare/ordering.h>
-#include <__config>
-#include <__functional/hash.h>
-#include <__functional/identity.h>
-#include <__iterator/iterator_traits.h>
-#include <__string/constexpr_c_functions.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__utility/is_pointer_in_range.h>
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <iosfwd>
+#include <__cxx03/__algorithm/fill_n.h>
+#include <__cxx03/__algorithm/find.h>
+#include <__cxx03/__algorithm/find_end.h>
+#include <__cxx03/__algorithm/find_first_of.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/hash.h>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__string/constexpr_c_functions.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__utility/is_pointer_in_range.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
+#include <__cxx03/cstdio>
+#include <__cxx03/iosfwd>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  include <cwchar> // for wmemcpy
+#  include <__cxx03/cwchar> // for wmemcpy
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -37,7 +37,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -540,4 +540,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STRING_CHAR_TRAITS_H
+#endif // _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
