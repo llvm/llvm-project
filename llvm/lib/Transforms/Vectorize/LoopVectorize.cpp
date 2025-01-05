@@ -8903,7 +8903,8 @@ static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
   Type *ScalarTypeOfWideIV = TypeInfo.inferScalarType(WideIV);
   if (ScalarTypeOfWideIV != TypeInfo.inferScalarType(EndValue)) {
     EndValue = VectorPHBuilder.createScalarCast(Instruction::Trunc, EndValue,
-                                                ScalarTypeOfWideIV);
+                                                ScalarTypeOfWideIV,
+                                                WideIV->getDebugLoc());
   }
 
   auto *ResumePhiRecipe =

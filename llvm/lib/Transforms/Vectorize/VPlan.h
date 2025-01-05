@@ -1580,14 +1580,16 @@ class VPScalarCastRecipe : public VPSingleDefRecipe {
   Value *generate(VPTransformState &State);
 
 public:
-  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}), Opcode(Opcode),
+  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                     DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}, DL), Opcode(Opcode),
         ResultTy(ResultTy) {}
 
   ~VPScalarCastRecipe() override = default;
 
   VPScalarCastRecipe *clone() override {
-    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy);
+    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy,
+                                  getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
