@@ -1591,7 +1591,6 @@ module std [system] {
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/musl.h"
       textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
