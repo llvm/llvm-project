@@ -81,7 +81,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   ParsedAttributes attrs(AttrFactory);
 
-  auto ReadAttributes = [&](bool TrailingAttrs) {
+  auto ReadAttributes = [&](bool CheckProhibitedCXX11Attribute) {
     bool MoreToParse;
     do {
       MoreToParse = false;
@@ -90,7 +90,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
         MoreToParse = true;
       }
       if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
-        if (TrailingAttrs)
+        if (CheckProhibitedCXX11Attribute)
           Diag(Tok.getLocation(), diag::err_attribute_after_namespace);
 
         Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
@@ -103,7 +103,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     } while (MoreToParse);
   };
 
-  ReadAttributes(/*TrailingAttrs*/ false);
+  ReadAttributes(/*CheckProhibitedCXX11Attribute*/ false);
 
   if (Tok.is(tok::identifier)) {
     Ident = Tok.getIdentifierInfo();
@@ -129,7 +129,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     }
   }
 
-  ReadAttributes(/*TrailingAttrs*/ true);
+  ReadAttributes(/*CheckProhibitedCXX11Attribute*/ true);
 
   SourceLocation attrLoc = attrs.Range.getBegin();
 
