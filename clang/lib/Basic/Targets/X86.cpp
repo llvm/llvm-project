@@ -41,7 +41,14 @@ static constexpr Builtin::Info BuiltinInfos[] = {
 #include "clang/Basic/BuiltinsX86.inc"
 #undef GET_BUILTIN_INFOS
 };
-static_assert(std::size(BuiltinInfos) == NumX86Builtins);
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumX86Builtins);
 } // namespace X86
 
 namespace X86_64 {
@@ -54,7 +61,14 @@ static constexpr Builtin::Info BuiltinInfos[] = {
 #include "clang/Basic/BuiltinsX86_64.inc"
 #undef GET_BUILTIN_INFOS
 };
-static_assert(std::size(BuiltinInfos) == NumX86_64Builtins);
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumX86_64Builtins);
 } // namespace X86_64
 
 static const char *const GCCRegNames[] = {
@@ -1874,13 +1888,19 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
 
 llvm::SmallVector<Builtin::InfosShard>
 X86_32TargetInfo::getTargetBuiltins() const {
-  return {{&X86::BuiltinStrings, X86::BuiltinInfos}};
+  return {
+      {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86::BuiltinStrings, X86::PrefixedBuiltinInfos, "__builtin_ia32_"},
+  };
 }
 
 llvm::SmallVector<Builtin::InfosShard>
 X86_64TargetInfo::getTargetBuiltins() const {
   return {
       {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86::BuiltinStrings, X86::PrefixedBuiltinInfos, "__builtin_ia32_"},
       {&X86_64::BuiltinStrings, X86_64::BuiltinInfos},
+      {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
+       "__builtin_ia32_"},
   };
 }
