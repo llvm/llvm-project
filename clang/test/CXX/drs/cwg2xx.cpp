@@ -97,9 +97,9 @@ public:
 };
 
 void foo() { Templ<Derived> x(&Derived::func); }
-// expected-error@-1 {{<source>:46:29: error: no matching constructor for initialization of 'Templ<Derived>'}}
+// expected-error@-1 {{no matching constructor for initialization of 'Templ<Derived>'}}
 //   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'const Templ<Derived>' for 1st argument}}
-//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'Templ<Derived>' for 1st argument}}
+//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'Templ<Derived>' for 1st argument}}
 //   expected-note@#cwg203-ex3-Templ-ctor {{candidate template ignored: could not match 'cwg203::ex3::Derived' against 'cwg203::ex3::Base'}}
 } // namespace ex3
 
@@ -114,12 +114,13 @@ struct Derived : Base1, Base2 {
 
 int f() {
   Derived d;
+  // FIXME: in the diagnostic below, Very_base is fully qualified, but Derived is not
   int Derived::*a_ptr = &Derived::Base1::a;
   /* expected-error@-1
-  {{ambiguous conversion from pointer to member of base class 'cwg203::ex4::Very_base' to pointer to member of derived class 'cwg203::ex4::Derived':
+  {{ambiguous conversion from pointer to member of base class 'cwg203::ex4::Very_base' to pointer to member of derived class 'Derived':
     struct cwg203::ex4::Derived -> Base1 -> Very_base
     struct cwg203::ex4::Derived -> Base2 -> Very_base}}*/
-};
+}
 } // namespace ex4
 
 namespace ex5 {
@@ -168,8 +169,9 @@ public:
 int main() {
   Derived d;
   int b = d.a;
+  // FIXME: in the diagnostic below, Base is fully qualified, but Derived is not
   int Derived::*ptr = &Derived::a;
-  // expected-error@-1 {{cannot cast private base class 'cwg203::ex6::Base' to 'cwg203::ex6::Derived'}}
+  // expected-error@-1 {{cannot cast private base class 'cwg203::ex6::Base' to 'Derived'}}
   //   expected-note@#cwg203-ex6-Derived {{declared private here}}
 }
 } // namespace ex6
