@@ -5,7 +5,7 @@ set -e
 usage()
 {
     echo "Usage: $0 [BuildArch] [CodeName] [lldbx.y] [llvmx[.y]] [--skipunmount] --rootfsdir <directory>]"
-    echo "BuildArch can be: arm(default), arm64, armel, armv6, ppc64le, riscv64, s390x, x64, x86"
+    echo "BuildArch can be: arm(default), arm64, armel, armv6, loongarch64, ppc64le, riscv64, s390x, x64, x86"
     echo "CodeName - optional, Code name for Linux, can be: xenial(default), zesty, bionic, alpine"
     echo "                               for alpine can be specified with version: alpineX.YY or alpineedge"
     echo "                               for FreeBSD can be: freebsd13, freebsd14"
@@ -15,6 +15,7 @@ usage()
     echo "llvmx[.y] - optional, LLVM version for LLVM related packages."
     echo "--skipunmount - optional, will skip the unmount of rootfs folder."
     echo "--skipsigcheck - optional, will skip package signature checks (allowing untrusted packages)."
+    echo "--skipemulation - optional, will skip qemu and debootstrap requirement when building environment for debian based systems."
     echo "--use-mirror - optional, use mirror URL to fetch resources, when available."
     echo "--jobs N - optional, restrict to N jobs."
     exit 1
@@ -32,6 +33,7 @@ __QEMUArch=arm
 __UbuntuArch=armhf
 __UbuntuRepo=
 __UbuntuSuites="updates security backports"
+__DebianSuites=
 __LLDB_Package="liblldb-3.9-dev"
 __SkipUnmount=0
 
@@ -127,10 +129,12 @@ __AlpineKeys='
 616adfeb:MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAq0BFD1D4lIxQcsqEpQzU\npNCYM3aP1V/fxxVdT4DWvSI53JHTwHQamKdMWtEXetWVbP5zSROniYKFXd/xrD9X\n0jiGHey3lEtylXRIPxe5s+wXoCmNLcJVnvTcDtwx/ne2NLHxp76lyc25At+6RgE6\nADjLVuoD7M4IFDkAsd8UQ8zM0Dww9SylIk/wgV3ZkifecvgUQRagrNUdUjR56EBZ\nraQrev4hhzOgwelT0kXCu3snbUuNY/lU53CoTzfBJ5UfEJ5pMw1ij6X0r5S9IVsy\nKLWH1hiO0NzU2c8ViUYCly4Fe9xMTFc6u2dy/dxf6FwERfGzETQxqZvSfrRX+GLj\n/QZAXiPg5178hT/m0Y3z5IGenIC/80Z9NCi+byF1WuJlzKjDcF/TU72zk0+PNM/H\nKuppf3JT4DyjiVzNC5YoWJT2QRMS9KLP5iKCSThwVceEEg5HfhQBRT9M6KIcFLSs\nmFjx9kNEEmc1E8hl5IR3+3Ry8G5/bTIIruz14jgeY9u5jhL8Vyyvo41jgt9sLHR1\n/J1TxKfkgksYev7PoX6/ZzJ1ksWKZY5NFoDXTNYUgzFUTOoEaOg3BAQKadb3Qbbq\nXIrxmPBdgrn9QI7NCgfnAY3Tb4EEjs3ON/BNyEhUENcXOH6I1NbcuBQ7g9P73kE4\nVORdoc8MdJ5eoKBpO8Ww8HECAwEAAQ==
 616ae350:MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyduVzi1mWm+lYo2Tqt/0\nXkCIWrDNP1QBMVPrE0/ZlU2bCGSoo2Z9FHQKz/mTyMRlhNqTfhJ5qU3U9XlyGOPJ\npiM+b91g26pnpXJ2Q2kOypSgOMOPA4cQ42PkHBEqhuzssfj9t7x47ppS94bboh46\nxLSDRff/NAbtwTpvhStV3URYkxFG++cKGGa5MPXBrxIp+iZf9GnuxVdST5PGiVGP\nODL/b69sPJQNbJHVquqUTOh5Ry8uuD2WZuXfKf7/C0jC/ie9m2+0CttNu9tMciGM\nEyKG1/Xhk5iIWO43m4SrrT2WkFlcZ1z2JSf9Pjm4C2+HovYpihwwdM/OdP8Xmsnr\nDzVB4YvQiW+IHBjStHVuyiZWc+JsgEPJzisNY0Wyc/kNyNtqVKpX6dRhMLanLmy+\nf53cCSI05KPQAcGj6tdL+D60uKDkt+FsDa0BTAobZ31OsFVid0vCXtsbplNhW1IF\nHwsGXBTVcfXg44RLyL8Lk/2dQxDHNHzAUslJXzPxaHBLmt++2COa2EI1iWlvtznk\nOk9WP8SOAIj+xdqoiHcC4j72BOVVgiITIJNHrbppZCq6qPR+fgXmXa+sDcGh30m6\n9Wpbr28kLMSHiENCWTdsFij+NQTd5S47H7XTROHnalYDuF1RpS+DpQidT5tUimaT\nJZDr++FjKrnnijbyNF8b98UCAwEAAQ==
 616db30d:MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAnpUpyWDWjlUk3smlWeA0\nlIMW+oJ38t92CRLHH3IqRhyECBRW0d0aRGtq7TY8PmxjjvBZrxTNDpJT6KUk4LRm\na6A6IuAI7QnNK8SJqM0DLzlpygd7GJf8ZL9SoHSH+gFsYF67Cpooz/YDqWrlN7Vw\ntO00s0B+eXy+PCXYU7VSfuWFGK8TGEv6HfGMALLjhqMManyvfp8hz3ubN1rK3c8C\nUS/ilRh1qckdbtPvoDPhSbTDmfU1g/EfRSIEXBrIMLg9ka/XB9PvWRrekrppnQzP\nhP9YE3x/wbFc5QqQWiRCYyQl/rgIMOXvIxhkfe8H5n1Et4VAorkpEAXdsfN8KSVv\nLSMazVlLp9GYq5SUpqYX3KnxdWBgN7BJoZ4sltsTpHQ/34SXWfu3UmyUveWj7wp0\nx9hwsPirVI00EEea9AbP7NM2rAyu6ukcm4m6ATd2DZJIViq2es6m60AE6SMCmrQF\nwmk4H/kdQgeAELVfGOm2VyJ3z69fQuywz7xu27S6zTKi05Qlnohxol4wVb6OB7qG\nLPRtK9ObgzRo/OPumyXqlzAi/Yvyd1ZQk8labZps3e16bQp8+pVPiumWioMFJDWV\nGZjCmyMSU8V6MB6njbgLHoyg2LCukCAeSjbPGGGYhnKLm1AKSoJh3IpZuqcKCk5C\n8CM1S15HxV78s9dFntEqIokCAwEAAQ==
+66ba20fe:MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtfB12w4ZgqsXWZDfUAV/\n6Y4aHUKIu3q4SXrNZ7CXF9nXoAVYrS7NAxJdAodsY3vPCN0g5O8DFXR+390LdOuQ\n+HsGKCc1k5tX5ZXld37EZNTNSbR0k+NKhd9h6X3u6wqPOx7SIKxwAQR8qeeFq4pP\nrt9GAGlxtuYgzIIcKJPwE0dZlcBCg+GnptCUZXp/38BP1eYC+xTXSL6Muq1etYfg\nodXdb7Yl+2h1IHuOwo5rjgY5kpY7GcAs8AjGk3lDD/av60OTYccknH0NCVSmPoXK\nvrxDBOn0LQRNBLcAfnTKgHrzy0Q5h4TNkkyTgxkoQw5ObDk9nnabTxql732yy9BY\ns+hM9+dSFO1HKeVXreYSA2n1ndF18YAvAumzgyqzB7I4pMHXq1kC/8bONMJxwSkS\nYm6CoXKyavp7RqGMyeVpRC7tV+blkrrUml0BwNkxE+XnwDRB3xDV6hqgWe0XrifD\nYTfvd9ScZQP83ip0r4IKlq4GMv/R5shcCRJSkSZ6QSGshH40JYSoiwJf5FHbj9ND\n7do0UAqebWo4yNx63j/wb2ULorW3AClv0BCFSdPsIrCStiGdpgJDBR2P2NZOCob3\nG9uMj+wJD6JJg2nWqNJxkANXX37Qf8plgzssrhrgOvB0fjjS7GYhfkfmZTJ0wPOw\nA8+KzFseBh4UFGgue78KwgkCAwEAAQ==
 '
 __Keyring=
 __KeyringFile="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
 __SkipSigCheck=0
+__SkipEmulation=0
 __UseMirror=0
 
 __UnprocessedBuildArgs=
@@ -177,6 +181,19 @@ while :; do
 
             if [[ -e "$__KeyringFile" ]]; then
                 __Keyring="--keyring $__KeyringFile"
+            fi
+            ;;
+        loongarch64)
+            __BuildArch=loongarch64
+            __AlpineArch=loongarch64
+            __QEMUArch=loongarch64
+            __UbuntuArch=loong64
+            __UbuntuSuites=
+            __DebianSuites=unreleased
+            __LLDB_Package="liblldb-19-dev"
+
+            if [[ "$__CodeName" == "sid" ]]; then
+                __UbuntuRepo="http://ftp.ports.debian.org/debian-ports/"
             fi
             ;;
         riscv64)
@@ -339,10 +356,28 @@ while :; do
             ;;
         sid) # Debian sid
             __CodeName=sid
-            __KeyringFile="/usr/share/keyrings/debian-archive-keyring.gpg"
+            __UbuntuSuites=
 
-            if [[ -z "$__UbuntuRepo" ]]; then
-                __UbuntuRepo="http://ftp.debian.org/debian/"
+            # Debian-Ports architectures need different values
+            case "$__UbuntuArch" in
+            amd64|arm64|armel|armhf|i386|mips64el|ppc64el|riscv64|s390x)
+                __KeyringFile="/usr/share/keyrings/debian-archive-keyring.gpg"
+
+                if [[ -z "$__UbuntuRepo" ]]; then
+                    __UbuntuRepo="http://ftp.debian.org/debian/"
+                fi
+                ;;
+            *)
+                __KeyringFile="/usr/share/keyrings/debian-ports-archive-keyring.gpg"
+
+                if [[ -z "$__UbuntuRepo" ]]; then
+                    __UbuntuRepo="http://ftp.ports.debian.org/debian-ports/"
+                fi
+                ;;
+            esac
+
+            if [[ -e "$__KeyringFile" ]]; then
+                __Keyring="--keyring $__KeyringFile"
             fi
             ;;
         tizen)
@@ -387,6 +422,9 @@ while :; do
         --skipsigcheck)
             __SkipSigCheck=1
             ;;
+        --skipemulation)
+            __SkipEmulation=1
+            ;;
         --rootfsdir|-rootfsdir)
             shift
             __RootfsDir="$1"
@@ -419,9 +457,9 @@ case "$__AlpineVersion" in
         elif [[ "$__AlpineArch" == "x86" ]]; then
             __AlpineVersion=3.17 # minimum version that supports lldb-dev
             __AlpinePackages+=" llvm15-libs"
-        elif [[ "$__AlpineArch" == "riscv64" ]]; then
-            __AlpineLlvmLibsLookup=1
-            __AlpineVersion=edge # minimum version with APKINDEX.tar.gz (packages archive)
+        elif [[ "$__AlpineArch" == "riscv64" || "$__AlpineArch" == "loongarch64" ]]; then
+            __AlpineVersion=3.21 # minimum version that supports lldb-dev
+            __AlpinePackages+=" llvm19-libs"
         elif [[ -n "$__AlpineMajorVersion" ]]; then
             # use whichever alpine version is provided and select the latest toolchain libs
             __AlpineLlvmLibsLookup=1
@@ -505,11 +543,6 @@ if [[ "$__CodeName" == "alpine" ]]; then
     echo "$__ApkToolsSHA512SUM $__ApkToolsDir/apk.static" | sha512sum -c
     chmod +x "$__ApkToolsDir/apk.static"
 
-    if [[ -f "/usr/bin/qemu-$__QEMUArch-static" ]]; then
-        mkdir -p "$__RootfsDir"/usr/bin
-        cp -v "/usr/bin/qemu-$__QEMUArch-static" "$__RootfsDir/usr/bin"
-    fi
-
     if [[ "$__AlpineVersion" == "edge" ]]; then
         version=edge
     else
@@ -527,6 +560,10 @@ if [[ "$__CodeName" == "alpine" ]]; then
         __ApkSignatureArg="--allow-untrusted"
     else
         __ApkSignatureArg="--keys-dir $__ApkKeysDir"
+    fi
+
+    if [[ "$__SkipEmulation" == "1" ]]; then
+        __NoEmulationArg="--no-scripts"
     fi
 
     # initialize DB
@@ -550,7 +587,7 @@ if [[ "$__CodeName" == "alpine" ]]; then
     "$__ApkToolsDir/apk.static" \
         -X "http://dl-cdn.alpinelinux.org/alpine/$version/main" \
         -X "http://dl-cdn.alpinelinux.org/alpine/$version/community" \
-        -U $__ApkSignatureArg --root "$__RootfsDir" --arch "$__AlpineArch" \
+        -U $__ApkSignatureArg --root "$__RootfsDir" --arch "$__AlpineArch" $__NoEmulationArg \
         add $__AlpinePackages
 
     rm -r "$__ApkToolsDir"
@@ -745,25 +782,68 @@ elif [[ "$__CodeName" == "haiku" ]]; then
     popd
     rm -rf "$__RootfsDir/tmp"
 elif [[ -n "$__CodeName" ]]; then
+    if [[ "$__SkipEmulation" == "1" ]]; then
+        if [[ -z "$AR" ]]; then
+            if command -v ar &>/dev/null; then
+                AR="$(command -v ar)"
+            elif command -v llvm-ar &>/dev/null; then
+                AR="$(command -v llvm-ar)"
+            else
+                echo "Unable to find ar or llvm-ar on PATH, add them to PATH or set AR environment variable pointing to the available AR tool"
+                exit 1
+            fi
+        fi
 
+        # shellcheck disable=SC2086
+        suites="$__CodeName $__DebianSuites $(echo $__UbuntuSuites | xargs -n 1 | xargs -I {} echo -n "$__CodeName-{} ")"
+
+        PYTHON=${PYTHON_EXECUTABLE:-python3}
+
+        # shellcheck disable=SC2086,SC2046
+        echo running "$PYTHON" "$__CrossDir/install-debs.py" --arch "$__UbuntuArch" --rootfsdir "$__RootfsDir" --artool "$AR" \
+            $(echo $suites | xargs -n 1 | xargs -I {} echo -n "--suite {} ") \
+            $__UbuntuPackages
+
+        # shellcheck disable=SC2086,SC2046
+        "$PYTHON" "$__CrossDir/install-debs.py" --arch "$__UbuntuArch" --mirror "$__UbuntuRepo" --rootfsdir "$__RootfsDir" --artool "$AR" \
+            $(echo $suites | xargs -n 1 | xargs -I {} echo -n "--suite {} ") \
+            $__UbuntuPackages
+
+        exit 0
+    fi
+
+    __UpdateOptions=
     if [[ "$__SkipSigCheck" == "0" ]]; then
         __Keyring="$__Keyring --force-check-gpg"
+    else
+        __Keyring=
+        __UpdateOptions="--allow-unauthenticated --allow-insecure-repositories"
     fi
 
     # shellcheck disable=SC2086
     echo running debootstrap "--variant=minbase" $__Keyring --arch "$__UbuntuArch" "$__CodeName" "$__RootfsDir" "$__UbuntuRepo"
-    debootstrap "--variant=minbase" $__Keyring --arch "$__UbuntuArch" "$__CodeName" "$__RootfsDir" "$__UbuntuRepo"
 
+    # shellcheck disable=SC2086
+    if ! debootstrap "--variant=minbase" $__Keyring --arch "$__UbuntuArch" "$__CodeName" "$__RootfsDir" "$__UbuntuRepo"; then
+        echo "debootstrap failed! dumping debootstrap.log"
+        cat "$__RootfsDir/debootstrap/debootstrap.log"
+        exit 1
+    fi
+
+    rm -rf "$__RootfsDir"/etc/apt/*.{sources,list} "$__RootfsDir"/etc/apt/sources.list.d
     mkdir -p "$__RootfsDir/etc/apt/sources.list.d/"
+
+    # shellcheck disable=SC2086
     cat > "$__RootfsDir/etc/apt/sources.list.d/$__CodeName.sources" <<EOF
 Types: deb
 URIs: $__UbuntuRepo
-Suites: $__CodeName $(echo $__UbuntuSuites | xargs -n 1 | xargs -I {} echo -n "$__CodeName-{} ")
+Suites: $__CodeName $__DebianSuites $(echo $__UbuntuSuites | xargs -n 1 | xargs -I {} echo -n "$__CodeName-{} ")
 Components: main universe
 Signed-By: $__KeyringFile
 EOF
 
-    chroot "$__RootfsDir" apt-get update
+    # shellcheck disable=SC2086
+    chroot "$__RootfsDir" apt-get update $__UpdateOptions
     chroot "$__RootfsDir" apt-get -f -y install
     # shellcheck disable=SC2086
     chroot "$__RootfsDir" apt-get -y install $__UbuntuPackages
