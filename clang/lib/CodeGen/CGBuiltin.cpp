@@ -4865,6 +4865,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Triple::x86_64:
       return RValue::get(EmitSpecialRegisterBuiltin(
           *this, E, Int64Ty, VoidPtrTy, NormalRead, "rsp"));
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+    case Triple::aarch64:
+    case Triple::aarch64_be:
+    case Triple::aarch64_32:
     case Triple::riscv32:
     case Triple::riscv64: {
       llvm::IntegerType *SPRegIntTy =
