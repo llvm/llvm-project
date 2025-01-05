@@ -624,56 +624,63 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   }
 }
 
-VPWidenInductionRecipe *isIVUse(VPValue *Incoming) {
-  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Incoming);
+/// Return a wide IV, if \p VPV is an optimizable wide IV or wide IV use. That
+/// is, if \p VPV is either an untruncated wide induction, or if it increments a
+/// wide induction by its step.
+static VPWidenInductionRecipe *isOptimizableIVOrUse(VPValue *VPV) {
+  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
-    auto *WideIntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    if (WideIntOrFpIV && WideIntOrFpIV->getTruncInst())
-      return nullptr;
-    return WideIV;
+    // VPV itself is a wide induction, separately compute the end value for exit
+    // users if it is not a truncated IV.
+    if (isa<VPWidenPointerInductionRecipe>(WideIV) ||
+        !cast<VPWidenIntOrFpInductionRecipe>(WideIV)->getTruncInst())
+      return WideIV;
+    return nullptr;
   }
 
-  VPRecipeBase *IncomingDef = Incoming->getDefiningRecipe();
-  if (!IncomingDef || IncomingDef->getNumOperands() != 2)
+  // Check if VPV is an optimizable induction increment.
+  VPRecipeBase *Def = VPV->getDefiningRecipe();
+  if (!Def || Def->getNumOperands() != 2)
     return nullptr;
-
-  WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef->getOperand(0));
+  WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(0));
   if (!WideIV)
-    WideIV = dyn_cast<VPWidenInductionRecipe>(IncomingDef->getOperand(1));
+    WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(1));
   if (!WideIV)
     return nullptr;
 
   auto IsWideIVInc = [&]() {
     using namespace VPlanPatternMatch;
     auto &ID = WideIV->getInductionDescriptor();
+
+    // Check if VPV increments the induction by the induction step.
+    VPValue *IVStep = WideIV->getStepValue();
     switch (ID.getInductionOpcode()) {
     case Instruction::Add:
-      return match(Incoming,
-                   m_c_Binary<Instruction::Add>(
-                       m_VPValue(), m_Specific(WideIV->getStepValue())));
+      return match(VPV, m_c_Binary<Instruction::Add>(m_Specific(WideIV),
+                                                     m_Specific(IVStep)));
     case Instruction::FAdd:
-      return match(Incoming,
-                   m_c_Binary<Instruction::FAdd>(
-                       m_VPValue(), m_Specific(WideIV->getStepValue())));
+      return match(VPV, m_c_Binary<Instruction::FAdd>(m_Specific(WideIV),
+                                                      m_Specific(IVStep)));
     case Instruction::FSub:
-      return match(Incoming,
-                   m_Binary<Instruction::FSub>(
-                       m_VPValue(), m_Specific(WideIV->getStepValue())));
+      return match(VPV, m_Binary<Instruction::FSub>(m_Specific(WideIV),
+                                                    m_Specific(IVStep)));
     case Instruction::Sub: {
+      // IVStep will be the negated step of the subtraction. Check if Step == -1
+      // * IVStep.
       VPValue *Step;
-      return match(Incoming,
-                   m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) &&
-             Step->isLiveIn() && WideIV->getStepValue()->isLiveIn() &&
-             (cast<ConstantInt>(Step->getLiveInIRValue())->getValue() +
-              cast<ConstantInt>(WideIV->getStepValue()->getLiveInIRValue())
-                  ->getValue())
-                 .isZero();
+      if (!match(VPV,
+                 m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) ||
+          !Step->isLiveIn() || !IVStep->isLiveIn())
+        return false;
+      auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
+      auto *IVStepCI = dyn_cast<ConstantInt>(IVStep->getLiveInIRValue());
+      return StepCI && IVStepCI &&
+             StepCI->getValue() == (-1 * IVStepCI->getValue());
     }
     default:
       return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-             match(Incoming,
-                   m_GetElementPtr(m_VPValue(),
-                                   m_Specific(WideIV->getStepValue())));
+             match(VPV, m_GetElementPtr(m_Specific(WideIV),
+                                        m_Specific(WideIV->getStepValue())));
     }
     llvm_unreachable("should have been covered by switch above");
   };
@@ -707,7 +714,7 @@ void VPlanTransforms::optimizeInductionExitUsers(
                    m_VPValue(Incoming), m_SpecificInt(1))))
       continue;
 
-    auto *WideIV = isIVUse(Incoming);
+    auto *WideIV = isOptimizableIVOrUse(Incoming);
     if (!WideIV)
       continue;
     VPValue *EndValue = EndValues.lookup(WideIV);
@@ -1619,10 +1626,13 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
               auto *CastR = cast<VPWidenCastRecipe>(CR);
               VPID = VPIntrinsic::getForOpcode(CastR->getOpcode());
             }
-            assert(VPID != Intrinsic::not_intrinsic && "Expected VP intrinsic");
+
+            // Not all intrinsics have a corresponding VP intrinsic.
+            if (VPID == Intrinsic::not_intrinsic)
+              return nullptr;
             assert(VPIntrinsic::getMaskParamPos(VPID) &&
                    VPIntrinsic::getVectorLengthParamPos(VPID) &&
-                   "Expected VP intrinsic");
+                   "Expected VP intrinsic to have mask and EVL");
 
             SmallVector<VPValue *> Ops(CR->operands());
             Ops.push_back(&AllOneMask);

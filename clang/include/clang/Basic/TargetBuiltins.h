@@ -128,7 +128,7 @@ namespace clang {
     FirstX86_64Builtin,
     LastX86CommonBuiltin = FirstX86_64Builtin - 1,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsX86_64.def"
+#include "clang/Basic/BuiltinsX86_64.inc"
     LastTSBuiltin
   };
   }

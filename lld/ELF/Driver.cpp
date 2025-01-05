@@ -3215,11 +3215,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read the callgraph now that we know what was gced or icfed
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       if (std::optional<MemoryBufferRef> buffer =
               readFile(ctx, arg->getValue()))
         readCallGraph(ctx, *buffer);
-    readCallGraphsFromObjectFiles<ELFT>(ctx);
+    } else
+      readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.
