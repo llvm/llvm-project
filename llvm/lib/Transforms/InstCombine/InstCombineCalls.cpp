@@ -851,10 +851,12 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
       CallInst *I = cast<CallInst>(AssumeVH);
       if (!match(I->getArgOperand(0), m_Not(m_Specific(U))))
         continue;
-      if (!isValidAssumeForContext(I, II, &DT))
+      if (!isValidAssumeForContext(I, II, /*DT=*/nullptr,
+                                   /*AllowEphemerals=*/true))
         continue;
       Value *Result =
           Builder.CreateBinOp(WO->getBinaryOp(), WO->getLHS(), WO->getRHS());
+      Result->takeName(WO);
       if (auto *Inst = dyn_cast<Instruction>(Result)) {
         if (WO->isSigned())
           Inst->setHasNoSignedWrap();
