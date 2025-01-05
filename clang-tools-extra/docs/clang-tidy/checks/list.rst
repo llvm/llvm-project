@@ -154,7 +154,7 @@ Clang-Tidy Checks
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
    :doc:`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
-   :doc:`bugprone-undefined-sprintf-overlap <bugprone/undefined-sprintf-overlap>`
+   :doc:`bugprone-undefined-sprintf-overlap <bugprone/undefined-sprintf-overlap>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
