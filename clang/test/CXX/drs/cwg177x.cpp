@@ -1,7 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11
 // RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
-// RUN: %clang_cc1 -std=c++1z %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
 // RUN: %clang_cc1 -std=c++1z %s -fexceptions -fcxx-exceptions -pedantic-errors -triple i386-windows-pc -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
 
 namespace cwg1772 { // cwg1772: 14

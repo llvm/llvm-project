@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
