@@ -50,7 +50,7 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  std::optional<MachineOperand> getVLForUser(MachineOperand &UserOp);
+  std::optional<MachineOperand> getMinimumVLForUser(MachineOperand &UserOp);
   /// Returns the largest common VL MachineOperand that may be used to optimize
   /// MI. Returns std::nullopt if it failed to find a suitable VL.
   std::optional<MachineOperand> checkUsers(MachineInstr &MI);
@@ -1056,7 +1056,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
 }
 
 std::optional<MachineOperand>
-RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
+RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
 
@@ -1081,12 +1081,9 @@ RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
 
     unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
     const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-    if (VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0))
-      return MachineOperand::CreateImm(1);
-    LLVM_DEBUG(dbgs() << "    Abort because could not determine VL of vector "
-                         "operand used as scalar operand\n");
-
-    return std::nullopt;
+    return VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0)
+               ? MachineOperand::CreateImm(1)
+               : VLOp;
   }
 
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
@@ -1117,7 +1114,7 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       return std::nullopt;
     }
 
-    auto VLOp = getVLForUser(UserOp);
+    auto VLOp = getMinimumVLForUser(UserOp);
     if (!VLOp)
       return std::nullopt;
 
