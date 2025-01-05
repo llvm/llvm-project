@@ -832,7 +832,7 @@ LogicalResult tosa::PadOp::verify() {
       paddingType.getDimSize(0) != inputType.getRank() * 2)
     return emitOpError() << "expected padding tensor dim 0 to have size "
                          << inputType.getRank() * 2
-                         << " (2*rank(input)) but got size "
+                         << " (2*rank(shape1)) but got size "
                          << paddingType.getDimSize(0);
 
   return success();

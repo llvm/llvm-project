@@ -1566,7 +1566,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
   let arguments = (ins
     Tosa_RankedTensor:$input1,
-    1DTensorOf<[Tosa_Int32Or64]>:$padding,
+    TosaTensorRankOf<[Tosa_Int32Or64], [1]>:$padding,
     Optional<Tosa_ScalarTensor>:$pad_const,
     OptionalAttr<Tosa_PadOpQuantizationAttr>:$quantization_info
   );
