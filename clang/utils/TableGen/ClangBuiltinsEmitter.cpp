@@ -59,7 +59,13 @@ struct Builtin {
   const Record *BuiltinRecord;
 
   void EmitEnumerator(llvm::raw_ostream &OS) const {
-    OS << "    BI" << Name << ",\n";
+    OS << "    BI";
+    // If there is a required name prefix, include its spelling in the
+    // enumerator.
+    if (auto *PrefixRecord =
+            BuiltinRecord->getValueAsOptionalDef("RequiredNamePrefix"))
+      OS << PrefixRecord->getValueAsString("Spelling");
+    OS << Name << ",\n";
   }
 
   void EmitInfo(llvm::raw_ostream &OS, const StringToOffsetTable &Table) const {
@@ -482,17 +488,42 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   for (const auto *BuiltinRecord :
        Records.getAllDerivedDefinitions("AtomicBuiltin"))
     collectBuiltins(BuiltinRecord, Builtins);
-
   unsigned NumAtomicBuiltins = Builtins.size();
 
   for (const auto *BuiltinRecord :
        Records.getAllDerivedDefinitions("Builtin")) {
     if (BuiltinRecord->isSubClassOf("AtomicBuiltin"))
       continue;
+    // Prefixed builtins are also special and we emit them last so they can have
+    // their own representation that skips the prefix.
+    if (BuiltinRecord->getValueAsOptionalDef("RequiredNamePrefix"))
+      continue;
+
     collectBuiltins(BuiltinRecord, Builtins);
   }
 
+  // Now collect (and count) the prefixed builtins.
+  unsigned NumPrefixedBuiltins = Builtins.size();
+  const Record *FirstPrefix = nullptr;
+  for (const auto *BuiltinRecord :
+       Records.getAllDerivedDefinitions("Builtin")) {
+    auto *Prefix = BuiltinRecord->getValueAsOptionalDef("RequiredNamePrefix");
+    if (!Prefix)
+      continue;
+
+    if (!FirstPrefix)
+      FirstPrefix = Prefix;
+    assert(Prefix == FirstPrefix &&
+           "Multiple distinct prefixes which is not currently supported!");
+    assert(!BuiltinRecord->isSubClassOf("AtomicBuiltin") &&
+           "Cannot require a name prefix for an atomic builtin.");
+    collectBuiltins(BuiltinRecord, Builtins);
+  }
+  NumPrefixedBuiltins = Builtins.size() - NumPrefixedBuiltins;
+
   auto AtomicBuiltins = ArrayRef(Builtins).slice(0, NumAtomicBuiltins);
+  auto UnprefixedBuiltins = ArrayRef(Builtins).drop_back(NumPrefixedBuiltins);
+  auto PrefixedBuiltins = ArrayRef(Builtins).take_back(NumPrefixedBuiltins);
 
   // Collect strings into a table.
   StringToOffsetTable Table;
@@ -524,14 +555,24 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
 #endif // GET_BUILTIN_STR_TABLE
 )c++";
 
-  // Emit a direct set of `Builtin::Info` initializers.
+  // Emit a direct set of `Builtin::Info` initializers, first for the unprefixed
+  // builtins and then for the prefixed builtins.
   OS << R"c++(
 #ifdef GET_BUILTIN_INFOS
 )c++";
-  for (const auto &B : Builtins)
+  for (const auto &B : UnprefixedBuiltins)
     B.EmitInfo(OS, Table);
   OS << R"c++(
 #endif // GET_BUILTIN_INFOS
+)c++";
+
+  OS << R"c++(
+#ifdef GET_BUILTIN_PREFIXED_INFOS
+)c++";
+  for (const auto &B : PrefixedBuiltins)
+    B.EmitInfo(OS, Table);
+  OS << R"c++(
+#endif // GET_BUILTIN_PREFIXED_INFOS
 )c++";
 
   // Emit X-macros for the atomic builtins to support various custome patterns
