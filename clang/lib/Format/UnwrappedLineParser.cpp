@@ -1030,6 +1030,12 @@ void UnwrappedLineParser::parsePPDirective() {
   case tok::pp_pragma:
     parsePPPragma();
     break;
+  case tok::pp_error:
+  case tok::pp_warning:
+    nextToken();
+    if (!eof() && Style.isCpp())
+      FormatTok->setFinalizedType(TT_AfterPPDirective);
+    [[fallthrough]];
   default:
     parsePPUnknown();
     break;
@@ -1209,9 +1215,8 @@ void UnwrappedLineParser::parsePPPragma() {
 }
 
 void UnwrappedLineParser::parsePPUnknown() {
-  do {
+  while (!eof())
     nextToken();
-  } while (!eof());
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
