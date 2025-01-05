@@ -51,9 +51,7 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
        << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
-    for (SmallVectorImpl<UnwrappedLine>::const_iterator
-             CI = I->Children.begin(),
-             CE = I->Children.end();
+    for (const auto *CI = I->Children.begin(), *CE = I->Children.end();
          CI != CE; ++CI) {
       OS << "\n";
       printLine(OS, *CI, (Prefix + "  ").str());
@@ -4788,8 +4786,7 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
 }
 
 void UnwrappedLineParser::distributeComments(
-    const SmallVectorImpl<FormatToken *> &Comments,
-    const FormatToken *NextTok) {
+    const ArrayRef<FormatToken *> &Comments, const FormatToken *NextTok) {
   // Whether or not a line comment token continues a line is controlled by
   // the method continuesLineCommentSection, with the following caveat:
   //
@@ -5011,7 +5008,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
 namespace {
 template <typename Iterator>
 void pushTokens(Iterator Begin, Iterator End,
-                llvm::SmallVectorImpl<FormatToken *> &Into) {
+                SmallVectorImpl<FormatToken *> &Into) {
   for (auto I = Begin; I != End; ++I) {
     Into.push_back(I->Tok);
     for (const auto &Child : I->Children)
