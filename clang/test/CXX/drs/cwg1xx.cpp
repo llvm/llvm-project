@@ -1364,6 +1364,14 @@ namespace cwg191 { // cwg191: yes
   }
 }
 
+namespace cwg192 { // cwg192: 2.7
+struct S {
+  void f(I i) { }
+  // expected-error@-1 {{unknown type name 'I'}}
+  typedef int I;
+};
+} // namespace cwg192
+
 // cwg193 is in cwg193.cpp
 
 namespace cwg194 { // cwg194: yes
