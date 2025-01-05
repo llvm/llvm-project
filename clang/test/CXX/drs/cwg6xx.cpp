@@ -61,7 +61,7 @@ static_assert(0x8000000000000000 < -1, "0x8000000000000000 should be unsigned");
 #endif
 
 #undef MAX
-}
+} // namespace cwg601
 
 namespace cwg602 { // cwg602: yes
   template<class T> struct A {
@@ -76,14 +76,14 @@ namespace cwg602 { // cwg602: yes
     typename C::type ct; // ok, befriended
   };
   B<int> b;
-}
+} // namespace cwg602
 
 namespace cwg603 { // cwg603: yes
   template<unsigned char> struct S {};
   typedef S<'\001'> S1;
   typedef S<(1ul << __CHAR_BIT__) + 1> S1;
   // since-cxx11-error@-1 {{cannot be narrowed}}
-}
+} // namespace cwg603
 
 // cwg604: na
 // cwg605 is in cwg605.cpp
@@ -108,7 +108,7 @@ namespace cwg606 { // cwg606: 3.0
     h(test); // ok, an rvalue reference can bind to a function lvalue
   }
 #endif
-}
+} // namespace cwg606
 
 namespace cwg607 { // cwg607: yes
 namespace example1 {
@@ -143,14 +143,14 @@ namespace cwg608 { // cwg608: yes
   struct B : A {};
   struct C : A { void f(); };
   struct D : B, C {};
-}
+} // namespace cwg608
 
 static_assert(-0u == 0u, ""); // cwg610: yes
 
 namespace cwg611 { // cwg611: yes
   int k;
   struct S { int &r; } s = { k ? k : k };
-}
+} // namespace cwg611
 
 // cwg612: na
 
@@ -189,7 +189,7 @@ namespace cwg613 { // cwg613: yes c++11
     // cxx98-error@-1 {{invalid use of member 'n' in static member function}}
     // since-cxx11-error@-2 {{invalid use of non-static data member 'n'}}
   }
-}
+} // namespace cwg613
 
 static_assert((-1) / 2 == 0, ""); // cwg614: yes
 static_assert((-1) % 2 == -1, "");
@@ -197,7 +197,7 @@ static_assert((-1) % 2 == -1, "");
 namespace cwg615 { // cwg615: yes
   int f();
   static int n = f();
-}
+} // namespace cwg615
 
 namespace cwg616 { // cwg616: 4
 #if __cplusplus >= 201103L
@@ -215,13 +215,13 @@ namespace cwg616 { // cwg616: 4
   using U = decltype(static_cast<S&&>(s).n);
   using U = int;
 #endif
-}
+} // namespace cwg616
 
 namespace cwg618 { // cwg618: yes
 #if (unsigned)-1 > 0
 #error wrong
 #endif
-}
+} // namespace cwg618
 
 namespace cwg619 { // cwg619: yes
   extern int x[10];
@@ -240,7 +240,7 @@ namespace cwg619 { // cwg619: yes
     sizeof(x);
     // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
   }
-}
+} // namespace cwg619
 
 // cwg620: dup 568
 
@@ -250,7 +250,7 @@ namespace cwg621 { // cwg621: yes
   template<> int f<int>() {}
   // expected-error@-1 {{redefinition of 'f<int>'}}
   //   expected-note@#cwg621-f {{previous definition is here}}
-}
+} // namespace cwg621
 
 // cwg623: na
 // FIXME: Add documentation saying we allow invalid pointer values.
@@ -266,14 +266,14 @@ namespace cwg625 { // cwg625: yes
   void (*p)(auto) = f;
   // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
   // expected-error@-2 {{'auto' not allowed in function prototype}}
-}
+} // namespace cwg625
 
 namespace cwg626 { // cwg626: yes
 #define STR(x) #x
   char c[2] = STR(c); // ok, type matches
   wchar_t w[2] = STR(w);
   // expected-error@-1 {{initializing wide char array with non-wide string literal}}
-}
+} // namespace cwg626
 
 namespace cwg627 { // cwg627: yes
   void f() {
@@ -283,7 +283,7 @@ namespace cwg627 { // cwg627: yes
     // expected-error@-2 {{use of undeclared identifier 'a'}}
     // expected-warning@-3 {{expression result unused}}
   }
-}
+} // namespace cwg627
 
 // cwg628: na
 
@@ -298,7 +298,7 @@ namespace cwg629 { // cwg629: 2.9
     // since-cxx11-error@-1 {{redefinition of 'T'}}
     //   since-cxx11-note@#cwg629-T {{previous definition is here}}
   }
-}
+} // namespace cwg629
 
 namespace cwg630 { // cwg630: yes
 const bool MB_EQ_WC =
@@ -332,14 +332,14 @@ static_assert(!MB_EQ_WC, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characte
 #else
 static_assert(MB_EQ_WC, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
 #endif
-}
+} // namespace cwg630
 
 // cwg631: na
 
 namespace cwg632 { // cwg632: yes
   struct S { int n; } s = {{5}};
   // expected-warning@-1 {{braces around scalar initializer}}
-}
+} // namespace cwg632
 
 // cwg633: na
 // see also n2993
@@ -354,7 +354,7 @@ namespace cwg634 { // cwg634: yes
   int k = f(S());
   // cxx98-error@-1 {{cannot pass object of non-POD type 'S' through variadic function; call will abort at runtime}}
   // since-cxx11-error@-2 {{cannot pass object of non-trivial type 'S' through variadic function; call will abort at runtime}}
-}
+} // namespace cwg634
 
 namespace cwg635 { // cwg635: yes
   template<typename T> struct A { A(); ~A(); };
@@ -381,7 +381,7 @@ namespace cwg635 { // cwg635: yes
   // expected-error@#cwg635-D-T {{out-of-line constructor for 'D' cannot have template arguments}}
   // expected-error@#cwg635-D-T {{redefinition of 'D<T>'}}
   //   expected-note@#cwg635-D {{previous definition is here}}
-}
+} // namespace cwg635
 
 namespace cwg637 { // cwg637: yes
   void f(int i) {
@@ -389,7 +389,7 @@ namespace cwg637 { // cwg637: yes
     i = i++ + 1;
     // cxx98-14-warning@-1 {{multiple unsequenced modifications to 'i'}}
   }
-}
+} // namespace cwg637
 
 namespace cwg638 { // cwg638: no
   template<typename T> struct A {
@@ -424,14 +424,14 @@ namespace cwg638 { // cwg638: no
       void h() { X::type e; } // FIXME: private
     };
   };
-}
+} // namespace cwg638
 
 namespace cwg639 { // cwg639: 3.3
   void f(int i) {
     void((i = 0) + (i = 0));
     // expected-warning@-1 {{multiple unsequenced modifications to 'i'}}
   }
-}
+} // namespace cwg639
 
 namespace cwg641 { // cwg641: yes
   namespace std_example {
@@ -481,7 +481,7 @@ namespace cwg641 { // cwg641: yes
     (void)A();
     (void)ca;
   }
-}
+} // namespace cwg641
 
 namespace cwg642 { // cwg642: yes
   void f() {
@@ -497,10 +497,10 @@ namespace cwg642 { // cwg642: yes
     struct s *p = new struct s;
     p->a = s;
   }
-}
+} // namespace cwg642
 
-#if __cplusplus >= 201103L
 namespace cwg643 { // cwg643: 3.2
+#if __cplusplus >= 201103L
   struct A {
     int x;
     auto f() -> decltype(this->x);
@@ -514,11 +514,11 @@ namespace cwg643 { // cwg643: 3.2
     // since-cxx11-error@-1 {{use of undeclared identifier 'y'}}
     int y;
   };
-}
 #endif
+} // namespace cwg643
 
-#if __cplusplus >= 201103L
 namespace cwg644 { // cwg644: partial
+#if __cplusplus >= 201103L
   struct A {
     A() = default;
     int x, y;
@@ -541,15 +541,15 @@ namespace cwg644 { // cwg644: partial
     constexpr E() = default;
   };
   static_assert(!__is_literal_type(E<C>), "");
-}
 #endif
+} // namespace cwg644
 
 // cwg645 increases permission to optimize; it's not clear that it's possible to
 // test for this.
 // cwg645: na
 
-#if __cplusplus >= 201103L
 namespace cwg646 { // cwg646: sup 981
+#if __cplusplus >= 201103L
   struct A {
     constexpr A(const A&) = default; // ok
   };
@@ -559,11 +559,11 @@ namespace cwg646 { // cwg646: sup 981
     B(B&);
   };
   constexpr B b = {}; // ok
-}
 #endif
+} // namespace cwg646
 
-#if __cplusplus >= 201103L
 namespace cwg647 { // cwg647: 3.1
+#if __cplusplus >= 201103L
   // This is partially superseded by cwg1358.
   struct A {
     constexpr virtual void f() const;
@@ -620,20 +620,20 @@ namespace cwg647 { // cwg647: 3.1
         : n(get()),
           d(D(0) + f) {} // #cwg647-float-d
   };
-}
 #endif
+} // namespace cwg647
 
-#if __cplusplus >= 201103L
 namespace cwg648 { // cwg648: yes
+#if __cplusplus >= 201103L
   int f();
   constexpr int a = (true ? 1 : f());
   constexpr int b = false && f();
   constexpr int c = true || f();
-}
 #endif
+} // namespace cwg648
 
-#if __cplusplus >= 201103L
 namespace cwg649 { // cwg649: 3.5
+#if __cplusplus >= 201103L
 // Maximum alignment is 8192 bytes for Windows, and 4 GB for Linux
 alignas(0x200000000) int n;
 // since-cxx11-error-re@-1 {{{{requested alignment must be (8192|4294967296) bytes or smaller}}}}
@@ -646,13 +646,13 @@ struct Y {
   struct alignas(256) Z {};
   // This part is superseded by cwg2130 and eventually by aligned allocation support.
   auto *p = new Z;
-}
 #endif
+} // namespace cwg649
 
 // cwg650 is in cwg650.cpp
 
-#if __cplusplus >= 201103L
 namespace cwg651 { // cwg651: yes
+#if __cplusplus >= 201103L
   struct X {
     virtual X &f();
   };
@@ -661,20 +661,20 @@ namespace cwg651 { // cwg651: yes
   };
   using T = decltype(((X&&)Y()).f());
   using T = X &;
-}
 #endif
+} // namespace cwg651
 
-#if __cplusplus >= 201103L
 namespace cwg652 { // cwg652: yes
+#if __cplusplus >= 201103L
   constexpr int n = 1.2 * 3.4;
   static_assert(n == 4, "");
-}
 #endif
+} // namespace cwg652
 
 // cwg653 is in cwg653.cpp
 
-#if __cplusplus >= 201103L
 namespace cwg654 { // cwg654: sup 1423
+#if __cplusplus >= 201103L
   void f() {
     if (nullptr) {}
     // since-cxx11-warning@-1 {{implicit conversion of nullptr constant to 'bool'}}
@@ -697,8 +697,8 @@ namespace cwg654 { // cwg654: sup 1423
     void(true ? nullptr : 0);
     void(true ? 0 : nullptr);
   }
-}
 #endif
+} // namespace cwg654
 
 namespace cwg655 { // cwg655: yes
   struct A { A(int); }; // #cwg655-A
@@ -716,7 +716,7 @@ namespace cwg655 { // cwg655: yes
     //   expected-note@#cwg655-a {{member is declared here}}
     //   expected-note@#cwg655-A {{'cwg655::A' declared here}}
   };
-}
+} // namespace cwg655
 
 namespace cwg656 { // cwg656: yes
   struct A { A(const A&) = delete; };
@@ -757,7 +757,7 @@ namespace cwg656 { // cwg656: yes
     //   expected-note@#cwg656-Y {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
     accept<const D&>(c);
   }
-}
+} // namespace cwg656
 
 namespace cwg657 { // cwg657: partial
   struct Abs { virtual void x() = 0; }; // #cwg657-Abs
@@ -795,12 +795,12 @@ namespace cwg657 { // cwg657: partial
 
   // FIXME: We should reject this too.
   Cnvt2<Abs>::type err;
-}
+} // namespace cwg657
 
 // cwg658 is in cwg658.cpp
 
-#if __cplusplus >= 201103L
 namespace cwg659 { // cwg659: 3.0
+#if __cplusplus >= 201103L
   static_assert(alignof(char) == alignof(char&), "");
   static_assert(alignof(int) == alignof(int&), "");
   int n = alignof(int(&)());
@@ -809,11 +809,11 @@ namespace cwg659 { // cwg659: 3.0
   int m = alignof(A&);
   // since-cxx11-error@-1 {{invalid application of 'alignof' to an incomplete type 'A'}}
   //   since-cxx11-note@#cwg659-A {{forward declaration of 'cwg659::A'}}
-}
 #endif
+} // namespace cwg659
 
-#if __cplusplus >= 201103L
 namespace cwg660 { // cwg660: 3.0
+#if __cplusplus >= 201103L
   enum : int { a };
   enum class { b };
   // since-cxx11-error@-1 {{scoped enumeration requires a name}}
@@ -825,8 +825,8 @@ namespace cwg660 { // cwg660: 3.0
     // since-cxx11-error@-1 {{scoped enumeration requires a name}}
   };
   auto y = X::a;
-}
 #endif
+} // namespace cwg660
 
 // cwg661 is in cwg661.cpp
 
@@ -841,22 +841,22 @@ namespace cwg662 { // cwg662: yes
 #endif
   }
   void g(int n) { f<int&>(n); } // #cwg662-f-call
-}
+} // namespace cwg662
 
 namespace cwg663 { // cwg663: sup P1949
   int ЍЎ = 123;
-}
+} // namespace cwg663
 
-#if __cplusplus >= 201103L
 namespace cwg664 { // cwg664: yes
+#if __cplusplus >= 201103L
   struct A { A(const A&) = delete; };
   A &&f(A &&a, int n) {
     if (n)
       return f(static_cast<A&&>(a), n - 1);
     return static_cast<A&&>(a);
   }
-}
 #endif
+} // namespace cwg664
 
 namespace cwg665 { // cwg665: 2.8
   struct A { virtual ~A(); };
@@ -883,7 +883,7 @@ namespace cwg665 { // cwg665: 2.8
     //   expected-note@#cwg665-VC {{declared private here}}
     (void)dynamic_cast<A*>(vd);
   }
-}
+} // namespace cwg665
 
 namespace cwg666 { // cwg666: 2.8
   struct P { friend P operator*(P, P); P(int); } p(0);
@@ -902,11 +902,11 @@ namespace cwg666 { // cwg666: 2.8
   struct Y { typedef int type; };
   int a = f<X>();
   int b = f<Y>(); // #cwg666-f-Y
-}
+} // namespace cwg666
 
 // Triviality is entirely different in C++98.
-#if __cplusplus >= 201103L
 namespace cwg667 { // cwg667: 8
+#if __cplusplus >= 201103L
   struct A {
     A() = default; // #cwg667-A-ctor
     // since-cxx11-warning@-1 {{explicitly defaulted default constructor is implicitly deleted}}
@@ -927,13 +927,13 @@ namespace cwg667 { // cwg667: 8
   struct F { F &operator=(F&&) = delete; };
   struct G : F {};
   static_assert(!__is_trivially_assignable(G, G&&), "");
-}
 #endif
+} // namespace cwg667
 
 // cwg668 needs an libc++abi test
 
-#if __cplusplus >= 201103L
 namespace cwg669 { // cwg669: yes
+#if __cplusplus >= 201103L
   void f() {
     int n;
     using T = decltype(n);
@@ -958,8 +958,8 @@ namespace cwg669 { // cwg669: yes
       }
     };
   }
-}
 #endif
+} // namespace cwg669
 
 namespace cwg671 { // cwg671: 2.9
   enum class E { e };
@@ -968,7 +968,7 @@ namespace cwg671 { // cwg671: 2.9
   int n = static_cast<int>(E::e);
   // cxx98-error@-1 {{use of enumeration in a nested name specifier is a C++11 extension}}
   int m = static_cast<int>(e);
-}
+} // namespace cwg671
 
 // cwg672 is in cwg672.cpp
 
@@ -988,7 +988,7 @@ namespace cwg673 { // cwg673: yes
   E *e;
   F *f;
   // expected-error@-1 {{unknown type name 'F'}}
-}
+} // namespace cwg673
 
 namespace cwg674 { // cwg674: 8
   template<typename T> int f(T);
@@ -1054,7 +1054,7 @@ namespace cwg674 { // cwg674: 8
   template int Y::f<>(int);
   template int Y::g<>(int); // #cwg674-Y-g-int
   template int Y::h<>(int);
-}
+} // namespace cwg674
 
 namespace cwg675 { // cwg675: dup 739
   template<typename T> struct A { T n : 1; };
@@ -1066,7 +1066,7 @@ namespace cwg675 { // cwg675: dup 739
   static_assert(A<long long>{1}.n < 0, "");
   // since-cxx11-warning@-1 {{implicit truncation from 'int' to a one-bit wide bit-field changes value from 1 to -1}}
 #endif
-}
+} // namespace cwg675
 
 // cwg676: na
 
@@ -1092,7 +1092,7 @@ namespace cwg677 { // cwg677: no
   B::~B() {}
   // expected-error@-1 {{attempt to use a deleted function}}
   //   expected-note@#cwg677-B-delete {{'operator delete' has been explicitly marked deleted here}}
-}
+} // namespace cwg677
 
 // cwg678 FIXME: check that the modules ODR check catches this
 
@@ -1103,12 +1103,12 @@ namespace cwg679 { // cwg679: yes
   template<> void operator+<0>(X, X) {}
   // expected-error@-1 {{redefinition of 'operator+<0>'}}
   //   expected-note@#cwg679-def {{previous definition is here}}
-}
+} // namespace cwg679
 
 // cwg680: na
 
-#if __cplusplus >= 201103L
 namespace cwg681 { // cwg681: partial
+#if __cplusplus >= 201103L
   auto *a() -> int;
   // since-cxx11-error@-1 {{function with trailing return type must specify return type 'auto', not 'auto *'}}
   auto (*b)() -> int;
@@ -1127,11 +1127,11 @@ namespace cwg681 { // cwg681: partial
 
   auto f() -> int (*)();
   auto g() -> auto (*)() -> int;
-}
 #endif
+} // namespace cwg681
 
-#if __cplusplus >= 201103L
 namespace cwg683 { // cwg683: yes
+#if __cplusplus >= 201103L
   struct A {
     A() = default;
     A(const A&) = default;
@@ -1145,11 +1145,11 @@ namespace cwg683 { // cwg683: yes
   static_assert(__is_trivially_constructible(B, const B&), "");
   static_assert(__is_trivially_constructible(B, B&), "");
   static_assert(__is_trivial(B), "");
-}
 #endif
+} // namespace cwg683
 
-#if __cplusplus >= 201103L
 namespace cwg684 { // cwg684: sup 1454
+#if __cplusplus >= 201103L
   void f() {
     int a;  // #cwg684-a
     constexpr int *p = &a;
@@ -1157,8 +1157,8 @@ namespace cwg684 { // cwg684: sup 1454
     //   expected-note@-2 {{pointer to 'a' is not a constant expression}}
     //   expected-note@#cwg684-a {{here}}
   }
-}
 #endif
+} // namespace cwg684
 
 namespace cwg685 { // cwg685: yes
   enum E : long { e };
@@ -1188,7 +1188,7 @@ namespace cwg685 { // cwg685: yes
   int k(short);
   void k(int);
   int x = k(g);
-}
+} // namespace cwg685
 
 namespace cwg686 { // cwg686: 3.0
   void f() {
@@ -1256,7 +1256,7 @@ namespace cwg686 { // cwg686: 3.0
   template<struct R *> struct X;
   template<struct R {} *> struct Y;
   // expected-error@-1 {{'cwg686::R' cannot be defined in a type specifier}}
-}
+} // namespace cwg686
 
 namespace cwg687 { // cwg687 (9 c++20, but the issue is still considered open)
   template<typename T> void f(T a) {
@@ -1268,7 +1268,7 @@ namespace cwg687 { // cwg687 (9 c++20, but the issue is still considered open)
     template g<int>(a);
     // expected-error@-1 {{expected '<' after 'template'}}
   }
-}
+} // namespace cwg687
 
 namespace cwg692 { // cwg692: 16
   // Also see cwg1395.
@@ -1359,7 +1359,7 @@ namespace cwg692 { // cwg692: 16
     template<class T> void f(T){}
     template void f(int*);
   }
-}
+} // namespace cwg692
 
 namespace cwg696 { // cwg696: 3.1
   void f(const int*);
@@ -1385,4 +1385,4 @@ namespace cwg696 { // cwg696: 3.1
     //   since-cxx11-note@-7 {{default capture by reference}}
 #endif
   }
-}
+} // namespace cwg696
