@@ -181,7 +181,7 @@ def error10 {
 class Foo<int i, int j>;
 
 def error11 : Foo<"", "">;
-// ERROR11: Value specified for template argument 'Foo:i' is of type string; expected type int: ""
-// ERROR11: Value specified for template argument 'Foo:j' is of type string; expected type int: ""
+// ERROR11: [[#@LINE-1]]:19: error: Value specified for template argument 'Foo:i' is of type string; expected type int: ""
+// ERROR11: [[#@LINE-2]]:23: error: Value specified for template argument 'Foo:j' is of type string; expected type int: ""
 
 #endif
