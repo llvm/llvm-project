@@ -81,8 +81,8 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
                                 const Twine &Name, FMFSource FMFSource,
                                 ArrayRef<OperandBundleDef> OpBundles) {
   CallInst *CI = CreateCall(Callee, Ops, OpBundles, Name);
-  if (FMFSource.FMF.has_value())
-    CI->setFastMathFlags(*FMFSource.FMF);
+  if (isa<FPMathOperator>(CI))
+    CI->setFastMathFlags(FMFSource.get(FMF));
   return CI;
 }
 
@@ -882,7 +882,7 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
   if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
-                                            FMFSource.Source))
+                                            /*FMFSource=*/nullptr))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
@@ -931,7 +931,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
   Value *RoundingV = getConstrainedFPRounding(Rounding);
   Value *ExceptV = getConstrainedFPExcept(Except);
 
-  FastMathFlags UseFMF = FMFSource.FMF.value_or(FMF);
+  FastMathFlags UseFMF = FMFSource.get(FMF);
 
   CallInst *C = CreateIntrinsic(ID, {L->getType()},
                                 {L, R, RoundingV, ExceptV}, nullptr, Name);
@@ -946,7 +946,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
     std::optional<fp::ExceptionBehavior> Except) {
   Value *ExceptV = getConstrainedFPExcept(Except);
 
-  FastMathFlags UseFMF = FMFSource.FMF.value_or(FMF);
+  FastMathFlags UseFMF = FMFSource.get(FMF);
 
   CallInst *C =
       CreateIntrinsic(ID, {L->getType()}, {L, R, ExceptV}, nullptr, Name);
@@ -976,7 +976,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCast(
     std::optional<fp::ExceptionBehavior> Except) {
   Value *ExceptV = getConstrainedFPExcept(Except);
 
-  FastMathFlags UseFMF = FMFSource.FMF.value_or(FMF);
+  FastMathFlags UseFMF = FMFSource.get(FMF);
 
   CallInst *C;
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
@@ -1006,9 +1006,9 @@ Value *IRBuilderBase::CreateFCmpHelper(CmpInst::Predicate P, Value *LHS,
 
   if (auto *V = Folder.FoldCmp(P, LHS, RHS))
     return V;
-  return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag,
-                           FMFSource.FMF.value_or(FMF)),
-                Name);
+  return Insert(
+      setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMFSource.get(FMF)),
+      Name);
 }
 
 CallInst *IRBuilderBase::CreateConstrainedFPCmp(
@@ -1058,7 +1058,7 @@ Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
     Sel = addBranchMetadata(Sel, Prof, Unpred);
   }
   if (isa<FPMathOperator>(Sel))
-    setFPAttrs(Sel, /*MDNode=*/nullptr, FMFSource.FMF.value_or(FMF));
+    setFPAttrs(Sel, /*MDNode=*/nullptr, FMFSource.get(FMF));
   return Insert(Sel, Name);
 }
 

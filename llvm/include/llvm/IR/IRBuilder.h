@@ -89,16 +89,19 @@ public:
 
 /// This provides a helper for copying FMF from an instruction or setting
 /// specified flags.
-struct FMFSource final {
-  Instruction *Source;
+class FMFSource {
   std::optional<FastMathFlags> FMF;
 
-  FMFSource() : Source(nullptr) {}
-  FMFSource(Instruction *Source) : Source(Source) {
+public:
+  FMFSource() = default;
+  FMFSource(Instruction *Source) {
     if (Source)
       FMF = Source->getFastMathFlags();
   }
-  FMFSource(FastMathFlags FMF) : Source(nullptr), FMF(FMF) {}
+  FMFSource(FastMathFlags FMF) : FMF(FMF) {}
+  FastMathFlags get(FastMathFlags Default) const {
+    return FMF.value_or(Default);
+  }
 };
 
 /// Common base class shared among various IRBuilders.
@@ -1575,11 +1578,11 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fadd,
                                       L, R, FMFSource, Name, FPMD);
 
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FAdd, L, R,
-                                       FMFSource.FMF.value_or(FMF)))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFAdd(L, R), FPMD,
-                                FMFSource.FMF.value_or(FMF));
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFAdd(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
@@ -1594,11 +1597,11 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fsub,
                                       L, R, FMFSource, Name, FPMD);
 
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FSub, L, R,
-                                       FMFSource.FMF.value_or(FMF)))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFSub(L, R), FPMD,
-                                FMFSource.FMF.value_or(FMF));
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFSub(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
@@ -1613,11 +1616,11 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fmul,
                                       L, R, FMFSource, Name, FPMD);
 
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FMul, L, R,
-                                       FMFSource.FMF.value_or(FMF)))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFMul(L, R), FPMD,
-                                FMFSource.FMF.value_or(FMF));
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFMul(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
@@ -1632,11 +1635,11 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
                                       L, R, FMFSource, Name, FPMD);
 
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FDiv, L, R,
-                                       FMFSource.FMF.value_or(FMF)))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), FPMD,
-                                FMFSource.FMF.value_or(FMF));
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFDiv(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
@@ -1651,11 +1654,11 @@ public:
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_frem,
                                       L, R, FMFSource, Name, FPMD);
 
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FRem, L, R,
-                                       FMFSource.FMF.value_or(FMF)))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFRem(L, R), FPMD,
-                                FMFSource.FMF.value_or(FMF));
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFRem(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
@@ -1672,7 +1675,7 @@ public:
       return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
-      setFPAttrs(BinOp, FPMathTag, FMFSource.FMF.value_or(FMF));
+      setFPAttrs(BinOp, FPMathTag, FMFSource.get(FMF));
     return Insert(BinOp, Name);
   }
 
@@ -1737,12 +1740,12 @@ public:
 
   Value *CreateFNegFMF(Value *V, FMFSource FMFSource, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V,
-                                        FMFSource.FMF.value_or(FMF)))
+    if (Value *Res =
+            Folder.FoldUnOpFMF(Instruction::FNeg, V, FMFSource.get(FMF)))
       return Res;
-    return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), FPMathTag,
-                             FMFSource.FMF.value_or(FMF)),
-                  Name);
+    return Insert(
+        setFPAttrs(UnaryOperator::CreateFNeg(V), FPMathTag, FMFSource.get(FMF)),
+        Name);
   }
 
   Value *CreateNot(Value *V, const Twine &Name = "") {
@@ -2183,7 +2186,7 @@ public:
       return Folded;
     Instruction *Cast = CastInst::Create(Op, V, DestTy);
     if (isa<FPMathOperator>(Cast))
-      setFPAttrs(Cast, FPMathTag, FMFSource.FMF.value_or(FMF));
+      setFPAttrs(Cast, FPMathTag, FMFSource.get(FMF));
     return Insert(Cast, Name);
   }
 
