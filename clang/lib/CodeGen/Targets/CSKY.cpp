@@ -83,7 +83,7 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
     return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        Ty, /*AddrSpace=*/getTargetDefaultAS(),
         /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
@@ -145,8 +145,7 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
           llvm::IntegerType::get(getVMContext(), XLen), (Size + 31) / XLen));
     }
   }
-  return getNaturalAlignIndirect(
-      Ty, getContext().getTargetAddressSpace(LangAS::Default), /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
 }
 
 ABIArgInfo CSKYABIInfo::classifyReturnType(QualType RetTy) const {

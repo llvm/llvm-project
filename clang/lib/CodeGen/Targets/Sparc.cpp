@@ -232,9 +232,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
   if (Size > SizeLimit)
-    return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-        /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
+                                   /*ByVal=*/false);
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
@@ -255,9 +254,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // If a C++ object has either a non-trivial copy constructor or a non-trivial
   // destructor, it is passed with an explicit indirect pointer / sret pointer.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // This is a small aggregate type that should be passed in registers.
   // Build a coercion type from the LLVM struct type.

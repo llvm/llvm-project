@@ -3293,9 +3293,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   if (RT) {
     if (!IsReturnType) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
-        return getNaturalAlignIndirect(
-            Ty, getContext().getTargetAddressSpace(LangAS::Default),
-            RAA == CGCXXABI::RAA_DirectInMemory);
+        return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+                                       RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
     if (RT->getDecl()->hasFlexibleArrayMember())
@@ -3317,10 +3316,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
-      return ABIArgInfo::getIndirect(
-          Align,
-          /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-          /*ByVal=*/false);
+      return ABIArgInfo::getIndirect(Align, /*AddrSpace=*/getTargetDefaultAS(),
+                                     /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
           (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
@@ -3331,9 +3328,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
         return ABIArgInfo::getIndirect(
-            Align,
-            /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-            /*ByVal=*/false);
+            Align, /*AddrSpace=*/getTargetDefaultAS(), /*ByVal=*/false);
       }
     }
   }
@@ -3350,9 +3345,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
     // not 1, 2, 4, or 8 bytes, must be passed by reference."
     if (Width > 64 || !llvm::isPowerOf2_64(Width))
-      return getNaturalAlignIndirect(
-          Ty, getContext().getTargetAddressSpace(LangAS::Default),
-          /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
 
     // Otherwise, coerce it to a small integer.
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Width));
@@ -3372,9 +3365,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
         const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
         if (LDF == &llvm::APFloat::x87DoubleExtended())
           return ABIArgInfo::getIndirect(
-              Align,
-              /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-              /*ByVal=*/false);
+              Align, /*AddrSpace=*/getTargetDefaultAS(), /*ByVal=*/false);
       }
       break;
 
@@ -3385,9 +3376,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // even though it isn't particularly efficient.
       if (!IsReturnType)
         return ABIArgInfo::getIndirect(
-            Align,
-            /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-            /*ByVal=*/false);
+            Align, /*AddrSpace=*/getTargetDefaultAS(), /*ByVal=*/false);
 
       // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
       // Clang matches them for compatibility.
@@ -3407,10 +3396,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // the power of 2.
     if (Width <= 64)
       return ABIArgInfo::getDirect();
-    return ABIArgInfo::getIndirect(
-        Align,
-        /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-        /*ByVal=*/false);
+    return ABIArgInfo::getIndirect(Align, /*AddrSpace=*/getTargetDefaultAS(),
+                                   /*ByVal=*/false);
   }
 
   return ABIArgInfo::getDirect();

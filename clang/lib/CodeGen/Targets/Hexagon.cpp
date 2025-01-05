@@ -105,18 +105,15 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
       HexagonAdjustRegsLeft(Size, RegsLeft);
 
     if (Size > 64 && Ty->isBitIntType())
-      return getNaturalAlignIndirect(
-          Ty, getContext().getTargetAddressSpace(LangAS::Default),
-          /*ByVal=*/true);
+      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/true);
 
     return isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                              : ABIArgInfo::getDirect();
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Ignore empty records.
   if (isEmptyRecord(getContext(), Ty, true))
@@ -126,9 +123,7 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
   unsigned Align = getContext().getTypeAlign(Ty);
 
   if (Size > 64)
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        /*ByVal=*/true);
+    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/true);
 
   if (HexagonAdjustRegsLeft(Size, RegsLeft))
     Align = Size <= 32 ? 32 : 64;

@@ -71,9 +71,7 @@ public:
 ABIArgInfo ARCABIInfo::getIndirectByRef(QualType Ty, bool HasFreeRegs) const {
   return HasFreeRegs
              ? getNaturalAlignIndirectInReg(Ty)
-             : getNaturalAlignIndirect(
-                   Ty, getContext().getTargetAddressSpace(LangAS::Default),
-                   false);
+             : getNaturalAlignIndirect(Ty, getTargetDefaultAS(), false);
 }
 
 ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
@@ -81,8 +79,7 @@ ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
   const unsigned MinABIStackAlignInBytes = 4;
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
   return ABIArgInfo::getIndirect(
-      CharUnits::fromQuantity(4),
-      /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+      CharUnits::fromQuantity(4), /*AddrSpace=*/getTargetDefaultAS(),
       /*ByVal=*/true, TypeAlign > MinABIStackAlignInBytes);
 }
 

@@ -43,7 +43,7 @@ public:
         return ABIArgInfo::getDirect(CoerceTy);
       } else {
         return getNaturalAlignIndirect(
-            Ty, getContext().getTargetAddressSpace(LangAS::Default));
+            Ty, getTargetDefaultAS());
       }
     }
 
@@ -53,8 +53,7 @@ public:
     ASTContext &Context = getContext();
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
-        return getNaturalAlignIndirect(
-            Ty, Context.getTargetAddressSpace(LangAS::Default));
+        return getNaturalAlignIndirect(Ty, getTargetDefaultAS());
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                               : ABIArgInfo::getDirect());

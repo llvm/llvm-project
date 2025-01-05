@@ -298,9 +298,8 @@ ABIArgInfo ARMABIInfo::coerceIllegalVector(QualType Ty) const {
         llvm::Type::getInt32Ty(getVMContext()), Size / 32);
     return ABIArgInfo::getDirect(ResType);
   }
-  return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-      /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
@@ -357,10 +356,8 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
-        return getNaturalAlignIndirect(
-            Ty,
-            /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-            /*ByVal=*/true);
+        return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
+                                       /*ByVal=*/true);
 
     return (isPromotableIntegerTypeForABI(Ty)
                 ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
@@ -368,9 +365,8 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Ignore empty records.
@@ -405,7 +401,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     // and a pointer is passed.
     return ABIArgInfo::getIndirect(
         CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8),
-        getContext().getTargetAddressSpace(LangAS::Default), false);
+        getTargetDefaultAS(), false);
   }
 
   // Support byval for ARM.
@@ -424,8 +420,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(64)) {
     assert(getABIKind() != ARMABIKind::AAPCS16_VFP && "unexpected byval");
     return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(ABIAlign),
-        /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        CharUnits::fromQuantity(ABIAlign), /*AddrSpace=*/getTargetDefaultAS(),
         /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
   }
 

@@ -411,7 +411,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
     return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        Ty, /*AddrSpace=*/getTargetDefaultAS(),
         /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
@@ -493,10 +493,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(
-            Ty,
-            /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-            /*ByVal=*/false);
+        return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
+                                       /*ByVal=*/false);
     }
 
     return ABIArgInfo::getDirect();
@@ -528,9 +526,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
           llvm::IntegerType::get(getVMContext(), XLen), 2));
     }
   }
-  return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
-      /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {

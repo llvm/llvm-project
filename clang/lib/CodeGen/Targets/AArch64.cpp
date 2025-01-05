@@ -326,8 +326,7 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
 
-  return getNaturalAlignIndirect(
-      Ty, getContext().getTargetAddressSpace(LangAS::Default), /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
@@ -335,9 +334,7 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
   if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default),
-        /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
 
@@ -377,8 +374,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(
-            Ty, getContext().getTargetAddressSpace(LangAS::Default), false);
+        return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), false);
 
     if (Ty->isVectorType())
       NSRN = std::min(NSRN + 1, 8u);
@@ -419,7 +415,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getContext().getTargetAddressSpace(LangAS::Default),
+        Ty, /*AddrSpace=*/getTargetDefaultAS(),
         /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
@@ -494,9 +490,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
   }
 
-  return getNaturalAlignIndirect(
-      Ty, /*AddrSpace*/ getContext().getTargetAddressSpace(LangAS::Default),
-      /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
