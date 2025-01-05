@@ -426,8 +426,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
            SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
     Value *NewSqrt =
-        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg,
-                                /*FMFSource=*/Call->getFastMathFlags(), "sqrt");
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
