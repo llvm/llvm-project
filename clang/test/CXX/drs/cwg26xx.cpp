@@ -33,7 +33,7 @@ namespace std {
   static_assert(sizeof(int16_t) == 2 && sizeof(int32_t) == 4 && sizeof(int64_t) == 8, "Some tests rely on these sizes");
 
   template<typename T> T declval();
-}
+} // namespace std
 
 namespace cwg2621 { // cwg2621: sup 2877
 #if __cplusplus >= 202002L
@@ -49,7 +49,7 @@ int E; // ignored by type-only lookup
 using enum E;
 }
 #endif
-}
+} // namespace cwg2621
 
 namespace cwg2627 { // cwg2627: 20
 #if __cplusplus >= 202002L
@@ -155,7 +155,7 @@ void f() {
   //   FIXME-since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
 }
 #endif
-}
+} // namespace cwg2628
 
 // cwg2630 is in cwg2630.cpp
 
@@ -175,7 +175,7 @@ namespace cwg2631 { // cwg2631: 16
     return k();
   }
 #endif
-}
+} // namespace cwg2631
 
 namespace cwg2635 { // cwg2635: 16
 #if __cplusplus >= 202002L
@@ -205,7 +205,7 @@ void TemplUse() {
   // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
 }
 #endif
-}
+} // namespace cwg2635
 
 // cwg2636: na
 
@@ -230,7 +230,7 @@ int y = cwg2640_a\N{LOTUS});
 // expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
 // expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
 // expected-error@-3 {{extraneous ')' before ';'}}
-}
+} // namespace cwg2640
 
 // cwg2642: na
 
@@ -243,10 +243,10 @@ auto z = [a = 42](int a) {
      return 1;
 };
 #endif
-}
+} // namespace cwg2644
 
-#if __cplusplus >= 202302L
 namespace cwg2650 { // cwg2650: 17
+#if __cplusplus >= 202302L
 template <class T, T> struct S {};
 template <class T> int f(S<T, T{}>*); // #cwg2650-f
 class X {
@@ -255,17 +255,17 @@ class X {
 int i0 = f<X>(0);
 // since-cxx23-error@-1 {{no matching function for call to 'f'}}
 //   since-cxx23-note@#cwg2650-f {{type 'X' of non-type template parameter is not a structural type}}
-}
 #endif
+} // namespace cwg2650
 
-#if __cplusplus >= 202302L
 namespace cwg2653 { // cwg2653: 18
+#if __cplusplus >= 202302L
   struct Test { void f(this const auto& = Test{}); };
   // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
   auto L = [](this const auto& = Test{}){};
   // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
-}
 #endif
+} // namespace cwg2653
 
 namespace cwg2654 { // cwg2654: 16
 void f() {
@@ -275,7 +275,7 @@ void f() {
     brachiosaur -= neck;                // OK
     brachiosaur |= neck;                // OK
 }
-}
+} // namespace cwg2654
 
 namespace cwg2681 { // cwg2681: 17
 #if __cplusplus >= 202002L
@@ -308,7 +308,7 @@ J j = { "ghi" };
 //   since-cxx20-note@#cwg2681-J {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
 //   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J() -> J<N>'}}
 #endif
-}
+} // namespace cwg2681
 
 namespace cwg2672 { // cwg2672: 18
 #if __cplusplus >= 202002L
@@ -333,10 +333,10 @@ void m() {
   bar(0);
 }
 #endif
-}
+} // namespace cwg2672
 
-#if __cplusplus >= 202302L
 namespace cwg2687 { // cwg2687: 18
+#if __cplusplus >= 202302L
 struct S{
     void f(int);
     static void g(int);
@@ -349,9 +349,8 @@ void test() {
     (&S::g)(1);
     (&S::h)(S(), 1);
 }
-}
 #endif
-
+} // namespace cwg2687
 
 namespace cwg2692 { // cwg2692: 19
 #if __cplusplus >= 202302L
@@ -377,4 +376,4 @@ namespace cwg2692 { // cwg2692: 19
     // expected-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
   }
 #endif
-}
+} // namespace cwg2692
