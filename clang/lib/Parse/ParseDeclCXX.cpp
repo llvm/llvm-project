@@ -81,14 +81,15 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   ParsedAttributes attrs(AttrFactory);
 
-  MaybeParseGNUAttributes(attrs);
-  if (isAllowedCXX11AttributeSpecifier()) {
-    if (getLangOpts().CPlusPlus11)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                  ? diag::warn_cxx14_compat_ns_enum_attribute
-                                  : diag::ext_ns_enum_attribute)
-          << 0 /*namespace*/;
-    ParseCXX11Attributes(attrs);
+  while (MaybeParseGNUAttributes(attrs) || isAllowedCXX11AttributeSpecifier()) {
+    if (isAllowedCXX11AttributeSpecifier()) {
+      if (getLangOpts().CPlusPlus11)
+        Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
+                                    ? diag::warn_cxx14_compat_ns_enum_attribute
+                                    : diag::ext_ns_enum_attribute)
+            << 0 /*namespace*/;
+      ParseCXX11Attributes(attrs);
+    }
   }
 
   if (Tok.is(tok::identifier)) {
@@ -115,9 +116,9 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     }
   }
 
+  DiagnoseAndSkipCXX11Attributes();
   MaybeParseGNUAttributes(attrs);
-  if (Tok.is(tok::l_square))
-    CheckProhibitedCXX11Attribute();
+  DiagnoseAndSkipCXX11Attributes();
 
   SourceLocation attrLoc = attrs.Range.getBegin();
 

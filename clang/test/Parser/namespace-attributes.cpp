@@ -8,12 +8,19 @@ namespace A __attribute__(()) [[]] // expected-error {{an attribute list cannot 
 {
 }
 
-namespace A [[]] __attribute__(()) // expected-error {{an attribute list cannot appear here}} \
-                                   // expected-error {{expected '{'}}
-{                                  // expected-error {{expected unqualified-id}}
+namespace A [[]] __attribute__(()) // expected-error {{an attribute list cannot appear here}}
+{
 }
 
 namespace [[]] A __attribute__(())
+{
+}
+
+namespace [[]] __attribute__(()) A
+{
+}
+
+namespace __attribute__(()) [[]] A
 {
 }
 
