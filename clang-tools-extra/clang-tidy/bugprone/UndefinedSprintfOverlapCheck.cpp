@@ -63,7 +63,7 @@ void UndefinedSprintfOverlapCheck::check(
   const auto *FirstArg = Result.Nodes.getNodeAs<Expr>("firstArgExpr");
   const auto *FnDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
 
-  llvm::StringRef FirstArgText =
+  const llvm::StringRef FirstArgText =
       Lexer::getSourceText(CharSourceRange::getTokenRange(
                                FirstArg->getBeginLoc(), FirstArg->getEndLoc()),
                            *Result.SourceManager, getLangOpts());
