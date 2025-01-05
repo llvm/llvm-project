@@ -30,10 +30,10 @@ namespace cwg1213 { // cwg1213: 7
   using U = decltype(V4Int()[0]);
   using U = decltype(EV4Int()[0]);
 #endif
-}
+} // namespace cwg1213
 
-#if __cplusplus >= 201103L
 namespace cwg1223 { // cwg1223: 17
+#if __cplusplus >= 201103L
 struct M;
 template <typename T>
 struct V;
@@ -83,12 +83,11 @@ void g() {
     sizeof(auto () -> C[1]);
     // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'cwg1223::BB[1]')}}
 }
-
-}
 #endif
+} // namespace cwg1223
 
-#if __cplusplus >= 201103L
 namespace cwg1227 { // cwg1227: 3.0
+#if __cplusplus >= 201103L
 template <class T> struct A { using X = typename T::X; };
 // since-cxx11-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
 //   since-cxx11-note@#cwg1227-g {{in instantiation of template class 'cwg1227::A<int>' requested here}}
@@ -102,8 +101,8 @@ void h() {
   f<int>(0); // OK, substituting return type causes deduction to fail
   g<int>(0); // #cwg1227-g-int
 }
-}
 #endif
+} // namespace cwg1227
 
 namespace cwg1250 { // cwg1250: 3.9
 struct Incomplete;
@@ -115,7 +114,7 @@ struct Base {
 struct Derived : Base {
   virtual Incomplete *meow();
 };
-}
+} // namespace cwg1250
 
 namespace cwg1265 { // cwg1265: 5
 #if __cplusplus >= 201103L
@@ -135,7 +134,7 @@ namespace cwg1265 { // cwg1265: 5
   auto k(), l();
   // since-cxx14-error@-1 {{function with deduced return type must be the only declaration in its group}}
 #endif
-}
+} // namespace cwg1265
 
 // cwg1291: na
 
@@ -162,5 +161,4 @@ namespace cwg1295 { // cwg1295: 4
   using T = decltype(true ? other : x.bitfield);
   using T = unsigned;
 #endif
-}
-
+} // namespace cwg1295
