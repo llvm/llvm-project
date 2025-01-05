@@ -761,7 +761,15 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLE64_V:
   case RISCV::VLSE64_V:
   case RISCV::VLE64FF_V:
-
+  // Vector Indexed Instructions
+  case RISCV::VLUXEI8_V:
+  case RISCV::VLOXEI8_V:
+  case RISCV::VLUXEI16_V:
+  case RISCV::VLOXEI16_V:
+  case RISCV::VLUXEI32_V:
+  case RISCV::VLOXEI32_V:
+  case RISCV::VLUXEI64_V:
+  case RISCV::VLOXEI64_V:
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
