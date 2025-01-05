@@ -1116,7 +1116,7 @@ AST Matchers
 
 - Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
 
-- Add ``hasDependentName`` matcher to match the dependent name of a dependent scope decl ref expr.
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr.
 
 clang-format
 ------------
