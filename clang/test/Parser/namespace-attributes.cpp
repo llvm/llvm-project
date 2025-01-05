@@ -4,31 +4,20 @@ namespace __attribute__(()) A
 {
 }
 
-namespace A __attribute__(())
+namespace A __attribute__(()) [[]] // expected-error {{an attribute list cannot appear here}}
 {
 }
 
-namespace __attribute__(()) [[]] A
-{
-}
-
-namespace [[]] __attribute__(()) A
-{
-}
-
-namespace A __attribute__(()) [[]] // expected-error {{standard attributes cannot appear after the namespace name}}
-{
-}
-
-namespace A [[]] __attribute__(()) // expected-error {{standard attributes cannot appear after the namespace name}}
-{
+namespace A [[]] __attribute__(()) // expected-error {{an attribute list cannot appear here}} \
+                                   // expected-error {{expected '{'}}
+{                                  // expected-error {{expected unqualified-id}}
 }
 
 namespace [[]] A __attribute__(())
 {
 }
 
-namespace __attribute__(()) A [[]] // expected-error {{standard attributes cannot appear after the namespace name}}
+namespace __attribute__(()) A [[]] // expected-error {{an attribute list cannot appear here}}
 {
 }
 
