@@ -51,8 +51,6 @@
 //  float               __strtof(const char*, char**, __locale_t);
 //  double              __strtod(const char*, char**, __locale_t);
 //  long double         __strtold(const char*, char**, __locale_t);
-//  long long           __strtoll(const char*, char**, __locale_t);
-//  unsigned long long  __strtoull(const char*, char**, __locale_t);
 // }
 //
 // Character manipulation functions
@@ -180,15 +178,6 @@ inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr
 
 inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
   return strtold_l(__nptr, __endptr, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return strtoll_l(__nptr, __endptr, __base, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return strtoull_l(__nptr, __endptr, __base, __loc);
 }
 
 //

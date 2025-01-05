@@ -103,6 +103,18 @@ int main(int, char**)
         assert(v == 291);
     }
     {
+        const char str[] = "a123";
+        std::dec(ios);
+        std::ios_base::iostate err = ios.goodbit;
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str),
+                  cpp17_input_iterator<const char*>(str+sizeof(str)),
+                  ios, err, v);
+        assert(base(iter) == str);
+        assert(err == ios.failbit);
+        assert(v == 0);
+    }
+    {
         const char str[] = "0x123";
         std::hex(ios);
         std::ios_base::iostate err = ios.goodbit;

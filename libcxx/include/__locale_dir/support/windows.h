@@ -184,14 +184,6 @@ inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr
   return ::_strtod_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::_strtoi64_l(__nptr, __endptr, __base, __loc);
-}
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::_strtoui64_l(__nptr, __endptr, __base, __loc);
-}
-
 //
 // Character manipulation functions
 //
