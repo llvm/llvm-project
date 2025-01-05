@@ -637,7 +637,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 /// Iterate through each successor block of `branchOp`.
 /// (1) For each successor block, gather all operands from all successors.
 /// (2) Fetch their associated liveness analysis data and collect for future
-/// removal. 
+/// removal.
 /// (3) Identify and collect the dead operands from the successor block
 ///      as well as their corresponding arguments.
 
