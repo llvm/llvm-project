@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -284,39 +284,7 @@ namespace cwg2352 { // cwg2352: 10
 #if __cplusplus >= 201103L
   static_assert(&p == &check_f, "");
 #endif
-}
-
-namespace cwg2353 { // cwg2353: 9
-  struct X {
-    static const int n = 0;
-  };
-
-  // CHECK: FunctionDecl {{.*}} use
-  int use(X x) {
-    // CHECK: MemberExpr {{.*}} .n
-    // CHECK-NOT: non_odr_use
-    // CHECK: DeclRefExpr {{.*}} 'x'
-    // CHECK-NOT: non_odr_use
-    return *&x.n;
-  }
-#pragma clang __debug dump use
-
-  // CHECK: FunctionDecl {{.*}} not_use
-  int not_use(X x) {
-    // CHECK: MemberExpr {{.*}} .n {{.*}} non_odr_use_constant
-    // CHECK: DeclRefExpr {{.*}} 'x'
-    return x.n;
-  }
-#pragma clang __debug dump not_use
-
-  // CHECK: FunctionDecl {{.*}} not_use_2
-  int not_use_2(X *x) {
-    // CHECK: MemberExpr {{.*}} ->n {{.*}} non_odr_use_constant
-    // CHECK: DeclRefExpr {{.*}} 'x'
-    return x->n;
-  }
-#pragma clang __debug dump not_use_2
-}
+} // namespace cwg2352
 
 namespace cwg2354 { // cwg2354: 15
 #if __cplusplus >= 201103L
