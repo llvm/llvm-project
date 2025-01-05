@@ -1060,6 +1060,12 @@ RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
 
+  if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
+    LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
+                         " use VLMAX\n");
+    return std::nullopt;
+  }
+
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it like a scalar register which
   // does not impact the decision on whether to optimize VL. But if there is
@@ -1072,11 +1078,6 @@ RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
     assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
            "Expect LMUL 1 register class for vector as scalar operands!");
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
-    // VMV_X_S and VFMV_F_S do not have a VL operand which would cause an assert
-    // failure if we called getVLOpNum. Therefore, we will return 1 in this
-    // case, even if it could have been set to 0.
-    if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
-      return MachineOperand::CreateImm(1);
 
     unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
     const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
@@ -1085,12 +1086,6 @@ RISCVVLOptimizer::getVLForUser(MachineOperand &UserOp) {
     LLVM_DEBUG(dbgs() << "    Abort because could not determine VL of vector "
                          "operand used as scalar operand\n");
 
-    return std::nullopt;
-  }
-
-  if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
-                         " use VLMAX\n");
     return std::nullopt;
   }
 
