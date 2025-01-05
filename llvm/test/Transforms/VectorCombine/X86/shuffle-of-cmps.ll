@@ -275,3 +275,33 @@ define <4 x i32> @shuf_icmp_ugt_v4i32_use(<4 x i32> %x, <4 x i32> %y, <4 x i32> 
   %r = sext <4 x i1> %s to <4 x i32>
   ret <4 x i32> %r
 }
+
+; PR121110 - don't merge equivalent (but not matching) predicates
+
+define <2 x i1> @PR121110() {
+; CHECK-LABEL: define <2 x i1> @PR121110(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[UGT:%.*]] = icmp samesign ugt <2 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[UGT]], <2 x i1> [[SGT]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %ugt = icmp samesign ugt <2 x i32> < i32 0, i32 0 >, < i32 0, i32 0 >
+  %sgt = icmp sgt <2 x i32> < i32 0, i32 0 >, < i32 6, i32 4294967292 >
+  %res = shufflevector <2 x i1> %ugt, <2 x i1> %sgt, <2 x i32> <i32 0, i32 3>
+  ret <2 x i1> %res
+}
+
+define <2 x i1> @PR121110_commute() {
+; CHECK-LABEL: define <2 x i1> @PR121110_commute(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt <2 x i32> zeroinitializer, <i32 6, i32 -4>
+; CHECK-NEXT:    [[UGT:%.*]] = icmp samesign ugt <2 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i1> [[SGT]], <2 x i1> [[UGT]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %sgt = icmp sgt <2 x i32> < i32 0, i32 0 >, < i32 6, i32 4294967292 >
+  %ugt = icmp samesign ugt <2 x i32> < i32 0, i32 0 >, < i32 0, i32 0 >
+  %res = shufflevector <2 x i1> %sgt, <2 x i1> %ugt, <2 x i32> <i32 0, i32 3>
+  ret <2 x i1> %res
+}

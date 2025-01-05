@@ -126,3 +126,47 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 
 // CHECK-LABEL: llvm.func @_QQmain()
 // CHECK-COUNT-4: llvm.call @_FortranACUFAllocDescriptor
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, "dlti.endianness" = "little", "dlti.stack_alignment" = 128 : i64>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (git@github.com:clementval/llvm-project.git efc2415bcce8e8a9e73e77aa122c8aba1c1fbbd2)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  func.func @_QQmain() {
+    %c1_i32 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : index
+    %c10 = arith.constant 10 : index
+    %c1 = arith.constant 1 : index
+    %c0 = arith.constant 0 : index
+    %0 = fir.address_of(@_QQclX3C737464696E3E00) : !fir.ref<!fir.char<1,8>>
+    %c11_i32 = arith.constant 11 : i32
+    %c72 = arith.constant 72 : index
+    %1 = fir.convert %c72 : (index) -> i64
+    %2 = fir.convert %0 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
+    %3 = fir.call @_FortranACUFAllocDescriptor(%1, %2, %c11_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
+    %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    %5 = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
+    %6 = fircg.ext_embox %5(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
+    fir.store %6 to %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    %7 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    %8 = fir.box_addr %7 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
+    %c0_0 = arith.constant 0 : index
+    %9:3 = fir.box_dims %7, %c0_0 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
+    %c1_1 = arith.constant 1 : index
+    %10:3 = fir.box_dims %7, %c1_1 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
+    %11 = fircg.ext_embox %8(%9#1, %10#1) origin %9#0, %10#0[%c1, %c10, %c1, %c1, %c2, %c1] : (!fir.heap<!fir.array<?x?xi32>>, index, index, index, index, index, index, index, index, index, index) -> !fir.box<!fir.array<10x2xi32>>
+    return
+  }
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMassumedPglob(%arg0: !fir.box<!fir.array<?x?xi32>>) kernel {
+      gpu.return
+    }
+  }
+  fir.global linkonce @_QQclX3C737464696E3E00 constant : !fir.char<1,8> {
+    %0 = fir.string_lit "<stdin>\00"(8) : !fir.char<1,8>
+    fir.has_value %0 : !fir.char<1,8>
+  }
+  func.func private @_FortranACUFAllocDescriptor(i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>> attributes {fir.runtime}
+  func.func private @_FortranACUFFreeDescriptor(!fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor

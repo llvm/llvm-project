@@ -83,6 +83,7 @@ enum NodeType : unsigned {
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
+  TLSDESC_AUTH_CALLSEQ,
   ADRP,     // Page address of a TargetGlobalAddress operand.
   ADR,      // ADR
   ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
@@ -466,6 +467,10 @@ enum NodeType : unsigned {
   ALLOCATE_ZA_BUFFER,
   INIT_TPIDR2OBJ,
 
+  // Needed for __arm_agnostic("sme_za_state")
+  GET_SME_SAVE_SIZE,
+  ALLOC_SME_SAVE_BUFFER,
+
   // Asserts that a function argument (i32) is zero-extended to i8 by
   // the caller
   ASSERT_ZEXT_BOOL,
@@ -667,6 +672,10 @@ public:
                                           MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitAllocateSMESaveBuffer(MachineInstr &MI,
+                                               MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
+                                        MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,

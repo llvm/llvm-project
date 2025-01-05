@@ -78,45 +78,16 @@ define <8 x i16> @add_v8i16_u1234567(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-NEXT:    ret <8 x i16> [[RESULT]]
 ;
 ; SSE4-LABEL: @add_v8i16_u1234567(
-; SSE4-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP1:%.*]] = add <8 x i16> [[A]], [[SHIFT]]
-; SSE4-NEXT:    [[HADD1:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 4, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[TMP3]]
-; SSE4-NEXT:    [[HADD32:%.*]] = shufflevector <8 x i16> [[HADD1]], <8 x i16> [[TMP4]], <8 x i32> <i32 poison, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i32> <i32 poison, i32 2, i32 5, i32 6, i32 8, i32 10, i32 12, i32 14>
+; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 poison, i32 3, i32 4, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; SSE4-NEXT:    [[TMP7:%.*]] = add <8 x i16> [[TMP5]], [[TMP6]]
-; SSE4-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i16> [[HADD32]], <8 x i16> [[TMP7]], <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; SSE4-NEXT:    ret <8 x i16> [[RESULT]]
+; SSE4-NEXT:    ret <8 x i16> [[TMP7]]
 ;
-; AVX2-LABEL: @add_v8i16_u1234567(
-; AVX2-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP1:%.*]] = add <8 x i16> [[A]], [[SHIFT]]
-; AVX2-NEXT:    [[HADD1:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 4, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[TMP3]]
-; AVX2-NEXT:    [[HADD32:%.*]] = shufflevector <8 x i16> [[HADD1]], <8 x i16> [[TMP4]], <8 x i32> <i32 poison, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP7:%.*]] = add <8 x i16> [[TMP5]], [[TMP6]]
-; AVX2-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i16> [[HADD32]], <8 x i16> [[TMP7]], <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; AVX2-NEXT:    ret <8 x i16> [[RESULT]]
-;
-; AVX512-LABEL: @add_v8i16_u1234567(
-; AVX512-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP1:%.*]] = add <8 x i16> [[A]], [[SHIFT]]
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 4, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[TMP3]]
-; AVX512-NEXT:    [[HADD32:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> [[TMP4]], <8 x i32> <i32 poison, i32 2, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP7:%.*]] = add <8 x i16> [[TMP5]], [[TMP6]]
-; AVX512-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i16> [[HADD32]], <8 x i16> [[TMP7]], <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; AVX512-NEXT:    ret <8 x i16> [[RESULT]]
+; AVX-LABEL: @add_v8i16_u1234567(
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i32> <i32 poison, i32 2, i32 5, i32 6, i32 8, i32 10, i32 12, i32 14>
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 poison, i32 3, i32 4, i32 7, i32 9, i32 11, i32 13, i32 15>
+; AVX-NEXT:    [[TMP7:%.*]] = add <8 x i16> [[TMP5]], [[TMP6]]
+; AVX-NEXT:    ret <8 x i16> [[TMP7]]
 ;
   %a0 = extractelement <8 x i16> %a, i32 0
   %a1 = extractelement <8 x i16> %a, i32 1
@@ -187,13 +158,10 @@ define <4 x i32> @add_v4i32_0123(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @add_v4i32_u123(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @add_v4i32_u123(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A]], [[SHIFT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 poison, i32 2, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 poison, i32 3, i32 4, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP4]], <4 x i32> <i32 poison, i32 2, i32 4, i32 5>
-; CHECK-NEXT:    ret <4 x i32> [[RESULT1]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP4]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
   %a1 = extractelement <4 x i32> %a, i32 1
@@ -217,13 +185,10 @@ define <4 x i32> @add_v4i32_u123(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @add_v4i32_0u23(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @add_v4i32_0u23(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A]], [[SHIFT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 poison, i32 4, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 poison, i32 4, i32 5>
-; CHECK-NEXT:    ret <4 x i32> [[RESULT1]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP4]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
   %a1 = extractelement <4 x i32> %a, i32 1
@@ -247,40 +212,28 @@ define <4 x i32> @add_v4i32_0u23(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @add_v4i32_01u3(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: @add_v4i32_01u3(
-; SSE2-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A]], [[SHIFT]]
-; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B:%.*]], <4 x i32> <i32 2, i32 poison, i32 6, i32 poison>
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 3, i32 poison, i32 7, i32 poison>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 poison, i32 6>
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 poison, i32 7>
 ; SSE2-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; SSE2-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 poison, i32 6>
-; SSE2-NEXT:    ret <4 x i32> [[RESULT1]]
+; SSE2-NEXT:    ret <4 x i32> [[TMP4]]
 ;
 ; SSE4-LABEL: @add_v4i32_01u3(
-; SSE4-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
-; SSE4-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[SHIFT]], [[B]]
-; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 1, i32 2, i32 poison, i32 6>
+; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 3, i32 poison, i32 7>
 ; SSE4-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; SSE4-NEXT:    [[RESULT:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
-; SSE4-NEXT:    ret <4 x i32> [[RESULT]]
+; SSE4-NEXT:    ret <4 x i32> [[TMP4]]
 ;
 ; AVX2-LABEL: @add_v4i32_01u3(
-; AVX2-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
-; AVX2-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[SHIFT]], [[B]]
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 1, i32 2, i32 poison, i32 6>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 3, i32 poison, i32 7>
 ; AVX2-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; AVX2-NEXT:    [[RESULT:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
-; AVX2-NEXT:    ret <4 x i32> [[RESULT]]
+; AVX2-NEXT:    ret <4 x i32> [[TMP4]]
 ;
 ; AVX512-LABEL: @add_v4i32_01u3(
-; AVX512-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A]], [[SHIFT]]
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B:%.*]], <4 x i32> <i32 2, i32 poison, i32 6, i32 poison>
-; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 3, i32 poison, i32 7, i32 poison>
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 poison, i32 6>
+; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 poison, i32 7>
 ; AVX512-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; AVX512-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 poison, i32 6>
-; AVX512-NEXT:    ret <4 x i32> [[RESULT1]]
+; AVX512-NEXT:    ret <4 x i32> [[TMP4]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
   %a1 = extractelement <4 x i32> %a, i32 1
@@ -304,13 +257,10 @@ define <4 x i32> @add_v4i32_01u3(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @add_v4i32_012u(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @add_v4i32_012u(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A]], [[SHIFT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B:%.*]], <4 x i32> <i32 2, i32 4, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 3, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 4, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
-; CHECK-NEXT:    ret <4 x i32> [[RESULT1]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP4]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
   %a1 = extractelement <4 x i32> %a, i32 1
@@ -391,21 +341,11 @@ define <4 x i32> @add_v4i32_01uu(<4 x i32> %a, <4 x i32> %b) {
 ;
 
 define <8 x i32> @add_v8i32_01234567(<8 x i32> %a, <8 x i32> %b) {
-; SSE-LABEL: @add_v8i32_01234567(
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 8, i32 10>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <4 x i32> <i32 4, i32 6, i32 12, i32 14>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 9, i32 11>
-; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <4 x i32> <i32 5, i32 7, i32 13, i32 15>
-; SSE-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; SSE-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP2]], [[TMP4]]
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    ret <8 x i32> [[TMP7]]
-;
-; AVX-LABEL: @add_v8i32_01234567(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 7, i32 13, i32 15>
-; AVX-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP1]], [[TMP2]]
-; AVX-NEXT:    ret <8 x i32> [[TMP3]]
+; CHECK-LABEL: @add_v8i32_01234567(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 7, i32 13, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
 ;
   %a0 = extractelement <8 x i32> %a, i32 0
   %a1 = extractelement <8 x i32> %a, i32 1
@@ -445,17 +385,14 @@ define <8 x i32> @add_v8i32_01234567(<8 x i32> %a, <8 x i32> %b) {
 
 define <8 x i32> @add_v8i32_01234u67(<8 x i32> %a, <8 x i32> %b) {
 ; SSE2-LABEL: @add_v8i32_01234u67(
-; SSE2-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[A]], [[SHIFT]]
 ; SSE2-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[B:%.*]], <8 x i32> poison, <2 x i32> <i32 5, i32 6>
 ; SSE2-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <2 x i32> <i32 4, i32 7>
 ; SSE2-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[TMP5]], [[TMP6]]
-; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP2]], [[TMP3]]
-; SSE2-NEXT:    [[HADD4:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i32> [[HADD4]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 8, i32 9>
+; SSE2-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 8, i32 9>
 ; SSE2-NEXT:    ret <8 x i32> [[RESULT]]
 ;
 ; SSE4-LABEL: @add_v8i32_01234u67(
@@ -474,17 +411,10 @@ define <8 x i32> @add_v8i32_01234u67(<8 x i32> %a, <8 x i32> %b) {
 ; SSE4-NEXT:    ret <8 x i32> [[RESULT]]
 ;
 ; AVX-LABEL: @add_v8i32_01234u67(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[A]], [[SHIFT]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[HADD4:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <8 x i32> <i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <8 x i32> <i32 4, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 poison, i32 13, i32 14>
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 poison, i32 12, i32 15>
 ; AVX-NEXT:    [[TMP7:%.*]] = add <8 x i32> [[TMP5]], [[TMP6]]
-; AVX-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i32> [[HADD4]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 8, i32 9>
-; AVX-NEXT:    ret <8 x i32> [[RESULT]]
+; AVX-NEXT:    ret <8 x i32> [[TMP7]]
 ;
   %a0 = extractelement <8 x i32> %a, i32 0
   %a1 = extractelement <8 x i32> %a, i32 1
@@ -555,13 +485,10 @@ define <4 x float> @add_v4f32_0123(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @add_v4f32_u123(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @add_v4f32_u123(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A]], [[SHIFT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[B]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 poison, i32 2, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 poison, i32 3, i32 4, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP4]], <4 x i32> <i32 poison, i32 2, i32 4, i32 5>
-; CHECK-NEXT:    ret <4 x float> [[RESULT1]]
+; CHECK-NEXT:    ret <4 x float> [[TMP4]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -624,22 +551,16 @@ define <4 x float> @add_v4f32_01u3(<4 x float> %a, <4 x float> %b) {
 ; SSE2-NEXT:    ret <4 x float> [[RESULT1]]
 ;
 ; SSE4-LABEL: @add_v4f32_01u3(
-; SSE4-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
-; SSE4-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[SHIFT]], [[B]]
-; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 1, i32 2, i32 poison, i32 6>
+; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 0, i32 3, i32 poison, i32 7>
 ; SSE4-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
-; SSE4-NEXT:    [[RESULT:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
-; SSE4-NEXT:    ret <4 x float> [[RESULT]]
+; SSE4-NEXT:    ret <4 x float> [[TMP4]]
 ;
 ; AVX2-LABEL: @add_v4f32_01u3(
-; AVX2-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
-; AVX2-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[SHIFT]], [[B]]
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 1, i32 2, i32 poison, i32 6>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 0, i32 3, i32 poison, i32 7>
 ; AVX2-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
-; AVX2-NEXT:    [[RESULT:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
-; AVX2-NEXT:    ret <4 x float> [[RESULT]]
+; AVX2-NEXT:    ret <4 x float> [[TMP4]]
 ;
 ; AVX512-LABEL: @add_v4f32_01u3(
 ; AVX512-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
@@ -786,21 +707,11 @@ define <4 x float> @add_v4f32_01uu(<4 x float> %a, <4 x float> %b) {
 ;
 
 define <8 x float> @add_v8f32_01234567(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: @add_v8f32_01234567(
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 8, i32 10>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <4 x i32> <i32 4, i32 6, i32 12, i32 14>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <4 x i32> <i32 1, i32 3, i32 9, i32 11>
-; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <4 x i32> <i32 5, i32 7, i32 13, i32 15>
-; SSE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP1]], [[TMP3]]
-; SSE-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP2]], [[TMP4]]
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    ret <8 x float> [[TMP7]]
-;
-; AVX-LABEL: @add_v8f32_01234567(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 7, i32 13, i32 15>
-; AVX-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[TMP1]], [[TMP2]]
-; AVX-NEXT:    ret <8 x float> [[TMP3]]
+; CHECK-LABEL: @add_v8f32_01234567(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 7, i32 13, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <8 x float> [[TMP3]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
@@ -855,17 +766,10 @@ define <8 x float> @add_v8f32_012u4567(<8 x float> %a, <8 x float> %b) {
 ; SSE-NEXT:    ret <8 x float> [[RESULT]]
 ;
 ; AVX-LABEL: @add_v8f32_012u4567(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 7, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A]], [[SHIFT]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 poison, i32 4, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 poison, i32 5, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP4:%.*]] = fadd <8 x float> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[HADD5:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 4, i32 14, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[B]], <8 x float> poison, <8 x i32> <i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[B]], <8 x float> poison, <8 x i32> <i32 4, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 poison, i32 4, i32 6, i32 13, i32 14>
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <8 x i32> <i32 1, i32 3, i32 9, i32 poison, i32 5, i32 7, i32 12, i32 15>
 ; AVX-NEXT:    [[TMP7:%.*]] = fadd <8 x float> [[TMP5]], [[TMP6]]
-; AVX-NEXT:    [[RESULT:%.*]] = shufflevector <8 x float> [[HADD5]], <8 x float> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 4, i32 5, i32 8, i32 9>
-; AVX-NEXT:    ret <8 x float> [[RESULT]]
+; AVX-NEXT:    ret <8 x float> [[TMP7]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
@@ -969,21 +873,11 @@ define <2 x double> @add_v2f64_0u(<2 x double> %a, <2 x double> %b) {
 ;
 
 define <4 x double> @add_v4f64_0123(<4 x double> %a, <4 x double> %b) {
-; SSE-LABEL: @add_v4f64_0123(
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <2 x i32> <i32 0, i32 4>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 2, i32 6>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
-; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 3, i32 7>
-; SSE-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; SSE-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    ret <4 x double> [[TMP7]]
-;
-; AVX-LABEL: @add_v4f64_0123(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
-; AVX-NEXT:    ret <4 x double> [[TMP3]]
+; CHECK-LABEL: @add_v4f64_0123(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x double> [[TMP3]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -1028,13 +922,10 @@ define <4 x double> @add_v4f64_u123(<4 x double> %a, <4 x double> %b) {
 ; SSE4-NEXT:    ret <4 x double> [[RESULT]]
 ;
 ; AVX-LABEL: @add_v4f64_u123(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[B]], [[SHIFT]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> [[A:%.*]], <4 x i32> <i32 poison, i32 0, i32 6, i32 poison>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[B]], <4 x double> [[A]], <4 x i32> <i32 poison, i32 1, i32 7, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> [[A:%.*]], <4 x i32> <i32 poison, i32 0, i32 6, i32 2>
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[B]], <4 x double> [[A]], <4 x i32> <i32 poison, i32 1, i32 7, i32 3>
 ; AVX-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[RESULT:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP1]], <4 x i32> <i32 poison, i32 1, i32 2, i32 6>
-; AVX-NEXT:    ret <4 x double> [[RESULT]]
+; AVX-NEXT:    ret <4 x double> [[TMP4]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -1079,13 +970,10 @@ define <4 x double> @add_v4f64_0u23(<4 x double> %a, <4 x double> %b) {
 ; SSE4-NEXT:    ret <4 x double> [[RESULT]]
 ;
 ; AVX-LABEL: @add_v4f64_0u23(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[B]], [[SHIFT]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> poison, <4 x i32> <i32 1, i32 poison, i32 2, i32 poison>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 0, i32 poison, i32 3, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 1, i32 poison, i32 2, i32 6>
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 0, i32 poison, i32 3, i32 7>
 ; AVX-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[RESULT:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP1]], <4 x i32> <i32 0, i32 poison, i32 2, i32 6>
-; AVX-NEXT:    ret <4 x double> [[RESULT]]
+; AVX-NEXT:    ret <4 x double> [[TMP4]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -1130,13 +1018,10 @@ define <4 x double> @add_v4f64_01u3(<4 x double> %a, <4 x double> %b) {
 ; SSE4-NEXT:    ret <4 x double> [[RESULT]]
 ;
 ; AVX-LABEL: @add_v4f64_01u3(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[B]], [[SHIFT]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 poison, i32 6>
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 5, i32 poison, i32 7>
 ; AVX-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[RESULT:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 6>
-; AVX-NEXT:    ret <4 x double> [[RESULT]]
+; AVX-NEXT:    ret <4 x double> [[TMP4]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -1181,13 +1066,10 @@ define <4 x double> @add_v4f64_012u(<4 x double> %a, <4 x double> %b) {
 ; SSE4-NEXT:    ret <4 x double> [[RESULT]]
 ;
 ; AVX-LABEL: @add_v4f64_012u(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[A]], [[SHIFT]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 2, i32 poison>
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 5, i32 3, i32 poison>
 ; AVX-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[RESULT:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 6, i32 poison>
-; AVX-NEXT:    ret <4 x double> [[RESULT]]
+; AVX-NEXT:    ret <4 x double> [[TMP4]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1

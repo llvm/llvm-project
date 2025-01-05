@@ -186,7 +186,7 @@ public:
   std::string ProfileExcludeFiles;
 
   /// The version string to put into coverage files.
-  char CoverageVersion[4];
+  char CoverageVersion[4] = {'0', '0', '0', '0'};
 
   /// Enable additional debugging information.
   std::string DebugPass;

@@ -35,6 +35,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
+static cl::opt<bool> SVEPreferFixedOverScalableIfEqualCost(
+    "sve-prefer-fixed-over-scalable-if-equal", cl::Hidden);
+
 static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
                                            cl::Hidden);
 
@@ -261,7 +264,8 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
       CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresPreservingZT0(CalleeAttrs)) {
+      CallerAttrs.requiresPreservingZT0(CalleeAttrs) ||
+      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -4916,6 +4920,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
     }
   }
   return false;
+}
+
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+  if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
+    return SVEPreferFixedOverScalableIfEqualCost;
+  return ST->useFixedOverScalableIfEqualCost();
 }
 
 unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {

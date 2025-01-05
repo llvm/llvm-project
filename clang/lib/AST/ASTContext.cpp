@@ -6376,7 +6376,7 @@ ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
 }
 
 QualType ASTContext::getUnconstrainedType(QualType T) const {
-  QualType CanonT = T.getCanonicalType();
+  QualType CanonT = T.getNonPackExpansionType().getCanonicalType();
 
   // Remove a type-constraint from a top-level auto or decltype(auto).
   if (auto *AT = CanonT->getAs<AutoType>()) {
@@ -9751,6 +9751,43 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
+static TypedefDecl *
+CreateXtensaABIBuiltinVaListDecl(const ASTContext *Context) {
+  // typedef struct __va_list_tag {
+  RecordDecl *VaListTagDecl = Context->buildImplicitRecord("__va_list_tag");
+
+  VaListTagDecl->startDefinition();
+
+  // int* __va_stk;
+  // int* __va_reg;
+  // int __va_ndx;
+  constexpr size_t NumFields = 3;
+  QualType FieldTypes[NumFields] = {Context->getPointerType(Context->IntTy),
+                                    Context->getPointerType(Context->IntTy),
+                                    Context->IntTy};
+  const char *FieldNames[NumFields] = {"__va_stk", "__va_reg", "__va_ndx"};
+
+  // Create fields
+  for (unsigned i = 0; i < NumFields; ++i) {
+    FieldDecl *Field = FieldDecl::Create(
+        *Context, VaListTagDecl, SourceLocation(), SourceLocation(),
+        &Context->Idents.get(FieldNames[i]), FieldTypes[i], /*TInfo=*/nullptr,
+        /*BitWidth=*/nullptr,
+        /*Mutable=*/false, ICIS_NoInit);
+    Field->setAccess(AS_public);
+    VaListTagDecl->addDecl(Field);
+  }
+  VaListTagDecl->completeDefinition();
+  Context->VaListTagDecl = VaListTagDecl;
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
+
+  // } __va_list_tag;
+  TypedefDecl *VaListTagTypedefDecl =
+      Context->buildImplicitTypedef(VaListTagType, "__builtin_va_list");
+
+  return VaListTagTypedefDecl;
+}
+
 static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
                                      TargetInfo::BuiltinVaListKind Kind) {
   switch (Kind) {
@@ -9772,6 +9809,8 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
     return CreateSystemZBuiltinVaListDecl(Context);
   case TargetInfo::HexagonBuiltinVaList:
     return CreateHexagonBuiltinVaListDecl(Context);
+  case TargetInfo::XtensaABIBuiltinVaList:
+    return CreateXtensaABIBuiltinVaListDecl(Context);
   }
 
   llvm_unreachable("Unhandled __builtin_va_list type kind");

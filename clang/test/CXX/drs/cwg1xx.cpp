@@ -1314,8 +1314,25 @@ namespace cwg188 { // cwg188: yes
   static_assert(sizeof(0, c) == 10, "");
 }
 
-// cwg190 FIXME: add codegen test for tbaa
-//              or implement C++20 std::is_layout_compatible and test it this way
+namespace cwg190 { // cwg190: 19
+struct A {
+  int a;
+  static double x;
+  int b;
+  void y();
+  int c;
+};
+
+struct B {
+  int a;
+  void y();
+  int b;
+  static double x;
+  int c;
+};
+
+static_assert(__is_layout_compatible(A, B), "");
+} // namespace cwg190
 
 int cwg191_j;
 namespace cwg191 { // cwg191: yes

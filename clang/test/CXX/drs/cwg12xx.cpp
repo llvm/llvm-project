@@ -32,7 +32,7 @@ namespace cwg1213 { // cwg1213: 7
 }
 
 #if __cplusplus >= 201103L
-namespace cwg1223 { // cwg1223: 17 drafting 2023-05-12
+namespace cwg1223 { // cwg1223: 17
 struct M;
 template <typename T>
 struct V;
