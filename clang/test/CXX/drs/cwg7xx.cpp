@@ -24,7 +24,7 @@ namespace cwg705 { // cwg705: yes
     // expected-error@-1 {{use of undeclared identifier 'f'}}
     //   expected-note@#cwg705-f {{'N::f' declared here}}
   }
-}
+} // namespace cwg705
 
 namespace cwg712 { // cwg712: partial
   void use(int);
@@ -76,7 +76,7 @@ namespace cwg712 { // cwg712: partial
     };
   }
 #endif
-}
+} // namespace cwg712
 
 namespace cwg713 { // cwg713: 3.0
 template<typename T>
@@ -324,7 +324,7 @@ namespace cwg727 { // cwg727: partial
     //   expected-note@#cwg727-S2-T {{previous}}
   };
   Collision<int, int> c; // #cwg727-Collision-int-int
-}
+} // namespace cwg727
 
 namespace cwg777 { // cwg777: 3.7
 #if __cplusplus >= 201103L
@@ -338,7 +338,7 @@ void g(int i = 0, T ...args, T ...args2) {}
 template <typename... T>
 void h(int i = 0, T ...args, int j = 1) {}
 #endif
-}
+} // namespace cwg777
 
 namespace cwg794 { // cwg794: 2.7
 struct B {};

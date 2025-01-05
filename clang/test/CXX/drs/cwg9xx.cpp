@@ -13,7 +13,7 @@ namespace std {
     const T *p; size_t n;
     initializer_list(const T *p, size_t n);
   };
-}
+} // namespace std
 
 namespace cwg930 { // cwg930: 2.7
 #if __cplusplus >= 201103L
@@ -49,7 +49,7 @@ namespace cwg948 { // cwg948: 3.7
      while (constexpr A i = 0) { }
   }
 #endif
-}
+} // namespace cwg948
 
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
@@ -150,7 +150,7 @@ namespace cwg974 { // cwg974: yes
     auto lam = [](int x = 42) { return x; };
   }
 #endif
-}
+} // namespace cwg974
 
 namespace cwg977 { // cwg977: yes
 enum E { e = E() }; // #cwg977-E
@@ -198,4 +198,4 @@ namespace cwg990 { // cwg990: 3.5
   };
   D d{};
 #endif
-}
+} // namespace cwg990

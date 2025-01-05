@@ -59,7 +59,7 @@ namespace cwg2819 { // cwg2819: 19 c++26
   //   cxx11-23-note@-2 {{initializer of 'q' is not a constant expression}}
   //   cxx11-23-note@#cwg2819-q {{declared here}}
 #endif
-}
+} // namespace cwg2819
 
 namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 

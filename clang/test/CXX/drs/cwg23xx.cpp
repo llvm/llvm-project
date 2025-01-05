@@ -16,8 +16,8 @@ namespace std {
   };
 }
 
-#if __cplusplus >= 201103L
 namespace cwg2303 { // cwg2303: 12
+#if __cplusplus >= 201103L
 template <typename... T>
 struct A;
 template <>
@@ -54,8 +54,8 @@ void g() {
     struct cwg2303::F -> B -> A<int, int>
     struct cwg2303::F -> E -> A<int, int>}} */
 }
-} // namespace cwg2303
 #endif
+} // namespace cwg2303
 
 namespace cwg2304 { // cwg2304: 2.8
 template<typename T> void foo(T, int);
@@ -191,10 +191,10 @@ auto j = std::initializer_list<InitListCtor>{ i };
 // since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
 //   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
 #endif
-}
+} // namespace cwg2311
 
-#if __cplusplus >= 201103L
 namespace cwg2338 { // cwg2338: 12
+#if __cplusplus >= 201103L
 namespace B {
 enum E : bool { Zero, One };
 static_assert((int)(E)2 == 1, "");
@@ -203,15 +203,15 @@ namespace D {
 enum class E : bool { Zero, One };
 static_assert((int)(E)2 == 1, "");
 } // namespace D
-} // namespace cwg2338
 #endif
+} // namespace cwg2338
 
 namespace cwg2346 { // cwg2346: 11
   void test() {
     const int i2 = 0;
     extern void h2b(int x = i2 + 0); // ok, not odr-use
   }
-}
+} // namespace cwg2346
 
 namespace cwg2351 { // cwg2351: 20
 #if __cplusplus >= 201103L
@@ -248,7 +248,7 @@ namespace cwg2351 { // cwg2351: 20
   //   cxx98-note@-2 {{to match this '('}}
   // cxx98-error@-3 {{expected expression}}
 #endif
-}
+} // namespace cwg2351
 
 namespace cwg2352 { // cwg2352: 10
   int **p;
@@ -350,18 +350,18 @@ B b2 = static_cast<B&&>(b1);      // calls #3: #1, #2, and #4 are not viable
 struct C { operator B&&(); };
 B b3 = C();                       // calls #3
 #endif
-}
+} // namespace cwg2356
 
-#if __cplusplus >= 201402L
 namespace cwg2358 { // cwg2358: 16
+#if __cplusplus >= 201402L
   void f2() {
     int i = 1;
     void g1(int = [xxx=1] { return xxx; }());  // OK
     void g2(int = [xxx=i] { return xxx; }());
     // since-cxx14-error@-1 {{default argument references local variable 'i' of enclosing function}}
   }
-}
 #endif
+} // namespace cwg2358
 
 // CWG2363 was closed as NAD, but its resolution does affirm that
 // a friend declaration cannot have an opaque-enumm-specifier.
@@ -411,11 +411,11 @@ class C {
 };
 } // namespace cwg2370
 
-#if __cplusplus >= 201702L
+namespace cwg2386 { // cwg2386: 9
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class
 // type **with a member value**, the expression std::tuple_size<E>::value shall
 // be a well-formed integral constant expression
-namespace cwg2386 { // cwg2386: 9
+#if __cplusplus >= 201702L
 struct Bad1 { int a, b; };
 struct Bad2 { int a, b; };
 } // namespace cwg2386
@@ -430,8 +430,8 @@ namespace cwg2386 {
 void no_value() { auto [x, y] = Bad1(); }
 void wrong_value() { auto [x, y] = Bad2(); }
 // since-cxx17-error@-1 {{type 'Bad2' decomposes into 42 elements, but only 2 names were provided}}
-} // namespace cwg2386
 #endif
+} // namespace cwg2386
 
 // cwg2385: na
 
@@ -451,7 +451,7 @@ namespace cwg2387 { // cwg2387: 9
   extern template int d<int>;
   extern template const int d<const int>;
 #endif
-}
+} // namespace cwg2387
 
 namespace cwg2390 { // cwg2390: 14
 // Test that macro expansion of the builtin argument works.
@@ -499,7 +499,7 @@ const A a;
 struct B { const A a; };
 B b;
 
-}
+} // namespace cwg2394
 
 namespace cwg2396 { // cwg2396: no
   struct A {
@@ -515,24 +515,21 @@ namespace cwg2396 { // cwg2396: no
   // void f(A a) { a.operator B B::*(); }
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
-}
+} // namespace cwg2396
 
-#if __cplusplus >= 201103L
 namespace cwg2397 { // cwg2397: 17
+#if __cplusplus >= 201103L
   void foo() {
     int a[5];
 
     auto (&b)[5] = a;
     auto (*c)[5] = &a;
   }
+#endif
 } // namespace cwg2397
 
-#endif
-
-#if __cplusplus >= 202002L
-
 namespace cwg2369 { // cwg2369: partial
-
+#if __cplusplus >= 202002L
 template <class T> struct Z {
   typedef typename T::x xx;
 };
@@ -557,6 +554,5 @@ void foo() {
   f(zz, 42); // OK, deduction fails for #1 because C<int> is not satisfied
 }
 
-} // namespace cwg2369
-
 #endif
+} // namespace cwg2369

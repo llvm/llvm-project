@@ -1225,8 +1225,12 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // zext/trunc) have one use (ending at the select), the cttz/ctlz result will
   // not be used if the input is zero. Relax to 'zero is poison' for that case.
   if (II->hasOneUse() && SelectArg->hasOneUse() &&
-      !match(II->getArgOperand(1), m_One()))
+      !match(II->getArgOperand(1), m_One())) {
     II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
+    // noundef attribute on the intrinsic may no longer be valid.
+    II->dropUBImplyingAttrsAndMetadata();
+    IC.addToWorklist(II);
+  }
 
   return nullptr;
 }
