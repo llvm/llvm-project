@@ -1498,10 +1498,13 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
               auto *CastR = cast<VPWidenCastRecipe>(CR);
               VPID = VPIntrinsic::getForOpcode(CastR->getOpcode());
             }
-            assert(VPID != Intrinsic::not_intrinsic && "Expected VP intrinsic");
+
+            // Not all intrinsics have a corresponding VP intrinsic.
+            if (VPID == Intrinsic::not_intrinsic)
+              return nullptr;
             assert(VPIntrinsic::getMaskParamPos(VPID) &&
                    VPIntrinsic::getVectorLengthParamPos(VPID) &&
-                   "Expected VP intrinsic");
+                   "Expected VP intrinsic to have mask and EVL");
 
             SmallVector<VPValue *> Ops(CR->operands());
             Ops.push_back(&AllOneMask);

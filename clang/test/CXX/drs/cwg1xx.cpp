@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -922,6 +923,7 @@ namespace cwg155 { // cwg155: dup 632
   // expected-warning@-1 {{braces around scalar initializer}}
 }
 
+// cwg156: sup 1111
 // cwg158 is in cwg158.cpp
 
 namespace cwg159 { // cwg159: 3.5
@@ -1314,8 +1316,25 @@ namespace cwg188 { // cwg188: yes
   static_assert(sizeof(0, c) == 10, "");
 }
 
-// cwg190 FIXME: add codegen test for tbaa
-//              or implement C++20 std::is_layout_compatible and test it this way
+namespace cwg190 { // cwg190: 19
+struct A {
+  int a;
+  static double x;
+  int b;
+  void y();
+  int c;
+};
+
+struct B {
+  int a;
+  void y();
+  int b;
+  static double x;
+  int c;
+};
+
+static_assert(__is_layout_compatible(A, B), "");
+} // namespace cwg190
 
 int cwg191_j;
 namespace cwg191 { // cwg191: yes
@@ -1346,6 +1365,14 @@ namespace cwg191 { // cwg191: yes
     };
   }
 }
+
+namespace cwg192 { // cwg192: 2.7
+struct S {
+  void f(I i) { }
+  // expected-error@-1 {{unknown type name 'I'}}
+  typedef int I;
+};
+} // namespace cwg192
 
 // cwg193 is in cwg193.cpp
 

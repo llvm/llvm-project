@@ -1456,6 +1456,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, CompoundRequirement) {
+  auto Tokens = annotate("template <typename T, typename V>\n"
+                         "concept CheckMultiplicableBy = requires(T a, V b) {\n"
+                         "  { a * b } -> std::same_as<T>;\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+
+  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {
   // Everything after #pragma region should be ImplicitStringLiteral
   auto Tokens = annotate("#pragma region Foo(Bar: Hello)");
@@ -3633,6 +3645,13 @@ TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
                          "void f() {}");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, AfterPPDirective) {
+  auto Tokens = annotate("#error -- My error message");
+
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minusminus, TT_AfterPPDirective);
 }
 
 } // namespace

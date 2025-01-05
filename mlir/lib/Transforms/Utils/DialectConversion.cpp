@@ -54,55 +54,6 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   });
 }
 
-/// Given two insertion points in the same block, choose the later one.
-static OpBuilder::InsertPoint
-chooseLaterInsertPointInBlock(OpBuilder::InsertPoint a,
-                              OpBuilder::InsertPoint b) {
-  assert(a.getBlock() == b.getBlock() && "expected same block");
-  Block *block = a.getBlock();
-  if (a.getPoint() == block->begin())
-    return b;
-  if (b.getPoint() == block->begin())
-    return a;
-  if (a.getPoint()->isBeforeInBlock(&*b.getPoint()))
-    return b;
-  return a;
-}
-
-/// Helper function that chooses the insertion point among the two given ones
-/// that is later.
-// TODO: Extend DominanceInfo API to work with block iterators.
-static OpBuilder::InsertPoint chooseLaterInsertPoint(OpBuilder::InsertPoint a,
-                                                     OpBuilder::InsertPoint b) {
-  // Case 1: Fast path: Same block. This is the most common case.
-  if (LLVM_LIKELY(a.getBlock() == b.getBlock()))
-    return chooseLaterInsertPointInBlock(a, b);
-
-  // Case 2: Different block, but same region.
-  if (a.getBlock()->getParent() == b.getBlock()->getParent()) {
-    DominanceInfo domInfo;
-    if (domInfo.properlyDominates(a.getBlock(), b.getBlock()))
-      return b;
-    if (domInfo.properlyDominates(b.getBlock(), a.getBlock()))
-      return a;
-    // Neither of the two blocks dominante each other.
-    llvm_unreachable("unable to find valid insertion point");
-  }
-
-  // Case 3: b's region contains a: choose a.
-  if (b.getBlock()->getParent()->findAncestorOpInRegion(
-          *a.getPoint()->getParentOp()))
-    return a;
-
-  // Case 4: a's region contains b: choose b.
-  if (a.getBlock()->getParent()->findAncestorOpInRegion(
-          *b.getPoint()->getParentOp()))
-    return b;
-
-  // Neither of the two operations contain each other.
-  llvm_unreachable("unable to find valid insertion point");
-}
-
 /// Helper function that computes an insertion point where the given value is
 /// defined and can be used without a dominance violation.
 static OpBuilder::InsertPoint computeInsertPoint(Value value) {
@@ -117,9 +68,26 @@ static OpBuilder::InsertPoint computeInsertPoint(Value value) {
 /// defined and can be used without a dominance violation.
 static OpBuilder::InsertPoint computeInsertPoint(ArrayRef<Value> vals) {
   assert(!vals.empty() && "expected at least one value");
+  DominanceInfo domInfo;
   OpBuilder::InsertPoint pt = computeInsertPoint(vals.front());
-  for (Value v : vals.drop_front())
-    pt = chooseLaterInsertPoint(pt, computeInsertPoint(v));
+  for (Value v : vals.drop_front()) {
+    // Choose the "later" insertion point.
+    OpBuilder::InsertPoint nextPt = computeInsertPoint(v);
+    if (domInfo.dominates(pt.getBlock(), pt.getPoint(), nextPt.getBlock(),
+                          nextPt.getPoint())) {
+      // pt is before nextPt => choose nextPt.
+      pt = nextPt;
+    } else {
+#ifndef NDEBUG
+      // nextPt should be before pt => choose pt.
+      // If pt, nextPt are no dominance relationship, then there is no valid
+      // insertion point at which all given values are defined.
+      bool dom = domInfo.dominates(nextPt.getBlock(), nextPt.getPoint(),
+                                   pt.getBlock(), pt.getPoint());
+      assert(dom && "unable to find valid insertion point");
+#endif // NDEBUG
+    }
+  }
   return pt;
 }
 
@@ -135,8 +103,8 @@ namespace {
 
 /// Helper class to make it possible to use `ValueVector` as a key in DenseMap.
 struct ValueVectorMapInfo {
-  static ValueVector getEmptyKey() { return ValueVector{}; }
-  static ValueVector getTombstoneKey() { return ValueVector{}; }
+  static ValueVector getEmptyKey() { return ValueVector{Value()}; }
+  static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
     return ::llvm::hash_combine_range(val.begin(), val.end());
   }
@@ -1072,10 +1040,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationRewrite *>
       unresolvedMaterializations;
 
-  /// A set of all N:1 materializations that were added to work around
-  /// incomplete 1:N support in the dialect conversion driver.
-  DenseSet<UnrealizedConversionCastOp> nTo1TempMaterializations;
-
   /// The current type converter, or nullptr if no type converter is currently
   /// active.
   const TypeConverter *currentTypeConverter = nullptr;
@@ -1212,7 +1176,6 @@ void UnresolvedMaterializationRewrite::rollback() {
   if (!mappedValues.empty())
     rewriterImpl.mapping.erase(mappedValues);
   rewriterImpl.unresolvedMaterializations.erase(getOperation());
-  rewriterImpl.nTo1TempMaterializations.erase(getOperation());
   op->erase();
 }
 
