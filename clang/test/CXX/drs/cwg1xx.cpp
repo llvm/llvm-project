@@ -922,6 +922,7 @@ namespace cwg155 { // cwg155: dup 632
   // expected-warning@-1 {{braces around scalar initializer}}
 }
 
+// cwg156: sup 1111
 // cwg158 is in cwg158.cpp
 
 namespace cwg159 { // cwg159: 3.5
