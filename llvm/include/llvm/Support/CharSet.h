@@ -33,6 +33,9 @@ class CharSetConverterImplBase {
 public:
   virtual ~CharSetConverterImplBase() = default;
 
+  /// Resets the converter to the initial state.
+  virtual void reset() = 0;
+
   /// Converts a string.
   /// \param[in] Source source string
   /// \param[out] Result container for converted string
@@ -52,8 +55,12 @@ public:
   /// In case of an error, the result string contains the successfully converted
   /// part of the input string.
   ///
-  virtual std::error_code convert(StringRef Source,
-                                  SmallVectorImpl<char> &Result) const = 0;
+
+  std::error_code convert(StringRef Source,
+                          SmallVectorImpl<char> &Result) const;
+
+  virtual std::error_code convertString(StringRef Source,
+                                        SmallVectorImpl<char> &Result) = 0;
 };
 } // namespace details
 
@@ -111,12 +118,15 @@ public:
   /// \return error code in case something went wrong
   std::error_code convert(StringRef Source,
                           SmallVectorImpl<char> &Result) const {
-    return Converter->convert(Source, Result);
+    auto EC = Converter->convertString(Source, Result);
+    Converter->reset();
+    return EC;
   }
 
   ErrorOr<std::string> convert(StringRef Source) const {
     SmallString<100> Result;
-    auto EC = Converter->convert(Source, Result);
+    auto EC = Converter->convertString(Source, Result);
+    Converter->reset();
     if (!EC)
       return std::string(Result);
     return EC;
