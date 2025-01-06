@@ -394,7 +394,6 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // MachO/CodeModel::Large, which GlobalISel does not support.
   if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO &&
       TT.getArch() != Triple::aarch64_32 &&
-      TT.getArchName() != "arm64e" &&
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
     setGlobalISel(true);
