@@ -1804,8 +1804,9 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                            diag::err_feature_check_malformed);
         if (!II)
           return false;
-        else if (II->getBuiltinID() != 0) {
-          switch (II->getBuiltinID()) {
+        auto BuiltinID = II->getBuiltinID();
+        if (BuiltinID != 0) {
+          switch (BuiltinID) {
           case Builtin::BI__builtin_cpu_is:
             return getTargetInfo().supportsCpuIs();
           case Builtin::BI__builtin_cpu_init:
@@ -1818,8 +1819,21 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             // usual allocation and deallocation functions. Required by libc++
             return 201802;
           default:
+            // We may get here because of aux builtins which may not be
+            // supported on the default target, for example if we have an X86
+            // specific builtin and the current target is SPIR-V. Sometimes we
+            // rely on __has_builtin returning true when passed a builtin that
+            // is not supported on the default target due to LangOpts but is
+            // supported on the aux target. See
+            // test/Headers/__cpuidex_conflict.c for an example. If the builtin
+            // is an aux builtin and it can never be supported on the default
+            // target, __has_builtin should return false.
+            if (getBuiltinInfo().isAuxBuiltinID(BuiltinID) &&
+                getBuiltinInfo().isAuxBuiltinIDAlwaysUnsupportedOnDefaultTarget(
+                    BuiltinID))
+              return false;
             return Builtin::evaluateRequiredTargetFeatures(
-                getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
+                getBuiltinInfo().getRequiredFeatures(BuiltinID),
                 getTargetInfo().getTargetOpts().FeatureMap);
           }
           return true;
