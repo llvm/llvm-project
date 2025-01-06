@@ -3481,11 +3481,13 @@ libc_support_library(
     hdrs = [
         "src/stdlib/heap_sort.h",
         "src/stdlib/qsort_data.h",
+        "src/stdlib/qsort_pivot.h",
         "src/stdlib/qsort_util.h",
         "src/stdlib/quick_sort.h",
     ],
     deps = [
         ":__support_common",
+        ":__support_cpp_bit",
         ":__support_cpp_cstddef",
         ":__support_macros_attributes",
     ],

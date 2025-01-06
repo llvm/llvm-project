@@ -693,9 +693,6 @@ public:
   /// Return the dialect this operation is registered to.
   Dialect &getDialect() const { return *getImpl()->getDialect(); }
 
-  /// Use the specified object to parse this ops custom assembly format.
-  ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
-
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
   static RegisteredOperationName getFromOpaquePointer(const void *pointer) {

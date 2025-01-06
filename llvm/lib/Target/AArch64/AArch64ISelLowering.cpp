@@ -21987,21 +21987,35 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   SDLoc DL(N);
 
   SDValue Op2 = N->getOperand(2);
-  if (Op2->getOpcode() != ISD::MUL ||
-      !ISD::isExtOpcode(Op2->getOperand(0)->getOpcode()) ||
-      !ISD::isExtOpcode(Op2->getOperand(1)->getOpcode()))
+  unsigned Op2Opcode = Op2->getOpcode();
+  SDValue MulOpLHS, MulOpRHS;
+  bool MulOpLHSIsSigned, MulOpRHSIsSigned;
+  if (ISD::isExtOpcode(Op2Opcode)) {
+    MulOpLHSIsSigned = MulOpRHSIsSigned = (Op2Opcode == ISD::SIGN_EXTEND);
+    MulOpLHS = Op2->getOperand(0);
+    MulOpRHS = DAG.getConstant(1, DL, MulOpLHS.getValueType());
+  } else if (Op2Opcode == ISD::MUL) {
+    SDValue ExtMulOpLHS = Op2->getOperand(0);
+    SDValue ExtMulOpRHS = Op2->getOperand(1);
+
+    unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
+    unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
+    if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
+        !ISD::isExtOpcode(ExtMulOpRHSOpcode))
+      return SDValue();
+
+    MulOpLHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
+    MulOpRHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
+
+    MulOpLHS = ExtMulOpLHS->getOperand(0);
+    MulOpRHS = ExtMulOpRHS->getOperand(0);
+
+    if (MulOpLHS.getValueType() != MulOpRHS.getValueType())
+      return SDValue();
+  } else
     return SDValue();
 
   SDValue Acc = N->getOperand(1);
-  SDValue Mul = N->getOperand(2);
-  SDValue ExtMulOpLHS = Mul->getOperand(0);
-  SDValue ExtMulOpRHS = Mul->getOperand(1);
-
-  SDValue MulOpLHS = ExtMulOpLHS->getOperand(0);
-  SDValue MulOpRHS = ExtMulOpRHS->getOperand(0);
-  if (MulOpLHS.getValueType() != MulOpRHS.getValueType())
-    return SDValue();
-
   EVT ReducedVT = N->getValueType(0);
   EVT MulSrcVT = MulOpLHS.getValueType();
 
@@ -22015,8 +22029,6 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
       !(ReducedVT == MVT::v2i32 && MulSrcVT == MVT::v8i8))
     return SDValue();
 
-  bool MulOpLHSIsSigned = ExtMulOpLHS->getOpcode() == ISD::SIGN_EXTEND;
-  bool MulOpRHSIsSigned = ExtMulOpRHS->getOpcode() == ISD::SIGN_EXTEND;
   // If the extensions are mixed, we should lower it to a usdot instead
   unsigned Opcode = 0;
   if (MulOpLHSIsSigned != MulOpRHSIsSigned) {
@@ -22032,10 +22044,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
     // USDOT expects the signed operand to be last
     if (!MulOpRHSIsSigned)
       std::swap(MulOpLHS, MulOpRHS);
-  } else if (MulOpLHSIsSigned)
-    Opcode = AArch64ISD::SDOT;
-  else
-    Opcode = AArch64ISD::UDOT;
+  } else
+    Opcode = MulOpLHSIsSigned ? AArch64ISD::SDOT : AArch64ISD::UDOT;
 
   // Partial reduction lowering for (nx)v16i8 to (nx)v4i64 requires an i32 dot
   // product followed by a zero / sign extension
@@ -29654,8 +29664,15 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   if (ScalarTy->isIntegerTy() && Subtarget->hasSVE2() && VTy->isScalableTy()) {
     unsigned ScalarWidth = ScalarTy->getScalarSizeInBits();
+
+    if (Operation == ComplexDeinterleavingOperation::CDot)
+      return ScalarWidth == 32 || ScalarWidth == 64;
     return 8 <= ScalarWidth && ScalarWidth <= 64;
   }
+
+  // CDot is not supported outside of scalable/sve scopes
+  if (Operation == ComplexDeinterleavingOperation::CDot)
+    return false;
 
   return (ScalarTy->isHalfTy() && Subtarget->hasFullFP16()) ||
          ScalarTy->isFloatTy() || ScalarTy->isDoubleTy();
@@ -29666,6 +29683,8 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
     Value *Accumulator) const {
   VectorType *Ty = cast<VectorType>(InputA->getType());
+  if (Accumulator == nullptr)
+    Accumulator = Constant::getNullValue(Ty);
   bool IsScalable = Ty->isScalableTy();
   bool IsInt = Ty->getElementType()->isIntegerTy();
 
@@ -29677,6 +29696,10 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
   if (TyWidth > 128) {
     int Stride = Ty->getElementCount().getKnownMinValue() / 2;
+    int AccStride = cast<VectorType>(Accumulator->getType())
+                        ->getElementCount()
+                        .getKnownMinValue() /
+                    2;
     auto *HalfTy = VectorType::getHalfElementsVectorType(Ty);
     auto *LowerSplitA = B.CreateExtractVector(HalfTy, InputA, B.getInt64(0));
     auto *LowerSplitB = B.CreateExtractVector(HalfTy, InputB, B.getInt64(0));
@@ -29686,25 +29709,26 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
         B.CreateExtractVector(HalfTy, InputB, B.getInt64(Stride));
     Value *LowerSplitAcc = nullptr;
     Value *UpperSplitAcc = nullptr;
-    if (Accumulator) {
-      LowerSplitAcc = B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(0));
-      UpperSplitAcc =
-          B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(Stride));
-    }
+    Type *FullTy = Ty;
+    FullTy = Accumulator->getType();
+    auto *HalfAccTy = VectorType::getHalfElementsVectorType(
+        cast<VectorType>(Accumulator->getType()));
+    LowerSplitAcc =
+        B.CreateExtractVector(HalfAccTy, Accumulator, B.getInt64(0));
+    UpperSplitAcc =
+        B.CreateExtractVector(HalfAccTy, Accumulator, B.getInt64(AccStride));
     auto *LowerSplitInt = createComplexDeinterleavingIR(
         B, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
     auto *UpperSplitInt = createComplexDeinterleavingIR(
         B, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
 
-    auto *Result = B.CreateInsertVector(Ty, PoisonValue::get(Ty), LowerSplitInt,
-                                        B.getInt64(0));
-    return B.CreateInsertVector(Ty, Result, UpperSplitInt, B.getInt64(Stride));
+    auto *Result = B.CreateInsertVector(FullTy, PoisonValue::get(FullTy),
+                                        LowerSplitInt, B.getInt64(0));
+    return B.CreateInsertVector(FullTy, Result, UpperSplitInt,
+                                B.getInt64(AccStride));
   }
 
   if (OperationType == ComplexDeinterleavingOperation::CMulPartial) {
-    if (Accumulator == nullptr)
-      Accumulator = Constant::getNullValue(Ty);
-
     if (IsScalable) {
       if (IsInt)
         return B.CreateIntrinsic(
@@ -29754,6 +29778,13 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
       return nullptr;
 
     return B.CreateIntrinsic(IntId, Ty, {InputA, InputB});
+  }
+
+  if (OperationType == ComplexDeinterleavingOperation::CDot && IsInt &&
+      IsScalable) {
+    return B.CreateIntrinsic(
+        Intrinsic::aarch64_sve_cdot, Accumulator->getType(),
+        {Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
   }
 
   return nullptr;
