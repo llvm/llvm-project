@@ -565,7 +565,6 @@ LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
 
 namespace AArch64ExactFPImm {
   struct ExactFPImm {
-    const char *Name;
     int Enum;
     const char *Repr;
   };

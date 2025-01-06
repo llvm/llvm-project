@@ -630,17 +630,12 @@ def ExactFPImmValues : GenericEnum {
 
 def ExactFPImmsList : GenericTable {
   let FilterClass = "ExactFPImm";
-  let Fields = ["Name", "Enum", "Repr"];
+  let Fields = ["Enum", "Repr"];
 }
 
 def lookupExactFPImmByEnum : SearchIndex {
   let Table = ExactFPImmsList;
   let Key = ["Enum"];
-}
-
-def lookupExactFPImmByRepr : SearchIndex {
-  let Table = ExactFPImmsList;
-  let Key = ["Repr"];
 }
 
 def : ExactFPImm<"zero", "0.0", 0x0>;
