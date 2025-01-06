@@ -525,8 +525,8 @@ public:
 
   static bool canSymbolicate(QualType T);
 
-  /// Make a unique symbol for MemRegion R according to its kind.
-  const SymbolRegionValue* getRegionValueSymbol(const TypedValueRegion* R);
+  template <typename T, typename... Args>
+  const T *get(Args &&...args);
 
   const SymbolConjured* conjureSymbol(const Stmt *E,
                                       const LocationContext *LCtx,
@@ -706,6 +706,19 @@ public:
   virtual bool VisitSymbol(SymbolRef sym) = 0;
   virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
+
+template <typename T, typename... Args>
+const T *SymbolManager::get(Args &&...args) {
+  llvm::FoldingSetNodeID profile;
+  T::Profile(profile, std::forward<Args>(args)...);
+  void *InsertPos;
+  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
+  if (!SD) {
+    SD = Alloc.make<T>(std::forward<Args>(args)...);
+    DataSet.InsertNode(SD, InsertPos);
+  }
+  return cast<T>(SD);
+}
 
 } // namespace ento
 

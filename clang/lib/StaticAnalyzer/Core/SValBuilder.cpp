@@ -143,7 +143,7 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion *region) {
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.getRegionValueSymbol(region);
+  SymbolRef sym = SymMgr.get<SymbolRegionValue>(region);
 
   if (Loc::isLocType(T))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
