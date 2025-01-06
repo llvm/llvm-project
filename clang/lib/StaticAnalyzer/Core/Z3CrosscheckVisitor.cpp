@@ -21,9 +21,10 @@
 
 #define DEBUG_TYPE "Z3CrosscheckOracle"
 
-// Queries retried at most `Z3CrosscheckMaxAttemptsPerQuery` number of times if
-// the `check()` call returns `UNDEF` for any reason. Each query is only counted
-// once for these statistics, the retries are not accounted for.
+// Queries attempted at most `Z3CrosscheckMaxAttemptsPerQuery` number of times.
+// Multiple `check()` calls might be called on the same query if previous
+// attempts of the same query resulted in UNSAT for any reason. Each query is
+// only counted once for these statistics, the retries are not accounted for.
 STATISTIC(NumZ3QueriesDone, "Number of Z3 queries done");
 STATISTIC(NumTimesZ3TimedOut, "Number of times Z3 query timed out");
 STATISTIC(NumTimesZ3ExhaustedRLimit,
