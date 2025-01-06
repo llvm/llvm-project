@@ -64,11 +64,23 @@ void test_builtin_reduce_min(float4 vf1, si8 vi1, u4 vu1) {
 
 void test_builtin_reduce_addf(float4 vf4, double4 vd4) {          
   // CHECK:      [[VF4:%.+]] = load <4 x float>, ptr %vf4.addr, align 16
-  // CHECK-NEXT: call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[VF4]])
+  // CHECK-NEXT: [[ARRF1:%.+]] = extractelement <4 x float> [[VF4]], i64 0
+  // CHECK-NEXT: [[ARRF2:%.+]] = extractelement <4 x float> [[VF4]], i64 1
+  // CHECK-NEXT: [[ADDF1:%.+]] = fadd float [[ARRF1]], [[ARRF2]]
+  // CHECK-NEXT: [[ARRF3:%.+]] = extractelement <4 x float> [[VF4]], i64 2
+  // CHECK-NEXT: [[ADDF2:%.+]] = fadd float [[ADDF1]], [[ARRF3]]
+  // CHECK-NEXT: [[ARRF4:%.+]] = extractelement <4 x float> [[VF4]], i64 3
+  // CHECK-NEXT: [[ADDF3:%.+]] = fadd float [[ADDF2]], [[ARRF4]]
   float r2 = __builtin_reduce_add(vf4);
 
   // CHECK:      [[VD4:%.+]] = load <4 x double>, ptr %vd4.addr, align 16
-  // CHECK-NEXT: call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[VD4]])
+  // CHECK-NEXT: [[ARR1:%.+]] = extractelement <4 x double> [[VD4]], i64 0
+  // CHECK-NEXT: [[ARR2:%.+]] = extractelement <4 x double> [[VD4]], i64 1
+  // CHECK-NEXT: [[ADD1:%.+]] = fadd double [[ARR1]], [[ARR2]]
+  // CHECK-NEXT: [[ARR3:%.+]] = extractelement <4 x double> [[VD4]], i64 2
+  // CHECK-NEXT: [[ADD2:%.+]] = fadd double [[ADD1]], [[ARR3]]
+  // CHECK-NEXT: [[ARR4:%.+]] = extractelement <4 x double> [[VD4]], i64 3
+  // CHECK-NEXT: [[ADD3:%.+]] = fadd double [[ADD2]], [[ARR4]]
   double r3 = __builtin_reduce_add(vd4);
 }
 
@@ -96,11 +108,23 @@ void test_builtin_reduce_add(si8 vi1, u4 vu1) {
 
 void test_builtin_reduce_mulf(float4 vf4, double4 vd4) {          
   // CHECK:      [[VF4:%.+]] = load <4 x float>, ptr %vf4.addr, align 16
-  // CHECK-NEXT: call float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[VF4]])
+  // CHECK-NEXT: [[ARRF1:%.+]] = extractelement <4 x float> [[VF4]], i64 0
+  // CHECK-NEXT: [[ARRF2:%.+]] = extractelement <4 x float> [[VF4]], i64 1
+  // CHECK-NEXT: [[MULF1:%.+]] = fmul float [[ARRF1]], [[ARRF2]]
+  // CHECK-NEXT: [[ARRF3:%.+]] = extractelement <4 x float> [[VF4]], i64 2
+  // CHECK-NEXT: [[MULF2:%.+]] = fmul float [[MULF1]], [[ARRF3]]
+  // CHECK-NEXT: [[ARRF4:%.+]] = extractelement <4 x float> [[VF4]], i64 3
+  // CHECK-NEXT: [[MULF3:%.+]] = fmul float [[MULF2]], [[ARRF4]]
   float r2 = __builtin_reduce_mul(vf4);
 
   // CHECK:      [[VD4:%.+]] = load <4 x double>, ptr %vd4.addr, align 16
-  // CHECK-NEXT: call double @llvm.vector.reduce.fmul.v4f64(double 1.000000e+00, <4 x double> [[VD4]])
+  // CHECK-NEXT: [[ARR1:%.+]] = extractelement <4 x double> [[VD4]], i64 0
+  // CHECK-NEXT: [[ARR2:%.+]] = extractelement <4 x double> [[VD4]], i64 1
+  // CHECK-NEXT: [[MUL1:%.+]] = fmul double [[ARR1]], [[ARR2]]
+  // CHECK-NEXT: [[ARR3:%.+]] = extractelement <4 x double> [[VD4]], i64 2
+  // CHECK-NEXT: [[MUL2:%.+]] = fmul double [[MUL1]], [[ARR3]]
+  // CHECK-NEXT: [[ARR4:%.+]] = extractelement <4 x double> [[VD4]], i64 3
+  // CHECK-NEXT: [[MUL3:%.+]] = fmul double [[MUL2]], [[ARR4]]
   double r3 = __builtin_reduce_mul(vd4);
 }
 

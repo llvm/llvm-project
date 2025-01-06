@@ -4315,33 +4315,37 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_reduce_add: {
-    // Note: vector_reduce_fadd takes two arguments a
-    // scalar start value and a vector. That would mean to
-    // correctly call it we would need emitBuiltinWithOneOverloadedType<2>
-    // To keep the  builtin sema behavior the same despite type we will
-    // popululate vector_reduce_fadd scalar value with a 0.
-    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
-      Value *X = EmitScalarExpr(E->getArg(0));
-      auto EltTy = X->getType()->getScalarType();
-      Value *Seed = ConstantFP::get(EltTy, -0.0);
-      return RValue::get(Builder.CreateIntrinsic(
-          /*ReturnType=*/EltTy, llvm::Intrinsic::vector_reduce_fadd,
-          ArrayRef<Value *>{Seed, X}, nullptr, "rdx.fadd"));
+    QualType QT = E->getArg(0)->getType();
+    if (QT->hasFloatingRepresentation()) {
+      Value *Op0 = EmitScalarExpr(E->getArg(0));
+      assert(Op0->getType()->isVectorTy());
+      unsigned VecSize = QT->getAs<VectorType>()->getNumElements();
+      Value *Sum = Builder.CreateExtractElement(Op0, static_cast<uint64_t>(0));
+      for (unsigned I = 1; I < VecSize; I++) {
+        Value *Elt = Builder.CreateExtractElement(Op0, I);
+        Sum = Builder.CreateFAdd(Sum, Elt);
+      }
+      return RValue::get(Sum);
     }
-    assert(E->getArg(0)->getType()->hasIntegerRepresentation());
+    assert(QT->hasIntegerRepresentation());
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_add, "rdx.add"));
   }
   case Builtin::BI__builtin_reduce_mul: {
-    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
-      Value *X = EmitScalarExpr(E->getArg(0));
-      auto EltTy = X->getType()->getScalarType();
-      Value *Seed = ConstantFP::get(EltTy, 1.0);
-      return RValue::get(Builder.CreateIntrinsic(
-          /*ReturnType=*/EltTy, llvm::Intrinsic::vector_reduce_fmul,
-          ArrayRef<Value *>{Seed, X}, nullptr, "rdx.fmul"));
+    QualType QT = E->getArg(0)->getType();
+    if (QT->hasFloatingRepresentation()) {
+      Value *Op0 = EmitScalarExpr(E->getArg(0));
+      assert(Op0->getType()->isVectorTy());
+      unsigned VecSize = QT->getAs<VectorType>()->getNumElements();
+      Value *Product =
+          Builder.CreateExtractElement(Op0, static_cast<uint64_t>(0));
+      for (unsigned I = 1; I < VecSize; I++) {
+        Value *Elt = Builder.CreateExtractElement(Op0, I);
+        Product = Builder.CreateFMul(Product, Elt);
+      }
+      return RValue::get(Product);
     }
-    assert(E->getArg(0)->getType()->hasIntegerRepresentation());
+    assert(QT->hasIntegerRepresentation());
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_mul, "rdx.mul"));
   }
