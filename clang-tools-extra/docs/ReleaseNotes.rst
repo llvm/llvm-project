@@ -164,7 +164,6 @@ New checks
   first argument.
 
 - New :doc:`modernize-use-integer-sign-comparison
-
   <clang-tidy/checks/modernize/use-integer-sign-comparison>` check.
 
   Replace comparisons between signed and unsigned integers with their safe

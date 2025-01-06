@@ -93,7 +93,7 @@ void SprintfArgumentOverlapCheck::check(
   diag(OtherArg->getBeginLoc(),
        "the %ordinal0 argument in %1 overlaps the 1st argument, "
        "which is undefined behavior")
-      << (*ArgIndex+1) << FnDecl << FirstArg->getSourceRange()
+      << (*ArgIndex + 1) << FnDecl << FirstArg->getSourceRange()
       << OtherArg->getSourceRange();
 }
 
