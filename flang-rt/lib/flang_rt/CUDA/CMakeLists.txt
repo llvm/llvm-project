@@ -1,4 +1,4 @@
-#===-- lib/CufRuntime/CMakeLists.txt ---------------------------------------===#
+#===-- lib/flang_rt/CUDA/CMakeLists.txt ------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
