@@ -224,6 +224,8 @@ class SymbolMetadata : public SymbolData {
   const Stmt *S;
   QualType T;
   const LocationContext *LCtx;
+  /// Count can be used to differentiate regions corresponding to
+  /// different loop iterations, thus, making the symbol path-dependent.
   unsigned Count;
   const void *Tag;
 
@@ -542,16 +544,6 @@ public:
                                       const void *SymbolTag = nullptr) {
     return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
   }
-
-  /// Creates a metadata symbol associated with a specific region.
-  ///
-  /// VisitCount can be used to differentiate regions corresponding to
-  /// different loop iterations, thus, making the symbol path-dependent.
-  const SymbolMetadata *getMetadataSymbol(const MemRegion *R, const Stmt *S,
-                                          QualType T,
-                                          const LocationContext *LCtx,
-                                          unsigned VisitCount,
-                                          const void *SymbolTag = nullptr);
 
   const SymbolCast* getCastSymbol(const SymExpr *Operand,
                                   QualType From, QualType To);
