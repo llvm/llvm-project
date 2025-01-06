@@ -57,11 +57,9 @@ SanitizerMask clang::parseSanitizerWeightedValue(StringRef Value,
         // hence we unconditionally expandSanitizerGroups.
         SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
 
-        for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
-          if (ExpandedKind & SanitizerMask::bitPosToMask(i)) {
+        for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
+          if (ExpandedKind & SanitizerMask::bitPosToMask(i))
             Weights[i] = arg;
-          }
-        }
       }
     }
   }

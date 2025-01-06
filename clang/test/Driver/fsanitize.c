@@ -1154,3 +1154,19 @@
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,undefined  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-UBSAN
 // CHECK-REALTIME-UBSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=undefined'
+
+
+// -fno-sanitize-top-hot
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TOP-HOT
+// CHECK-UNDEFINED-TOP-HOT: "-fno-sanitize-top-hot={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.5(0*),?){19}"}}
+
+// If no sanitizers are enabled, -fno-sanitize-top-hot is not passed
+// RUN: %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TOP-HOT2
+// CHECK-UNDEFINED-TOP-HOT2-NOT: "-fno-sanitize-top-hot"
+
+// Threshold of 0.0 cancels out the flag
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TOP-HOT3
+// CHECK-UNDEFINED-TOP-HOT3: "-fno-sanitize-top-hot={{((unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.5(0*),?){15}"}}
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0,signed-integer-overflow=0.7 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TOP-HOT4
+// CHECK-UNDEFINED-TOP-HOT4: "-fno-sanitize-top-hot={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=(0.5|0.7)(0*),?){16}"}}
