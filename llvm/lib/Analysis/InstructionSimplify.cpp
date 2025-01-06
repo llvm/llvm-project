@@ -4284,6 +4284,10 @@ static Value *simplifyWithOpsReplaced(Value *V,
   assert((AllowRefinement || !Q.CanUseUndef) &&
          "If AllowRefinement=false then CanUseUndef=false");
   for (const auto &OpAndRepOp : Ops) {
+    // We cannot replace a constant, and shouldn't even try.
+    if (isa<Constant>(OpAndRepOp.first))
+      return nullptr;
+
     // Trivial replacement.
     if (V == OpAndRepOp.first)
       return OpAndRepOp.second;
@@ -4309,30 +4313,20 @@ static Value *simplifyWithOpsReplaced(Value *V,
   if (isa<FreezeInst>(I))
     return nullptr;
 
-  SmallVector<std::pair<Value *, Value *>> ValidReplacements{};
   for (const auto &OpAndRepOp : Ops) {
-    // We cannot replace a constant, and shouldn't even try.
-    if (isa<Constant>(OpAndRepOp.first))
-      return nullptr;
-
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
     if (OpAndRepOp.first->getType()->isVectorTy() &&
         !isNotCrossLaneOperation(I))
-      continue;
-    ValidReplacements.emplace_back(OpAndRepOp);
+      return nullptr;
   }
-
-  if (ValidReplacements.empty())
-    return nullptr;
 
   // Replace Op with RepOp in instruction operands.
   SmallVector<Value *, 8> NewOps;
   bool AnyReplaced = false;
   for (Value *InstOp : I->operands()) {
-    if (Value *NewInstOp =
-            simplifyWithOpsReplaced(InstOp, ValidReplacements, Q,
-                                    AllowRefinement, DropFlags, MaxRecurse)) {
+    if (Value *NewInstOp = simplifyWithOpsReplaced(
+            InstOp, Ops, Q, AllowRefinement, DropFlags, MaxRecurse)) {
       NewOps.push_back(NewInstOp);
       AnyReplaced = InstOp != NewInstOp;
     } else {
@@ -4383,9 +4377,8 @@ static Value *simplifyWithOpsReplaced(Value *V,
       // by assumption and this case never wraps, so nowrap flags can be
       // ignored.
       if ((Opcode == Instruction::Sub || Opcode == Instruction::Xor) &&
-          any_of(ValidReplacements, [=](const auto &Rep) {
-            return NewOps[0] == NewOps[1] && NewOps[0] == Rep.second;
-          }))
+          NewOps[0] == NewOps[1] &&
+          any_of(Ops, [=](const auto &Rep) { return NewOps[0] == Rep.second; }))
         return Constant::getNullValue(I->getType());
 
       // If we are substituting an absorber constant into a binop and extra
@@ -4397,7 +4390,7 @@ static Value *simplifyWithOpsReplaced(Value *V,
       // (Op == -1) ? -1 : (Op | (binop C, Op) --> Op | (binop C, Op)
       Constant *Absorber = ConstantExpr::getBinOpAbsorber(Opcode, I->getType());
       if ((NewOps[0] == Absorber || NewOps[1] == Absorber) &&
-          any_of(ValidReplacements,
+          any_of(Ops,
                  [=](const auto &Rep) { return impliesPoison(BO, Rep.first); }))
         return Absorber;
     }

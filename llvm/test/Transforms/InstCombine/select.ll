@@ -4831,11 +4831,8 @@ define i32 @replace_and_cond_multiuse2(i1 %cond1, i1 %cond2) {
 
 define i32 @src_simplify_2x_at_once_and(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_simplify_2x_at_once_and(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND0:%.*]] = icmp eq i32 [[AND]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[AND0]], i32 0, i32 [[XOR]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %and = and i32 %x, %y
   %and0 = icmp eq i32 %and, -1
