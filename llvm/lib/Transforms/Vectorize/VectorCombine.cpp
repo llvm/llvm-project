@@ -3106,7 +3106,7 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   if (!Ext->hasOneUse())
     NewCost += ExtCost;
 
-  LLVM_DEBUG(dbgs() << "Found a insert/extract shuffle-like pair : " << I
+  LLVM_DEBUG(dbgs() << "Found a insert/extract shuffle-like pair: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
 
