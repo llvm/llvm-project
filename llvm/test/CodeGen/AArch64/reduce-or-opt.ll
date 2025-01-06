@@ -93,24 +93,24 @@ notfound:
 define i64 @select_or_reduce_nxv2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: select_or_reduce_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x10, xzr
-; CHECK-NEXT:    neg x8, x9
-; CHECK-NEXT:    add x11, x8, #4
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    neg x10, x8
+; CHECK-NEXT:    add x10, x10, #4
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x10, lsl #3]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x9, lsl #3]
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    b.ne .LBB2_3
 ; CHECK-NEXT:  // %bb.2: // %vector.body
 ; CHECK-NEXT:    // in Loop: Header=BB2_1 Depth=1
-; CHECK-NEXT:    cmp x11, x10
-; CHECK-NEXT:    add x10, x10, x9
+; CHECK-NEXT:    cmp x10, x9
+; CHECK-NEXT:    add x9, x9, x8
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  .LBB2_3: // %middle.split
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %vscale = tail call i64 @llvm.vscale.i64()
@@ -145,7 +145,6 @@ define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x9, lsl #3]
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    cset w11, ne
 ; CHECK-NEXT:    b.ne .LBB3_3
 ; CHECK-NEXT:  // %bb.2: // %vector.body
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
@@ -153,7 +152,8 @@ define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef
 ; CHECK-NEXT:    add x9, x9, x8
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  .LBB3_3: // %middle.split
-; CHECK-NEXT:    tbz w11, #0, .LBB3_5
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    b.eq .LBB3_5
 ; CHECK-NEXT:  // %bb.4: // %found
 ; CHECK-NEXT:    mov w8, #56 // =0x38
 ; CHECK-NEXT:    mov w0, #1 // =0x1

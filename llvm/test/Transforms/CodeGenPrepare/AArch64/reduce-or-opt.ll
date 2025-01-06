@@ -105,7 +105,9 @@ define i64 @select_or_reduce_nxv2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = or i1 [[OR_REDUC]], [[IV_CMP]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_SPLIT]]:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[OR_REDUC]], i64 1, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP2]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP3]], i64 1, i64 0
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
 entry:
@@ -147,7 +149,9 @@ define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = or i1 [[OR_REDUC]], [[IV_CMP]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_SPLIT]]:
-; CHECK-NEXT:    br i1 [[OR_REDUC]], label %[[FOUND:.*]], label %[[NOTFOUND:.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP2]])
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOUND:.*]], label %[[NOTFOUND:.*]]
 ; CHECK:       [[FOUND]]:
 ; CHECK-NEXT:    store i64 56, ptr [[P]], align 8
 ; CHECK-NEXT:    ret i64 1
