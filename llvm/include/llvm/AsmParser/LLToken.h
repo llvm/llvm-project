@@ -497,10 +497,12 @@ enum Kind {
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
   DbgRecordType,    // dbg_foo
+  FloatLiteral,     // Unparsed float literal
 
   // Type valued tokens (TyVal).
   Type,
 
+  FloatHexLiteral,  // f0x..., stored as APSInt
   APFloat, // APFloatVal
   APSInt   // APSInt
 };
