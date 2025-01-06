@@ -1438,10 +1438,10 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
 
 static void parseSanitizerWeightedKinds(
     StringRef FlagName, const std::vector<std::string> &Sanitizers,
-    DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskWeights *Weights) {
+    DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskCutoffs *Cutoffs) {
   for (const auto &Sanitizer : Sanitizers) {
     SanitizerMask K =
-        parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Weights);
+        parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs);
     if (K == SanitizerMask())
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
     else
@@ -1810,7 +1810,7 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
   SmallVector<std::string, 4> Values;
-  serializeSanitizerMaskWeights(Opts.NoSanitizeTopHotWeights, Values);
+  serializeSanitizerMaskCutoffs(Opts.NoSanitizeTopHotCutoffs, Values);
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fno_sanitize_top_hot_EQ, Sanitizer);
 
@@ -2299,7 +2299,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
                               Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
                               Diags, Opts.NoSanitizeTopHot,
-                              &Opts.NoSanitizeTopHotWeights);
+                              &Opts.NoSanitizeTopHotCutoffs);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

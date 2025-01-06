@@ -384,13 +384,13 @@ public:
   /// the expense of debuggability).
   SanitizerSet SanitizeMergeHandlers;
 
-  /// Set of thresholds, specifying the top hottest fraction of code to be
-  /// excluded from sanitization (0.0 = skip none, 0.1 = skip hottest 10%,
-  /// 1.0 = skip all).
+  /// Set of thresholds: the top hottest code responsible for the given
+  /// fraction of PGO counters will be excluded from sanitization
+  /// (0.0 [default] = skip none, 1.0 = skip all).
   SanitizerSet NoSanitizeTopHot;
-  /// N.B. The weights contain strictly more information than the SanitizerSet,
+  /// N.B. The cutoffs contain strictly more information than the SanitizerSet,
   /// but the SanitizerSet is more efficient for some calculations.
-  SanitizerMaskWeights NoSanitizeTopHotWeights = {0};
+  SanitizerMaskCutoffs NoSanitizeTopHotCutoffs = {0};
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;

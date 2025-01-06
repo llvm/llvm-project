@@ -38,7 +38,7 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
 
 SanitizerMask
 clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
-                                   SanitizerMaskWeights *Weights) {
+                                   SanitizerMaskCutoffs *Cutoffs) {
   SanitizerMask ParsedKind = llvm::StringSwitch<SanitizerMask>(Value)
 #define SANITIZER(NAME, ID) .StartsWith(NAME "=", SanitizerKind::ID)
 #define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
@@ -47,7 +47,7 @@ clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
 #include "clang/Basic/Sanitizers.def"
                                  .Default(SanitizerMask());
 
-  if (ParsedKind && Weights) {
+  if (ParsedKind && Cutoffs) {
     size_t equalsIndex = Value.find_first_of('=');
     if (equalsIndex != llvm::StringLiteral::npos) {
       double arg;
@@ -59,7 +59,7 @@ clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
 
         for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
           if (ExpandedKind & SanitizerMask::bitPosToMask(i))
-            (*Weights)[i] = arg;
+            (*Cutoffs)[i] = arg;
       }
     }
   }
@@ -75,12 +75,12 @@ void clang::serializeSanitizerSet(SanitizerSet Set,
 #include "clang/Basic/Sanitizers.def"
 }
 
-void clang::serializeSanitizerMaskWeights(
-    const SanitizerMaskWeights Weights, SmallVectorImpl<std::string> &Values) {
+void clang::serializeSanitizerMaskCutoffs(
+    const SanitizerMaskCutoffs Cutoffs, SmallVectorImpl<std::string> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
-  if (Weights[SanitizerKind::SO_##ID])                                         \
+  if (Cutoffs[SanitizerKind::SO_##ID])                                         \
     Values.push_back(std::string(NAME "=") +                                   \
-                     std::to_string(Weights[SanitizerKind::SO_##ID]));
+                     std::to_string(Cutoffs[SanitizerKind::SO_##ID]));
 #include "clang/Basic/Sanitizers.def"
 }
 

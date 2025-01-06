@@ -2652,8 +2652,10 @@ def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-unde
 def fno_sanitize_top_hot_EQ
     : CommaJoined<["-"], "fno-sanitize-top-hot=">,
       Group<f_clang_Group>,
-      HelpText<"Exclude sanitization for the top hottest fraction of code "
-               "(0.0 [default] = skip none; 0.1 = skip hottest 10%; 1.0 = skip all)">;
+      HelpText<"Exclude sanitization for the top hottest code responsible for "
+               "the given fraction of PGO counters "
+               "(0.0 [default] = skip none; 1.0 = skip all). "
+               "Argument format: <sanitizer1>=,<sanitizer2>=,...">;
 
 } // end -f[no-]sanitize* flags
 

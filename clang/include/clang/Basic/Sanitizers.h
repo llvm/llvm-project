@@ -154,7 +154,7 @@ struct SanitizerKind {
 #include "clang/Basic/Sanitizers.def"
 }; // SanitizerKind
 
-using SanitizerMaskWeights = std::array<float, SanitizerKind::SO_Count>;
+using SanitizerMaskCutoffs = std::array<float, SanitizerKind::SO_Count>;
 
 struct SanitizerSet {
   /// Check if a certain (single) sanitizer is enabled.
@@ -192,18 +192,18 @@ SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 /// -fno-sanitize= value list.
 /// Returns a non-zero SanitizerMask, or \c 0 if \p Value is not known.
 /// The relevant weight(s) are updated in the passed array.
-/// Individual weights are never reset to zero unless explicitly set
+/// Individual Cutoffs are never reset to zero unless explicitly set
 /// (e.g., 'null=0.0').
 SanitizerMask parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
-                                          SanitizerMaskWeights *Weights);
+                                          SanitizerMaskCutoffs *Cutoffs);
 
 /// Serialize a SanitizerSet into values for -fsanitize= or -fno-sanitize=.
 void serializeSanitizerSet(SanitizerSet Set,
                            SmallVectorImpl<StringRef> &Values);
 
-/// Serialize a SanitizerMaskWeights into values for -fsanitize= or
+/// Serialize a SanitizerMaskCutoffs into values for -fsanitize= or
 /// -fno-sanitize=.
-void serializeSanitizerMaskWeights(const SanitizerMaskWeights Weights,
+void serializeSanitizerMaskCutoffs(const SanitizerMaskCutoffs Cutoffs,
                                    SmallVectorImpl<std::string> &Values);
 
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers
