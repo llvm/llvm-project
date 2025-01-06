@@ -41,7 +41,6 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -1854,9 +1853,6 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
         return false;
     }
   }
-
-  if (Context.getTargetInfo().getTriple().isAArch64())
-    ARM().CheckSMEFunctionDefAttributes(NewFD);
 
   // - each of its parameter types shall be a literal type; (removed in C++23)
   if (!getLangOpts().CPlusPlus23 &&
