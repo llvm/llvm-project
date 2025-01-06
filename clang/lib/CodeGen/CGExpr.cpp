@@ -3602,7 +3602,6 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
-  bool SanitizeGuardChecks = ClSanitizeGuardChecks;
   for (int i = 0, n = Checked.size(); i < n; ++i) {
     llvm::Value *Check = Checked[i].first;
     // -fsanitize-trap= overrides -fsanitize-recover=.
@@ -3616,12 +3615,9 @@ void CodeGenFunction::EmitCheck(
 
     if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Checked[i].second))
       NoMerge = true;
-
-    if (!CGM.getCodeGenOpts().NoSanitizeTopHot.has(Checked[i].second))
-      SanitizeGuardChecks = true;
   }
 
-  if (SanitizeGuardChecks) {
+  if (ClSanitizeGuardChecks) {
     llvm::Value *Allow =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
                            llvm::ConstantInt::get(CGM.Int8Ty, CheckHandler));
