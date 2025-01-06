@@ -157,10 +157,6 @@ Counter CounterExpressionBuilder::subst(Counter C, const SubstMap &Map) {
     break;
   }
 
-  // Reconfirm if the reconstructed expression would hit the Map.
-  if (auto I = Map.find(C); I != Map.end())
-    return I->second;
-
   return C;
 }
 
