@@ -70,7 +70,6 @@ add_llvm_unittest(SupportTests
   PrefixMapperTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
-  RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp
