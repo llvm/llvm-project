@@ -335,19 +335,11 @@ define i64 @add_shl_moreOneUse_sh4add(i64 %x) {
 }
 
 define i64 @add_shl_rhs_constant(i64 %x, i64 %y) {
-; NO-ZBA-LABEL: add_shl_rhs_constant:
-; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    add a0, a0, a1
-; NO-ZBA-NEXT:    slli a0, a0, 3
-; NO-ZBA-NEXT:    ret
-;
-; ZBA-LABEL: add_shl_rhs_constant:
-; ZBA:       # %bb.0:
-; ZBA-NEXT:    add a0, a0, a1
-; ZBA-NEXT:    addi a0, a0, 1
-; ZBA-NEXT:    slli a0, a0, 3
-; ZBA-NEXT:    addi a0, a0, -8
-; ZBA-NEXT:    ret
+; RV64-LABEL: add_shl_rhs_constant:
+; RV64:       # %bb.0:
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    ret
   %a = add i64 %x, 1
   %b = add i64 %y, %a
   %c = shl i64 %b, 3

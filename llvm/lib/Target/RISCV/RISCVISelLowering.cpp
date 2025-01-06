@@ -18391,7 +18391,8 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     if (Subtarget.hasStdExtZba() && C2->getZExtValue() >= 1 &&
         C2->getZExtValue() <= 3 && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
-        !isUsedByLdSt(*N->user_begin(), nullptr))
+        !isUsedByLdSt(*N->user_begin(), nullptr) &&
+        !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
       return false;
 
     if (C1 && C2) {
