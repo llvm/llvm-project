@@ -314,6 +314,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasDeducedType);
   REGISTER_MATCHER(hasDefaultArgument);
   REGISTER_MATCHER(hasDefinition);
+  REGISTER_MATCHER(hasDependentName);
   REGISTER_MATCHER(hasDescendant);
   REGISTER_MATCHER(hasDestinationType);
   REGISTER_MATCHER(hasDirectBase);
