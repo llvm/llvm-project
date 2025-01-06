@@ -6095,10 +6095,11 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
       if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION) {
         assert(isa<FunctionDecl>(D) && "expected FunctionDecl");
         HasUpdatedBody = cast<FunctionDecl>(D)->hasBody();
-      } else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION)
+      } else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION) {
         HasAddedVarDefinition = true;
-      else
+      } else {
         Record.push_back(Kind);
+      }
 
       switch (Kind) {
       case UPD_CXX_ADDED_IMPLICIT_MEMBER:
