@@ -163,21 +163,6 @@ void SymExpr::symbol_iterator::expand() {
   llvm_unreachable("unhandled expansion case");
 }
 
-const SymbolCast*
-SymbolManager::getCastSymbol(const SymExpr *Op,
-                             QualType From, QualType To) {
-  llvm::FoldingSetNodeID ID;
-  SymbolCast::Profile(ID, Op, From, To);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-  if (!data) {
-    data = Alloc.make<SymbolCast>(Op, From, To);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<SymbolCast>(data);
-}
-
 const SymIntExpr *SymbolManager::getSymIntExpr(const SymExpr *lhs,
                                                BinaryOperator::Opcode op,
                                                APSIntPtr v, QualType t) {

@@ -545,9 +545,6 @@ public:
     return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
   }
 
-  const SymbolCast* getCastSymbol(const SymExpr *Operand,
-                                  QualType From, QualType To);
-
   const SymIntExpr *getSymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
                                   APSIntPtr rhs, QualType t);
 
