@@ -61,7 +61,7 @@ def main():
 
     if not header.template_file:
         sys.stderr.write(f"{yaml_file}: Missing header_template\n")
-        sys.exit(2)
+        return 2
 
     # The header_template path is relative to the containing YAML file.
     template_path = yaml_file.parent / header.template_file
@@ -78,4 +78,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
