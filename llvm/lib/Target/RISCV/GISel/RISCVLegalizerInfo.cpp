@@ -1341,15 +1341,14 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_ADD: {
     Helper.Observer.changingInstr(MI);
-    Helper.widenScalarSrc(MI, LLT::scalar(64), 1, TargetOpcode::G_ANYEXT);
-    Helper.widenScalarSrc(MI, LLT::scalar(64), 2, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
 
     Register DstALU = MRI.createGenericVirtualRegister(sXLen);
-    Register DstSext = MRI.createGenericVirtualRegister(sXLen);
 
     MachineOperand &MO = MI.getOperand(0);
     MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
-    MIRBuilder.buildSExtInReg(DstSext, DstALU, 32);
+    auto DstSext = MIRBuilder.buildSExtInReg(sXLen, DstALU, 32);
 
     MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, {MO}, {DstSext});
     MO.setReg(DstALU);
