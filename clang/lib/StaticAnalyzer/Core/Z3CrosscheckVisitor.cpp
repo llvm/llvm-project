@@ -99,7 +99,7 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
 
   // And check for satisfiability
   unsigned MinQueryTimeAcrossAttempts = std::numeric_limits<unsigned>::max();
-  for (unsigned I = 0; I <= Opts.Z3CrosscheckMaxAttemptsPerQuery; ++I) {
+  for (unsigned I = 0; I < Opts.Z3CrosscheckMaxAttemptsPerQuery; ++I) {
     Result = AttemptOnce(RefutationSolver);
     Result.Z3QueryTimeMilliseconds =
         std::min(MinQueryTimeAcrossAttempts, Result.Z3QueryTimeMilliseconds);
