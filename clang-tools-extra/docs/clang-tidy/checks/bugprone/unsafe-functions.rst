@@ -118,8 +118,12 @@ fully qualified name (``::std::original``).
 
    Fully qualified names can contain template parameters on certain C++ classes, but not on C++ functions.
    Type aliases are resolved before matching.
+
    As an example, the member function ``open`` in the class ``std::ifstream``
    has a fully qualified name of ``::std::basic_ifstream<char>::open``.
+
+   The example could also be matched with the regex ``::std::basic_ifstream<[^>]*>::open``, which matches all potential
+   template parameters, but does not match nested template classes.
 
 Options
 -------
