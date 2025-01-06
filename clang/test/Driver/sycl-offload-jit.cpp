@@ -3,7 +3,7 @@
 /// Check the phases graph with -fsycl. Use of -fsycl enables offload
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-PHASES %s
-// RUN: %clang_cl -ccc-print-phases --target=x86_64-pc-windows-msvc -fsycl %s 2>&1 \
+// RUN: %clang_cl -ccc-print-phases --target=x86_64-pc-windows-msvc -fsycl -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-PHASES %s
 // CHK-PHASES: 0: input, "[[INPUT:.+\.cpp]]", c++, (host-sycl)
 // CHK-PHASES-NEXT: 1: preprocessor, {0}, c++-cpp-output, (host-sycl)
@@ -35,7 +35,7 @@
 // RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST %s
 // RUN: %clang -### -fsycl -fsycl-device-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-DEVICE %s
-// RUN: %clang_cl -### -fsycl -c %s 2>&1 \
+// RUN: %clang_cl -### -fsycl -c -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST %s
 // RUN: %clang -### -fsycl -fsycl-host-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-HOST %s
