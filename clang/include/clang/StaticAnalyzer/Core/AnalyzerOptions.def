@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(LLVM_ADT_STRINGREF_H) || !defined(LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H)
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
 #error This .def file is expected to be included in translation units where \
-"llvm/ADT/StringRef.h" and "clang/StaticAnalyzer/Core/AnalyzerOptions.h" are \
-already included!
+"clang/StaticAnalyzer/Core/AnalyzerOptions.h" is already included!
 #endif
 
 #ifdef ANALYZER_OPTION
