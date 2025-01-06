@@ -417,6 +417,7 @@ public:
   void VisitOpenACCHostDataConstruct(const OpenACCHostDataConstruct *S);
   void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S);
   void VisitOpenACCInitConstruct(const OpenACCInitConstruct *S);
+  void VisitOpenACCSetConstruct(const OpenACCSetConstruct *S);
   void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *S);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
   void VisitEmbedExpr(const EmbedExpr *S);

@@ -1082,13 +1082,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         return OpenACCCanContinue();
       }
 
-      // TODO OpenACC: as we implement the 'rest' of the above, this 'if' should
-      // be removed leaving just the 'setIntExprDetails'.
-      if (ClauseKind == OpenACCClauseKind::NumWorkers ||
-          ClauseKind == OpenACCClauseKind::DeviceNum ||
-          ClauseKind == OpenACCClauseKind::VectorLength)
-        ParsedClause.setIntExprDetails(IntExpr.get());
-
+      ParsedClause.setIntExprDetails(IntExpr.get());
       break;
     }
     case OpenACCClauseKind::DType:

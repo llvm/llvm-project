@@ -340,7 +340,7 @@ let FPDPRounding = 1 in {
 
   let SubtargetPredicate = isGFX9Plus in {
     defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst_t16 <"v_div_fixup_f16_gfx9", VOP_F16_F16_F16_F16, AMDGPUdiv_fixup>;
-    defm V_FMA_F16_gfx9 : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, any_fma>;
+    defm V_FMA_F16_gfx9 : VOP3Inst_t16 <"v_fma_f16_gfx9", VOP_F16_F16_F16_F16, any_fma>;
   } // End SubtargetPredicate = isGFX9Plus
 } // End FPDPRounding = 1
 
@@ -1708,7 +1708,7 @@ defm V_PERM_B32            : VOP3_Realtriple_gfx11_gfx12<0x244>;
 defm V_XAD_U32             : VOP3_Realtriple_gfx11_gfx12<0x245>;
 defm V_LSHL_ADD_U32        : VOP3_Realtriple_gfx11_gfx12<0x246>;
 defm V_ADD_LSHL_U32        : VOP3_Realtriple_gfx11_gfx12<0x247>;
-defm V_FMA_F16             : VOP3_Realtriple_with_name_gfx11_gfx12<0x248, "V_FMA_F16_gfx9", "v_fma_f16">;
+defm V_FMA_F16             : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x248, "v_fma_f16", "V_FMA_F16_gfx9">;
 defm V_MIN3_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx11<0x249, "v_min3_f16">;
 defm V_MIN3_I16            : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x24a, "v_min3_i16">;
 defm V_MIN3_U16            : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x24b, "v_min3_u16">;
