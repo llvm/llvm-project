@@ -1068,8 +1068,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
           Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
                      RISCV::VFSQRT_V,         RISCV::VFSQRT_V,
                      RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
-          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT,
-                                        NVT.getHalfNumVectorElementsVT());
+          NVT = MVT::nxv16f32;
         } else {
           Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
                      RISCV::VFNCVTBF16_F_F_W};
@@ -1081,8 +1080,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
           Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
                      RISCV::VFSQRT_V,     RISCV::VFSQRT_V,
                      RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
-          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT,
-                                        NVT.getHalfNumVectorElementsVT());
+          NVT = NVT = MVT::nxv16f32;
         } else {
           Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
           NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
