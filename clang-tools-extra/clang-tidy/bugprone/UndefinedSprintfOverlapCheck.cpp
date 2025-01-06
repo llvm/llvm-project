@@ -58,34 +58,43 @@ void UndefinedSprintfOverlapCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
                hasArgument(0, expr().bind("firstArgExpr")),
                forEachArgument(expr(unless(equalsBoundNode("firstArgExpr")))
-                                   .bind("secondArgExpr"))),
+                                   .bind("otherArgExpr")))
+          .bind("call"),
       this);
 }
 
 void UndefinedSprintfOverlapCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *FirstArg = Result.Nodes.getNodeAs<Expr>("firstArgExpr");
-  const auto *SecondArg = Result.Nodes.getNodeAs<Expr>("secondArgExpr");
+  const auto *OtherArg = Result.Nodes.getNodeAs<Expr>("otherArgExpr");
+  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   const auto *FnDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
 
   clang::ASTContext &Context = *Result.Context;
 
-  if (!FirstArg || !SecondArg)
+  if (!FirstArg || !OtherArg || !Call || !FnDecl)
     return;
 
-  if (!utils::areStatementsIdentical(FirstArg, SecondArg, Context))
+  if (!utils::areStatementsIdentical(FirstArg, OtherArg, Context))
     return;
-  if (FirstArg->HasSideEffects(Context) || SecondArg->HasSideEffects(Context))
+  if (FirstArg->HasSideEffects(Context) || OtherArg->HasSideEffects(Context))
     return;
 
-  const llvm::StringRef FirstArgText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(FirstArg->getSourceRange()),
-      *Result.SourceManager, getLangOpts());
+  std::optional<unsigned> ArgNumber;
+  for (unsigned I = 0; I != Call->getNumArgs(); ++I) {
+    if (Call->getArg(I)->IgnoreUnlessSpelledInSource() == OtherArg) {
+      ArgNumber = I;
+      break;
+    }
+  }
+  if (!ArgNumber)
+    return;
 
-  diag(SecondArg->getBeginLoc(), "argument '%0' overlaps the first argument in "
-                                 "%1, which is undefined behavior")
-      << FirstArgText << FnDecl << FirstArg->getSourceRange()
-      << SecondArg->getSourceRange();
+  diag(OtherArg->getBeginLoc(),
+       "the %ordinal0 argument in %1 overlaps the 1st argument, "
+       "which is undefined behavior")
+      << *ArgNumber << FnDecl << FirstArg->getSourceRange()
+      << OtherArg->getSourceRange();
 }
 
 void UndefinedSprintfOverlapCheck::storeOptions(
