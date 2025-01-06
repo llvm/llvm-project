@@ -331,15 +331,14 @@ void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
       }
 }
 
-bool FunctionImportGlobalProcessing::run() {
+void FunctionImportGlobalProcessing::run() {
   processGlobalsForThinLTO();
-  return false;
 }
 
-bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
                                                    ClearDSOLocalOnDeclarations);
-  return ThinLTOProcessing.run();
+  ThinLTOProcessing.run();
 }
