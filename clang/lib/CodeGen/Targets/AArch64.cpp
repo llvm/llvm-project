@@ -662,7 +662,7 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
 
 bool AArch64ABIInfo::passAsAggregateType(QualType Ty) const {
   if (Kind == AArch64ABIKind::AAPCS && Ty->isSVESizelessBuiltinType()) {
-    const auto *BT = Ty->getAs<BuiltinType>();
+    const auto *BT = Ty->castAs<BuiltinType>();
     return !BT->isSVECount() &&
            getContext().getBuiltinVectorTypeInfo(BT).NumVectors > 1;
   }

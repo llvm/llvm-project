@@ -839,6 +839,35 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   if (OptimizeOverflowCheck(WO->getBinaryOp(), WO->isSigned(), WO->getLHS(),
                             WO->getRHS(), *WO, OperationResult, OverflowResult))
     return createOverflowTuple(WO, OperationResult, OverflowResult);
+
+  // See whether we can optimize the overflow check with assumption information.
+  for (User *U : WO->users()) {
+    if (!match(U, m_ExtractValue<1>(m_Value())))
+      continue;
+
+    for (auto &AssumeVH : AC.assumptionsFor(U)) {
+      if (!AssumeVH)
+        continue;
+      CallInst *I = cast<CallInst>(AssumeVH);
+      if (!match(I->getArgOperand(0), m_Not(m_Specific(U))))
+        continue;
+      if (!isValidAssumeForContext(I, II, /*DT=*/nullptr,
+                                   /*AllowEphemerals=*/true))
+        continue;
+      Value *Result =
+          Builder.CreateBinOp(WO->getBinaryOp(), WO->getLHS(), WO->getRHS());
+      Result->takeName(WO);
+      if (auto *Inst = dyn_cast<Instruction>(Result)) {
+        if (WO->isSigned())
+          Inst->setHasNoSignedWrap();
+        else
+          Inst->setHasNoUnsignedWrap();
+      }
+      return createOverflowTuple(WO, Result,
+                                 ConstantInt::getFalse(U->getType()));
+    }
+  }
+
   return nullptr;
 }
 
