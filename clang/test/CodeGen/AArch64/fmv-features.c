@@ -4,10 +4,8 @@
 // RUN: %clang --target=aarch64-linux-gnu --rtlib=compiler-rt -emit-llvm -S -o - %s | FileCheck %s
 
 // CHECK: define dso_local i32 @fmv._Maes() #[[aes:[0-9]+]] {
-__attribute__((target_version("aes"))) int fmv(void) { return 0; }
-
 // CHECK: define dso_local i32 @fmv._Mbf16() #[[bf16:[0-9]+]] {
-__attribute__((target_version("bf16"))) int fmv(void) { return 0; }
+__attribute__((target_clones("aes", "bf16"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mbti() #[[bti:[0-9]+]] {
 __attribute__((target_version("bti"))) int fmv(void) { return 0; }
