@@ -1,5 +1,4 @@
-//===- SemaSPIRV.cpp - Semantic Analysis for SPIRV constructs
-//---------------===//
+//===- SemaSPIRV.cpp - Semantic Analysis for SPIRV constructs--------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +18,6 @@ SemaSPIRV::SemaSPIRV(Sema &S) : SemaBase(S) {}
 
 bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
                                               CallExpr *TheCall) {
-  // position of memory order and scope arguments in the builtin
   switch (BuiltinID) {
   case SPIRV::BI__builtin_spirv_distance: {
     if (SemaRef.checkArgCount(TheCall, 2))
