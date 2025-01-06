@@ -30,8 +30,8 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
 }
 
 // Unsupported options for SYCL device compilation.
-static ArrayRef<OptSpecifier> getUnsupportedOpts() {
-  static constexpr OptSpecifier UnsupportedOpts[] = {
+static ArrayRef<options::ID> getUnsupportedOpts() {
+  static constexpr options::ID UnsupportedOpts[] = {
       options::OPT_fsanitize_EQ,      // -fsanitize
       options::OPT_fcf_protection_EQ, // -fcf-protection
       options::OPT_fprofile_generate,
@@ -52,7 +52,8 @@ static ArrayRef<OptSpecifier> getUnsupportedOpts() {
       options::OPT_fprofile_instr_use_EQ,       // -fprofile-instr-use
       options::OPT_forder_file_instrumentation, // -forder-file-instrumentation
       options::OPT_fcs_profile_generate,        // -fcs-profile-generate
-      options::OPT_fcs_profile_generate_EQ};
+      options::OPT_fcs_profile_generate_EQ,
+  };
   return UnsupportedOpts;
 }
 
