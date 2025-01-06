@@ -15078,12 +15078,16 @@ int16_t test_vqmovns_s32(int32_t a) {
 //   return (uint64_t)vcaltd_f64(a, b);
 // }
 
-// NYI-LABEL: @test_vshrd_n_s64(
-// NYI:   [[SHRD_N:%.*]] = ashr i64 %a, 1
-// NYI:   ret i64 [[SHRD_N]]
-// int64_t test_vshrd_n_s64(int64_t a) {
-//   return (int64_t)vshrd_n_s64(a, 1);
-// }
+int64_t test_vshrd_n_s64(int64_t a) {
+  return (int64_t)vshrd_n_s64(a, 1);
+
+  // CIR-LABEL: vshrd_n_s64
+  // CIR: {{%.*}} = cir.shift(right, {{%.*}} : !s64i, {{%.*}} : !s64i) -> !s64i
+
+  // LLVM-LABEL: @test_vshrd_n_s64(
+  // LLVM:   [[SHRD_N:%.*]] = ashr i64 %0, 1
+  // LLVM:   ret i64 [[SHRD_N]]
+}
 
 // NYI-LABEL: @test_vshrd_n_u64(
 // NYI:   ret i64 0
