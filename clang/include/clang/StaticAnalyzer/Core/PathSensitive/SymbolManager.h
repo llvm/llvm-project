@@ -527,12 +527,10 @@ public:
 
   static bool canSymbolicate(QualType T);
 
-  template <typename T, typename... Args>
-  const T *get(Args &&...args);
+  template <typename T, typename... Args> const T *get(Args &&...args);
 
-  const SymbolConjured* conjureSymbol(const Stmt *E,
-                                      const LocationContext *LCtx,
-                                      QualType T,
+  const SymbolConjured *conjureSymbol(const Stmt *E,
+                                      const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
     return get<SymbolConjured>(E, LCtx, T, VisitCount, SymbolTag);
