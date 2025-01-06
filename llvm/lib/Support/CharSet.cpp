@@ -91,13 +91,15 @@ class CharSetConverterTable : public details::CharSetConverterImplBase {
 public:
   CharSetConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
 
-  std::error_code convert(StringRef Source,
-                          SmallVectorImpl<char> &Result) const override;
+  std::error_code convertString(StringRef Source,
+                                SmallVectorImpl<char> &Result) override;
+
+  void reset() override {}
 };
 
 std::error_code
-CharSetConverterTable::convert(StringRef Source,
-                               SmallVectorImpl<char> &Result) const {
+CharSetConverterTable::convertString(StringRef Source,
+                                     SmallVectorImpl<char> &Result) {
   if (ConvType == IBM1047ToUTF8) {
     ConverterEBCDIC::convertToUTF8(Source, Result);
     return std::error_code();
@@ -127,13 +129,15 @@ public:
       : FromConvDesc(std::move(FromConverter)),
         ToConvDesc(std::move(ToConverter)) {}
 
-  std::error_code convert(StringRef Source,
-                          SmallVectorImpl<char> &Result) const override;
+  std::error_code convertString(StringRef Source,
+                                SmallVectorImpl<char> &Result) override;
+
+  void reset() override;
 };
 
 std::error_code
-CharSetConverterICU::convert(StringRef Source,
-                             SmallVectorImpl<char> &Result) const {
+CharSetConverterICU::convertString(StringRef Source,
+                                   SmallVectorImpl<char> &Result) {
   // Setup the input in case it has no backing data.
   size_t InputLength = Source.size();
   const char *In = InputLength ? const_cast<char *>(Source.data()) : "";
@@ -171,6 +175,11 @@ CharSetConverterICU::convert(StringRef Source,
   return std::error_code();
 }
 
+void CharSetConverterICU::reset() {
+  ucnv_reset(&*FromConvDesc);
+  ucnv_reset(&*ToConvDesc);
+}
+
 #elif defined(HAVE_ICONV)
 class CharSetConverterIconv : public details::CharSetConverterImplBase {
   class UniqueIconvT {
@@ -202,13 +211,15 @@ public:
   CharSetConverterIconv(UniqueIconvT ConvDesc)
       : ConvDesc(std::move(ConvDesc)) {}
 
-  std::error_code convert(StringRef Source,
-                          SmallVectorImpl<char> &Result) const override;
+  std::error_code convertString(StringRef Source,
+                                SmallVectorImpl<char> &Result) override;
+
+  void reset() override;
 };
 
 std::error_code
-CharSetConverterIconv::convert(StringRef Source,
-                               SmallVectorImpl<char> &Result) const {
+CharSetConverterIconv::convertString(StringRef Source,
+                                     SmallVectorImpl<char> &Result) {
   // Setup the output. We directly write into the SmallVector.
   size_t Capacity = Result.capacity();
   char *Output = static_cast<char *>(Result.data());
@@ -262,8 +273,12 @@ CharSetConverterIconv::convert(StringRef Source,
   } while (true);
 
   // Re-adjust size to actual size.
-  Result.resize(Capacity - OutputLength);
+  Result.resize(Output - Result.data());
   return std::error_code();
+}
+
+void CharSetConverterIconv::reset() {
+  iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
 }
 
 #endif // HAVE_ICONV
@@ -281,8 +296,7 @@ CharSetConverter CharSetConverter::create(text_encoding::id CPFrom,
            CPTo == text_encoding::id::UTF8)
     Conversion = IBM1047ToUTF8;
   else
-    assert(false &&
-           "Only conversions between UTF-8 and IBM-1047 are supported");
+    llvm_unreachable("Invalid ConversionType!");
   std::unique_ptr<details::CharSetConverterImplBase> Converter =
       std::make_unique<CharSetConverterTable>(Conversion);
 
@@ -316,6 +330,7 @@ ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
   std::unique_ptr<details::CharSetConverterImplBase> Converter =
       std::make_unique<CharSetConverterIconv>(ConvDesc);
   return CharSetConverter(std::move(Converter));
-#endif
+#else
   return std::make_error_code(std::errc::invalid_argument);
+#endif
 }
