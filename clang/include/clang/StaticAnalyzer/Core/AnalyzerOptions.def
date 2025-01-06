@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_STRINGREF_H
+#if !defined(LLVM_ADT_STRINGREF_H) || !defined(LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H)
 #error This .def file is expected to be included in translation units where \
-"llvm/ADT/StringRef.h" is already included!
+"llvm/ADT/StringRef.h" and "clang/StaticAnalyzer/Core/AnalyzerOptions.h" are \
+already included!
 #endif
 
 #ifdef ANALYZER_OPTION
@@ -216,13 +217,13 @@ ANALYZER_OPTION(
     "hardware. Set 0 for unlimited.", 0)
 
 ANALYZER_OPTION(
-    unsigned, Z3CrosscheckRetriesOnTimeout,
-    "crosscheck-with-z3-retries-on-timeout",
-    "Set how many times the oracle is allowed to retry a Z3 query. "
-    "Set 0 for not allowing retries, in which case each Z3 query would be "
-    "attempted only once. Increasing the number of retries is often more "
-    "effective at reducing the number of nondeterministic diagnostics than "
-    "\"crosscheck-with-z3-timeout-threshold\" in practice.", 2)
+    PositiveAnalyzerOption, Z3CrosscheckMaxAttemptsPerQuery,
+    "crosscheck-with-z3-max-attempts-per-query",
+    "Set how many times the oracle is allowed to run a Z3 query. "
+    "This must be a positive value. Set 1 to not allow any retry attempts. "
+    "Increasing the number of attempts is often more effective at reducing "
+    "the number of nondeterministic diagnostics than "
+    "\"crosscheck-with-z3-timeout-threshold\" in practice.", 3)
 
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",

@@ -21,8 +21,8 @@
 
 #define DEBUG_TYPE "Z3CrosscheckOracle"
 
-// Queries retried at most `Z3CrosscheckRetriesOnTimeout` number of times if the
-// `check()` call returns `UNDEF` for any reason. Each query is only counted
+// Queries retried at most `Z3CrosscheckMaxAttemptsPerQuery` number of times if
+// the `check()` call returns `UNDEF` for any reason. Each query is only counted
 // once for these statistics, the retries are not accounted for.
 STATISTIC(NumZ3QueriesDone, "Number of Z3 queries done");
 STATISTIC(NumTimesZ3TimedOut, "Number of times Z3 query timed out");
@@ -99,7 +99,7 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
 
   // And check for satisfiability
   unsigned MinQueryTimeAcrossAttempts = std::numeric_limits<unsigned>::max();
-  for (unsigned I = 0; I <= Opts.Z3CrosscheckRetriesOnTimeout; ++I) {
+  for (unsigned I = 0; I <= Opts.Z3CrosscheckMaxAttemptsPerQuery; ++I) {
     Result = AttemptOnce(RefutationSolver);
     Result.Z3QueryTimeMilliseconds =
         std::min(MinQueryTimeAcrossAttempts, Result.Z3QueryTimeMilliseconds);

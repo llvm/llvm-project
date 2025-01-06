@@ -1,7 +1,7 @@
 // Check the default config.
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ConfigDumper 2>&1 \
 // RUN: | FileCheck %s --match-full-lines
-// CHECK: crosscheck-with-z3-retries-on-timeout = 2
+// CHECK: crosscheck-with-z3-max-attempts-per-query = 3
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: %host_cxx -shared -fPIC                           \
@@ -14,7 +14,7 @@
 // DEFINE:   -analyzer-config crosscheck-with-z3=true     \
 // DEFINE:   -analyzer-checker=core
 
-// DEFINE: %{retry} = -analyzer-config crosscheck-with-z3-retries-on-timeout
+// DEFINE: %{retry} = -analyzer-config crosscheck-with-z3-max-attempts-per-query
 
 // RUN: Z3_SOLVER_RESULTS="UNDEF"             %{mocked_clang} %{retry}=0 -verify=refuted
 // RUN: Z3_SOLVER_RESULTS="UNSAT"             %{mocked_clang} %{retry}=0 -verify=refuted

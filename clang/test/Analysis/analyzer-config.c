@@ -41,7 +41,7 @@
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
 // CHECK-NEXT: crosscheck-with-z3-eqclass-timeout-threshold = 0
-// CHECK-NEXT: crosscheck-with-z3-retries-on-timeout = 2
+// CHECK-NEXT: crosscheck-with-z3-max-attempts-per-query = 3
 // CHECK-NEXT: crosscheck-with-z3-rlimit-threshold = 0
 // CHECK-NEXT: crosscheck-with-z3-timeout-threshold = 15000
 // CHECK-NEXT: ctu-dir = ""
