@@ -1407,8 +1407,17 @@ These attributes are used by the Clang Static Analyzer's dynamic memory modeling
 facilities to mark custom allocating/deallocating functions.
 
 All 3 attributes' first parameter of type string is the type of the allocation:
-``malloc``, ``new``, etc. to allow for catching mismatched deallocation bugs to
-be found.
+``malloc``, ``new``, etc. to allow for catching :ref:`mismatched deallocation
+<unix-MismatchedDeallocator>` bugs to
+be found. The allocation type can be any string, e.g. a function annotated with
+returning a piece of memory of type ``lasagna`` but freed with a function
+annoteted to release ``cheese`` typed memory will result in mismatched
+deallocation warning.
+
+The (currently) only allocation type having special meaning is ``malloc`` --
+the Clang Static Analyzer makes sure that allocating functions annotated with
+``malloc`` are treated like they used the standard ``malloc()``, and can be
+safely deallocated with the standard ``free()``.
 
 * Use ``ownership_returns`` to mark a function as an allocating function. Takes
   1 parameter to denote the allocation type.
@@ -1419,6 +1428,7 @@ be found.
   piece of memory and will free it at some unspecified point in the future. Like
   ``ownership_takes``, this takes 2 parameters: the allocation type, and the
   index of the parameter whose ownership will be taken over (counting from 1).
+
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
 leak reports (concerning the specified argument); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
