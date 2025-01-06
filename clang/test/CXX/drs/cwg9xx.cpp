@@ -144,7 +144,7 @@ class B : A {
 
 } // namespace cwg960
 
-namespace cwg974 { // cwg974: yes
+namespace cwg974 { // cwg974: 3.3
 #if __cplusplus >= 201103L
   void test() {
     auto lam = [](int x = 42) { return x; };
@@ -152,7 +152,7 @@ namespace cwg974 { // cwg974: yes
 #endif
 } // namespace cwg974
 
-namespace cwg977 { // cwg977: yes
+namespace cwg977 { // cwg977: 2.7
 enum E { e = E() }; // #cwg977-E
 #if !defined(_WIN32) || defined(__MINGW32__)
 // expected-error@#cwg977-E {{invalid use of incomplete type 'E'}}

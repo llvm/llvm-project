@@ -10,7 +10,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-namespace cwg273 { // cwg273: yes
+namespace cwg273 { // cwg273: 2.7
   struct A {
     int n;
   };
