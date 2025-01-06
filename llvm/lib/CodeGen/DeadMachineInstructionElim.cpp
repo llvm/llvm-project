@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -32,14 +31,9 @@ namespace {
 class DeadMachineInstructionElimImpl {
   const MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  LiveRegUnits LivePhysRegs;
 
 public:
   bool runImpl(MachineFunction &MF);
-
-private:
-  bool isDead(const MachineInstr *MI) const;
-  bool eliminateDeadMI(MachineFunction &MF);
 };
 
 class DeadMachineInstructionElim : public MachineFunctionPass {
@@ -79,7 +73,21 @@ char &llvm::DeadMachineInstructionElimID = DeadMachineInstructionElim::ID;
 INITIALIZE_PASS(DeadMachineInstructionElim, DEBUG_TYPE,
                 "Remove dead machine instructions", false, false)
 
-bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
+bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
+  MRI = &MF.getRegInfo();
+
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  TII = ST.getInstrInfo();
+  DeadMachineInstructionInfo DMII(MRI);
+
+  bool AnyChanges = DMII.eliminateDeadMI(MF);
+  while (AnyChanges && DMII.eliminateDeadMI(MF))
+    ;
+  return AnyChanges;
+}
+
+bool DeadMachineInstructionInfo::isDead(const MachineInstr *MI,
+                                        LiveRegUnits *LivePhysRegs) const {
   // Instructions without side-effects are dead iff they only define dead regs.
   // This function is hot and this loop returns early in the common case,
   // so only perform additional checks before this if absolutely necessary.
@@ -87,7 +95,8 @@ bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
     Register Reg = MO.getReg();
     if (Reg.isPhysical()) {
       // Don't delete live physreg defs, or any reserved register defs.
-      if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
+      if (!LivePhysRegs || !LivePhysRegs->available(Reg) ||
+          MRI->isReserved(Reg))
         return false;
     } else {
       if (MO.isDead()) {
@@ -120,22 +129,12 @@ bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
   return MI->wouldBeTriviallyDead();
 }
 
-bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
-  MRI = &MF.getRegInfo();
-
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
-  TII = ST.getInstrInfo();
-  LivePhysRegs.init(*ST.getRegisterInfo());
-
-  bool AnyChanges = eliminateDeadMI(MF);
-  while (AnyChanges && eliminateDeadMI(MF))
-    ;
-  return AnyChanges;
-}
-
-bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
+bool DeadMachineInstructionInfo::eliminateDeadMI(MachineFunction &MF) {
   bool AnyChanges = false;
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
 
+  LiveRegUnits LivePhysRegs;
+  LivePhysRegs.init(*ST.getRegisterInfo());
   // Loop over all instructions in all blocks, from bottom to top, so that it's
   // more likely that chains of dependent but ultimately dead instructions will
   // be cleaned up.
@@ -146,7 +145,7 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
     // liveness as we go.
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
       // If the instruction is dead, delete it!
-      if (isDead(&MI)) {
+      if (isDead(&MI, &LivePhysRegs)) {
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << MI);
         // It is possible that some DBG_VALUE instructions refer to this
         // instruction. They will be deleted in the live debug variable
@@ -156,11 +155,8 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
         ++NumDeletes;
         continue;
       }
-
       LivePhysRegs.stepBackward(MI);
     }
   }
-
-  LivePhysRegs.clear();
   return AnyChanges;
 }
