@@ -331,6 +331,8 @@ David Blaikie (especially type information) \
 dblaikie@gmail.com (email), [dwblaikie](https://github.com/dwblaike) (GitHub) \
 Jeremy Morse (especially variable information) \
 jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub) \
+Jonas Devlieghere (especially dsymutil/DWARFLinker) \
+jonas@devlieghere.com (email), [JDevlieghere](https://github.com/JDevlieghere) (GitHub) \
 Eric Christopher \
 echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 
