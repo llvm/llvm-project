@@ -1546,18 +1546,23 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
     if (ISD == ISD::AND) {
       // Example sequences:
-      //   vsetvli a0, zero, e8, mf8, ta, ma
       //   vmand.mm v8, v9, v8 ; needed every time type is split
       //   vmnot.m v8, v0
       //   vcpop.m a0, v8
       //   seqz a0, a0
 
-      // Fixed VT:    In v512i1 and larger vector elements,
-      // Scalable VT: In v128i1 and larger vector elements,
-      // the VMAND_MM instructions have started to be added.
-      return ((LT.first >= 2)
-                  ? LT.first - (LT.second.isScalableVector() ? 1 : 2)
-                  : 0) *
+      // Scalable VT: In nxv128i1 and larger vector elements,
+      // Fixed VT:    If getFixedSizeInBits() >= (4 * getRealMinVLen()),
+      //              the VMAND_MM instructions have started to be added.
+      InstructionCost NumOfVMAND = 0;
+      if (LT.second.isScalableVector()) {
+        NumOfVMAND = (LT.first >= 2) ? (LT.first - 1) : 0;
+      } else {
+        bool IsOverflow =
+            LT.second.getFixedSizeInBits() == ST->getRealMinVLen();
+        NumOfVMAND = (IsOverflow && LT.first > 2) ? (LT.first - 2) : 0;
+      }
+      return NumOfVMAND *
                  getRISCVInstructionCost(RISCV::VMAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
