@@ -3691,9 +3691,13 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vset_lane_f64:
     // The vector type needs a cast for the v1f64 variant.
     llvm_unreachable("NEON::BI__builtin_neon_vset_lane_f64 NYI");
-  case NEON::BI__builtin_neon_vsetq_lane_f64:
-    // The vector type needs a cast for the v2f64 variant.
-    llvm_unreachable("NEON::BI__builtin_neon_vsetq_lane_f64 NYI");
+  case NEON::BI__builtin_neon_vsetq_lane_f64: {
+    Ops.push_back(emitScalarExpr(E->getArg(2)));
+    Ops[1] = builder.createBitcast(
+        Ops[1], cir::VectorType::get(&getMLIRContext(), DoubleTy, 2));
+    return builder.create<cir::VecInsertOp>(getLoc(E->getExprLoc()), Ops[1],
+                                            Ops[0], Ops[2]);
+  }
 
   case NEON::BI__builtin_neon_vget_lane_i8:
   case NEON::BI__builtin_neon_vdupb_lane_i8:

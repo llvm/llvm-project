@@ -137,6 +137,18 @@ float32x4_t test_vsetq_lane_f32(float32_t a, float32x4_t b) {
 // LLVM: [[INTRN_RES:%.*]] = insertelement <4 x float> [[B]], float [[A]], i32 3
 // LLVM: ret <4 x float> [[INTRN_RES]]
 
+float64x2_t test_vsetq_land_f64(float64_t a, float64x2_t b) {
+  return vsetq_lane_f64(a, b, 0);
+}
+
+// CIR-LABEL: test_vsetq_land_f64
+// CIR: [[IDX:%.*]] = cir.const #cir.int<0> : !s32i
+// CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.double x 2>
+
+// LLVM: {{.*}}test_vsetq_land_f64(double{{.*}}[[A:%.*]], <2 x double>{{.*}}[[B:%.*]])
+// LLVM: [[INTRN_RES:%.*]] = insertelement <2 x double> [[B]], double [[A]], i32 0
+// LLVM: ret <2 x double> [[INTRN_RES]]
+
 uint8_t test_vget_lane_u8(uint8x8_t a) {
   return vget_lane_u8(a, 7);
 }
