@@ -131,6 +131,8 @@ private:
                       int OpIdx) const;
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                  int OpIdx) const;
+  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
@@ -715,14 +717,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  case TargetOpcode::G_FRAME_INDEX: {
-    // TODO: We may want to replace this code with the SelectionDAG patterns,
-    // which fail to get imported because it uses FrameAddrRegImm, which is a
-    // ComplexPattern
-    MI.setDesc(TII.get(RISCV::ADDI));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB);
   case TargetOpcode::G_FCMP:
@@ -857,6 +851,14 @@ void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(CstVal);
+}
+
+void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
+         "Expected G_FRAME_INDEX");
+  MIB.add(MI.getOperand(1));
 }
 
 void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,

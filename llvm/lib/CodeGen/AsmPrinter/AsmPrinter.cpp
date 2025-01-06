@@ -503,13 +503,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // don't, this at least helps the user find where a global came from.
   if (MAI->hasSingleParameterDotFile()) {
     // .file "foo.c"
-
-    SmallString<128> FileName;
-    if (MAI->hasBasenameOnlyForFileDirective())
-      FileName = llvm::sys::path::filename(M.getSourceFileName());
-    else
-      FileName = M.getSourceFileName();
-    if (MAI->hasFourStringsDotFile()) {
+    if (MAI->isAIX()) {
       const char VerStr[] =
 #ifdef PACKAGE_VENDOR
           PACKAGE_VENDOR " "
@@ -520,9 +514,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 #endif
           ;
       // TODO: Add timestamp and description.
-      OutStreamer->emitFileDirective(FileName, VerStr, "", "");
+      OutStreamer->emitFileDirective(M.getSourceFileName(), VerStr, "", "");
     } else {
-      OutStreamer->emitFileDirective(FileName);
+      OutStreamer->emitFileDirective(
+          llvm::sys::path::filename(M.getSourceFileName()));
     }
   }
 
@@ -531,7 +526,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
     // Now we can generate section information.
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+    OutStreamer->switchSection(
+        OutContext.getObjectFileInfo()->getTextSection());
 
     // To work around an AIX assembler and/or linker bug, generate
     // a rename for the default text-section symbol name.  This call has
@@ -966,11 +962,10 @@ void AsmPrinter::emitFunctionHeader() {
     MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
   OutStreamer->switchSection(MF->getSection());
 
-  if (!MAI->hasVisibilityOnlyWithLinkage())
-    emitVisibility(CurrentFnSym, F.getVisibility());
-
-  if (MAI->needsFunctionDescriptors())
+  if (MAI->isAIX())
     emitLinkage(&F, CurrentFnDescSym);
+  else
+    emitVisibility(CurrentFnSym, F.getVisibility());
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment())
@@ -1030,7 +1025,7 @@ void AsmPrinter::emitFunctionHeader() {
   // to emit their specific function descriptor. Right now it is only used by
   // the AIX target. The PowerPC 64-bit V1 ELF target also uses function
   // descriptors and should be converted to use this hook as well.
-  if (MAI->needsFunctionDescriptors())
+  if (MAI->isAIX())
     emitFunctionDescriptor();
 
   // Emit the CurrentFnSym. This is a virtual function to allow targets to do
@@ -2233,9 +2228,6 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // point, all the extra label is emitted, we just have to emit linkage for
   // those labels.
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
-    assert(MAI->hasVisibilityOnlyWithLinkage() &&
-           "Visibility should be handled with emitLinkage() on AIX.");
-
     // Linkage for alias of global variable has been emitted.
     if (isa<GlobalVariable>(GA.getAliaseeObject()))
       return;
@@ -2729,7 +2721,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     HasNoSplitStack = true;
 
   // Get the function symbol.
-  if (!MAI->needsFunctionDescriptors()) {
+  if (!MAI->isAIX()) {
     CurrentFnSym = getSymbol(&MF.getFunction());
   } else {
     assert(TM.getTargetTriple().isOSAIX() &&

@@ -1,4 +1,6 @@
-// RUN: mlir-opt -split-input-file --test-linalg-transform-patterns="test-decompose-tensor-unpack"  %s | FileCheck %s
+// RUN: mlir-opt -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/decompose-unpack.mlir' \
+// RUN: -transform-interpreter=entry-point=decompose_unpack %s | FileCheck %s
 
 func.func @simple_KCRSsr_to_KCRS(%arg0: tensor<1x1x1x1x8x32xf32>, %arg1: tensor<1x1x32x8xf32>) -> tensor<1x1x32x8xf32> {
   %0 = tensor.unpack %arg0 inner_dims_pos = [3, 2] inner_tiles = [8, 32] into %arg1 : tensor<1x1x1x1x8x32xf32> -> tensor<1x1x32x8xf32>

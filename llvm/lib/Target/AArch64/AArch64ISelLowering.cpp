@@ -2643,6 +2643,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     break;
     MAKE_CASE(AArch64ISD::ALLOCATE_ZA_BUFFER)
     MAKE_CASE(AArch64ISD::INIT_TPIDR2OBJ)
+    MAKE_CASE(AArch64ISD::GET_SME_SAVE_SIZE)
+    MAKE_CASE(AArch64ISD::ALLOC_SME_SAVE_BUFFER)
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
     MAKE_CASE(AArch64ISD::VG_SAVE)
     MAKE_CASE(AArch64ISD::VG_RESTORE)
@@ -2667,6 +2669,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CSINC)
     MAKE_CASE(AArch64ISD::THREAD_POINTER)
     MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
+    MAKE_CASE(AArch64ISD::TLSDESC_AUTH_CALLSEQ)
     MAKE_CASE(AArch64ISD::PROBED_ALLOCA)
     MAKE_CASE(AArch64ISD::ABDS_PRED)
     MAKE_CASE(AArch64ISD::ABDU_PRED)
@@ -3230,6 +3233,64 @@ AArch64TargetLowering::EmitAllocateZABuffer(MachineInstr &MI,
   return BB;
 }
 
+// TODO: Find a way to merge this with EmitAllocateZABuffer.
+MachineBasicBlock *
+AArch64TargetLowering::EmitAllocateSMESaveBuffer(MachineInstr &MI,
+                                                 MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  assert(!MF->getSubtarget<AArch64Subtarget>().isTargetWindows() &&
+         "Lazy ZA save is not yet supported on Windows");
+
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  if (FuncInfo->isSMESaveBufferUsed()) {
+    // Allocate a buffer object of the size given by MI.getOperand(1).
+    auto Size = MI.getOperand(1).getReg();
+    auto Dest = MI.getOperand(0).getReg();
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrx64), AArch64::SP)
+        .addReg(AArch64::SP)
+        .addReg(Size)
+        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Dest)
+        .addReg(AArch64::SP);
+
+    // We have just allocated a variable sized object, tell this to PEI.
+    MFI.CreateVariableSizedObject(Align(16), nullptr);
+  } else
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
+            MI.getOperand(0).getReg());
+
+  BB->remove_instr(&MI);
+  return BB;
+}
+
+MachineBasicBlock *
+AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const {
+  // If the buffer is used, emit a call to __arm_sme_state_size()
+  MachineFunction *MF = BB->getParent();
+  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  if (FuncInfo->isSMESaveBufferUsed()) {
+    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
+        .addExternalSymbol("__arm_sme_state_size")
+        .addReg(AArch64::X0, RegState::ImplicitDefine)
+        .addRegMask(TRI->getCallPreservedMask(
+            *MF, CallingConv::
+                     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            MI.getOperand(0).getReg())
+        .addReg(AArch64::X0);
+  } else
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            MI.getOperand(0).getReg())
+        .addReg(AArch64::XZR);
+  BB->remove_instr(&MI);
+  return BB;
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -3264,6 +3325,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitInitTPIDR2Object(MI, BB);
   case AArch64::AllocateZABuffer:
     return EmitAllocateZABuffer(MI, BB);
+  case AArch64::AllocateSMESaveBuffer:
+    return EmitAllocateSMESaveBuffer(MI, BB);
+  case AArch64::GetSMESaveSize:
+    return EmitGetSMESaveSize(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
   case TargetOpcode::STATEPOINT:
@@ -7663,6 +7728,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AArch64_VectorCall:
   case CallingConv::AArch64_SVE_VectorCall:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
     return CC_AArch64_AAPCS;
   case CallingConv::ARM64EC_Thunk_X64:
@@ -8122,6 +8188,31 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     Chain = DAG.getNode(
         AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
         {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
+  } else if (SMEAttrs(MF.getFunction()).hasAgnosticZAInterface()) {
+    // Call __arm_sme_state_size().
+    SDValue BufferSize =
+        DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
+                    DAG.getVTList(MVT::i64, MVT::Other), Chain);
+    Chain = BufferSize.getValue(1);
+
+    SDValue Buffer;
+    if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
+      Buffer =
+          DAG.getNode(AArch64ISD::ALLOC_SME_SAVE_BUFFER, DL,
+                      DAG.getVTList(MVT::i64, MVT::Other), {Chain, BufferSize});
+    } else {
+      // Allocate space dynamically.
+      Buffer = DAG.getNode(
+          ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
+          {Chain, BufferSize, DAG.getConstant(1, DL, MVT::i64)});
+      MFI.CreateVariableSizedObject(Align(16), nullptr);
+    }
+
+    // Copy the value to a virtual register, and save that in FuncInfo.
+    Register BufferPtr =
+        MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+    FuncInfo->setSMESaveBufferAddr(BufferPtr);
+    Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
   }
 
   if (CallConv == CallingConv::PreserveNone) {
@@ -8410,6 +8501,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   auto CalleeAttrs = CLI.CB ? SMEAttrs(*CLI.CB) : SMEAttrs(SMEAttrs::Normal);
   if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
       CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs) ||
       CallerAttrs.hasStreamingBody())
     return false;
 
@@ -8734,6 +8826,33 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
 }
 
+// Emit a call to __arm_sme_save or __arm_sme_restore.
+static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
+                                       SelectionDAG &DAG,
+                                       AArch64FunctionInfo *Info, SDLoc DL,
+                                       SDValue Chain, bool IsSave) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  FuncInfo->setSMESaveBufferUsed();
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = PointerType::getUnqual(*DAG.getContext());
+  Entry.Node =
+      DAG.getCopyFromReg(Chain, DL, Info->getSMESaveBufferAddr(), MVT::i64);
+  Args.push_back(Entry);
+
+  SDValue Callee =
+      DAG.getExternalSymbol(IsSave ? "__arm_sme_save" : "__arm_sme_restore",
+                            TLI.getPointerTy(DAG.getDataLayout()));
+  auto *RetTy = Type::getVoidTy(*DAG.getContext());
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1, RetTy,
+      Callee, std::move(Args));
+  return TLI.LowerCallTo(CLI).second;
+}
+
 static unsigned getSMCondition(const SMEAttrs &CallerAttrs,
                                const SMEAttrs &CalleeAttrs) {
   if (!CallerAttrs.hasStreamingCompatibleInterface() ||
@@ -8894,6 +9013,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   };
 
   bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
+  bool RequiresSaveAllZA =
+      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs);
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     MachinePointerInfo MPI =
@@ -8920,6 +9041,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                                                    &MF.getFunction());
       return DescribeCallsite(R) << " sets up a lazy save for ZA";
     });
+  } else if (RequiresSaveAllZA) {
+    assert(!CalleeAttrs.hasSharedZAInterface() &&
+           "Cannot share state that may not exist");
+    Chain = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
+                                    /*IsSave=*/true);
   }
 
   SDValue PStateSM;
@@ -9467,9 +9593,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
         DAG.getConstant(0, DL, MVT::i64));
     TPIDR2.Uses++;
+  } else if (RequiresSaveAllZA) {
+    Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
+                                     /*IsSave=*/false);
   }
 
-  if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0) {
+  if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0 ||
+      RequiresSaveAllZA) {
     for (unsigned I = 0; I < InVals.size(); ++I) {
       // The smstart/smstop is chained as part of the call, but when the
       // resulting chain is discarded (which happens when the call is not part
@@ -9994,8 +10124,11 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   SDValue Chain = DAG.getEntryNode();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  Chain =
-      DAG.getNode(AArch64ISD::TLSDESC_CALLSEQ, DL, NodeTys, {Chain, SymAddr});
+  unsigned Opcode =
+      DAG.getMachineFunction().getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+          ? AArch64ISD::TLSDESC_AUTH_CALLSEQ
+          : AArch64ISD::TLSDESC_CALLSEQ;
+  Chain = DAG.getNode(Opcode, DL, NodeTys, {Chain, SymAddr});
   SDValue Glue = Chain.getValue(1);
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
@@ -10007,8 +10140,12 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   assert(Subtarget->isTargetELF() && "This function expects an ELF target");
 
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  AArch64FunctionInfo *MFI =
+      DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
 
-  TLSModel::Model Model = getTargetMachine().getTLSModel(GA->getGlobal());
+  TLSModel::Model Model = MFI->hasELFSignedGOT()
+                              ? TLSModel::GeneralDynamic
+                              : getTargetMachine().getTLSModel(GA->getGlobal());
 
   if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
     if (Model == TLSModel::LocalDynamic)
@@ -10045,8 +10182,6 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
     // calculation.
 
     // These accesses will need deduplicating if there's more than one.
-    AArch64FunctionInfo *MFI =
-        DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
     MFI->incNumLocalDynamicTLSAccesses();
 
     // The call needs a relocation too for linker relaxation. It doesn't make
@@ -18177,16 +18312,38 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   unsigned ExtOpcode = Op0.getOpcode();
   SDValue A = Op0;
   SDValue B;
+  unsigned DotOpcode;
   if (ExtOpcode == ISD::MUL) {
     A = Op0.getOperand(0);
     B = Op0.getOperand(1);
-    if (A.getOpcode() != B.getOpcode() ||
-        A.getOperand(0).getValueType() != B.getOperand(0).getValueType())
+    if (A.getOperand(0).getValueType() != B.getOperand(0).getValueType())
       return SDValue();
-    ExtOpcode = A.getOpcode();
-  }
-  if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
+    auto OpCodeA = A.getOpcode();
+    if (OpCodeA != ISD::ZERO_EXTEND && OpCodeA != ISD::SIGN_EXTEND)
+      return SDValue();
+
+    auto OpCodeB = B.getOpcode();
+    if (OpCodeB != ISD::ZERO_EXTEND && OpCodeB != ISD::SIGN_EXTEND)
+      return SDValue();
+
+    if (OpCodeA == OpCodeB) {
+      DotOpcode =
+          OpCodeA == ISD::ZERO_EXTEND ? AArch64ISD::UDOT : AArch64ISD::SDOT;
+    } else {
+      // Check USDOT support support
+      if (!ST->hasMatMulInt8())
+        return SDValue();
+      DotOpcode = AArch64ISD::USDOT;
+      if (OpCodeA == ISD::SIGN_EXTEND)
+        std::swap(A, B);
+    }
+  } else if (ExtOpcode == ISD::ZERO_EXTEND) {
+    DotOpcode = AArch64ISD::UDOT;
+  } else if (ExtOpcode == ISD::SIGN_EXTEND) {
+    DotOpcode = AArch64ISD::SDOT;
+  } else {
     return SDValue();
+  }
 
   EVT Op0VT = A.getOperand(0).getValueType();
   bool IsValidElementCount = Op0VT.getVectorNumElements() % 8 == 0;
@@ -18212,8 +18369,6 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     NumOfVecReduce = Op0VT.getVectorNumElements() / 8;
     TargetType = MVT::v2i32;
   }
-  auto DotOpcode =
-      (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UDOT : AArch64ISD::SDOT;
   // Handle the case where we need to generate only one Dot operation.
   if (NumOfVecReduce == 1) {
     SDValue Zeros = DAG.getConstant(0, DL, TargetType);
@@ -18275,7 +18430,7 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
     EVT VT = A.getValueType();
     SDValue Op0 = A.getOperand(0);
     SDValue Op1 = A.getOperand(1);
-    if (Op0.getOpcode() != Op0.getOpcode() ||
+    if (Op0.getOpcode() != Op1.getOpcode() ||
         (Op0.getOpcode() != ISD::ZERO_EXTEND &&
          Op0.getOpcode() != ISD::SIGN_EXTEND))
       return SDValue();
@@ -28064,7 +28219,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     auto CalleeAttrs = SMEAttrs(*Base);
     if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
         CallerAttrs.requiresLazySave(CalleeAttrs) ||
-        CallerAttrs.requiresPreservingZT0(CalleeAttrs))
+        CallerAttrs.requiresPreservingZT0(CalleeAttrs) ||
+        CallerAttrs.requiresPreservingAllZAState(CalleeAttrs))
       return true;
   }
   return false;
@@ -29498,8 +29654,15 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   if (ScalarTy->isIntegerTy() && Subtarget->hasSVE2() && VTy->isScalableTy()) {
     unsigned ScalarWidth = ScalarTy->getScalarSizeInBits();
+
+    if (Operation == ComplexDeinterleavingOperation::CDot)
+      return ScalarWidth == 32 || ScalarWidth == 64;
     return 8 <= ScalarWidth && ScalarWidth <= 64;
   }
+
+  // CDot is not supported outside of scalable/sve scopes
+  if (Operation == ComplexDeinterleavingOperation::CDot)
+    return false;
 
   return (ScalarTy->isHalfTy() && Subtarget->hasFullFP16()) ||
          ScalarTy->isFloatTy() || ScalarTy->isDoubleTy();
@@ -29510,6 +29673,8 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
     Value *Accumulator) const {
   VectorType *Ty = cast<VectorType>(InputA->getType());
+  if (Accumulator == nullptr)
+    Accumulator = Constant::getNullValue(Ty);
   bool IsScalable = Ty->isScalableTy();
   bool IsInt = Ty->getElementType()->isIntegerTy();
 
@@ -29521,6 +29686,10 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
   if (TyWidth > 128) {
     int Stride = Ty->getElementCount().getKnownMinValue() / 2;
+    int AccStride = cast<VectorType>(Accumulator->getType())
+                        ->getElementCount()
+                        .getKnownMinValue() /
+                    2;
     auto *HalfTy = VectorType::getHalfElementsVectorType(Ty);
     auto *LowerSplitA = B.CreateExtractVector(HalfTy, InputA, B.getInt64(0));
     auto *LowerSplitB = B.CreateExtractVector(HalfTy, InputB, B.getInt64(0));
@@ -29530,25 +29699,26 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
         B.CreateExtractVector(HalfTy, InputB, B.getInt64(Stride));
     Value *LowerSplitAcc = nullptr;
     Value *UpperSplitAcc = nullptr;
-    if (Accumulator) {
-      LowerSplitAcc = B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(0));
-      UpperSplitAcc =
-          B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(Stride));
-    }
+    Type *FullTy = Ty;
+    FullTy = Accumulator->getType();
+    auto *HalfAccTy = VectorType::getHalfElementsVectorType(
+        cast<VectorType>(Accumulator->getType()));
+    LowerSplitAcc =
+        B.CreateExtractVector(HalfAccTy, Accumulator, B.getInt64(0));
+    UpperSplitAcc =
+        B.CreateExtractVector(HalfAccTy, Accumulator, B.getInt64(AccStride));
     auto *LowerSplitInt = createComplexDeinterleavingIR(
         B, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
     auto *UpperSplitInt = createComplexDeinterleavingIR(
         B, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
 
-    auto *Result = B.CreateInsertVector(Ty, PoisonValue::get(Ty), LowerSplitInt,
-                                        B.getInt64(0));
-    return B.CreateInsertVector(Ty, Result, UpperSplitInt, B.getInt64(Stride));
+    auto *Result = B.CreateInsertVector(FullTy, PoisonValue::get(FullTy),
+                                        LowerSplitInt, B.getInt64(0));
+    return B.CreateInsertVector(FullTy, Result, UpperSplitInt,
+                                B.getInt64(AccStride));
   }
 
   if (OperationType == ComplexDeinterleavingOperation::CMulPartial) {
-    if (Accumulator == nullptr)
-      Accumulator = Constant::getNullValue(Ty);
-
     if (IsScalable) {
       if (IsInt)
         return B.CreateIntrinsic(
@@ -29598,6 +29768,13 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
       return nullptr;
 
     return B.CreateIntrinsic(IntId, Ty, {InputA, InputB});
+  }
+
+  if (OperationType == ComplexDeinterleavingOperation::CDot && IsInt &&
+      IsScalable) {
+    return B.CreateIntrinsic(
+        Intrinsic::aarch64_sve_cdot, Accumulator->getType(),
+        {Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
   }
 
   return nullptr;
