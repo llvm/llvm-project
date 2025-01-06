@@ -121,9 +121,6 @@ fully qualified name (``::std::original``).
    As an example, the member function ``open`` in the class ``std::ifstream``
    has a fully qualified name of ``::std::basic_ifstream<char>::open``.
 
-To aid with finding the fully qualified names of expressions, the option ``ShowFullyQualifiedNames`` can be used.
-This option will show the fully qualified name of all functions matched by the custom function matchers.
-
 Options
 -------
 
