@@ -472,9 +472,6 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
       getRegionBuilder() {
       return regionBuilder;
     }
-
-    static void createRegion(::mlir::OpBuilder &opBuilder,
-                             ::mlir::OperationState & odsState);
   }];
 
   let hasFolder = 1;

@@ -19,8 +19,7 @@ define <16 x i16> @combine_vpermt2var_16i16_identity_mask(<16 x i16> %x0, <16 x 
 ; X86-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpermt2w %ymm0, %ymm1, %ymm0 {%k1} {z}
-; X86-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X86-NEXT:    vpermt2w %ymm0, %ymm1, %ymm0 {%k1} {z}
+; X86-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_16i16_identity_mask:
@@ -28,8 +27,7 @@ define <16 x i16> @combine_vpermt2var_16i16_identity_mask(<16 x i16> %x0, <16 x 
 ; X64-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpermt2w %ymm0, %ymm1, %ymm0 {%k1} {z}
-; X64-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X64-NEXT:    vpermt2w %ymm0, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; X64-NEXT:    retq
   %res0 = call <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16> <i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, <16 x i16> %x0, <16 x i16> %x1, i16 %m)
   %res1 = call <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16> <i16 15, i16 30, i16 13, i16 28, i16 11, i16 26, i16 9, i16 24, i16 7, i16 22, i16 5, i16 20, i16 3, i16 18, i16 1, i16 16>, <16 x i16> %res0, <16 x i16> %res0, i16 %m)
@@ -192,7 +190,7 @@ define i64 @PR55050() {
 entry:
   %i275 = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> undef, <16 x i8> zeroinitializer)
   %i277 = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> undef, <16 x i8> zeroinitializer)
-  br i1 undef, label %exit, label %if
+  br i1 poison, label %exit, label %if
 
 if:
   %i298 = bitcast <2 x i64> %i275 to <4 x i32>

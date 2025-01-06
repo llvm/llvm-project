@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileDWARF.h"
-
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Core/Module.h"
@@ -470,14 +473,20 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFileSP objfile_sp,
     : SymbolFileCommon(std::move(objfile_sp)), m_debug_map_module_wp(),
       m_debug_map_symfile(nullptr),
       m_context(m_objfile_sp->GetModule()->GetSectionList(), dwo_section_list),
-      m_fetched_external_modules(false),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
+      m_fetched_external_modules(false) {}
 
 SymbolFileDWARF::~SymbolFileDWARF() = default;
 
 static ConstString GetDWARFMachOSegmentName() {
   static ConstString g_dwarf_section_name("__DWARF");
   return g_dwarf_section_name;
+}
+
+llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &
+SymbolFileDWARF::GetDIEToType() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetDIEToType();
+  return m_die_to_type;
 }
 
 llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
@@ -888,13 +897,13 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
 Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
                                          const DWARFDIE &die) {
   ASSERT_MODULE_LOCK(this);
+  Log *log = GetLog(LLDBLog::Symbols);
   if (!die.IsValid())
     return nullptr;
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to parse function: {0}");
+    LLDB_LOG_ERROR(log, std::move(err), "Unable to parse function: {0}");
     return nullptr;
   }
   auto ts = *type_system_or_err;
@@ -906,13 +915,18 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
 
   AddressRanges ranges;
   ModuleSP module_sp(die.GetModule());
-  for (const auto &range : die.GetDIE()->GetAttributeAddressRanges(
-           die.GetCU(), /*check_hi_lo_pc=*/true)) {
-    if (range.base < m_first_code_address)
-      continue;
-    if (Address base_addr(range.base, module_sp->GetSectionList());
-        base_addr.IsValid() && FixupAddress(base_addr))
-      ranges.emplace_back(std::move(base_addr), range.size);
+  if (llvm::Expected<llvm::DWARFAddressRangesVector> die_ranges =
+          die.GetDIE()->GetAttributeAddressRanges(die.GetCU(),
+                                                  /*check_hi_lo_pc=*/true)) {
+    for (const auto &range : *die_ranges) {
+      if (range.valid() && range.LowPC < m_first_code_address)
+        continue;
+      if (Address base_addr(range.LowPC, module_sp->GetSectionList());
+          base_addr.IsValid() && FixupAddress(base_addr))
+        ranges.emplace_back(std::move(base_addr), range.HighPC - range.LowPC);
+    }
+  } else {
+    LLDB_LOG_ERROR(log, die_ranges.takeError(), "DIE({1:x}): {0}", die.GetID());
   }
   if (ranges.empty())
     return nullptr;
@@ -1316,7 +1330,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
       continue;
 
     Block *block = parent_block->CreateChild(die.GetID()).get();
-    DWARFRangeList ranges;
+    llvm::DWARFAddressRangesVector ranges;
     const char *name = nullptr;
     const char *mangled_name = nullptr;
 
@@ -1329,21 +1343,19 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
     if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
                                  decl_line, decl_column, call_file, call_line,
                                  call_column, nullptr)) {
-      const size_t num_ranges = ranges.GetSize();
-      for (size_t i = 0; i < num_ranges; ++i) {
-        const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
-        const addr_t range_base = range.GetRangeBase();
-        if (range_base >= subprogram_low_pc)
-          block->AddRange(Block::Range(range_base - subprogram_low_pc,
-                                       range.GetByteSize()));
+      for (const llvm::DWARFAddressRange &range : ranges) {
+        if (!range.valid())
+          continue;
+        if (range.LowPC >= subprogram_low_pc)
+          block->AddRange(Block::Range(range.LowPC - subprogram_low_pc,
+                                       range.HighPC - range.LowPC));
         else {
           GetObjectFile()->GetModule()->ReportError(
               "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
               "that is less than the function's low PC {3:x16}. Please file "
               "a bug and attach the file at the "
               "start of this error message",
-              block->GetID(), range_base, range.GetRangeEnd(),
-              subprogram_low_pc);
+              block->GetID(), range.LowPC, range.HighPC, subprogram_low_pc);
         }
       }
       block->FinalizeRanges();
@@ -1589,6 +1601,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   if (!dwarf_ast)
     return false;
   Type *type = GetDIEToType().lookup(decl_die.GetDIE());
+  assert(type);
+
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
     DWARFASTParserClang *ast_parser =
@@ -1700,7 +1714,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
       // We have a SymbolFileDWARFDebugMap, so let it find the right file
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
-    
+
     // Handle the .dwp file case correctly
     if (*file_index == DIERef::k_file_index_mask)
       return GetDwpSymbolFile().get(); // DWP case
@@ -2726,22 +2740,20 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
       // Copy our match's context and update the basename we are looking for
       // so we can use this only to compare the context correctly.
       m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
-        if (Type *matching_type = ResolveType(die, true, true)) {
-          ConstString name = matching_type->GetQualifiedName();
-          // We have found a type that still might not match due to template
-          // parameters. If we create a new TypeQuery that uses the new type's
-          // fully qualified name, we can find out if this type matches at all
-          // context levels. We can't use just the "match_simple" context
-          // because all template parameters were stripped off. The fully
-          // qualified name of the type will have the template parameters and
-          // will allow us to make sure it matches correctly.
-          TypeQuery die_query(name.GetStringRef(),
-                              TypeQueryOptions::e_exact_match);
-          if (!query.ContextMatches(die_query.GetContextRef()))
-            return true; // Keep iterating over index types, context mismatch.
-
-          results.InsertUnique(matching_type->shared_from_this());
+        // Check the language, but only if we have a language filter.
+        if (query.HasLanguage()) {
+          if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
+            return true; // Keep iterating over index types, language mismatch.
         }
+
+        std::string qualified_name;
+        llvm::raw_string_ostream os(qualified_name);
+        llvm::DWARFTypePrinter<DWARFDIE> type_printer(os);
+        type_printer.appendQualifiedName(die);
+        TypeQuery die_query(qualified_name, e_exact_match);
+        if (query.ContextMatches(die_query.GetContextRef()))
+          if (Type *matching_type = ResolveType(die, true, true))
+            results.InsertUnique(matching_type->shared_from_this());
         return !results.Done(query); // Keep iterating if we aren't done.
       });
       if (results.Done(query)) {
@@ -2917,37 +2929,6 @@ Symbol *SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {
   return objc_class_symbol;
 }
 
-// Some compilers don't emit the DW_AT_APPLE_objc_complete_type attribute. If
-// they don't then we can end up looking through all class types for a complete
-// type and never find the full definition. We need to know if this attribute
-// is supported, so we determine this here and cache th result. We also need to
-// worry about the debug map
-// DWARF file
-// if we are doing darwin DWARF in .o file debugging.
-bool SymbolFileDWARF::Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu) {
-  if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolCalculate) {
-    m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolNo;
-    if (cu && cu->Supports_DW_AT_APPLE_objc_complete_type())
-      m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-    else {
-      DWARFDebugInfo &debug_info = DebugInfo();
-      const uint32_t num_compile_units = GetNumCompileUnits();
-      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFUnit *dwarf_cu = debug_info.GetUnitAtIndex(cu_idx);
-        if (dwarf_cu != cu &&
-            dwarf_cu->Supports_DW_AT_APPLE_objc_complete_type()) {
-          m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-          break;
-        }
-      }
-    }
-    if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolNo &&
-        GetDebugMapSymfile())
-      return m_debug_map_symfile->Supports_DW_AT_APPLE_objc_complete_type(this);
-  }
-  return m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolYes;
-}
-
 // This function can be used when a DIE is found that is a forward declaration
 // DIE and we want to try and find a type that has the complete definition.
 TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
@@ -2965,8 +2946,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
         if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
           return true;
 
-        if (must_be_implementation &&
-            type_die.Supports_DW_AT_APPLE_objc_complete_type()) {
+        if (must_be_implementation) {
           const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
           if (!try_resolving_type)
@@ -3197,14 +3177,21 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
   if (function_die) {
     // We can't use the file address from the Function object as (in the OSO
     // case) it will already be remapped to the main module.
-    DWARFRangeList ranges = function_die.GetDIE()->GetAttributeAddressRanges(
-        function_die.GetCU(),
-        /*check_hi_lo_pc=*/true);
-    lldb::addr_t function_file_addr =
-        ranges.GetMinRangeBase(LLDB_INVALID_ADDRESS);
-    if (function_file_addr != LLDB_INVALID_ADDRESS)
-      ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
-                           function_die.GetFirstChild(), function_file_addr);
+    if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
+            function_die.GetDIE()->GetAttributeAddressRanges(
+                function_die.GetCU(),
+                /*check_hi_lo_pc=*/true)) {
+      if (ranges->empty())
+        return 0;
+      // TODO: Use the first range instead.
+      dw_addr_t function_file_addr = llvm::min_element(*ranges)->LowPC;
+      if (function_file_addr != LLDB_INVALID_ADDRESS)
+        ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
+                             function_die.GetFirstChild(), function_file_addr);
+    } else {
+      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                     "{1:x}: {0}", dwarf_cu->GetOffset());
+    }
   }
 
   return functions_added;
@@ -3233,10 +3220,16 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       DWARFDIE function_die = GetDIE(sc.function->GetID());
 
       dw_addr_t func_lo_pc = LLDB_INVALID_ADDRESS;
-      DWARFRangeList ranges = function_die.GetDIE()->GetAttributeAddressRanges(
-          function_die.GetCU(), /*check_hi_lo_pc=*/true);
-      if (!ranges.IsEmpty())
-        func_lo_pc = ranges.GetMinRangeBase(0);
+      if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
+              function_die.GetDIE()->GetAttributeAddressRanges(
+                  function_die.GetCU(), /*check_hi_lo_pc=*/true)) {
+        // TODO: Use the first range element instead.
+        if (!ranges->empty())
+          func_lo_pc = llvm::min_element(*ranges)->LowPC;
+      } else {
+        LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                       "DIE({1:x}): {0}", function_die.GetID());
+      }
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
         const size_t num_variables =
             ParseVariablesInFunctionContext(sc, function_die, func_lo_pc);
@@ -3523,17 +3516,20 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     // Check if the location has a DW_OP_addr with any address value...
     lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
     if (!location_is_const_value_data) {
-      bool op_error = false;
-      const DWARFExpression* location = location_list.GetAlwaysValidExpr();
-      if (location)
-        location_DW_OP_addr =
-            location->GetLocation_DW_OP_addr(location_form.GetUnit(), op_error);
-      if (op_error) {
-        StreamString strm;
-        location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
-        GetObjectFile()->GetModule()->ReportError(
-            "{0:x16}: {1} ({2}) has an invalid location: {3}", die.GetOffset(),
-            DW_TAG_value_to_name(die.Tag()), die.Tag(), strm.GetData());
+      if (const DWARFExpression *location =
+              location_list.GetAlwaysValidExpr()) {
+        if (auto maybe_location_DW_OP_addr =
+                location->GetLocation_DW_OP_addr(location_form.GetUnit())) {
+          location_DW_OP_addr = *maybe_location_DW_OP_addr;
+        } else {
+          StreamString strm;
+          location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
+          GetObjectFile()->GetModule()->ReportError(
+              "{0:x16}: {1} ({2}) has an invalid location: {3}: {4}",
+              die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+              llvm::fmt_consume(maybe_location_DW_OP_addr.takeError()),
+              strm.GetData());
+        }
       }
       if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
         is_static_lifetime = true;

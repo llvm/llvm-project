@@ -904,6 +904,7 @@ public:
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_GOTTPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+        ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
         ELFRefKind == AArch64MCExpr::VK_GOT_PAGE_LO15) {
@@ -1021,6 +1022,7 @@ public:
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
              ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
@@ -1445,11 +1447,12 @@ public:
 
   /// Is this a vector list with the type implicit (presumably attached to the
   /// instruction itself)?
-  template <RegKind VectorKind, unsigned NumRegs>
+  template <RegKind VectorKind, unsigned NumRegs, bool IsConsecutive = false>
   bool isImplicitlyTypedVectorList() const {
     return Kind == k_VectorList && VectorList.Count == NumRegs &&
            VectorList.NumElements == 0 &&
-           VectorList.RegisterKind == VectorKind;
+           VectorList.RegisterKind == VectorKind &&
+           (!IsConsecutive || (VectorList.Stride == 1));
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
@@ -1864,9 +1867,12 @@ public:
     VecListIdx_PReg = 3,
   };
 
-  template <VecListIndexType RegTy, unsigned NumRegs>
+  template <VecListIndexType RegTy, unsigned NumRegs,
+            bool IsConsecutive = false>
   void addVectorListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
+    assert((!IsConsecutive || (getVectorListStride() == 1)) &&
+           "Expected consecutive registers");
     static const unsigned FirstRegs[][5] = {
       /* DReg */ { AArch64::Q0,
                    AArch64::D0,       AArch64::D0_D1,
@@ -3314,7 +3320,8 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
                ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
                ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE) {
+               ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE &&
+               ELFRefKind != AArch64MCExpr::VK_TLSDESC_AUTH_PAGE) {
       // The operand must be an @page or @gotpage qualified symbolref.
       return Error(S, "page or gotpage label reference expected");
     }
@@ -3354,7 +3361,13 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
       Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
-    } else {
+    } else if (ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE) {
+      // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
+      // adr. It's not actually GOT entry page address but the GOT address
+      // itself - we just share the same variant kind with :got_auth: operator
+      // applied for adrp.
+      // TODO: can we somehow get current TargetMachine object to call
+      // getCodeModel() on it to ensure we are using tiny code model?
       return Error(S, "unexpected adr label");
     }
   }
@@ -4392,56 +4405,59 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
       return TokError("expect relocation specifier in operand after ':'");
 
     std::string LowerCase = getTok().getIdentifier().lower();
-    RefKind = StringSwitch<AArch64MCExpr::VariantKind>(LowerCase)
-                  .Case("lo12", AArch64MCExpr::VK_LO12)
-                  .Case("abs_g3", AArch64MCExpr::VK_ABS_G3)
-                  .Case("abs_g2", AArch64MCExpr::VK_ABS_G2)
-                  .Case("abs_g2_s", AArch64MCExpr::VK_ABS_G2_S)
-                  .Case("abs_g2_nc", AArch64MCExpr::VK_ABS_G2_NC)
-                  .Case("abs_g1", AArch64MCExpr::VK_ABS_G1)
-                  .Case("abs_g1_s", AArch64MCExpr::VK_ABS_G1_S)
-                  .Case("abs_g1_nc", AArch64MCExpr::VK_ABS_G1_NC)
-                  .Case("abs_g0", AArch64MCExpr::VK_ABS_G0)
-                  .Case("abs_g0_s", AArch64MCExpr::VK_ABS_G0_S)
-                  .Case("abs_g0_nc", AArch64MCExpr::VK_ABS_G0_NC)
-                  .Case("prel_g3", AArch64MCExpr::VK_PREL_G3)
-                  .Case("prel_g2", AArch64MCExpr::VK_PREL_G2)
-                  .Case("prel_g2_nc", AArch64MCExpr::VK_PREL_G2_NC)
-                  .Case("prel_g1", AArch64MCExpr::VK_PREL_G1)
-                  .Case("prel_g1_nc", AArch64MCExpr::VK_PREL_G1_NC)
-                  .Case("prel_g0", AArch64MCExpr::VK_PREL_G0)
-                  .Case("prel_g0_nc", AArch64MCExpr::VK_PREL_G0_NC)
-                  .Case("dtprel_g2", AArch64MCExpr::VK_DTPREL_G2)
-                  .Case("dtprel_g1", AArch64MCExpr::VK_DTPREL_G1)
-                  .Case("dtprel_g1_nc", AArch64MCExpr::VK_DTPREL_G1_NC)
-                  .Case("dtprel_g0", AArch64MCExpr::VK_DTPREL_G0)
-                  .Case("dtprel_g0_nc", AArch64MCExpr::VK_DTPREL_G0_NC)
-                  .Case("dtprel_hi12", AArch64MCExpr::VK_DTPREL_HI12)
-                  .Case("dtprel_lo12", AArch64MCExpr::VK_DTPREL_LO12)
-                  .Case("dtprel_lo12_nc", AArch64MCExpr::VK_DTPREL_LO12_NC)
-                  .Case("pg_hi21_nc", AArch64MCExpr::VK_ABS_PAGE_NC)
-                  .Case("tprel_g2", AArch64MCExpr::VK_TPREL_G2)
-                  .Case("tprel_g1", AArch64MCExpr::VK_TPREL_G1)
-                  .Case("tprel_g1_nc", AArch64MCExpr::VK_TPREL_G1_NC)
-                  .Case("tprel_g0", AArch64MCExpr::VK_TPREL_G0)
-                  .Case("tprel_g0_nc", AArch64MCExpr::VK_TPREL_G0_NC)
-                  .Case("tprel_hi12", AArch64MCExpr::VK_TPREL_HI12)
-                  .Case("tprel_lo12", AArch64MCExpr::VK_TPREL_LO12)
-                  .Case("tprel_lo12_nc", AArch64MCExpr::VK_TPREL_LO12_NC)
-                  .Case("tlsdesc_lo12", AArch64MCExpr::VK_TLSDESC_LO12)
-                  .Case("got", AArch64MCExpr::VK_GOT_PAGE)
-                  .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
-                  .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
-                  .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
-                  .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
-                  .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
-                  .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
-                  .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
-                  .Case("gottprel_g0_nc", AArch64MCExpr::VK_GOTTPREL_G0_NC)
-                  .Case("tlsdesc", AArch64MCExpr::VK_TLSDESC_PAGE)
-                  .Case("secrel_lo12", AArch64MCExpr::VK_SECREL_LO12)
-                  .Case("secrel_hi12", AArch64MCExpr::VK_SECREL_HI12)
-                  .Default(AArch64MCExpr::VK_INVALID);
+    RefKind =
+        StringSwitch<AArch64MCExpr::VariantKind>(LowerCase)
+            .Case("lo12", AArch64MCExpr::VK_LO12)
+            .Case("abs_g3", AArch64MCExpr::VK_ABS_G3)
+            .Case("abs_g2", AArch64MCExpr::VK_ABS_G2)
+            .Case("abs_g2_s", AArch64MCExpr::VK_ABS_G2_S)
+            .Case("abs_g2_nc", AArch64MCExpr::VK_ABS_G2_NC)
+            .Case("abs_g1", AArch64MCExpr::VK_ABS_G1)
+            .Case("abs_g1_s", AArch64MCExpr::VK_ABS_G1_S)
+            .Case("abs_g1_nc", AArch64MCExpr::VK_ABS_G1_NC)
+            .Case("abs_g0", AArch64MCExpr::VK_ABS_G0)
+            .Case("abs_g0_s", AArch64MCExpr::VK_ABS_G0_S)
+            .Case("abs_g0_nc", AArch64MCExpr::VK_ABS_G0_NC)
+            .Case("prel_g3", AArch64MCExpr::VK_PREL_G3)
+            .Case("prel_g2", AArch64MCExpr::VK_PREL_G2)
+            .Case("prel_g2_nc", AArch64MCExpr::VK_PREL_G2_NC)
+            .Case("prel_g1", AArch64MCExpr::VK_PREL_G1)
+            .Case("prel_g1_nc", AArch64MCExpr::VK_PREL_G1_NC)
+            .Case("prel_g0", AArch64MCExpr::VK_PREL_G0)
+            .Case("prel_g0_nc", AArch64MCExpr::VK_PREL_G0_NC)
+            .Case("dtprel_g2", AArch64MCExpr::VK_DTPREL_G2)
+            .Case("dtprel_g1", AArch64MCExpr::VK_DTPREL_G1)
+            .Case("dtprel_g1_nc", AArch64MCExpr::VK_DTPREL_G1_NC)
+            .Case("dtprel_g0", AArch64MCExpr::VK_DTPREL_G0)
+            .Case("dtprel_g0_nc", AArch64MCExpr::VK_DTPREL_G0_NC)
+            .Case("dtprel_hi12", AArch64MCExpr::VK_DTPREL_HI12)
+            .Case("dtprel_lo12", AArch64MCExpr::VK_DTPREL_LO12)
+            .Case("dtprel_lo12_nc", AArch64MCExpr::VK_DTPREL_LO12_NC)
+            .Case("pg_hi21_nc", AArch64MCExpr::VK_ABS_PAGE_NC)
+            .Case("tprel_g2", AArch64MCExpr::VK_TPREL_G2)
+            .Case("tprel_g1", AArch64MCExpr::VK_TPREL_G1)
+            .Case("tprel_g1_nc", AArch64MCExpr::VK_TPREL_G1_NC)
+            .Case("tprel_g0", AArch64MCExpr::VK_TPREL_G0)
+            .Case("tprel_g0_nc", AArch64MCExpr::VK_TPREL_G0_NC)
+            .Case("tprel_hi12", AArch64MCExpr::VK_TPREL_HI12)
+            .Case("tprel_lo12", AArch64MCExpr::VK_TPREL_LO12)
+            .Case("tprel_lo12_nc", AArch64MCExpr::VK_TPREL_LO12_NC)
+            .Case("tlsdesc_lo12", AArch64MCExpr::VK_TLSDESC_LO12)
+            .Case("tlsdesc_auth_lo12", AArch64MCExpr::VK_TLSDESC_AUTH_LO12)
+            .Case("got", AArch64MCExpr::VK_GOT_PAGE)
+            .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
+            .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
+            .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
+            .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
+            .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
+            .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
+            .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
+            .Case("gottprel_g0_nc", AArch64MCExpr::VK_GOTTPREL_G0_NC)
+            .Case("tlsdesc", AArch64MCExpr::VK_TLSDESC_PAGE)
+            .Case("tlsdesc_auth", AArch64MCExpr::VK_TLSDESC_AUTH_PAGE)
+            .Case("secrel_lo12", AArch64MCExpr::VK_SECREL_LO12)
+            .Case("secrel_hi12", AArch64MCExpr::VK_SECREL_HI12)
+            .Default(AArch64MCExpr::VK_INVALID);
 
     if (RefKind == AArch64MCExpr::VK_INVALID)
       return TokError("expect relocation specifier in operand after ':'");
@@ -5815,6 +5831,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
              ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_HI12) &&
             (Inst.getOpcode() == AArch64::ADDXri ||

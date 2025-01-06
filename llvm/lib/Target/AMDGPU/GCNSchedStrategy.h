@@ -29,7 +29,8 @@ enum class GCNSchedStageID : unsigned {
   UnclusteredHighRPReschedule = 1,
   ClusteredLowOccupancyReschedule = 2,
   PreRARematerialize = 3,
-  ILPInitialSchedule = 4
+  ILPInitialSchedule = 4,
+  MemoryClauseInitialSchedule = 5
 };
 
 #ifndef NDEBUG
@@ -147,6 +148,17 @@ protected:
 
 public:
   GCNMaxILPSchedStrategy(const MachineSchedContext *C);
+};
+
+/// The goal of this scheduling strategy is to maximize memory clause for a
+/// single wave.
+class GCNMaxMemoryClauseSchedStrategy final : public GCNSchedStrategy {
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  GCNMaxMemoryClauseSchedStrategy(const MachineSchedContext *C);
 };
 
 class ScheduleMetrics {
@@ -460,6 +472,15 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class MemoryClauseInitialScheduleStage : public GCNSchedStage {
+public:
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  MemoryClauseInitialScheduleStage(GCNSchedStageID StageID,
+                                   GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 

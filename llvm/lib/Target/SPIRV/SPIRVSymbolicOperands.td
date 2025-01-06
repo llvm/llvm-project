@@ -170,6 +170,8 @@ def GroupOperationOperand : OperandCategory;
 def KernelEnqueueFlagsOperand : OperandCategory;
 def KernelProfilingInfoOperand : OperandCategory;
 def OpcodeOperand : OperandCategory;
+def CooperativeMatrixLayoutOperand : OperandCategory;
+def CooperativeMatrixOperandsOperand : OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Extesions enum values and at the same time
@@ -305,6 +307,8 @@ defm SPV_INTEL_global_variable_fpga_decorations : ExtensionOperand<110>;
 defm SPV_KHR_cooperative_matrix : ExtensionOperand<111>;
 defm SPV_EXT_arithmetic_fence : ExtensionOperand<112>;
 defm SPV_EXT_optnone : ExtensionOperand<113>;
+defm SPV_INTEL_joint_matrix : ExtensionOperand<114>;
+defm SPV_INTEL_float_controls2 : ExtensionOperand<115>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -492,6 +496,15 @@ defm CacheControlsINTEL : CapabilityOperand<6441, 0, 0, [SPV_INTEL_cache_control
 defm CooperativeMatrixKHR : CapabilityOperand<6022, 0, 0, [SPV_KHR_cooperative_matrix], []>;
 defm ArithmeticFenceEXT : CapabilityOperand<6144, 0, 0, [SPV_EXT_arithmetic_fence], []>;
 defm SplitBarrierINTEL : CapabilityOperand<6141, 0, 0, [SPV_INTEL_split_barrier], []>;
+defm CooperativeMatrixCheckedInstructionsINTEL : CapabilityOperand<6192, 0, 0, [SPV_INTEL_joint_matrix], []>;
+defm CooperativeMatrixPrefetchINTEL : CapabilityOperand<6411, 0, 0, [SPV_INTEL_joint_matrix], []>;
+defm PackedCooperativeMatrixINTEL : CapabilityOperand<6434, 0, 0, [SPV_INTEL_joint_matrix], []>;
+defm CooperativeMatrixInvocationInstructionsINTEL : CapabilityOperand<6435, 0, 0, [SPV_INTEL_joint_matrix], []>;
+defm CooperativeMatrixTF32ComponentTypeINTEL : CapabilityOperand<6436, 0, 0, [SPV_INTEL_joint_matrix], []>;
+defm CooperativeMatrixBFloat16ComponentTypeINTEL : CapabilityOperand<6437, 0, 0, [SPV_INTEL_joint_matrix], []>;
+defm RoundToInfinityINTEL : CapabilityOperand<5582, 0, 0, [SPV_INTEL_float_controls2], []>;
+defm FloatingPointModeINTEL : CapabilityOperand<5583, 0, 0, [SPV_INTEL_float_controls2], []>;
+defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_controls2], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -685,6 +698,10 @@ defm OutputLinesNV : ExecutionModeOperand<5269, [MeshShadingNV]>;
 defm DerivativeGroupQuadsNV : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsNV]>;
 defm DerivativeGroupLinearNV : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearNV]>;
 defm OutputTrianglesNV : ExecutionModeOperand<5298, [MeshShadingNV]>;
+defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
+defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
+defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
+defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time
@@ -1233,6 +1250,9 @@ defm CacheControlStoreINTEL : DecorationOperand<6443, 0, 0, [], [CacheControlsIN
 defm HostAccessINTEL : DecorationOperand<6188, 0, 0, [], [GlobalVariableHostAccessINTEL]>;
 defm InitModeINTEL : DecorationOperand<6190, 0, 0, [], [GlobalVariableFPGADecorationsINTEL]>;
 defm ImplementInRegisterMapINTEL : DecorationOperand<6191, 0, 0, [], [GlobalVariableFPGADecorationsINTEL]>;
+defm FunctionRoundingModeINTEL : DecorationOperand<5822, 0, 0, [], [FunctionFloatControlINTEL]>;
+defm FunctionDenormModeINTEL : DecorationOperand<5823, 0, 0, [], [FunctionFloatControlINTEL]>;
+defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [FunctionFloatControlINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
@@ -1649,3 +1669,62 @@ defm GenericCastToPtr : OpcodeOperand<122>;
 defm Bitcast : OpcodeOperand<124>;
 defm ConvertPtrToU : OpcodeOperand<117>;
 defm ConvertUToPtr : OpcodeOperand<120>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define Cooperative Matrix Layout enum values and at the
+// same time SymbolicOperand entries extensions and capabilities.
+//===----------------------------------------------------------------------===//
+
+def CooperativeMatrixLayout : GenericEnum, Operand<i32> {
+  let FilterClass = "CooperativeMatrixLayout";
+  let NameField = "Name";
+  let ValueField = "Value";
+}
+
+class CooperativeMatrixLayout<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass CooperativeMatrixLayoutOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+  def : CooperativeMatrixLayout<NAME, value>;
+  defm : SymbolicOperandWithRequirements<CooperativeMatrixLayoutOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities>;
+}
+
+defm RowMajorKHR : CooperativeMatrixLayoutOperand<0x0, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm ColumnMajorKHR : CooperativeMatrixLayoutOperand<0x1, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm PackedINTEL : CooperativeMatrixLayoutOperand<0x2, [SPV_INTEL_joint_matrix], [PackedCooperativeMatrixINTEL]>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define Cooperative Matrix Operands enum values and at the
+// same time SymbolicOperand entries with string mnemonics, extensions and
+// capabilities.
+//===----------------------------------------------------------------------===//
+
+def CooperativeMatrixOperands : GenericEnum, Operand<i32> {
+  let FilterClass = "CooperativeMatrixOperands";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class CooperativeMatrixOperands<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass CooperativeMatrixOperandsOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+  def : CooperativeMatrixOperands<NAME, value>;
+  defm : SymbolicOperandWithRequirements<CooperativeMatrixOperandsOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities>;
+}
+
+defm NoneKHR : CooperativeMatrixOperandsOperand<0x0, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm MatrixASignedComponentsKHR : CooperativeMatrixOperandsOperand<0x1, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm MatrixBSignedComponentsKHR : CooperativeMatrixOperandsOperand<0x2, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm MatrixCSignedComponentsKHR : CooperativeMatrixOperandsOperand<0x4, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm MatrixResultSignedComponentsKHR : CooperativeMatrixOperandsOperand<0x8, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm SaturatingAccumulationKHR : CooperativeMatrixOperandsOperand<0x10, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
+defm MatrixAAndBTF32ComponentsINTEL : CooperativeMatrixOperandsOperand<0x20, [SPV_INTEL_joint_matrix], [CooperativeMatrixTF32ComponentTypeINTEL]>;
+defm MatrixAAndBBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x40, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
+defm MatrixCBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x80, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
+defm MatrixResultBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x100, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;

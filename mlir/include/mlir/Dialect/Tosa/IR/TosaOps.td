@@ -1698,7 +1698,8 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                 AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator";
 
   let description = [{
@@ -1904,24 +1905,6 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
   let results = (outs
     Tosa_Tensor:$output
   );
-
-  // Custom builder that does not require optional input_unsigned and
-  // output_unsigned.
-  let builders = [
-    OpBuilder<(ins "::mlir::Type":$output,
-                   "::mlir::Value":$input,
-                   "::mlir::IntegerAttr":$input_zp,
-                   "::mlir::IntegerAttr":$output_zp,
-                   "::mlir::DenseI32ArrayAttr":$multiplier,
-                   "::mlir::DenseI8ArrayAttr":$shift,
-                   "::mlir::BoolAttr":$scale32,
-                   "::mlir::BoolAttr":$double_round,
-                   "::mlir::BoolAttr":$per_channel), [{
-      auto FalseAttr = BoolAttr::get($_builder.getContext(), false);
-      build($_builder, $_state, output, input, input_zp, output_zp, multiplier,
-            shift, scale32, double_round, per_channel, FalseAttr, FalseAttr);
-    }]>
-  ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }

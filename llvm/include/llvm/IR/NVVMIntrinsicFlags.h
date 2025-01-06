@@ -15,6 +15,8 @@
 #ifndef LLVM_IR_NVVMINTRINSICFLAGS_H
 #define LLVM_IR_NVVMINTRINSICFLAGS_H
 
+#include <stdint.h>
+
 namespace llvm {
 namespace nvvm {
 

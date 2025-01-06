@@ -16,10 +16,41 @@
 
 #include "count_new.h"
 
+struct throwing_t {
+  int* throw_after_n_ = nullptr;
+  throwing_t() { throw 0; }
+
+  explicit throwing_t(int& throw_after_n) : throw_after_n_(&throw_after_n) {
+    if (throw_after_n == 0)
+      throw 0;
+    --throw_after_n;
+  }
+
+  throwing_t(const throwing_t& rhs) : throw_after_n_(rhs.throw_after_n_) {
+    if (throw_after_n_ == nullptr || *throw_after_n_ == 0)
+      throw 1;
+    --*throw_after_n_;
+  }
+
+  throwing_t& operator=(const throwing_t& rhs) {
+    throw_after_n_ = rhs.throw_after_n_;
+    if (throw_after_n_ == nullptr || *throw_after_n_ == 0)
+      throw 1;
+    --*throw_after_n_;
+    return *this;
+  }
+
+  friend bool operator==(const throwing_t& lhs, const throwing_t& rhs) {
+    return lhs.throw_after_n_ == rhs.throw_after_n_;
+  }
+  friend bool operator!=(const throwing_t& lhs, const throwing_t& rhs) {
+    return lhs.throw_after_n_ != rhs.throw_after_n_;
+  }
+};
+
 template <class T>
 struct throwing_allocator {
-  using value_type      = T;
-  using is_always_equal = std::false_type;
+  using value_type = T;
 
   bool throw_on_copy_ = false;
 
@@ -64,7 +95,7 @@ struct throwing_iterator {
   int i_;
   T v_;
 
-  throwing_iterator(int i = 0, const T& v = T()) : i_(i), v_(v) {}
+  explicit throwing_iterator(int i = 0, const T& v = T()) : i_(i), v_(v) {}
 
   reference operator*() {
     if (i_ == 1)

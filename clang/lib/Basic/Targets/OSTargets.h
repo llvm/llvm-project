@@ -231,6 +231,9 @@ public:
     case llvm::Triple::riscv32:
     case llvm::Triple::riscv64:
       break;
+    case llvm::Triple::loongarch32:
+    case llvm::Triple::loongarch64:
+      break;
     }
   }
 };
@@ -473,7 +476,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-n32:64");
+    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
   }
 };
 
@@ -787,7 +790,9 @@ template <typename Target>
 class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {}
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__UEFI__");
+  }
 
 public:
   UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)

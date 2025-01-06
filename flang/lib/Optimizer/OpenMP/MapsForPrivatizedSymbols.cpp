@@ -49,13 +49,6 @@ class MapsForPrivatizedSymbolsPass
     : public flangomp::impl::MapsForPrivatizedSymbolsPassBase<
           MapsForPrivatizedSymbolsPass> {
 
-  bool privatizerNeedsMap(omp::PrivateClauseOp &privatizer) {
-    Region &allocRegion = privatizer.getAllocRegion();
-    Value blockArg0 = allocRegion.getArgument(0);
-    if (blockArg0.use_empty())
-      return false;
-    return true;
-  }
   omp::MapInfoOp createMapInfo(Location loc, Value var,
                                fir::FirOpBuilder &builder) {
     uint64_t mapTypeTo = static_cast<
@@ -134,7 +127,7 @@ class MapsForPrivatizedSymbolsPass
         omp::PrivateClauseOp privatizer =
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
                 targetOp, privatizerName);
-        if (!privatizerNeedsMap(privatizer)) {
+        if (!privatizer.needsMap()) {
           privVarMapIdx.push_back(-1);
           continue;
         }

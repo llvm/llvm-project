@@ -163,7 +163,7 @@ MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
                                                     void *&InsertPos) {
   handleRecordedInsts();
   if (auto *Inst = getNodeIfExists(ID, MBB, InsertPos)) {
-    LLVM_DEBUG(dbgs() << "CSEInfo::Found Instr " << *Inst->MI;);
+    LLVM_DEBUG(dbgs() << "CSEInfo::Found Instr " << *Inst->MI);
     return const_cast<MachineInstr *>(Inst->MI);
   }
   return nullptr;
@@ -313,11 +313,11 @@ Error GISelCSEInfo::verify() {
 }
 
 void GISelCSEInfo::print() {
-  LLVM_DEBUG(for (auto &It
-                  : OpcodeHitTable) {
-    dbgs() << "CSEInfo::CSE Hit for Opc " << It.first << " : " << It.second
-           << "\n";
-  };);
+  LLVM_DEBUG({
+    for (auto &It : OpcodeHitTable)
+      dbgs() << "CSEInfo::CSE Hit for Opc " << It.first << " : " << It.second
+             << "\n";
+  });
 }
 /// -----------------------------------------
 // ---- Profiling methods for FoldingSetNode --- //

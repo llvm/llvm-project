@@ -369,7 +369,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_MIPS_26 && type != R_MIPS_PC26_S2 &&
       type != R_MICROMIPS_26_S1 && type != R_MICROMIPS_PC26_S1)
     return false;
-  auto *f = dyn_cast_or_null<ObjFile<ELFT>>(file);
+  auto *f = dyn_cast<ObjFile<ELFT>>(file);
   if (!f)
     return false;
   // If current file has PIC code, LA25 stub is not required.
