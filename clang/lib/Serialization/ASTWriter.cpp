@@ -6092,9 +6092,10 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
 
       // An updated body is emitted last, so that the reader doesn't need
       // to skip over the lazy body to reach statements for other records.
-      if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION)
-        HasUpdatedBody = true;
-      else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION)
+      if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION) {
+        assert(isa<FunctionDecl>(D) && "expected FunctionDecl");
+        HasUpdatedBody = dyn_cast<FunctionDecl>(D)->hasBody();
+      } else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION)
         HasAddedVarDefinition = true;
       else
         Record.push_back(Kind);
@@ -6227,10 +6228,8 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
     if (!GeneratingReducedBMI || !CanElideDeclDef(D)) {
-      assert(!(HasUpdatedBody && HasAddedVarDefinition) &&
-             "Declaration can not be both a FunctionDecl and a VarDecl");
-      if (const auto *Def = dyn_cast<FunctionDecl>(D);
-          HasUpdatedBody && Def->doesThisDeclarationHaveABody()) {
+      if (HasUpdatedBody) {
+        const auto *Def = cast<FunctionDecl>(D);
         Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
         Record.push_back(Def->isInlined());
         Record.AddSourceLocation(Def->getInnerLocStart());
