@@ -56,10 +56,10 @@ define float @test_select_frexp_multi_use(float %x, i1 %cond) {
 define <2 x float> @test_select_frexp_vec_splat(<2 x float> %x, <2 x i1> %cond) {
 ; CHECK-LABEL: define <2 x float> @test_select_frexp_vec_splat(
 ; CHECK-SAME: <2 x float> [[X:%.*]], <2 x i1> [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND]], <2 x float> splat (float 1.000000e+00), <2 x float> [[X]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> [[SEL]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> [[X]])
 ; CHECK-NEXT:    [[FREXP_0:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[FREXP]], 0
-; CHECK-NEXT:    ret <2 x float> [[FREXP_0]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select <2 x i1> [[COND]], <2 x float> splat (float 5.000000e-01), <2 x float> [[FREXP_0]]
+; CHECK-NEXT:    ret <2 x float> [[SELECT_FREXP]]
 ;
   %sel = select <2 x i1> %cond, <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> %x
   %frexp = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %sel)
@@ -125,6 +125,37 @@ define i32 @test_select_frexp_extract_exp(float %x, i1 %cond) {
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
   %frexp.1 = extractvalue { float, i32 } %frexp, 1
   ret i32 %frexp.1
+}
+
+; Test with fast math flags
+define float @test_select_frexp_fast_math_select(float %x, i1 %cond) {
+; CHECK-LABEL: define float @test_select_frexp_fast_math_select(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[FREXP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
+; CHECK-NEXT:    [[MANTISSA:%.*]] = extractvalue { float, i32 } [[FREXP1]], 0
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select nnan ninf nsz i1 [[COND]], float 5.000000e-01, float [[MANTISSA]]
+; CHECK-NEXT:    ret float [[SELECT_FREXP]]
+;
+  %sel = select nnan ninf nsz i1 %cond, float 1.000000e+00, float %x
+  %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
+  %frexp.0 = extractvalue { float, i32 } %frexp, 0
+  ret float %frexp.0
+}
+
+
+; Test vector case with fast math flags
+define <2 x float> @test_select_frexp_vec_fast_math(<2 x float> %x, <2 x i1> %cond) {
+; CHECK-LABEL: define <2 x float> @test_select_frexp_vec_fast_math(
+; CHECK-SAME: <2 x float> [[X:%.*]], <2 x i1> [[COND:%.*]]) {
+; CHECK-NEXT:    [[FREXP1:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> [[X]])
+; CHECK-NEXT:    [[MANTISSA:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[FREXP1]], 0
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select nnan ninf nsz <2 x i1> [[COND]], <2 x float> splat (float 5.000000e-01), <2 x float> [[MANTISSA]]
+; CHECK-NEXT:    ret <2 x float> [[SELECT_FREXP]]
+;
+  %sel = select nnan ninf nsz <2 x i1> %cond, <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> %x
+  %frexp = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %sel)
+  %frexp.0 = extractvalue { <2 x float>, <2 x i32> } %frexp, 0
+  ret <2 x float> %frexp.0
 }
 
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>)

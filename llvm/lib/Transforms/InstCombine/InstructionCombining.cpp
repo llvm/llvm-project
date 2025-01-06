@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -4069,52 +4070,57 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   return nullptr;
 }
 
-static Value *foldFrexpOfSelect(ExtractValueInst &EV, CallInst *FrexpCall,
+static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
                                 SelectInst *SelectInst,
                                 InstCombiner::BuilderTy &Builder) {
   // Helper to fold frexp of select to select of frexp.
   Value *Cond = SelectInst->getCondition();
   Value *TrueVal = SelectInst->getTrueValue();
   Value *FalseVal = SelectInst->getFalseValue();
-  ConstantFP *ConstOp = nullptr;
+
+  const APFloat *ConstVal = nullptr;
   Value *VarOp = nullptr;
   bool ConstIsTrue = false;
 
-  if (auto *TrueConst = dyn_cast<ConstantFP>(TrueVal)) {
-    ConstOp = TrueConst;
+  if (match(TrueVal, m_APFloat(ConstVal))) {
     VarOp = FalseVal;
     ConstIsTrue = true;
-  } else if (auto *FalseConst = dyn_cast<ConstantFP>(FalseVal)) {
-    ConstOp = FalseConst;
+  } else if (match(FalseVal, m_APFloat(ConstVal))) {
     VarOp = TrueVal;
     ConstIsTrue = false;
+  } else {
+    return nullptr;
   }
 
-  if (!ConstOp || !VarOp)
-    return nullptr;
+  Builder.SetInsertPoint(&EV);
 
   CallInst *NewFrexp =
       Builder.CreateCall(FrexpCall->getCalledFunction(), {VarOp}, "frexp");
+  NewFrexp->copyIRFlags(FrexpCall);
 
   Value *NewEV = Builder.CreateExtractValue(NewFrexp, 0, "mantissa");
 
-  APFloat ConstVal = ConstOp->getValueAPF();
-  int Exp = 0;
-  APFloat Mantissa = ConstVal;
+  int Exp;
+  APFloat Mantissa = frexp(*ConstVal, Exp, APFloat::rmNearestTiesToEven);
 
-  if (ConstVal.isFiniteNonZero()) {
-    Mantissa = frexp(ConstVal, Exp, APFloat::rmNearestTiesToEven);
+  Constant *ConstantMantissa;
+  if (auto *VecTy = dyn_cast<VectorType>(TrueVal->getType())) {
+    SmallVector<Constant *, 4> Elems(
+        VecTy->getElementCount().getFixedValue(),
+        ConstantFP::get(VecTy->getElementType(), Mantissa));
+    ConstantMantissa = ConstantVector::get(Elems);
+  } else {
+    ConstantMantissa = ConstantFP::get(TrueVal->getType(), Mantissa);
   }
-
-  Constant *ConstantMantissa = ConstantFP::get(ConstOp->getType(), Mantissa);
 
   Value *NewSel = Builder.CreateSelect(
       Cond, ConstIsTrue ? ConstantMantissa : NewEV,
       ConstIsTrue ? NewEV : ConstantMantissa, "select.frexp");
+  if (auto *NewSelInst = dyn_cast<Instruction>(NewSel))
+    NewSelInst->copyFastMathFlags(SelectInst);
 
   return NewSel;
 }
-
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   Value *Agg = EV.getAggregateOperand();
 
@@ -4125,20 +4131,12 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
                                           SQ.getWithInstruction(&EV)))
     return replaceInstUsesWith(EV, V);
   if (EV.getNumIndices() == 1 && EV.getIndices()[0] == 0) {
-    if (auto *FrexpCall = dyn_cast<CallInst>(Agg)) {
-      if (Function *F = FrexpCall->getCalledFunction()) {
-        if (F->getIntrinsicID() == Intrinsic::frexp) {
-          if (auto *SelInst =
-                  dyn_cast<SelectInst>(FrexpCall->getArgOperand(0))) {
-            if (isa<ConstantFP>(SelInst->getTrueValue()) ||
-                isa<ConstantFP>(SelInst->getFalseValue())) {
-              Builder.SetInsertPoint(&EV);
-
-              if (Value *Result =
-                      foldFrexpOfSelect(EV, FrexpCall, SelInst, Builder)) {
-                return replaceInstUsesWith(EV, Result);
-              }
-            }
+    if (auto *FrexpCall = dyn_cast<IntrinsicInst>(Agg)) {
+      if (FrexpCall->getIntrinsicID() == Intrinsic::frexp) {
+        if (auto *SelInst = dyn_cast<SelectInst>(FrexpCall->getArgOperand(0))) {
+          if (Value *Result =
+                  foldFrexpOfSelect(EV, FrexpCall, SelInst, Builder)) {
+            return replaceInstUsesWith(EV, Result);
           }
         }
       }
