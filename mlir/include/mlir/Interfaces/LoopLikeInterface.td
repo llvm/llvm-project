@@ -80,23 +80,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/"op->moveBefore($_op);"
     >,
     InterfaceMethod<[{
-        Wraps the loop into a trip-count check.
+        Moves the given loop-invariant operation out of the loop with a
+        trip-count guard.
       }],
-      /*retTy=*/"FailureOr<std::pair<::mlir::Operation *, ::mlir::Region *>>",
-      /*methodName=*/"wrapInTripCountCheck",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/"return ::mlir::failure();"
-    >,
-    InterfaceMethod<[{
-        Unwraps the trip-count check.
-      }],
-      /*retTy=*/"::llvm::LogicalResult",
-      /*methodName=*/"unwrapTripCountCheck",
-      /*args=*/(ins),
+      /*retTy=*/"void",
+      /*methodName=*/"moveOutOfLoopWithGuard",
+      /*args=*/(ins "::mlir::Operation *":$op),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::failure();
+        return;
       }]
     >,
     InterfaceMethod<[{

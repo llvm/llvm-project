@@ -56,86 +56,41 @@ static bool canBeHoisted(Operation *op,
       op, [&](OpOperand &operand) { return definedOutside(operand.get()); });
 }
 
-static bool dependsOnGuarded(Operation *op,
-                             function_ref<bool(OpOperand &)> condition) {
-  auto walkFn = [&](Operation *child) {
-    for (OpOperand &operand : child->getOpOperands()) {
-      if (!condition(operand))
-        return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  };
-  return op->walk(walkFn).wasInterrupted();
-}
-
-static bool dependsOnGuarded(Operation *op,
-                             function_ref<bool(Value)> definedOutsideGuard) {
-  return dependsOnGuarded(op, [&](OpOperand &operand) {
-    return definedOutsideGuard(operand.get());
-  });
-}
-
-static bool loopSideEffectFreeOrHasOnlyReadEffect(Operation *loop) {
-  for (Region &region : loop->getRegions()) {
-    for (Block &block : region.getBlocks()) {
-      for (Operation &op : block.getOperations()) {
-        if (!isMemoryEffectFree(&op) && !hasOnlyReadEffect(&op))
-          return false;
-      }
-    }
-  }
-  return true;
-}
-
 size_t mlir::moveLoopInvariantCode(
     ArrayRef<Region *> regions,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
-    function_ref<FailureOr<std::pair<Operation *, Region *>>()> wrapInGuard,
-    function_ref<void(Operation *, Region *)> moveOutOfRegion,
-    function_ref<LogicalResult()> unwrapGuard) {
+    function_ref<void(Operation *)> moveOutOfRegionWithoutGuard,
+    function_ref<void(Operation *)> moveOutOfRegionWithGuard) {
   size_t numMoved = 0;
 
   for (Region *region : regions) {
     LLVM_DEBUG(llvm::dbgs() << "Original loop:\n"
                             << *region->getParentOp() << "\n");
 
-    auto loopSideEffectFreeOrHasOnlyReadSideEffect =
-        loopSideEffectFreeOrHasOnlyReadEffect(region->getParentOp());
-
-    size_t numMovedWithoutGuard = 0;
-
-    FailureOr<std::pair<Operation *, Region *>> ifOpAndRegion = wrapInGuard();
-    Region *loopRegion = region;
-    auto isLoopWrapped = false;
-    if (succeeded(ifOpAndRegion)) {
-      loopRegion = ifOpAndRegion->second;
-      isLoopWrapped = true;
-    }
+    bool anyOpHoistedWithGuard = false;
+    bool loopSideEffectFreeOrHasOnlyReadSideEffect =
+        isMemoryEffectFreeOrOnlyRead(region->getParentOp());
 
     std::queue<Operation *> worklist;
     // Add top-level operations in the loop body to the worklist.
-    for (Operation &op : loopRegion->getOps())
+    for (Operation &op : region->getOps())
       worklist.push(&op);
 
     auto definedOutside = [&](Value value) {
-      return isDefinedOutsideRegion(value, loopRegion);
-    };
-
-    auto definedOutsideGuard = [&](Value value) {
-      return isDefinedOutsideRegion(value, loopRegion->getParentRegion());
+      return isDefinedOutsideRegion(value, region);
     };
 
     while (!worklist.empty()) {
       Operation *op = worklist.front();
       worklist.pop();
       // Skip ops that have already been moved. Check if the op can be hoisted.
-      if (op->getParentRegion() != loopRegion)
+      if (op->getParentRegion() != region)
         continue;
 
       LLVM_DEBUG(llvm::dbgs() << "Checking op: " << *op << "\n");
 
-      if (!shouldMoveOutOfRegion(op, loopRegion) ||
+      if (!shouldMoveOutOfRegion(op, region) ||
           !canBeHoisted(op, definedOutside))
         continue;
       // Can only hoist pure ops (side-effect free) when there is an op with
@@ -143,29 +98,24 @@ size_t mlir::moveLoopInvariantCode(
       if (!loopSideEffectFreeOrHasOnlyReadSideEffect && !isMemoryEffectFree(op))
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op << "\n");
-
-      auto moveWithoutGuard = isMemoryEffectFree(op) &&
-                              !dependsOnGuarded(op, definedOutsideGuard) &&
-                              isLoopWrapped;
-      numMovedWithoutGuard += moveWithoutGuard;
-
-      moveOutOfRegion(op, moveWithoutGuard ? loopRegion->getParentRegion()
-                                           : loopRegion);
+      bool moveWithoutGuard = !anyOpHoistedWithGuard && isMemoryEffectFree(op);
+      if (moveWithoutGuard) {
+        LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op
+                                << " without guard\n");
+        moveOutOfRegionWithoutGuard(op);
+      } else {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Moving loop-invariant op: " << *op << " with guard\n");
+        moveOutOfRegionWithGuard(op);
+        anyOpHoistedWithGuard = true;
+      }
       ++numMoved;
 
       // Since the op has been moved, we need to check its users within the
       // top-level of the loop body.
       for (Operation *user : op->getUsers())
-        if (user->getParentRegion() == loopRegion)
+        if (user->getParentRegion() == region)
           worklist.push(user);
-    }
-
-    // Unwrap the loop if it was wrapped but no ops were moved in the guard.
-    if (isLoopWrapped && numMovedWithoutGuard == numMoved) {
-      auto tripCountCheckUnwrapped = unwrapGuard();
-      if (failed(tripCountCheckUnwrapped))
-        llvm_unreachable("Should not fail unwrapping trip-count check");
     }
   }
 
@@ -179,14 +129,10 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
         return !region->isAncestor(value.getParentRegion());
       },
       [&](Operation *op, Region *) {
-        return isSpeculatable(op) &&
-               (isMemoryEffectFree(op) || hasOnlyReadEffect(op));
+        return isSpeculatable(op) && isMemoryEffectFreeOrOnlyRead(op);
       },
-      [&]() { return loopLike.wrapInTripCountCheck(); },
-      [&](Operation *op, Region *region) {
-        op->moveBefore(region->getParentOp());
-      },
-      [&]() { return loopLike.unwrapTripCountCheck(); });
+      [&](Operation *op) { loopLike.moveOutOfLoop(op); },
+      [&](Operation *op) { loopLike.moveOutOfLoopWithGuard(op); });
 }
 
 namespace {

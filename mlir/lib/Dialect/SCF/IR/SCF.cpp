@@ -15,6 +15,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -395,58 +396,38 @@ std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
 
-FailureOr<std::pair<Operation *, Region *>> ForOp::wrapInTripCountCheck() {
-
+/// Moves the op out of the loop with a guard that checks if the loop has at
+/// least one iteration.
+void ForOp::moveOutOfLoopWithGuard(Operation *op) {
   IRRewriter rewriter(this->getContext());
   OpBuilder::InsertionGuard insertGuard(rewriter);
-  rewriter.setInsertionPointAfter(this->getOperation());
-
-  auto loc = this->getLoc();
-  auto cmpIOp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt,
-                                               this->getUpperBound(),
-                                               this->getLowerBound());
-  scf::YieldOp yieldInThen;
+  rewriter.setInsertionPoint(this->getOperation());
+  Location loc = this->getLoc();
+  arith::CmpIOp cmpIOp = rewriter.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::ult, this->getLowerBound(),
+      this->getUpperBound());
   // Create the trip-count check.
-  auto ifOp = rewriter.create<scf::IfOp>(
+  scf::YieldOp thenYield;
+  scf::IfOp ifOp = rewriter.create<scf::IfOp>(
       loc, cmpIOp,
       [&](OpBuilder &builder, Location loc) {
-        yieldInThen = builder.create<scf::YieldOp>(loc, this->getResults());
+        thenYield = builder.create<scf::YieldOp>(loc, op->getResults());
       },
       [&](OpBuilder &builder, Location loc) {
-        builder.create<scf::YieldOp>(loc, this->getInitArgs());
+        SmallVector<Value> poisonResults;
+        poisonResults.reserve(op->getResults().size());
+        for (Type type : op->getResults().getTypes()) {
+          ub::PoisonOp poisonOp =
+              rewriter.create<ub::PoisonOp>(loc, type, nullptr);
+          poisonResults.push_back(poisonOp);
+        }
+        builder.create<scf::YieldOp>(loc, poisonResults);
       });
-
-  for (auto [forOpResult, ifOpResult] :
-       llvm::zip(this->getResults(), ifOp.getResults()))
-    rewriter.replaceAllUsesExcept(forOpResult, ifOpResult, yieldInThen);
-  // Move the scf.for into the then block.
-  rewriter.moveOpBefore(this->getOperation(), yieldInThen);
-  return std::make_pair(ifOp.getOperation(), &this->getRegion());
-}
-
-LogicalResult ForOp::unwrapTripCountCheck() {
-  auto ifOp = (*this)->getParentRegion()->getParentOp();
-  if (!isa<scf::IfOp>(ifOp))
-    return failure();
-
-  IRRewriter rewriter(ifOp->getContext());
-  OpBuilder::InsertionGuard insertGuard(rewriter);
-  rewriter.setInsertionPoint(ifOp);
-
-  auto cmpOp = ifOp->getOperand(0).getDefiningOp();
-  if (!isa<arith::CmpIOp>(cmpOp))
-    return failure();
-
-  auto wrappedForOp = this->getOperation();
-  rewriter.moveOpBefore(wrappedForOp, ifOp);
-
-  for (auto [forOpResult, ifOpResult] :
-       llvm::zip(wrappedForOp->getResults(), ifOp->getResults()))
-    rewriter.replaceAllUsesWith(ifOpResult, forOpResult);
-
-  rewriter.eraseOp(ifOp);
-  rewriter.eraseOp(cmpOp);
-  return success();
+  for (auto [opResult, ifOpResult] :
+       llvm::zip(op->getResults(), ifOp->getResults()))
+    rewriter.replaceAllUsesExcept(opResult, ifOpResult, thenYield);
+  // Move the op into the then block.
+  rewriter.moveOpBefore(op, thenYield);
 }
 
 /// Promotes the loop body of a forOp to its containing block if the forOp

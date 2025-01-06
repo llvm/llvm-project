@@ -306,26 +306,6 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
-bool mlir::hasOnlyReadEffect(Operation *op) {
-  if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
-    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
-      return memEffects.onlyHasEffect<MemoryEffects::Read>();
-  } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
-    // Otherwise, if the op does not implement the memory effect interface and
-    // it does not have recursive side effects, then it cannot be known that the
-    // op is moveable.
-    return false;
-  }
-
-  // Recurse into the regions and ensure that all nested ops are memory effect
-  // free.
-  for (Region &region : op->getRegions())
-    for (Operation &op : region.getOps())
-      if (!hasOnlyReadEffect(&op))
-        return false;
-  return true;
-}
-
 bool mlir::isMemoryEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect())
@@ -381,6 +361,16 @@ mlir::getEffectsRecursively(Operation *rootOp) {
     }
   }
   return effects;
+}
+
+bool mlir::isMemoryEffectFreeOrOnlyRead(Operation *op) {
+  std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
+      getEffectsRecursively(op);
+  if (!effects)
+    return false;
+  return std::all_of(effects->begin(), effects->end(), [](auto &effect) {
+    return isa<MemoryEffects::Read>(effect.getEffect());
+  });
 }
 
 bool mlir::isSpeculatable(Operation *op) {
