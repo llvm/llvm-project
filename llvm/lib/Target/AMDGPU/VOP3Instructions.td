@@ -1888,7 +1888,7 @@ multiclass VOP3_Real_Base_gfx11_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Gen, op>;
 
 multiclass VOP3_Real_Base_gfx11_gfx12_not_gfx1250<bits<10> op> :
-  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not12_10Gen, op>;
+  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not12_50Gen, op>;
 
 multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
                                                  string asmName> :
@@ -1917,7 +1917,7 @@ multiclass VOP3be_Real_gfx11_gfx12<bits<10> op, string opName, string asmName> :
 
 multiclass VOP3be_Real_gfx11_gfx12_not_gfx1250<bits<10> op, string opName, string asmName> :
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
-  VOP3be_Real<GFX12Not12_10Gen, op, opName, asmName>;
+  VOP3be_Real<GFX12Not12_50Gen, op, opName, asmName>;
 
 multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
   VOP3be_Realtriple<GFX1250Gen, op>;
