@@ -8352,8 +8352,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
               ? GEPNoWrapFlags::none()
               : GEPNoWrapFlags::inBounds();
       VectorPtr = new VPReverseVectorPointerRecipe(
-          Ptr, &Plan.getVF(), getLoadStoreType(I),
-          Flags, I->getDebugLoc());
+          Ptr, &Plan.getVF(), getLoadStoreType(I), Flags, I->getDebugLoc());
     } else {
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
                                             GEP ? GEP->getNoWrapFlags()
