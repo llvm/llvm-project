@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
@@ -44,16 +43,15 @@ class StoreManager;
 class SymbolRegionValue : public SymbolData {
   const TypedValueRegion *R;
 
-  friend class SymExprAllocator;
+public:
   SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
       : SymbolData(SymbolRegionValueKind, sym), R(r) {
     assert(r);
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
-public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const TypedValueRegion *getRegion() const { return R; }
+  const TypedValueRegion* getRegion() const { return R; }
 
   static void Profile(llvm::FoldingSetNodeID& profile, const TypedValueRegion* R) {
     profile.AddInteger((unsigned) SymbolRegionValueKind);
@@ -86,7 +84,7 @@ class SymbolConjured : public SymbolData {
   const LocationContext *LCtx;
   const void *SymbolTag;
 
-  friend class SymExprAllocator;
+public:
   SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
                  QualType t, unsigned count, const void *symbolTag)
       : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
@@ -100,7 +98,6 @@ class SymbolConjured : public SymbolData {
     assert(isValidTypeForSymbol(t));
   }
 
-public:
   /// It might return null.
   const Stmt *getStmt() const { return S; }
   unsigned getCount() const { return Count; }
@@ -140,7 +137,7 @@ class SymbolDerived : public SymbolData {
   SymbolRef parentSymbol;
   const TypedValueRegion *R;
 
-  friend class SymExprAllocator;
+public:
   SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
       : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {
     assert(parent);
@@ -148,7 +145,6 @@ class SymbolDerived : public SymbolData {
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
-public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   SymbolRef getParentSymbol() const { return parentSymbol; }
   LLVM_ATTRIBUTE_RETURNS_NONNULL
@@ -184,13 +180,12 @@ public:
 class SymbolExtent : public SymbolData {
   const SubRegion *R;
 
-  friend class SymExprAllocator;
+public:
   SymbolExtent(SymbolID sym, const SubRegion *r)
       : SymbolData(SymbolExtentKind, sym), R(r) {
     assert(r);
   }
 
-public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const SubRegion *getRegion() const { return R; }
 
@@ -227,7 +222,7 @@ class SymbolMetadata : public SymbolData {
   unsigned Count;
   const void *Tag;
 
-  friend class SymExprAllocator;
+public:
   SymbolMetadata(SymbolID sym, const MemRegion* r, const Stmt *s, QualType t,
                  const LocationContext *LCtx, unsigned count, const void *tag)
       : SymbolData(SymbolMetadataKind, sym), R(r), S(s), T(t), LCtx(LCtx),
@@ -239,7 +234,6 @@ class SymbolMetadata : public SymbolData {
       assert(tag);
     }
 
-  public:
     LLVM_ATTRIBUTE_RETURNS_NONNULL
     const MemRegion *getRegion() const { return R; }
 
@@ -292,16 +286,15 @@ class SymbolCast : public SymExpr {
   /// The type of the result.
   QualType ToTy;
 
-  friend class SymExprAllocator;
-  SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
-      : SymExpr(SymbolCastKind, Sym), Operand(In), FromTy(From), ToTy(To) {
+public:
+  SymbolCast(const SymExpr *In, QualType From, QualType To)
+      : SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) {
     assert(In);
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
     // Otherwise, 'To' should also be a valid type.
   }
 
-public:
   unsigned computeComplexity() const override {
     if (Complexity == 0)
       Complexity = 1 + Operand->computeComplexity();
@@ -339,10 +332,9 @@ class UnarySymExpr : public SymExpr {
   UnaryOperator::Opcode Op;
   QualType T;
 
-  friend class SymExprAllocator;
-  UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
-               QualType T)
-      : SymExpr(UnarySymExprKind, Sym), Operand(In), Op(Op), T(T) {
+public:
+  UnarySymExpr(const SymExpr *In, UnaryOperator::Opcode Op, QualType T)
+      : SymExpr(UnarySymExprKind), Operand(In), Op(Op), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -353,7 +345,6 @@ class UnarySymExpr : public SymExpr {
     assert(!Loc::isLocType(T) && "unary symbol should be nonloc");
   }
 
-public:
   unsigned computeComplexity() const override {
     if (Complexity == 0)
       Complexity = 1 + Operand->computeComplexity();
@@ -390,8 +381,8 @@ class BinarySymExpr : public SymExpr {
   QualType T;
 
 protected:
-  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t)
-      : SymExpr(k, Sym), Op(op), T(t) {
+  BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
+      : SymExpr(k), Op(op), T(t) {
     assert(classof(this));
     // Binary expressions are results of arithmetic. Pointer arithmetic is not
     // handled by binary expressions, but it is instead handled by applying
@@ -434,15 +425,14 @@ class BinarySymExprImpl : public BinarySymExpr {
   LHSTYPE LHS;
   RHSTYPE RHS;
 
-  friend class SymExprAllocator;
-  BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
-                    RHSTYPE rhs, QualType t)
-      : BinarySymExpr(Sym, ClassKind, op, t), LHS(lhs), RHS(rhs) {
+public:
+  BinarySymExprImpl(LHSTYPE lhs, BinaryOperator::Opcode op, RHSTYPE rhs,
+                    QualType t)
+      : BinarySymExpr(ClassKind, op, t), LHS(lhs), RHS(rhs) {
     assert(getPointer(lhs));
     assert(getPointer(rhs));
   }
 
-public:
   void dumpToStream(raw_ostream &os) const override {
     dumpToStreamImpl(os, LHS);
     dumpToStreamImpl(os, getOpcode());
@@ -488,21 +478,6 @@ using IntSymExpr = BinarySymExprImpl<APSIntPtr, const SymExpr *,
 using SymSymExpr = BinarySymExprImpl<const SymExpr *, const SymExpr *,
                                      SymExpr::Kind::SymSymExprKind>;
 
-class SymExprAllocator {
-  SymbolID NextSymbolID = 0;
-  llvm::BumpPtrAllocator &Alloc;
-
-public:
-  explicit SymExprAllocator(llvm::BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
-
-  template <class SymT, typename... ArgsT> SymT *make(ArgsT &&...Args) {
-    return new (Alloc) SymT(nextID(), std::forward<ArgsT>(Args)...);
-  }
-
-private:
-  SymbolID nextID() { return NextSymbolID++; }
-};
-
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
   using SymbolDependTy =
@@ -514,14 +489,15 @@ class SymbolManager {
   /// alive as long as the key is live.
   SymbolDependTy SymbolDependencies;
 
-  SymExprAllocator Alloc;
+  unsigned SymbolCounter = 0;
+  llvm::BumpPtrAllocator& BPAlloc;
   BasicValueFactory &BV;
   ASTContext &Ctx;
 
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
-                llvm::BumpPtrAllocator &bpalloc)
-      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx) {}
+                llvm::BumpPtrAllocator& bpalloc)
+      : SymbolDependencies(16), BPAlloc(bpalloc), BV(bv), Ctx(ctx) {}
 
   static bool canSymbolicate(QualType T);
 
@@ -710,37 +686,5 @@ public:
 } // namespace ento
 
 } // namespace clang
-
-// Override the default definition that would use pointer values of SymbolRefs
-// to order them, which is unstable due to ASLR.
-// Use the SymbolID instead which reflect the order in which the symbols were
-// allocated. This is usually stable across runs leading to the stability of
-// ConstraintMap and other containers using SymbolRef as keys.
-template <>
-struct ::llvm::ImutContainerInfo<clang::ento::SymbolRef>
-    : public ImutProfileInfo<clang::ento::SymbolRef> {
-  using value_type = clang::ento::SymbolRef;
-  using value_type_ref = clang::ento::SymbolRef;
-  using key_type = value_type;
-  using key_type_ref = value_type_ref;
-  using data_type = bool;
-  using data_type_ref = bool;
-
-  static key_type_ref KeyOfValue(value_type_ref D) { return D; }
-  static data_type_ref DataOfValue(value_type_ref) { return true; }
-
-  static bool isEqual(clang::ento::SymbolRef LHS, clang::ento::SymbolRef RHS) {
-    return LHS->getSymbolID() == RHS->getSymbolID();
-  }
-
-  static bool isLess(clang::ento::SymbolRef LHS, clang::ento::SymbolRef RHS) {
-    return LHS->getSymbolID() < RHS->getSymbolID();
-  }
-
-  // This might seem redundant, but it is required because of the way
-  // ImmutableSet is implemented through AVLTree:
-  // same as ImmutableMap, but with a non-informative "data".
-  static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
-};
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMBOLMANAGER_H
