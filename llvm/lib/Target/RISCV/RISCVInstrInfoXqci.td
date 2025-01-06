@@ -158,20 +158,10 @@ class QCIMVCC<bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class QCIMVCCI<bits<3> funct3, string opcodestr>
+class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
     : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
-               (ins GPRNoX0:$rs1, simm5:$imm, GPRNoX0:$rs3),
+               (ins GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
                opcodestr, "$rd, $rs1, $imm, $rs3"> {
-  bits<5> imm;
-
-  let rs2 = imm;
-}
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class QCIMVCCUI<bits<3> funct3, string opcodestr>
-    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
-               (ins GPRNoX0:$rs1, uimm5:$imm, GPRNoX0:$rs3),
-                       opcodestr, "$rd, $rs1, $imm, $rs3"> {
   bits<5> imm;
 
   let rs2 = imm;
@@ -309,28 +299,18 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
   }
 
   def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">;
-
   def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">;
-
   def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">;
-
   def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">;
-
   def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">;
-
   def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">;
 
-  def QC_MVEQI   : QCIMVCCI <0b000, "qc.mveqi">;
-
-  def QC_MVNEI   : QCIMVCCI <0b001, "qc.mvnei">;
-
-  def QC_MVLTI   : QCIMVCCI <0b100, "qc.mvlti">;
-
-  def QC_MVGEI   : QCIMVCCI <0b101, "qc.mvgei">;
-
-  def QC_MVLTUI  : QCIMVCCUI<0b110, "qc.mvltui">;
-
-  def QC_MVGEUI  : QCIMVCCUI<0b111, "qc.mvgeui">;
+  def QC_MVEQI   : QCIMVCCI<0b000, "qc.mveqi", simm5>;
+  def QC_MVNEI   : QCIMVCCI<0b001, "qc.mvnei", simm5>;
+  def QC_MVLTI   : QCIMVCCI<0b100, "qc.mvlti", simm5>;
+  def QC_MVGEI   : QCIMVCCI<0b101, "qc.mvgei", simm5>;
+  def QC_MVLTUI  : QCIMVCCI<0b110, "qc.mvltui", uimm5>;
+  def QC_MVGEUI  : QCIMVCCI<0b111, "qc.mvgeui", uimm5>;
 } // Predicates = [HasVendorXqcicm, IsRV32], DecoderNamespace = "Xqcicm"
 
 //===----------------------------------------------------------------------===//
