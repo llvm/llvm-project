@@ -206,7 +206,7 @@ namespace ARMSysReg {
     }
   };
 
-  #define GET_MCLASSSYSREG_DECL
+  #define GET_MClassSysRegsList_DECL
   #include "ARMGenSystemRegister.inc"
 
   // lookup system register using 12-bit SYSm value.
@@ -228,7 +228,7 @@ namespace ARMBankedReg {
     const char *Name;
     uint16_t Encoding;
   };
-  #define GET_BANKEDREG_DECL
+  #define GET_BankedRegsList_DECL
   #include "ARMGenSystemRegister.inc"
 } // end namespace ARMBankedReg
 
