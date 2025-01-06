@@ -4621,16 +4621,16 @@ static Value *simplifySelectWithEquivalence(
     ArrayRef<std::pair<Value *, Value *>> Replacements, Value *TrueVal,
     Value *FalseVal, const SimplifyQuery &Q, unsigned MaxRecurse) {
   Value *SimplifiedFalseVal =
-      simplifyWithOpReplaced(FalseVal, Replacements, Q.getWithoutUndef(),
-                             /* AllowRefinement */ false,
-                             /* DropFlags */ nullptr, MaxRecurse);
+      simplifyWithOpsReplaced(FalseVal, Replacements, Q.getWithoutUndef(),
+                              /* AllowRefinement */ false,
+                              /* DropFlags */ nullptr, MaxRecurse);
   if (!SimplifiedFalseVal)
     SimplifiedFalseVal = FalseVal;
 
   Value *SimplifiedTrueVal =
-      simplifyWithOpReplaced(TrueVal, Replacements, Q,
-                             /* AllowRefinement */ true,
-                             /* DropFlags */ nullptr, MaxRecurse);
+      simplifyWithOpsReplaced(TrueVal, Replacements, Q,
+                              /* AllowRefinement */ true,
+                              /* DropFlags */ nullptr, MaxRecurse);
   if (!SimplifiedTrueVal)
     SimplifiedTrueVal = TrueVal;
 
@@ -4744,12 +4744,6 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
       if (Value *V = simplifySelectWithEquivalence(
               {{X, CmpRHS}, {Y, CmpRHS}}, TrueVal, FalseVal, Q, MaxRecurse))
         return V;
-      if (Value *V = simplifySelectWithEquivalence({{X, CmpRHS}}, TrueVal,
-                                                   FalseVal, Q, MaxRecurse))
-        return V;
-      if (Value *V = simplifySelectWithEquivalence({{Y, CmpRHS}}, TrueVal,
-                                                   FalseVal, Q, MaxRecurse))
-        return V;
     }
 
     // select((X & Y) == -1 ?  X : -1) --> -1 (commuted 2 ways)
@@ -4758,12 +4752,6 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
       // (X & Y) == -1 implies X == -1 and Y == -1.
       if (Value *V = simplifySelectWithEquivalence(
               {{X, CmpRHS}, {Y, CmpRHS}}, TrueVal, FalseVal, Q, MaxRecurse))
-        return V;
-      if (Value *V = simplifySelectWithEquivalence({{X, CmpRHS}}, TrueVal,
-                                                   FalseVal, Q, MaxRecurse))
-        return V;
-      if (Value *V = simplifySelectWithEquivalence({{Y, CmpRHS}}, TrueVal,
-                                                   FalseVal, Q, MaxRecurse))
         return V;
     }
   }
