@@ -3820,7 +3820,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vshld_n_s64:
   case NEON::BI__builtin_neon_vshld_n_u64: {
-    llvm_unreachable("NEON::BI__builtin_neon_vshld_n_u64 NYI");
+    std::optional<llvm::APSInt> amt =
+        E->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(amt && "Expected argument to be a constant");
+    return builder.createShiftLeft(Ops[0], amt->getZExtValue());
   }
   case NEON::BI__builtin_neon_vshrd_n_s64: {
     llvm_unreachable("NEON::BI__builtin_neon_vshrd_n_s64 NYI");
