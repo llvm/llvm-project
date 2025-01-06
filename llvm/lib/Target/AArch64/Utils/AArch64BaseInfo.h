@@ -371,81 +371,81 @@ namespace AArch64SVCR {
   struct SVCR : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_SVCRValues_DECL
-  #define GET_SVCRsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_SVCRValues_DECL
+#define GET_SVCRsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64AT{
   struct AT : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_ATValues_DECL
-  #define GET_ATsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ATValues_DECL
+#define GET_ATsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64DB {
   struct DB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DBValues_DECL
-  #define GET_DBsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DBValues_DECL
+#define GET_DBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64DBnXS {
   struct DBnXS : SysAliasImm {
     using SysAliasImm::SysAliasImm;
   };
-  #define GET_DBnXSValues_DECL
-  #define GET_DBnXSsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DBnXSValues_DECL
+#define GET_DBnXSsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64DC {
   struct DC : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DCValues_DECL
-  #define GET_DCsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DCValues_DECL
+#define GET_DCsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64IC {
   struct IC : SysAliasReg {
     using SysAliasReg::SysAliasReg;
   };
-  #define GET_ICValues_DECL
-  #define GET_ICsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ICValues_DECL
+#define GET_ICsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64ISB {
   struct ISB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_ISBValues_DECL
-  #define GET_ISBsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ISBValues_DECL
+#define GET_ISBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64TSB {
   struct TSB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_TSBValues_DECL
-  #define GET_TSBsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_TSBValues_DECL
+#define GET_TSBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PRFMValues_DECL
-  #define GET_PRFMsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PRFMValues_DECL
+#define GET_PRFMsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64SVEPRFM {
@@ -578,25 +578,25 @@ namespace AArch64PState {
   struct PStateImm0_15 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PStateImm0_15Values_DECL
-  #define GET_PStateImm0_15sList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PStateImm0_15Values_DECL
+#define GET_PStateImm0_15sList_DECL
+#include "AArch64GenSystemOperands.inc"
 
   struct PStateImm0_1 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PStateImm0_1Values_DECL
-  #define GET_PStateImm0_1sList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PStateImm0_1Values_DECL
+#define GET_PStateImm0_1sList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64PSBHint {
   struct PSB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PSBValues_DECL
-  #define GET_PSBsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PSBValues_DECL
+#define GET_PSBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64PHint {
@@ -624,9 +624,9 @@ namespace AArch64BTIHint {
   struct BTI : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_BTIValues_DECL
-  #define GET_BTIsList_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_BTIValues_DECL
+#define GET_BTIsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64SME {
@@ -732,9 +732,9 @@ namespace AArch64SysReg {
     }
   };
 
-  #define GET_SysRegsList_DECL
-  #define GET_SysRegValues_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_SysRegsList_DECL
+#define GET_SysRegValues_DECL
+#include "AArch64GenSystemOperands.inc"
 
   const SysReg *lookupSysRegByName(StringRef);
   const SysReg *lookupSysRegByEncoding(uint16_t);
