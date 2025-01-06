@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,cxx98-14,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
@@ -274,8 +274,8 @@ void d2() {
 #if __cplusplus >= 201103L
 auto e = [] {
   typedef int cwg1820::A;
-  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
-  // expected-error@-2 {{typedef declarator cannot be qualified}}
+  // since-cxx11-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // since-cxx11-error@-2 {{typedef declarator cannot be qualified}}
 };
 #endif
 } // namespace cwg1820
@@ -325,9 +325,9 @@ enum E { // #cwg1832-E
 
 #if __cplusplus >= 201103L
 enum E2: decltype(static_cast<E2>(0), 0) {};
-// expected-error@-1 {{unknown type name 'E2'}}
+// since-cxx11-error@-1 {{unknown type name 'E2'}}
 enum class E3: decltype(static_cast<E3>(0), 0) {};
-// expected-error@-1 {{unknown type name 'E3'}}
+// since-cxx11-error@-1 {{unknown type name 'E3'}}
 #endif
 } // namespace cwg1832
 
@@ -488,15 +488,12 @@ namespace cwg1872 { // cwg1872: 9
   // cxx11-17-error@-1 {{constexpr variable 'y2' must be initialized by a constant expression}}
   //   cxx11-17-note@-2 {{cannot evaluate call to virtual function in a constant expression in C++ standards before C++20}}
 #if __cplusplus >= 202002L
-  static_assert(y == 0);
+  static_assert(y2 == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}a
-#if __cplusplus < 202302L
-  //   since-cxx11-note@-3 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
-#else
-  //   since-cxx23-note@-5 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
-#endif
+  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
+  //   cxx11-20-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+  //   since-cxx23-note@-3 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
 #endif
 } // namespace cwg1872
 
