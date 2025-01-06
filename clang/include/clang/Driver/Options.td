@@ -1493,6 +1493,8 @@ def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path
   HelpText<"Path to libomptarget-amdgcn bitcode library">, Alias<libomptarget_amdgpu_bc_path_EQ>;
 def libomptarget_nvptx_bc_path_EQ : Joined<["--"], "libomptarget-nvptx-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx bitcode library">;
+def libomptarget_spirv_bc_path_EQ : Joined<["--"], "libomptarget-spirv-bc-path=">, Group<i_Group>,
+  HelpText<"Path to libomptarget-spirv bitcode library">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -1888,7 +1890,7 @@ defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
           " pseudo probes for sample profiling">>;
 def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
-    HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
+    HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var). Deprecated, please use temporal profiling.">;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     HelpText<"Filename defining the list of functions/files to instrument. "

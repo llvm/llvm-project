@@ -173,7 +173,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
   // in all cases.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU implementer line.
   StringRef Implementer;
@@ -436,7 +436,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // The "processor 0:" line comes after a fair amount of other information,
   // including a cache breakdown, but this should be plenty.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
@@ -478,7 +478,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   // There are 24 lines in /proc/cpuinfo
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
@@ -1630,7 +1630,7 @@ StringRef sys::getHostCPUName() {
 #if defined(__linux__)
 StringRef sys::detail::getHostCPUNameForSPARC(StringRef ProcCpuinfoContent) {
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for cpu line to determine cpu name
   StringRef Cpu;
@@ -1970,7 +1970,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
     return Features;
 
   SmallVector<StringRef, 32> Lines;
-  P->getBuffer().split(Lines, "\n");
+  P->getBuffer().split(Lines, '\n');
 
   SmallVector<StringRef, 32> CPUFeatures;
 

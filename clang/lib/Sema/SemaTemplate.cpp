@@ -1228,7 +1228,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
                                 NonTypeTemplateParmDecl *NewConstrainedParm,
                                 NonTypeTemplateParmDecl *OrigConstrainedParm,
                                 SourceLocation EllipsisLoc) {
-  if (NewConstrainedParm->getType() != TL.getType() ||
+  if (NewConstrainedParm->getType().getNonPackExpansionType() != TL.getType() ||
       TL.getAutoKeyword() != AutoTypeKeyword::Auto) {
     Diag(NewConstrainedParm->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
          diag::err_unsupported_placeholder_constraint)
@@ -1530,9 +1530,19 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   Param->setAccess(AS_public);
 
   if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc())
-    if (TL.isConstrained())
-      if (AttachTypeConstraint(TL, Param, Param, D.getEllipsisLoc()))
+    if (TL.isConstrained()) {
+      if (D.getEllipsisLoc().isInvalid() &&
+          T->containsUnexpandedParameterPack()) {
+        assert(TL.getConceptReference()->getTemplateArgsAsWritten());
+        for (auto &Loc :
+             TL.getConceptReference()->getTemplateArgsAsWritten()->arguments())
+          Invalid |= DiagnoseUnexpandedParameterPack(
+              Loc, UnexpandedParameterPackContext::UPPC_TypeConstraint);
+      }
+      if (!Invalid &&
+          AttachTypeConstraint(TL, Param, Param, D.getEllipsisLoc()))
         Invalid = true;
+    }
 
   if (Invalid)
     Param->setInvalidDecl();

@@ -42,6 +42,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
+  NarrowingConversionsCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
   NondeterministicPointerIterationOrderCheck.cpp
@@ -95,7 +96,6 @@ add_clang_library(clangTidyBugproneModule STATIC
 
   LINK_LIBS
   clangTidy
-  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
 
   DEPENDS
