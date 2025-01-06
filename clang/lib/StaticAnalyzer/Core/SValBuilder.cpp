@@ -264,7 +264,7 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.getDerivedSymbol(parentSymbol, region);
+  SymbolRef sym = SymMgr.get<SymbolDerived>(parentSymbol, region);
 
   if (Loc::isLocType(T))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));

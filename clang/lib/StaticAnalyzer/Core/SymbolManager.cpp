@@ -163,21 +163,6 @@ void SymExpr::symbol_iterator::expand() {
   llvm_unreachable("unhandled expansion case");
 }
 
-const SymbolDerived*
-SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
-                                const TypedValueRegion *R) {
-  llvm::FoldingSetNodeID profile;
-  SymbolDerived::Profile(profile, parentSymbol, R);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = Alloc.make<SymbolDerived>(parentSymbol, R);
-    DataSet.InsertNode(SD, InsertPos);
-  }
-
-  return cast<SymbolDerived>(SD);
-}
-
 const SymbolExtent*
 SymbolManager::getExtentSymbol(const SubRegion *R) {
   llvm::FoldingSetNodeID profile;
