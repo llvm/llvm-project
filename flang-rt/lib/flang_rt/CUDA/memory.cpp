@@ -1,4 +1,4 @@
-//===-- lib/CufRuntime/memory.cpp -------------------------------*- C++ -*-===//
+//===-- lib/flang_rt/CUDA/memory.cpp ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/memory.h"
-#include "../flang_rt/assign-impl.h"
-#include "../flang_rt/terminator.h"
+#include "../assign-impl.h"
+#include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memmove-function.h"

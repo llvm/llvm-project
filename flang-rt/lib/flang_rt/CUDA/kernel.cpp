@@ -1,4 +1,4 @@
-//===-- lib/CufRuntime/kernel.cpp -------------------------------*- C++ -*-===//
+//===-- lib/flang_rt/CUDA/kernel.cpp ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/kernel.h"
-#include "../flang_rt/terminator.h"
+#include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"
