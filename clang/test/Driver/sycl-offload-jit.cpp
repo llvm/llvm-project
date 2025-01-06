@@ -35,8 +35,8 @@
 // RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST %s
 // RUN: %clang -### -fsycl -fsycl-device-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-DEVICE %s
-// RUN: %clang_cl -### -fsycl -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST -- %s
+// RUN: %clang_cl -### -fsycl -c -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST %s
 // RUN: %clang -### -fsycl -fsycl-host-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-HOST %s
 // CHK-FSYCL-IS-DEVICE: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
