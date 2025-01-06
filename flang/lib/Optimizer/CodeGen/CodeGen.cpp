@@ -3928,6 +3928,7 @@ public:
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           pattern);
+    mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
     if (!isAMDGCN)
