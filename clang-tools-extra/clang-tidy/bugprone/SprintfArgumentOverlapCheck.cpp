@@ -38,6 +38,22 @@ AST_MATCHER_P(CallExpr, forEachArgument, ast_matchers::internal::Matcher<Expr>,
   return Matched;
 }
 
+AST_MATCHER_P(Stmt, identicalTo, std::string, ID) {
+  return Builder->removeBindings(
+      [this, &Node,
+       &Finder](const ast_matchers::internal::BoundNodesMap &Nodes) {
+        const DynTypedNode &BN = Nodes.getNode(ID);
+        if (const auto *BoundStmt = BN.get<Stmt>())
+          return !utils::areStatementsIdentical(&Node, BoundStmt,
+                                                Finder->getASTContext());
+        return true;
+      });
+}
+
+AST_MATCHER(Expr, hasSideEffects) {
+  return Node.HasSideEffects(Finder->getASTContext());
+}
+
 SprintfArgumentOverlapCheck::SprintfArgumentOverlapCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -45,10 +61,12 @@ SprintfArgumentOverlapCheck::SprintfArgumentOverlapCheck(
 
 void SprintfArgumentOverlapCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      callExpr(callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
-               hasArgument(0, expr().bind("firstArgExpr")),
-               forEachArgument(expr(unless(equalsBoundNode("firstArgExpr")))
-                                   .bind("otherArgExpr")))
+      callExpr(
+          callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
+          hasArgument(0, expr(unless(hasSideEffects())).bind("firstArgExpr")),
+          forEachArgument(expr(unless(equalsBoundNode("firstArgExpr")),
+                               identicalTo("firstArgExpr"))
+                              .bind("otherArgExpr")))
           .bind("call"),
       this);
 }
@@ -60,14 +78,7 @@ void SprintfArgumentOverlapCheck::check(
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   const auto *FnDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
 
-  clang::ASTContext &Context = *Result.Context;
-
   if (!FirstArg || !OtherArg || !Call || !FnDecl)
-    return;
-
-  if (!utils::areStatementsIdentical(FirstArg, OtherArg, Context))
-    return;
-  if (FirstArg->HasSideEffects(Context) || OtherArg->HasSideEffects(Context))
     return;
 
   std::optional<unsigned> ArgIndex;
