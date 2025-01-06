@@ -15,6 +15,10 @@ void NormalFunc() {
 
 #pragma acc set default_async(some_int()) device_num(some_long()) device_type(DT) if (some_int() < some_long())
   // CHECK-NEXT: OpenACCSetConstruct{{.*}}set
+  // CHECK-NEXT: default_async clause
+  // CHECK-NEXT: CallExpr{{.*}}'int'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'some_int' 'int ()'
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: CallExpr{{.*}} 'long'
   // CHECK-NEXT: ImplicitCastExpr
@@ -41,6 +45,9 @@ void TemplFunc(T t) {
 
 #pragma acc set default_async(T::value) device_num(t) device_type(DT) if (T::value < t)
   // CHECK-NEXT: OpenACCSetConstruct{{.*}}set
+  // CHECK-NEXT: default_async clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'t' 'T'
   // CHECK-NEXT: device_type(DT)
@@ -59,6 +66,10 @@ void TemplFunc(T t) {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCSetConstruct{{.*}}set
+  // CHECK-NEXT: default_async clause
+  // CHECK-NEXT: ImplicitCastExpr {{.*}}'unsigned int'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'value' 'const unsigned int'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'SomeStruct'
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: ImplicitCastExpr {{.*}}'unsigned int'
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'unsigned int'

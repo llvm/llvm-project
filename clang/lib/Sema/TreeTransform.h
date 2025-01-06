@@ -11910,6 +11910,29 @@ void OpenACCClauseTransform<Derived>::VisitDeviceNumClause (
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
+  Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
+  assert(IntExpr && "default_async clause constructed with invalid int expr");
+
+  ExprResult Res = Self.TransformExpr(IntExpr);
+  if (!Res.isUsable())
+    return;
+
+  Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                              C.getClauseKind(),
+                                              C.getBeginLoc(), Res.get());
+  if (!Res.isUsable())
+    return;
+
+  ParsedClause.setIntExprDetails(Res.get());
+  NewClause = OpenACCDefaultAsyncClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());

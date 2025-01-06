@@ -15,8 +15,6 @@ struct ExplicitConvertOnly {
 } Explicit;
 
 void uses() {
-  // expected-warning@+2{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
-  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async(getI())
 #pragma acc set device_num(getI())
 #pragma acc set device_type(getI)
@@ -45,10 +43,8 @@ void uses() {
   // expected-note@#AMBIG_SHORT{{conversion to integral type 'short'}}
   // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async(Ambiguous)
-  // expected-error@+4{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
-  // expected-error@+2{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
 #pragma acc set default_async(Explicit)
 
   // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
@@ -56,9 +52,8 @@ void uses() {
 
 #pragma acc set if (true)
 
-  // expected-error@+3{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
-  // expected-warning@+2{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
+  // expected-error@+2{{'default_async' clause cannot appear more than once on a 'set' directive}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc set default_async(getI()) default_async(getI())
 
   // expected-error@+2{{'device_num' clause cannot appear more than once on a 'set' directive}}

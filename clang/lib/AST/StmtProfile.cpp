@@ -2650,6 +2650,11 @@ void OpenACCClauseProfiler::VisitDeviceNumClause(
   Profiler.VisitStmt(Clause.getIntExpr());
 }
 
+void OpenACCClauseProfiler::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &Clause) {
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
+
 void OpenACCClauseProfiler::VisitWorkerClause(
     const OpenACCWorkerClause &Clause) {
   if (Clause.hasIntExpr())
