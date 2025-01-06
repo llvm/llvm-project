@@ -35,6 +35,7 @@ public:
 
 private:
   utils::IncludeInserter IncludeInserter;
+  const bool ConsideringIntSize;
 };
 
 } // namespace clang::tidy::modernize

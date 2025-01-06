@@ -301,6 +301,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-designated-initializers>` check to fix a
   crash when a class is declared but not defined.
 
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check to
+  add an option ``ConsideringIntegerSize``, that ignores a comparison between
+  a signed wide and an unsigned narrow integer types.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
