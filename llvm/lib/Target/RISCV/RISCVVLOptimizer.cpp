@@ -264,25 +264,21 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VSE8_V:
   case RISCV::VLSE8_V:
   case RISCV::VSSE8_V:
-  case RISCV::VLE8FF_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
   case RISCV::VLE16_V:
   case RISCV::VSE16_V:
   case RISCV::VLSE16_V:
   case RISCV::VSSE16_V:
-  case RISCV::VLE16FF_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
   case RISCV::VLE32_V:
   case RISCV::VSE32_V:
   case RISCV::VLSE32_V:
   case RISCV::VSSE32_V:
-  case RISCV::VLE32FF_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
   case RISCV::VLE64_V:
   case RISCV::VSE64_V:
   case RISCV::VLSE64_V:
   case RISCV::VSSE64_V:
-  case RISCV::VLE64FF_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
 
   // Vector Indexed Instructions
@@ -752,16 +748,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLE8_V:
   case RISCV::VLM_V:
   case RISCV::VLSE8_V:
-  case RISCV::VLE8FF_V:
   case RISCV::VLE16_V:
   case RISCV::VLSE16_V:
-  case RISCV::VLE16FF_V:
   case RISCV::VLE32_V:
   case RISCV::VLSE32_V:
-  case RISCV::VLE32FF_V:
   case RISCV::VLE64_V:
   case RISCV::VLSE64_V:
-  case RISCV::VLE64FF_V:
   // Vector Indexed Instructions
   case RISCV::VLUXEI8_V:
   case RISCV::VLOXEI8_V:
