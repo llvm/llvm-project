@@ -3771,14 +3771,22 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
         Ops[0], cir::VectorType::get(&getMLIRContext(), DoubleTy, 2));
     return builder.create<cir::VecExtractOp>(getLoc(E->getExprLoc()), Ops[0],
                                              emitScalarExpr(E->getArg(1)));
-  case NEON::BI__builtin_neon_vaddh_f16:
-    llvm_unreachable("NEON::BI__builtin_neon_vaddh_f16 NYI");
-  case NEON::BI__builtin_neon_vsubh_f16:
-    llvm_unreachable("NEON::BI__builtin_neon_vsubh_f16 NYI");
-  case NEON::BI__builtin_neon_vmulh_f16:
-    llvm_unreachable("NEON::BI__builtin_neon_vmulh_f16 NYI");
-  case NEON::BI__builtin_neon_vdivh_f16:
-    llvm_unreachable("NEON::BI__builtin_neon_vdivh_f16 NYI");
+  case NEON::BI__builtin_neon_vaddh_f16: {
+    Ops.push_back(emitScalarExpr(E->getArg(1)));
+    return builder.createFAdd(Ops[0], Ops[1]);
+  }
+  case NEON::BI__builtin_neon_vsubh_f16: {
+    Ops.push_back(emitScalarExpr(E->getArg(1)));
+    return builder.createFSub(Ops[0], Ops[1]);
+  }
+  case NEON::BI__builtin_neon_vmulh_f16: {
+    Ops.push_back(emitScalarExpr(E->getArg(1)));
+    return builder.createFMul(Ops[0], Ops[1]);
+  }
+  case NEON::BI__builtin_neon_vdivh_f16: {
+    Ops.push_back(emitScalarExpr(E->getArg(1)));
+    return builder.createFDiv(Ops[0], Ops[1]);
+  }
   case NEON::BI__builtin_neon_vfmah_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     llvm_unreachable("NEON::BI__builtin_neon_vfmah_f16 NYI");
