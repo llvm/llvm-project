@@ -23,8 +23,10 @@ llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (G
 
 #### AliasAnalysis
 
-Hal Finkel \
-hfinkel@anl.gov (email), [hfinkel](https://github.com/hfinkel) (GitHub)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse) \
+Florian Hahn \
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
 #### Attributor, OpenMPOpt
 
@@ -72,6 +74,11 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
+
+#### MemorySSA
+
+Alina Sbirlea \
+asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
 
 #### SandboxVectorizer
 
@@ -456,6 +463,7 @@ Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https:/
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
+Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnalysis \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
