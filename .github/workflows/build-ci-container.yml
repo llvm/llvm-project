@@ -38,7 +38,7 @@ jobs:
       - name: Write Variables
         id: vars
         run: |
-          tag="${{ github.run_id}}.${{ github.run_attempt }}"
+          tag=$(git rev-parse --short=12 HEAD)
           container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-22.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
