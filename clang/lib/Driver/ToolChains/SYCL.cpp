@@ -31,7 +31,7 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
 
 // Unsupported options for SYCL device compilation.
 static ArrayRef<OptSpecifier> getUnsupportedOpts() {
-  static std::vector<OptSpecifier> UnsupportedOpts = {
+  static constexpr OptSpecifier UnsupportedOpts[] = {
       options::OPT_fsanitize_EQ,      // -fsanitize
       options::OPT_fcf_protection_EQ, // -fcf-protection
       options::OPT_fprofile_generate,
