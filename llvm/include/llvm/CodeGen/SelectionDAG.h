@@ -2474,6 +2474,11 @@ private:
   SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
                               void *&InsertPos);
 
+  SDValue getNodeImpl(unsigned Opcode, const SDLoc &DL, EVT VT,
+                      ArrayRef<SDValue> Ops, SDNodeFlags Flags);
+  SDValue getNodeImpl(unsigned Opcode, const SDLoc &DL, SDVTList VTs,
+                      ArrayRef<SDValue> Ops, SDNodeFlags Flags);
+
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;
 

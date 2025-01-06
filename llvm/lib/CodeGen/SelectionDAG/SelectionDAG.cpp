@@ -115,6 +115,10 @@ static cl::opt<unsigned>
     MaxSteps("has-predecessor-max-steps", cl::Hidden, cl::init(8192),
              cl::desc("DAG combiner limit number of steps when searching DAG "
                       "for predecessor nodes"));
+static cl::opt<bool> EnableSimplifyNodes(
+    "selectiondag-simplify-nodes", cl::Hidden, cl::init(true),
+    cl::desc("Enable SelectionDAG::getNode simplifications. Useful for testing "
+             "DAG combines."));
 
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
@@ -6172,21 +6176,44 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
 }
 
 /// Gets or creates the specified node.
-SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
+SDValue SelectionDAG::getNodeImpl(unsigned Opcode, const SDLoc &DL, EVT VT,
+                                  ArrayRef<SDValue> Ops,
+                                  const SDNodeFlags Flags) {
   SDVTList VTs = getVTList(VT);
-  FoldingSetNodeID ID;
-  AddNodeIDNode(ID, Opcode, VTs, {});
-  void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
-    return SDValue(E, 0);
+  return getNodeImpl(Opcode, DL, VTs, Ops, Flags);
+}
 
-  auto *N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-  CSEMap.InsertNode(N, IP);
+SDValue SelectionDAG::getNodeImpl(unsigned Opcode, const SDLoc &DL,
+                                  SDVTList VTs, ArrayRef<SDValue> Ops,
+                                  const SDNodeFlags Flags) {
+  SDNode *N;
+  // Don't CSE glue-producing nodes
+  if (VTs.VTs[VTs.NumVTs - 1] != MVT::Glue) {
+    FoldingSetNodeID ID;
+    AddNodeIDNode(ID, Opcode, VTs, Ops);
+    void *IP = nullptr;
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
+      return SDValue(E, 0);
+    }
 
+    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
+    createOperands(N, Ops);
+    CSEMap.InsertNode(N, IP);
+  } else {
+    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
+    createOperands(N, Ops);
+  }
+
+  N->setFlags(Flags);
   InsertNode(N);
   SDValue V = SDValue(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
+}
+
+SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
+  return getNodeImpl(Opcode, DL, VT, {}, SDNodeFlags{});
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -6200,6 +6227,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, const SDNodeFlags Flags) {
   assert(N1.getOpcode() != ISD::DELETED_NODE && "Operand is DELETED_NODE!");
+  if (!EnableSimplifyNodes)
+    return getNodeImpl(Opcode, DL, VT, {N1}, Flags);
 
   // Constant fold unary operations with a vector integer or float operand.
   switch (Opcode) {
@@ -6516,31 +6545,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
 
-  SDNode *N;
-  SDVTList VTs = getVTList(VT);
-  SDValue Ops[] = {N1};
-  if (VT != MVT::Glue) { // Don't CSE glue producing nodes
-    FoldingSetNodeID ID;
-    AddNodeIDNode(ID, Opcode, VTs, Ops);
-    void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
-      return SDValue(E, 0);
-    }
-
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    N->setFlags(Flags);
-    createOperands(N, Ops);
-    CSEMap.InsertNode(N, IP);
-  } else {
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    createOperands(N, Ops);
-  }
-
-  InsertNode(N);
-  SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
+  return getNodeImpl(Opcode, DL, VT, {N1}, Flags);
 }
 
 static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
@@ -7234,6 +7239,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   assert(N1.getOpcode() != ISD::DELETED_NODE &&
          N2.getOpcode() != ISD::DELETED_NODE &&
          "Operand is DELETED_NODE!");
+  if (!EnableSimplifyNodes)
+    return getNodeImpl(Opcode, DL, VT, {N1, N2}, Flags);
 
   canonicalizeCommutativeBinop(Opcode, N1, N2);
 
@@ -7680,32 +7687,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
   }
 
-  // Memoize this node if possible.
-  SDNode *N;
-  SDVTList VTs = getVTList(VT);
-  SDValue Ops[] = {N1, N2};
-  if (VT != MVT::Glue) {
-    FoldingSetNodeID ID;
-    AddNodeIDNode(ID, Opcode, VTs, Ops);
-    void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
-      return SDValue(E, 0);
-    }
-
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    N->setFlags(Flags);
-    createOperands(N, Ops);
-    CSEMap.InsertNode(N, IP);
-  } else {
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    createOperands(N, Ops);
-  }
-
-  InsertNode(N);
-  SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
+  return getNodeImpl(Opcode, DL, VT, {N1, N2}, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -7723,6 +7705,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
          N2.getOpcode() != ISD::DELETED_NODE &&
          N3.getOpcode() != ISD::DELETED_NODE &&
          "Operand is DELETED_NODE!");
+  if (!EnableSimplifyNodes)
+    return getNodeImpl(Opcode, DL, VT, {N1, N2, N3}, Flags);
+
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA:
@@ -7877,33 +7862,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   }
-
-  // Memoize node if it doesn't produce a glue result.
-  SDNode *N;
-  SDVTList VTs = getVTList(VT);
-  SDValue Ops[] = {N1, N2, N3};
-  if (VT != MVT::Glue) {
-    FoldingSetNodeID ID;
-    AddNodeIDNode(ID, Opcode, VTs, Ops);
-    void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
-      return SDValue(E, 0);
-    }
-
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    N->setFlags(Flags);
-    createOperands(N, Ops);
-    CSEMap.InsertNode(N, IP);
-  } else {
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    createOperands(N, Ops);
-  }
-
-  InsertNode(N);
-  SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
+  return getNodeImpl(Opcode, DL, VT, {N1, N2, N3}, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -10358,6 +10317,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(Op.getOpcode() != ISD::DELETED_NODE &&
            "Operand is DELETED_NODE!");
 #endif
+  if (!EnableSimplifyNodes)
+    return getNodeImpl(Opcode, DL, VT, Ops, Flags);
 
   switch (Opcode) {
   default: break;
@@ -10426,34 +10387,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
 
-  // Memoize nodes.
-  SDNode *N;
-  SDVTList VTs = getVTList(VT);
-
-  if (VT != MVT::Glue) {
-    FoldingSetNodeID ID;
-    AddNodeIDNode(ID, Opcode, VTs, Ops);
-    void *IP = nullptr;
-
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
-      return SDValue(E, 0);
-    }
-
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    createOperands(N, Ops);
-
-    CSEMap.InsertNode(N, IP);
-  } else {
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    createOperands(N, Ops);
-  }
-
-  N->setFlags(Flags);
-  InsertNode(N);
-  SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
+  return getNodeImpl(Opcode, DL, VT, Ops, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL,
@@ -10473,6 +10407,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                               ArrayRef<SDValue> Ops, const SDNodeFlags Flags) {
   if (VTList.NumVTs == 1)
     return getNode(Opcode, DL, VTList.VTs[0], Ops, Flags);
+  if (!EnableSimplifyNodes)
+    return getNodeImpl(Opcode, DL, VTList, Ops, Flags);
 
 #ifndef NDEBUG
   for (const auto &Op : Ops)
@@ -10637,30 +10573,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 #endif
   }
 
-  // Memoize the node unless it returns a glue result.
-  SDNode *N;
-  if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
-    FoldingSetNodeID ID;
-    AddNodeIDNode(ID, Opcode, VTList, Ops);
-    void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
-      return SDValue(E, 0);
-    }
-
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList);
-    createOperands(N, Ops);
-    CSEMap.InsertNode(N, IP);
-  } else {
-    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList);
-    createOperands(N, Ops);
-  }
-
-  N->setFlags(Flags);
-  InsertNode(N);
-  SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
-  return V;
+  return getNodeImpl(Opcode, DL, VTList, Ops, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL,
