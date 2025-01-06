@@ -322,6 +322,32 @@ void Module::eraseNamedMetadata(NamedMDNode *NMD) {
   eraseNamedMDNode(NMD);
 }
 
+SetVector<Function *> Module::getDeviceKernels() {
+  // TODO: Create a more cross-platform way of determining device kernels.
+  NamedMDNode *MD = getNamedMetadata("nvvm.annotations");
+  SetVector<Function *> Kernels;
+
+  if (!MD)
+    return Kernels;
+
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() < 2)
+      continue;
+    MDString *KindID = dyn_cast<MDString>(Op->getOperand(1));
+    if (!KindID || KindID->getString() != "kernel")
+      continue;
+
+    Function *KernelFn =
+        mdconst::dyn_extract_or_null<Function>(Op->getOperand(0));
+    if (!KernelFn)
+      continue;
+
+    Kernels.insert(KernelFn);
+  }
+
+  return Kernels;
+}
+
 bool Module::isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB) {
   if (ConstantInt *Behavior = mdconst::dyn_extract_or_null<ConstantInt>(MD)) {
     uint64_t Val = Behavior->getLimitedValue();

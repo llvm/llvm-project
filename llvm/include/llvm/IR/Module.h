@@ -16,6 +16,7 @@
 
 #include "llvm-c/Types.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -512,6 +513,9 @@ public:
 
   /// Remove the given NamedMDNode from this module and delete it.
   void eraseNamedMetadata(NamedMDNode *NMD);
+
+  /// Get device kernels in the module.
+  SetVector<Function *> getDeviceKernels();
 
 /// @}
 /// @name Comdat Accessors
