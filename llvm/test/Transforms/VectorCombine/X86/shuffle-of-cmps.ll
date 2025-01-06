@@ -137,29 +137,13 @@ define <4 x i32> @shuf_fcmp_oeq_v4i32(<4 x float> %x, <4 x float> %y, <4 x float
 ; For commutative instructions, common operand may be swapped
 
 define <4 x i32> @shuf_fcmp_one_v4f32_swap(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; SSE-LABEL: define <4 x i32> @shuf_fcmp_one_v4f32_swap(
-; SSE-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 0, i32 3>
-; SSE-NEXT:    [[S:%.*]] = fcmp one <4 x float> [[TMP1]], [[TMP2]]
-; SSE-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
-; SSE-NEXT:    ret <4 x i32> [[R]]
-;
-; AVX2-LABEL: define <4 x i32> @shuf_fcmp_one_v4f32_swap(
-; AVX2-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[B0:%.*]] = fcmp one <4 x float> [[X]], [[Y]]
-; AVX2-NEXT:    [[B1:%.*]] = fcmp one <4 x float> [[Z]], [[X]]
-; AVX2-NEXT:    [[S:%.*]] = shufflevector <4 x i1> [[B0]], <4 x i1> [[B1]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; AVX2-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
-; AVX2-NEXT:    ret <4 x i32> [[R]]
-;
-; AVX512-LABEL: define <4 x i32> @shuf_fcmp_one_v4f32_swap(
-; AVX512-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 0, i32 3>
-; AVX512-NEXT:    [[S:%.*]] = fcmp one <4 x float> [[TMP1]], [[TMP2]]
-; AVX512-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
-; AVX512-NEXT:    ret <4 x i32> [[R]]
+; CHECK-LABEL: define <4 x i32> @shuf_fcmp_one_v4f32_swap(
+; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 0, i32 3>
+; CHECK-NEXT:    [[S:%.*]] = fcmp one <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %b0 = fcmp one <4 x float> %x, %y
   %b1 = fcmp one <4 x float> %z, %x

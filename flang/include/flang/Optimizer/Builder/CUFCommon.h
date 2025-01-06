@@ -15,6 +15,10 @@
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
 
+namespace fir {
+class FirOpBuilder;
+} // namespace fir
+
 namespace cuf {
 
 /// Retrieve or create the CUDA Fortran GPU module in the given \p mod.
@@ -23,6 +27,8 @@ mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
 
 bool isInCUDADeviceContext(mlir::Operation *op);
 bool isRegisteredDeviceGlobal(fir::GlobalOp op);
+
+void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
 
 } // namespace cuf
 
