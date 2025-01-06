@@ -33,6 +33,8 @@ enum LineType {
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
   LT_CommentAbovePPDirective,
+  LT_RequiresExpression,
+  LT_SimpleRequirement,
 };
 
 enum ScopeType {

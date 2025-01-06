@@ -22,8 +22,7 @@ public:
   static void Terminate();
 
   static FileSpec GetProgramFileSpec();
-
 };
-}
+} // namespace lldb_private
 
-#endif
+#endif // LLDB_HOST_AIX_HOSTINFOAIX_H_

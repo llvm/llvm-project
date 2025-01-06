@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-17,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-17,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -980,14 +980,14 @@ namespace cwg673 { // cwg673: yes
     class C *f();
     void f(class D *);
     enum { e = X<struct E>::n };
-    void g() { extern struct F *p; }
+    void g() { extern struct FF *p; }
   };
   B *b;
   C *c;
   D *d;
   E *e;
-  F *f;
-  // expected-error@-1 {{unknown type name 'F'}}
+  FF *ff;
+  // expected-error@-1 {{unknown type name 'FF'}}
 } // namespace cwg673
 
 namespace cwg674 { // cwg674: 8
@@ -1153,9 +1153,9 @@ namespace cwg684 { // cwg684: sup 1454
   void f() {
     int a;  // #cwg684-a
     constexpr int *p = &a;
-    // expected-error@-1 {{constexpr variable 'p' must be initialized by a constant expression}}
-    //   expected-note@-2 {{pointer to 'a' is not a constant expression}}
-    //   expected-note@#cwg684-a {{here}}
+    // since-cxx11-error@-1 {{constexpr variable 'p' must be initialized by a constant expression}}
+    //   since-cxx11-note@-2 {{pointer to 'a' is not a constant expression}}
+    //   since-cxx11-note@#cwg684-a {{here}}
   }
 #endif
 } // namespace cwg684
@@ -1245,12 +1245,12 @@ namespace cwg686 { // cwg686: 3.0
     //   expected-note@-2 {{forward declaration of 'P'}}
     catch (struct P {} *) {}
     // expected-error@-1 {{'P' cannot be defined in a type specifier}}
-#if __cplusplus < 201703L
+#if __cplusplus <= 201402L
     void g() throw(struct Q);
-    // cxx98-17-error@-1 {{incomplete type 'struct Q' is not allowed in exception specification}}
-    //   cxx98-17-note@-2 {{forward declaration of 'Q'}}
+    // cxx98-14-error@-1 {{incomplete type 'struct Q' is not allowed in exception specification}}
+    //   cxx98-14-note@-2 {{forward declaration of 'Q'}}
     void h() throw(struct Q {});
-    // cxx98-17-error@-1 {{'Q' cannot be defined in a type specifier}}
+    // cxx98-14-error@-1 {{'Q' cannot be defined in a type specifier}}
 #endif
   }
   template<struct R *> struct X;
