@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
+
+// cxx98-no-diagnostics
 
 namespace cwg2913 { // cwg2913: 20
 
@@ -35,21 +37,25 @@ struct A {
 } // namespace cwg2915
 
 namespace cwg2917 { // cwg2917: 20 review 2024-07-30
+#if __cplusplus >= 201103L
 template <typename>
 class Foo;
 
-template<class ...> // cxx98-error {{variadic templates are a C++11 extension}}
+template<class ...>
 struct C {
   struct Nested { };
 };
 
 struct S {
   template <typename>
-  friend class Foo, int; // expected-error {{a friend declaration that befriends a template must contain exactly one type-specifier}}
+  friend class Foo, int;
+  // since-cxx11-error@-1 {{a friend declaration that befriends a template must contain exactly one type-specifier}}
 
-  template <typename ...Ts> // cxx98-error {{variadic templates are a C++11 extension}}
-  friend class C<Ts>::Nested...; // expected-error {{friend declaration expands pack 'Ts' that is declared it its own template parameter list}}
+  template <typename ...Ts>
+  friend class C<Ts>::Nested...;
+  // since-cxx11-error@-1 {{friend declaration expands pack 'Ts' that is declared it its own template parameter list}}
 };
+#endif
 } // namespace cwg2917
 
 #if __cplusplus > 202302L
