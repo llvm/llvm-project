@@ -276,8 +276,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 // Sort sections by the profile data using the Cache-Directed Sort algorithm.
 // The placement is done by optimizing the locality by co-locating frequently
 // executed code sections together.
-DenseMap<const InputSectionBase *, int>
-elf::computeCacheDirectedSortOrder(Ctx &ctx) {
+static DenseMap<const InputSectionBase *, int>
+computeCacheDirectedSortOrder(Ctx &ctx) {
   SmallVector<uint64_t, 0> funcSizes;
   SmallVector<uint64_t, 0> funcCounts;
   SmallVector<codelayout::EdgeCount, 0> callCounts;
