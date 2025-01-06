@@ -1416,16 +1416,19 @@ be found.
   parameters: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
 * Use ``ownership_holds`` to mark that a function takes over the ownership of a
-  piece of memory. The analyzer will assume that the memory is not leaked even
-  if it finds that the last pointer referencing it went out of scope (almost as
-  if it was freed). Takes 2 parameters: the allocation type, and the index of
-  the parameter whose ownership will be taken over (counting from 1).
+  piece of memory and will free it at some unspecified point in the future. Like
+  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  index of the parameter whose ownership will be taken over (counting from 1).
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
+leak reports (concerning the specified argument); the difference between them
+is that using taken memory is a use-after-free error, while using held memory
+is assumed to be legitimate.
 
 Example:
 
 .. code-block:: c
 
-  // Denotes that my_malloc will return with adynamically allocated piece of
+  // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
   void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
 
