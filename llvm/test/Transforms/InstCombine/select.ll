@@ -5,6 +5,9 @@
 
 target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64"
 
+declare void @use.i1(i1)
+declare void @use.i32(i32)
+
 define i1 @test5(i1 %C) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
@@ -4433,6 +4436,40 @@ define i32 @src_no_trans_select_and_eq0_xor_and(i32 %x, i32 %y) {
   %and0 = icmp eq i32 %and, 0
   %xor = xor i32 %x, %y
   %cond = select i1 %and0, i32 %xor, i32 %and
+  ret i32 %cond
+}
+
+define i32 @src_no_trans_select_and_eq0_xor_and_fail_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @src_no_trans_select_and_eq0_xor_and_fail_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND0:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use.i32(i32 [[XOR]])
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[AND0]], i32 [[XOR]], i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %and = and i32 %x, %y
+  %and0 = icmp eq i32 %and, 0
+  %xor = xor i32 %x, %y
+  call void @use.i32(i32 %xor)
+  %cond = select i1 %and0, i32 %xor, i32 %and
+  ret i32 %cond
+}
+
+define i32 @src_no_trans_select_and_eq0_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @src_no_trans_select_and_eq0_add(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND0:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    call void @use.i1(i1 [[AND0]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[AND0]], i32 [[Z:%.*]], i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %and = and i32 %x, %y
+  %and0 = icmp ne i32 %and, 0
+  call void @use.i1(i1 %and0)
+  %add = add i32 %x, %y
+  %cond = select i1 %and0, i32 %z, i32 %add
   ret i32 %cond
 }
 
