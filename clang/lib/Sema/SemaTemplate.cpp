@@ -1246,13 +1246,8 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
   DeclRefExpr *Ref =
       BuildDeclRefExpr(OrigConstrainedParm, OrigConstrainedParm->getType(),
                        VK_PRValue, OrigConstrainedParm->getLocation());
-  if (!Ref) {
-    NewConstrainedParm->setPlaceholderTypeConstraint(
-        RecoveryExpr::Create(Context, OrigConstrainedParm->getType(),
-                             OrigConstrainedParm->getBeginLoc(),
-                             OrigConstrainedParm->getEndLoc(), {}));
-    return true;
-  }
+  assert(Ref != nullptr && "Unexpected nullptr!");
+
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
       TL.getNamedConcept(), /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(),
