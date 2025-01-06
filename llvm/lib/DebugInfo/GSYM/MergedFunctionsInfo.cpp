@@ -32,6 +32,24 @@ llvm::Error MergedFunctionsInfo::encode(FileWriter &Out) const {
   return Error::success();
 }
 
+llvm::Expected<MergedFunctionsInfo>
+MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
+  MergedFunctionsInfo MFI;
+  auto FuncExtractorsOrError = MFI.getFuncsDataExtractors(Data);
+
+  if (!FuncExtractorsOrError)
+    return FuncExtractorsOrError.takeError();
+
+  for (DataExtractor &FuncData : *FuncExtractorsOrError) {
+    llvm::Expected<FunctionInfo> FI = FunctionInfo::decode(FuncData, BaseAddr);
+    if (!FI)
+      return FI.takeError();
+    MFI.MergedFunctions.push_back(std::move(*FI));
+  }
+
+  return MFI;
+}
+
 llvm::Expected<std::vector<DataExtractor>>
 MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
   std::vector<DataExtractor> Results;
@@ -70,24 +88,6 @@ MergedFunctionsInfo::getFuncsDataExtractors(DataExtractor &Data) {
     Offset += FnSize;
   }
   return Results;
-}
-
-llvm::Expected<MergedFunctionsInfo>
-MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
-  MergedFunctionsInfo MFI;
-  auto FuncExtractorsOrError = MFI.getFuncsDataExtractors(Data);
-
-  if (!FuncExtractorsOrError)
-    return FuncExtractorsOrError.takeError();
-
-  for (DataExtractor &FuncData : *FuncExtractorsOrError) {
-    llvm::Expected<FunctionInfo> FI = FunctionInfo::decode(FuncData, BaseAddr);
-    if (!FI)
-      return FI.takeError();
-    MFI.MergedFunctions.push_back(std::move(*FI));
-  }
-
-  return MFI;
 }
 
 bool operator==(const MergedFunctionsInfo &LHS,
