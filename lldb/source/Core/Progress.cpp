@@ -36,7 +36,6 @@ Progress::Progress(std::string title, std::string details,
                       debugger ? std::optional<user_id_t>(debugger->GetID())
                                : std::nullopt,
                       origin},
-      m_origin(origin),
       m_last_report_time_ns(
           std::chrono::nanoseconds(
               std::chrono::steady_clock::now().time_since_epoch())
@@ -110,9 +109,10 @@ void Progress::ReportProgress() {
     return; // An overflow in the m_completed counter. Just ignore these events.
 
   // Change the category bit if we're an internal or external progress.
-  uint32_t progress_category_bit = m_origin == Progress::Origin::eExternal
-                                       ? lldb::eBroadcastBitExternalProgress
-                                       : lldb::eBroadcastBitProgress;
+  uint32_t progress_category_bit =
+      m_progress_data.origin == Progress::Origin::eExternal
+          ? lldb::eBroadcastBitExternalProgress
+          : lldb::eBroadcastBitProgress;
 
   Debugger::ReportProgress(m_progress_data.progress_id, m_progress_data.title,
                            m_details, completed, m_total,

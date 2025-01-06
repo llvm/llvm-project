@@ -144,9 +144,6 @@ private:
   /// Data needed by the debugger to broadcast a progress event.
   const ProgressData m_progress_data;
 
-  /// The origin of this progress event.
-  const Origin m_origin;
-
   /// How much work ([0...m_total]) that has been completed.
   std::atomic<uint64_t> m_completed = 0;
 
