@@ -50,9 +50,9 @@ using namespace lldb_dap;
 
 namespace {
 #ifdef _WIN32
-const char *DEV_NULL = "nul";
+const char DEV_NULL[] = "nul";
 #else
-const char *DEV_NULL = "/dev/null";
+const char DEV_NULL[] = "/dev/null";
 #endif
 } // namespace
 
