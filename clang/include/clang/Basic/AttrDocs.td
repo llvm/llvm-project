@@ -1408,8 +1408,8 @@ facilities to mark custom allocating/deallocating functions.
 
 All 3 attributes' first parameter of type string is the type of the allocation:
 ``malloc``, ``new``, etc. to allow for catching :ref:`mismatched deallocation
-<unix-MismatchedDeallocator>` bugs to
-be found. The allocation type can be any string, e.g. a function annotated with
+<unix-MismatchedDeallocator>` bugs. The allocation type can be any string, e.g.
+a function annotated with
 returning a piece of memory of type ``lasagna`` but freed with a function
 annoteted to release ``cheese`` typed memory will result in mismatched
 deallocation warning.
