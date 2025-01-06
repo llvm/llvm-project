@@ -16,7 +16,7 @@ int test_assume(int x) {
 //      CIR: }
 
 //      LLVM: @_Z11test_assumei
-//      LLVM: %[[#cond:]] = trunc i8 %{{.+}} to i1
+//      LLVM: %[[#cond:]] = icmp sgt i32 %{{.+}}, 0
 // LLVM-NEXT: call void @llvm.assume(i1 %[[#cond]])
 
 int test_assume_attr(int x) {
@@ -32,7 +32,7 @@ int test_assume_attr(int x) {
 //      CIR: }
 
 //      LLVM: @_Z16test_assume_attri
-//      LLVM: %[[#cond:]] = trunc i8 %{{.+}} to i1
+//      LLVM: %[[#cond:]] = icmp sgt i32 %{{.+}}, 0
 // LLVM-NEXT: call void @llvm.assume(i1 %[[#cond]])
 
 int test_assume_aligned(int *ptr) {

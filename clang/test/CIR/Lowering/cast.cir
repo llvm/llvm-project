@@ -51,7 +51,6 @@ module {
     %33 = cir.cast(int_to_bool, %arg1 : !s32i), !cir.bool
     // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
     // CHECK: %[[#CMP:]] = llvm.icmp "ne" %arg1, %[[#ZERO]] : i32
-    // CHECK: %{{.+}} = llvm.zext %[[#CMP]] : i1 to i8
 
     // Pointer casts.
     cir.store %16, %6 : !s64i, !cir.ptr<!s64i>
@@ -91,9 +90,22 @@ module {
     %2 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
     %3 = cir.cast(bool_to_int, %2 : !cir.bool), !u8i
     // CHECK: %[[LOAD_BOOL:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i8
-    // CHECK: %{{.*}} = llvm.bitcast %[[LOAD_BOOL]] : i8 to i8
+    // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[LOAD_BOOL]] : i8 to i1
+    // CHECK: %[[EXT:.*]] = llvm.zext %[[TRUNC]] : i1 to i8
 
     cir.store %3, %1 : !u8i, !cir.ptr<!u8i>
+    cir.return
+  }
+
+  // Test cases where the memory type is not the same as the source type.
+  cir.func @testArrayToPtrDecay() {
+    // CHECK-LABEL: llvm.func @testArrayToPtrDecay()
+    %null_bool_array = cir.const #cir.ptr<null> : !cir.ptr<!cir.array<!cir.bool x 3>>
+    %bool_array_decay = cir.cast(array_to_ptrdecay, %null_bool_array : !cir.ptr<!cir.array<!cir.bool x 3>>), !cir.ptr<!cir.bool>
+    // CHECK: = llvm.getelementptr %{{.*}}[0] : (!llvm.ptr) -> !llvm.ptr, i8
+    %res = cir.load %bool_array_decay : !cir.ptr<!cir.bool>, !cir.bool
+    // CHECK-NEXT: %[[BOOL_LOAD:.+]] = llvm.load %{{.*}} {{.*}} : !llvm.ptr -> i8
+    // CHECK-NEXT: = llvm.trunc %[[BOOL_LOAD]] : i8 to i1
     cir.return
   }
 }

@@ -10,6 +10,8 @@
 !ty_S2_ = !cir.struct<struct "S2" {!ty_S2A} #cir.record.decl.ast>
 !ty_S3_ = !cir.struct<struct "S3" {!s32i} #cir.record.decl.ast>
 
+!struct_with_bool = !cir.struct<struct "struct_with_bool" {!u32i, !cir.bool}>
+
 module {
   cir.func @test() {
     %1 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["x"] {alignment = 4 : i64}
@@ -91,6 +93,23 @@ module {
     cir.copy %1 to %2 : !cir.ptr<!ty_S>
     // CHECK: %[[#SIZE:]] = llvm.mlir.constant(8 : i32) : i32
     // CHECK: "llvm.intr.memcpy"(%[[#SB]], %[[#SA]], %[[#SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+    cir.return
+  }
+
+  // Verify that boolean fields are lowered to i8 and that the correct type is inserted during initialization.
+  cir.global external @struct_with_bool = #cir.const_struct<{#cir.int<1> : !u32i, #cir.bool<false> : !cir.bool}> : !struct_with_bool
+  // CHECK: llvm.mlir.global external @struct_with_bool() {addr_space = 0 : i32} : !llvm.struct<"struct.struct_with_bool", (i32, i8)> {
+  // CHECK:  %[[FALSE:.+]] = llvm.mlir.constant(false) : i1
+  // CHECK-NEXT:  %[[FALSE_MEM:.+]] = llvm.zext %[[FALSE]] : i1 to i8
+  // CHECK-NEXT:  = llvm.insertvalue %[[FALSE_MEM]], %{{.+}}[1] : !llvm.struct<"struct.struct_with_bool", (i32, i8)>
+
+  cir.func @test_struct_with_bool() {
+    // CHECK-LABEL: llvm.func @test_struct_with_bool()
+    %0 = cir.alloca !struct_with_bool, !cir.ptr<!struct_with_bool>, ["a"] {alignment = 4 : i64}
+    %1 = cir.get_member %0[1] {name = "b"} : !cir.ptr<!struct_with_bool> -> !cir.ptr<!cir.bool>
+    // CHECK: %[[BOOL_MEMBER_PTR:.+]] = llvm.getelementptr %{{.*}}[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.struct_with_bool", (i32, i8)>
+    %2 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    // CHECK: = llvm.load %[[BOOL_MEMBER_PTR]] {{.*}} : !llvm.ptr -> i8
     cir.return
   }
 }

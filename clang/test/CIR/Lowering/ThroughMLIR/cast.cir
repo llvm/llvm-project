@@ -7,8 +7,8 @@
 !u16i = !cir.int<u, 16>
 !u8i  = !cir.int<u, 8>
 module {
-  // MLIR-LABEL: func.func @cast_int_to_bool(%arg0: i32) -> i8
-  // LLVM-LABEL: define i8 @cast_int_to_bool(i32 %0)
+  // MLIR-LABEL: func.func @cast_int_to_bool(%arg0: i32) -> i1
+  // LLVM-LABEL: define i1 @cast_int_to_bool(i32 %0)
   cir.func @cast_int_to_bool(%i : !u32i) -> !cir.bool {
     // MLIR-NEXT: %[[ZERO:.*]] = arith.constant 0 : i32
     // MLIR-NEXT: arith.cmpi ne, %arg0, %[[ZERO]]
@@ -71,8 +71,8 @@ module {
     %1 = cir.cast(floating, %f : !cir.float), !cir.double
     cir.return %1 : !cir.double
   }
-  // MLIR-LABEL: func.func @cast_float_to_bool(%arg0: f32) -> i8
-  // LLVM-LABEL: define i8 @cast_float_to_bool(float %0)
+  // MLIR-LABEL: func.func @cast_float_to_bool(%arg0: f32) -> i1
+  // LLVM-LABEL: define i1 @cast_float_to_bool(float %0)
   cir.func @cast_float_to_bool(%f : !cir.float) -> !cir.bool {
     // MLIR-NEXT: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
     // MLIR-NEXT: arith.cmpf une, %arg0, %[[ZERO]] : f32
@@ -81,29 +81,29 @@ module {
     %1 = cir.cast(float_to_bool, %f : !cir.float), !cir.bool
     cir.return %1 : !cir.bool
   }
-  // MLIR-LABEL: func.func @cast_bool_to_int8(%arg0: i8) -> i8
-  // LLVM-LABEL: define i8 @cast_bool_to_int8(i8 %0)
+  // MLIR-LABEL: func.func @cast_bool_to_int8(%arg0: i1) -> i8
+  // LLVM-LABEL: define i8 @cast_bool_to_int8(i1 %0)
   cir.func @cast_bool_to_int8(%b : !cir.bool) -> !u8i {
-    // MLIR-NEXT: arith.bitcast %arg0 : i8 to i8
-    // LLVM-NEXT: ret i8 %0
+    // MLIR-NEXT: arith.extui %arg0 : i1 to i8
+    // LLVM-NEXT: zext i1 %0 to i8
 
     %1 = cir.cast(bool_to_int, %b : !cir.bool), !u8i
     cir.return %1 : !u8i
   }
-  // MLIR-LABEL: func.func @cast_bool_to_int(%arg0: i8) -> i32
-  // LLVM-LABEL: define i32 @cast_bool_to_int(i8 %0)
+  // MLIR-LABEL: func.func @cast_bool_to_int(%arg0: i1) -> i32
+  // LLVM-LABEL: define i32 @cast_bool_to_int(i1 %0)
   cir.func @cast_bool_to_int(%b : !cir.bool) -> !u32i {
-    // MLIR-NEXT: arith.extui %arg0 : i8 to i32
-    // LLVM-NEXT: zext i8 %0 to i32
+    // MLIR-NEXT: arith.extui %arg0 : i1 to i32
+    // LLVM-NEXT: zext i1 %0 to i32
 
     %1 = cir.cast(bool_to_int, %b : !cir.bool), !u32i
     cir.return %1 : !u32i
   }
-  // MLIR-LABEL: func.func @cast_bool_to_float(%arg0: i8) -> f32
-  // LLVM-LABEL: define float @cast_bool_to_float(i8 %0)
+  // MLIR-LABEL: func.func @cast_bool_to_float(%arg0: i1) -> f32
+  // LLVM-LABEL: define float @cast_bool_to_float(i1 %0)
   cir.func @cast_bool_to_float(%b : !cir.bool) -> !cir.float {
-    // MLIR-NEXT: arith.uitofp %arg0 : i8 to f32
-    // LLVM-NEXT: uitofp i8 %0 to float
+    // MLIR-NEXT: arith.uitofp %arg0 : i1 to f32
+    // LLVM-NEXT: uitofp i1 %0 to float
 
     %1 = cir.cast(bool_to_float, %b : !cir.bool), !cir.float
     cir.return %1 : !cir.float

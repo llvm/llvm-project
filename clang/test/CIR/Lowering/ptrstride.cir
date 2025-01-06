@@ -3,6 +3,8 @@
 // XFAIL: *
 
 !s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+
 module {
   cir.func @f(%arg0: !cir.ptr<!s32i>) {
     %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["a", init] {alignment = 8 : i64}
@@ -15,6 +17,11 @@ module {
   }
   cir.func @g(%arg0: !cir.ptr<!s32i>, %2 : !s32i) {
     %3 = cir.ptr_stride(%arg0 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
+    cir.return
+  }
+
+  cir.func @bool_stride(%arg0: !cir.ptr<!cir.bool>, %2 : !u64i) {
+    %3 = cir.ptr_stride(%arg0 : !cir.ptr<!cir.bool>, %2 : !u64i), !cir.ptr<!cir.bool>
     cir.return
   }
 }
@@ -33,3 +40,6 @@ module {
 // MLIR-LABEL: @g
 // MLIR:      %0 = llvm.sext %arg1 : i32 to i64
 // MLIR-NEXT: llvm.getelementptr %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+
+// MLIR-LABEL: @bool_stride
+// MLIR: llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, i8

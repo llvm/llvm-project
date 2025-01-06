@@ -16,10 +16,11 @@ module {
     cir.return
   }
 //      MLIR: llvm.func @foo()
-//  MLIR-DAG: = llvm.mlir.constant(1 : i8) : i8
-//  MLIR-DAG: [[Value:%[a-z0-9]+]] = llvm.mlir.constant(1 : index) : i64
-//  MLIR-DAG: = llvm.alloca [[Value]] x i8 {alignment = 1 : i64} : (i64) -> !llvm.ptr
-//  MLIR-DAG: llvm.store %0, %2 {{.*}} : i8, !llvm.ptr
+//  MLIR-DAG: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+//  MLIR-DAG: %[[VALUE:.*]] = llvm.mlir.constant(1 : index) : i64
+//  MLIR-DAG: %[[ADDR:.*]] = llvm.alloca %[[VALUE]] x i8 {alignment = 1 : i64} : (i64) -> !llvm.ptr
+//  MLIR-DAG: %[[TRUE_EXT:.*]] = llvm.zext %[[TRUE]] : i1 to i8
+//  MLIR-DAG: llvm.store %[[TRUE_EXT]], %[[ADDR]] {{.*}} : i8, !llvm.ptr
 // MLIR-NEXT: llvm.return
 
 //      LLVM: define void @foo()

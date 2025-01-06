@@ -9,9 +9,8 @@ module {
     cir.return %0 : !s32i
   }
 
-  //      LLVM: define i32 @select_int(i8 %[[#COND:]], i32 %[[#TV:]], i32 %[[#FV:]])
-  // LLVM-NEXT:   %[[#CONDF:]] = trunc i8 %[[#COND]] to i1
-  // LLVM-NEXT:   %[[#RES:]] = select i1 %[[#CONDF]], i32 %[[#TV]], i32 %[[#FV]]
+  //      LLVM: define i32 @select_int(i1 %[[#COND:]], i32 %[[#TV:]], i32 %[[#FV:]])
+  // LLVM-NEXT:   %[[#RES:]] = select i1 %[[#COND]], i32 %[[#TV]], i32 %[[#FV]]
   // LLVM-NEXT:   ret i32 %[[#RES]]
   // LLVM-NEXT: }
 
@@ -20,10 +19,9 @@ module {
     cir.return %0 : !cir.bool
   }
 
-  //      LLVM: define i8 @select_bool(i8 %[[#COND:]], i8 %[[#TV:]], i8 %[[#FV:]])
-  // LLVM-NEXT:   %[[#CONDF:]] = trunc i8 %[[#COND]] to i1
-  // LLVM-NEXT:   %[[#RES:]] = select i1 %[[#CONDF]], i8 %[[#TV]], i8 %[[#FV]]
-  // LLVM-NEXT:   ret i8 %[[#RES]]
+  //      LLVM: define i1 @select_bool(i1 %[[#COND:]], i1 %[[#TV:]], i1 %[[#FV:]])
+  // LLVM-NEXT:   %[[#RES:]] = select i1 %[[#COND]], i1 %[[#TV]], i1 %[[#FV]]
+  // LLVM-NEXT:   ret i1 %[[#RES]]
   // LLVM-NEXT: }
 
   cir.func @logical_and(%arg0 : !cir.bool, %arg1 : !cir.bool) -> !cir.bool {
@@ -32,9 +30,9 @@ module {
     cir.return %1 : !cir.bool
   }
 
-  //      LLVM: define i8 @logical_and(i8 %[[#ARG0:]], i8 %[[#ARG1:]])
-  // LLVM-NEXT:   %[[#RES:]] = and i8 %[[#ARG0]], %[[#ARG1]]
-  // LLVM-NEXT:   ret i8 %[[#RES]]
+  //      LLVM: define i1 @logical_and(i1 %[[#ARG0:]], i1 %[[#ARG1:]])
+  // LLVM-NEXT:   %[[#RES:]] = and i1 %[[#ARG0]], %[[#ARG1]]
+  // LLVM-NEXT:   ret i1 %[[#RES]]
   // LLVM-NEXT: }
 
   cir.func @logical_or(%arg0 : !cir.bool, %arg1 : !cir.bool) -> !cir.bool {
@@ -43,8 +41,8 @@ module {
     cir.return %1 : !cir.bool
   }
 
-  //      LLVM: define i8 @logical_or(i8 %[[#ARG0:]], i8 %[[#ARG1:]])
-  // LLVM-NEXT:   %[[#RES:]] = or i8 %[[#ARG0]], %[[#ARG1]]
-  // LLVM-NEXT:   ret i8 %[[#RES]]
+  //      LLVM: define i1 @logical_or(i1 %[[#ARG0:]], i1 %[[#ARG1:]])
+  // LLVM-NEXT:   %[[#RES:]] = or i1 %[[#ARG0]], %[[#ARG1]]
+  // LLVM-NEXT:   ret i1 %[[#RES]]
   // LLVM-NEXT: }
 }

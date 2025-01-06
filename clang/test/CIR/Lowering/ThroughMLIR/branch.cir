@@ -13,9 +13,8 @@ cir.func @foo(%arg0: !cir.bool) -> !s32i {
 }
 
 //      MLIR: module {
-// MLIR-NEXT:   func.func @foo(%arg0: i8) -> i32
-// MLIR-NEXT:     %0 = arith.trunci %arg0 : i8 to i1
-// MLIR-NEXT:     cf.cond_br %0, ^bb1, ^bb2
+// MLIR-NEXT:   func.func @foo(%arg0: i1) -> i32
+// MLIR-NEXT:     cf.cond_br %arg0, ^bb1, ^bb2
 // MLIR-NEXT:   ^bb1:  // pred: ^bb0
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
 // MLIR-NEXT:     return %c1_i32 : i32
@@ -25,13 +24,12 @@ cir.func @foo(%arg0: !cir.bool) -> !s32i {
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
 
-//       LLVM: define i32 @foo(i8 %0)
-//  LLVM-NEXT:   %2 = trunc i8 %0 to i1
-//  LLVM-NEXT:   br i1 %2, label %3, label %4
+//       LLVM: define i32 @foo(i1 %0)
+//  LLVM-NEXT:   br i1 %0, label %[[TRUE:.*]], label %[[FALSE:.*]]
 // LLVM-EMPTY:
-//  LLVM-NEXT: 3:                                                ; preds = %1
+//  LLVM-NEXT: [[TRUE]]:
 //  LLVM-NEXT:   ret i32 1
 // LLVM-EMPTY:
-//  LLVM-NEXT: 4:                                                ; preds = %1
+//  LLVM-NEXT: [[FALSE]]:
 //  LLVM-NEXT:   ret i32 0
 //  LLVM-NEXT: }

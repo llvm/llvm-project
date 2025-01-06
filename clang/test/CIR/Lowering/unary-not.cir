@@ -31,18 +31,16 @@ module {
         %3 = cir.cast(float_to_bool, %2 : !cir.float), !cir.bool
         // MLIR: %[[#F_ZERO:]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
         // MLIR: %[[#F_BOOL:]] = llvm.fcmp "une" %{{.+}}, %[[#F_ZERO]] : f32
-        // MLIR: %[[#F_ZEXT:]] = llvm.zext %[[#F_BOOL]] : i1 to i8
         %4 = cir.unary(not, %3) : !cir.bool, !cir.bool
-        // MLIR: %[[#F_ONE:]] = llvm.mlir.constant(1 : i8) : i8
-        // MLIR: = llvm.xor %[[#F_ZEXT]], %[[#F_ONE]]  : i8
+        // MLIR: %[[#F_ONE:]] = llvm.mlir.constant(true) : i1
+        // MLIR: = llvm.xor %[[#F_BOOL]], %[[#F_ONE]]  : i1
         %5 = cir.load %1 : !cir.ptr<!cir.double>, !cir.double
         %6 = cir.cast(float_to_bool, %5 : !cir.double), !cir.bool
         // MLIR: %[[#D_ZERO:]] = llvm.mlir.constant(0.000000e+00 : f64) : f64
         // MLIR: %[[#D_BOOL:]] = llvm.fcmp "une" %{{.+}}, %[[#D_ZERO]] : f64
-        // MLIR: %[[#D_ZEXT:]] = llvm.zext %[[#D_BOOL]] : i1 to i8
         %7 = cir.unary(not, %6) : !cir.bool, !cir.bool
-        // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(1 : i8) : i8
-        // MLIR: = llvm.xor %[[#D_ZEXT]], %[[#D_ONE]]  : i8
+        // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(true) : i1
+        // MLIR: = llvm.xor %[[#D_BOOL]], %[[#D_ONE]]  : i1
         cir.return
     }
 
@@ -60,10 +58,9 @@ module {
         // MLIR: %[[#INT:]] = llvm.load %{{.+}} : !llvm.ptr
         // MLIR: %[[#IZERO:]] = llvm.mlir.constant(0 : i32) : i32
         // MLIR: %[[#ICMP:]] = llvm.icmp "ne" %[[#INT]], %[[#IZERO]] : i32
-        // MLIR: %[[#IEXT:]] = llvm.zext %[[#ICMP]] : i1 to i8
-        // MLIR: %[[#IONE:]] = llvm.mlir.constant(1 : i8) : i8
-        // MLIR: %[[#IXOR:]] = llvm.xor %[[#IEXT]], %[[#IONE]]  : i8
-        // MLIR: = llvm.zext %[[#IXOR]] : i8 to i32
+        // MLIR: %[[#IONE:]] = llvm.mlir.constant(true) : i1
+        // MLIR: %[[#IXOR:]] = llvm.xor %[[#ICMP]], %[[#IONE]]  : i1
+        // MLIR: = llvm.zext %[[#IXOR]] : i1 to i32
 
         %17 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
         %18 = cir.cast(float_to_bool, %17 : !cir.float), !cir.bool
@@ -72,10 +69,9 @@ module {
         // MLIR: %[[#FLOAT:]] = llvm.load %{{.+}} : !llvm.ptr
         // MLIR: %[[#FZERO:]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
         // MLIR: %[[#FCMP:]] = llvm.fcmp "une" %[[#FLOAT]], %[[#FZERO]] : f32
-        // MLIR: %[[#FEXT:]] = llvm.zext %[[#FCMP]] : i1 to i8
-        // MLIR: %[[#FONE:]] = llvm.mlir.constant(1 : i8) : i8
-        // MLIR: %[[#FXOR:]] = llvm.xor %[[#FEXT]], %[[#FONE]]  : i8
-        // MLIR: = llvm.zext %[[#FXOR]] : i8 to i32
+        // MLIR: %[[#FONE:]] = llvm.mlir.constant(true) : i1
+        // MLIR: %[[#FXOR:]] = llvm.xor %[[#FCMP]], %[[#FONE]]  : i1
+        // MLIR: = llvm.zext %[[#FXOR]] : i1 to i32
 
         cir.return
     }

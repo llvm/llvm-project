@@ -35,6 +35,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -105,6 +106,54 @@ public:
   }
 };
 
+/// Given a type convertor and a data layout, convert the given type to a type
+/// that is suitable for memory operations. For example, this can be used to
+/// lower cir.bool accesses to i8.
+static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                       mlir::Type type) {
+  // TODO(cir): Handle other types similarly to clang's codegen
+  // convertTypeForMemory
+  if (isa<cir::BoolType>(type)) {
+    // TODO: Use datalayout to get the size of bool
+    return mlir::IntegerType::get(type.getContext(), 8);
+  }
+
+  return converter.convertType(type);
+}
+
+/// Emits the value from memory as expected by its users. Should be called when
+/// the memory represetnation of a CIR type is not equal to its scalar
+/// representation.
+static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
+                                  cir::LoadOp op, mlir::Value value) {
+
+  // TODO(cir): Handle other types similarly to clang's codegen EmitFromMemory
+  if (isa<cir::BoolType>(op.getResult().getType())) {
+    // Create trunc of value from i8 to i1
+    // TODO: Use datalayout to get the size of bool
+    assert(value.getType().isInteger(8));
+    return createIntCast(rewriter, value, rewriter.getI1Type());
+  }
+
+  return value;
+}
+
+/// Emits a value to memory with the expected scalar type. Should be called when
+/// the memory represetnation of a CIR type is not equal to its scalar
+/// representation.
+static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
+                                cir::StoreOp op, mlir::Value value) {
+
+  // TODO(cir): Handle other types similarly to clang's codegen EmitToMemory
+  if (isa<cir::BoolType>(op.getValue().getType())) {
+    // Create zext of value from i1 to i8
+    // TODO: Use datalayout to get the size of bool
+    return createIntCast(rewriter, value, rewriter.getI8Type());
+  }
+
+  return value;
+}
+
 class CIRAllocaOpLowering : public mlir::OpConversionPattern<cir::AllocaOp> {
 public:
   using OpConversionPattern<cir::AllocaOp>::OpConversionPattern;
@@ -112,8 +161,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(cir::AllocaOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.getAllocaType();
-    auto mlirType = getTypeConverter()->convertType(type);
+
+    mlir::Type mlirType =
+        convertTypeForMemory(*getTypeConverter(), adaptor.getAllocaType());
 
     // FIXME: Some types can not be converted yet (e.g. struct)
     if (!mlirType)
@@ -174,12 +224,20 @@ public:
     mlir::Value base;
     SmallVector<mlir::Value> indices;
     SmallVector<mlir::Operation *> eraseList;
+    mlir::memref::LoadOp newLoad;
     if (findBaseAndIndices(adaptor.getAddr(), base, indices, eraseList,
                            rewriter)) {
-      rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(op, base, indices);
+      newLoad =
+          rewriter.create<mlir::memref::LoadOp>(op.getLoc(), base, indices);
+      // rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(op, base, indices);
       eraseIfSafe(op.getAddr(), base, eraseList, rewriter);
     } else
-      rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(op, adaptor.getAddr());
+      newLoad =
+          rewriter.create<mlir::memref::LoadOp>(op.getLoc(), adaptor.getAddr());
+
+    // Convert adapted result to its original type if needed.
+    mlir::Value result = emitFromMemory(rewriter, op, newLoad.getResult());
+    rewriter.replaceOp(op, result);
     return mlir::LogicalResult::success();
   }
 };
@@ -194,13 +252,16 @@ public:
     mlir::Value base;
     SmallVector<mlir::Value> indices;
     SmallVector<mlir::Operation *> eraseList;
+
+    // Convert adapted value to its memory type if needed.
+    mlir::Value value = emitToMemory(rewriter, op, adaptor.getValue());
     if (findBaseAndIndices(adaptor.getAddr(), base, indices, eraseList,
                            rewriter)) {
-      rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(op, adaptor.getValue(),
-                                                         base, indices);
+      rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(op, value, base,
+                                                         indices);
       eraseIfSafe(op.getAddr(), base, eraseList, rewriter);
     } else
-      rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(op, adaptor.getValue(),
+      rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(op, value,
                                                          adaptor.getAddr());
     return mlir::LogicalResult::success();
   }
@@ -744,28 +805,19 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto type = op.getLhs().getType();
 
-    mlir::Value mlirResult;
-
     if (auto ty = mlir::dyn_cast<cir::IntType>(type)) {
       auto kind = convertCmpKindToCmpIPredicate(op.getKind(), ty.isSigned());
-      mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-          op.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
+      rewriter.replaceOpWithNewOp<mlir::arith::CmpIOp>(
+          op, kind, adaptor.getLhs(), adaptor.getRhs());
     } else if (auto ty = mlir::dyn_cast<cir::CIRFPTypeInterface>(type)) {
       auto kind = convertCmpKindToCmpFPredicate(op.getKind());
-      mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-          op.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
+      rewriter.replaceOpWithNewOp<mlir::arith::CmpFOp>(
+          op, kind, adaptor.getLhs(), adaptor.getRhs());
     } else if (auto ty = mlir::dyn_cast<cir::PointerType>(type)) {
       llvm_unreachable("pointer comparison not supported yet");
     } else {
       return op.emitError() << "unsupported type for CmpOp: " << type;
     }
-
-    // MLIR comparison ops return i1, but cir::CmpOp returns the same type as
-    // the LHS value. Since this return value can be used later, we need to
-    // restore the type with the extension below.
-    auto mlirResultTy = getTypeConverter()->convertType(op.getType());
-    rewriter.replaceOpWithNewOp<mlir::arith::ExtUIOp>(op, mlirResultTy,
-                                                      mlirResult);
 
     return mlir::LogicalResult::success();
   }
@@ -826,12 +878,8 @@ struct CIRBrCondOpLowering : public mlir::OpConversionPattern<cir::BrCondOp> {
   mlir::LogicalResult
   matchAndRewrite(cir::BrCondOp brOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-
-    auto condition = adaptor.getCond();
-    auto i1Condition = rewriter.create<mlir::arith::TruncIOp>(
-        brOp.getLoc(), rewriter.getI1Type(), condition);
     rewriter.replaceOpWithNewOp<mlir::cf::CondBranchOp>(
-        brOp, i1Condition.getResult(), brOp.getDestTrue(),
+        brOp, adaptor.getCond(), brOp.getDestTrue(),
         adaptor.getDestOperandsTrue(), brOp.getDestFalse(),
         adaptor.getDestOperandsFalse());
 
@@ -847,16 +895,13 @@ public:
   matchAndRewrite(cir::TernaryOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(op);
-    auto condition = adaptor.getCond();
-    auto i1Condition = rewriter.create<mlir::arith::TruncIOp>(
-        op.getLoc(), rewriter.getI1Type(), condition);
     SmallVector<mlir::Type> resultTypes;
     if (mlir::failed(getTypeConverter()->convertTypes(op->getResultTypes(),
                                                       resultTypes)))
       return mlir::failure();
 
     auto ifOp = rewriter.create<mlir::scf::IfOp>(op.getLoc(), resultTypes,
-                                                 i1Condition.getResult(), true);
+                                                 adaptor.getCond(), true);
     auto *thenBlock = &ifOp.getThenRegion().front();
     auto *elseBlock = &ifOp.getElseRegion().front();
     rewriter.inlineBlockBefore(&op.getTrueRegion().front(), thenBlock,
@@ -893,11 +938,8 @@ public:
   mlir::LogicalResult
   matchAndRewrite(cir::IfOp ifop, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto condition = adaptor.getCondition();
-    auto i1Condition = rewriter.create<mlir::arith::TruncIOp>(
-        ifop->getLoc(), rewriter.getI1Type(), condition);
     auto newIfOp = rewriter.create<mlir::scf::IfOp>(
-        ifop->getLoc(), ifop->getResultTypes(), i1Condition);
+        ifop->getLoc(), ifop->getResultTypes(), adaptor.getCondition());
     auto *thenBlock = rewriter.createBlock(&newIfOp.getThenRegion());
     rewriter.inlineBlockBefore(&ifop.getThenRegion().front(), thenBlock,
                                thenBlock->end());
@@ -924,7 +966,7 @@ public:
     mlir::OpBuilder b(moduleOp.getContext());
 
     const auto CIRSymType = op.getSymType();
-    auto convertedType = getTypeConverter()->convertType(CIRSymType);
+    auto convertedType = convertTypeForMemory(*getTypeConverter(), CIRSymType);
     if (!convertedType)
       return mlir::failure();
     auto memrefType = dyn_cast<mlir::MemRefType>(convertedType);
@@ -1170,19 +1212,14 @@ public:
       return mlir::success();
     }
     case CIR::float_to_bool: {
-      auto dstTy = mlir::cast<cir::BoolType>(op.getType());
-      auto newDstType = convertTy(dstTy);
       auto kind = mlir::arith::CmpFPredicate::UNE;
 
       // Check if float is not equal to zero.
       auto zeroFloat = rewriter.create<mlir::arith::ConstantOp>(
           op.getLoc(), src.getType(), mlir::FloatAttr::get(src.getType(), 0.0));
 
-      // Extend comparison result to either bool (C++) or int (C).
-      mlir::Value cmpResult = rewriter.create<mlir::arith::CmpFOp>(
-          op.getLoc(), kind, src, zeroFloat);
-      rewriter.replaceOpWithNewOp<mlir::arith::ExtUIOp>(op, newDstType,
-                                                        cmpResult);
+      rewriter.replaceOpWithNewOp<mlir::arith::CmpFOp>(op, kind, src,
+                                                       zeroFloat);
       return mlir::success();
     }
     case CIR::bool_to_int: {
@@ -1330,7 +1367,7 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
 static mlir::TypeConverter prepareTypeConverter() {
   mlir::TypeConverter converter;
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    auto ty = converter.convertType(type.getPointee());
+    auto ty = convertTypeForMemory(converter, type.getPointee());
     // FIXME: The pointee type might not be converted (e.g. struct)
     if (!ty)
       return nullptr;
@@ -1350,7 +1387,7 @@ static mlir::TypeConverter prepareTypeConverter() {
         mlir::IntegerType::SignednessSemantics::Signless);
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {
-    return mlir::IntegerType::get(type.getContext(), 8);
+    return mlir::IntegerType::get(type.getContext(), 1);
   });
   converter.addConversion([&](cir::SingleType type) -> mlir::Type {
     return mlir::Float32Type::get(type.getContext());

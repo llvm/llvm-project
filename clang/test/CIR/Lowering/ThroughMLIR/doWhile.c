@@ -45,9 +45,7 @@ void nestedDoWhile() {
 // CHECK:     %[[VAR4:.+]] = memref.load %[[ALLOC1]][] : memref<i32>
 // CHECK:     %[[C10_I32:.+]] = arith.constant 10 : i32
 // CHECK:     %[[CMP:.+]] = arith.cmpi sle, %[[VAR4]], %[[C10_I32]] : i32
-// CHECK:     %[[EXT1:.+]] = arith.extui %[[CMP]] : i1 to i8
-// CHECK:     %[[TRUNC:.+]] = arith.trunci %[[EXT1]] : i8 to i1
-// CHECK:     scf.condition(%[[TRUNC]])
+// CHECK:     scf.condition(%[[CMP]])
 // CHECK:   } do {
 // CHECK:     scf.yield
 // CHECK:   }
@@ -76,9 +74,7 @@ void nestedDoWhile() {
 // CHECK:               %[[EIGHT:.+]] = memref.load %[[alloca_0]][] : memref<i32>
 // CHECK:               %[[C2_I32_3:.+]] = arith.constant 2 : i32
 // CHECK:               %[[NINE:.+]] = arith.cmpi slt, %[[EIGHT]], %[[C2_I32_3]] : i32
-// CHECK:               %[[TWELVE:.+]] = arith.extui %[[NINE]] : i1 to i8
-// CHECK:               %[[THIRTEEN:.+]] = arith.trunci %[[TWELVE]] : i8 to i1
-// CHECK:               scf.condition(%[[THIRTEEN]])
+// CHECK:               scf.condition(%[[NINE]])
 // CHECK:             } do {
 // CHECK:               %[[EIGHT]] = memref.load %[[alloca_0]][] : memref<i32>
 // CHECK:               %[[C1_I32_3:.+]] = arith.constant 1 : i32
@@ -91,9 +87,7 @@ void nestedDoWhile() {
 // CHECK:         %[[TWO:.+]] = memref.load %[[alloca]][] : memref<i32>
 // CHECK:         %[[C2_I32:.+]] = arith.constant 2 : i32
 // CHECK:         %[[THREE:.+]] = arith.cmpi slt, %[[TWO]], %[[C2_I32]] : i32
-// CHECK:         %[[SIX:.+]] = arith.extui %[[THREE]] : i1 to i8
-// CHECK:         %[[SEVEN:.+]] = arith.trunci %[[SIX]] : i8 to i1
-// CHECK:         scf.condition(%[[SEVEN]])
+// CHECK:         scf.condition(%[[THREE]])
 // CHECK:       } do {
 // CHECK:         scf.yield
 // CHECK:       }

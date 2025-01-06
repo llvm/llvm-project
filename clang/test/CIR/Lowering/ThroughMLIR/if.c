@@ -22,9 +22,7 @@ void foo() {
 //CHECK:     %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
 //CHECK:     %[[C0_I32_1:.+]] = arith.constant 0 : i32
 //CHECK:     %[[ONE:.+]] = arith.cmpi sgt, %[[ZERO]], %[[C0_I32_1]] : i32
-//CHECK:     %[[FOUR:.+]] = arith.extui %[[ONE]] : i1 to i8
-//CHECK:     %[[FIVE:.+]] = arith.trunci %[[FOUR]] : i8 to i1
-//CHECK:     scf.if %[[FIVE]] {
+//CHECK:     scf.if %[[ONE]] {
 //CHECK:       %[[SIX:.+]] = memref.load %[[alloca_0]][] : memref<i32>
 //CHECK:       %[[C1_I32:.+]] = arith.constant 1 : i32
 //CHECK:       %[[SEVEN:.+]] = arith.addi %[[SIX]], %[[C1_I32]] : i32
@@ -58,9 +56,7 @@ void foo2() {
 //CHECK:     %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
 //CHECK:     %[[C3_I32:.+]] = arith.constant 3 : i32
 //CHECK:     %[[ONE:.+]] = arith.cmpi slt, %[[ZERO]], %[[C3_I32]] : i32
-//CHECK:     %[[FOUR:.+]] = arith.extui %[[ONE]] : i1 to i8
-//CHECK:     %[[FIVE]] = arith.trunci %[[FOUR]] : i8 to i1
-//CHECK:     scf.if %[[FIVE]] {
+//CHECK:     scf.if %[[ONE]] {
 //CHECK:       %[[SIX:.+]] = memref.load %[[alloca_0]][] : memref<i32>
 //CHECK:       %[[C1_I32:.+]] = arith.constant 1 : i32
 //CHECK:       %[[SEVEN:.+]] = arith.addi %[[SIX]], %[[C1_I32]] : i32
@@ -95,9 +91,7 @@ void foo3() {
 //CHECK:     %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
 //CHECK:     %[[C3_I32:.+]] = arith.constant 3 : i32
 //CHECK:     %[[ONE:.+]] = arith.cmpi slt, %[[ZERO]], %[[C3_I32]] : i32
-//CHECK:     %[[FOUR:.+]] = arith.extui %[[ONE]] : i1 to i8
-//CHECK:     %[[FIVE]] = arith.trunci %[[FOUR]] : i8 to i1
-//CHECK:     scf.if %[[FIVE]] {
+//CHECK:     scf.if %[[ONE]] {
 //CHECK:       %[[alloca_2:.+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
 //CHECK:       %[[C1_I32:.+]] = arith.constant 1 : i32
 //CHECK:       memref.store %[[C1_I32]], %[[alloca_2]][] : memref<i32>
@@ -105,9 +99,7 @@ void foo3() {
 //CHECK:         %[[SIX:.+]] = memref.load %[[alloca_2]][] : memref<i32>
 //CHECK:         %[[C2_I32_3:.+]] = arith.constant 2 : i32
 //CHECK:         %[[SEVEN:.+]] = arith.cmpi sgt, %[[SIX]], %[[C2_I32_3]] : i32
-//CHECK:         %[[TEN:.+]] = arith.extui %[[SEVEN]] : i1 to i8
-//CHECK:         %[[ELEVEN:.+]] = arith.trunci %[[TEN]] : i8 to i1
-//CHECK:         scf.if %[[ELEVEN]] {
+//CHECK:         scf.if %[[SEVEN]] {
 //CHECK:           %[[TWELVE:.+]] = memref.load %[[alloca_0]][] : memref<i32>
 //CHECK:           %[[C1_I32_5:.+]] = arith.constant 1 : i32
 //CHECK:           %[[THIRTEEN:.+]] = arith.addi %[[TWELVE]], %[[C1_I32_5]] : i32

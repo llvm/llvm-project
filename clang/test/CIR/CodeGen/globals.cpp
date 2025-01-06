@@ -20,6 +20,10 @@ void use_global() {
   int li = a;
 }
 
+bool bool_global() {
+  return e;
+}
+
 void use_global_string() {
   unsigned char c = s2[0];
 }

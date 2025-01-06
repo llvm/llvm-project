@@ -25,9 +25,10 @@ module {
     %5 = cir.const #true
     %6 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_U1_> -> !cir.ptr<!cir.bool>
     cir.store %5, %6 : !cir.bool, !cir.ptr<!cir.bool>
-    // CHECK: %[[#VAL:]] = llvm.mlir.constant(1 : i8) : i8
+    // CHECK: %[[#TRUE:]] = llvm.mlir.constant(true) : i1
     // The bitcast it just to bypass the type checker. It will be replaced by an opaque pointer.
     // CHECK: %[[#ADDR:]] = llvm.bitcast %{{.+}} : !llvm.ptr
+    // CHECK: %[[#VAL:]] = llvm.zext %[[#TRUE]] : i1 to i8
     // CHECK: llvm.store %[[#VAL]], %[[#ADDR]] {{.*}}: i8, !llvm.ptr
 
     // Should load direclty from the union's base address.

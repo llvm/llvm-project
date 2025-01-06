@@ -14,8 +14,9 @@ module {
 
 // MLIR: func @foo() {
 // MLIR: [[Value:%[a-z0-9]+]] = memref.alloca() {alignment = 1 : i64} : memref<i8>
-// MLIR: = arith.constant 1 : i8
-// MLIR: memref.store {{.*}}, [[Value]][] : memref<i8>
+// MLIR: %[[CONST:.*]] = arith.constant true
+// MLIR: %[[BOOL_TO_MEM:.*]] = arith.extui %[[CONST]] : i1 to i8
+// MLIR-NEXT: memref.store %[[BOOL_TO_MEM]], [[Value]][] : memref<i8>
 // return
 
 // LLVM: = alloca i8, i64

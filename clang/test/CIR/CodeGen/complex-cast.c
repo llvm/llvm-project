@@ -179,10 +179,8 @@ void complex_to_bool() {
 //      LLVM:   %[[#REAL:]] = extractvalue { double, double } %{{.+}}, 0
 // LLVM-NEXT:   %[[#IMAG:]] = extractvalue { double, double } %{{.+}}, 1
 // LLVM-NEXT:   %[[#RB:]] = fcmp une double %[[#REAL]], 0.000000e+00
-// LLVM-NEXT:   %[[#RB2:]] = zext i1 %[[#RB]] to i8
 // LLVM-NEXT:   %[[#IB:]] = fcmp une double %[[#IMAG]], 0.000000e+00
-// LLVM-NEXT:   %[[#IB2:]] = zext i1 %[[#IB]] to i8
-// LLVM-NEXT:   %{{.+}} = or i8 %[[#RB2]], %[[#IB2]]
+// LLVM-NEXT:   %{{.+}} = or i1 %[[#RB]], %[[#IB]]
 
 // CIR-BEFORE: %{{.+}} = cir.cast(int_complex_to_bool, %{{.+}} : !cir.complex<!s32i>), !cir.bool
 
@@ -196,10 +194,8 @@ void complex_to_bool() {
 //      LLVM:   %[[#REAL:]] = extractvalue { i32, i32 } %{{.+}}, 0
 // LLVM-NEXT:   %[[#IMAG:]] = extractvalue { i32, i32 } %{{.+}}, 1
 // LLVM-NEXT:   %[[#RB:]] = icmp ne i32 %[[#REAL]], 0
-// LLVM-NEXT:   %[[#RB2:]] = zext i1 %[[#RB]] to i8
 // LLVM-NEXT:   %[[#IB:]] = icmp ne i32 %[[#IMAG]], 0
-// LLVM-NEXT:   %[[#IB2:]] = zext i1 %[[#IB]] to i8
-// LLVM-NEXT:   %{{.+}} = or i8 %[[#RB2]], %[[#IB2]]
+// LLVM-NEXT:   %{{.+}} = or i1 %[[#RB]], %[[#IB]]
 
 // CHECK: }
 

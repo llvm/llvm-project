@@ -77,11 +77,11 @@ static Init __ioinit2(false);
 // LLVM:      @_ZL9__ioinit2 = internal global %class.Init zeroinitializer
 // LLVM:      @llvm.global_ctors = appending constant [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init, ptr null }, { i32, ptr, ptr } { i32 65536, ptr @__cxx_global_var_init.1, ptr null }]
 // LLVM:      define internal void @__cxx_global_var_init()
-// LLVM-NEXT:   call void @_ZN4InitC1Eb(ptr @_ZL8__ioinit, i8 1)
+// LLVM-NEXT:   call void @_ZN4InitC1Eb(ptr @_ZL8__ioinit, i1 true)
 // LLVM-NEXT:   call void @__cxa_atexit(ptr @_ZN4InitD1Ev, ptr @_ZL8__ioinit, ptr @__dso_handle)
 // LLVM-NEXT:   ret void
 // LLVM:      define internal void @__cxx_global_var_init.1()
-// LLVM-NEXT:   call void @_ZN4InitC1Eb(ptr @_ZL9__ioinit2, i8 0)
+// LLVM-NEXT:   call void @_ZN4InitC1Eb(ptr @_ZL9__ioinit2, i1 false)
 // LLVM-NEXT:   call void @__cxa_atexit(ptr @_ZN4InitD1Ev, ptr @_ZL9__ioinit2, ptr @__dso_handle)
 // LLVM-NEXT:   ret void
 // LLVM:      define void @_GLOBAL__sub_I_static.cpp()

@@ -26,16 +26,14 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 }
 
 // MLIR:      %1 = arith.cmpi sgt, %0, %c0_i32 : i32
-// MLIR-NEXT: %2 = arith.extui %1 : i1 to i8
-// MLIR-NEXT: %3 = arith.trunci %2 : i8 to i1
-// MLIR-NEXT: %4 = scf.if %3 -> (i32) {
+// MLIR-NEXT: %2 = scf.if %1 -> (i32) {
 // MLIR-NEXT:   %c3_i32 = arith.constant 3 : i32
 // MLIR-NEXT:   scf.yield %c3_i32 : i32
 // MLIR-NEXT: } else {
 // MLIR-NEXT:   %c5_i32 = arith.constant 5 : i32
 // MLIR-NEXT:   scf.yield %c5_i32 : i32
 // MLIR-NEXT: }
-// MLIR-NEXT: memref.store %4, %alloca_0[] : memref<i32>
+// MLIR-NEXT: memref.store %2, %alloca_0[] : memref<i32>
 
 // MLIR-CANONICALIZE: %[[CMP:.*]] = arith.cmpi sgt
 // MLIR-CANONICALIZE: arith.select %[[CMP]]

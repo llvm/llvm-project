@@ -337,11 +337,8 @@ public:
     auto *parentOp = op->getParentOp();
     return llvm::TypeSwitch<mlir::Operation *, mlir::LogicalResult>(parentOp)
         .Case<mlir::scf::WhileOp>([&](auto) {
-          auto condition = adaptor.getCondition();
-          auto i1Condition = rewriter.create<mlir::arith::TruncIOp>(
-              op.getLoc(), rewriter.getI1Type(), condition);
           rewriter.replaceOpWithNewOp<mlir::scf::ConditionOp>(
-              op, i1Condition, parentOp->getOperands());
+              op, adaptor.getCondition(), parentOp->getOperands());
           return mlir::success();
         })
         .Default([](auto) { return mlir::failure(); });

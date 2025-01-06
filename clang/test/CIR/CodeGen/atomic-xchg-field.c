@@ -58,16 +58,14 @@ void structAtomicExchange(unsigned referenceCount, wPtr item) {
 // LLVM:   %[[RES:.*]] = cmpxchg weak ptr %9, i32 %[[EXP]], i32 %[[DES]] seq_cst seq_cst
 // LLVM:   %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
 // LLVM:   %[[CMP:.*]] = extractvalue { i32, i1 } %[[RES]], 1
-// LLVM:   %[[Z:.*]] = zext i1 %[[CMP]] to i8
-// LLVM:   %[[X:.*]] = xor i8 %[[Z]], 1
-// LLVM:   %[[FAIL:.*]] = trunc i8 %[[X]] to i1
-
-// LLVM:   br i1 %[[FAIL:.*]], label %[[STORE_OLD:.*]], label %[[CONTINUE:.*]]
+// LLVM:   %[[FAIL:.*]] = xor i1 %[[CMP]], true
+// LLVM:   br i1 %[[FAIL]], label %[[STORE_OLD:.*]], label %[[CONTINUE:.*]]
 // LLVM: [[STORE_OLD]]:
 // LLVM:   store i32 %[[OLD]], ptr
 // LLVM:   br label %[[CONTINUE]]
 
 // LLVM: [[CONTINUE]]:
+// LLVM:   %[[Z:.*]] = zext i1 %[[CMP]] to i8
 // LLVM:   store i8 %[[Z]], ptr {{.*}}, align 1
 // LLVM:   ret void
 

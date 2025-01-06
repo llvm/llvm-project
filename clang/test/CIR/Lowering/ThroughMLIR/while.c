@@ -28,9 +28,7 @@ void nestedWhile() {
 //CHECK:       %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
 //CHECK:       %[[C2_I32:.+]] = arith.constant 2 : i32
 //CHECK:       %[[ONE:.+]] = arith.cmpi slt, %[[ZERO:.+]], %[[C2_I32]] : i32
-//CHECK:       %[[FOUR:.+]] = arith.extui %[[ONE:.+]] : i1 to i8
-//CHECK:       %[[FIVE:.+]] = arith.trunci %[[FOUR:.+]] : i8 to i1
-//CHECK:       scf.condition(%[[FIVE]])
+//CHECK:       scf.condition(%[[ONE]])
 //CHECK:     } do {
 //CHECK:       memref.alloca_scope {
 //CHECK:         %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32>
@@ -53,9 +51,7 @@ void nestedWhile() {
 //CHECK:       %[[ZERO:.+]] = memref.load %alloca[] : memref<i32>
 //CHECK:       %[[C2_I32:.+]] = arith.constant 2 : i32
 //CHECK:       %[[ONE:.+]] = arith.cmpi slt, %[[ZERO]], %[[C2_I32]] : i32
-//CHECK:       %[[FOUR:.+]] = arith.extui %[[ONE]] : i1 to i8
-//CHECK:       %[[FIVE:.+]] = arith.trunci %[[FOUR]] : i8 to i1
-//CHECK:       scf.condition(%[[FIVE]])
+//CHECK:       scf.condition(%[[ONE]])
 //CHECK:     } do {
 //CHECK:       memref.alloca_scope {
 //CHECK:         %[[alloca_0:.+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
@@ -65,9 +61,7 @@ void nestedWhile() {
 //CHECK:           scf.while : () -> () {
 //CHECK:             %{{.*}} = memref.load %[[alloca_0]][] : memref<i32>
 //CHECK:             %[[C2_I32]] = arith.constant 2 : i32
-//CHECK:             %{{.*}} = arith.cmpi slt, %{{.*}}, %[[C2_I32]] : i32
-//CHECK:             %[[SIX:.+]] = arith.extui %{{.*}} : i1 to i8
-//CHECK:             %[[SEVEN:.+]] = arith.trunci %[[SIX]] : i8 to i1
+//CHECK:             %[[SEVEN:.*]] = arith.cmpi slt, %{{.*}}, %[[C2_I32]] : i32
 //CHECK:             scf.condition(%[[SEVEN]])
 //CHECK:           } do {
 //CHECK:             %{{.*}} = memref.load %[[alloca_0]][] : memref<i32>

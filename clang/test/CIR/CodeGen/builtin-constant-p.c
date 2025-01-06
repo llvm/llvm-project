@@ -20,8 +20,7 @@ int foo() {
 // LLVM:  [[TMP1:%.*]] = alloca i32, i64 1
 // LLVM:  [[TMP2:%.*]] = load i32, ptr @a
 // LLVM:  [[TMP3:%.*]] = call i1 @llvm.is.constant.i32(i32 [[TMP2]])
-// LLVM:  [[TMP4:%.*]] = zext i1 [[TMP3]] to i8
-// LLVM:  [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
+// LLVM:  [[TMP5:%.*]] = zext i1 [[TMP3]] to i32
 // LLVM:  store i32 [[TMP5]], ptr [[TMP1]]
 // LLVM:  [[TMP6:%.*]] = load i32, ptr [[TMP1]]
 // LLVM:  ret i32 [[TMP6]]

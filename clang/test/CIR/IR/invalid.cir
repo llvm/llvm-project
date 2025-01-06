@@ -1140,8 +1140,8 @@ module {
 !s8i = !cir.int<s, 8>
 cir.func @no_reference_global() {
   // expected-error @below {{'cir.get_global' op 'str' does not reference a valid cir.global or cir.func}}
-  %0 = cir.get_global @str : !cir.ptr<!s8i> 
-  cir.return 
+  %0 = cir.get_global @str : !cir.ptr<!s8i>
+  cir.return
 }
 
 // -----
@@ -1458,7 +1458,7 @@ cir.global external @f = #cir.fp<0x7FC0000007FC0000007FC000000> : !cir.long_doub
 
 // -----
 
-// Long double with `double` semnatics should have a value that fits in a double.
+// Long double with `double` semantics should have a value that fits in a double.
 
 // CHECK: cir.global external @f = #cir.fp<0x7FC000007FC000000000> : !cir.long_double<!cir.f80>
 cir.global external @f = #cir.fp<0x7FC000007FC000000000> : !cir.long_double<!cir.f80>

@@ -41,14 +41,12 @@ void foo(void) {
   // NATIVE-NEXT: %{{.+}} = cir.cast(integral, %[[#C]] : !s32i), !u32i
 
   //      NONATIVE-LLVM: %[[#A:]] = fcmp une bfloat %{{.+}}, 0xR0000
-  // NONATIVE-LLVM-NEXT: %[[#B:]] = zext i1 %[[#A]] to i8
-  // NONATIVE-LLVM-NEXT: %[[#C:]] = xor i8 %[[#B]], 1
-  // NONATIVE-LLVM-NEXT: %{{.+}} = zext i8 %[[#C]] to i32
+  // NONATIVE-LLVM-NEXT: %[[#C:]] = xor i1 %[[#A]], true
+  // NONATIVE-LLVM-NEXT: %{{.+}} = zext i1 %[[#C]] to i32
 
   //      NATIVE-LLVM: %[[#A:]] = fcmp une bfloat %{{.+}}, 0xR0000
-  // NATIVE-LLVM-NEXT: %[[#B:]] = zext i1 %[[#A]] to i8
-  // NATIVE-LLVM-NEXT: %[[#C:]] = xor i8 %[[#B]], 1
-  // NATIVE-LLVM-NEXT: %{{.+}} = zext i8 %[[#C]] to i32
+  // NATIVE-LLVM-NEXT: %[[#C:]] = xor i1 %[[#A]], true
+  // NATIVE-LLVM-NEXT: %{{.+}} = zext i1 %[[#C]] to i32
 
   h1 = -h1;
   //      NONATIVE: %[[#A:]] = cir.cast(floating, %{{.+}} : !cir.bf16), !cir.float

@@ -18,7 +18,7 @@ module {
     %2 = cir.load volatile %0 : !cir.ptr<!u32i>, !u32i
     cir.return %2 : !u32i
   }
-}
+
 
 //      MLIR: module {
 // MLIR-NEXT:   func @foo() -> i32
@@ -37,3 +37,21 @@ module {
 // MLIR-NEXT:     llvm.store volatile %2, %1 {{.*}}: i32, !llvm.ptr
 // MLIR-NEXT:     %3 = llvm.load volatile %1 {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR-NEXT:     return %3 : i32
+
+  cir.func @test_bool_memory_lowering() {
+    // MLIR-LABEL: @test_bool_memory_lowering
+    %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init] {alignment = 1 : i64}
+    // MLIR: %[[VAR:.*]] = llvm.alloca %{{.*}} x i8
+    %1 = cir.const #cir.bool<true> : !cir.bool
+    // MLIR: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+    cir.store %1, %0 : !cir.bool, !cir.ptr<!cir.bool>
+    // MLIR: %[[TRUE_EXT:.*]] = llvm.zext %[[TRUE]] : i1 to i8
+    // MLIR: llvm.store %[[TRUE_EXT]], %[[VAR]] {alignment = 1 : i64} : i8, !llvm.ptr
+    %2 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    // MLIR: %[[LOAD_VAL:.*]] = llvm.load %[[VAR]] {alignment = 1 : i64} : !llvm.ptr -> i8
+    // MLIR: %[[LOAD_SCALAR:.*]] = llvm.trunc %[[LOAD_VAL]] : i8 to i1
+    %3 = cir.cast(bool_to_int, %2 : !cir.bool), !u32i
+    // MLIR: %[[CAST_VAL:.*]] = llvm.zext %[[LOAD_SCALAR]] : i1 to i32
+    cir.return
+  }
+}

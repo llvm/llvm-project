@@ -303,12 +303,9 @@ void mul() {
 // LLVM-FULL-NEXT:   %[[#F:]] = fadd double %[[#C]], %[[#D]]
 // LLVM-FULL-NEXT:   %[[#G:]] = insertvalue { double, double } undef, double %[[#E]], 0
 // LLVM-FULL-NEXT:   %[[#RES:]] = insertvalue { double, double } %[[#G]], double %[[#F]], 1
-// LLVM-FULL-NEXT:   %[[#H:]] = fcmp une double %[[#E]], %[[#E]]
-// LLVM-FULL-NEXT:   %[[#COND:]] = zext i1 %[[#H]] to i8
-// LLVM-FULL-NEXT:   %[[#I:]] = fcmp une double %[[#F]], %[[#F]]
-// LLVM-FULL-NEXT:   %[[#COND2:]] = zext i1 %[[#I]] to i8
-// LLVM-FULL-NEXT:   %[[#J:]] = and i8 %[[#COND]], %[[#COND2]]
-// LLVM-FULL-NEXT:   %[[#COND3:]] = trunc i8 %[[#J]] to i1
+// LLVM-FULL-NEXT:   %[[#COND:]] = fcmp une double %[[#E]], %[[#E]]
+// LLVM-FULL-NEXT:   %[[#COND2:]] = fcmp une double %[[#F]], %[[#F]]
+// LLVM-FULL-NEXT:   %[[#COND3:]] = and i1 %[[#COND]], %[[#COND2]]
 //      LLVM-FULL: {{.+}}:
 // LLVM-FULL-NEXT:   %{{.+}} = call { double, double } @__muldc3(double %[[#LHSR]], double %[[#LHSI]], double %[[#RHSR]], double %[[#RHSI]])
 // LLVM-FULL-NEXT:   br label %{{.+}}

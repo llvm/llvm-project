@@ -23,10 +23,8 @@ auto base_to_derived(int Base2::*ptr) -> int Derived::* {
 
   //      LLVM: %[[#src:]] = load i64, ptr %{{.+}}
   // LLVM-NEXT: %[[#is_null:]] = icmp eq i64 %[[#src]], -1
-  // LLVM-NEXT: %[[#is_null_bool:]] = zext i1 %[[#is_null]] to i8
   // LLVM-NEXT: %[[#adjusted:]] = add i64 %[[#src]], 4
-  // LLVM-NEXT: %[[#cond:]] = trunc i8 %[[#is_null_bool]] to i1
-  // LLVM-NEXT: %{{.+}} = select i1 %[[#cond]], i64 -1, i64 %[[#adjusted]]
+  // LLVM-NEXT: %{{.+}} = select i1 %[[#is_null]], i64 -1, i64 %[[#adjusted]]
 }
 
 // CIR-LABEL:  @_Z15derived_to_baseM7Derivedi
@@ -37,10 +35,8 @@ auto derived_to_base(int Derived::*ptr) -> int Base2::* {
 
   //      LLVM: %[[#src:]] = load i64, ptr %{{.+}}
   // LLVM-NEXT: %[[#is_null:]] = icmp eq i64 %[[#src]], -1
-  // LLVM-NEXT: %[[#is_null_bool:]] = zext i1 %[[#is_null]] to i8
   // LLVM-NEXT: %[[#adjusted:]] = sub i64 %[[#src]], 4
-  // LLVM-NEXT: %[[#cond:]] = trunc i8 %[[#is_null_bool]] to i1
-  // LLVM-NEXT: %9 = select i1 %[[#cond]], i64 -1, i64 %[[#adjusted]]
+  // LLVM-NEXT: %{{.+}} = select i1 %[[#is_null]], i64 -1, i64 %[[#adjusted]]
 }
 
 // CIR-LABEL:  @_Z27base_to_derived_zero_offsetM5Base1i

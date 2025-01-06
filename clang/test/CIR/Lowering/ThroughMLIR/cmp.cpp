@@ -7,10 +7,10 @@ bool testSignedIntCmpOps(int a, int b) {
     // CHECK: %[[ALLOC3:.+]] = memref.alloca() {alignment = 1 : i64} : memref<i8>
     // CHECK: %[[ALLOC4:.+]] = memref.alloca() {alignment = 1 : i64} : memref<i8>
     // CHECK: memref.store %arg0, %[[ALLOC1]][] : memref<i32>
-    // CHECK: memref.store %arg1, %[[ALLOC2]][] : memref<i32>  
-  
+    // CHECK: memref.store %arg1, %[[ALLOC2]][] : memref<i32>
+
     bool x = a == b;
-  
+
     // CHECK: %[[LOAD0:.+]] = memref.load %[[ALLOC1]][] : memref<i32>
     // CHECK: %[[LOAD1:.+]] = memref.load %[[ALLOC2]][] : memref<i32>
     // CHECK: %[[CMP0:.+]] = arith.cmpi eq, %[[LOAD0]], %[[LOAD1]] : i32
@@ -57,11 +57,8 @@ bool testSignedIntCmpOps(int a, int b) {
     // CHECK: %[[EXT5:.+]] = arith.extui %[[CMP5]] : i1 to i8
     // CHECK: memref.store %[[EXT5]], %[[ALLOC4]][] : memref<i8>
 
-    // CHECK: %[[LOAD12:.+]] = memref.load %[[ALLOC4]][] : memref<i8>
-    // CHECK: memref.store %[[LOAD12]], %[[ALLOC3]][] : memref<i8>
-    // CHECK: %[[LOAD13:.+]] = memref.load %[[ALLOC3]][] : memref<i8>
-    // CHECK: return %[[LOAD13]] : i8
     return x;
+    // CHECK: return
 }
 
 bool testUnSignedIntBinOps(unsigned a, unsigned b) {
@@ -71,7 +68,7 @@ bool testUnSignedIntBinOps(unsigned a, unsigned b) {
     // CHECK: %[[ALLOC4:.+]] = memref.alloca() {alignment = 1 : i64} : memref<i8>
     // CHECK: memref.store %arg0, %[[ALLOC1]][] : memref<i32>
     // CHECK: memref.store %arg1, %[[ALLOC2]][] : memref<i32>
-    
+
     bool x = a == b;
 
     // CHECK: %[[LOAD0:.+]] = memref.load %[[ALLOC1]][] : memref<i32>

@@ -78,8 +78,9 @@ module {
 
   // CHECK: llvm.func @testInitArrWithBool()
   // CHECK:   [[ARR:%.*]] = llvm.mlir.undef : !llvm.array<1 x i8>
-  // CHECK:   [[TRUE:%.*]] = llvm.mlir.constant(1 : i8) : i8
-  // CHECK:   {{.*}} = llvm.insertvalue [[TRUE]], [[ARR]][0] : !llvm.array<1 x i8>
-  // CHECL: llvm.return
+  // CHECK:   [[TRUE:%.*]] = llvm.mlir.constant(true) : i1
+  // CHECK:   [[TRUE_EXT:%.*]] = llvm.zext [[TRUE]] : i1 to i8
+  // CHECK:   {{.*}} = llvm.insertvalue [[TRUE_EXT]], [[ARR]][0] : !llvm.array<1 x i8>
+  // CHECK: llvm.return
 
 }
