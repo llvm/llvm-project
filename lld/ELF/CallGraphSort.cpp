@@ -235,7 +235,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   });
 
   DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  int curOrder = -clusters.size();
   for (int leader : sorted) {
     for (int i = leader;;) {
       orderMap[sections[i]] = curOrder++;
@@ -328,7 +328,7 @@ computeCacheDirectedSortOrder(Ctx &ctx) {
 
   // Create the final order.
   DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  int curOrder = -sortedSections.size();
   for (uint64_t secIdx : sortedSections)
     orderMap[sections[secIdx]] = curOrder++;
 
