@@ -9,7 +9,7 @@
 
 ; But we can optionally emit it last, to match GCC<4.8 (r189778).
 ; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='407*' -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-LAST %s
+; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

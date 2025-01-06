@@ -2586,6 +2586,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // OpenMPDeclarativeConstruct visitors
 //===----------------------------------------------------------------------===//
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPUtilityConstruct &);
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -2907,8 +2911,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPErrorConstruct &) {
-  TODO(converter.getCurrentLocation(), "OpenMPErrorConstruct");
+                   const parser::OpenMPUtilityConstruct &) {
+  TODO(converter.getCurrentLocation(), "OpenMPUtilityConstruct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

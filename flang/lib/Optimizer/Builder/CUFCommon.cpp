@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Transforms/CUFCommon.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"

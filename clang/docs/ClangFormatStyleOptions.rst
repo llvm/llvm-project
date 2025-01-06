@@ -6843,6 +6843,45 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_PP_STRINGIZE
 
+.. _WrapNamespaceBodyWithEmptyLines:
+
+**WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
+  Wrap namespace body with empty lines.
+
+  Possible values:
+
+  * ``WNBWELS_Never`` (in configuration: ``Never``)
+    Remove all empty lines at the beginning and the end of namespace body.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2
+      function();
+      }
+      }
+
+  * ``WNBWELS_Always`` (in configuration: ``Always``)
+    Always have at least one empty line at the beginning and the end of
+    namespace body except that the number of empty lines between consecutive
+    nested namespace definitions is not increased.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2 {
+
+      function();
+
+      }
+      }
+
+  * ``WNBWELS_Leave`` (in configuration: ``Leave``)
+    Keep existing newlines at the beginning and the end of namespace body.
+    ``MaxEmptyLinesToKeep`` still applies.
+
+
+
 .. END_FORMAT_STYLE_OPTIONS
 
 Adding additional style options

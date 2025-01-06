@@ -230,6 +230,9 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicli` (Conditional Load Immediate)
+  extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------

@@ -3949,6 +3949,23 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
 
+    // Similar to the previous rule, but this time targeting an expanded abs.
+    // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+    // as well as
+    // (sub 0, (min X, (sub 0, X))) --> (max X, (sub 0, X))
+    // Note that these two are applicable to both signed and unsigned min/max.
+    SDValue X;
+    SDValue S0;
+    auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
+    if (sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
+                                      m_UMax(m_Value(X), NegPat),
+                                      m_SMin(m_Value(X), NegPat),
+                                      m_UMin(m_Value(X), NegPat))))) {
+      unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
+      if (hasOperation(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, X, S0);
+    }
+
     // Fold neg(splat(neg(x)) -> splat(x)
     if (VT.isVector()) {
       SDValue N1S = DAG.getSplatValue(N1, true);

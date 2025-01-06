@@ -1584,6 +1584,23 @@ static auto computeNewlines(const AnnotatedLine &Line,
     Newlines = 1;
   }
 
+  if (Style.WrapNamespaceBodyWithEmptyLines != FormatStyle::WNBWELS_Leave) {
+    // Modify empty lines after TT_NamespaceLBrace.
+    if (PreviousLine && PreviousLine->endsWith(TT_NamespaceLBrace)) {
+      if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
+        Newlines = 1;
+      else if (!Line.startsWithNamespace())
+        Newlines = std::max(Newlines, 2u);
+    }
+    // Modify empty lines before TT_NamespaceRBrace.
+    if (Line.startsWith(TT_NamespaceRBrace)) {
+      if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
+        Newlines = 1;
+      else if (!PreviousLine->startsWith(TT_NamespaceRBrace))
+        Newlines = std::max(Newlines, 2u);
+    }
+  }
+
   // Insert or remove empty line before access specifiers.
   if (PreviousLine && RootToken.isAccessSpecifier()) {
     switch (Style.EmptyLineBeforeAccessModifier) {
