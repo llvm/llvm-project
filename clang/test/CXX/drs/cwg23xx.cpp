@@ -333,7 +333,7 @@ namespace cwg2358 { // cwg2358: 16
 
 // CWG2363 was closed as NAD, but its resolution does affirm that
 // a friend declaration cannot have an opaque-enumm-specifier.
-namespace cwg2363 { // cwg2363: yes
+namespace cwg2363 { // cwg2363: 19
 #if __cplusplus >= 201103L
 enum class E0;
 enum E1 : int;
