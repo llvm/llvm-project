@@ -10,7 +10,9 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceCount.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfo.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfoSize.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfoSize.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/queue/olCreateQueue.cpp
+    )
 add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON})
 target_link_libraries("offload.unittests" PRIVATE ${PLUGINS_TEST_COMMON})
 target_include_directories("offload.unittests" PRIVATE ${PLUGINS_TEST_INCLUDE})
