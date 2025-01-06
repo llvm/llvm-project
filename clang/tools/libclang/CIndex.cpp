@@ -2861,6 +2861,10 @@ void OpenACCClauseEnqueue::VisitDeviceNumClause(
     const OpenACCDeviceNumClause &C) {
   Visitor.AddStmt(C.getIntExpr());
 }
+void OpenACCClauseEnqueue::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
 void OpenACCClauseEnqueue::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   Visitor.AddStmt(C.getIntExpr());

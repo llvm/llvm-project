@@ -463,6 +463,14 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::DefaultAsync: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Set:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -973,6 +981,20 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceNumClause(
   assert(Clause.getNumIntExprs() == 1 &&
          "Invalid number of expressions for device_num");
   return OpenACCDeviceNumClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getIntExprs()[0],
+      Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultAsyncClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
+  // same directive.
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
+  assert(Clause.getNumIntExprs() == 1 &&
+         "Invalid number of expressions for default_async");
+  return OpenACCDefaultAsyncClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getIntExprs()[0],
       Clause.getEndLoc());
 }
@@ -3681,12 +3703,9 @@ bool SemaOpenACC::ActOnStartStmtDirective(
   if (K == OpenACCDirectiveKind::Set &&
       llvm::find_if(
           Clauses,
-          llvm::IsaPred</*OpenACCDefaultAsyncClause,*/ // TODO: ERICH Need to
-                                                       // implement.
-                                                       // DefaultAsyncClause
-                                                       // then enable this.
-                        OpenACCDeviceNumClause, OpenACCDeviceTypeClause,
-                        OpenACCIfClause>) == Clauses.end())
+          llvm::IsaPred<OpenACCDefaultAsyncClause, OpenACCDeviceNumClause,
+                        OpenACCDeviceTypeClause, OpenACCIfClause>) ==
+          Clauses.end())
     return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
            << K
            << GetListOfClauses({OpenACCClauseKind::DefaultAsync,
