@@ -47,6 +47,11 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
         )
         # Unfiltered.
         self.expect(
+            "bt -u",
+            ordered=True,
+            patterns=["frame.*foo", "frame.*std::__[^:]*::__function", "frame.*main"],
+        )
+        self.expect(
             "thread backtrace -u",
             ordered=True,
             patterns=["frame.*foo", "frame.*std::__[^:]*::__function", "frame.*main"],

@@ -59,7 +59,8 @@ public:
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
 class WorkGroupSizeConversion : public OpConversionPattern<gpu::BlockDimOp> {
 public:
-  WorkGroupSizeConversion(TypeConverter &typeConverter, MLIRContext *context)
+  WorkGroupSizeConversion(const TypeConverter &typeConverter,
+                          MLIRContext *context)
       : OpConversionPattern(typeConverter, context, /*benefit*/ 10) {}
 
   LogicalResult
@@ -728,7 +729,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
-void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,

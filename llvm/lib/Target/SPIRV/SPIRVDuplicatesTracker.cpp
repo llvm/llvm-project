@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVDuplicatesTracker.h"
+#include "SPIRVInstrInfo.h"
 
 #define DEBUG_TYPE "build-dep-graph"
 
@@ -19,13 +20,14 @@ using namespace llvm;
 
 template <typename T>
 void SPIRVGeneralDuplicatesTracker::prebuildReg2Entry(
-    SPIRVDuplicatesTracker<T> &DT, SPIRVReg2EntryTy &Reg2Entry) {
+    SPIRVDuplicatesTracker<T> &DT, SPIRVReg2EntryTy &Reg2Entry,
+    const SPIRVInstrInfo *TII) {
   for (auto &TPair : DT.getAllUses()) {
     for (auto &RegPair : TPair.second) {
       const MachineFunction *MF = RegPair.first;
       Register R = RegPair.second;
       MachineInstr *MI = MF->getRegInfo().getUniqueVRegDef(R);
-      if (!MI)
+      if (!MI || (TPair.second.getIsConst() && !TII->isConstantInstr(*MI)))
         continue;
       Reg2Entry[&MI->getOperand(0)] = &TPair.second;
     }
@@ -33,16 +35,16 @@ void SPIRVGeneralDuplicatesTracker::prebuildReg2Entry(
 }
 
 void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
-    std::vector<SPIRV::DTSortableEntry *> &Graph,
+    std::vector<SPIRV::DTSortableEntry *> &Graph, const SPIRVInstrInfo *TII,
     MachineModuleInfo *MMI = nullptr) {
   SPIRVReg2EntryTy Reg2Entry;
-  prebuildReg2Entry(TT, Reg2Entry);
-  prebuildReg2Entry(CT, Reg2Entry);
-  prebuildReg2Entry(GT, Reg2Entry);
-  prebuildReg2Entry(FT, Reg2Entry);
-  prebuildReg2Entry(AT, Reg2Entry);
-  prebuildReg2Entry(MT, Reg2Entry);
-  prebuildReg2Entry(ST, Reg2Entry);
+  prebuildReg2Entry(TT, Reg2Entry, TII);
+  prebuildReg2Entry(CT, Reg2Entry, TII);
+  prebuildReg2Entry(GT, Reg2Entry, TII);
+  prebuildReg2Entry(FT, Reg2Entry, TII);
+  prebuildReg2Entry(AT, Reg2Entry, TII);
+  prebuildReg2Entry(MT, Reg2Entry, TII);
+  prebuildReg2Entry(ST, Reg2Entry, TII);
 
   for (auto &Op2E : Reg2Entry) {
     SPIRV::DTSortableEntry *E = Op2E.second;
@@ -65,20 +67,34 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
         if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL && i == 2)
           continue;
         MachineOperand *RegOp = &VRegDef->getOperand(0);
-        LLVM_DEBUG({
-          if (Reg2Entry.count(RegOp) == 0 &&
-              (MI->getOpcode() != SPIRV::OpVariable || i != 3)) {
-            dbgs() << "Unexpected pattern while building a dependency "
-                      "graph.\nInstruction: ";
-            MI->print(dbgs());
-            dbgs() << "Operand: ";
-            Op.print(dbgs());
-            dbgs() << "\nOperand definition: ";
-            VRegDef->print(dbgs());
+        if (Reg2Entry.count(RegOp) == 0 &&
+            (MI->getOpcode() != SPIRV::OpVariable || i != 3)) {
+          // try to repair the unexpected code pattern
+          bool IsFixed = false;
+          if (VRegDef->getOpcode() == TargetOpcode::G_CONSTANT &&
+              RegOp->isReg() && MRI.getType(RegOp->getReg()).isScalar()) {
+            const Constant *C = VRegDef->getOperand(1).getCImm();
+            add(C, MI->getParent()->getParent(), RegOp->getReg());
+            auto Iter = CT.Storage.find(C);
+            if (Iter != CT.Storage.end()) {
+              SPIRV::DTSortableEntry &MissedEntry = Iter->second;
+              Reg2Entry[RegOp] = &MissedEntry;
+              IsFixed = true;
+            }
           }
-        });
-        assert((MI->getOpcode() == SPIRV::OpVariable && i == 3) ||
-               Reg2Entry.count(RegOp));
+          if (!IsFixed) {
+            std::string DiagMsg;
+            raw_string_ostream OS(DiagMsg);
+            OS << "Unexpected pattern while building a dependency "
+                  "graph.\nInstruction: ";
+            MI->print(OS);
+            OS << "Operand: ";
+            Op.print(OS);
+            OS << "\nOperand definition: ";
+            VRegDef->print(OS);
+            report_fatal_error(DiagMsg.c_str());
+          }
+        }
         if (Reg2Entry.count(RegOp))
           E->addDep(Reg2Entry[RegOp]);
       }

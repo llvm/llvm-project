@@ -20,10 +20,12 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <vector>
 
 using namespace llvm;
@@ -165,10 +167,9 @@ void print_kernel_resources(CUmodule binary, const char *kernel_name) {
 }
 
 template <typename args_t>
-CUresult launch_kernel(CUmodule binary, CUstream stream,
-                       rpc_device_t rpc_device, const LaunchParameters &params,
-                       const char *kernel_name, args_t kernel_args,
-                       bool print_resource_usage) {
+CUresult launch_kernel(CUmodule binary, CUstream stream, rpc::Server &server,
+                       const LaunchParameters &params, const char *kernel_name,
+                       args_t kernel_args, bool print_resource_usage) {
   // look up the '_start' kernel in the loaded module.
   CUfunction function;
   if (CUresult err = cuModuleGetFunction(&function, binary, kernel_name))
@@ -179,23 +180,21 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
   void *args_config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, &kernel_args,
                          CU_LAUNCH_PARAM_BUFFER_SIZE, &args_size,
                          CU_LAUNCH_PARAM_END};
+  if (print_resource_usage)
+    print_kernel_resources(binary, kernel_name);
 
-  // Initialize a non-blocking CUDA stream to allocate memory if needed. This
-  // needs to be done on a separate stream or else it will deadlock with the
-  // executing kernel.
+  // Initialize a non-blocking CUDA stream to allocate memory if needed.
+  // This needs to be done on a separate stream or else it will deadlock
+  // with the executing kernel.
   CUstream memory_stream;
   if (CUresult err = cuStreamCreate(&memory_stream, CU_STREAM_NON_BLOCKING))
     handle_error(err);
 
-  // Register RPC callbacks for the malloc and free functions on HSA.
-  register_rpc_callbacks<32>(rpc_device);
-
-  rpc_register_callback(
-      rpc_device, RPC_MALLOC,
-      [](rpc_port_t port, void *data) {
-        auto malloc_handler = [](rpc_buffer_t *buffer, void *data) -> void {
-          CUstream memory_stream = *static_cast<CUstream *>(data);
-          uint64_t size = buffer->data[0];
+  std::atomic<bool> finished = false;
+  std::thread server_thread(
+      [](std::atomic<bool> *finished, rpc::Server *server,
+         CUstream memory_stream) {
+        auto malloc_handler = [&](size_t size) -> void * {
           CUdeviceptr dev_ptr;
           if (CUresult err = cuMemAllocAsync(&dev_ptr, size, memory_stream))
             dev_ptr = 0UL;
@@ -203,26 +202,22 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
           // Wait until the memory allocation is complete.
           while (cuStreamQuery(memory_stream) == CUDA_ERROR_NOT_READY)
             ;
-          buffer->data[0] = static_cast<uintptr_t>(dev_ptr);
+          return reinterpret_cast<void *>(dev_ptr);
         };
-        rpc_recv_and_send(port, malloc_handler, data);
-      },
-      &memory_stream);
-  rpc_register_callback(
-      rpc_device, RPC_FREE,
-      [](rpc_port_t port, void *data) {
-        auto free_handler = [](rpc_buffer_t *buffer, void *data) {
-          CUstream memory_stream = *static_cast<CUstream *>(data);
-          if (CUresult err = cuMemFreeAsync(
-                  static_cast<CUdeviceptr>(buffer->data[0]), memory_stream))
+
+        auto free_handler = [&](void *ptr) -> void {
+          if (CUresult err = cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(ptr),
+                                            memory_stream))
             handle_error(err);
         };
-        rpc_recv_and_send(port, free_handler, data);
-      },
-      &memory_stream);
 
-  if (print_resource_usage)
-    print_kernel_resources(binary, kernel_name);
+        uint32_t index = 0;
+        while (!*finished) {
+          index =
+              handle_server<32>(*server, index, malloc_handler, free_handler);
+        }
+      },
+      &finished, &server, memory_stream);
 
   // Call the kernel with the given arguments.
   if (CUresult err = cuLaunchKernel(
@@ -231,16 +226,12 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
           params.num_threads_z, 0, stream, nullptr, args_config))
     handle_error(err);
 
-  // Wait until the kernel has completed execution on the device. Periodically
-  // check the RPC client for work to be performed on the server.
-  while (cuStreamQuery(stream) == CUDA_ERROR_NOT_READY)
-    if (rpc_status_t err = rpc_handle_server(rpc_device))
-      handle_error(err);
-
-  // Handle the server one more time in case the kernel exited with a pending
-  // send still in flight.
-  if (rpc_status_t err = rpc_handle_server(rpc_device))
+  if (CUresult err = cuStreamSynchronize(stream))
     handle_error(err);
+
+  finished = true;
+  if (server_thread.joinable())
+    server_thread.join();
 
   return CUDA_SUCCESS;
 }
@@ -310,44 +301,35 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
 
   uint32_t warp_size = 32;
-  auto rpc_alloc = [](uint64_t size, void *) -> void * {
-    void *dev_ptr;
-    if (CUresult err = cuMemAllocHost(&dev_ptr, size))
-      handle_error(err);
-    return dev_ptr;
-  };
-  rpc_device_t rpc_device;
-  if (rpc_status_t err = rpc_server_init(&rpc_device, RPC_MAXIMUM_PORT_COUNT,
-                                         warp_size, rpc_alloc, nullptr))
+  void *rpc_buffer = nullptr;
+  if (CUresult err = cuMemAllocHost(
+          &rpc_buffer,
+          rpc::Server::allocation_size(warp_size, rpc::MAX_PORT_COUNT)))
     handle_error(err);
+  rpc::Server server(rpc::MAX_PORT_COUNT, rpc_buffer);
+  rpc::Client client(rpc::MAX_PORT_COUNT, rpc_buffer);
 
   // Initialize the RPC client on the device by copying the local data to the
   // device's internal pointer.
   CUdeviceptr rpc_client_dev = 0;
   uint64_t client_ptr_size = sizeof(void *);
   if (CUresult err = cuModuleGetGlobal(&rpc_client_dev, &client_ptr_size,
-                                       binary, rpc_client_symbol_name))
+                                       binary, "__llvm_rpc_client"))
     handle_error(err);
 
-  CUdeviceptr rpc_client_host = 0;
-  if (CUresult err =
-          cuMemcpyDtoH(&rpc_client_host, rpc_client_dev, sizeof(void *)))
-    handle_error(err);
-  if (CUresult err =
-          cuMemcpyHtoD(rpc_client_host, rpc_get_client_buffer(rpc_device),
-                       rpc_get_client_size()))
+  if (CUresult err = cuMemcpyHtoD(rpc_client_dev, &client, sizeof(rpc::Client)))
     handle_error(err);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   begin_args_t init_args = {argc, dev_argv, dev_envp};
   if (CUresult err =
-          launch_kernel(binary, stream, rpc_device, single_threaded_params,
+          launch_kernel(binary, stream, server, single_threaded_params,
                         "_begin", init_args, print_resource_usage))
     handle_error(err);
 
   start_args_t args = {argc, dev_argv, dev_envp,
                        reinterpret_cast<void *>(dev_ret)};
-  if (CUresult err = launch_kernel(binary, stream, rpc_device, params, "_start",
+  if (CUresult err = launch_kernel(binary, stream, server, params, "_start",
                                    args, print_resource_usage))
     handle_error(err);
 
@@ -361,8 +343,8 @@ int load(int argc, const char **argv, const char **envp, void *image,
 
   end_args_t fini_args = {host_ret};
   if (CUresult err =
-          launch_kernel(binary, stream, rpc_device, single_threaded_params,
-                        "_end", fini_args, print_resource_usage))
+          launch_kernel(binary, stream, server, single_threaded_params, "_end",
+                        fini_args, print_resource_usage))
     handle_error(err);
 
   // Free the memory allocated for the device.
@@ -372,8 +354,7 @@ int load(int argc, const char **argv, const char **envp, void *image,
     handle_error(err);
   if (CUresult err = cuMemFreeHost(dev_argv))
     handle_error(err);
-  if (rpc_status_t err = rpc_server_shutdown(
-          rpc_device, [](void *ptr, void *) { cuMemFreeHost(ptr); }, nullptr))
+  if (CUresult err = cuMemFreeHost(rpc_buffer))
     handle_error(err);
 
   // Destroy the context and the loaded binary.

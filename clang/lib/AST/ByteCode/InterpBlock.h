@@ -50,16 +50,17 @@ class Block final {
 public:
   /// Creates a new block.
   Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
-        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
+        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false,
+        bool IsWeak = false)
       : EvalID(EvalID), DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern),
-        IsDynamic(false), Desc(Desc) {
+        IsDynamic(false), IsWeak(IsWeak), Desc(Desc) {
     assert(Desc);
   }
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
-        bool IsExtern = false)
+        bool IsExtern = false, bool IsWeak = false)
       : EvalID(EvalID), DeclID((unsigned)-1), IsStatic(IsStatic),
-        IsExtern(IsExtern), IsDynamic(false), Desc(Desc) {
+        IsExtern(IsExtern), IsDynamic(false), IsWeak(IsWeak), Desc(Desc) {
     assert(Desc);
   }
 
@@ -73,6 +74,7 @@ public:
   bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
+  bool isWeak() const { return IsWeak; }
   bool isDynamic() const { return IsDynamic; }
   /// Returns the size of the block.
   unsigned getSize() const { return Desc->getAllocSize(); }
@@ -135,9 +137,9 @@ private:
   friend class DynamicAllocator;
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
-        bool IsDead)
+        bool IsWeak, bool IsDead)
       : EvalID(EvalID), IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true),
-        IsDynamic(false), Desc(Desc) {
+        IsDynamic(false), IsWeak(IsWeak), Desc(Desc) {
     assert(Desc);
   }
 
@@ -170,6 +172,7 @@ private:
   /// Flag indicating if this block has been allocated via dynamic
   /// memory allocation (e.g. malloc).
   bool IsDynamic = false;
+  bool IsWeak = false;
   /// Pointer to the stack slot descriptor.
   const Descriptor *Desc;
 };

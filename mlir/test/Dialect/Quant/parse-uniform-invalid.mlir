@@ -107,7 +107,7 @@
 
 // -----
 // Illegal scale: negative
-// expected-error@+1 {{illegal scale: -1.000000}}
+// expected-error@+1 {{scale out of expressed type range}}
 !qalias = !quant.uniform<i8<-4:3>:f32, -1.0:127>
 
 // -----

@@ -338,14 +338,11 @@ template <class Tr>
 typename Tr::RegionNodeT *RegionBase<Tr>::getBBNode(BlockT *BB) const {
   assert(contains(BB) && "Can get BB node out of this region!");
 
-  typename BBNodeMapT::const_iterator at = BBNodeMap.find(BB);
-
-  if (at == BBNodeMap.end()) {
+  auto [at, Inserted] = BBNodeMap.try_emplace(BB);
+  if (Inserted) {
     auto Deconst = const_cast<RegionBase<Tr> *>(this);
-    typename BBNodeMapT::value_type V = {
-        BB,
-        std::make_unique<RegionNodeT>(static_cast<RegionT *>(Deconst), BB)};
-    at = BBNodeMap.insert(std::move(V)).first;
+    at->second =
+        std::make_unique<RegionNodeT>(static_cast<RegionT *>(Deconst), BB);
   }
   return at->second.get();
 }

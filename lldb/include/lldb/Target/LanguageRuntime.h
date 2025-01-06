@@ -14,11 +14,11 @@
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Runtime.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 #include <optional>
@@ -240,6 +240,11 @@ public:
   GetRuntimeUnwindPlan(lldb_private::Thread &thread,
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
+
+  /// Language runtime plugins can use this API to report
+  /// language-specific runtime information about this compile unit,
+  /// such as additional language version details or feature flags.
+  virtual StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc);
 
 protected:
   // The static GetRuntimeUnwindPlan method above is only implemented in the

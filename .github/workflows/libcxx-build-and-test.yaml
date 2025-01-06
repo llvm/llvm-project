@@ -33,28 +33,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-
-env:
-  # LLVM POST-BRANCH bump version
-  # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
-  # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-  LLVM_HEAD_VERSION: "19"   # Used compiler, update POST-BRANCH.
-  LLVM_PREVIOUS_VERSION: "18"
-  LLVM_OLDEST_VERSION: "17"
-  GCC_STABLE_VERSION: "13"
-  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
-  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-self-hosted-linux
+    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
     continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         config: [
+          'frozen-cxx03-headers',
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
@@ -79,12 +68,14 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-self-hosted-linux
+    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -123,6 +114,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -155,25 +147,23 @@ jobs:
           'generic-no-rtti',
           'generic-optimized-speed',
           'generic-static',
-          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
-          # or don't provide much value since the benchmark run results are too noise on the bots.
-          'benchmarks',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8-set' ]
+        machine: [ 'libcxx-self-hosted-linux' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-asan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-tsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
+    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -188,6 +178,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -199,13 +190,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          os: macos-latest
+          os: macos-15
         - config: generic-cxx23
-          os: macos-latest
+          os: macos-15
         - config: generic-modules
-          os: macos-latest
+          os: macos-15
         - config: apple-configuration
-          os: macos-latest
+          os: macos-15
         - config: apple-system
           os: macos-13
         - config: apple-system-hardened
@@ -230,6 +221,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*

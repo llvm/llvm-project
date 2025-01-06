@@ -124,8 +124,8 @@ define i64 @and64_0x7ffffffffffff000(i64 %x) {
 ; RV32I-LABEL: and64_0x7ffffffffffff000:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 1048575
-; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    ret
 ;

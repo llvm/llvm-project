@@ -16,21 +16,27 @@ void NormalUses() {
   // CHECK-NEXT: CompoundStmt
 
 #pragma acc loop collapse(1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
   // CHECK-NEXT: ConstantExpr{{.*}}'int'
   // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop collapse(force:S{})
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
   // CHECK-NEXT: ConstantExpr{{.*}}'int'
@@ -41,10 +47,16 @@ void NormalUses() {
   // CHECK-NEXT: MaterializeTemporaryExpr{{.*}}'S' lvalue
   // CHECK-NEXT: CXXTemporaryObjectExpr{{.*}}'S' 'void ()' list
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 }
 
@@ -57,26 +69,38 @@ void TemplUses() {
   // CHECK-NEXT: CompoundStmt
 
 #pragma acc loop collapse(Value)
-  for(;;)
-  for(;;);
+  for(int i = 0; i < 5; ++i)
+    for(int j = 0; j < 5; ++j);
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
   // CHECK-NEXT: DeclRefExpr{{.*}} 'unsigned int' NonTypeTemplateParm{{.*}} 'Value'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} j 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
   // CHECK-NEXT: NullStmt
 
 #pragma acc loop collapse(force:T{} + S{})
-  for(;;)
-  for(;;);
+  for(int i = 0; i < 5; ++i)
+    for(int j = 0; j < 5; ++j);
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
   // CHECK-NEXT: BinaryOperator {{.*}}'+'
@@ -84,15 +108,27 @@ void TemplUses() {
   // CHECK-NEXT: InitListExpr
   // CHECK-NEXT: CXXTemporaryObjectExpr{{.*}}'S' 'void ()' list
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} j 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
   // CHECK-NEXT: NullStmt
 
   // Instantiation:
@@ -111,15 +147,27 @@ void TemplUses() {
   // CHECK-NEXT: NonTypeTemplateParmDecl
   // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} j 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCLoopConstruct
@@ -138,15 +186,27 @@ void TemplUses() {
   // CHECK-NEXT: MaterializeTemporaryExpr{{.*}}'S' lvalue
   // CHECK-NEXT: CXXTemporaryObjectExpr{{.*}}'S' 'void ()' list
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} j 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'j' 'int'
   // CHECK-NEXT: NullStmt
 
 }

@@ -402,6 +402,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FCOPYSIGN:
   case ISD::FSQRT:
   case ISD::FSIN:
@@ -410,6 +412,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FASIN:
   case ISD::FACOS:
   case ISD::FATAN:
+  case ISD::FATAN2:
   case ISD::FSINH:
   case ISD::FCOSH:
   case ISD::FTANH:
@@ -451,6 +454,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
+  case ISD::FSINCOS:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -1079,6 +1083,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FMAXIMUM:
     Results.push_back(TLI.expandFMINIMUM_FMAXIMUM(Node, DAG));
     return;
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    Results.push_back(TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG));
+    return;
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -1190,6 +1198,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
+  case ISD::FSINCOS: {
+    RTLIB::Libcall LC =
+        RTLIB::getFSINCOS(Node->getValueType(0).getVectorElementType());
+    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
+      return;
+    break;
+  }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;
@@ -1197,6 +1212,24 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
+
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FMA:
+  case ISD::FDIV:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FNEARBYINT:
+  case ISD::FRINT:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
+  case ISD::FTRUNC:
+  case ISD::FSQRT:
+    if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
@@ -1680,11 +1713,8 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
   SDValue ClearedSign =
       DAG.getNode(ISD::VP_AND, DL, IntVT, Mag, ClearSignMask, Mask, EVL);
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
   SDValue CopiedSign = DAG.getNode(ISD::VP_OR, DL, IntVT, ClearedSign, SignBit,
-                                   Mask, EVL, Flags);
+                                   Mask, EVL, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
@@ -1866,11 +1896,8 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
       APInt::getSignedMaxValue(IntVT.getScalarSizeInBits()), DL, IntVT);
   SDValue ClearedSign = DAG.getNode(ISD::AND, DL, IntVT, Mag, ClearSignMask);
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
-  SDValue CopiedSign =
-      DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit, Flags);
+  SDValue CopiedSign = DAG.getNode(ISD::OR, DL, IntVT, ClearedSign, SignBit,
+                                   SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
@@ -1884,6 +1911,11 @@ void VectorLegalizer::ExpandFSUB(SDNode *Node,
   if (TLI.isOperationLegalOrCustom(ISD::FNEG, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FADD, VT))
     return; // Defer to LegalizeDAG
+
+  if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+    Results.push_back(Expanded);
+    return;
+  }
 
   SDValue Tmp = DAG.UnrollVectorOp(Node);
   Results.push_back(Tmp);
@@ -2220,11 +2252,13 @@ SDValue VectorLegalizer::UnrollVSETCC(SDNode *Node) {
                                   DAG.getVectorIdxConstant(i, dl));
     SDValue RHSElem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TmpEltVT, RHS,
                                   DAG.getVectorIdxConstant(i, dl));
+    // FIXME: We should use i1 setcc + boolext here, but it causes regressions.
     Ops[i] = DAG.getNode(ISD::SETCC, dl,
                          TLI.getSetCCResultType(DAG.getDataLayout(),
                                                 *DAG.getContext(), TmpEltVT),
                          LHSElem, RHSElem, CC);
-    Ops[i] = DAG.getSelect(dl, EltVT, Ops[i], DAG.getAllOnesConstant(dl, EltVT),
+    Ops[i] = DAG.getSelect(dl, EltVT, Ops[i],
+                           DAG.getBoolConstant(true, dl, EltVT, VT),
                            DAG.getConstant(0, dl, EltVT));
   }
   return DAG.getBuildVector(VT, dl, Ops);

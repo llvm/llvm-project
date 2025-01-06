@@ -93,9 +93,9 @@ class VPRecipeBuilder {
   VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
-  /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
-  /// decision from \p Range.Start to \p Range.End.
-  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
+  /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
+  /// decreased to ensure same decision from \p Range.Start to \p Range.End.
+  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
                                     VFRange &Range);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe

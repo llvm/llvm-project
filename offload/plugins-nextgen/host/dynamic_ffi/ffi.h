@@ -43,7 +43,8 @@ typedef enum {
 typedef enum ffi_abi {
 #if (defined(_M_X64) || defined(__x86_64__))
   FFI_DEFAULT_ABI = 2, // FFI_UNIX64.
-#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64) ||       \
+    defined(__riscv) || defined(__loongarch__)
   FFI_DEFAULT_ABI = 1, // FFI_SYSV.
 #elif defined(__powerpc64__)
   FFI_DEFAULT_ABI = 8, // FFI_LINUX.

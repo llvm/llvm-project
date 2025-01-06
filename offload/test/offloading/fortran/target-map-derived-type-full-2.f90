@@ -1,6 +1,5 @@
-! Offloading test checking interaction of an
-! explicit derived type mapping when mapped to
-! target and assigning to individual members
+! Offloading test checking interaction of an explicit derived type mapping when
+! mapped to target and assigning to individual members
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

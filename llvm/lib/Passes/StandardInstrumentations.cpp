@@ -24,6 +24,8 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -137,6 +139,11 @@ static cl::opt<std::string> IRDumpDirectory(
              "-print-[before|after]{-all} options will be dumped into "
              "files in this directory rather than written to stderr"),
     cl::Hidden, cl::value_desc("filename"));
+
+static cl::opt<bool>
+    DroppedVarStats("dropped-variable-stats", cl::Hidden,
+                    cl::desc("Dump dropped debug variables stats"),
+                    cl::init(false));
 
 template <typename IRUnitT> static const IRUnitT *unwrapIR(Any IR) {
   const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
@@ -1041,14 +1048,16 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  const auto *F = unwrapIR<Function>(IR);
-  if (!F) {
-    if (const auto *L = unwrapIR<Loop>(IR))
-      F = L->getHeader()->getParent();
-  }
-  bool ShouldRun = !(F && F->hasOptNone());
+  bool ShouldRun = true;
+  if (const auto *F = unwrapIR<Function>(IR))
+    ShouldRun = !F->hasOptNone();
+  else if (const auto *L = unwrapIR<Loop>(IR))
+    ShouldRun = !L->getHeader()->getParent()->hasOptNone();
+  else if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    ShouldRun = !MF->getFunction().hasOptNone();
+
   if (!ShouldRun && DebugLogging) {
-    errs() << "Skipping pass " << PassID << " on " << F->getName()
+    errs() << "Skipping pass " << PassID << " on " << getIRName(IR)
            << " due to optnone attribute\n";
   }
   return ShouldRun;
@@ -2445,8 +2454,7 @@ void DotCfgChangeReporter::registerCallbacks(
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
     PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts),
-      OptNone(DebugLogging),
+    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
@@ -2454,7 +2462,8 @@ StandardInstrumentations::StandardInstrumentations(
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
       WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      Verify(DebugLogging), DroppedStatsIR(DroppedVarStats),
+      VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
@@ -2529,6 +2538,7 @@ void StandardInstrumentations::registerCallbacks(
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
+  DroppedStatsIR.registerCallbacks(PIC);
   if (MAM)
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 

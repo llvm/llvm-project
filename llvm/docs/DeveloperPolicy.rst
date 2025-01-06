@@ -105,6 +105,13 @@ When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
 
+The LLVM project uses email to communicate to contributors outside of the
+GitHub platform about their past contributions. Primarily, our buildbot
+infrastructure uses emails to contact contributors about build and test
+failures. Therefore, the LLVM community requires contributors to have a public
+email address associated with their GitHub commits, so please ensure that "Keep
+my email addresses private" is disabled in your
+`account settings <https://github.com/settings/emails>`_.
 
 .. _code review:
 
@@ -194,7 +201,7 @@ within an area of a project:
     * aid release managers with backporting and other release-related
       activities,
     * be a point of contact for contributors who need help (answering questions
-      on Discord/Discourse/IRC or holding office hours).
+      on Discord/Discourse or holding office hours).
 
 Each top-level project in the monorepo will specify one or more
 lead maintainers who are responsible for ensuring community needs are
@@ -526,13 +533,13 @@ Obtaining Commit Access
 -----------------------
 
 We grant commit access to contributors that can provide a valid justification.
-If you would like commit access, please send an email to
-`Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
-for former contributors with SVN access as well as new contributors. If
-approved, a GitHub invitation will be sent to your GitHub account. In case you
-don't get notification from GitHub, go to
+If you would like commit access, please use this `link <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_ to file
+an issue and request commit access. Replace the <user> string in the title
+with your github username, and explain why you are requesting commit access in
+the issue description. If approved, a GitHub invitation will be sent to your
+GitHub account. In case you don't get notification from GitHub, go to
 `Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
-accept the invitation, you'll get commit access.
+you accept the invitation, you'll get commit access.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please

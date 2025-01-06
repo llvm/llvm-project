@@ -80,8 +80,8 @@ lpad:
 }
 
 define i8 @invoke_with_same_range() personality ptr undef {
-; CHECK-LABEL: @invoke_with_same_range()
-; CHECK: tail call i8 @invoke_with_range()
+; CHECK-DAG: @invoke_with_same_range()
+; CHECK-DAG: tail call i8 @invoke_with_range()
   %out = invoke range(i8 0, 2) i8 @dummy() to label %next unwind label %lpad
 
 next:
@@ -93,15 +93,15 @@ lpad:
 }
 
 define i8 @call_with_same_range() {
-; CHECK-LABEL: @call_with_same_range
-; CHECK: tail call i8 @call_with_range
+; CHECK-DAG: @call_with_same_range()
+; CHECK-DAG: tail call i8 @call_with_range()
   %out = call range(i8 0, 2) i8 @dummy()
   ret i8 %out
 }
 
 define i8 @call_with_same_range_attr(i8 range(i8 0, 2) %v) {
-; CHECK-LABEL: @call_with_same_range_attr
-; CHECK: tail call i8 @call_with_range_attr
+; CHECK-DAG: @call_with_same_range_attr
+; CHECK-DAG: tail call i8 @call_with_range_attr
   %out = call i8 @dummy2(i8 %v)
   ret i8 %out
 }

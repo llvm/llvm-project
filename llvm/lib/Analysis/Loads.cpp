@@ -21,7 +21,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -95,10 +94,8 @@ static bool isDereferenceableAndAlignedPointer(
 
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
-    APInt KnownDerefBytes(Size.getBitWidth(),
-                          V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                            CheckForFreed));
-    if (!KnownDerefBytes.getBoolValue() || !KnownDerefBytes.uge(Size) ||
+    if (!Size.ule(V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                    CheckForFreed)) ||
         CheckForFreed)
       return false;
     if (CheckForNonNull &&

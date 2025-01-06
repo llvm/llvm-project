@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -132,7 +131,7 @@ public:
   HoistSpillHelper(MachineFunctionPass &pass, MachineFunction &mf,
                    VirtRegMap &vrm)
       : MF(mf), LIS(pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
-        LSS(pass.getAnalysis<LiveStacks>()),
+        LSS(pass.getAnalysis<LiveStacksWrapperLegacy>().getLS()),
         MDT(pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()),
@@ -194,7 +193,7 @@ public:
   InlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF, VirtRegMap &VRM,
                 VirtRegAuxInfo &VRAI)
       : MF(MF), LIS(Pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
-        LSS(Pass.getAnalysis<LiveStacks>()),
+        LSS(Pass.getAnalysis<LiveStacksWrapperLegacy>().getLS()),
         MDT(Pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
         VRM(VRM), MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
         TRI(*MF.getSubtarget().getRegisterInfo()),

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11
+
 #include <cassert>
 #include <cstddef>
 #include <utility>

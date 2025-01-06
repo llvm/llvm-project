@@ -13,6 +13,7 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
@@ -21,6 +22,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <queue>
 #include <vector>
@@ -106,6 +108,16 @@ void buildOpName(Register Target, const StringRef &Name,
   }
 }
 
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII) {
+  if (!Name.empty()) {
+    auto MIB =
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
+            .addUse(Target);
+    addStringImm(Name, MIB);
+  }
+}
+
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
                                   const std::vector<uint32_t> &DecArgs,
                                   StringRef StrImm) {
@@ -162,6 +174,39 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
 }
 
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineBasicBlock *MBB = &MF->front();
+  MachineBasicBlock::iterator It = MBB->SkipPHIsAndLabels(MBB->begin()),
+                              E = MBB->end();
+  bool IsHeader = false;
+  unsigned Opcode;
+  for (; It != E && It != I; ++It) {
+    Opcode = It->getOpcode();
+    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+      IsHeader = true;
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+      ++It;
+      break;
+    }
+  }
+  return It;
+}
+
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
+  MachineBasicBlock::iterator I = MBB->end();
+  if (I == MBB->begin())
+    return I;
+  --I;
+  while (I->isTerminator() || I->isDebugValue()) {
+    if (I == MBB->begin())
+      break;
+    --I;
+  }
+  return I;
+}
+
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
@@ -185,6 +230,12 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 8:
+    return SPIRV::StorageClass::Output;
+  case 9:
+    return SPIRV::StorageClass::CodeSectionINTEL;
+  case 10:
+    return SPIRV::StorageClass::Private;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -383,8 +434,10 @@ bool hasBuiltinTypePrefix(StringRef Name) {
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  if (const TargetExtType *EType = dyn_cast<TargetExtType>(Ty))
-    return hasBuiltinTypePrefix(EType->getName());
+  if (const TargetExtType *ExtTy = dyn_cast<TargetExtType>(Ty))
+    return isTypedPointerWrapper(ExtTy)
+               ? false
+               : hasBuiltinTypePrefix(ExtTy->getName());
 
   return false;
 }
@@ -407,25 +460,31 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
     return Type::getVoidTy(Ctx);
-  else if (TypeName.consume_front("bool"))
+  else if (TypeName.consume_front("bool") || TypeName.consume_front("_Bool"))
     return Type::getIntNTy(Ctx, 1);
   else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("signed char") ||
            TypeName.consume_front("unsigned char") ||
            TypeName.consume_front("uchar"))
     return Type::getInt8Ty(Ctx);
   else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("signed short") ||
            TypeName.consume_front("unsigned short") ||
            TypeName.consume_front("ushort"))
     return Type::getInt16Ty(Ctx);
   else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("signed int") ||
            TypeName.consume_front("unsigned int") ||
            TypeName.consume_front("uint"))
     return Type::getInt32Ty(Ctx);
   else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("signed long") ||
            TypeName.consume_front("unsigned long") ||
            TypeName.consume_front("ulong"))
     return Type::getInt64Ty(Ctx);
-  else if (TypeName.consume_front("half"))
+  else if (TypeName.consume_front("half") ||
+           TypeName.consume_front("_Float16") ||
+           TypeName.consume_front("__fp16"))
     return Type::getHalfTy(Ctx);
   else if (TypeName.consume_front("float"))
     return Type::getFloatTy(Ctx);
@@ -460,53 +519,107 @@ PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   return Output;
 }
 
-size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Rank) {
-  if (Visited.count(BB) != 0)
-    return Rank;
+bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
+  for (BasicBlock *P : predecessors(BB)) {
+    // Ignore back-edges.
+    if (DT.dominates(BB, P))
+      continue;
 
-  Loop *L = LI.getLoopFor(BB);
-  const bool isLoopHeader = LI.isLoopHeader(BB);
+    // One of the predecessor hasn't been visited. Not ready yet.
+    if (BlockToOrder.count(P) == 0)
+      return false;
 
-  if (BlockToOrder.count(BB) == 0) {
-    OrderInfo Info = {Rank, Visited.size()};
+    // If the block is a loop exit, the loop must be finished before
+    // we can continue.
+    Loop *L = LI.getLoopFor(P);
+    if (L == nullptr || L->contains(BB))
+      continue;
+
+    // SPIR-V requires a single back-edge. And the backend first
+    // step transforms loops into the simplified format. If we have
+    // more than 1 back-edge, something is wrong.
+    assert(L->getNumBackEdges() <= 1);
+
+    // If the loop has no latch, loop's rank won't matter, so we can
+    // proceed.
+    BasicBlock *Latch = L->getLoopLatch();
+    assert(Latch);
+    if (Latch == nullptr)
+      continue;
+
+    // The latch is not ready yet, let's wait.
+    if (BlockToOrder.count(Latch) == 0)
+      return false;
+  }
+
+  return true;
+}
+
+size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
+  auto It = BlockToOrder.find(BB);
+  if (It != BlockToOrder.end())
+    return It->second.Rank;
+
+  size_t result = 0;
+  for (BasicBlock *P : predecessors(BB)) {
+    // Ignore back-edges.
+    if (DT.dominates(BB, P))
+      continue;
+
+    auto Iterator = BlockToOrder.end();
+    Loop *L = LI.getLoopFor(P);
+    BasicBlock *Latch = L ? L->getLoopLatch() : nullptr;
+
+    // If the predecessor is either outside a loop, or part of
+    // the same loop, simply take its rank + 1.
+    if (L == nullptr || L->contains(BB) || Latch == nullptr) {
+      Iterator = BlockToOrder.find(P);
+    } else {
+      // Otherwise, take the loop's rank (highest rank in the loop) as base.
+      // Since loops have a single latch, highest rank is easy to find.
+      // If the loop has no latch, then it doesn't matter.
+      Iterator = BlockToOrder.find(Latch);
+    }
+
+    assert(Iterator != BlockToOrder.end());
+    result = std::max(result, Iterator->second.Rank + 1);
+  }
+
+  return result;
+}
+
+size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
+  ToVisit.push(BB);
+  Queued.insert(BB);
+
+  size_t QueueIndex = 0;
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (!CanBeVisited(BB)) {
+      ToVisit.push(BB);
+      if (QueueIndex >= ToVisit.size())
+        llvm::report_fatal_error(
+            "No valid candidate in the queue. Is the graph reducible?");
+      QueueIndex++;
+      continue;
+    }
+
+    QueueIndex = 0;
+    size_t Rank = GetNodeRank(BB);
+    OrderInfo Info = {Rank, BlockToOrder.size()};
     BlockToOrder.emplace(BB, Info);
-  } else {
-    BlockToOrder[BB].Rank = std::max(BlockToOrder[BB].Rank, Rank);
-  }
 
-  for (BasicBlock *Predecessor : predecessors(BB)) {
-    if (isLoopHeader && L->contains(Predecessor)) {
-      continue;
-    }
-
-    if (BlockToOrder.count(Predecessor) == 0) {
-      return Rank;
+    for (BasicBlock *S : successors(BB)) {
+      if (Queued.count(S) != 0)
+        continue;
+      ToVisit.push(S);
+      Queued.insert(S);
     }
   }
 
-  Visited.insert(BB);
-
-  SmallVector<BasicBlock *, 2> OtherSuccessors;
-  SmallVector<BasicBlock *, 2> LoopSuccessors;
-
-  for (BasicBlock *Successor : successors(BB)) {
-    // Ignoring back-edges.
-    if (DT.dominates(Successor, BB))
-      continue;
-
-    if (isLoopHeader && L->contains(Successor)) {
-      LoopSuccessors.push_back(Successor);
-    } else
-      OtherSuccessors.push_back(Successor);
-  }
-
-  for (BasicBlock *BB : LoopSuccessors)
-    Rank = std::max(Rank, visit(BB, Rank + 1));
-
-  size_t OutputRank = Rank;
-  for (BasicBlock *Item : OtherSuccessors)
-    OutputRank = std::max(OutputRank, visit(Item, Rank + 1));
-  return OutputRank;
+  return 0;
 }
 
 PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
@@ -568,15 +681,12 @@ bool sortBlocks(Function &F) {
     return false;
 
   bool Modified = false;
-
   std::vector<BasicBlock *> Order;
   Order.reserve(F.size());
 
-  PartialOrderingVisitor Visitor(F);
-  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
-    Order.push_back(Block);
-    return true;
-  });
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT)
+    Order.push_back(BB);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();
@@ -596,6 +706,93 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
     MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
   return MaybeDef;
+}
+
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = OrdName;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Assign SPIR-V type to the register. If the register has no valid assigned
+// class, set register LLT type and class according to the SPIR-V type.
+void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                     MachineRegisterInfo *MRI, const MachineFunction &MF,
+                     bool Force) {
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  if (!MRI->getRegClassOrNull(Reg) || Force) {
+    MRI->setRegClass(Reg, GR->getRegClass(SpvType));
+    MRI->setType(Reg, GR->getRegType(SpvType));
+  }
+}
+
+// Create a SPIR-V type, assign SPIR-V type to the register. If the register has
+// no valid assigned class, set register LLT type and class according to the
+// SPIR-V type.
+void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder &MIRBuilder, bool Force) {
+  setRegClassType(Reg, GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
+                  MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo *MRI,
+                               const MachineFunction &MF) {
+  Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
+  MRI->setType(Reg, GR->getRegType(SpvType));
+  GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
+  return Reg;
+}
+
+// Create a virtual register and assign SPIR-V type to the register. Set
+// register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
+                               MIRBuilder.getMF());
+}
+
+// Create a SPIR-V type, virtual register and assign SPIR-V type to the
+// register. Set register LLT type and class according to the SPIR-V type.
+Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
+                               MachineIRBuilder &MIRBuilder) {
+  return createVirtualRegister(GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
+                               MIRBuilder);
+}
+
+// Return true if there is an opaque pointer type nested in the argument.
+bool isNestedPointer(const Type *Ty) {
+  if (Ty->isPtrOrPtrVectorTy())
+    return true;
+  if (const FunctionType *RefTy = dyn_cast<FunctionType>(Ty)) {
+    if (isNestedPointer(RefTy->getReturnType()))
+      return true;
+    for (const Type *ArgTy : RefTy->params())
+      if (isNestedPointer(ArgTy))
+        return true;
+    return false;
+  }
+  if (const ArrayType *RefTy = dyn_cast<ArrayType>(Ty))
+    return isNestedPointer(RefTy->getElementType());
+  return false;
+}
+
+bool isSpvIntrinsic(const Value *Arg) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return true;
+  return false;
 }
 
 } // namespace llvm

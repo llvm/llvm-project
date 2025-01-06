@@ -912,6 +912,11 @@ public:
   /// Determine if this is an equals/not equals predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// Determine if one operand of this compare can always be replaced by the
+  /// other operand, ignoring provenance considerations. If \p Invert, check for
+  /// equivalence with the inverse predicate.
+  bool isEquivalence(bool Invert = false) const;
+
   /// Return true if the predicate is relational (not EQ or NE).
   static bool isRelational(Predicate P) { return !isEquality(P); }
 
@@ -928,43 +933,6 @@ public:
   /// Determine if this instruction is using an unsigned comparison.
   bool isUnsigned() const {
     return isUnsigned(getPredicate());
-  }
-
-  /// For example, ULT->SLT, ULE->SLE, UGT->SGT, UGE->SGE, SLT->Failed assert
-  /// @returns the signed version of the unsigned predicate pred.
-  /// return the signed version of a predicate
-  static Predicate getSignedPredicate(Predicate pred);
-
-  /// For example, ULT->SLT, ULE->SLE, UGT->SGT, UGE->SGE, SLT->Failed assert
-  /// @returns the signed version of the predicate for this instruction (which
-  /// has to be an unsigned predicate).
-  /// return the signed version of a predicate
-  Predicate getSignedPredicate() {
-    return getSignedPredicate(getPredicate());
-  }
-
-  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
-  /// @returns the unsigned version of the signed predicate pred.
-  static Predicate getUnsignedPredicate(Predicate pred);
-
-  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
-  /// @returns the unsigned version of the predicate for this instruction (which
-  /// has to be an signed predicate).
-  /// return the unsigned version of a predicate
-  Predicate getUnsignedPredicate() {
-    return getUnsignedPredicate(getPredicate());
-  }
-
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
-  /// @returns the unsigned version of the signed predicate pred or
-  ///          the signed version of the signed predicate pred.
-  static Predicate getFlippedSignednessPredicate(Predicate pred);
-
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
-  /// @returns the unsigned version of the signed predicate pred or
-  ///          the signed version of the signed predicate pred.
-  Predicate getFlippedSignednessPredicate() {
-    return getFlippedSignednessPredicate(getPredicate());
   }
 
   /// This is just a convenience.
@@ -1453,13 +1421,21 @@ public:
   /// looking through to the attributes on the called function when necessary).
   ///@{
 
-  /// Return the parameter attributes for this call.
-  ///
+  /// Return the attributes for this call.
   AttributeList getAttributes() const { return Attrs; }
 
-  /// Set the parameter attributes for this call.
-  ///
+  /// Set the attributes for this call.
   void setAttributes(AttributeList A) { Attrs = A; }
+
+  /// Return the return attributes for this call.
+  AttributeSet getRetAttributes() const {
+    return getAttributes().getRetAttrs();
+  }
+
+  /// Return the param attributes for this call.
+  AttributeSet getParamAttributes(unsigned ArgNo) const {
+    return getAttributes().getParamAttrs(ArgNo);
+  }
 
   /// Try to intersect the attributes from 'this' CallBase and the
   /// 'Other' CallBase. Sets the intersected attributes to 'this' and

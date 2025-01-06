@@ -35,17 +35,20 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
 
-  // Track creation of instructions.
-  // Please note that we don't allow the creation of detached instructions,
-  // meaning that the instructions need to be inserted into a block upon
-  // creation. This is why the tracker class combines creation and insertion.
-  if (auto *I = dyn_cast<Instruction>(VPtr.get()))
-    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
-
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
       LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
+
+  // Track creation of instructions.
+  // Please note that we don't allow the creation of detached instructions,
+  // meaning that the instructions need to be inserted into a block upon
+  // creation. This is why the tracker class combines creation and insertion.
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
+    runCreateInstrCallbacks(I);
+  }
+
   return V;
 }
 
@@ -595,72 +598,6 @@ FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
   auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
   return cast<FCmpInst>(registerValue(std::move(NewPtr)));
 }
-CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
-                         Instruction *InsertBefore, Context &Ctx,
-                         const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
-  if (dyn_cast<llvm::ICmpInst>(LLVMI))
-    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
-  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
-}
-CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                        const Instruction *F,
-                                        Instruction *InsertBefore, Context &Ctx,
-                                        const Twine &Name) {
-  CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
-  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
-  return Inst;
-}
-
-Type *CmpInst::makeCmpResultType(Type *OpndType) {
-  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
-    // TODO: Cleanup when we have more complete support for
-    // sandboxir::VectorType
-    return OpndType->getContext().getType(llvm::VectorType::get(
-        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
-        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
-  }
-  return Type::getInt1Ty(OpndType->getContext());
-}
-
-void CmpInst::setPredicate(Predicate P) {
-  Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
-  cast<llvm::CmpInst>(Val)->setPredicate(P);
-}
-
-void CmpInst::swapOperands() {
-  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
-    IC->swapOperands();
-  else
-    cast<FCmpInst>(this)->swapOperands();
-}
-
-void ICmpInst::swapOperands() {
-  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
-  cast<llvm::ICmpInst>(Val)->swapOperands();
-}
-
-void FCmpInst::swapOperands() {
-  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
-  cast<llvm::FCmpInst>(Val)->swapOperands();
-}
-
-#ifndef NDEBUG
-void CmpInst::dumpOS(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void CmpInst::dump() const {
-  dumpOS(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 Value *Context::getValue(llvm::Value *V) const {
   auto It = LLVMValueToValueMap.find(V);
   if (It != LLVMValueToValueMap.end())
@@ -724,6 +661,66 @@ Module *Context::createModule(llvm::Module *LLVMM) {
     getOrCreateValue(&IFunc);
 
   return M;
+}
+
+void Context::runEraseInstrCallbacks(Instruction *I) {
+  for (const auto &CBEntry : EraseInstrCallbacks)
+    CBEntry.second(I);
+}
+
+void Context::runCreateInstrCallbacks(Instruction *I) {
+  for (auto &CBEntry : CreateInstrCallbacks)
+    CBEntry.second(I);
+}
+
+void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
+  for (auto &CBEntry : MoveInstrCallbacks)
+    CBEntry.second(I, WhereIt);
+}
+
+// An arbitrary limit, to check for accidental misuse. We expect a small number
+// of callbacks to be registered at a time, but we can increase this number if
+// we discover we needed more.
+[[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
+
+Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
+  assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "EraseInstrCallbacks size limit exceeded");
+  CallbackID ID = NextCallbackID++;
+  EraseInstrCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterEraseInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = EraseInstrCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in EraseInstrCallbacks during deregistration");
+}
+
+Context::CallbackID
+Context::registerCreateInstrCallback(CreateInstrCallback CB) {
+  assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "CreateInstrCallbacks size limit exceeded");
+  CallbackID ID = NextCallbackID++;
+  CreateInstrCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterCreateInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = CreateInstrCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in CreateInstrCallbacks during deregistration");
+}
+
+Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
+  assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "MoveInstrCallbacks size limit exceeded");
+  CallbackID ID = NextCallbackID++;
+  MoveInstrCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterMoveInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = MoveInstrCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in MoveInstrCallbacks during deregistration");
 }
 
 } // namespace llvm::sandboxir

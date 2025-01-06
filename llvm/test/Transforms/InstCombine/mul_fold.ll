@@ -542,8 +542,8 @@ define <2 x i8> @mul_v2i8_low(<2 x i8> %in0, <2 x i8> %in1) {
 
 define <2 x i8> @mul_v2i8_low_one_extra_user(<2 x i8> %in0, <2 x i8> %in1) {
 ; CHECK-LABEL: @mul_v2i8_low_one_extra_user(
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[IN1LO:%.*]] = and <2 x i8> [[IN1:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0:%.*]], splat (i8 4)
+; CHECK-NEXT:    [[IN1LO:%.*]] = and <2 x i8> [[IN1:%.*]], splat (i8 15)
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw <2 x i8> [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use_v2i8(<2 x i8> [[M01]])
 ; CHECK-NEXT:    [[RETLO:%.*]] = mul <2 x i8> [[IN0]], [[IN1]]

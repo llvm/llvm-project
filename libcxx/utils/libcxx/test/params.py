@@ -364,6 +364,16 @@ DEFAULT_PARAMETERS = [
             AddFeature("libcpp-has-no-experimental-syncstream"),
         ],
     ),
+    # TODO: This can be improved once we use a version of GoogleBenchmark that supports the dry-run mode.
+    #       See https://github.com/google/benchmark/issues/1827.
+    Parameter(
+        name="enable_benchmarks",
+        choices=["no", "run", "dry-run"],
+        type=str,
+        default="run",
+        help="Whether to run the benchmarks in the test suite, to only dry-run them or to disable them entirely.",
+        actions=lambda mode: [AddFeature(f"enable-benchmarks={mode}")],
+    ),
     Parameter(
         name="long_tests",
         choices=[True, False],
@@ -437,6 +447,13 @@ DEFAULT_PARAMETERS = [
             AddFeature('has-clang-tidy'),
             AddSubstitution('%{clang-tidy}', exe),
         ]
+    ),
+    Parameter(
+        name='test_frozen_cxx03_headers',
+        type=bool,
+        default=False,
+        help="Whether to test the main or C++03-specific headers. Only changes behaviour when std=c++03.",
+        actions=lambda enabled: [] if not enabled else [AddFlag("-D_LIBCPP_USE_FROZEN_CXX03_HEADERS"), AddFeature("FROZEN-CXX03-HEADERS-FIXME")],
     ),
 ]
 # fmt: on

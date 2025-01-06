@@ -62,7 +62,7 @@ void populateExtendToSupportedTypesTypeConverter(
 void populateExtendToSupportedTypesConversionTarget(
     ConversionTarget &target, TypeConverter &typeConverter);
 void populateExtendToSupportedTypesPatterns(RewritePatternSet &patterns,
-                                            TypeConverter &typeConverter);
+                                            const TypeConverter &typeConverter);
 } // namespace math
 } // namespace mlir
 

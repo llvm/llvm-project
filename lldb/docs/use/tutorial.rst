@@ -210,7 +210,7 @@ you will have to indicate these are not option markers by putting ``--`` after t
 command name, but before your command string.
 
 LLDB also has a built-in Python interpreter, which is accessible by the
-``"script`` command. All the functionality of the debugger is available as classes
+``script`` command. All the functionality of the debugger is available as classes
 in the Python interpreter, so the more complex commands that in GDB you would
 introduce with the ``define`` command can be done by writing Python functions
 using the LLDB Python library, then loading the scripts into your running
@@ -331,8 +331,8 @@ do:
 
 ::
 
-   (lldb) help <breakpt-id> <breakpt-id> -- Breakpoint ID's consist major and
-   minor numbers; the major etc...
+   (lldb) help <breakpt-id>
+   <breakpt-id> -- Breakpoint ID's consist major and minor numbers; the major etc...
 
 Breakpoint Names
 ----------------

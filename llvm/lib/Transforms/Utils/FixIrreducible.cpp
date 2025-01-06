@@ -82,7 +82,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"

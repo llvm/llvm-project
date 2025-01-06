@@ -2121,9 +2121,7 @@ static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getDeclaration(M, Intrinsic::ctpop, Tys);
-  CallInst *CI = IRBuilder.CreateCall(Func, Ops);
+  CallInst *CI = IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
   CI->setDebugLoc(DL);
 
   return CI;
@@ -2135,9 +2133,7 @@ static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getDeclaration(M, IID, Tys);
-  CallInst *CI = IRBuilder.CreateCall(Func, Ops);
+  CallInst *CI = IRBuilder.CreateIntrinsic(IID, Tys, Ops);
   CI->setDebugLoc(DL);
 
   return CI;
@@ -2436,7 +2432,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 
   // Step 1: Check if the loop backedge is in desirable form.
 
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *CmpLHS, *CmpRHS;
   BasicBlock *TrueBB, *FalseBB;
   if (!match(LoopHeaderBB->getTerminator(),
@@ -2494,7 +2490,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
       dyn_cast<Instruction>(CurrXPN->getIncomingValueForBlock(LoopHeaderBB));
 
   assert(CurLoop->isLoopInvariant(BaseX) &&
-         "Expected BaseX to be avaliable in the preheader!");
+         "Expected BaseX to be available in the preheader!");
 
   if (!NextX || !match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
     // FIXME: support right-shift?
@@ -2801,7 +2797,7 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
 
   // Step 1: Check if the loop backedge, condition is in desirable form.
 
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   BasicBlock *TrueBB, *FalseBB;
   if (!match(LoopHeaderBB->getTerminator(),
              m_Br(m_Instruction(ValShiftedIsZero), m_BasicBlock(TrueBB),

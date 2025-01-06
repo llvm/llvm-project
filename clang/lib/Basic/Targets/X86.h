@@ -130,6 +130,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
   bool HasMOVBE = false;
+  bool HasMOVRS = false;
   bool HasPREFETCHI = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
@@ -156,6 +157,11 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXINT8 = false;
   bool HasAMXBF16 = false;
   bool HasAMXCOMPLEX = false;
+  bool HasAMXFP8 = false;
+  bool HasAMXMOVRS = false;
+  bool HasAMXTRANSPOSE = false;
+  bool HasAMXAVX512 = false;
+  bool HasAMXTF32 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;
@@ -210,7 +216,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
@@ -378,7 +384,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -824,11 +830,6 @@ public:
     this->MaxTLSAlign = 8192u * this->getCharWidth();
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
-  }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    getOSDefines(Opts, X86TargetInfo::getTriple(), Builder);
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

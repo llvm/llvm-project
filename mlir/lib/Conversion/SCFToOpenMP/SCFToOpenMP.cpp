@@ -488,9 +488,6 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
             llvm::SmallVector<mlir::Location>(reductionVariables.size(),
                                               parallelOp.getLoc()));
 
-        rewriter.setInsertionPoint(
-            rewriter.create<omp::TerminatorOp>(parallelOp.getLoc()));
-
         // Create loop nest and populate region with contents of scf.parallel.
         auto loopOp = rewriter.create<omp::LoopNestOp>(
             parallelOp.getLoc(), parallelOp.getLowerBound(),

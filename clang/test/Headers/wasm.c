@@ -482,7 +482,7 @@ v128_t test_f64x2_const(void) {
 
 // CHECK-LABEL: @test_i8x16_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 707406378, i32 707406378, i32 707406378, i32 707406378>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 707406378)
 //
 v128_t test_i8x16_const_splat(void) {
   return wasm_i8x16_const_splat(42);
@@ -490,7 +490,7 @@ v128_t test_i8x16_const_splat(void) {
 
 // CHECK-LABEL: @test_u8x16_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 707406378, i32 707406378, i32 707406378, i32 707406378>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 707406378)
 //
 v128_t test_u8x16_const_splat(void) {
   return wasm_u8x16_const_splat(42);
@@ -498,7 +498,7 @@ v128_t test_u8x16_const_splat(void) {
 
 // CHECK-LABEL: @test_i16x8_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 2752554, i32 2752554, i32 2752554, i32 2752554>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 2752554)
 //
 v128_t test_i16x8_const_splat(void) {
   return wasm_i16x8_const_splat(42);
@@ -506,7 +506,7 @@ v128_t test_i16x8_const_splat(void) {
 
 // CHECK-LABEL: @test_u16x8_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 2752554, i32 2752554, i32 2752554, i32 2752554>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 2752554)
 //
 v128_t test_u16x8_const_splat(void) {
   return wasm_u16x8_const_splat(42);
@@ -514,7 +514,7 @@ v128_t test_u16x8_const_splat(void) {
 
 // CHECK-LABEL: @test_i32x4_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 42)
 //
 v128_t test_i32x4_const_splat(void) {
   return wasm_i32x4_const_splat(42);
@@ -522,7 +522,7 @@ v128_t test_i32x4_const_splat(void) {
 
 // CHECK-LABEL: @test_u32x4_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 42)
 //
 v128_t test_u32x4_const_splat(void) {
   return wasm_u32x4_const_splat(42);
@@ -546,7 +546,7 @@ v128_t test_u64x2_const_splat(void) {
 
 // CHECK-LABEL: @test_f32x4_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 1109917696, i32 1109917696, i32 1109917696, i32 1109917696>
+// CHECK-NEXT:    ret <4 x i32> splat (i32 1109917696)
 //
 v128_t test_f32x4_const_splat(void) {
   return wasm_f32x4_const_splat(42);
@@ -1462,7 +1462,7 @@ v128_t test_f64x2_ge(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_v128_not(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[A:%.*]], splat (i32 -1)
 // CHECK-NEXT:    ret <4 x i32> [[NOT_I]]
 //
 v128_t test_v128_not(v128_t a) {
@@ -1498,7 +1498,7 @@ v128_t test_v128_xor(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_v128_andnot(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[B:%.*]], splat (i32 -1)
 // CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[A:%.*]], [[NOT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[AND_I]]
 //

@@ -27,13 +27,11 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CXXFieldCollector.h"
-#include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Initialization.h"
@@ -51,7 +49,6 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLoongArch.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
@@ -220,7 +217,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      CurScope(nullptr), Ident_super(nullptr),
+      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
       AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
@@ -562,17 +559,9 @@ Sema::~Sema() {
   SemaPPCallbackHandler->reset();
 }
 
-void Sema::warnStackExhausted(SourceLocation Loc) {
-  // Only warn about this once.
-  if (!WarnedStackExhausted) {
-    Diag(Loc, diag::warn_stack_exhausted);
-    WarnedStackExhausted = true;
-  }
-}
-
 void Sema::runWithSufficientStackSpace(SourceLocation Loc,
                                        llvm::function_ref<void()> Fn) {
-  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 bool Sema::makeUnavailableInSystemHeader(SourceLocation loc,
@@ -733,6 +722,15 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);
+
+  // This cast is used in place of a regular LValue to RValue cast for
+  // HLSL Array Parameter Types. It needs to be emitted even if
+  // ExprTy == TypeTy, except if E is an HLSLOutArgExpr
+  // Emitting a cast in that case will prevent HLSLOutArgExpr from
+  // being handled properly in EmitCallArg
+  if (Kind == CK_HLSLArrayRValue && !isa<HLSLOutArgExpr>(E))
+    return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
+                                    CurFPFeatureOverrides());
 
   if (ExprTy == TypeTy)
     return E;
@@ -2385,10 +2383,11 @@ FunctionScopeInfo *Sema::getEnclosingFunction() const {
   return nullptr;
 }
 
-LambdaScopeInfo *Sema::getEnclosingLambda() const {
+CapturingScopeInfo *Sema::getEnclosingLambdaOrBlock() const {
   for (auto *Scope : llvm::reverse(FunctionScopes)) {
-    if (auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Scope)) {
-      if (LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
+    if (auto *CSI = dyn_cast<CapturingScopeInfo>(Scope)) {
+      auto *LSI = dyn_cast<LambdaScopeInfo>(CSI);
+      if (LSI && LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
           LSI->AfterParameterList) {
         // We have switched contexts due to template instantiation.
         // FIXME: We should swap out the FunctionScopes during code synthesis
@@ -2396,7 +2395,7 @@ LambdaScopeInfo *Sema::getEnclosingLambda() const {
         assert(!CodeSynthesisContexts.empty());
         return nullptr;
       }
-      return LSI;
+      return CSI;
     }
   }
   return nullptr;
@@ -2543,8 +2542,8 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
   // with default arguments, etc.
   if (IsMemExpr && !E.isTypeDependent()) {
     Sema::TentativeAnalysisScope Trap(*this);
-    ExprResult R = BuildCallToMemberFunction(nullptr, &E, SourceLocation(),
-                                             std::nullopt, SourceLocation());
+    ExprResult R = BuildCallToMemberFunction(nullptr, &E, SourceLocation(), {},
+                                             SourceLocation());
     if (R.isUsable()) {
       ZeroArgCallReturnTy = R.get()->getType();
       return true;
@@ -2696,7 +2695,7 @@ bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
 
       // FIXME: Try this before emitting the fixit, and suppress diagnostics
       // while doing so.
-      E = BuildCallExpr(nullptr, E.get(), Range.getEnd(), std::nullopt,
+      E = BuildCallExpr(nullptr, E.get(), Range.getEnd(), {},
                         Range.getEnd().getLocWithOffset(1));
       return true;
     }
@@ -2776,4 +2775,32 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
     return false;
   });
   return Result;
+}
+
+Attr *Sema::CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
+                                 MutableArrayRef<Expr *> Args) {
+
+  auto *A = AnnotateAttr::Create(Context, Annot, Args.data(), Args.size(), CI);
+  if (!ConstantFoldAttrArgs(
+          CI, MutableArrayRef<Expr *>(A->args_begin(), A->args_end()))) {
+    return nullptr;
+  }
+  return A;
+}
+
+Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
+  // Make sure that there is a string literal as the annotation's first
+  // argument.
+  StringRef Str;
+  if (!checkStringLiteralArgumentAttr(AL, 0, Str))
+    return nullptr;
+
+  llvm::SmallVector<Expr *, 4> Args;
+  Args.reserve(AL.getNumArgs() - 1);
+  for (unsigned Idx = 1; Idx < AL.getNumArgs(); Idx++) {
+    assert(!AL.isArgIdent(Idx));
+    Args.push_back(AL.getArgAsExpr(Idx));
+  }
+
+  return CreateAnnotationAttr(AL, Str, Args);
 }

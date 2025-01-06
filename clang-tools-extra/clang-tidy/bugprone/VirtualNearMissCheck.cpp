@@ -112,7 +112,7 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
 
   // The class type D should have the same cv-qualification as or less
   // cv-qualification than the class type B.
-  if (DTy.isMoreQualifiedThan(BTy))
+  if (DTy.isMoreQualifiedThan(BTy, *Context))
     return false;
 
   return true;

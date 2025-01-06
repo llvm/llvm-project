@@ -24,7 +24,6 @@
 ! CHECK: fir.store %[[result]] to %{{.*}} : !fir.ref<i32>
 ! CHECK: omp.yield
 ! CHECK: }
-! CHECK: omp.terminator
 ! CHECK: }
 ! CHECK: omp.terminator
 ! CHECK: }

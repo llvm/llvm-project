@@ -241,7 +241,7 @@ public:
   virtual bool isAlwaysTrue() const = 0;
 
   /// Returns true if this predicate implies \p N.
-  virtual bool implies(const SCEVPredicate *N) const = 0;
+  virtual bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const = 0;
 
   /// Prints a textual representation of this predicate with an indentation of
   /// \p Depth.
@@ -286,7 +286,7 @@ public:
                        const SCEV *LHS, const SCEV *RHS);
 
   /// Implementation of the SCEVPredicate interface
-  bool implies(const SCEVPredicate *N) const override;
+  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
   void print(raw_ostream &OS, unsigned Depth = 0) const override;
   bool isAlwaysTrue() const override;
 
@@ -393,7 +393,7 @@ public:
 
   /// Implementation of the SCEVPredicate interface
   const SCEVAddRecExpr *getExpr() const;
-  bool implies(const SCEVPredicate *N) const override;
+  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
   void print(raw_ostream &OS, unsigned Depth = 0) const override;
   bool isAlwaysTrue() const override;
 
@@ -418,16 +418,17 @@ private:
   SmallVector<const SCEVPredicate *, 16> Preds;
 
   /// Adds a predicate to this union.
-  void add(const SCEVPredicate *N);
+  void add(const SCEVPredicate *N, ScalarEvolution &SE);
 
 public:
-  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
+  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
+                     ScalarEvolution &SE);
 
   ArrayRef<const SCEVPredicate *> getPredicates() const { return Preds; }
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
-  bool implies(const SCEVPredicate *N) const override;
+  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
   void print(raw_ostream &OS, unsigned Depth) const override;
 
   /// We estimate the complexity of a union predicate as the size number of
@@ -1316,6 +1317,25 @@ public:
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
 
+    /// Recursively collect loop guards in \p Guards, starting from
+    /// block \p Block with predecessor \p Pred. The intended starting point
+    /// is to collect from a loop header and its predecessor.
+    static void
+    collectFromBlock(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+                     const BasicBlock *Block, const BasicBlock *Pred,
+                     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+                     unsigned Depth = 0);
+
+    /// Collect loop guards in \p Guards, starting from PHINode \p
+    /// Phi, by calling \p collectFromBlock on the incoming blocks of
+    /// \Phi and trying to merge the found constraints into a single
+    /// combined one for \p Phi.
+    static void collectFromPHI(
+        ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+        const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+        SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
+        unsigned Depth);
+
   public:
     /// Collect rewrite map for loop guards for loop \p L, together with flags
     /// indicating if NUW and NSW can be preserved during rewriting.
@@ -1761,6 +1781,10 @@ private:
   /// V.
   const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
 
+  /// Returns SCEV for the first operand of a phi if all phi operands have
+  /// identical opcodes and operands.
+  const SCEV *createNodeForPHIWithIdenticalOperands(PHINode *PN);
+
   /// Provide the special handling we need to analyze PHI SCEVs.
   const SCEV *createNodeForPHI(PHINode *PN);
 
@@ -2168,6 +2192,12 @@ private:
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
 
+  /// Returns true if \p Op is guaranteed not to cause immediate UB.
+  bool isGuaranteedNotToCauseUB(const SCEV *Op);
+
+  /// Returns true if \p Op is guaranteed to not be poison.
+  static bool isGuaranteedNotToBePoison(const SCEV *Op);
+
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
   /// SCEV commons expressions across control flow, and you can have cases
@@ -2376,6 +2406,10 @@ public:
   /// Get the (predicated) symbolic max backedge count for the analyzed loop.
   const SCEV *getSymbolicMaxBackedgeTakenCount();
 
+  /// Returns the upper bound of the loop trip count as a normal unsigned
+  /// value, or 0 if the trip count is unknown.
+  unsigned getSmallConstantMaxTripCount();
+
   /// Adds a new predicate.
   void addPredicate(const SCEVPredicate &Pred);
 
@@ -2447,6 +2481,9 @@ private:
 
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
+
+  /// The constant max trip count for the loop.
+  std::optional<unsigned> SmallConstantMaxTripCount;
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {

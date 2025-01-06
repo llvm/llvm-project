@@ -99,7 +99,8 @@ getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
   }
 
   ArrayRef<llvm::Type *> overloadedArgTysRef = overloadedArgTys;
-  return llvm::Intrinsic::getDeclaration(module, id, overloadedArgTysRef);
+  return llvm::Intrinsic::getOrInsertDeclaration(module, id,
+                                                 overloadedArgTysRef);
 }
 
 static llvm::OperandBundleDef
@@ -113,15 +114,25 @@ convertOperandBundle(OperandRange bundleOperands, StringRef bundleTag,
 }
 
 static SmallVector<llvm::OperandBundleDef>
-convertOperandBundles(OperandRangeRange bundleOperands,
-                      ArrayRef<std::string> bundleTags,
+convertOperandBundles(OperandRangeRange bundleOperands, ArrayAttr bundleTags,
                       LLVM::ModuleTranslation &moduleTranslation) {
   SmallVector<llvm::OperandBundleDef> bundles;
   bundles.reserve(bundleOperands.size());
 
-  for (auto [operands, tag] : llvm::zip_equal(bundleOperands, bundleTags))
+  for (auto [operands, tagAttr] : llvm::zip_equal(bundleOperands, bundleTags)) {
+    StringRef tag = cast<StringAttr>(tagAttr).getValue();
     bundles.push_back(convertOperandBundle(operands, tag, moduleTranslation));
+  }
   return bundles;
+}
+
+static SmallVector<llvm::OperandBundleDef>
+convertOperandBundles(OperandRangeRange bundleOperands,
+                      std::optional<ArrayAttr> bundleTags,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  if (!bundleTags)
+    return {};
+  return convertOperandBundles(bundleOperands, *bundleTags, moduleTranslation);
 }
 
 /// Builder for LLVM_CallIntrinsicOp
@@ -143,7 +154,7 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
       return failure();
     fn = *fnOrFailure;
   } else {
-    fn = llvm::Intrinsic::getDeclaration(module, id, {});
+    fn = llvm::Intrinsic::getOrInsertDeclaration(module, id, {});
   }
 
   // Check the result type of the call.

@@ -17,7 +17,7 @@
 namespace llvm {
 namespace {
 
-class VPlanHCFGTest : public VPlanTestBase {};
+class VPlanHCFGTest : public VPlanTestIRBase {};
 
 TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   const char *ModuleString =
@@ -50,7 +50,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 
   // Check that the region following the preheader is a single basic-block
   // region (loop).
-  VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   EXPECT_EQ(8u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
@@ -107,8 +107,9 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "ir-bb\<entry\>:\l" +
-    "No successors\l"
+    "Successor(s): vector.ph\l"
   ]
+  N0 -> N1 [ label=""]
   N1 [label =
     "vector.ph:\l" +
     "Successor(s): vector loop\l"
@@ -133,8 +134,8 @@ compound=true
   N2 -> N4 [ label="" ltail=cluster_N3]
   N4 [label =
     "middle.block:\l" +
-    "  EMIT vp\<%1\> = icmp eq ir\<%N\>, vp\<%0\>\l" +
-    "  EMIT branch-on-cond vp\<%1\>\l" +
+    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%0\>\l" +
+    "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
   ]
   N4 -> N5 [ label="T"]
@@ -145,6 +146,18 @@ compound=true
   ]
   N6 [label =
     "scalar.ph:\l" +
+    "Successor(s): ir-bb\<for.body\>\l"
+  ]
+  N6 -> N7 [ label=""]
+  N7 [label =
+    "ir-bb\<for.body\>:\l" +
+    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
+    "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
+    "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
+    "  IR   %res = add i32 %l1, 10\l" +
+    "  IR   store i32 %res, ptr %arr.idx, align 4\l" +
+    "  IR   %indvars.iv.next = add i64 %indvars.iv, 1\l" +
+    "  IR   %exitcond = icmp ne i64 %indvars.iv.next, %N\l" +
     "No successors\l"
   ]
 }
@@ -193,7 +206,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
 
   // Check that the region following the preheader is a single basic-block
   // region (loop).
-  VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   EXPECT_EQ(8u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());

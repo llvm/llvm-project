@@ -7,10 +7,10 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: arm_offset_q15
-; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 36 for VF 2 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 8 for VF 4 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 2 for VF 8 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
+; CHECK-COST: LV: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
+; CHECK-COST: Cost of 36 for VF 2: REPLICATE ir<%1> = call @llvm.sadd.sat.i16(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 8 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 2 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
 
 define void @arm_offset_q15(ptr nocapture readonly %pSrc, i16 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_offset_q15(

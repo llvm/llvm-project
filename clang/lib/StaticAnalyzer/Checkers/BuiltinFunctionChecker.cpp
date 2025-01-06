@@ -155,12 +155,14 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   unsigned BitWidth = C.getASTContext().getIntWidth(Res);
   bool IsUnsigned = Res->isUnsignedIntegerType();
 
+  SValBuilder &SVB = C.getSValBuilder();
+  BasicValueFactory &VF = SVB.getBasicValueFactory();
+
   auto MinValType = llvm::APSInt::getMinValue(BitWidth, IsUnsigned);
   auto MaxValType = llvm::APSInt::getMaxValue(BitWidth, IsUnsigned);
-  nonloc::ConcreteInt MinVal{MinValType};
-  nonloc::ConcreteInt MaxVal{MaxValType};
+  nonloc::ConcreteInt MinVal{VF.getValue(MinValType)};
+  nonloc::ConcreteInt MaxVal{VF.getValue(MaxValType)};
 
-  SValBuilder &SVB = C.getSValBuilder();
   ProgramStateRef State = C.getState();
   SVal IsLeMax = SVB.evalBinOp(State, BO_LE, RetVal, MaxVal, Res);
   SVal IsGeMin = SVB.evalBinOp(State, BO_GE, RetVal, MinVal, Res);
@@ -183,6 +185,7 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
   const Expr *CE = Call.getOriginExpr();
+  auto BoolTy = C.getASTContext().BoolTy;
 
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
@@ -193,8 +196,8 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
 
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
   if (NotOverflow) {
-    ProgramStateRef StateNoOverflow =
-        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(false));
+    ProgramStateRef StateNoOverflow = State->BindExpr(
+        CE, C.getLocationContext(), SVB.makeTruthVal(false, BoolTy));
 
     if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
       StateNoOverflow =
@@ -212,9 +215,9 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   }
 
   if (Overflow) {
-    C.addTransition(
-        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)),
-        createBuiltinOverflowNoteTag(C));
+    C.addTransition(State->BindExpr(CE, C.getLocationContext(),
+                                    SVB.makeTruthVal(true, BoolTy)),
+                    createBuiltinOverflowNoteTag(C));
   }
 }
 

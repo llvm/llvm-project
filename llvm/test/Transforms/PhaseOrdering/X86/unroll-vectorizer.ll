@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo(ptr %a, <32 x i8> %_0) #0 {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr nocapture writeonly [[A:%.*]], <32 x i8> [[_0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nocapture writeonly initializes((0, 32)) [[A:%.*]], <32 x i8> [[_0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    store <32 x i8> [[_0]], ptr [[A]], align 1
 ; CHECK-NEXT:    ret void

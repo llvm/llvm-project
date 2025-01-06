@@ -419,7 +419,7 @@ define i32 @ashr_lshr_no_lshr(i32 %x, i32 %y) {
 
 define <2 x i32> @ashr_lshr_vec_wrong_pred(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_vec_wrong_pred(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i32> [[X]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[L]], <2 x i32> [[R]]

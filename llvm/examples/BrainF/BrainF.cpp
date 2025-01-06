@@ -67,8 +67,8 @@ void BrainF::header(LLVMContext& C) {
 
   //declare void @llvm.memset.p0i8.i32(i8 *, i8, i32, i1)
   Type *Tys[] = {PointerType::getUnqual(C), Type::getInt32Ty(C)};
-  Function *memset_func = Intrinsic::getDeclaration(module, Intrinsic::memset,
-                                                    Tys);
+  Function *memset_func =
+      Intrinsic::getOrInsertDeclaration(module, Intrinsic::memset, Tys);
 
   //declare i32 @getchar()
   getchar_func =

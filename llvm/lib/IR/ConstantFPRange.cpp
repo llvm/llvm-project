@@ -221,14 +221,57 @@ ConstantFPRange::makeAllowedFCmpRegion(FCmpInst::Predicate Pred,
 ConstantFPRange
 ConstantFPRange::makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
                                           const ConstantFPRange &Other) {
-  // TODO
-  return getEmpty(Other.getSemantics());
+  if (Other.isEmptySet())
+    return getFull(Other.getSemantics());
+  if (Other.containsNaN() && FCmpInst::isOrdered(Pred))
+    return getEmpty(Other.getSemantics());
+  if (Other.isNaNOnly() && FCmpInst::isUnordered(Pred))
+    return getFull(Other.getSemantics());
+
+  switch (Pred) {
+  case FCmpInst::FCMP_TRUE:
+    return getFull(Other.getSemantics());
+  case FCmpInst::FCMP_FALSE:
+    return getEmpty(Other.getSemantics());
+  case FCmpInst::FCMP_ORD:
+    return getNonNaN(Other.getSemantics());
+  case FCmpInst::FCMP_UNO:
+    return getNaNOnly(Other.getSemantics(), /*MayBeQNaN=*/true,
+                      /*MayBeSNaN=*/true);
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_UEQ:
+    return setNaNField(Other.isSingleElement(/*ExcludesNaN=*/true) ||
+                               ((Other.classify() & ~fcNan) == fcZero)
+                           ? extendZeroIfEqual(Other, Pred)
+                           : getEmpty(Other.getSemantics()),
+                       Pred);
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UNE:
+    return getEmpty(Other.getSemantics());
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_OLE:
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_ULE:
+    return setNaNField(
+        extendZeroIfEqual(makeLessThan(Other.getLower(), Pred), Pred), Pred);
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_UGT:
+  case FCmpInst::FCMP_UGE:
+    return setNaNField(
+        extendZeroIfEqual(makeGreaterThan(Other.getUpper(), Pred), Pred), Pred);
+  default:
+    llvm_unreachable("Unexpected predicate");
+  }
 }
 
 std::optional<ConstantFPRange>
 ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
                                      const APFloat &Other) {
-  return std::nullopt;
+  if ((Pred == FCmpInst::FCMP_UNE || Pred == FCmpInst::FCMP_ONE) &&
+      !Other.isNaN())
+    return std::nullopt;
+  return makeSatisfyingFCmpRegion(Pred, ConstantFPRange(Other));
 }
 
 bool ConstantFPRange::fcmp(FCmpInst::Predicate Pred,

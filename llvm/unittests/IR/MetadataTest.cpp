@@ -1772,44 +1772,48 @@ TEST_F(DIEnumeratorTest, getWithLargeValues) {
 typedef MetadataTest DIBasicTypeTest;
 
 TEST_F(DIBasicTypeTest, get) {
-  auto *N =
-      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33, 26, 7,
-                        DINode::FlagZero);
+  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                             26, 7, 100, DINode::FlagZero);
   EXPECT_EQ(dwarf::DW_TAG_base_type, N->getTag());
   EXPECT_EQ("special", N->getName());
   EXPECT_EQ(33u, N->getSizeInBits());
   EXPECT_EQ(26u, N->getAlignInBits());
   EXPECT_EQ(7u, N->getEncoding());
   EXPECT_EQ(0u, N->getLine());
+  EXPECT_EQ(100u, N->getNumExtraInhabitants());
   EXPECT_EQ(DINode::FlagZero, N->getFlags());
   EXPECT_EQ(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
 
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type,
-                                "special", 33, 26, 7, DINode::FlagZero));
-  EXPECT_NE(N,
-            DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26, 7,
-                              DINode::FlagZero));
+                                "special", 33, 26, 7, 100, DINode::FlagZero));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26,
+                                7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 32,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                25, 7, DINode::FlagZero));
+                                25, 7, 100, DINode::FlagZero));
+
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 6, DINode::FlagZero));
+                                26, 7, 99, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagBigEndian));
+                                26, 6, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagLittleEndian));
+                                26, 7, 100, DINode::FlagBigEndian));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                                26, 7, 100, DINode::FlagLittleEndian));
 
   TempDIBasicType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
 TEST_F(DIBasicTypeTest, getWithLargeValues) {
-  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special",
-                             UINT64_MAX, UINT32_MAX - 1, 7, DINode::FlagZero);
+  auto *N =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", UINT64_MAX,
+                       UINT32_MAX - 1, 7, UINT32_MAX, DINode::FlagZero);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX, N->getNumExtraInhabitants());
 }
 
 TEST_F(DIBasicTypeTest, getUnspecified) {
@@ -1829,7 +1833,7 @@ typedef MetadataTest DITypeTest;
 TEST_F(DITypeTest, clone) {
   // Check that DIType has a specialized clone that returns TempDIType.
   DIType *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "int", 32, 32,
-                               dwarf::DW_ATE_signed, DINode::FlagZero);
+                               0, dwarf::DW_ATE_signed, DINode::FlagZero);
 
   TempDIType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -3537,12 +3541,12 @@ TEST_F(DIExpressionTest, Fold) {
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a left shift greater than 64.
+  // Test a left shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shl);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3550,17 +3554,17 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shl);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a right shift greater than 64.
+  // Test a right shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shr);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3568,7 +3572,7 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shr);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);

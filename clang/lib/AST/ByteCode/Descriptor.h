@@ -201,8 +201,8 @@ public:
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
-  const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
-  const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const Decl *asDecl() const { return dyn_cast<const Decl *>(Source); }
+  const Expr *asExpr() const { return dyn_cast<const Expr *>(Source); }
   const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {

@@ -58,7 +58,7 @@ define i64 @add_or_sub_comb_i64_commuted4(i64 %p) {
 define <3 x i32> @add_or_sub_comb_i32vec(<3 x i32> %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i32vec(
 ; CHECK-NEXT:    [[X:%.*]] = mul <3 x i32> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i32> [[X]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i32> [[X]], splat (i32 -1)
 ; CHECK-NEXT:    [[ADD:%.*]] = and <3 x i32> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i32> [[ADD]]
 ;
@@ -72,7 +72,7 @@ define <3 x i32> @add_or_sub_comb_i32vec(<3 x i32> %p) {
 define <4 x i16> @add_or_sub_comb_i32vec_poison(<4 x i16> %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i32vec_poison(
 ; CHECK-NEXT:    [[X:%.*]] = mul <4 x i16> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[X]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[X]], splat (i16 -1)
 ; CHECK-NEXT:    [[ADD:%.*]] = and <4 x i16> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <4 x i16> [[ADD]]
 ;

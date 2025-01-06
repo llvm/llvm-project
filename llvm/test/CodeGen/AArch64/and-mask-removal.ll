@@ -530,10 +530,10 @@ define i64 @test_2_selects(i8 zeroext %a) {
 ; CHECK-LABEL: test_2_selects:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    add w9, w0, #24
-; CHECK-NEXT:    mov w8, #131
+; CHECK-NEXT:    mov w8, #131 ; =0x83
 ; CHECK-NEXT:    and w9, w9, #0xff
 ; CHECK-NEXT:    cmp w9, #81
-; CHECK-NEXT:    mov w9, #57
+; CHECK-NEXT:    mov w9, #57 ; =0x39
 ; CHECK-NEXT:    csel x8, x8, xzr, lo
 ; CHECK-NEXT:    csel x9, xzr, x9, eq
 ; CHECK-NEXT:    add x0, x8, x9

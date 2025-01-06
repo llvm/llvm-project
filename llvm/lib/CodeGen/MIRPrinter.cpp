@@ -113,7 +113,8 @@ public:
 
   void print(const MachineFunction &MF);
 
-  void convert(yaml::MachineFunction &MF, const MachineRegisterInfo &RegInfo,
+  void convert(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
+               const MachineRegisterInfo &RegInfo,
                const TargetRegisterInfo *TRI);
   void convert(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                const MachineFrameInfo &MFI);
@@ -231,7 +232,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.NoVRegs = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::NoVRegs);
 
-  convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
+  convert(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker MST(MMI, &MF);
   MST.incorporateFunction(MF.getFunction());
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
@@ -316,10 +317,21 @@ printStackObjectDbgInfo(const MachineFunction::VariableDbgInfo &DebugVar,
   }
 }
 
-void MIRPrinter::convert(yaml::MachineFunction &MF,
+static void printRegFlags(Register Reg,
+                          std::vector<yaml::FlowStringValue> &RegisterFlags,
+                          const MachineFunction &MF,
+                          const TargetRegisterInfo *TRI) {
+  auto FlagValues = TRI->getVRegFlagsOfReg(Reg, MF);
+  for (auto &Flag : FlagValues) {
+    RegisterFlags.push_back(yaml::FlowStringValue(Flag.str()));
+  }
+}
+
+void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
+                         const MachineFunction &MF,
                          const MachineRegisterInfo &RegInfo,
                          const TargetRegisterInfo *TRI) {
-  MF.TracksRegLiveness = RegInfo.tracksLiveness();
+  YamlMF.TracksRegLiveness = RegInfo.tracksLiveness();
 
   // Print the virtual register definitions.
   for (unsigned I = 0, E = RegInfo.getNumVirtRegs(); I < E; ++I) {
@@ -332,7 +344,8 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     Register PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
-    MF.VirtualRegisters.push_back(VReg);
+    printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
+    YamlMF.VirtualRegisters.push_back(std::move(VReg));
   }
 
   // Print the live ins.
@@ -341,7 +354,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     printRegMIR(LI.first, LiveIn.Register, TRI);
     if (LI.second)
       printRegMIR(LI.second, LiveIn.VirtualRegister, TRI);
-    MF.LiveIns.push_back(LiveIn);
+    YamlMF.LiveIns.push_back(std::move(LiveIn));
   }
 
   // Prints the callee saved registers.
@@ -351,9 +364,9 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     for (const MCPhysReg *I = CalleeSavedRegs; *I; ++I) {
       yaml::FlowStringValue Reg;
       printRegMIR(*I, Reg, TRI);
-      CalleeSavedRegisters.push_back(Reg);
+      CalleeSavedRegisters.push_back(std::move(Reg));
     }
-    MF.CalleeSavedRegisters = CalleeSavedRegisters;
+    YamlMF.CalleeSavedRegisters = std::move(CalleeSavedRegisters);
   }
 }
 
@@ -824,6 +837,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "disjoint ";
   if (MI.getFlag(MachineInstr::NoUSWrap))
     OS << "nusw ";
+  if (MI.getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

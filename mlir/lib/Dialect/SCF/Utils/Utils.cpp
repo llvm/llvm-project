@@ -130,7 +130,7 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
 
   // Outline before current function.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(region.getParentOfType<func::FuncOp>());
+  rewriter.setInsertionPoint(region.getParentOfType<FunctionOpInterface>());
 
   SetVector<Value> captures;
   getUsedValuesDefinedAbove(region, captures);
@@ -372,15 +372,16 @@ static void generateUnrolledLoop(
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
 }
 
-/// Unrolls 'forOp' by 'unrollFactor', returns success if the loop is unrolled.
-LogicalResult mlir::loopUnrollByFactor(
+/// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
+/// eplilog loop, if the loop is unrolled.
+FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
-    return success();
+    return UnrolledLoopInfo{forOp, std::nullopt};
 
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
@@ -402,7 +403,7 @@ LogicalResult mlir::loopUnrollByFactor(
       if (*constTripCount == 1 &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
-      return success();
+      return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
     int64_t tripCountEvenMultiple =
@@ -450,11 +451,12 @@ LogicalResult mlir::loopUnrollByFactor(
         boundsBuilder.create<arith::MulIOp>(loc, step, unrollFactorCst);
   }
 
+  UnrolledLoopInfo resultLoops;
+
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
     OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPoint(forOp->getBlock(),
-                                      std::next(Block::iterator(forOp)));
+    epilogueBuilder.setInsertionPointAfter(forOp);
     auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
     epilogueForOp.setLowerBound(upperBoundUnrolled);
 
@@ -467,7 +469,8 @@ LogicalResult mlir::loopUnrollByFactor(
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getInitArgs().size(), results);
-    (void)epilogueForOp.promoteIfSingleIteration(rewriter);
+    if (epilogueForOp.promoteIfSingleIteration(rewriter).failed())
+      resultLoops.epilogueLoopOp = epilogueForOp;
   }
 
   // Create unrolled loop.
@@ -489,8 +492,9 @@ LogicalResult mlir::loopUnrollByFactor(
       },
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)forOp.promoteIfSingleIteration(rewriter);
-  return success();
+  if (forOp.promoteIfSingleIteration(rewriter).failed())
+    resultLoops.mainLoopOp = forOp;
+  return resultLoops;
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`

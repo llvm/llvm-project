@@ -81,7 +81,8 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   Diags.setSourceManager(&Sources);
   // FIXME: Investigate whatever is there better way to initialize DiagEngine
   // or whatever DiagEngine can be shared by multiple preprocessors
-  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts());
+  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts(),
+                        Compiler.getVirtualFileSystem());
 
   LangOpts.Modules = false;
 

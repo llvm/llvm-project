@@ -124,12 +124,9 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   Table.layout();
   OS << "const std::array<NfaStatePair, " << Table.size() << "> " << Name
      << "TransitionInfo = {{\n";
-  Table.emit(
-      OS,
-      [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
-        OS << "{" << P.first << ", " << P.second << "}";
-      },
-      "{0ULL, 0ULL}");
+  Table.emit(OS, [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
+    OS << "{" << P.first << ", " << P.second << "}";
+  });
 
   OS << "}};\n\n";
 
@@ -306,7 +303,7 @@ StringRef Automaton::getActionSymbolType(StringRef A) {
 }
 
 Transition::Transition(const Record *R, Automaton *Parent) {
-  BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
+  const BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
   NewState = 0;
   assert(NewStateInit->getNumBits() <= sizeof(uint64_t) * 8 &&
          "State cannot be represented in 64 bits!");

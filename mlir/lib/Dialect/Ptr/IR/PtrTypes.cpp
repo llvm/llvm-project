@@ -33,7 +33,7 @@ static SpecAttr getPointerSpec(DataLayoutEntryListRef params, PtrType type) {
   for (DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
-    if (cast<PtrType>(entry.getKey().get<Type>()).getMemorySpace() ==
+    if (cast<PtrType>(cast<Type>(entry.getKey())).getMemorySpace() ==
         type.getMemorySpace()) {
       if (auto spec = dyn_cast<SpecAttr>(entry.getValue()))
         return spec;
@@ -55,7 +55,7 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
       continue;
     uint32_t size = kDefaultPointerSizeBits;
     uint32_t abi = kDefaultPointerAlignment;
-    auto newType = llvm::cast<PtrType>(newEntry.getKey().get<Type>());
+    auto newType = llvm::cast<PtrType>(llvm::cast<Type>(newEntry.getKey()));
     const auto *it =
         llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
           if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
@@ -134,7 +134,7 @@ LogicalResult PtrType::verifyEntries(DataLayoutEntryListRef entries,
   for (DataLayoutEntryInterface entry : entries) {
     if (!entry.isTypeEntry())
       continue;
-    auto key = entry.getKey().get<Type>();
+    auto key = llvm::cast<Type>(entry.getKey());
     if (!llvm::isa<SpecAttr>(entry.getValue())) {
       return emitError(loc) << "expected layout attribute for " << key
                             << " to be a #ptr.spec attribute";

@@ -202,8 +202,8 @@ For a more comprehensive example see
 
   # If there is no multilib available for a particular set of flags, and the
   # other multilibs are not adequate fallbacks, then you can define a variant
-  # record with a FatalError key in place of the Dir key.
-  - FatalError: this multilib collection has no hard-float ABI support 
+  # record with an Error key in place of the Dir key.
+  - Error: this multilib collection has no hard-float ABI support
     Flags: [--target=thumbv7m-none-eabi, -mfloat-abi=hard]
 
 

@@ -9,25 +9,47 @@
 #ifndef LLVM_SANDBOXIR_CONTEXT_H
 #define LLVM_SANDBOXIR_CONTEXT_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Type.h"
 
+#include <cstdint>
+
 namespace llvm::sandboxir {
 
+class Argument;
+class BBIterator;
+class Constant;
 class Module;
 class Value;
-class Argument;
-class Constant;
 
 class Context {
+public:
+  // A EraseInstrCallback receives the instruction about to be erased.
+  using EraseInstrCallback = std::function<void(Instruction *)>;
+  // A CreateInstrCallback receives the instruction about to be created.
+  using CreateInstrCallback = std::function<void(Instruction *)>;
+  // A MoveInstrCallback receives the instruction about to be moved, the
+  // destination BB and an iterator pointing to the insertion position.
+  using MoveInstrCallback =
+      std::function<void(Instruction *, const BBIterator &)>;
+
+  /// An ID for a registered callback. Used for deregistration. Using a 64-bit
+  /// integer so we don't have to worry about the unlikely case of overflowing
+  /// a 32-bit counter.
+  using CallbackID = uint64_t;
+
 protected:
   LLVMContext &LLVMCtx;
-  friend class Type;        // For LLVMCtx.
-  friend class PointerType; // For LLVMCtx.
-  friend class IntegerType; // For LLVMCtx.
-  friend class StructType;  // For LLVMCtx.
-  friend class Region;      // For LLVMCtx.
+  friend class Type;              // For LLVMCtx.
+  friend class PointerType;       // For LLVMCtx.
+  friend class IntegerType;       // For LLVMCtx.
+  friend class StructType;        // For LLVMCtx.
+  friend class Region;            // For LLVMCtx.
+  friend class IRSnapshotChecker; // To snapshot LLVMModuleToModuleMap.
 
   Tracker IRTracker;
 
@@ -47,6 +69,21 @@ protected:
   /// Maps LLVM Type to the corresonding sandboxir::Type. Owns all Sandbox IR
   /// Type objects.
   DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
+
+  /// Callbacks called when an IR instruction is about to get erased. Keys are
+  /// used as IDs for deregistration.
+  MapVector<CallbackID, EraseInstrCallback> EraseInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get created. Keys are
+  /// used as IDs for deregistration.
+  MapVector<CallbackID, CreateInstrCallback> CreateInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get moved. Keys are
+  /// used as IDs for deregistration.
+  MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
+
+  /// A counter used for assigning callback IDs during registration. The same
+  /// counter is used for all kinds of callbacks so we can detect mismatched
+  /// registration/deregistration.
+  CallbackID NextCallbackID = 0;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
@@ -68,6 +105,11 @@ protected:
   }
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
   Constant *getOrCreateConstant(llvm::Constant *LLVMC);
+  friend class Utils; // For getMemoryBase
+
+  void runEraseInstrCallbacks(Instruction *I);
+  void runCreateInstrCallbacks(Instruction *I);
+  void runMoveInstrCallbacks(Instruction *I, const BBIterator &Where);
 
   // Friends for getOrCreateConstant().
 #define DEF_CONST(ID, CLASS) friend class CLASS;
@@ -197,6 +239,28 @@ public:
 
   /// \Returns the number of values registered with Context.
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
+
+  /// Register a callback that gets called when a SandboxIR instruction is about
+  /// to be removed from its parent. Note that this will also be called when
+  /// reverting the creation of an instruction.
+  /// \Returns a callback ID for later deregistration.
+  CallbackID registerEraseInstrCallback(EraseInstrCallback CB);
+  void unregisterEraseInstrCallback(CallbackID ID);
+
+  /// Register a callback that gets called right after a SandboxIR instruction
+  /// is created. Note that this will also be called when reverting the removal
+  /// of an instruction.
+  /// \Returns a callback ID for later deregistration.
+  CallbackID registerCreateInstrCallback(CreateInstrCallback CB);
+  void unregisterCreateInstrCallback(CallbackID ID);
+
+  /// Register a callback that gets called when a SandboxIR instruction is about
+  /// to be moved. Note that this will also be called when reverting a move.
+  /// \Returns a callback ID for later deregistration.
+  CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
+  void unregisterMoveInstrCallback(CallbackID ID);
+
+  // TODO: Add callbacks for instructions inserted/removed if needed.
 };
 
 } // namespace llvm::sandboxir

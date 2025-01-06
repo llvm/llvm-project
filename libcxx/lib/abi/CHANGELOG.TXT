@@ -16,6 +16,37 @@ New entries should be added directly below the "Version" header.
 Version 20.0
 ------------
 
+* [libc++][PMR] Remove duplicate implementation of __try_allocate_from_chunk
+
+  This patch removes member functions __try_allocate_from_chunk from __chunk_footer and __initial_descriptor.
+  The two implementations were almost identical and can be easily moved to be implementation details of the built library.
+  Since they were only used from within the built library, the removal of these symbols should not be an ABI break.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm
+
+* [libc++] Remove the pointer safety functions from the dylib
+
+  The pointer safety functions were never implemented by anyone in a non-trivial
+  way, which lead us to removing them entirely from the headers when they were
+  removed in C++23. This also means that just about nobody ever called these
+  functions, especially not in production code. Because of that, we expect there
+  to be no references in the wild to the functions in the dylib.
+
+  Symbol removed: _ZNSt3__117declare_reachableEPv
+  Symbol removed: _ZNSt3__119declare_no_pointersEPcm
+  Symbol removed: _ZNSt3__121__undeclare_reachableEPv
+  Symbol removed: _ZNSt3__121undeclare_no_pointersEPcm
+
+* [libcxx][libc] Implements from_chars floating-point
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE
+  Symbol added: _ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE
+
 * [libc++] Stop trying to avoid exporting some typeinfo names
 
   This patch removes the explicit list of symbols to avoid exporting

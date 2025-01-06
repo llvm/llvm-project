@@ -8,7 +8,6 @@
 
 #include "DXILFinalizeLinkage.h"
 #include "DirectX.h"
-#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
@@ -19,20 +18,22 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
-  SmallPtrSet<Function *, 8> EntriesAndExports;
+  SmallPtrSet<Function *, 8> Funcs;
 
-  // Find all entry points and export functions
+  // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
-    if (!EF.hasFnAttribute("hlsl.shader") && !EF.hasFnAttribute("hlsl.export"))
+    if (EF.isIntrinsic())
       continue;
-    EntriesAndExports.insert(&EF);
+    if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
+      continue;
+    Funcs.insert(&EF);
   }
 
-  for (Function &F : M.functions()) {
-    if (F.getLinkage() == GlobalValue::ExternalLinkage &&
-        !EntriesAndExports.contains(&F)) {
-      F.setLinkage(GlobalValue::InternalLinkage);
-    }
+  for (Function *F : Funcs) {
+    if (F->getLinkage() == GlobalValue::ExternalLinkage)
+      F->setLinkage(GlobalValue::InternalLinkage);
+    if (F->isDefTriviallyDead())
+      M.getFunctionList().erase(F);
   }
 
   return false;
@@ -47,10 +48,6 @@ PreservedAnalyses DXILFinalizeLinkage::run(Module &M,
 
 bool DXILFinalizeLinkageLegacy::runOnModule(Module &M) {
   return finalizeLinkage(M);
-}
-
-void DXILFinalizeLinkageLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILFinalizeLinkageLegacy::ID = 0;

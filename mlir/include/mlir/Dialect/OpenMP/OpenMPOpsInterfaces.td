@@ -193,6 +193,13 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
       (ins), [{
         return $_op.getMapVarsMutable();
       }]>,
+      InterfaceMethod<"Get operand index for a map clause",
+                      "int64_t",
+                      "getOperandIndexForMap",
+      (ins "::mlir::Value":$map), [{
+         return std::distance($_op.getMapVars().begin(),
+                              llvm::find($_op.getMapVars(), map));
+      }]>,
   ];
 }
 
@@ -258,6 +265,7 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let verify = [{
     return ::llvm::cast<::mlir::omp::LoopWrapperInterface>($_op).verifyImpl();
   }];
+  let verifyWithRegions = 1;
 }
 
 def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {

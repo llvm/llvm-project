@@ -215,8 +215,9 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
       LLDB_LOGF(log, "Initial module fetch:  Adding %" PRId64 " modules.\n",
                 (uint64_t)image_infos.size());
 
-      UpdateSpecialBinariesFromNewImageInfos(image_infos);
-      AddModulesUsingImageInfos(image_infos);
+      auto images = PreloadModulesFromImageInfos(image_infos);
+      UpdateSpecialBinariesFromPreloadedModules(images);
+      AddModulesUsingPreloadedModules(images);
     }
   }
 
@@ -425,8 +426,9 @@ void DynamicLoaderMacOS::AddBinaries(
               ->GetAsArray()
               ->GetSize() == load_addresses.size()) {
     if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
-      UpdateSpecialBinariesFromNewImageInfos(image_infos);
-      AddModulesUsingImageInfos(image_infos);
+      auto images = PreloadModulesFromImageInfos(image_infos);
+      UpdateSpecialBinariesFromPreloadedModules(images);
+      AddModulesUsingPreloadedModules(images);
     }
     m_dyld_image_infos_stop_id = m_process->GetStopID();
   }

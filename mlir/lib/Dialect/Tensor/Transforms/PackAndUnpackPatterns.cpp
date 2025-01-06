@@ -16,11 +16,6 @@ namespace mlir {
 namespace tensor {
 namespace {
 
-static bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
-  return llvm::all_of(
-      ofrs, [&](OpFoldResult ofr) { return isConstantIntValue(ofr, value); });
-}
-
 /// Returns the number of shape sizes that is either dynamic or greater than 1.
 static int64_t getNumGtOneDims(ArrayRef<int64_t> shape) {
   return llvm::count_if(

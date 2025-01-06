@@ -178,8 +178,8 @@ func.func @div_bounds_negative(%arg0 : index) -> i1 {
 }
 
 // CHECK-LABEL: func @div_zero_undefined
-// CHECK: %[[ret:.*]] = arith.cmpi ule
-// CHECK: return %[[ret]]
+// CHECK: %[[true:.*]] = arith.constant true
+// CHECK: return %[[true]]
 func.func @div_zero_undefined(%arg0 : index) -> i1 {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -187,6 +187,19 @@ func.func @div_zero_undefined(%arg0 : index) -> i1 {
     %0 = arith.andi %arg0, %c1 : index
     %1 = arith.divui %c4, %0 : index
     %2 = arith.cmpi ule, %1, %c4 : index
+    func.return %2 : i1
+}
+
+// CHECK-LABEL: func @div_refine_min
+// CHECK: %[[true:.*]] = arith.constant true
+// CHECK: return %[[true]]
+func.func @div_refine_min(%arg0 : index) -> i1 {
+    %c0 = arith.constant 1 : index
+    %c1 = arith.constant 2 : index
+    %c4 = arith.constant 4 : index
+    %0 = arith.andi %arg0, %c1 : index
+    %1 = arith.divui %c4, %0 : index
+    %2 = arith.cmpi uge, %1, %c0 : index
     func.return %2 : i1
 }
 
@@ -236,6 +249,31 @@ func.func @ceil_divsi(%arg0 : index) -> i1 {
     func.return %10 : i1
 }
 
+// There was a bug, which was causing this expr errorneously fold to constant
+// CHECK-LABEL: func @ceil_divsi_full_range
+// CHECK-SAME: (%[[arg:.*]]: index)
+// CHECK: %[[c64:.*]] = arith.constant 64 : index
+// CHECK: %[[ret:.*]] = arith.ceildivsi %[[arg]], %[[c64]] : index
+// CHECK: return %[[ret]]
+func.func @ceil_divsi_full_range(%6: index) -> index {
+  %c64 = arith.constant 64 : index
+  %55 = arith.ceildivsi %6, %c64 : index
+  return %55 : index
+}
+
+// CHECK-LABEL: func @ceil_divsi_intmin_bug_115293
+// CHECK: %[[ret:.*]] = arith.constant true
+// CHECK: return %[[ret]]
+func.func @ceil_divsi_intmin_bug_115293() -> i1 {
+    %intMin_i64 = test.with_bounds { smin = -9223372036854775808 : si64, smax = -9223372036854775808 : si64, umin = 9223372036854775808 : ui64, umax = 9223372036854775808 : ui64 } : i64
+    %denom_i64 = test.with_bounds { smin = 1189465982 : si64, smax = 1189465982 : si64, umin = 1189465982 : ui64, umax = 1189465982 : ui64 } : i64
+    %res_i64 = test.with_bounds { smin = 7754212542 : si64, smax = 7754212542 : si64, umin = 7754212542 : ui64, umax = 7754212542 : ui64 }  : i64
+
+    %0 = arith.ceildivsi %intMin_i64, %denom_i64 : i64
+    %1 = arith.cmpi eq, %0, %res_i64 : i64
+    func.return %1 : i1
+}
+
 // CHECK-LABEL: func @floor_divsi
 // CHECK: %[[true:.*]] = arith.constant true
 // CHECK: return %[[true]]
@@ -271,13 +309,13 @@ func.func @remui_base(%arg0 : index, %arg1 : index ) -> i1 {
 // CHECK: return %[[true]]
 func.func @remui_base_maybe_zero(%arg0 : index, %arg1 : index ) -> i1 {
     %c4 = arith.constant 4 : index
-    %c5 = arith.constant 5 : index    
+    %c5 = arith.constant 5 : index
 
     %0 = arith.minui %arg1, %c4 : index
     %1 = arith.remui %arg0, %0 : index
     %2 = arith.cmpi ult, %1, %c5 : index
     func.return %2 : i1
-}    
+}
 
 // CHECK-LABEL: func @remsi_base
 // CHECK: %[[ret:.*]] = arith.cmpi sge
@@ -426,6 +464,32 @@ func.func @ori(%arg0 : i128, %arg1 : i128) -> i1 {
     %1 = arith.ori %arg0, %0 : i128
     %2 = arith.cmpi slt, %1, %c0 : i128
     func.return %2 : i1
+}
+
+// CHECK-LABEL: func @xori_issue_82168
+// arith.cmpi was erroneously folded to %false, see Issue #82168.
+// CHECK: %[[R:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}} : i64
+// CHECK: return %[[R]]
+func.func @xori_issue_82168() -> i1 {
+    %c0_i64 = arith.constant 0 : i64
+    %c2060639849_i64 = arith.constant 2060639849 : i64
+    %2 = test.with_bounds { umin = 2060639849 : i64, umax = 2060639850 : i64, smin = 2060639849 : i64, smax = 2060639850 : i64 } : i64
+    %3 = arith.xori %2, %c2060639849_i64 : i64
+    %4 = arith.cmpi eq, %3, %c0_i64 : i64
+    func.return %4 : i1
+}
+
+// CHECK-LABEL: func @xori_i1
+//   CHECK-DAG: %[[true:.*]] = arith.constant true
+//   CHECK-DAG: %[[false:.*]] = arith.constant false
+//       CHECK: return %[[true]], %[[false]]
+func.func @xori_i1() -> (i1, i1) {
+    %true = arith.constant true
+    %1 = test.with_bounds { umin = 0 : i1, umax = 0 : i1, smin = 0 : i1, smax = 0 : i1 } : i1
+    %2 = test.with_bounds { umin = 1 : i1, umax = 1 : i1, smin = 1 : i1, smax = 1 : i1 } : i1
+    %3 = arith.xori %1, %true : i1
+    %4 = arith.xori %2, %true : i1
+    func.return %3, %4 : i1, i1
 }
 
 // CHECK-LABEL: func @xori

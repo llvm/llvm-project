@@ -162,8 +162,8 @@ private:
   };
   CppHashInfoTy CppHashInfo;
 
-  /// The filename from the first cpp hash file line comment, if any.
-  StringRef FirstCppHashFilename;
+  /// Have we seen any file line comment.
+  bool HadCppHashFilename = false;
 
   /// List of forward directional labels for diagnosis at the end.
   SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
@@ -264,7 +264,7 @@ public:
                         SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
                         SmallVectorImpl<std::string> &Constraints,
                         SmallVectorImpl<std::string> &Clobbers,
-                        const MCInstrInfo *MII, const MCInstPrinter *IP,
+                        const MCInstrInfo *MII, MCInstPrinter *IP,
                         MCAsmParserSemaCallback &SI) override;
 
   bool parseExpression(const MCExpr *&Res);
@@ -523,6 +523,7 @@ private:
     DK_CFI_WINDOW_SAVE,
     DK_CFI_LABEL,
     DK_CFI_B_KEY_FRAME,
+    DK_CFI_VAL_OFFSET,
     DK_MACROS_ON,
     DK_MACROS_OFF,
     DK_ALTMACRO,
@@ -626,6 +627,7 @@ private:
   bool parseDirectiveCFISignalFrame(SMLoc DirectiveLoc);
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
   bool parseDirectiveCFILabel(SMLoc DirectiveLoc);
+  bool parseDirectiveCFIValOffset(SMLoc DirectiveLoc);
 
   // macro directives
   bool parseDirectivePurgeMacro(SMLoc DirectiveLoc);
@@ -950,12 +952,6 @@ bool AsmParser::enabledGenDwarfForAssembly() {
   // the assembler source was produced with debug info already) then emit one
   // describing the assembler source file itself.
   if (getContext().getGenDwarfFileNumber() == 0) {
-    // Use the first #line directive for this, if any. It's preprocessed, so
-    // there is no checksum, and of course no source directive.
-    if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(
-          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
-          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -1044,7 +1040,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Check to see that all assembler local symbols were actually defined.
   // Targets that don't do subsections via symbols may not want this, though,
   // so conservatively exclude them. Only do this if we're finalizing, though,
-  // as otherwise we won't necessarilly have seen everything yet.
+  // as otherwise we won't necessarily have seen everything yet.
   if (!NoFinalize) {
     if (MAI.hasSubsectionsViaSymbols()) {
       for (const auto &TableEntry : getContext().getSymbols()) {
@@ -1185,7 +1181,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       if (getTok().is(AsmToken::Dollar) || getTok().is(AsmToken::Star)) {
         bool ShouldGenerateTempSymbol = false;
         if ((getTok().is(AsmToken::Dollar) && MAI.getDollarIsPC()) ||
-            (getTok().is(AsmToken::Star) && MAI.getStarIsPC()))
+            (getTok().is(AsmToken::Star) && MAI.isHLASM()))
           ShouldGenerateTempSymbol = true;
 
         if (!ShouldGenerateTempSymbol)
@@ -1252,8 +1248,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().getOrCreateSymbol(
-          MAI.shouldEmitLabelsInUpperCase() ? SymbolName.upper() : SymbolName);
+      Sym = getContext().getOrCreateSymbol(MAI.isHLASM() ? SymbolName.upper()
+                                                         : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -1316,7 +1312,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     return false;
   }
   case AsmToken::Dot: {
-    if (!MAI.getDotIsPC())
+    if (MAI.isHLASM())
       return TokError("cannot use . as current PC");
 
     // This is a '.' reference, which references the current PC.  Emit a
@@ -2232,6 +2228,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIWindowSave(IDLoc);
     case DK_CFI_LABEL:
       return parseDirectiveCFILabel(IDLoc);
+    case DK_CFI_VAL_OFFSET:
+      return parseDirectiveCFIValOffset(IDLoc);
     case DK_MACROS_ON:
     case DK_MACROS_OFF:
       return parseDirectiveMacrosOnOff(IDVal);
@@ -2436,8 +2434,20 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
   CppHashInfo.Filename = Filename;
   CppHashInfo.LineNumber = LineNumber;
   CppHashInfo.Buf = CurBuffer;
-  if (FirstCppHashFilename.empty())
-    FirstCppHashFilename = Filename;
+  if (!HadCppHashFilename) {
+    HadCppHashFilename = true;
+    // If we haven't encountered any .file directives, then the first #line
+    // directive describes the "root" file and directory of the compilation
+    // unit.
+    if (getContext().getGenDwarfForAssembly() &&
+        getContext().getGenDwarfFileNumber() == 0) {
+      // It's preprocessed, so there is no checksum, and of course no source
+      // directive.
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), Filename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
+    }
+  }
   return false;
 }
 
@@ -3037,7 +3047,11 @@ bool AsmParser::parseEscapedString(std::string &Data) {
   StringRef Str = getTok().getStringContents();
   for (unsigned i = 0, e = Str.size(); i != e; ++i) {
     if (Str[i] != '\\') {
-      if (Str[i] == '\n') {
+      if ((Str[i] == '\n') || (Str[i] == '\r')) {
+        // Don't double-warn for Windows newlines.
+        if ((Str[i] == '\n') && (i > 0) && (Str[i - 1] == '\r'))
+          continue;
+
         SMLoc NewlineLoc = SMLoc::getFromPointer(Str.data() + i);
         if (Warning(NewlineLoc, "unterminated string; newline inserted"))
           return true;
@@ -4527,6 +4541,20 @@ bool AsmParser::parseDirectiveCFILabel(SMLoc Loc) {
   return false;
 }
 
+/// parseDirectiveCFIValOffset
+/// ::= .cfi_val_offset register, offset
+bool AsmParser::parseDirectiveCFIValOffset(SMLoc DirectiveLoc) {
+  int64_t Register = 0;
+  int64_t Offset = 0;
+
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(Offset) || parseEOL())
+    return true;
+
+  getStreamer().emitCFIValOffset(Register, Offset, DirectiveLoc);
+  return false;
+}
+
 /// parseDirectiveAltmacro
 /// ::= .altmacro
 /// ::= .noaltmacro
@@ -5599,6 +5627,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_label"] = DK_CFI_LABEL;
   DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
   DirectiveKindMap[".cfi_mte_tagged_frame"] = DK_CFI_MTE_TAGGED_FRAME;
+  DirectiveKindMap[".cfi_val_offset"] = DK_CFI_VAL_OFFSET;
   DirectiveKindMap[".macros_on"] = DK_MACROS_ON;
   DirectiveKindMap[".macros_off"] = DK_MACROS_OFF;
   DirectiveKindMap[".macro"] = DK_MACRO;
@@ -6002,7 +6031,7 @@ bool AsmParser::parseMSInlineAsm(
     SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
     SmallVectorImpl<std::string> &Constraints,
     SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
-    const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) {
+    MCInstPrinter *IP, MCAsmParserSemaCallback &SI) {
   SmallVector<void *, 4> InputDecls;
   SmallVector<void *, 4> OutputDecls;
   SmallVector<bool, 4> InputDeclsAddressOf;
@@ -6264,7 +6293,7 @@ bool AsmParser::parseMSInlineAsm(
   if (AsmStart != AsmEnd)
     OS << StringRef(AsmStart, AsmEnd - AsmStart);
 
-  AsmString = AsmStringIR;
+  AsmString = std::move(AsmStringIR);
   return false;
 }
 
@@ -6293,9 +6322,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
                  "Cannot have just a label for an HLASM inline asm statement");
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(
-      getContext().getAsmInfo()->shouldEmitLabelsInUpperCase()
-          ? LabelVal.upper()
-          : LabelVal);
+      getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
 
   getTargetParser().doBeforeLabelEmit(Sym, LabelLoc);
 
@@ -6394,33 +6421,6 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
 namespace llvm {
 namespace MCParserUtils {
 
-/// Returns whether the given symbol is used anywhere in the given expression,
-/// or subexpressions.
-static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
-  switch (Value->getKind()) {
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(Value);
-    return isSymbolUsedInExpression(Sym, BE->getLHS()) ||
-           isSymbolUsedInExpression(Sym, BE->getRHS());
-  }
-  case MCExpr::Target:
-  case MCExpr::Constant:
-    return false;
-  case MCExpr::SymbolRef: {
-    const MCSymbol &S =
-        static_cast<const MCSymbolRefExpr *>(Value)->getSymbol();
-    if (S.isVariable() && !S.isWeakExternal())
-      return isSymbolUsedInExpression(Sym, S.getVariableValue());
-    return &S == Sym;
-  }
-  case MCExpr::Unary:
-    return isSymbolUsedInExpression(
-        Sym, static_cast<const MCUnaryExpr *>(Value)->getSubExpr());
-  }
-
-  llvm_unreachable("Unknown expr kind!");
-}
-
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Sym,
                                const MCExpr *&Value) {
@@ -6445,7 +6445,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     //
     // FIXME: Diagnostics. Note the location of the definition as a label.
     // FIXME: Diagnose assignment to protected identifier (e.g., register name).
-    if (isSymbolUsedInExpression(Sym, Value))
+    if (Value->isSymbolUsedInExpression(Sym))
       return Parser.Error(EqualLoc, "Recursive use of '" + Name + "'");
     else if (Sym->isUndefined(/*SetUsed*/ false) && !Sym->isUsed() &&
              !Sym->isVariable())

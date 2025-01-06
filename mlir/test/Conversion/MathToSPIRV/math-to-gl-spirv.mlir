@@ -156,7 +156,13 @@ func.func @ctlz_vector2(%val: vector<2xi32>) -> vector<2xi32> {
 func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
   // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
   // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
-  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[F1:.+]] = spirv.Constant 1.000000e+00 : f32
+  // CHECK: %[[REM:.+]] = spirv.FRem %[[RHS]], %[[F1]] : f32
+  // CHECK: %[[IS_FRACTION:.+]] = spirv.FOrdNotEqual %[[REM]], %[[F0]] : f32
+  // CHECK: %[[AND:.+]] = spirv.LogicalAnd %[[IS_FRACTION]], %[[LT]] : i1
+  // CHECK: %[[NAN:.+]] = spirv.Constant 0x7FC00000 : f32
+  // CHECK: %[[NEW_LHS:.+]] = spirv.Select %[[AND]], %[[NAN]], %[[LHS]] : i1, f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[NEW_LHS]] : f32
   // CHECK: %[[IRHS:.+]] = spirv.ConvertFToS
   // CHECK: %[[CST1:.+]] = spirv.Constant 1 : i32
   // CHECK: %[[REM:.+]] = spirv.BitwiseAnd %[[IRHS]]
@@ -173,6 +179,10 @@ func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
 // CHECK-LABEL: @powf_vector
 func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
   // CHECK: spirv.FOrdLessThan
+  // CHECK: spirv.FRem
+  // CHECK: spirv.FOrdNotEqual
+  // CHECK: spirv.LogicalAnd
+  // CHECK: spirv.Select
   // CHECK: spirv.GL.FAbs
   // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
   // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>

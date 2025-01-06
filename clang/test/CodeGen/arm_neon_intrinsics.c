@@ -583,7 +583,7 @@ uint64x2_t test_vaddq_u64(uint64x2_t a, uint64x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VADDHN_I:%.*]] = add <8 x i16> %a, %b
-// CHECK:   [[VADDHN1_I:%.*]] = lshr <8 x i16> [[VADDHN_I]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VADDHN1_I:%.*]] = lshr <8 x i16> [[VADDHN_I]], splat (i16 8)
 // CHECK:   [[VADDHN2_I:%.*]] = trunc <8 x i16> [[VADDHN1_I]] to <8 x i8>
 // CHECK:   ret <8 x i8> [[VADDHN2_I]]
 int8x8_t test_vaddhn_s16(int16x8_t a, int16x8_t b) {
@@ -594,7 +594,7 @@ int8x8_t test_vaddhn_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VADDHN_I:%.*]] = add <4 x i32> %a, %b
-// CHECK:   [[VADDHN1_I:%.*]] = lshr <4 x i32> [[VADDHN_I]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VADDHN1_I:%.*]] = lshr <4 x i32> [[VADDHN_I]], splat (i32 16)
 // CHECK:   [[VADDHN2_I:%.*]] = trunc <4 x i32> [[VADDHN1_I]] to <4 x i16>
 // CHECK:   ret <4 x i16> [[VADDHN2_I]]
 int16x4_t test_vaddhn_s32(int32x4_t a, int32x4_t b) {
@@ -605,7 +605,7 @@ int16x4_t test_vaddhn_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VADDHN_I:%.*]] = add <2 x i64> %a, %b
-// CHECK:   [[VADDHN1_I:%.*]] = lshr <2 x i64> [[VADDHN_I]], <i64 32, i64 32>
+// CHECK:   [[VADDHN1_I:%.*]] = lshr <2 x i64> [[VADDHN_I]], splat (i64 32)
 // CHECK:   [[VADDHN2_I:%.*]] = trunc <2 x i64> [[VADDHN1_I]] to <2 x i32>
 // CHECK:   ret <2 x i32> [[VADDHN2_I]]
 int32x2_t test_vaddhn_s64(int64x2_t a, int64x2_t b) {
@@ -616,7 +616,7 @@ int32x2_t test_vaddhn_s64(int64x2_t a, int64x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VADDHN_I:%.*]] = add <8 x i16> %a, %b
-// CHECK:   [[VADDHN1_I:%.*]] = lshr <8 x i16> [[VADDHN_I]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VADDHN1_I:%.*]] = lshr <8 x i16> [[VADDHN_I]], splat (i16 8)
 // CHECK:   [[VADDHN2_I:%.*]] = trunc <8 x i16> [[VADDHN1_I]] to <8 x i8>
 // CHECK:   ret <8 x i8> [[VADDHN2_I]]
 uint8x8_t test_vaddhn_u16(uint16x8_t a, uint16x8_t b) {
@@ -627,7 +627,7 @@ uint8x8_t test_vaddhn_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VADDHN_I:%.*]] = add <4 x i32> %a, %b
-// CHECK:   [[VADDHN1_I:%.*]] = lshr <4 x i32> [[VADDHN_I]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VADDHN1_I:%.*]] = lshr <4 x i32> [[VADDHN_I]], splat (i32 16)
 // CHECK:   [[VADDHN2_I:%.*]] = trunc <4 x i32> [[VADDHN1_I]] to <4 x i16>
 // CHECK:   ret <4 x i16> [[VADDHN2_I]]
 uint16x4_t test_vaddhn_u32(uint32x4_t a, uint32x4_t b) {
@@ -638,7 +638,7 @@ uint16x4_t test_vaddhn_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VADDHN_I:%.*]] = add <2 x i64> %a, %b
-// CHECK:   [[VADDHN1_I:%.*]] = lshr <2 x i64> [[VADDHN_I]], <i64 32, i64 32>
+// CHECK:   [[VADDHN1_I:%.*]] = lshr <2 x i64> [[VADDHN_I]], splat (i64 32)
 // CHECK:   [[VADDHN2_I:%.*]] = trunc <2 x i64> [[VADDHN1_I]] to <2 x i32>
 // CHECK:   ret <2 x i32> [[VADDHN2_I]]
 uint32x2_t test_vaddhn_u64(uint64x2_t a, uint64x2_t b) {
@@ -872,7 +872,7 @@ uint64x2_t test_vandq_u64(uint64x2_t a, uint64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, splat (i8 -1)
 // CHECK:   [[AND_I:%.*]] = and <8 x i8> %a, [[NEG_I]]
 // CHECK:   ret <8 x i8> [[AND_I]]
 int8x8_t test_vbic_s8(int8x8_t a, int8x8_t b) {
@@ -880,7 +880,7 @@ int8x8_t test_vbic_s8(int8x8_t a, int8x8_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, splat (i16 -1)
 // CHECK:   [[AND_I:%.*]] = and <4 x i16> %a, [[NEG_I]]
 // CHECK:   ret <4 x i16> [[AND_I]]
 int16x4_t test_vbic_s16(int16x4_t a, int16x4_t b) {
@@ -888,7 +888,7 @@ int16x4_t test_vbic_s16(int16x4_t a, int16x4_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, splat (i32 -1)
 // CHECK:   [[AND_I:%.*]] = and <2 x i32> %a, [[NEG_I]]
 // CHECK:   ret <2 x i32> [[AND_I]]
 int32x2_t test_vbic_s32(int32x2_t a, int32x2_t b) {
@@ -896,7 +896,7 @@ int32x2_t test_vbic_s32(int32x2_t a, int32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_s64(
-// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, <i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, splat (i64 -1)
 // CHECK:   [[AND_I:%.*]] = and <1 x i64> %a, [[NEG_I]]
 // CHECK:   ret <1 x i64> [[AND_I]]
 int64x1_t test_vbic_s64(int64x1_t a, int64x1_t b) {
@@ -904,7 +904,7 @@ int64x1_t test_vbic_s64(int64x1_t a, int64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, splat (i8 -1)
 // CHECK:   [[AND_I:%.*]] = and <8 x i8> %a, [[NEG_I]]
 // CHECK:   ret <8 x i8> [[AND_I]]
 uint8x8_t test_vbic_u8(uint8x8_t a, uint8x8_t b) {
@@ -912,7 +912,7 @@ uint8x8_t test_vbic_u8(uint8x8_t a, uint8x8_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, splat (i16 -1)
 // CHECK:   [[AND_I:%.*]] = and <4 x i16> %a, [[NEG_I]]
 // CHECK:   ret <4 x i16> [[AND_I]]
 uint16x4_t test_vbic_u16(uint16x4_t a, uint16x4_t b) {
@@ -920,7 +920,7 @@ uint16x4_t test_vbic_u16(uint16x4_t a, uint16x4_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, splat (i32 -1)
 // CHECK:   [[AND_I:%.*]] = and <2 x i32> %a, [[NEG_I]]
 // CHECK:   ret <2 x i32> [[AND_I]]
 uint32x2_t test_vbic_u32(uint32x2_t a, uint32x2_t b) {
@@ -928,7 +928,7 @@ uint32x2_t test_vbic_u32(uint32x2_t a, uint32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vbic_u64(
-// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, <i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, splat (i64 -1)
 // CHECK:   [[AND_I:%.*]] = and <1 x i64> %a, [[NEG_I]]
 // CHECK:   ret <1 x i64> [[AND_I]]
 uint64x1_t test_vbic_u64(uint64x1_t a, uint64x1_t b) {
@@ -936,7 +936,7 @@ uint64x1_t test_vbic_u64(uint64x1_t a, uint64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, splat (i8 -1)
 // CHECK:   [[AND_I:%.*]] = and <16 x i8> %a, [[NEG_I]]
 // CHECK:   ret <16 x i8> [[AND_I]]
 int8x16_t test_vbicq_s8(int8x16_t a, int8x16_t b) {
@@ -944,7 +944,7 @@ int8x16_t test_vbicq_s8(int8x16_t a, int8x16_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, splat (i16 -1)
 // CHECK:   [[AND_I:%.*]] = and <8 x i16> %a, [[NEG_I]]
 // CHECK:   ret <8 x i16> [[AND_I]]
 int16x8_t test_vbicq_s16(int16x8_t a, int16x8_t b) {
@@ -952,7 +952,7 @@ int16x8_t test_vbicq_s16(int16x8_t a, int16x8_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, splat (i32 -1)
 // CHECK:   [[AND_I:%.*]] = and <4 x i32> %a, [[NEG_I]]
 // CHECK:   ret <4 x i32> [[AND_I]]
 int32x4_t test_vbicq_s32(int32x4_t a, int32x4_t b) {
@@ -960,7 +960,7 @@ int32x4_t test_vbicq_s32(int32x4_t a, int32x4_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_s64(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, <i64 -1, i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, splat (i64 -1)
 // CHECK:   [[AND_I:%.*]] = and <2 x i64> %a, [[NEG_I]]
 // CHECK:   ret <2 x i64> [[AND_I]]
 int64x2_t test_vbicq_s64(int64x2_t a, int64x2_t b) {
@@ -968,7 +968,7 @@ int64x2_t test_vbicq_s64(int64x2_t a, int64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, splat (i8 -1)
 // CHECK:   [[AND_I:%.*]] = and <16 x i8> %a, [[NEG_I]]
 // CHECK:   ret <16 x i8> [[AND_I]]
 uint8x16_t test_vbicq_u8(uint8x16_t a, uint8x16_t b) {
@@ -976,7 +976,7 @@ uint8x16_t test_vbicq_u8(uint8x16_t a, uint8x16_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, splat (i16 -1)
 // CHECK:   [[AND_I:%.*]] = and <8 x i16> %a, [[NEG_I]]
 // CHECK:   ret <8 x i16> [[AND_I]]
 uint16x8_t test_vbicq_u16(uint16x8_t a, uint16x8_t b) {
@@ -984,7 +984,7 @@ uint16x8_t test_vbicq_u16(uint16x8_t a, uint16x8_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, splat (i32 -1)
 // CHECK:   [[AND_I:%.*]] = and <4 x i32> %a, [[NEG_I]]
 // CHECK:   ret <4 x i32> [[AND_I]]
 uint32x4_t test_vbicq_u32(uint32x4_t a, uint32x4_t b) {
@@ -992,7 +992,7 @@ uint32x4_t test_vbicq_u32(uint32x4_t a, uint32x4_t b) {
 }
 
 // CHECK-LABEL: @test_vbicq_u64(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, <i64 -1, i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, splat (i64 -1)
 // CHECK:   [[AND_I:%.*]] = and <2 x i64> %a, [[NEG_I]]
 // CHECK:   ret <2 x i64> [[AND_I]]
 uint64x2_t test_vbicq_u64(uint64x2_t a, uint64x2_t b) {
@@ -8414,98 +8414,98 @@ uint32x4_t test_vmulq_n_u32(uint32x4_t a, uint32_t b) {
 }
 
 // CHECK-LABEL: @test_vmvn_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, splat (i8 -1)
 // CHECK:   ret <8 x i8> [[NEG_I]]
 int8x8_t test_vmvn_s8(int8x8_t a) {
   return vmvn_s8(a);
 }
 
 // CHECK-LABEL: @test_vmvn_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, splat (i16 -1)
 // CHECK:   ret <4 x i16> [[NEG_I]]
 int16x4_t test_vmvn_s16(int16x4_t a) {
   return vmvn_s16(a);
 }
 
 // CHECK-LABEL: @test_vmvn_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, splat (i32 -1)
 // CHECK:   ret <2 x i32> [[NEG_I]]
 int32x2_t test_vmvn_s32(int32x2_t a) {
   return vmvn_s32(a);
 }
 
 // CHECK-LABEL: @test_vmvn_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, splat (i8 -1)
 // CHECK:   ret <8 x i8> [[NEG_I]]
 uint8x8_t test_vmvn_u8(uint8x8_t a) {
   return vmvn_u8(a);
 }
 
 // CHECK-LABEL: @test_vmvn_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, splat (i16 -1)
 // CHECK:   ret <4 x i16> [[NEG_I]]
 uint16x4_t test_vmvn_u16(uint16x4_t a) {
   return vmvn_u16(a);
 }
 
 // CHECK-LABEL: @test_vmvn_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, splat (i32 -1)
 // CHECK:   ret <2 x i32> [[NEG_I]]
 uint32x2_t test_vmvn_u32(uint32x2_t a) {
   return vmvn_u32(a);
 }
 
 // CHECK-LABEL: @test_vmvn_p8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, splat (i8 -1)
 // CHECK:   ret <8 x i8> [[NEG_I]]
 poly8x8_t test_vmvn_p8(poly8x8_t a) {
   return vmvn_p8(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, splat (i8 -1)
 // CHECK:   ret <16 x i8> [[NEG_I]]
 int8x16_t test_vmvnq_s8(int8x16_t a) {
   return vmvnq_s8(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, splat (i16 -1)
 // CHECK:   ret <8 x i16> [[NEG_I]]
 int16x8_t test_vmvnq_s16(int16x8_t a) {
   return vmvnq_s16(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, splat (i32 -1)
 // CHECK:   ret <4 x i32> [[NEG_I]]
 int32x4_t test_vmvnq_s32(int32x4_t a) {
   return vmvnq_s32(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, splat (i8 -1)
 // CHECK:   ret <16 x i8> [[NEG_I]]
 uint8x16_t test_vmvnq_u8(uint8x16_t a) {
   return vmvnq_u8(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, splat (i16 -1)
 // CHECK:   ret <8 x i16> [[NEG_I]]
 uint16x8_t test_vmvnq_u16(uint16x8_t a) {
   return vmvnq_u16(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, splat (i32 -1)
 // CHECK:   ret <4 x i32> [[NEG_I]]
 uint32x4_t test_vmvnq_u32(uint32x4_t a) {
   return vmvnq_u32(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_p8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, splat (i8 -1)
 // CHECK:   ret <16 x i8> [[NEG_I]]
 poly8x16_t test_vmvnq_p8(poly8x16_t a) {
   return vmvnq_p8(a);
@@ -8568,7 +8568,7 @@ float32x4_t test_vnegq_f32(float32x4_t a) {
 }
 
 // CHECK-LABEL: @test_vorn_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, splat (i8 -1)
 // CHECK:   [[OR_I:%.*]] = or <8 x i8> %a, [[NEG_I]]
 // CHECK:   ret <8 x i8> [[OR_I]]
 int8x8_t test_vorn_s8(int8x8_t a, int8x8_t b) {
@@ -8576,7 +8576,7 @@ int8x8_t test_vorn_s8(int8x8_t a, int8x8_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, splat (i16 -1)
 // CHECK:   [[OR_I:%.*]] = or <4 x i16> %a, [[NEG_I]]
 // CHECK:   ret <4 x i16> [[OR_I]]
 int16x4_t test_vorn_s16(int16x4_t a, int16x4_t b) {
@@ -8584,7 +8584,7 @@ int16x4_t test_vorn_s16(int16x4_t a, int16x4_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, splat (i32 -1)
 // CHECK:   [[OR_I:%.*]] = or <2 x i32> %a, [[NEG_I]]
 // CHECK:   ret <2 x i32> [[OR_I]]
 int32x2_t test_vorn_s32(int32x2_t a, int32x2_t b) {
@@ -8592,7 +8592,7 @@ int32x2_t test_vorn_s32(int32x2_t a, int32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_s64(
-// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, <i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, splat (i64 -1)
 // CHECK:   [[OR_I:%.*]] = or <1 x i64> %a, [[NEG_I]]
 // CHECK:   ret <1 x i64> [[OR_I]]
 int64x1_t test_vorn_s64(int64x1_t a, int64x1_t b) {
@@ -8600,7 +8600,7 @@ int64x1_t test_vorn_s64(int64x1_t a, int64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %b, splat (i8 -1)
 // CHECK:   [[OR_I:%.*]] = or <8 x i8> %a, [[NEG_I]]
 // CHECK:   ret <8 x i8> [[OR_I]]
 uint8x8_t test_vorn_u8(uint8x8_t a, uint8x8_t b) {
@@ -8608,7 +8608,7 @@ uint8x8_t test_vorn_u8(uint8x8_t a, uint8x8_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %b, splat (i16 -1)
 // CHECK:   [[OR_I:%.*]] = or <4 x i16> %a, [[NEG_I]]
 // CHECK:   ret <4 x i16> [[OR_I]]
 uint16x4_t test_vorn_u16(uint16x4_t a, uint16x4_t b) {
@@ -8616,7 +8616,7 @@ uint16x4_t test_vorn_u16(uint16x4_t a, uint16x4_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %b, splat (i32 -1)
 // CHECK:   [[OR_I:%.*]] = or <2 x i32> %a, [[NEG_I]]
 // CHECK:   ret <2 x i32> [[OR_I]]
 uint32x2_t test_vorn_u32(uint32x2_t a, uint32x2_t b) {
@@ -8624,7 +8624,7 @@ uint32x2_t test_vorn_u32(uint32x2_t a, uint32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vorn_u64(
-// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, <i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <1 x i64> %b, splat (i64 -1)
 // CHECK:   [[OR_I:%.*]] = or <1 x i64> %a, [[NEG_I]]
 // CHECK:   ret <1 x i64> [[OR_I]]
 uint64x1_t test_vorn_u64(uint64x1_t a, uint64x1_t b) {
@@ -8632,7 +8632,7 @@ uint64x1_t test_vorn_u64(uint64x1_t a, uint64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, splat (i8 -1)
 // CHECK:   [[OR_I:%.*]] = or <16 x i8> %a, [[NEG_I]]
 // CHECK:   ret <16 x i8> [[OR_I]]
 int8x16_t test_vornq_s8(int8x16_t a, int8x16_t b) {
@@ -8640,7 +8640,7 @@ int8x16_t test_vornq_s8(int8x16_t a, int8x16_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, splat (i16 -1)
 // CHECK:   [[OR_I:%.*]] = or <8 x i16> %a, [[NEG_I]]
 // CHECK:   ret <8 x i16> [[OR_I]]
 int16x8_t test_vornq_s16(int16x8_t a, int16x8_t b) {
@@ -8648,7 +8648,7 @@ int16x8_t test_vornq_s16(int16x8_t a, int16x8_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, splat (i32 -1)
 // CHECK:   [[OR_I:%.*]] = or <4 x i32> %a, [[NEG_I]]
 // CHECK:   ret <4 x i32> [[OR_I]]
 int32x4_t test_vornq_s32(int32x4_t a, int32x4_t b) {
@@ -8656,7 +8656,7 @@ int32x4_t test_vornq_s32(int32x4_t a, int32x4_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_s64(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, <i64 -1, i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, splat (i64 -1)
 // CHECK:   [[OR_I:%.*]] = or <2 x i64> %a, [[NEG_I]]
 // CHECK:   ret <2 x i64> [[OR_I]]
 int64x2_t test_vornq_s64(int64x2_t a, int64x2_t b) {
@@ -8664,7 +8664,7 @@ int64x2_t test_vornq_s64(int64x2_t a, int64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %b, splat (i8 -1)
 // CHECK:   [[OR_I:%.*]] = or <16 x i8> %a, [[NEG_I]]
 // CHECK:   ret <16 x i8> [[OR_I]]
 uint8x16_t test_vornq_u8(uint8x16_t a, uint8x16_t b) {
@@ -8672,7 +8672,7 @@ uint8x16_t test_vornq_u8(uint8x16_t a, uint8x16_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %b, splat (i16 -1)
 // CHECK:   [[OR_I:%.*]] = or <8 x i16> %a, [[NEG_I]]
 // CHECK:   ret <8 x i16> [[OR_I]]
 uint16x8_t test_vornq_u16(uint16x8_t a, uint16x8_t b) {
@@ -8680,7 +8680,7 @@ uint16x8_t test_vornq_u16(uint16x8_t a, uint16x8_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %b, splat (i32 -1)
 // CHECK:   [[OR_I:%.*]] = or <4 x i32> %a, [[NEG_I]]
 // CHECK:   ret <4 x i32> [[OR_I]]
 uint32x4_t test_vornq_u32(uint32x4_t a, uint32x4_t b) {
@@ -8688,7 +8688,7 @@ uint32x4_t test_vornq_u32(uint32x4_t a, uint32x4_t b) {
 }
 
 // CHECK-LABEL: @test_vornq_u64(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, <i64 -1, i64 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i64> %b, splat (i64 -1)
 // CHECK:   [[OR_I:%.*]] = or <2 x i64> %a, [[NEG_I]]
 // CHECK:   ret <2 x i64> [[OR_I]]
 uint64x2_t test_vornq_u64(uint64x2_t a, uint64x2_t b) {
@@ -10200,7 +10200,7 @@ uint64x2_t test_vqrshlq_u64(uint64x2_t a, int64x2_t b) {
 // CHECK-LABEL: @test_vqrshrn_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqrshiftns.v8i8(<8 x i16> [[VQRSHRN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqrshiftns.v8i8(<8 x i16> [[VQRSHRN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VQRSHRN_N1]]
 int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
   return vqrshrn_n_s16(a, 1);
@@ -10209,7 +10209,7 @@ int8x8_t test_vqrshrn_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vqrshrn_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqrshiftns.v4i16(<4 x i32> [[VQRSHRN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqrshiftns.v4i16(<4 x i32> [[VQRSHRN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VQRSHRN_N1]]
 int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
   return vqrshrn_n_s32(a, 1);
@@ -10218,7 +10218,7 @@ int16x4_t test_vqrshrn_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vqrshrn_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqrshiftns.v2i32(<2 x i64> [[VQRSHRN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqrshiftns.v2i32(<2 x i64> [[VQRSHRN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VQRSHRN_N1]]
 int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
   return vqrshrn_n_s64(a, 1);
@@ -10227,7 +10227,7 @@ int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
 // CHECK-LABEL: @test_vqrshrn_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqrshiftnu.v8i8(<8 x i16> [[VQRSHRN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VQRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqrshiftnu.v8i8(<8 x i16> [[VQRSHRN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VQRSHRN_N1]]
 uint8x8_t test_vqrshrn_n_u16(uint16x8_t a) {
   return vqrshrn_n_u16(a, 1);
@@ -10236,7 +10236,7 @@ uint8x8_t test_vqrshrn_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vqrshrn_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqrshiftnu.v4i16(<4 x i32> [[VQRSHRN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VQRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqrshiftnu.v4i16(<4 x i32> [[VQRSHRN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VQRSHRN_N1]]
 uint16x4_t test_vqrshrn_n_u32(uint32x4_t a) {
   return vqrshrn_n_u32(a, 1);
@@ -10245,7 +10245,7 @@ uint16x4_t test_vqrshrn_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vqrshrn_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqrshiftnu.v2i32(<2 x i64> [[VQRSHRN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VQRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqrshiftnu.v2i32(<2 x i64> [[VQRSHRN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VQRSHRN_N1]]
 uint32x2_t test_vqrshrn_n_u64(uint64x2_t a) {
   return vqrshrn_n_u64(a, 1);
@@ -10254,7 +10254,7 @@ uint32x2_t test_vqrshrn_n_u64(uint64x2_t a) {
 // CHECK-LABEL: @test_vqrshrun_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQRSHRUN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqrshiftnsu.v8i8(<8 x i16> [[VQRSHRUN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VQRSHRUN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqrshiftnsu.v8i8(<8 x i16> [[VQRSHRUN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VQRSHRUN_N1]]
 uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
   return vqrshrun_n_s16(a, 1);
@@ -10263,7 +10263,7 @@ uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vqrshrun_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQRSHRUN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqrshiftnsu.v4i16(<4 x i32> [[VQRSHRUN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VQRSHRUN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqrshiftnsu.v4i16(<4 x i32> [[VQRSHRUN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VQRSHRUN_N1]]
 uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
   return vqrshrun_n_s32(a, 1);
@@ -10272,7 +10272,7 @@ uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vqrshrun_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQRSHRUN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqrshiftnsu.v2i32(<2 x i64> [[VQRSHRUN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VQRSHRUN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqrshiftnsu.v2i32(<2 x i64> [[VQRSHRUN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VQRSHRUN_N1]]
 uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
   return vqrshrun_n_s64(a, 1);
@@ -10427,7 +10427,7 @@ uint64x2_t test_vqshlq_u64(uint64x2_t a, int64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vqshlu_n_s8(
-// CHECK:   [[VQSHLU_N:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftsu.v8i8(<8 x i8> %a, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VQSHLU_N:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftsu.v8i8(<8 x i8> %a, <8 x i8> splat (i8 1)
 // CHECK:   ret <8 x i8> [[VQSHLU_N]]
 uint8x8_t test_vqshlu_n_s8(int8x8_t a) {
   return vqshlu_n_s8(a, 1);
@@ -10436,7 +10436,7 @@ uint8x8_t test_vqshlu_n_s8(int8x8_t a) {
 // CHECK-LABEL: @test_vqshlu_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[VQSHLU_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VQSHLU_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftsu.v4i16(<4 x i16> [[VQSHLU_N]], <4 x i16> <i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VQSHLU_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftsu.v4i16(<4 x i16> [[VQSHLU_N]], <4 x i16> splat (i16 1)
 // CHECK:   ret <4 x i16> [[VQSHLU_N1]]
 uint16x4_t test_vqshlu_n_s16(int16x4_t a) {
   return vqshlu_n_s16(a, 1);
@@ -10445,7 +10445,7 @@ uint16x4_t test_vqshlu_n_s16(int16x4_t a) {
 // CHECK-LABEL: @test_vqshlu_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VQSHLU_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VQSHLU_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftsu.v2i32(<2 x i32> [[VQSHLU_N]], <2 x i32> <i32 1, i32 1>)
+// CHECK:   [[VQSHLU_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftsu.v2i32(<2 x i32> [[VQSHLU_N]], <2 x i32> splat (i32 1))
 // CHECK:   ret <2 x i32> [[VQSHLU_N1]]
 uint32x2_t test_vqshlu_n_s32(int32x2_t a) {
   return vqshlu_n_s32(a, 1);
@@ -10454,14 +10454,14 @@ uint32x2_t test_vqshlu_n_s32(int32x2_t a) {
 // CHECK-LABEL: @test_vqshlu_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[VQSHLU_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VQSHLU_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vqshiftsu.v1i64(<1 x i64> [[VQSHLU_N]], <1 x i64> <i64 1>)
+// CHECK:   [[VQSHLU_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vqshiftsu.v1i64(<1 x i64> [[VQSHLU_N]], <1 x i64> splat (i64 1))
 // CHECK:   ret <1 x i64> [[VQSHLU_N1]]
 uint64x1_t test_vqshlu_n_s64(int64x1_t a) {
   return vqshlu_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vqshluq_n_s8(
-// CHECK:   [[VQSHLU_N:%.*]] = call <16 x i8> @llvm.arm.neon.vqshiftsu.v16i8(<16 x i8> %a, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VQSHLU_N:%.*]] = call <16 x i8> @llvm.arm.neon.vqshiftsu.v16i8(<16 x i8> %a, <16 x i8> splat (i8 1))
 // CHECK:   ret <16 x i8> [[VQSHLU_N]]
 uint8x16_t test_vqshluq_n_s8(int8x16_t a) {
   return vqshluq_n_s8(a, 1);
@@ -10470,7 +10470,7 @@ uint8x16_t test_vqshluq_n_s8(int8x16_t a) {
 // CHECK-LABEL: @test_vqshluq_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQSHLU_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQSHLU_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vqshiftsu.v8i16(<8 x i16> [[VQSHLU_N]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VQSHLU_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vqshiftsu.v8i16(<8 x i16> [[VQSHLU_N]], <8 x i16> splat (i16 1))
 // CHECK:   ret <8 x i16> [[VQSHLU_N1]]
 uint16x8_t test_vqshluq_n_s16(int16x8_t a) {
   return vqshluq_n_s16(a, 1);
@@ -10479,7 +10479,7 @@ uint16x8_t test_vqshluq_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vqshluq_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQSHLU_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQSHLU_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vqshiftsu.v4i32(<4 x i32> [[VQSHLU_N]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+// CHECK:   [[VQSHLU_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vqshiftsu.v4i32(<4 x i32> [[VQSHLU_N]], <4 x i32> splat (i32 1))
 // CHECK:   ret <4 x i32> [[VQSHLU_N1]]
 uint32x4_t test_vqshluq_n_s32(int32x4_t a) {
   return vqshluq_n_s32(a, 1);
@@ -10488,14 +10488,14 @@ uint32x4_t test_vqshluq_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vqshluq_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQSHLU_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQSHLU_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vqshiftsu.v2i64(<2 x i64> [[VQSHLU_N]], <2 x i64> <i64 1, i64 1>)
+// CHECK:   [[VQSHLU_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vqshiftsu.v2i64(<2 x i64> [[VQSHLU_N]], <2 x i64> splat (i64 1))
 // CHECK:   ret <2 x i64> [[VQSHLU_N1]]
 uint64x2_t test_vqshluq_n_s64(int64x2_t a) {
   return vqshluq_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vqshl_n_s8(
-// CHECK:   [[VQSHL_N:%.*]] = call <8 x i8> @llvm.arm.neon.vqshifts.v8i8(<8 x i8> %a, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VQSHL_N:%.*]] = call <8 x i8> @llvm.arm.neon.vqshifts.v8i8(<8 x i8> %a, <8 x i8> splat (i8 1))
 // CHECK:   ret <8 x i8> [[VQSHL_N]]
 int8x8_t test_vqshl_n_s8(int8x8_t a) {
   return vqshl_n_s8(a, 1);
@@ -10504,7 +10504,7 @@ int8x8_t test_vqshl_n_s8(int8x8_t a) {
 // CHECK-LABEL: @test_vqshl_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshifts.v4i16(<4 x i16> [[VQSHL_N]], <4 x i16> <i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshifts.v4i16(<4 x i16> [[VQSHL_N]], <4 x i16> splat (i16 1))
 // CHECK:   ret <4 x i16> [[VQSHL_N1]]
 int16x4_t test_vqshl_n_s16(int16x4_t a) {
   return vqshl_n_s16(a, 1);
@@ -10513,7 +10513,7 @@ int16x4_t test_vqshl_n_s16(int16x4_t a) {
 // CHECK-LABEL: @test_vqshl_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshifts.v2i32(<2 x i32> [[VQSHL_N]], <2 x i32> <i32 1, i32 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshifts.v2i32(<2 x i32> [[VQSHL_N]], <2 x i32> splat (i32 1))
 // CHECK:   ret <2 x i32> [[VQSHL_N1]]
 int32x2_t test_vqshl_n_s32(int32x2_t a) {
   return vqshl_n_s32(a, 1);
@@ -10522,14 +10522,14 @@ int32x2_t test_vqshl_n_s32(int32x2_t a) {
 // CHECK-LABEL: @test_vqshl_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VQSHL_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vqshifts.v1i64(<1 x i64> [[VQSHL_N]], <1 x i64> <i64 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vqshifts.v1i64(<1 x i64> [[VQSHL_N]], <1 x i64> splat (i64 1))
 // CHECK:   ret <1 x i64> [[VQSHL_N1]]
 int64x1_t test_vqshl_n_s64(int64x1_t a) {
   return vqshl_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vqshl_n_u8(
-// CHECK:   [[VQSHL_N:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftu.v8i8(<8 x i8> %a, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VQSHL_N:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftu.v8i8(<8 x i8> %a, <8 x i8> splat (i8 1))
 // CHECK:   ret <8 x i8> [[VQSHL_N]]
 uint8x8_t test_vqshl_n_u8(uint8x8_t a) {
   return vqshl_n_u8(a, 1);
@@ -10538,7 +10538,7 @@ uint8x8_t test_vqshl_n_u8(uint8x8_t a) {
 // CHECK-LABEL: @test_vqshl_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftu.v4i16(<4 x i16> [[VQSHL_N]], <4 x i16> <i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftu.v4i16(<4 x i16> [[VQSHL_N]], <4 x i16> splat (i16 1))
 // CHECK:   ret <4 x i16> [[VQSHL_N1]]
 uint16x4_t test_vqshl_n_u16(uint16x4_t a) {
   return vqshl_n_u16(a, 1);
@@ -10547,7 +10547,7 @@ uint16x4_t test_vqshl_n_u16(uint16x4_t a) {
 // CHECK-LABEL: @test_vqshl_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftu.v2i32(<2 x i32> [[VQSHL_N]], <2 x i32> <i32 1, i32 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftu.v2i32(<2 x i32> [[VQSHL_N]], <2 x i32> splat (i32 1))
 // CHECK:   ret <2 x i32> [[VQSHL_N1]]
 uint32x2_t test_vqshl_n_u32(uint32x2_t a) {
   return vqshl_n_u32(a, 1);
@@ -10556,14 +10556,14 @@ uint32x2_t test_vqshl_n_u32(uint32x2_t a) {
 // CHECK-LABEL: @test_vqshl_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VQSHL_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vqshiftu.v1i64(<1 x i64> [[VQSHL_N]], <1 x i64> <i64 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vqshiftu.v1i64(<1 x i64> [[VQSHL_N]], <1 x i64> splat (i64 1))
 // CHECK:   ret <1 x i64> [[VQSHL_N1]]
 uint64x1_t test_vqshl_n_u64(uint64x1_t a) {
   return vqshl_n_u64(a, 1);
 }
 
 // CHECK-LABEL: @test_vqshlq_n_s8(
-// CHECK:   [[VQSHL_N:%.*]] = call <16 x i8> @llvm.arm.neon.vqshifts.v16i8(<16 x i8> %a, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VQSHL_N:%.*]] = call <16 x i8> @llvm.arm.neon.vqshifts.v16i8(<16 x i8> %a, <16 x i8> splat (i8 1))
 // CHECK:   ret <16 x i8> [[VQSHL_N]]
 int8x16_t test_vqshlq_n_s8(int8x16_t a) {
   return vqshlq_n_s8(a, 1);
@@ -10572,7 +10572,7 @@ int8x16_t test_vqshlq_n_s8(int8x16_t a) {
 // CHECK-LABEL: @test_vqshlq_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQSHL_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vqshifts.v8i16(<8 x i16> [[VQSHL_N]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vqshifts.v8i16(<8 x i16> [[VQSHL_N]], <8 x i16> splat (i16 1))
 // CHECK:   ret <8 x i16> [[VQSHL_N1]]
 int16x8_t test_vqshlq_n_s16(int16x8_t a) {
   return vqshlq_n_s16(a, 1);
@@ -10581,7 +10581,7 @@ int16x8_t test_vqshlq_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vqshlq_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vqshifts.v4i32(<4 x i32> [[VQSHL_N]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vqshifts.v4i32(<4 x i32> [[VQSHL_N]], <4 x i32> splat (i32 1))
 // CHECK:   ret <4 x i32> [[VQSHL_N1]]
 int32x4_t test_vqshlq_n_s32(int32x4_t a) {
   return vqshlq_n_s32(a, 1);
@@ -10590,14 +10590,14 @@ int32x4_t test_vqshlq_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vqshlq_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vqshifts.v2i64(<2 x i64> [[VQSHL_N]], <2 x i64> <i64 1, i64 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vqshifts.v2i64(<2 x i64> [[VQSHL_N]], <2 x i64> splat (i64 1))
 // CHECK:   ret <2 x i64> [[VQSHL_N1]]
 int64x2_t test_vqshlq_n_s64(int64x2_t a) {
   return vqshlq_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vqshlq_n_u8(
-// CHECK:   [[VQSHL_N:%.*]] = call <16 x i8> @llvm.arm.neon.vqshiftu.v16i8(<16 x i8> %a, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VQSHL_N:%.*]] = call <16 x i8> @llvm.arm.neon.vqshiftu.v16i8(<16 x i8> %a, <16 x i8> splat (i8 1))
 // CHECK:   ret <16 x i8> [[VQSHL_N]]
 uint8x16_t test_vqshlq_n_u8(uint8x16_t a) {
   return vqshlq_n_u8(a, 1);
@@ -10606,7 +10606,7 @@ uint8x16_t test_vqshlq_n_u8(uint8x16_t a) {
 // CHECK-LABEL: @test_vqshlq_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQSHL_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vqshiftu.v8i16(<8 x i16> [[VQSHL_N]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vqshiftu.v8i16(<8 x i16> [[VQSHL_N]], <8 x i16> splat (i16 1))
 // CHECK:   ret <8 x i16> [[VQSHL_N1]]
 uint16x8_t test_vqshlq_n_u16(uint16x8_t a) {
   return vqshlq_n_u16(a, 1);
@@ -10615,7 +10615,7 @@ uint16x8_t test_vqshlq_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vqshlq_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vqshiftu.v4i32(<4 x i32> [[VQSHL_N]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vqshiftu.v4i32(<4 x i32> [[VQSHL_N]], <4 x i32> splat (i32 1))
 // CHECK:   ret <4 x i32> [[VQSHL_N1]]
 uint32x4_t test_vqshlq_n_u32(uint32x4_t a) {
   return vqshlq_n_u32(a, 1);
@@ -10624,7 +10624,7 @@ uint32x4_t test_vqshlq_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vqshlq_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQSHL_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vqshiftu.v2i64(<2 x i64> [[VQSHL_N]], <2 x i64> <i64 1, i64 1>)
+// CHECK:   [[VQSHL_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vqshiftu.v2i64(<2 x i64> [[VQSHL_N]], <2 x i64> splat (i64 1))
 // CHECK:   ret <2 x i64> [[VQSHL_N1]]
 uint64x2_t test_vqshlq_n_u64(uint64x2_t a) {
   return vqshlq_n_u64(a, 1);
@@ -10633,7 +10633,7 @@ uint64x2_t test_vqshlq_n_u64(uint64x2_t a) {
 // CHECK-LABEL: @test_vqshrn_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftns.v8i8(<8 x i16> [[VQSHRN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftns.v8i8(<8 x i16> [[VQSHRN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VQSHRN_N1]]
 int8x8_t test_vqshrn_n_s16(int16x8_t a) {
   return vqshrn_n_s16(a, 1);
@@ -10642,7 +10642,7 @@ int8x8_t test_vqshrn_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vqshrn_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftns.v4i16(<4 x i32> [[VQSHRN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftns.v4i16(<4 x i32> [[VQSHRN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VQSHRN_N1]]
 int16x4_t test_vqshrn_n_s32(int32x4_t a) {
   return vqshrn_n_s32(a, 1);
@@ -10651,7 +10651,7 @@ int16x4_t test_vqshrn_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vqshrn_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftns.v2i32(<2 x i64> [[VQSHRN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftns.v2i32(<2 x i64> [[VQSHRN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VQSHRN_N1]]
 int32x2_t test_vqshrn_n_s64(int64x2_t a) {
   return vqshrn_n_s64(a, 1);
@@ -10660,7 +10660,7 @@ int32x2_t test_vqshrn_n_s64(int64x2_t a) {
 // CHECK-LABEL: @test_vqshrn_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftnu.v8i8(<8 x i16> [[VQSHRN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VQSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftnu.v8i8(<8 x i16> [[VQSHRN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VQSHRN_N1]]
 uint8x8_t test_vqshrn_n_u16(uint16x8_t a) {
   return vqshrn_n_u16(a, 1);
@@ -10669,7 +10669,7 @@ uint8x8_t test_vqshrn_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vqshrn_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftnu.v4i16(<4 x i32> [[VQSHRN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VQSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftnu.v4i16(<4 x i32> [[VQSHRN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VQSHRN_N1]]
 uint16x4_t test_vqshrn_n_u32(uint32x4_t a) {
   return vqshrn_n_u32(a, 1);
@@ -10678,7 +10678,7 @@ uint16x4_t test_vqshrn_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vqshrn_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftnu.v2i32(<2 x i64> [[VQSHRN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VQSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftnu.v2i32(<2 x i64> [[VQSHRN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VQSHRN_N1]]
 uint32x2_t test_vqshrn_n_u64(uint64x2_t a) {
   return vqshrn_n_u64(a, 1);
@@ -10687,7 +10687,7 @@ uint32x2_t test_vqshrn_n_u64(uint64x2_t a) {
 // CHECK-LABEL: @test_vqshrun_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VQSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VQSHRUN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftnsu.v8i8(<8 x i16> [[VQSHRUN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VQSHRUN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vqshiftnsu.v8i8(<8 x i16> [[VQSHRUN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VQSHRUN_N1]]
 uint8x8_t test_vqshrun_n_s16(int16x8_t a) {
   return vqshrun_n_s16(a, 1);
@@ -10696,7 +10696,7 @@ uint8x8_t test_vqshrun_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vqshrun_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VQSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VQSHRUN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftnsu.v4i16(<4 x i32> [[VQSHRUN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VQSHRUN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vqshiftnsu.v4i16(<4 x i32> [[VQSHRUN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VQSHRUN_N1]]
 uint16x4_t test_vqshrun_n_s32(int32x4_t a) {
   return vqshrun_n_s32(a, 1);
@@ -10705,7 +10705,7 @@ uint16x4_t test_vqshrun_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vqshrun_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VQSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VQSHRUN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftnsu.v2i32(<2 x i64> [[VQSHRUN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VQSHRUN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vqshiftnsu.v2i32(<2 x i64> [[VQSHRUN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VQSHRUN_N1]]
 uint32x2_t test_vqshrun_n_s64(int64x2_t a) {
   return vqshrun_n_s64(a, 1);
@@ -13296,7 +13296,7 @@ uint64x2_t test_vrshlq_u64(uint64x2_t a, int64x2_t b) {
 // CHECK-LABEL: @test_vrshrn_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftn.v8i8(<8 x i16> [[VRSHRN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftn.v8i8(<8 x i16> [[VRSHRN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VRSHRN_N1]]
 int8x8_t test_vrshrn_n_s16(int16x8_t a) {
   return vrshrn_n_s16(a, 1);
@@ -13305,7 +13305,7 @@ int8x8_t test_vrshrn_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vrshrn_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftn.v4i16(<4 x i32> [[VRSHRN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftn.v4i16(<4 x i32> [[VRSHRN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VRSHRN_N1]]
 int16x4_t test_vrshrn_n_s32(int32x4_t a) {
   return vrshrn_n_s32(a, 1);
@@ -13314,7 +13314,7 @@ int16x4_t test_vrshrn_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vrshrn_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftn.v2i32(<2 x i64> [[VRSHRN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftn.v2i32(<2 x i64> [[VRSHRN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VRSHRN_N1]]
 int32x2_t test_vrshrn_n_s64(int64x2_t a) {
   return vrshrn_n_s64(a, 1);
@@ -13323,7 +13323,7 @@ int32x2_t test_vrshrn_n_s64(int64x2_t a) {
 // CHECK-LABEL: @test_vrshrn_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftn.v8i8(<8 x i16> [[VRSHRN_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VRSHRN_N1:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftn.v8i8(<8 x i16> [[VRSHRN_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i8> [[VRSHRN_N1]]
 uint8x8_t test_vrshrn_n_u16(uint16x8_t a) {
   return vrshrn_n_u16(a, 1);
@@ -13332,7 +13332,7 @@ uint8x8_t test_vrshrn_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vrshrn_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftn.v4i16(<4 x i32> [[VRSHRN_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VRSHRN_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftn.v4i16(<4 x i32> [[VRSHRN_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i16> [[VRSHRN_N1]]
 uint16x4_t test_vrshrn_n_u32(uint32x4_t a) {
   return vrshrn_n_u32(a, 1);
@@ -13341,14 +13341,14 @@ uint16x4_t test_vrshrn_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vrshrn_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VRSHRN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftn.v2i32(<2 x i64> [[VRSHRN_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VRSHRN_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftn.v2i32(<2 x i64> [[VRSHRN_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i32> [[VRSHRN_N1]]
 uint32x2_t test_vrshrn_n_u64(uint64x2_t a) {
   return vrshrn_n_u64(a, 1);
 }
 
 // CHECK-LABEL: @test_vrshr_n_s8(
-// CHECK:   [[VRSHR_N:%.*]] = call <8 x i8> @llvm.arm.neon.vrshifts.v8i8(<8 x i8> %a, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VRSHR_N:%.*]] = call <8 x i8> @llvm.arm.neon.vrshifts.v8i8(<8 x i8> %a, <8 x i8> splat (i8 -1))
 // CHECK:   ret <8 x i8> [[VRSHR_N]]
 int8x8_t test_vrshr_n_s8(int8x8_t a) {
   return vrshr_n_s8(a, 1);
@@ -13357,7 +13357,7 @@ int8x8_t test_vrshr_n_s8(int8x8_t a) {
 // CHECK-LABEL: @test_vrshr_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshifts.v4i16(<4 x i16> [[VRSHR_N]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshifts.v4i16(<4 x i16> [[VRSHR_N]], <4 x i16> splat (i16 -1))
 // CHECK:   ret <4 x i16> [[VRSHR_N1]]
 int16x4_t test_vrshr_n_s16(int16x4_t a) {
   return vrshr_n_s16(a, 1);
@@ -13366,7 +13366,7 @@ int16x4_t test_vrshr_n_s16(int16x4_t a) {
 // CHECK-LABEL: @test_vrshr_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshifts.v2i32(<2 x i32> [[VRSHR_N]], <2 x i32> <i32 -1, i32 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshifts.v2i32(<2 x i32> [[VRSHR_N]], <2 x i32> splat (i32 -1))
 // CHECK:   ret <2 x i32> [[VRSHR_N1]]
 int32x2_t test_vrshr_n_s32(int32x2_t a) {
   return vrshr_n_s32(a, 1);
@@ -13375,14 +13375,14 @@ int32x2_t test_vrshr_n_s32(int32x2_t a) {
 // CHECK-LABEL: @test_vrshr_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VRSHR_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vrshifts.v1i64(<1 x i64> [[VRSHR_N]], <1 x i64> <i64 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vrshifts.v1i64(<1 x i64> [[VRSHR_N]], <1 x i64> splat (i64 -1))
 // CHECK:   ret <1 x i64> [[VRSHR_N1]]
 int64x1_t test_vrshr_n_s64(int64x1_t a) {
   return vrshr_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vrshr_n_u8(
-// CHECK:   [[VRSHR_N:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftu.v8i8(<8 x i8> %a, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VRSHR_N:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftu.v8i8(<8 x i8> %a, <8 x i8> splat (i8 -1))
 // CHECK:   ret <8 x i8> [[VRSHR_N]]
 uint8x8_t test_vrshr_n_u8(uint8x8_t a) {
   return vrshr_n_u8(a, 1);
@@ -13391,7 +13391,7 @@ uint8x8_t test_vrshr_n_u8(uint8x8_t a) {
 // CHECK-LABEL: @test_vrshr_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftu.v4i16(<4 x i16> [[VRSHR_N]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftu.v4i16(<4 x i16> [[VRSHR_N]], <4 x i16> splat (i16 -1))
 // CHECK:   ret <4 x i16> [[VRSHR_N1]]
 uint16x4_t test_vrshr_n_u16(uint16x4_t a) {
   return vrshr_n_u16(a, 1);
@@ -13400,7 +13400,7 @@ uint16x4_t test_vrshr_n_u16(uint16x4_t a) {
 // CHECK-LABEL: @test_vrshr_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftu.v2i32(<2 x i32> [[VRSHR_N]], <2 x i32> <i32 -1, i32 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftu.v2i32(<2 x i32> [[VRSHR_N]], <2 x i32> splat (i32 -1))
 // CHECK:   ret <2 x i32> [[VRSHR_N1]]
 uint32x2_t test_vrshr_n_u32(uint32x2_t a) {
   return vrshr_n_u32(a, 1);
@@ -13409,14 +13409,14 @@ uint32x2_t test_vrshr_n_u32(uint32x2_t a) {
 // CHECK-LABEL: @test_vrshr_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VRSHR_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vrshiftu.v1i64(<1 x i64> [[VRSHR_N]], <1 x i64> <i64 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <1 x i64> @llvm.arm.neon.vrshiftu.v1i64(<1 x i64> [[VRSHR_N]], <1 x i64> splat (i64 -1))
 // CHECK:   ret <1 x i64> [[VRSHR_N1]]
 uint64x1_t test_vrshr_n_u64(uint64x1_t a) {
   return vrshr_n_u64(a, 1);
 }
 
 // CHECK-LABEL: @test_vrshrq_n_s8(
-// CHECK:   [[VRSHR_N:%.*]] = call <16 x i8> @llvm.arm.neon.vrshifts.v16i8(<16 x i8> %a, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VRSHR_N:%.*]] = call <16 x i8> @llvm.arm.neon.vrshifts.v16i8(<16 x i8> %a, <16 x i8> splat (i8 -1))
 // CHECK:   ret <16 x i8> [[VRSHR_N]]
 int8x16_t test_vrshrq_n_s8(int8x16_t a) {
   return vrshrq_n_s8(a, 1);
@@ -13425,7 +13425,7 @@ int8x16_t test_vrshrq_n_s8(int8x16_t a) {
 // CHECK-LABEL: @test_vrshrq_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VRSHR_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vrshifts.v8i16(<8 x i16> [[VRSHR_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vrshifts.v8i16(<8 x i16> [[VRSHR_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i16> [[VRSHR_N1]]
 int16x8_t test_vrshrq_n_s16(int16x8_t a) {
   return vrshrq_n_s16(a, 1);
@@ -13434,7 +13434,7 @@ int16x8_t test_vrshrq_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vrshrq_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vrshifts.v4i32(<4 x i32> [[VRSHR_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vrshifts.v4i32(<4 x i32> [[VRSHR_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i32> [[VRSHR_N1]]
 int32x4_t test_vrshrq_n_s32(int32x4_t a) {
   return vrshrq_n_s32(a, 1);
@@ -13443,14 +13443,14 @@ int32x4_t test_vrshrq_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vrshrq_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vrshifts.v2i64(<2 x i64> [[VRSHR_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vrshifts.v2i64(<2 x i64> [[VRSHR_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i64> [[VRSHR_N1]]
 int64x2_t test_vrshrq_n_s64(int64x2_t a) {
   return vrshrq_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vrshrq_n_u8(
-// CHECK:   [[VRSHR_N:%.*]] = call <16 x i8> @llvm.arm.neon.vrshiftu.v16i8(<16 x i8> %a, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VRSHR_N:%.*]] = call <16 x i8> @llvm.arm.neon.vrshiftu.v16i8(<16 x i8> %a, <16 x i8> splat (i8 -1))
 // CHECK:   ret <16 x i8> [[VRSHR_N]]
 uint8x16_t test_vrshrq_n_u8(uint8x16_t a) {
   return vrshrq_n_u8(a, 1);
@@ -13459,7 +13459,7 @@ uint8x16_t test_vrshrq_n_u8(uint8x16_t a) {
 // CHECK-LABEL: @test_vrshrq_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VRSHR_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vrshiftu.v8i16(<8 x i16> [[VRSHR_N]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <8 x i16> @llvm.arm.neon.vrshiftu.v8i16(<8 x i16> [[VRSHR_N]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i16> [[VRSHR_N1]]
 uint16x8_t test_vrshrq_n_u16(uint16x8_t a) {
   return vrshrq_n_u16(a, 1);
@@ -13468,7 +13468,7 @@ uint16x8_t test_vrshrq_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vrshrq_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vrshiftu.v4i32(<4 x i32> [[VRSHR_N]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <4 x i32> @llvm.arm.neon.vrshiftu.v4i32(<4 x i32> [[VRSHR_N]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i32> [[VRSHR_N1]]
 uint32x4_t test_vrshrq_n_u32(uint32x4_t a) {
   return vrshrq_n_u32(a, 1);
@@ -13477,7 +13477,7 @@ uint32x4_t test_vrshrq_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vrshrq_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[VRSHR_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vrshiftu.v2i64(<2 x i64> [[VRSHR_N]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VRSHR_N1:%.*]] = call <2 x i64> @llvm.arm.neon.vrshiftu.v2i64(<2 x i64> [[VRSHR_N]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i64> [[VRSHR_N1]]
 uint64x2_t test_vrshrq_n_u64(uint64x2_t a) {
   return vrshrq_n_u64(a, 1);
@@ -13536,7 +13536,7 @@ float32x4_t test_vrsqrtsq_f32(float32x4_t a, float32x4_t b) {
 }
 
 // CHECK-LABEL: @test_vrsra_n_s8(
-// CHECK:   [[TMP0:%.*]] = call <8 x i8> @llvm.arm.neon.vrshifts.v8i8(<8 x i8> %b, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[TMP0:%.*]] = call <8 x i8> @llvm.arm.neon.vrshifts.v8i8(<8 x i8> %b, <8 x i8> splat (i8 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <8 x i8> %a, [[TMP0]]
 // CHECK:   ret <8 x i8> [[VRSRA_N]]
 int8x8_t test_vrsra_n_s8(int8x8_t a, int8x8_t b) {
@@ -13548,7 +13548,7 @@ int8x8_t test_vrsra_n_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[TMP4:%.*]] = call <4 x i16> @llvm.arm.neon.vrshifts.v4i16(<4 x i16> [[TMP3]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[TMP4:%.*]] = call <4 x i16> @llvm.arm.neon.vrshifts.v4i16(<4 x i16> [[TMP3]], <4 x i16> splat (i16 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <4 x i16> [[TMP2]], [[TMP4]]
 // CHECK:   ret <4 x i16> [[VRSRA_N]]
 int16x4_t test_vrsra_n_s16(int16x4_t a, int16x4_t b) {
@@ -13560,7 +13560,7 @@ int16x4_t test_vrsra_n_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[TMP4:%.*]] = call <2 x i32> @llvm.arm.neon.vrshifts.v2i32(<2 x i32> [[TMP3]], <2 x i32> <i32 -1, i32 -1>)
+// CHECK:   [[TMP4:%.*]] = call <2 x i32> @llvm.arm.neon.vrshifts.v2i32(<2 x i32> [[TMP3]], <2 x i32> splat (i32 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <2 x i32> [[TMP2]], [[TMP4]]
 // CHECK:   ret <2 x i32> [[VRSRA_N]]
 int32x2_t test_vrsra_n_s32(int32x2_t a, int32x2_t b) {
@@ -13572,7 +13572,7 @@ int32x2_t test_vrsra_n_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[TMP4:%.*]] = call <1 x i64> @llvm.arm.neon.vrshifts.v1i64(<1 x i64> [[TMP3]], <1 x i64> <i64 -1>)
+// CHECK:   [[TMP4:%.*]] = call <1 x i64> @llvm.arm.neon.vrshifts.v1i64(<1 x i64> [[TMP3]], <1 x i64> splat (i64 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <1 x i64> [[TMP2]], [[TMP4]]
 // CHECK:   ret <1 x i64> [[VRSRA_N]]
 int64x1_t test_vrsra_n_s64(int64x1_t a, int64x1_t b) {
@@ -13580,7 +13580,7 @@ int64x1_t test_vrsra_n_s64(int64x1_t a, int64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vrsra_n_u8(
-// CHECK:   [[TMP0:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftu.v8i8(<8 x i8> %b, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[TMP0:%.*]] = call <8 x i8> @llvm.arm.neon.vrshiftu.v8i8(<8 x i8> %b, <8 x i8> splat (i8 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <8 x i8> %a, [[TMP0]]
 // CHECK:   ret <8 x i8> [[VRSRA_N]]
 uint8x8_t test_vrsra_n_u8(uint8x8_t a, uint8x8_t b) {
@@ -13592,7 +13592,7 @@ uint8x8_t test_vrsra_n_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[TMP4:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftu.v4i16(<4 x i16> [[TMP3]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[TMP4:%.*]] = call <4 x i16> @llvm.arm.neon.vrshiftu.v4i16(<4 x i16> [[TMP3]], <4 x i16> splat (i16 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <4 x i16> [[TMP2]], [[TMP4]]
 // CHECK:   ret <4 x i16> [[VRSRA_N]]
 uint16x4_t test_vrsra_n_u16(uint16x4_t a, uint16x4_t b) {
@@ -13604,7 +13604,7 @@ uint16x4_t test_vrsra_n_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[TMP4:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftu.v2i32(<2 x i32> [[TMP3]], <2 x i32> <i32 -1, i32 -1>)
+// CHECK:   [[TMP4:%.*]] = call <2 x i32> @llvm.arm.neon.vrshiftu.v2i32(<2 x i32> [[TMP3]], <2 x i32> splat (i32 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <2 x i32> [[TMP2]], [[TMP4]]
 // CHECK:   ret <2 x i32> [[VRSRA_N]]
 uint32x2_t test_vrsra_n_u32(uint32x2_t a, uint32x2_t b) {
@@ -13616,7 +13616,7 @@ uint32x2_t test_vrsra_n_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[TMP4:%.*]] = call <1 x i64> @llvm.arm.neon.vrshiftu.v1i64(<1 x i64> [[TMP3]], <1 x i64> <i64 -1>)
+// CHECK:   [[TMP4:%.*]] = call <1 x i64> @llvm.arm.neon.vrshiftu.v1i64(<1 x i64> [[TMP3]], <1 x i64> splat (i64 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <1 x i64> [[TMP2]], [[TMP4]]
 // CHECK:   ret <1 x i64> [[VRSRA_N]]
 uint64x1_t test_vrsra_n_u64(uint64x1_t a, uint64x1_t b) {
@@ -13624,7 +13624,7 @@ uint64x1_t test_vrsra_n_u64(uint64x1_t a, uint64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vrsraq_n_s8(
-// CHECK:   [[TMP0:%.*]] = call <16 x i8> @llvm.arm.neon.vrshifts.v16i8(<16 x i8> %b, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[TMP0:%.*]] = call <16 x i8> @llvm.arm.neon.vrshifts.v16i8(<16 x i8> %b, <16 x i8> splat (i8 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <16 x i8> %a, [[TMP0]]
 // CHECK:   ret <16 x i8> [[VRSRA_N]]
 int8x16_t test_vrsraq_n_s8(int8x16_t a, int8x16_t b) {
@@ -13636,7 +13636,7 @@ int8x16_t test_vrsraq_n_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[TMP4:%.*]] = call <8 x i16> @llvm.arm.neon.vrshifts.v8i16(<8 x i16> [[TMP3]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[TMP4:%.*]] = call <8 x i16> @llvm.arm.neon.vrshifts.v8i16(<8 x i16> [[TMP3]], <8 x i16> splat (i16 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <8 x i16> [[TMP2]], [[TMP4]]
 // CHECK:   ret <8 x i16> [[VRSRA_N]]
 int16x8_t test_vrsraq_n_s16(int16x8_t a, int16x8_t b) {
@@ -13648,7 +13648,7 @@ int16x8_t test_vrsraq_n_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[TMP4:%.*]] = call <4 x i32> @llvm.arm.neon.vrshifts.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[TMP4:%.*]] = call <4 x i32> @llvm.arm.neon.vrshifts.v4i32(<4 x i32> [[TMP3]], <4 x i32> splat (i32 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <4 x i32> [[TMP2]], [[TMP4]]
 // CHECK:   ret <4 x i32> [[VRSRA_N]]
 int32x4_t test_vrsraq_n_s32(int32x4_t a, int32x4_t b) {
@@ -13660,7 +13660,7 @@ int32x4_t test_vrsraq_n_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[TMP4:%.*]] = call <2 x i64> @llvm.arm.neon.vrshifts.v2i64(<2 x i64> [[TMP3]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[TMP4:%.*]] = call <2 x i64> @llvm.arm.neon.vrshifts.v2i64(<2 x i64> [[TMP3]], <2 x i64> splat (i64 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
 // CHECK:   ret <2 x i64> [[VRSRA_N]]
 int64x2_t test_vrsraq_n_s64(int64x2_t a, int64x2_t b) {
@@ -13668,7 +13668,7 @@ int64x2_t test_vrsraq_n_s64(int64x2_t a, int64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vrsraq_n_u8(
-// CHECK:   [[TMP0:%.*]] = call <16 x i8> @llvm.arm.neon.vrshiftu.v16i8(<16 x i8> %b, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[TMP0:%.*]] = call <16 x i8> @llvm.arm.neon.vrshiftu.v16i8(<16 x i8> %b, <16 x i8> splat (i8 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <16 x i8> %a, [[TMP0]]
 // CHECK:   ret <16 x i8> [[VRSRA_N]]
 uint8x16_t test_vrsraq_n_u8(uint8x16_t a, uint8x16_t b) {
@@ -13680,7 +13680,7 @@ uint8x16_t test_vrsraq_n_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[TMP4:%.*]] = call <8 x i16> @llvm.arm.neon.vrshiftu.v8i16(<8 x i16> [[TMP3]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[TMP4:%.*]] = call <8 x i16> @llvm.arm.neon.vrshiftu.v8i16(<8 x i16> [[TMP3]], <8 x i16> splat (i16 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <8 x i16> [[TMP2]], [[TMP4]]
 // CHECK:   ret <8 x i16> [[VRSRA_N]]
 uint16x8_t test_vrsraq_n_u16(uint16x8_t a, uint16x8_t b) {
@@ -13692,7 +13692,7 @@ uint16x8_t test_vrsraq_n_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[TMP4:%.*]] = call <4 x i32> @llvm.arm.neon.vrshiftu.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[TMP4:%.*]] = call <4 x i32> @llvm.arm.neon.vrshiftu.v4i32(<4 x i32> [[TMP3]], <4 x i32> splat (i32 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <4 x i32> [[TMP2]], [[TMP4]]
 // CHECK:   ret <4 x i32> [[VRSRA_N]]
 uint32x4_t test_vrsraq_n_u32(uint32x4_t a, uint32x4_t b) {
@@ -13704,7 +13704,7 @@ uint32x4_t test_vrsraq_n_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[TMP4:%.*]] = call <2 x i64> @llvm.arm.neon.vrshiftu.v2i64(<2 x i64> [[TMP3]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[TMP4:%.*]] = call <2 x i64> @llvm.arm.neon.vrshiftu.v2i64(<2 x i64> [[TMP3]], <2 x i64> splat (i64 -1))
 // CHECK:   [[VRSRA_N:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
 // CHECK:   ret <2 x i64> [[VRSRA_N]]
 uint64x2_t test_vrsraq_n_u64(uint64x2_t a, uint64x2_t b) {
@@ -14107,7 +14107,7 @@ uint64x2_t test_vshlq_u64(uint64x2_t a, int64x2_t b) {
 
 // CHECK-LABEL: @test_vshll_n_s8(
 // CHECK:   [[TMP0:%.*]] = sext <8 x i8> %a to <8 x i16>
-// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 1)
 // CHECK:   ret <8 x i16> [[VSHLL_N]]
 int16x8_t test_vshll_n_s8(int8x8_t a) {
   return vshll_n_s8(a, 1);
@@ -14117,7 +14117,7 @@ int16x8_t test_vshll_n_s8(int8x8_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 1)
 // CHECK:   ret <4 x i32> [[VSHLL_N]]
 int32x4_t test_vshll_n_s16(int16x4_t a) {
   return vshll_n_s16(a, 1);
@@ -14127,7 +14127,7 @@ int32x4_t test_vshll_n_s16(int16x4_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 1, i64 1>
+// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 1)
 // CHECK:   ret <2 x i64> [[VSHLL_N]]
 int64x2_t test_vshll_n_s32(int32x2_t a) {
   return vshll_n_s32(a, 1);
@@ -14135,7 +14135,7 @@ int64x2_t test_vshll_n_s32(int32x2_t a) {
 
 // CHECK-LABEL: @test_vshll_n_u8(
 // CHECK:   [[TMP0:%.*]] = zext <8 x i8> %a to <8 x i16>
-// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 1)
 // CHECK:   ret <8 x i16> [[VSHLL_N]]
 uint16x8_t test_vshll_n_u8(uint8x8_t a) {
   return vshll_n_u8(a, 1);
@@ -14145,7 +14145,7 @@ uint16x8_t test_vshll_n_u8(uint8x8_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 1)
 // CHECK:   ret <4 x i32> [[VSHLL_N]]
 uint32x4_t test_vshll_n_u16(uint16x4_t a) {
   return vshll_n_u16(a, 1);
@@ -14155,14 +14155,14 @@ uint32x4_t test_vshll_n_u16(uint16x4_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 1, i64 1>
+// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 1)
 // CHECK:   ret <2 x i64> [[VSHLL_N]]
 uint64x2_t test_vshll_n_u32(uint32x2_t a) {
   return vshll_n_u32(a, 1);
 }
 
 // CHECK-LABEL: @test_vshl_n_s8(
-// CHECK:   [[VSHL_N:%.*]] = shl <8 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <8 x i8> %a, splat (i8 1)
 // CHECK:   ret <8 x i8> [[VSHL_N]]
 int8x8_t test_vshl_n_s8(int8x8_t a) {
   return vshl_n_s8(a, 1);
@@ -14171,7 +14171,7 @@ int8x8_t test_vshl_n_s8(int8x8_t a) {
 // CHECK-LABEL: @test_vshl_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VSHL_N:%.*]] = shl <4 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <4 x i16> [[VSHL_N]]
 int16x4_t test_vshl_n_s16(int16x4_t a) {
   return vshl_n_s16(a, 1);
@@ -14180,7 +14180,7 @@ int16x4_t test_vshl_n_s16(int16x4_t a) {
 // CHECK-LABEL: @test_vshl_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VSHL_N:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <2 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <2 x i32> [[VSHL_N]]
 int32x2_t test_vshl_n_s32(int32x2_t a) {
   return vshl_n_s32(a, 1);
@@ -14189,14 +14189,14 @@ int32x2_t test_vshl_n_s32(int32x2_t a) {
 // CHECK-LABEL: @test_vshl_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VSHL_N:%.*]] = shl <1 x i64> [[TMP1]], <i64 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <1 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <1 x i64> [[VSHL_N]]
 int64x1_t test_vshl_n_s64(int64x1_t a) {
   return vshl_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vshl_n_u8(
-// CHECK:   [[VSHL_N:%.*]] = shl <8 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <8 x i8> %a, splat (i8 1)
 // CHECK:   ret <8 x i8> [[VSHL_N]]
 uint8x8_t test_vshl_n_u8(uint8x8_t a) {
   return vshl_n_u8(a, 1);
@@ -14205,7 +14205,7 @@ uint8x8_t test_vshl_n_u8(uint8x8_t a) {
 // CHECK-LABEL: @test_vshl_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VSHL_N:%.*]] = shl <4 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <4 x i16> [[VSHL_N]]
 uint16x4_t test_vshl_n_u16(uint16x4_t a) {
   return vshl_n_u16(a, 1);
@@ -14214,7 +14214,7 @@ uint16x4_t test_vshl_n_u16(uint16x4_t a) {
 // CHECK-LABEL: @test_vshl_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VSHL_N:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <2 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <2 x i32> [[VSHL_N]]
 uint32x2_t test_vshl_n_u32(uint32x2_t a) {
   return vshl_n_u32(a, 1);
@@ -14223,14 +14223,14 @@ uint32x2_t test_vshl_n_u32(uint32x2_t a) {
 // CHECK-LABEL: @test_vshl_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VSHL_N:%.*]] = shl <1 x i64> [[TMP1]], <i64 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <1 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <1 x i64> [[VSHL_N]]
 uint64x1_t test_vshl_n_u64(uint64x1_t a) {
   return vshl_n_u64(a, 1);
 }
 
 // CHECK-LABEL: @test_vshlq_n_s8(
-// CHECK:   [[VSHL_N:%.*]] = shl <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <16 x i8> %a, splat (i8 1)
 // CHECK:   ret <16 x i8> [[VSHL_N]]
 int8x16_t test_vshlq_n_s8(int8x16_t a) {
   return vshlq_n_s8(a, 1);
@@ -14239,7 +14239,7 @@ int8x16_t test_vshlq_n_s8(int8x16_t a) {
 // CHECK-LABEL: @test_vshlq_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VSHL_N:%.*]] = shl <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <8 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <8 x i16> [[VSHL_N]]
 int16x8_t test_vshlq_n_s16(int16x8_t a) {
   return vshlq_n_s16(a, 1);
@@ -14248,7 +14248,7 @@ int16x8_t test_vshlq_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vshlq_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VSHL_N:%.*]] = shl <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <4 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <4 x i32> [[VSHL_N]]
 int32x4_t test_vshlq_n_s32(int32x4_t a) {
   return vshlq_n_s32(a, 1);
@@ -14257,14 +14257,14 @@ int32x4_t test_vshlq_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vshlq_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VSHL_N:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <2 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <2 x i64> [[VSHL_N]]
 int64x2_t test_vshlq_n_s64(int64x2_t a) {
   return vshlq_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vshlq_n_u8(
-// CHECK:   [[VSHL_N:%.*]] = shl <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <16 x i8> %a, splat (i8 1)
 // CHECK:   ret <16 x i8> [[VSHL_N]]
 uint8x16_t test_vshlq_n_u8(uint8x16_t a) {
   return vshlq_n_u8(a, 1);
@@ -14273,7 +14273,7 @@ uint8x16_t test_vshlq_n_u8(uint8x16_t a) {
 // CHECK-LABEL: @test_vshlq_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VSHL_N:%.*]] = shl <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <8 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <8 x i16> [[VSHL_N]]
 uint16x8_t test_vshlq_n_u16(uint16x8_t a) {
   return vshlq_n_u16(a, 1);
@@ -14282,7 +14282,7 @@ uint16x8_t test_vshlq_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vshlq_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VSHL_N:%.*]] = shl <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <4 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <4 x i32> [[VSHL_N]]
 uint32x4_t test_vshlq_n_u32(uint32x4_t a) {
   return vshlq_n_u32(a, 1);
@@ -14291,7 +14291,7 @@ uint32x4_t test_vshlq_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vshlq_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VSHL_N:%.*]] = shl <2 x i64> [[TMP1]], <i64 1, i64 1>
+// CHECK:   [[VSHL_N:%.*]] = shl <2 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <2 x i64> [[VSHL_N]]
 uint64x2_t test_vshlq_n_u64(uint64x2_t a) {
   return vshlq_n_u64(a, 1);
@@ -14300,7 +14300,7 @@ uint64x2_t test_vshlq_n_u64(uint64x2_t a) {
 // CHECK-LABEL: @test_vshrn_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[TMP2:%.*]] = ashr <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[TMP2:%.*]] = ashr <8 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   [[VSHRN_N:%.*]] = trunc <8 x i16> [[TMP2]] to <8 x i8>
 // CHECK:   ret <8 x i8> [[VSHRN_N]]
 int8x8_t test_vshrn_n_s16(int16x8_t a) {
@@ -14310,7 +14310,7 @@ int8x8_t test_vshrn_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vshrn_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   [[VSHRN_N:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
 // CHECK:   ret <4 x i16> [[VSHRN_N]]
 int16x4_t test_vshrn_n_s32(int32x4_t a) {
@@ -14320,7 +14320,7 @@ int16x4_t test_vshrn_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vshrn_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[TMP2:%.*]] = ashr <2 x i64> [[TMP1]], <i64 1, i64 1>
+// CHECK:   [[TMP2:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   [[VSHRN_N:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i32>
 // CHECK:   ret <2 x i32> [[VSHRN_N]]
 int32x2_t test_vshrn_n_s64(int64x2_t a) {
@@ -14330,7 +14330,7 @@ int32x2_t test_vshrn_n_s64(int64x2_t a) {
 // CHECK-LABEL: @test_vshrn_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[TMP2:%.*]] = lshr <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[TMP2:%.*]] = lshr <8 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   [[VSHRN_N:%.*]] = trunc <8 x i16> [[TMP2]] to <8 x i8>
 // CHECK:   ret <8 x i8> [[VSHRN_N]]
 uint8x8_t test_vshrn_n_u16(uint16x8_t a) {
@@ -14340,7 +14340,7 @@ uint8x8_t test_vshrn_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vshrn_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   [[VSHRN_N:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
 // CHECK:   ret <4 x i16> [[VSHRN_N]]
 uint16x4_t test_vshrn_n_u32(uint32x4_t a) {
@@ -14350,7 +14350,7 @@ uint16x4_t test_vshrn_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vshrn_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 1, i64 1>
+// CHECK:   [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   [[VSHRN_N:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i32>
 // CHECK:   ret <2 x i32> [[VSHRN_N]]
 uint32x2_t test_vshrn_n_u64(uint64x2_t a) {
@@ -14358,7 +14358,7 @@ uint32x2_t test_vshrn_n_u64(uint64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vshr_n_s8(
-// CHECK:   [[VSHR_N:%.*]] = ashr <8 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <8 x i8> %a, splat (i8 1)
 // CHECK:   ret <8 x i8> [[VSHR_N]]
 int8x8_t test_vshr_n_s8(int8x8_t a) {
   return vshr_n_s8(a, 1);
@@ -14367,7 +14367,7 @@ int8x8_t test_vshr_n_s8(int8x8_t a) {
 // CHECK-LABEL: @test_vshr_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VSHR_N:%.*]] = ashr <4 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <4 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <4 x i16> [[VSHR_N]]
 int16x4_t test_vshr_n_s16(int16x4_t a) {
   return vshr_n_s16(a, 1);
@@ -14376,7 +14376,7 @@ int16x4_t test_vshr_n_s16(int16x4_t a) {
 // CHECK-LABEL: @test_vshr_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VSHR_N:%.*]] = ashr <2 x i32> [[TMP1]], <i32 1, i32 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <2 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <2 x i32> [[VSHR_N]]
 int32x2_t test_vshr_n_s32(int32x2_t a) {
   return vshr_n_s32(a, 1);
@@ -14385,14 +14385,14 @@ int32x2_t test_vshr_n_s32(int32x2_t a) {
 // CHECK-LABEL: @test_vshr_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VSHR_N:%.*]] = ashr <1 x i64> [[TMP1]], <i64 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <1 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <1 x i64> [[VSHR_N]]
 int64x1_t test_vshr_n_s64(int64x1_t a) {
   return vshr_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vshr_n_u8(
-// CHECK:   [[VSHR_N:%.*]] = lshr <8 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <8 x i8> %a, splat (i8 1)
 // CHECK:   ret <8 x i8> [[VSHR_N]]
 uint8x8_t test_vshr_n_u8(uint8x8_t a) {
   return vshr_n_u8(a, 1);
@@ -14401,7 +14401,7 @@ uint8x8_t test_vshr_n_u8(uint8x8_t a) {
 // CHECK-LABEL: @test_vshr_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// CHECK:   [[VSHR_N:%.*]] = lshr <4 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <4 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <4 x i16> [[VSHR_N]]
 uint16x4_t test_vshr_n_u16(uint16x4_t a) {
   return vshr_n_u16(a, 1);
@@ -14410,7 +14410,7 @@ uint16x4_t test_vshr_n_u16(uint16x4_t a) {
 // CHECK-LABEL: @test_vshr_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// CHECK:   [[VSHR_N:%.*]] = lshr <2 x i32> [[TMP1]], <i32 1, i32 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <2 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <2 x i32> [[VSHR_N]]
 uint32x2_t test_vshr_n_u32(uint32x2_t a) {
   return vshr_n_u32(a, 1);
@@ -14419,14 +14419,14 @@ uint32x2_t test_vshr_n_u32(uint32x2_t a) {
 // CHECK-LABEL: @test_vshr_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VSHR_N:%.*]] = lshr <1 x i64> [[TMP1]], <i64 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <1 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <1 x i64> [[VSHR_N]]
 uint64x1_t test_vshr_n_u64(uint64x1_t a) {
   return vshr_n_u64(a, 1);
 }
 
 // CHECK-LABEL: @test_vshrq_n_s8(
-// CHECK:   [[VSHR_N:%.*]] = ashr <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <16 x i8> %a, splat (i8 1)
 // CHECK:   ret <16 x i8> [[VSHR_N]]
 int8x16_t test_vshrq_n_s8(int8x16_t a) {
   return vshrq_n_s8(a, 1);
@@ -14435,7 +14435,7 @@ int8x16_t test_vshrq_n_s8(int8x16_t a) {
 // CHECK-LABEL: @test_vshrq_n_s16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VSHR_N:%.*]] = ashr <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <8 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <8 x i16> [[VSHR_N]]
 int16x8_t test_vshrq_n_s16(int16x8_t a) {
   return vshrq_n_s16(a, 1);
@@ -14444,7 +14444,7 @@ int16x8_t test_vshrq_n_s16(int16x8_t a) {
 // CHECK-LABEL: @test_vshrq_n_s32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VSHR_N:%.*]] = ashr <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <4 x i32> [[VSHR_N]]
 int32x4_t test_vshrq_n_s32(int32x4_t a) {
   return vshrq_n_s32(a, 1);
@@ -14453,14 +14453,14 @@ int32x4_t test_vshrq_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vshrq_n_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VSHR_N:%.*]] = ashr <2 x i64> [[TMP1]], <i64 1, i64 1>
+// CHECK:   [[VSHR_N:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <2 x i64> [[VSHR_N]]
 int64x2_t test_vshrq_n_s64(int64x2_t a) {
   return vshrq_n_s64(a, 1);
 }
 
 // CHECK-LABEL: @test_vshrq_n_u8(
-// CHECK:   [[VSHR_N:%.*]] = lshr <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <16 x i8> %a, splat (i8 1)
 // CHECK:   ret <16 x i8> [[VSHR_N]]
 uint8x16_t test_vshrq_n_u8(uint8x16_t a) {
   return vshrq_n_u8(a, 1);
@@ -14469,7 +14469,7 @@ uint8x16_t test_vshrq_n_u8(uint8x16_t a) {
 // CHECK-LABEL: @test_vshrq_n_u16(
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
-// CHECK:   [[VSHR_N:%.*]] = lshr <8 x i16> [[TMP1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <8 x i16> [[TMP1]], splat (i16 1)
 // CHECK:   ret <8 x i16> [[VSHR_N]]
 uint16x8_t test_vshrq_n_u16(uint16x8_t a) {
   return vshrq_n_u16(a, 1);
@@ -14478,7 +14478,7 @@ uint16x8_t test_vshrq_n_u16(uint16x8_t a) {
 // CHECK-LABEL: @test_vshrq_n_u32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
-// CHECK:   [[VSHR_N:%.*]] = lshr <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 1)
 // CHECK:   ret <4 x i32> [[VSHR_N]]
 uint32x4_t test_vshrq_n_u32(uint32x4_t a) {
   return vshrq_n_u32(a, 1);
@@ -14487,14 +14487,14 @@ uint32x4_t test_vshrq_n_u32(uint32x4_t a) {
 // CHECK-LABEL: @test_vshrq_n_u64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VSHR_N:%.*]] = lshr <2 x i64> [[TMP1]], <i64 1, i64 1>
+// CHECK:   [[VSHR_N:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 1)
 // CHECK:   ret <2 x i64> [[VSHR_N]]
 uint64x2_t test_vshrq_n_u64(uint64x2_t a) {
   return vshrq_n_u64(a, 1);
 }
 
 // CHECK-LABEL: @test_vsli_n_s8(
-// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> splat (i8 1))
 // CHECK:   ret <8 x i8> [[VSLI_N]]
 int8x8_t test_vsli_n_s8(int8x8_t a, int8x8_t b) {
   return vsli_n_s8(a, b, 1);
@@ -14505,7 +14505,7 @@ int8x8_t test_vsli_n_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> <i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> splat (i16 1))
 // CHECK:   ret <4 x i16> [[VSLI_N2]]
 int16x4_t test_vsli_n_s16(int16x4_t a, int16x4_t b) {
   return vsli_n_s16(a, b, 1);
@@ -14516,7 +14516,7 @@ int16x4_t test_vsli_n_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> <i32 1, i32 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> splat (i32 1))
 // CHECK:   ret <2 x i32> [[VSLI_N2]]
 int32x2_t test_vsli_n_s32(int32x2_t a, int32x2_t b) {
   return vsli_n_s32(a, b, 1);
@@ -14527,14 +14527,14 @@ int32x2_t test_vsli_n_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> <i64 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> splat (i64 1))
 // CHECK:   ret <1 x i64> [[VSLI_N2]]
 int64x1_t test_vsli_n_s64(int64x1_t a, int64x1_t b) {
   return vsli_n_s64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsli_n_u8(
-// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> splat (i8 1))
 // CHECK:   ret <8 x i8> [[VSLI_N]]
 uint8x8_t test_vsli_n_u8(uint8x8_t a, uint8x8_t b) {
   return vsli_n_u8(a, b, 1);
@@ -14545,7 +14545,7 @@ uint8x8_t test_vsli_n_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> <i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> splat (i16 1))
 // CHECK:   ret <4 x i16> [[VSLI_N2]]
 uint16x4_t test_vsli_n_u16(uint16x4_t a, uint16x4_t b) {
   return vsli_n_u16(a, b, 1);
@@ -14556,7 +14556,7 @@ uint16x4_t test_vsli_n_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> <i32 1, i32 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> splat (i32 1))
 // CHECK:   ret <2 x i32> [[VSLI_N2]]
 uint32x2_t test_vsli_n_u32(uint32x2_t a, uint32x2_t b) {
   return vsli_n_u32(a, b, 1);
@@ -14567,14 +14567,14 @@ uint32x2_t test_vsli_n_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> <i64 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> splat (i64 1))
 // CHECK:   ret <1 x i64> [[VSLI_N2]]
 uint64x1_t test_vsli_n_u64(uint64x1_t a, uint64x1_t b) {
   return vsli_n_u64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsli_n_p8(
-// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> splat (i8 1))
 // CHECK:   ret <8 x i8> [[VSLI_N]]
 poly8x8_t test_vsli_n_p8(poly8x8_t a, poly8x8_t b) {
   return vsli_n_p8(a, b, 1);
@@ -14585,14 +14585,14 @@ poly8x8_t test_vsli_n_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> <i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> splat (i16 1))
 // CHECK:   ret <4 x i16> [[VSLI_N2]]
 poly16x4_t test_vsli_n_p16(poly16x4_t a, poly16x4_t b) {
   return vsli_n_p16(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsliq_n_s8(
-// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> splat (i8 1))
 // CHECK:   ret <16 x i8> [[VSLI_N]]
 int8x16_t test_vsliq_n_s8(int8x16_t a, int8x16_t b) {
   return vsliq_n_s8(a, b, 1);
@@ -14603,7 +14603,7 @@ int8x16_t test_vsliq_n_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> splat (i16 1))
 // CHECK:   ret <8 x i16> [[VSLI_N2]]
 int16x8_t test_vsliq_n_s16(int16x8_t a, int16x8_t b) {
   return vsliq_n_s16(a, b, 1);
@@ -14614,7 +14614,7 @@ int16x8_t test_vsliq_n_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> splat (i32 1))
 // CHECK:   ret <4 x i32> [[VSLI_N2]]
 int32x4_t test_vsliq_n_s32(int32x4_t a, int32x4_t b) {
   return vsliq_n_s32(a, b, 1);
@@ -14625,14 +14625,14 @@ int32x4_t test_vsliq_n_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> <i64 1, i64 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> splat (i64 1))
 // CHECK:   ret <2 x i64> [[VSLI_N2]]
 int64x2_t test_vsliq_n_s64(int64x2_t a, int64x2_t b) {
   return vsliq_n_s64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsliq_n_u8(
-// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> splat (i8 1))
 // CHECK:   ret <16 x i8> [[VSLI_N]]
 uint8x16_t test_vsliq_n_u8(uint8x16_t a, uint8x16_t b) {
   return vsliq_n_u8(a, b, 1);
@@ -14643,7 +14643,7 @@ uint8x16_t test_vsliq_n_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> splat (i16 1))
 // CHECK:   ret <8 x i16> [[VSLI_N2]]
 uint16x8_t test_vsliq_n_u16(uint16x8_t a, uint16x8_t b) {
   return vsliq_n_u16(a, b, 1);
@@ -14654,7 +14654,7 @@ uint16x8_t test_vsliq_n_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> splat (i32 1))
 // CHECK:   ret <4 x i32> [[VSLI_N2]]
 uint32x4_t test_vsliq_n_u32(uint32x4_t a, uint32x4_t b) {
   return vsliq_n_u32(a, b, 1);
@@ -14665,14 +14665,14 @@ uint32x4_t test_vsliq_n_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> <i64 1, i64 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> splat (i64 1))
 // CHECK:   ret <2 x i64> [[VSLI_N2]]
 uint64x2_t test_vsliq_n_u64(uint64x2_t a, uint64x2_t b) {
   return vsliq_n_u64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsliq_n_p8(
-// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> splat (i8 1))
 // CHECK:   ret <16 x i8> [[VSLI_N]]
 poly8x16_t test_vsliq_n_p8(poly8x16_t a, poly8x16_t b) {
   return vsliq_n_p8(a, b, 1);
@@ -14683,14 +14683,14 @@ poly8x16_t test_vsliq_n_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> splat (i16 1))
 // CHECK:   ret <8 x i16> [[VSLI_N2]]
 poly16x8_t test_vsliq_n_p16(poly16x8_t a, poly16x8_t b) {
   return vsliq_n_p16(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsra_n_s8(
-// CHECK:   [[VSRA_N:%.*]] = ashr <8 x i8> %b, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <8 x i8> %b, splat (i8 1)
 // CHECK:   [[TMP0:%.*]] = add <8 x i8> %a, [[VSRA_N]]
 // CHECK:   ret <8 x i8> [[TMP0]]
 int8x8_t test_vsra_n_s8(int8x8_t a, int8x8_t b) {
@@ -14702,7 +14702,7 @@ int8x8_t test_vsra_n_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSRA_N:%.*]] = ashr <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <4 x i16> [[TMP3]], splat (i16 1)
 // CHECK:   [[TMP4:%.*]] = add <4 x i16> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <4 x i16> [[TMP4]]
 int16x4_t test_vsra_n_s16(int16x4_t a, int16x4_t b) {
@@ -14714,7 +14714,7 @@ int16x4_t test_vsra_n_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[VSRA_N:%.*]] = ashr <2 x i32> [[TMP3]], <i32 1, i32 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <2 x i32> [[TMP3]], splat (i32 1)
 // CHECK:   [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <2 x i32> [[TMP4]]
 int32x2_t test_vsra_n_s32(int32x2_t a, int32x2_t b) {
@@ -14726,7 +14726,7 @@ int32x2_t test_vsra_n_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VSRA_N:%.*]] = ashr <1 x i64> [[TMP3]], <i64 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <1 x i64> [[TMP3]], splat (i64 1)
 // CHECK:   [[TMP4:%.*]] = add <1 x i64> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <1 x i64> [[TMP4]]
 int64x1_t test_vsra_n_s64(int64x1_t a, int64x1_t b) {
@@ -14734,7 +14734,7 @@ int64x1_t test_vsra_n_s64(int64x1_t a, int64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vsra_n_u8(
-// CHECK:   [[VSRA_N:%.*]] = lshr <8 x i8> %b, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <8 x i8> %b, splat (i8 1)
 // CHECK:   [[TMP0:%.*]] = add <8 x i8> %a, [[VSRA_N]]
 // CHECK:   ret <8 x i8> [[TMP0]]
 uint8x8_t test_vsra_n_u8(uint8x8_t a, uint8x8_t b) {
@@ -14746,7 +14746,7 @@ uint8x8_t test_vsra_n_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSRA_N:%.*]] = lshr <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <4 x i16> [[TMP3]], splat (i16 1)
 // CHECK:   [[TMP4:%.*]] = add <4 x i16> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <4 x i16> [[TMP4]]
 uint16x4_t test_vsra_n_u16(uint16x4_t a, uint16x4_t b) {
@@ -14758,7 +14758,7 @@ uint16x4_t test_vsra_n_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[VSRA_N:%.*]] = lshr <2 x i32> [[TMP3]], <i32 1, i32 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <2 x i32> [[TMP3]], splat (i32 1)
 // CHECK:   [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <2 x i32> [[TMP4]]
 uint32x2_t test_vsra_n_u32(uint32x2_t a, uint32x2_t b) {
@@ -14770,7 +14770,7 @@ uint32x2_t test_vsra_n_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VSRA_N:%.*]] = lshr <1 x i64> [[TMP3]], <i64 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <1 x i64> [[TMP3]], splat (i64 1)
 // CHECK:   [[TMP4:%.*]] = add <1 x i64> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <1 x i64> [[TMP4]]
 uint64x1_t test_vsra_n_u64(uint64x1_t a, uint64x1_t b) {
@@ -14778,7 +14778,7 @@ uint64x1_t test_vsra_n_u64(uint64x1_t a, uint64x1_t b) {
 }
 
 // CHECK-LABEL: @test_vsraq_n_s8(
-// CHECK:   [[VSRA_N:%.*]] = ashr <16 x i8> %b, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <16 x i8> %b, splat (i8 1)
 // CHECK:   [[TMP0:%.*]] = add <16 x i8> %a, [[VSRA_N]]
 // CHECK:   ret <16 x i8> [[TMP0]]
 int8x16_t test_vsraq_n_s8(int8x16_t a, int8x16_t b) {
@@ -14790,7 +14790,7 @@ int8x16_t test_vsraq_n_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSRA_N:%.*]] = ashr <8 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <8 x i16> [[TMP3]], splat (i16 1)
 // CHECK:   [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <8 x i16> [[TMP4]]
 int16x8_t test_vsraq_n_s16(int16x8_t a, int16x8_t b) {
@@ -14802,7 +14802,7 @@ int16x8_t test_vsraq_n_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSRA_N:%.*]] = ashr <4 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <4 x i32> [[TMP3]], splat (i32 1)
 // CHECK:   [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <4 x i32> [[TMP4]]
 int32x4_t test_vsraq_n_s32(int32x4_t a, int32x4_t b) {
@@ -14814,7 +14814,7 @@ int32x4_t test_vsraq_n_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSRA_N:%.*]] = ashr <2 x i64> [[TMP3]], <i64 1, i64 1>
+// CHECK:   [[VSRA_N:%.*]] = ashr <2 x i64> [[TMP3]], splat (i64 1)
 // CHECK:   [[TMP4:%.*]] = add <2 x i64> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <2 x i64> [[TMP4]]
 int64x2_t test_vsraq_n_s64(int64x2_t a, int64x2_t b) {
@@ -14822,7 +14822,7 @@ int64x2_t test_vsraq_n_s64(int64x2_t a, int64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vsraq_n_u8(
-// CHECK:   [[VSRA_N:%.*]] = lshr <16 x i8> %b, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <16 x i8> %b, splat (i8 1)
 // CHECK:   [[TMP0:%.*]] = add <16 x i8> %a, [[VSRA_N]]
 // CHECK:   ret <16 x i8> [[TMP0]]
 uint8x16_t test_vsraq_n_u8(uint8x16_t a, uint8x16_t b) {
@@ -14834,7 +14834,7 @@ uint8x16_t test_vsraq_n_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSRA_N:%.*]] = lshr <8 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <8 x i16> [[TMP3]], splat (i16 1)
 // CHECK:   [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <8 x i16> [[TMP4]]
 uint16x8_t test_vsraq_n_u16(uint16x8_t a, uint16x8_t b) {
@@ -14846,7 +14846,7 @@ uint16x8_t test_vsraq_n_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSRA_N:%.*]] = lshr <4 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <4 x i32> [[TMP3]], splat (i32 1)
 // CHECK:   [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <4 x i32> [[TMP4]]
 uint32x4_t test_vsraq_n_u32(uint32x4_t a, uint32x4_t b) {
@@ -14858,7 +14858,7 @@ uint32x4_t test_vsraq_n_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSRA_N:%.*]] = lshr <2 x i64> [[TMP3]], <i64 1, i64 1>
+// CHECK:   [[VSRA_N:%.*]] = lshr <2 x i64> [[TMP3]], splat (i64 1)
 // CHECK:   [[TMP4:%.*]] = add <2 x i64> [[TMP2]], [[VSRA_N]]
 // CHECK:   ret <2 x i64> [[TMP4]]
 uint64x2_t test_vsraq_n_u64(uint64x2_t a, uint64x2_t b) {
@@ -14866,7 +14866,7 @@ uint64x2_t test_vsraq_n_u64(uint64x2_t a, uint64x2_t b) {
 }
 
 // CHECK-LABEL: @test_vsri_n_s8(
-// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> splat (i8 -1))
 // CHECK:   ret <8 x i8> [[VSLI_N]]
 int8x8_t test_vsri_n_s8(int8x8_t a, int8x8_t b) {
   return vsri_n_s8(a, b, 1);
@@ -14877,7 +14877,7 @@ int8x8_t test_vsri_n_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> splat (i16 -1))
 // CHECK:   ret <4 x i16> [[VSLI_N2]]
 int16x4_t test_vsri_n_s16(int16x4_t a, int16x4_t b) {
   return vsri_n_s16(a, b, 1);
@@ -14888,7 +14888,7 @@ int16x4_t test_vsri_n_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> <i32 -1, i32 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> splat (i32 -1))
 // CHECK:   ret <2 x i32> [[VSLI_N2]]
 int32x2_t test_vsri_n_s32(int32x2_t a, int32x2_t b) {
   return vsri_n_s32(a, b, 1);
@@ -14899,14 +14899,14 @@ int32x2_t test_vsri_n_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> <i64 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> splat (i64 -1))
 // CHECK:   ret <1 x i64> [[VSLI_N2]]
 int64x1_t test_vsri_n_s64(int64x1_t a, int64x1_t b) {
   return vsri_n_s64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsri_n_u8(
-// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> splat (i8 -1))
 // CHECK:   ret <8 x i8> [[VSLI_N]]
 uint8x8_t test_vsri_n_u8(uint8x8_t a, uint8x8_t b) {
   return vsri_n_u8(a, b, 1);
@@ -14917,7 +14917,7 @@ uint8x8_t test_vsri_n_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> splat (i16 -1))
 // CHECK:   ret <4 x i16> [[VSLI_N2]]
 uint16x4_t test_vsri_n_u16(uint16x4_t a, uint16x4_t b) {
   return vsri_n_u16(a, b, 1);
@@ -14928,7 +14928,7 @@ uint16x4_t test_vsri_n_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> <i32 -1, i32 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i32> @llvm.arm.neon.vshiftins.v2i32(<2 x i32> [[VSLI_N]], <2 x i32> [[VSLI_N1]], <2 x i32> splat (i32 -1))
 // CHECK:   ret <2 x i32> [[VSLI_N2]]
 uint32x2_t test_vsri_n_u32(uint32x2_t a, uint32x2_t b) {
   return vsri_n_u32(a, b, 1);
@@ -14939,14 +14939,14 @@ uint32x2_t test_vsri_n_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> <i64 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <1 x i64> @llvm.arm.neon.vshiftins.v1i64(<1 x i64> [[VSLI_N]], <1 x i64> [[VSLI_N1]], <1 x i64> splat (i64 -1))
 // CHECK:   ret <1 x i64> [[VSLI_N2]]
 uint64x1_t test_vsri_n_u64(uint64x1_t a, uint64x1_t b) {
   return vsri_n_u64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsri_n_p8(
-// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VSLI_N:%.*]] = call <8 x i8> @llvm.arm.neon.vshiftins.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> splat (i8 -1))
 // CHECK:   ret <8 x i8> [[VSLI_N]]
 poly8x8_t test_vsri_n_p8(poly8x8_t a, poly8x8_t b) {
   return vsri_n_p8(a, b, 1);
@@ -14957,14 +14957,14 @@ poly8x8_t test_vsri_n_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i16> @llvm.arm.neon.vshiftins.v4i16(<4 x i16> [[VSLI_N]], <4 x i16> [[VSLI_N1]], <4 x i16> splat (i16 -1))
 // CHECK:   ret <4 x i16> [[VSLI_N2]]
 poly16x4_t test_vsri_n_p16(poly16x4_t a, poly16x4_t b) {
   return vsri_n_p16(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsriq_n_s8(
-// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> splat (i8 -1))
 // CHECK:   ret <16 x i8> [[VSLI_N]]
 int8x16_t test_vsriq_n_s8(int8x16_t a, int8x16_t b) {
   return vsriq_n_s8(a, b, 1);
@@ -14975,7 +14975,7 @@ int8x16_t test_vsriq_n_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i16> [[VSLI_N2]]
 int16x8_t test_vsriq_n_s16(int16x8_t a, int16x8_t b) {
   return vsriq_n_s16(a, b, 1);
@@ -14986,7 +14986,7 @@ int16x8_t test_vsriq_n_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i32> [[VSLI_N2]]
 int32x4_t test_vsriq_n_s32(int32x4_t a, int32x4_t b) {
   return vsriq_n_s32(a, b, 1);
@@ -14997,14 +14997,14 @@ int32x4_t test_vsriq_n_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i64> [[VSLI_N2]]
 int64x2_t test_vsriq_n_s64(int64x2_t a, int64x2_t b) {
   return vsriq_n_s64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsriq_n_u8(
-// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> splat (i8 -1))
 // CHECK:   ret <16 x i8> [[VSLI_N]]
 uint8x16_t test_vsriq_n_u8(uint8x16_t a, uint8x16_t b) {
   return vsriq_n_u8(a, b, 1);
@@ -15015,7 +15015,7 @@ uint8x16_t test_vsriq_n_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i16> [[VSLI_N2]]
 uint16x8_t test_vsriq_n_u16(uint16x8_t a, uint16x8_t b) {
   return vsriq_n_u16(a, b, 1);
@@ -15026,7 +15026,7 @@ uint16x8_t test_vsriq_n_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <4 x i32> @llvm.arm.neon.vshiftins.v4i32(<4 x i32> [[VSLI_N]], <4 x i32> [[VSLI_N1]], <4 x i32> splat (i32 -1))
 // CHECK:   ret <4 x i32> [[VSLI_N2]]
 uint32x4_t test_vsriq_n_u32(uint32x4_t a, uint32x4_t b) {
   return vsriq_n_u32(a, b, 1);
@@ -15037,14 +15037,14 @@ uint32x4_t test_vsriq_n_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> <i64 -1, i64 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <2 x i64> @llvm.arm.neon.vshiftins.v2i64(<2 x i64> [[VSLI_N]], <2 x i64> [[VSLI_N1]], <2 x i64> splat (i64 -1))
 // CHECK:   ret <2 x i64> [[VSLI_N2]]
 uint64x2_t test_vsriq_n_u64(uint64x2_t a, uint64x2_t b) {
   return vsriq_n_u64(a, b, 1);
 }
 
 // CHECK-LABEL: @test_vsriq_n_p8(
-// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+// CHECK:   [[VSLI_N:%.*]] = call <16 x i8> @llvm.arm.neon.vshiftins.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> splat (i8 -1))
 // CHECK:   ret <16 x i8> [[VSLI_N]]
 poly8x16_t test_vsriq_n_p8(poly8x16_t a, poly8x16_t b) {
   return vsriq_n_p8(a, b, 1);
@@ -15055,7 +15055,7 @@ poly8x16_t test_vsriq_n_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSLI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // CHECK:   [[VSLI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
-// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
+// CHECK:   [[VSLI_N2:%.*]] = call <8 x i16> @llvm.arm.neon.vshiftins.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], <8 x i16> splat (i16 -1))
 // CHECK:   ret <8 x i16> [[VSLI_N2]]
 poly16x8_t test_vsriq_n_p16(poly16x8_t a, poly16x8_t b) {
   return vsriq_n_p16(a, b, 1);
@@ -18620,7 +18620,7 @@ uint64x2_t test_vsubq_u64(uint64x2_t a, uint64x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSUBHN_I:%.*]] = sub <8 x i16> %a, %b
-// CHECK:   [[VSUBHN1_I:%.*]] = lshr <8 x i16> [[VSUBHN_I]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VSUBHN1_I:%.*]] = lshr <8 x i16> [[VSUBHN_I]], splat (i16 8)
 // CHECK:   [[VSUBHN2_I:%.*]] = trunc <8 x i16> [[VSUBHN1_I]] to <8 x i8>
 // CHECK:   ret <8 x i8> [[VSUBHN2_I]]
 int8x8_t test_vsubhn_s16(int16x8_t a, int16x8_t b) {
@@ -18631,7 +18631,7 @@ int8x8_t test_vsubhn_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VSUBHN_I:%.*]] = sub <4 x i32> %a, %b
-// CHECK:   [[VSUBHN1_I:%.*]] = lshr <4 x i32> [[VSUBHN_I]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VSUBHN1_I:%.*]] = lshr <4 x i32> [[VSUBHN_I]], splat (i32 16)
 // CHECK:   [[VSUBHN2_I:%.*]] = trunc <4 x i32> [[VSUBHN1_I]] to <4 x i16>
 // CHECK:   ret <4 x i16> [[VSUBHN2_I]]
 int16x4_t test_vsubhn_s32(int32x4_t a, int32x4_t b) {
@@ -18642,7 +18642,7 @@ int16x4_t test_vsubhn_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSUBHN_I:%.*]] = sub <2 x i64> %a, %b
-// CHECK:   [[VSUBHN1_I:%.*]] = lshr <2 x i64> [[VSUBHN_I]], <i64 32, i64 32>
+// CHECK:   [[VSUBHN1_I:%.*]] = lshr <2 x i64> [[VSUBHN_I]], splat (i64 32)
 // CHECK:   [[VSUBHN2_I:%.*]] = trunc <2 x i64> [[VSUBHN1_I]] to <2 x i32>
 // CHECK:   ret <2 x i32> [[VSUBHN2_I]]
 int32x2_t test_vsubhn_s64(int64x2_t a, int64x2_t b) {
@@ -18653,7 +18653,7 @@ int32x2_t test_vsubhn_s64(int64x2_t a, int64x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[VSUBHN_I:%.*]] = sub <8 x i16> %a, %b
-// CHECK:   [[VSUBHN1_I:%.*]] = lshr <8 x i16> [[VSUBHN_I]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VSUBHN1_I:%.*]] = lshr <8 x i16> [[VSUBHN_I]], splat (i16 8)
 // CHECK:   [[VSUBHN2_I:%.*]] = trunc <8 x i16> [[VSUBHN1_I]] to <8 x i8>
 // CHECK:   ret <8 x i8> [[VSUBHN2_I]]
 uint8x8_t test_vsubhn_u16(uint16x8_t a, uint16x8_t b) {
@@ -18664,7 +18664,7 @@ uint8x8_t test_vsubhn_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[VSUBHN_I:%.*]] = sub <4 x i32> %a, %b
-// CHECK:   [[VSUBHN1_I:%.*]] = lshr <4 x i32> [[VSUBHN_I]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VSUBHN1_I:%.*]] = lshr <4 x i32> [[VSUBHN_I]], splat (i32 16)
 // CHECK:   [[VSUBHN2_I:%.*]] = trunc <4 x i32> [[VSUBHN1_I]] to <4 x i16>
 // CHECK:   ret <4 x i16> [[VSUBHN2_I]]
 uint16x4_t test_vsubhn_u32(uint32x4_t a, uint32x4_t b) {
@@ -18675,7 +18675,7 @@ uint16x4_t test_vsubhn_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSUBHN_I:%.*]] = sub <2 x i64> %a, %b
-// CHECK:   [[VSUBHN1_I:%.*]] = lshr <2 x i64> [[VSUBHN_I]], <i64 32, i64 32>
+// CHECK:   [[VSUBHN1_I:%.*]] = lshr <2 x i64> [[VSUBHN_I]], splat (i64 32)
 // CHECK:   [[VSUBHN2_I:%.*]] = trunc <2 x i64> [[VSUBHN1_I]] to <2 x i32>
 // CHECK:   ret <2 x i32> [[VSUBHN2_I]]
 uint32x2_t test_vsubhn_u64(uint64x2_t a, uint64x2_t b) {

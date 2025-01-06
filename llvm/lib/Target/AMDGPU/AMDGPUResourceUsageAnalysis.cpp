@@ -19,11 +19,9 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -146,44 +144,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   // count easily.
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    MCPhysReg HighestVGPRReg = AMDGPU::NoRegister;
-    for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
-      if (MRI.isPhysRegUsed(Reg)) {
-        HighestVGPRReg = Reg;
-        break;
-      }
-    }
-
-    if (ST.hasMAIInsts()) {
-      MCPhysReg HighestAGPRReg = AMDGPU::NoRegister;
-      for (MCPhysReg Reg : reverse(AMDGPU::AGPR_32RegClass.getRegisters())) {
-        if (MRI.isPhysRegUsed(Reg)) {
-          HighestAGPRReg = Reg;
-          break;
-        }
-      }
-      Info.NumAGPR = HighestAGPRReg == AMDGPU::NoRegister
-                         ? 0
-                         : TRI.getHWRegIndex(HighestAGPRReg) + 1;
-    }
-
-    MCPhysReg HighestSGPRReg = AMDGPU::NoRegister;
-    for (MCPhysReg Reg : reverse(AMDGPU::SGPR_32RegClass.getRegisters())) {
-      if (MRI.isPhysRegUsed(Reg)) {
-        HighestSGPRReg = Reg;
-        break;
-      }
-    }
-
-    // We found the maximum register index. They start at 0, so add one to get
-    // the number of registers.
-    Info.NumVGPR = HighestVGPRReg == AMDGPU::NoRegister
-                       ? 0
-                       : TRI.getHWRegIndex(HighestVGPRReg) + 1;
-    Info.NumExplicitSGPR = HighestSGPRReg == AMDGPU::NoRegister
-                               ? 0
-                               : TRI.getHWRegIndex(HighestSGPRReg) + 1;
-
+    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
+    Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
+    if (ST.hasMAIInsts())
+      Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
     return Info;
   }
 

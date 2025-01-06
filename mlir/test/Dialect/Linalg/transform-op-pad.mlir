@@ -39,7 +39,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
     %p = transform.num_associations %copy_back : (!transform.op<"bufferization.materialize_in_destination">) -> !transform.param<i64>
     // expected-remark @below {{1}}
@@ -76,7 +76,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [2, 2, 1] {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -112,7 +112,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [%c2, 2, 1] {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -155,7 +155,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -178,7 +178,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0: i32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -201,7 +201,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=["{foo}", 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -210,7 +210,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // With all padded being static, there's nothing to pad. However, with the
-// `nofold` attribute set (see `pack_paddings`), the corresponding pad Ops are
+// `nofold` attribute set (see `nofold_flags`), the corresponding pad Ops are
 // preserved.
 
 // CHECK-LABEL: @zero_pad_static(
@@ -239,7 +239,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -248,7 +248,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // With all padded dims being static, there's nothing to pad. However, with the
-// `nofold` attribute set (see `pack_paddings`), the corresponding pad Ops are
+// `nofold` attribute set (see `nofold_flags`), the corresponding pad Ops are
 // preserved. Same as above, but some dims are now dynamic.
 
 // CHECK-LABEL: @zero_pad_dynamic(
@@ -278,7 +278,7 @@ module attributes {transform.with_named_sequence} {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       // Note - only the static dim is padded
       padding_dimensions=[2],
-      pack_paddings=[1, 1, 1]
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -305,7 +305,7 @@ module attributes {transform.with_named_sequence} {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       // Note - attempting to pad non-static dim
       padding_dimensions=[1],
-      pack_paddings=[1, 1, 1]
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -362,7 +362,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 1]
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -414,7 +414,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 1]
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }

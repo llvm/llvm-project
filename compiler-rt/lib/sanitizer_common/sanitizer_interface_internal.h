@@ -76,6 +76,11 @@ void __sanitizer_annotate_double_ended_contiguous_container(
     const void *old_container_beg, const void *old_container_end,
     const void *new_container_beg, const void *new_container_end);
 SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_copy_contiguous_container_annotations(const void *src_begin,
+                                                       const void *src_end,
+                                                       const void *dst_begin,
+                                                       const void *dst_end);
+SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_verify_contiguous_container(const void *beg, const void *mid,
                                             const void *end);
 SANITIZER_INTERFACE_ATTRIBUTE

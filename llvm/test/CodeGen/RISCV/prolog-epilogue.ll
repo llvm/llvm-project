@@ -20,7 +20,9 @@ define void @frame_16b() {
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_16b:
@@ -32,7 +34,9 @@ define void @frame_16b() {
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   call void @callee(ptr null)
   ret void
@@ -48,7 +52,9 @@ define void @frame_1024b() {
 ; RV32-NEXT:    addi a0, sp, 12
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 1020(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 1024
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_1024b:
@@ -60,7 +66,9 @@ define void @frame_1024b() {
 ; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    ld ra, 1016(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 1024
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [1008 x i8]
   call void @callee(ptr %a)
@@ -79,8 +87,11 @@ define void @frame_2048b() {
 ; RV32-NEXT:    addi a0, sp, 12
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_2048b:
@@ -94,8 +105,11 @@ define void @frame_2048b() {
 ; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [2032 x i8]
   call void @callee(ptr %a)
@@ -116,8 +130,11 @@ define void @frame_4096b() {
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    addi sp, sp, 2032
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_4096b:
@@ -133,8 +150,11 @@ define void @frame_4096b() {
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    addi sp, sp, 2032
 ; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [4080 x i8]
   call void @callee(ptr %a)
@@ -156,8 +176,11 @@ define void @frame_4kb() {
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lui a0, 1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_4kb:
@@ -173,8 +196,11 @@ define void @frame_4kb() {
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    lui a0, 1
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [6112 x i8]
   call void @callee(ptr %a)
@@ -197,8 +223,11 @@ define void @frame_4kb_offset_128() {
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, 128
 ; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: frame_4kb_offset_128:
@@ -214,8 +243,11 @@ define void @frame_4kb_offset_128() {
 ; RV32ZBA-NEXT:    call callee
 ; RV32ZBA-NEXT:    li a0, 528
 ; RV32ZBA-NEXT:    sh3add sp, a0, sp
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32ZBA-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore ra
 ; RV32ZBA-NEXT:    addi sp, sp, 2032
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: frame_4kb_offset_128:
@@ -233,8 +265,11 @@ define void @frame_4kb_offset_128() {
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    addiw a0, a0, 128
 ; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: frame_4kb_offset_128:
@@ -250,8 +285,11 @@ define void @frame_4kb_offset_128() {
 ; RV64ZBA-NEXT:    call callee
 ; RV64ZBA-NEXT:    li a0, 528
 ; RV64ZBA-NEXT:    sh3add sp, a0, sp
+; RV64ZBA-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64ZBA-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64ZBA-NEXT:    .cfi_restore ra
 ; RV64ZBA-NEXT:    addi sp, sp, 2032
+; RV64ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZBA-NEXT:    ret
   %a = alloca [6240 x i8]
   call void @callee(ptr %a)
@@ -274,8 +312,11 @@ define void @frame_8kb() {
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lui a0, 2
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_8kb:
@@ -291,8 +332,11 @@ define void @frame_8kb() {
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    lui a0, 2
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [10208 x i8]
   call void @callee(ptr %a)
@@ -315,8 +359,11 @@ define void @frame_8kb_offset_128() {
 ; RV32I-NEXT:    lui a0, 2
 ; RV32I-NEXT:    addi a0, a0, 128
 ; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: frame_8kb_offset_128:
@@ -332,8 +379,11 @@ define void @frame_8kb_offset_128() {
 ; RV32ZBA-NEXT:    call callee
 ; RV32ZBA-NEXT:    li a0, 1040
 ; RV32ZBA-NEXT:    sh3add sp, a0, sp
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32ZBA-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore ra
 ; RV32ZBA-NEXT:    addi sp, sp, 2032
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: frame_8kb_offset_128:
@@ -351,8 +401,11 @@ define void @frame_8kb_offset_128() {
 ; RV64I-NEXT:    lui a0, 2
 ; RV64I-NEXT:    addiw a0, a0, 128
 ; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: frame_8kb_offset_128:
@@ -368,8 +421,11 @@ define void @frame_8kb_offset_128() {
 ; RV64ZBA-NEXT:    call callee
 ; RV64ZBA-NEXT:    li a0, 1040
 ; RV64ZBA-NEXT:    sh3add sp, a0, sp
+; RV64ZBA-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64ZBA-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64ZBA-NEXT:    .cfi_restore ra
 ; RV64ZBA-NEXT:    addi sp, sp, 2032
+; RV64ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZBA-NEXT:    ret
   %a = alloca [10336 x i8]
   call void @callee(ptr %a)
@@ -392,8 +448,11 @@ define void @frame_16kb_minus_80() {
 ; RV32I-NEXT:    lui a0, 4
 ; RV32I-NEXT:    addi a0, a0, -80
 ; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: frame_16kb_minus_80:
@@ -409,8 +468,11 @@ define void @frame_16kb_minus_80() {
 ; RV32ZBA-NEXT:    call callee
 ; RV32ZBA-NEXT:    li a0, 2038
 ; RV32ZBA-NEXT:    sh3add sp, a0, sp
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32ZBA-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    .cfi_restore ra
 ; RV32ZBA-NEXT:    addi sp, sp, 2032
+; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: frame_16kb_minus_80:
@@ -428,8 +490,11 @@ define void @frame_16kb_minus_80() {
 ; RV64I-NEXT:    lui a0, 4
 ; RV64I-NEXT:    addiw a0, a0, -80
 ; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: frame_16kb_minus_80:
@@ -445,8 +510,11 @@ define void @frame_16kb_minus_80() {
 ; RV64ZBA-NEXT:    call callee
 ; RV64ZBA-NEXT:    li a0, 2038
 ; RV64ZBA-NEXT:    sh3add sp, a0, sp
+; RV64ZBA-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64ZBA-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64ZBA-NEXT:    .cfi_restore ra
 ; RV64ZBA-NEXT:    addi sp, sp, 2032
+; RV64ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZBA-NEXT:    ret
   %a = alloca [18320 x i8]
   call void @callee(ptr %a)
@@ -468,8 +536,11 @@ define void @frame_16kb() {
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lui a0, 4
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_16kb:
@@ -485,8 +556,11 @@ define void @frame_16kb() {
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    lui a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [18400 x i8]
   call void @callee(ptr %a)
@@ -508,8 +582,11 @@ define void @frame_32kb() {
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lui a0, 8
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: frame_32kb:
@@ -525,8 +602,11 @@ define void @frame_32kb() {
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    lui a0, 8
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = alloca [34784 x i8]
   call void @callee(ptr %a)

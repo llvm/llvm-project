@@ -12,7 +12,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 
-#include "src/__support/macros/config.h"       // LIBC_INLINE
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/utils.h"     // Ptr, CPtr
 

@@ -27,14 +27,14 @@ using namespace llvm::object;
 
 class MachODebugMapParser {
 public:
-  MachODebugMapParser(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                      StringRef BinaryPath, ArrayRef<std::string> Archs,
+  MachODebugMapParser(BinaryHolder &BinHolder, StringRef BinaryPath,
+                      ArrayRef<std::string> Archs,
                       ArrayRef<std::string> DSYMSearchPaths,
                       StringRef PathPrefix = "", StringRef VariantSuffix = "",
                       bool Verbose = false)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs),
         DSYMSearchPaths(DSYMSearchPaths), PathPrefix(std::string(PathPrefix)),
-        VariantSuffix(std::string(VariantSuffix)), BinHolder(VFS, Verbose),
+        VariantSuffix(std::string(VariantSuffix)), BinHolder(BinHolder),
         CurrentDebugMapObject(nullptr), SkipDebugMapObject(false) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
@@ -56,7 +56,7 @@ private:
   std::string VariantSuffix;
 
   /// Owns the MemoryBuffer for the main binary.
-  BinaryHolder BinHolder;
+  BinaryHolder &BinHolder;
   /// Map of the binary symbol addresses.
   StringMap<uint64_t> MainBinarySymbolAddresses;
   StringRef MainBinaryStrings;
@@ -854,24 +854,25 @@ void MachODebugMapParser::loadMainBinarySymbols(
 namespace llvm {
 namespace dsymutil {
 llvm::ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
-parseDebugMap(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-              StringRef InputFile, ArrayRef<std::string> Archs,
+parseDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
+              ArrayRef<std::string> Archs,
               ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath,
               StringRef VariantSuffix, bool Verbose, bool InputIsYAML) {
   if (InputIsYAML)
-    return DebugMap::parseYAMLDebugMap(InputFile, PrependPath, Verbose);
+    return DebugMap::parseYAMLDebugMap(BinHolder, InputFile, PrependPath,
+                                       Verbose);
 
-  MachODebugMapParser Parser(VFS, InputFile, Archs, DSYMSearchPaths,
+  MachODebugMapParser Parser(BinHolder, InputFile, Archs, DSYMSearchPaths,
                              PrependPath, VariantSuffix, Verbose);
 
   return Parser.parse();
 }
 
-bool dumpStab(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-              StringRef InputFile, ArrayRef<std::string> Archs,
+bool dumpStab(BinaryHolder &BinHolder, StringRef InputFile,
+              ArrayRef<std::string> Archs,
               ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath,
               StringRef VariantSuffix) {
-  MachODebugMapParser Parser(VFS, InputFile, Archs, DSYMSearchPaths,
+  MachODebugMapParser Parser(BinHolder, InputFile, Archs, DSYMSearchPaths,
                              PrependPath, VariantSuffix, false);
   return Parser.dumpStab();
 }

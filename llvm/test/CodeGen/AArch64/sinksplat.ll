@@ -204,10 +204,9 @@ define <4 x i32> @mlal(<4 x i32> %x, ptr %y) {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB6_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mla v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mla v0.4s, v2.4s, v1.s[3]
 ; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.eq .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -230,29 +229,34 @@ l2:
   ret <4 x i32> %c
 }
 
-define <4 x float> @fmul(<4 x float> %x, ptr %y) {
+define <4 x float> @fmul(ptr %x, ptr %y) {
 ; CHECK-LABEL: fmul:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    fmul v1.4s, v2.4s, v1.s[3]
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB7_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    subs w8, w8, #1
+; CHECK-NEXT:    ldr q2, [x1, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp w8, #16
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.s[0]
+; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    b.eq .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
 entry:
-  %a = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %x.val = load float, ptr %x
+  %x.ins = insertelement <4 x float> poison, float %x.val, i64 0
+  %a = shufflevector <4 x float> %x.ins, <4 x float> undef, <4 x i32> zeroinitializer
   br label %l1
 
 l1:
   %p = phi i32 [ 0, %entry ], [ %pa, %l1 ]
   %q = phi <4 x float> [ zeroinitializer, %entry ], [ %c, %l1 ]
-  %l = load <4 x float>, ptr %y
+  %idx.y = mul nuw nsw i32 %p, 4
+  %ptr.y = getelementptr float, ptr %y, i32 %idx.y
+  %l = load <4 x float>, ptr %ptr.y
   %b = fmul <4 x float> %l, %a
   %c = fadd <4 x float> %b, %q
   %pa = add i32 %p, 1
@@ -270,10 +274,9 @@ define <4 x float> @fmuladd(<4 x float> %x, ptr %y) {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB8_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fmla v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v1.s[3]
 ; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.eq .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -416,6 +419,134 @@ l1:
 l2:
   %r = phi <4 x i32> [ %b, %entry ], [ %c2, %l1 ]
   ret <4 x i32> %r
+}
+
+; We shouldn't sink without fullfp16.
+define <4 x half> @fmul_half(ptr %x, ptr %y) {
+; CHECK-LABEL: fmul_half:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1r { v1.4h }, [x0]
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NEXT:  .LBB13_1: // %l1
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr d2, [x1, x8]
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp w8, #8
+; CHECK-NEXT:    fcvtl v2.4s, v2.4h
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    fcvtn v2.4h, v2.4s
+; CHECK-NEXT:    fcvtl v2.4s, v2.4h
+; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    b.eq .LBB13_1
+; CHECK-NEXT:  // %bb.2: // %l2
+; CHECK-NEXT:    ret
+entry:
+  %x.val = load half, ptr %x
+  %x.ins = insertelement <4 x half> poison, half %x.val, i64 0
+  %a = shufflevector <4 x half> %x.ins, <4 x half> undef, <4 x i32> zeroinitializer
+  br label %l1
+
+l1:
+  %p = phi i32 [ 0, %entry ], [ %pa, %l1 ]
+  %q = phi <4 x half> [ zeroinitializer, %entry ], [ %c, %l1 ]
+  %idx.y = mul nuw nsw i32 %p, 4
+  %ptr.y = getelementptr half, ptr %y, i32 %idx.y
+  %l = load <4 x half>, ptr %ptr.y
+  %b = fmul <4 x half> %l, %a
+  %c = fadd <4 x half> %b, %q
+  %pa = add i32 %p, 1
+  %c1 = icmp eq i32 %p, 0
+  br i1 %c1, label %l1, label %l2
+
+l2:
+  ret <4 x half> %c
+}
+
+define <4 x half> @fmul_half_fullfp16(ptr %x, ptr %y) "target-features"="+fullfp16" {
+; CHECK-LABEL: fmul_half_fullfp16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB14_1: // %l1
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr d2, [x1, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp w8, #8
+; CHECK-NEXT:    fmul v2.4h, v2.4h, v1.h[0]
+; CHECK-NEXT:    fadd v0.4h, v2.4h, v0.4h
+; CHECK-NEXT:    b.eq .LBB14_1
+; CHECK-NEXT:  // %bb.2: // %l2
+; CHECK-NEXT:    ret
+entry:
+  %x.val = load half, ptr %x
+  %x.ins = insertelement <4 x half> poison, half %x.val, i64 0
+  %a = shufflevector <4 x half> %x.ins, <4 x half> undef, <4 x i32> zeroinitializer
+  br label %l1
+
+l1:
+  %p = phi i32 [ 0, %entry ], [ %pa, %l1 ]
+  %q = phi <4 x half> [ zeroinitializer, %entry ], [ %c, %l1 ]
+  %idx.y = mul nuw nsw i32 %p, 4
+  %ptr.y = getelementptr half, ptr %y, i32 %idx.y
+  %l = load <4 x half>, ptr %ptr.y
+  %b = fmul <4 x half> %l, %a
+  %c = fadd <4 x half> %b, %q
+  %pa = add i32 %p, 1
+  %c1 = icmp eq i32 %p, 0
+  br i1 %c1, label %l1, label %l2
+
+l2:
+  ret <4 x half> %c
+}
+
+; We shouldn't sink the splat operand for scalable vectors.
+define <vscale x 4 x float> @fmul_scalable(ptr %x, ptr %y) "target-features"="+sve" {
+; CHECK-LABEL: fmul_scalable:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    sxtw x8, w8
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    ld1rw { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    lsl x8, x8, #2
+; CHECK-NEXT:  .LBB15_1: // %l1
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    subs w9, w9, #1
+; CHECK-NEXT:    add x1, x1, x8
+; CHECK-NEXT:    fmul z2.s, z2.s, z1.s
+; CHECK-NEXT:    fadd z0.s, z2.s, z0.s
+; CHECK-NEXT:    b.eq .LBB15_1
+; CHECK-NEXT:  // %bb.2: // %l2
+; CHECK-NEXT:    ret
+entry:
+  %x.val = load float, ptr %x
+  %x.ins = insertelement <vscale x 4 x float> poison, float %x.val, i64 0
+  %a = shufflevector <vscale x 4 x float> %x.ins, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %33 = tail call i32 @llvm.vscale.i32()
+  %34 = shl nuw nsw i32 %33, 4
+  br label %l1
+
+l1:
+  %p = phi i32 [ 0, %entry ], [ %pa, %l1 ]
+  %q = phi <vscale x 4 x float> [ zeroinitializer, %entry ], [ %c, %l1 ]
+  %idx.y = mul nuw nsw i32 %p, %34
+  %ptr.y = getelementptr float, ptr %y, i32 %idx.y
+  %l = load <vscale x 4 x float>, ptr %ptr.y
+  %b = fmul <vscale x 4 x float> %l, %a
+  %c = fadd <vscale x 4 x float> %b, %q
+  %pa = add i32 %p, 1
+  %c1 = icmp eq i32 %p, 0
+  br i1 %c1, label %l1, label %l2
+
+l2:
+  ret <vscale x 4 x float> %c
 }
 
 

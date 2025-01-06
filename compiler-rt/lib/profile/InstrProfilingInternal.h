@@ -167,20 +167,20 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
 void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
                              __llvm_profile_data *DstData);
 
-VPDataReaderType *lprofGetVPDataReader();
+VPDataReaderType *lprofGetVPDataReader(void);
 
 /* Internal interface used by test to reset the max number of 
  * tracked values per value site to be \p MaxVals.
  */
 void lprofSetMaxValsPerSite(uint32_t MaxVals);
-void lprofSetupValueProfiler();
+void lprofSetupValueProfiler(void);
 
 /* Return the profile header 'signature' value associated with the current
  * executable or shared library. The signature value can be used to for
  * a profile name that is unique to this load module so that it does not
  * collide with profiles from other binaries. It also allows shared libraries
  * to dump merged profile data into its own profile file. */
-uint64_t lprofGetLoadModuleSignature();
+uint64_t lprofGetLoadModuleSignature(void);
 
 /* 
  * Return non zero value if the profile data has already been

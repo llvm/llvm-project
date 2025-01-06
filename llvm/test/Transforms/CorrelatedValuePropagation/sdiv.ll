@@ -128,10 +128,10 @@ define void @test5(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[DIV1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[A]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[DIV1]] = udiv i32 [[A]], 6
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp ugt i32 [[DIV1]], 8
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp samesign ugt i32 [[DIV1]], 8
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

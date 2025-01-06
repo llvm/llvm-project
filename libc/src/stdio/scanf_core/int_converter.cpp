@@ -80,7 +80,8 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     is_signed = true;
   } else if (to_conv.conv_name == 'o') {
     base = 8;
-  } else if (to_lower(to_conv.conv_name) == 'x' || to_conv.conv_name == 'p') {
+  } else if (internal::tolower(to_conv.conv_name) == 'x' ||
+             to_conv.conv_name == 'p') {
     base = 16;
   } else if (to_conv.conv_name == 'd') {
     base = 10;
@@ -122,15 +123,26 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
         return READ_OK;
       }
 
-      if (to_lower(cur_char) == 'x') {
+      if (internal::tolower(cur_char) == 'x') {
         // This is a valid hex prefix.
+
+        is_number = false;
+        // A valid hex prefix is not necessarily a valid number. For the
+        // conversion to be valid it needs to use all of the characters it
+        // consumes. From the standard:
+        // 7.23.6.2 paragraph 9: "An input item is defined as the longest
+        // sequence of input characters which does not exceed any specified
+        // field width and which is, or is a prefix of, a matching input
+        // sequence."
+        // 7.23.6.2 paragraph 10: "If the input item is not a matching sequence,
+        // the execution of the directive fails: this condition is a matching
+        // failure"
         base = 16;
         if (max_width > 1) {
           --max_width;
           cur_char = reader->getc();
         } else {
-          write_int_with_length(0, to_conv);
-          return READ_OK;
+          return MATCHING_FAILURE;
         }
 
       } else {
@@ -164,17 +176,18 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
 
   const uintmax_t max_div_by_base = MAX / base;
 
-  if (internal::isalnum(cur_char) && b36_char_to_int(cur_char) < base) {
+  if (internal::isalnum(cur_char) &&
+      internal::b36_char_to_int(cur_char) < base) {
     is_number = true;
   }
 
   bool has_overflow = false;
   size_t i = 0;
   for (; i < max_width && internal::isalnum(cur_char) &&
-         b36_char_to_int(cur_char) < base;
+         internal::b36_char_to_int(cur_char) < base;
        ++i, cur_char = reader->getc()) {
 
-    uintmax_t cur_digit = b36_char_to_int(cur_char);
+    uintmax_t cur_digit = internal::b36_char_to_int(cur_char);
 
     if (result == MAX) {
       has_overflow = true;
@@ -198,6 +211,9 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
   // last one back.
   reader->ungetc(cur_char);
 
+  if (!is_number)
+    return MATCHING_FAILURE;
+
   if (has_overflow) {
     write_int_with_length(MAX, to_conv);
   } else {
@@ -207,8 +223,6 @@ int convert_int(Reader *reader, const FormatSection &to_conv) {
     write_int_with_length(result, to_conv);
   }
 
-  if (!is_number)
-    return MATCHING_FAILURE;
   return READ_OK;
 }
 

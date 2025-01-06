@@ -1121,19 +1121,19 @@ entry:
 
 define i32 @loadCombine_4consecutive_metadata(ptr %p, ptr %pstr) {
 ; LE-LABEL: @loadCombine_4consecutive_metadata(
-; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1, !alias.scope !0
-; LE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias !0
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1, !alias.scope [[META0:![0-9]+]]
+; LE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META0]]
 ; LE-NEXT:    ret i32 [[L1]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_metadata(
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
 ; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
 ; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1, !alias.scope !0
-; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1, !alias.scope !0
-; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1, !alias.scope !0
-; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1, !alias.scope !0
-; BE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias !0
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1, !alias.scope [[META0:![0-9]+]]
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META0]]
 ; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
 ; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
 ; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
@@ -1869,7 +1869,7 @@ define i32 @loadCombine_4consecutive_badinsert2(ptr %p) {
 
 define i32 @loadCombine_4consecutive_badinsert3(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_badinsert3(
-; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
 ; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[TMP1]], align 1
 ; LE-NEXT:    ret i32 [[L1]]
 ;
@@ -2088,7 +2088,7 @@ define i32 @loadCombine_4consecutive_badinsert6(ptr %p) {
 
 define void @nested_gep(ptr %p, ptr %dest) {
 ; LE-LABEL: @nested_gep(
-; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 68
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 68
 ; LE-NEXT:    [[LD2:%.*]] = load i64, ptr [[TMP1]], align 4
 ; LE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LD2]] to i32
 ; LE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
@@ -2128,7 +2128,7 @@ define void @nested_gep(ptr %p, ptr %dest) {
 
 define void @bitcast_gep(ptr %p, ptr %dest) {
 ; LE-LABEL: @bitcast_gep(
-; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 68
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 68
 ; LE-NEXT:    [[LD2:%.*]] = load i64, ptr [[TMP1]], align 4
 ; LE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LD2]] to i32
 ; LE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4

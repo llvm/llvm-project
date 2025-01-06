@@ -79,6 +79,9 @@ def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
     HelpText<"Save intermediate LTO compilation results">;
+def lldsavetemps_colon : Joined<["/", "-", "/?", "-?"], "lldsavetemps:">,
+    HelpText<"Save select intermediate LTO compilation results">,
+    Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_sample_profile: P<"lto-sample-profile", "Sample profile file path">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;

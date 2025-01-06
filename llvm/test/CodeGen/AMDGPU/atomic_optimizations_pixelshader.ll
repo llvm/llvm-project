@@ -193,8 +193,6 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1164-NEXT:  ; %bb.5: ; %if
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX1164-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i32_constant:
@@ -234,8 +232,6 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1132-NEXT:  ; %bb.5: ; %if
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX1132-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
@@ -552,8 +548,6 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1164-NEXT:  ; %bb.5: ; %if
 ; GFX1164-NEXT:    buffer_store_b32 v4, off, s[0:3], 0
 ; GFX1164-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i32_varying:
@@ -612,8 +606,6 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1132-NEXT:  ; %bb.5: ; %if
 ; GFX1132-NEXT:    buffer_store_b32 v4, off, s[0:3], 0
 ; GFX1132-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)

@@ -1,0 +1,77 @@
+functions:
+  mlock:
+    posix-definition: ''
+  mlockall:
+    posix-definition: ''
+  mmap:
+    posix-definition: ''
+  mprotect:
+    posix-definition: ''
+  msync:
+    posix-definition: ''
+  munlock:
+    posix-definition: ''
+  munlockall:
+    posix-definition: ''
+  munmap:
+    posix-definition: ''
+  posix_madvise:
+    posix-definition: ''
+  posix_mem_offset:
+    posix-definition: ''
+  posix_typed_mem_get_info:
+    posix-definition: ''
+  posix_typed_mem_open:
+    posix-definition: ''
+  shm_open:
+    posix-definition: ''
+  shm_unlink:
+    posix-definition: ''
+macros:
+  MAP_ANON:
+    posix-definition: ''
+  MAP_ANONYMOUS:
+    posix-definition: ''
+  MAP_FAILED:
+    posix-definition: ''
+  MAP_FIXED:
+    posix-definition: ''
+  MAP_PRIVATE:
+    posix-definition: ''
+  MAP_SHARED:
+    posix-definition: ''
+  MCL_CURRENT:
+    posix-definition: ''
+  MCL_FUTURE:
+    posix-definition: ''
+  MS_ASYNC:
+    posix-definition: ''
+  MS_INVALIDATE:
+    posix-definition: ''
+  MS_SYNC:
+    posix-definition: ''
+  POSIX_MADV_DONTNEED:
+    posix-definition: ''
+  POSIX_MADV_NORMAL:
+    posix-definition: ''
+  POSIX_MADV_RANDOM:
+    posix-definition: ''
+  POSIX_MADV_SEQUENTIAL:
+    posix-definition: ''
+  POSIX_MADV_WILLNEED:
+    posix-definition: ''
+  POSIX_TYPED_MEM_ALLOCATE:
+    posix-definition: ''
+  POSIX_TYPED_MEM_ALLOCATE_CONTIG:
+    posix-definition: ''
+  POSIX_TYPED_MEM_MAP_ALLOCATABLE:
+    posix-definition: ''
+  PROT_EXEC:
+    posix-definition: ''
+  PROT_NONE:
+    posix-definition: ''
+  PROT_READ:
+    posix-definition: ''
+  PROT_WRITE:
+    posix-definition: ''
+

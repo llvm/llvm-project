@@ -1,4 +1,4 @@
-#include <utils.h>
+#include <clc/utils.h>
 
 #define __CLC_HALF_FUNC(x) __CLC_CONCAT(half_, x)
 #define __CLC_NATIVE_FUNC(x) __CLC_CONCAT(native_, x)

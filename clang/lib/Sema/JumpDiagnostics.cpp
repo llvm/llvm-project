@@ -179,9 +179,9 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
-    const Expr *Init = VD->getInit();
-    if (S.Context.getLangOpts().CPlusPlus && VD->hasLocalStorage() && Init &&
-        !Init->containsErrors()) {
+    if (const Expr *Init = VD->getInit(); S.Context.getLangOpts().CPlusPlus &&
+                                          VD->hasLocalStorage() && Init &&
+                                          !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope
@@ -613,6 +613,16 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
     BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    return;
+  }
+
+  case Stmt::OpenACCCombinedConstructClass: {
+    unsigned NewParentScope = Scopes.size();
+    OpenACCCombinedConstruct *CC = cast<OpenACCCombinedConstruct>(S);
+    Scopes.push_back(GotoScope(
+        ParentScope, diag::note_acc_branch_into_compute_construct,
+        diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
+    BuildScopeInformation(CC->getLoop(), NewParentScope);
     return;
   }
 

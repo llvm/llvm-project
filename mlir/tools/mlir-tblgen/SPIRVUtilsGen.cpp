@@ -33,7 +33,9 @@
 #include <optional>
 
 using llvm::ArrayRef;
+using llvm::cast;
 using llvm::formatv;
+using llvm::isa;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using llvm::Record;
@@ -607,11 +609,11 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   bool areOperandsAheadOfAttrs = true;
   // Find the first attribute.
   const Argument *it = llvm::find_if(op.getArgs(), [](const Argument &arg) {
-    return arg.is<NamedAttribute *>();
+    return isa<NamedAttribute *>(arg);
   });
   // Check whether all following arguments are attributes.
   for (const Argument *ie = op.arg_end(); it != ie; ++it) {
-    if (!it->is<NamedAttribute *>()) {
+    if (!isa<NamedAttribute *>(*it)) {
       areOperandsAheadOfAttrs = false;
       break;
     }
@@ -642,7 +644,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
     os << tabs << "{\n";
-    if (argument.is<NamedTypeConstraint *>()) {
+    if (isa<NamedTypeConstraint *>(argument)) {
       os << tabs
          << formatv("  for (auto arg : {0}.getODSOperands({1})) {{\n", opVar,
                     operandNum);
@@ -657,7 +659,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << "    }\n";
       operandNum++;
     } else {
-      NamedAttribute *attr = argument.get<NamedAttribute *>();
+      NamedAttribute *attr = cast<NamedAttribute *>(argument);
       auto newtabs = tabs.str() + "  ";
       emitAttributeSerialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -962,7 +964,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto *attr = argument.get<NamedAttribute *>();
+      auto *attr = cast<NamedAttribute *>(argument);
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -1184,7 +1186,7 @@ static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
       utilsString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
       serFn(serFnString), deserFn(deserFnString);
-  Record *attrClass = records.getClass("Attr");
+  const Record *attrClass = records.getClass("Attr");
 
   // Emit the serialization and deserialization functions simultaneously.
   StringRef opVar("op");

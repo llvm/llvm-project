@@ -944,3 +944,43 @@ block_param_and_return:
 
 # CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [f32]
   end_function
+
+  .tagtype  __cpp_exception i32
+
+eh_test:
+  .functype eh_test () -> ()
+  block i32
+    block i32
+      block i32
+        block
+# CHECK: :[[@LINE+4]]:11: error: try_table: catch index 0: type mismatch, catch tag type is [i32], but destination's type is []
+# CHECK: :[[@LINE+3]]:11: error: try_table: catch index 1: type mismatch, catch tag type is [i32, exnref], but destination's type is [i32]
+# CHECK: :[[@LINE+2]]:11: error: try_table: catch index 2: type mismatch, catch tag type is [], but destination's type is [i32]
+# CHECK: :[[@LINE+1]]:11: error: try_table: catch index 3: type mismatch, catch tag type is [exnref], but destination's type is [i32]
+          try_table i32 (catch __cpp_exception 0) (catch_ref __cpp_exception 1) (catch_all 2) (catch_all_ref 3)
+# CHECK: :[[@LINE+1]]:11: error: type mismatch, expected [i32] but got []
+          end_try_table
+          drop
+        end_block
+      end_block
+    end_block
+  end_block
+  drop
+
+  loop
+  i32.const 0
+    loop (i32) -> ()
+      loop (i32) -> ()
+        loop
+# CHECK: :[[@LINE+4]]:11: error: try_table: catch index 0: type mismatch, catch tag type is [i32], but destination's type is []
+# CHECK: :[[@LINE+3]]:11: error: try_table: catch index 1: type mismatch, catch tag type is [i32, exnref], but destination's type is [i32]
+# CHECK: :[[@LINE+2]]:11: error: try_table: catch index 2: type mismatch, catch tag type is [], but destination's type is [i32]
+# CHECK: :[[@LINE+1]]:11: error: try_table: catch index 3: type mismatch, catch tag type is [exnref], but destination's type is []
+          try_table (catch __cpp_exception 0) (catch_ref __cpp_exception 1) (catch_all 2) (catch_all_ref 3)
+          end_try_table
+        end_loop
+        drop
+      end_loop
+    end_loop
+  end_loop
+  end_function

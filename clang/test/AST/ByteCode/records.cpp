@@ -1015,11 +1015,13 @@ namespace ParenInit {
   };
 
   /// Not constexpr!
-  O o1(0);
+  O o1(0); // both-warning {{temporary whose address is used as value of}}
+  // FIXME: the secondary warning message is bogus, would be nice to suppress it.
   constinit O o2(0); // both-error {{variable does not have a constant initializer}} \
                      // both-note {{required by 'constinit' specifier}} \
                      // both-note {{reference to temporary is not a constant expression}} \
-                     // both-note {{temporary created here}}
+                     // both-note {{temporary created here}} \
+                     // both-warning {{temporary whose address is used as value}}
 
 
   /// Initializing an array.
@@ -1660,4 +1662,19 @@ namespace NullptrUpcast {
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
                          // both-note {{cannot access base class of null pointer}}
+}
+
+namespace NonConst {
+  template <int I>
+  struct S {
+    static constexpr int Size = I;
+    constexpr int getSize() const { return I; }
+    explicit S(int a) {}
+  };
+
+  void func() {
+    int a,b ;
+    const S<10> s{a};
+    static_assert(s.getSize() == 10, "");
+  }
 }

@@ -41,6 +41,18 @@ func.func @rocdl.sched_barrier() {
   llvm.return
 }
 
+func.func @rocdl_sched_group_barrier() {
+  // CHECK: rocdl.sched.group.barrier
+  rocdl.sched.group.barrier 8, 1, 0
+  llvm.return
+}
+
+func.func @rocdl_iglp_opt() {
+  // CHECK: rocdl.iglp.opt
+  rocdl.iglp.opt 0
+  llvm.return
+}
+
 func.func @rocdl.setprio() {
   // CHECK: rocdl.s.setprio
   rocdl.s.setprio 0
@@ -372,6 +384,17 @@ llvm.func @rocdl.s.wait.dscnt() {
   // CHECK: rocdl.s.wait.dscnt 0
   rocdl.s.wait.dscnt 0
   llvm.return
+}
+
+// -----
+
+llvm.func @rocdl.readlane(%src : f32) -> f32 {
+  %cst0 = llvm.mlir.constant(0 : i32) : i32
+
+  // CHECK-LABEL: rocdl.readlane
+  // CHECK: rocdl.readlane %{{.*}} %{{.*}}
+  %ret = rocdl.readlane %src, %cst0 : (f32, i32) -> f32
+  llvm.return %ret : f32
 }
 
 // -----

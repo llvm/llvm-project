@@ -371,11 +371,29 @@ uint64_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint64_t term_width) {
+  const uint32_t idx = ePropertyTerminalWidth;
+  const bool success = SetPropertyAtIndex(idx, term_width);
+
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
 
-  const uint32_t idx = ePropertyTerminalWidth;
-  return SetPropertyAtIndex(idx, term_width);
+  return success;
+}
+
+uint64_t Debugger::GetTerminalHeight() const {
+  const uint32_t idx = ePropertyTerminalHeight;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+bool Debugger::SetTerminalHeight(uint64_t term_height) {
+  const uint32_t idx = ePropertyTerminalHeight;
+  const bool success = SetPropertyAtIndex(idx, term_height);
+
+  if (auto handler_sp = m_io_handler_stack.Top())
+    handler_sp->TerminalSizeChanged();
+
+  return success;
 }
 
 bool Debugger::GetUseExternalEditor() const {
@@ -784,9 +802,10 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
     CommandReturnObject result(debugger_sp->GetUseColor());
     cmd_interpreter.SaveTranscript(result);
     if (result.Succeeded())
-      (*debugger_sp->GetAsyncOutputStream()) << result.GetOutputData() << '\n';
+      (*debugger_sp->GetAsyncOutputStream())
+          << result.GetOutputString() << '\n';
     else
-      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorData() << '\n';
+      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorString() << '\n';
   }
 
   debugger_sp->Clear();
@@ -918,7 +937,11 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
           ePropertyTerminalWidth);
   term_width->SetMinimumValue(10);
-  term_width->SetMaximumValue(1024);
+
+  OptionValueUInt64 *term_height =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
+          ePropertyTerminalHeight);
+  term_height->SetMinimumValue(10);
 
   // Turn off use-color if this is a dumb terminal.
   const char *term = getenv("TERM");
@@ -2115,7 +2138,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   const uint32_t term_width = GetTerminalWidth();
   const uint32_t ellipsis = 3;
   if (message.size() + ellipsis >= term_width)
-    message = message.substr(0, term_width - ellipsis);
+    message.resize(term_width - ellipsis);
 
   const bool use_color = GetUseColor();
   llvm::StringRef ansi_prefix = GetShowProgressAnsiPrefix();
