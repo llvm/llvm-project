@@ -1297,7 +1297,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
           return nullptr;
         }
       }
-    } else if (features_.IsEnabled(LanguageFeature::OpenMP)) {
+    } else if (features_.IsEnabled(LanguageFeature::OpenMP) && *p == '$') {
       ++p;
     } else {
       return nullptr;
