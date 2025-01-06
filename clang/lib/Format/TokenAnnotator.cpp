@@ -1582,7 +1582,10 @@ private:
         return false;
       break;
     case tok::l_brace:
-      if (Style.Language == FormatStyle::LK_TextProto) {
+      if (IsCpp) {
+        if (Tok->is(TT_RequiresExpressionLBrace))
+          Line.Type = LT_RequiresExpression;
+      } else if (Style.Language == FormatStyle::LK_TextProto) {
         FormatToken *Previous = Tok->getPreviousNonComment();
         if (Previous && Previous->isNot(TT_DictLiteral))
           Previous->setType(TT_SelectorName);
@@ -2024,8 +2027,11 @@ public:
       if (!consumeToken())
         return LT_Invalid;
     }
-    if (Line.Type == LT_AccessModifier)
-      return LT_AccessModifier;
+    if (const auto Type = Line.Type; Type == LT_AccessModifier ||
+                                     Type == LT_RequiresExpression ||
+                                     Type == LT_SimpleRequirement) {
+      return Type;
+    }
     if (KeywordVirtualFound)
       return LT_VirtualFunctionDecl;
     if (ImportStatement)
@@ -3102,8 +3108,10 @@ private:
       }
     }
 
-    if (!Scopes.empty() && Scopes.back() == ST_CompoundRequirement)
+    if (Line.Type == LT_SimpleRequirement ||
+        (!Scopes.empty() && Scopes.back() == ST_CompoundRequirement)) {
       return TT_BinaryOperator;
+    }
 
     return TT_PointerOrReference;
   }
@@ -3693,8 +3701,15 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 
   if (!Line.Children.empty()) {
     ScopeStack.push_back(ST_ChildBlock);
-    for (auto &Child : Line.Children)
+    const bool InRequiresExpression = Line.Type == LT_RequiresExpression;
+    for (auto &Child : Line.Children) {
+      if (InRequiresExpression &&
+          !Child->First->isOneOf(tok::kw_typename, tok::kw_requires,
+                                 TT_CompoundRequirementLBrace)) {
+        Child->Type = LT_SimpleRequirement;
+      }
       annotate(*Child);
+    }
     // ScopeStack can become empty if Child has an unmatched `}`.
     if (!ScopeStack.empty())
       ScopeStack.pop_back();
