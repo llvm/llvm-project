@@ -709,11 +709,11 @@ namespace cwg39 { // cwg39: no
     // expected-error@#cwg39-sizeof {{unknown type name}}
 #if __cplusplus >= 201103L
     decltype(D::n) n;
-    /* expected-error@-1
+    /* since-cxx11-error@-1
     {{non-static member 'n' found in multiple base-class subobjects of type 'A':
     struct cwg39::PR5916::D -> B -> A
     struct cwg39::PR5916::D -> C -> A}} */
-    //   expected-note@#cwg39-A-n {{member found by ambiguous name lookup}}
+    //   since-cxx11-note@#cwg39-A-n {{member found by ambiguous name lookup}}
 #endif
   }
 } // namespace cwg39
@@ -1150,8 +1150,8 @@ namespace cwg73 { // cwg73: sup 1652
 #if __cplusplus >= 201103L
   int a, b;
   static_assert(&a + 1 != &b, "");
-  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-  //   expected-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   since-cxx11-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
 #endif
 } // namespace cwg73
 
@@ -1255,14 +1255,14 @@ namespace cwg85 { // cwg85: 3.4
     enum E1 : int;
     enum E1 : int { e1 }; // #cwg85-E1-def
     enum E1 : int;
-    // expected-error@-1 {{class member cannot be redeclared}}
-    //   expected-note@#cwg85-E1-def {{previous declaration is here}}
+    // since-cxx11-error@-1 {{class member cannot be redeclared}}
+    //   since-cxx11-note@#cwg85-E1-def {{previous declaration is here}}
 
     enum class E2;
     enum class E2 { e2 }; // #cwg85-E2-def
     enum class E2;
-    // expected-error@-1 {{class member cannot be redeclared}}
-    //   expected-note@#cwg85-E2-def {{previous declaration is here}}
+    // since-cxx11-error@-1 {{class member cannot be redeclared}}
+    //   since-cxx11-note@#cwg85-E2-def {{previous declaration is here}}
 #endif
   };
 

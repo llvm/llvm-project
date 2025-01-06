@@ -22,7 +22,8 @@ template<typename T>
 R(T) -> R<T> requires true;
 
 template<typename T>
-R(T, T) requires true -> R<T>; // expected-error {{expected function body after function declarator}}
+R(T, T) requires true -> R<T>;
+// since-cxx20-error@-1 {{expected function body after function declarator}}
 
 #endif
 
@@ -31,7 +32,8 @@ R(T, T) requires true -> R<T>; // expected-error {{expected function body after 
 namespace cwg2915 { // cwg2915: 20
 #if __cplusplus >= 202302L
 struct A {
-  void f(this void); // expected-error {{explicit object parameter cannot have 'void' type}}
+  void f(this void);
+  // since-cxx23-error@-1 {{explicit object parameter cannot have 'void' type}}
 };
 #endif
 } // namespace cwg2915
@@ -63,7 +65,7 @@ namespace std {
   using size_t = decltype(sizeof(0));
 } // namespace std
 void *operator new(std::size_t, void *p) { return p; }
-void* operator new[] (std::size_t, void* p) {return p;}
+void* operator new[] (std::size_t, void* p) {return p; }
 #endif
 
 namespace cwg2922 { // cwg2922: 20
@@ -72,14 +74,14 @@ union U { int a, b; };
 constexpr U nondeterministic(bool i) {
   if(i) {
     U u;
-    new (&u) int();
-    // expected-note@-1 {{placement new would change type of storage from 'U' to 'int'}}
+    new (&u) int(); // #cwg2922-placement-new
     return u;
   }
   return {};
 }
 constexpr U _ = nondeterministic(true);
-// expected-error@-1 {{constexpr variable '_' must be initialized by a constant expression}} \
-// expected-note@-1 {{in call to 'nondeterministic(true)'}}
+// since-cxx26-error@-1 {{constexpr variable '_' must be initialized by a constant expression}}
+//   since-cxx26-note@#cwg2922-placement-new {{placement new would change type of storage from 'U' to 'int'}}
+//   since-cxx26-note@-3 {{in call to 'nondeterministic(true)'}}
 #endif
 } // namespace cwg2922
