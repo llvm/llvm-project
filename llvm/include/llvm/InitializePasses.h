@@ -120,8 +120,7 @@ void initializeExternalAAWrapperPassPass(PassRegistry&);
 void initializeFEntryInserterPass(PassRegistry&);
 void initializeFinalizeISelPass(PassRegistry&);
 void initializeFinalizeMachineBundlesPass(PassRegistry&);
-void initializeFixIrreduciblePass(PassRegistinitializeVirtRegMapPass(Registry);
-  ry &);
+void initializeFixIrreduciblePass(PassRegistry &);
 void initializeFixupStatepointCallerSavedPass(PassRegistry&);
 void initializeFixStackmapsSpillReloadsPass(PassRegistry&);
 void initializeFlattenCFGLegacyPassPass(PassRegistry &);
@@ -345,9 +344,9 @@ void initializeXRayInstrumentationPass(PassRegistry&);
 void initializeYkStackmapsPass(PassRegistry&);
 void initializeYkSplitBlocksAfterCallsPass(PassRegistry&);
 void initializeYkBasicBlockTracerPass(PassRegistry&);
-void initializeYkBasicBlockTracerNoopPass(PassRegistry&);
 void initializeYkShadowStackPass(PassRegistry&);
 void initializeYkModuleClonePass(PassRegistry&);
+void initializeYkBasicBlockTracerNoopPass(PassRegistry&);
 } // end namespace llvm
 
 #endif // LLVM_INITIALIZEPASSES_H
