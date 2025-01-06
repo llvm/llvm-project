@@ -257,8 +257,8 @@ macOS              x86                   GCC, Clang
 macOS              arm64                 Clang
 Cygwin/Win32       x86\ :sup:`1, 3`      GCC
 Windows            x86\ :sup:`1`         Visual Studio
-Windows x64        x86-64                Visual Studio
-Windows on Arm     ARM64                 Visual Studio
+Windows x64        x86-64                Visual Studio, Clang\ :sup:`4`
+Windows on Arm     ARM64                 Visual Studio, Clang\ :sup:`4`
 ================== ===================== =============
 
 .. note::
@@ -267,6 +267,8 @@ Windows on Arm     ARM64                 Visual Studio
   #. Code generation supported for 32-bit ABI only
   #. To use LLVM modules on Win32-based system, you may configure LLVM
      with ``-DBUILD_SHARED_LIBS=On``.
+  #. Visual Studio alone can compile LLVM. When using Clang, you
+     must also have Visual Studio installed.
 
 Note that Debug builds require a lot of time and disk space.  An LLVM-only build
 will need about 1-3 GB of space.  A full build of LLVM and Clang will need around
