@@ -12,6 +12,7 @@
 #include "Cuda.h"
 #include "LazyDetector.h"
 #include "ROCm.h"
+#include "SYCL.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Driver/Tool.h"
@@ -331,6 +332,7 @@ public:
 
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
+  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
@@ -563,6 +565,8 @@ public:
                           llvm::opt::ArgStringList &CC1Args) const override;
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
 
   bool UseObjCMixedDispatch() const override {
     // This is only used with the non-fragile ABI and non-legacy dispatch.
