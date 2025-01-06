@@ -18386,6 +18386,15 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
 
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+
+    // Bail if we might break a sh{1,2,3}add pattern.
+    if (Subtarget.hasStdExtZba() && C2->getZExtValue() >= 1 &&
+        C2->getZExtValue() <= 3 && N->hasOneUse() &&
+        N->user_begin()->getOpcode() == ISD::ADD &&
+        !isUsedByLdSt(*N->user_begin(), nullptr) &&
+        !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
+      return false;
+
     if (C1 && C2) {
       const APInt &C1Int = C1->getAPIntValue();
       APInt ShiftedC1Int = C1Int << C2->getAPIntValue();
