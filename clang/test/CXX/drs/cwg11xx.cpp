@@ -128,6 +128,6 @@ namespace cwg1113 { // cwg1113: partial
     extern "C" void f();
   }
   void g() { f(); }
-}
+} // namespace cwg1113
 
 // cwg1150: na

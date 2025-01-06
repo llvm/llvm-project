@@ -527,7 +527,8 @@ static VPScalarIVStepsRecipe *
 createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     Instruction::BinaryOps InductionOpcode,
                     FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPValue *StartV, VPValue *Step, VPBuilder &Builder) {
+                    VPValue *StartV, VPValue *Step, DebugLoc DL,
+                    VPBuilder &Builder) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
@@ -542,7 +543,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
     assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
            "Not truncating.");
     assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy);
+    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
     ResultTy = TruncTy;
   }
 
@@ -556,7 +557,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
         cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(VecPreheader);
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy);
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
   }
   return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step);
 }
@@ -588,7 +589,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       VPValue *StepV = PtrIV->getOperand(1);
       VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-          nullptr, StartV, StepV, Builder);
+          nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
 
       VPValue *PtrAdd = Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
                                              PtrIV->getDebugLoc(), "next.gep");
@@ -612,7 +613,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        Builder);
+        WideIV->getDebugLoc(), Builder);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)
@@ -794,12 +795,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 }
 
-/// Try to simplify the recipes in \p Plan
-static void simplifyRecipes(VPlan &Plan) {
+/// Try to simplify the recipes in \p Plan. Use \p CanonicalIVTy as type for all
+/// un-typed live-ins in VPTypeAnalysis.
+static void simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  VPTypeAnalysis TypeInfo(CanonicalIVTy);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -812,8 +813,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          PredicatedScalarEvolution &PSE) {
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
-  VPBasicBlock *ExitingVPBB =
-      Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   // Try to simplify the branch condition if TC <= VF * UF when preparing to
   // execute the plan for the main vector loop. We only do this if the
@@ -837,14 +838,42 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
 
-  LLVMContext &Ctx = SE.getContext();
-  auto *BOC = new VPInstruction(
-      VPInstruction::BranchOnCond,
-      {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
+  // The vector loop region only executes once. If possible, completely remove
+  // the region, otherwise replace the terminator controlling the latch with
+  // (BranchOnCond true).
+  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
+  auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
+  if (all_of(
+          Header->phis(),
+          IsaPred<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe>)) {
+    for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
+      auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
+      HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());
+      HeaderPhiR->eraseFromParent();
+    }
+
+    VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
+    VPBlockBase *Exit = VectorRegion->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(Preheader, VectorRegion);
+    VPBlockUtils::disconnectBlocks(VectorRegion, Exit);
+
+    for (VPBlockBase *B : vp_depth_first_shallow(VectorRegion->getEntry()))
+      B->setParent(nullptr);
+
+    VPBlockUtils::connectBlocks(Preheader, Header);
+    VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
+    simplifyRecipes(Plan, CanIVTy);
+  } else {
+    // The vector region contains header phis for which we cannot remove the
+    // loop region yet.
+    LLVMContext &Ctx = SE.getContext();
+    auto *BOC = new VPInstruction(
+        VPInstruction::BranchOnCond,
+        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
+    ExitingVPBB->appendRecipe(BOC);
+  }
 
   Term->eraseFromParent();
-  ExitingVPBB->appendRecipe(BOC);
-
   VPlanTransforms::removeDeadRecipes(Plan);
 
   Plan.setVF(BestVF);
@@ -1258,10 +1287,10 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   removeRedundantCanonicalIVs(Plan);
   removeRedundantInductionCasts(Plan);
 
-  simplifyRecipes(Plan);
+  simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
   legalizeAndOptimizeInductions(Plan);
   removeRedundantExpandSCEVRecipes(Plan);
-  simplifyRecipes(Plan);
+  simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
@@ -1661,9 +1690,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   VPSingleDefRecipe *OpVPEVL = VPEVL;
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
-    OpVPEVL = new VPScalarCastRecipe(IVSize < 32 ? Instruction::Trunc
-                                                 : Instruction::ZExt,
-                                     OpVPEVL, CanonicalIVPHI->getScalarType());
+    OpVPEVL = new VPScalarCastRecipe(
+        IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
+        CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
     OpVPEVL->insertBefore(CanonicalIVIncrement);
   }
   auto *NextEVLIV =

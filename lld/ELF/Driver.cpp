@@ -1746,13 +1746,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
                         "may not be used together";
-    if (std::optional<MemoryBufferRef> buffer =
-            readFile(ctx, arg->getValue())) {
+    if (auto buffer = readFile(ctx, arg->getValue()))
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
-      // Also need to disable CallGraphProfileSort to prevent
-      // LLD order symbols with CGProfile
-      ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
-    }
   }
 
   assert(ctx.arg.versionDefinitions.empty());

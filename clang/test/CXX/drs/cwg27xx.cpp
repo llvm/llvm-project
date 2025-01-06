@@ -174,8 +174,8 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3)
 #endif
 } // namespace cwg2759
 
-#if __cplusplus >= 202002L
 namespace cwg2770 { // cwg2770: 20
+#if __cplusplus >= 202002L
 template<typename T>
 struct B {
   static_assert(sizeof(T) == 1);
@@ -191,8 +191,8 @@ int f(T t, long);
 int i = f(1, 2);
 int j = f('a', 2);
 
-} // namespace cwg2770
 #endif
+} // namespace cwg2770
 
 namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L
@@ -224,7 +224,7 @@ void test() {
     //   since-cxx23-note@#cwg2789-g2 {{candidate function}}
 }
 #endif
-}
+} // namespace cwg2789
 
 namespace cwg2798 { // cwg2798: 17
 #if __cplusplus > 202302L
