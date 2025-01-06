@@ -138,7 +138,7 @@ Member_type get(Class &c) {
 
 void call(int (*f)(Derived &)); // #cwg203-ex5-call
 
-int main() {
+int f() {
   // ill-formed, contrary to Core issue filing:
   // `&Derived::b` yields `int Derived::*`, which can't initialize NTTP of type `int Base::*`,
   // because (implicit) pointer-to-member conversion doesn't upcast.
@@ -166,7 +166,7 @@ public:
   using Base::a; // make `a` accessible
 };
 
-int main() {
+int f() {
   Derived d;
   int b = d.a;
   // FIXME: in the diagnostic below, Base is fully qualified, but Derived is not
