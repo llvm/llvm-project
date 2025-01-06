@@ -486,6 +486,7 @@ public:
   NODE(parser, OmpAffinityClause)
   NODE(OmpAffinityClause, Modifier)
   NODE(parser, OmpAlignment)
+  NODE(parser, OmpAlignClause)
   NODE(parser, OmpAlignedClause)
   NODE(OmpAlignedClause, Modifier)
   NODE(parser, OmpAtClause)
