@@ -3097,8 +3097,12 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
       TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
   InstructionCost OldCost = ExtCost + InsCost;
 
-  InstructionCost NewCost = TTI.getShuffleCost(SK, VecTy, Mask, CostKind, 0,
-                                               nullptr, {DstVec, SrcVec});
+  // Ignore 'free' identity insertion shuffle.
+  // TODO: getShuffleCost should return TCC_Free for Identity shuffles.
+  InstructionCost NewCost = 0;
+  if (!ShuffleVectorInst::isIdentityMask(Mask, NumElts))
+    NewCost += TTI.getShuffleCost(SK, VecTy, Mask, CostKind, 0, nullptr,
+                                  {DstVec, SrcVec});
   if (!Ext->hasOneUse())
     NewCost += ExtCost;
 

@@ -121,21 +121,17 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
                                            m_SpecificFP(-1.0))),
-                         m_Value(OtherOp)))) {
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(I.getFastMathFlags());
-    return Builder.CreateSelect(Cond, OtherOp, Builder.CreateFNeg(OtherOp));
-  }
+                         m_Value(OtherOp))))
+    return Builder.CreateSelectFMF(Cond, OtherOp,
+                                   Builder.CreateFNegFMF(OtherOp, &I), &I);
 
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
                                            m_SpecificFP(1.0))),
-                         m_Value(OtherOp)))) {
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(I.getFastMathFlags());
-    return Builder.CreateSelect(Cond, Builder.CreateFNeg(OtherOp), OtherOp);
-  }
+                         m_Value(OtherOp))))
+    return Builder.CreateSelectFMF(Cond, Builder.CreateFNegFMF(OtherOp, &I),
+                                   OtherOp, &I);
 
   return nullptr;
 }
@@ -590,11 +586,9 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   // fabs(X) / fabs(Y) --> fabs(X / Y)
   if (match(Op0, m_FAbs(m_Value(X))) && match(Op1, m_FAbs(m_Value(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(I.getFastMathFlags());
-    Value *XY = Builder.CreateBinOp(Opcode, X, Y);
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY);
-    Fabs->takeName(&I);
+    Value *XY = Builder.CreateBinOpFMF(Opcode, X, Y, &I);
+    Value *Fabs =
+        Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY, &I, I.getName());
     return replaceInstUsesWith(I, Fabs);
   }
 
@@ -685,8 +679,6 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       match(Op0, m_AllowReassoc(m_BinOp(Op0BinOp)))) {
     // Everything in this scope folds I with Op0, intersecting their FMF.
     FastMathFlags FMF = I.getFastMathFlags() & Op0BinOp->getFastMathFlags();
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(FMF);
     Constant *C1;
     if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
       // (C1 / X) * C --> (C * C1) / X
@@ -718,7 +710,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // (X + C1) * C --> (X * C) + (C * C1)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMul(X, C);
+        Value *XC = Builder.CreateFMulFMF(X, C, FMF);
         return BinaryOperator::CreateFAddFMF(XC, CC1, FMF);
       }
     }
@@ -726,7 +718,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // (C1 - X) * C --> (C * C1) - (X * C)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMul(X, C);
+        Value *XC = Builder.CreateFMulFMF(X, C, FMF);
         return BinaryOperator::CreateFSubFMF(CC1, XC, FMF);
       }
     }
@@ -740,9 +732,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     FastMathFlags FMF = I.getFastMathFlags() & DivOp->getFastMathFlags();
     if (FMF.allowReassoc()) {
       // Sink division: (X / Y) * Z --> (X * Z) / Y
-      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-      Builder.setFastMathFlags(FMF);
-      auto *NewFMul = Builder.CreateFMul(X, Z);
+      auto *NewFMul = Builder.CreateFMulFMF(X, Z, FMF);
       return BinaryOperator::CreateFDivFMF(NewFMul, Y, FMF);
     }
   }
