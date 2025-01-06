@@ -726,7 +726,7 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
     return C.remaining();
   }
 
-  C = skipMachineOperandComment(C);
+  C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
     return R.remaining();

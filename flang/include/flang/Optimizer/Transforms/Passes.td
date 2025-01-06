@@ -153,7 +153,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">,
     Option<"setNSW", "set-nsw", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "set nsw on loop variable increment">
   ];
 }
@@ -424,7 +424,7 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
   ];
 }
 

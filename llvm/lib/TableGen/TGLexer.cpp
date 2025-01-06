@@ -81,8 +81,7 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   TokStart = nullptr;
 
   // Pretend that we enter the "top-level" include file.
-  PrepIncludeStack.push_back(
-      std::make_unique<std::vector<PreprocessorControlDesc>>());
+  PrepIncludeStack.emplace_back();
 
   // Add all macros defined on the command line to the DefinedMacros set.
   // Check invalid macro names and print fatal error if we find one.
@@ -453,8 +452,7 @@ bool TGLexer::LexInclude() {
   CurBuf = SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer();
   CurPtr = CurBuf.begin();
 
-  PrepIncludeStack.push_back(
-      std::make_unique<std::vector<PreprocessorControlDesc>>());
+  PrepIncludeStack.emplace_back();
   return false;
 }
 
@@ -633,6 +631,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("listremove", tgtok::XListRemove)
           .Case("range", tgtok::XRange)
           .Case("strconcat", tgtok::XStrConcat)
+          .Case("initialized", tgtok::XInitialized)
           .Case("interleave", tgtok::XInterleave)
           .Case("substr", tgtok::XSubstr)
           .Case("find", tgtok::XFind)
@@ -655,17 +654,13 @@ tgtok::TokKind TGLexer::LexExclaim() {
 bool TGLexer::prepExitInclude(bool IncludeStackMustBeEmpty) {
   // Report an error, if preprocessor control stack for the current
   // file is not empty.
-  if (!PrepIncludeStack.back()->empty()) {
+  if (!PrepIncludeStack.back().empty()) {
     prepReportPreprocessorStackError();
 
     return false;
   }
 
   // Pop the preprocessing controls from the include stack.
-  if (PrepIncludeStack.empty()) {
-    PrintFatalError("preprocessor include stack is empty");
-  }
-
   PrepIncludeStack.pop_back();
 
   if (IncludeStackMustBeEmpty) {
@@ -760,7 +755,7 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
     // Regardless of whether we are processing tokens or not,
     // we put the #ifdef control on stack.
     // Note that MacroIsDefined has been canonicalized against ifdef.
-    PrepIncludeStack.back()->push_back(
+    PrepIncludeStack.back().push_back(
         {tgtok::Ifdef, MacroIsDefined, SMLoc::getFromPointer(TokStart)});
 
     if (!prepSkipDirectiveEnd())
@@ -788,10 +783,10 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
   } else if (Kind == tgtok::Else) {
     // Check if this #else is correct before calling prepSkipDirectiveEnd(),
     // which will move CurPtr away from the beginning of #else.
-    if (PrepIncludeStack.back()->empty())
+    if (PrepIncludeStack.back().empty())
       return ReturnError(TokStart, "#else without #ifdef or #ifndef");
 
-    PreprocessorControlDesc IfdefEntry = PrepIncludeStack.back()->back();
+    PreprocessorControlDesc IfdefEntry = PrepIncludeStack.back().back();
 
     if (IfdefEntry.Kind != tgtok::Ifdef) {
       PrintError(TokStart, "double #else");
@@ -800,9 +795,8 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
 
     // Replace the corresponding #ifdef's control with its negation
     // on the control stack.
-    PrepIncludeStack.back()->pop_back();
-    PrepIncludeStack.back()->push_back(
-        {Kind, !IfdefEntry.IsDefined, SMLoc::getFromPointer(TokStart)});
+    PrepIncludeStack.back().back() = {Kind, !IfdefEntry.IsDefined,
+                                      SMLoc::getFromPointer(TokStart)};
 
     if (!prepSkipDirectiveEnd())
       return ReturnError(CurPtr, "only comments are supported after #else");
@@ -821,10 +815,10 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
   } else if (Kind == tgtok::Endif) {
     // Check if this #endif is correct before calling prepSkipDirectiveEnd(),
     // which will move CurPtr away from the beginning of #endif.
-    if (PrepIncludeStack.back()->empty())
+    if (PrepIncludeStack.back().empty())
       return ReturnError(TokStart, "#endif without #ifdef");
 
-    auto &IfdefOrElseEntry = PrepIncludeStack.back()->back();
+    auto &IfdefOrElseEntry = PrepIncludeStack.back().back();
 
     if (IfdefOrElseEntry.Kind != tgtok::Ifdef &&
         IfdefOrElseEntry.Kind != tgtok::Else) {
@@ -835,7 +829,7 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
     if (!prepSkipDirectiveEnd())
       return ReturnError(CurPtr, "only comments are supported after #endif");
 
-    PrepIncludeStack.back()->pop_back();
+    PrepIncludeStack.back().pop_back();
 
     // If we were processing tokens before this #endif, then
     // we should continue it.
@@ -1054,20 +1048,16 @@ bool TGLexer::prepSkipDirectiveEnd() {
 }
 
 bool TGLexer::prepIsProcessingEnabled() {
-  for (const PreprocessorControlDesc &I :
-       llvm::reverse(*PrepIncludeStack.back()))
-    if (!I.IsDefined)
-      return false;
-
-  return true;
+  return all_of(PrepIncludeStack.back(),
+                [](const PreprocessorControlDesc &I) { return I.IsDefined; });
 }
 
 void TGLexer::prepReportPreprocessorStackError() {
-  if (PrepIncludeStack.back()->empty())
+  if (PrepIncludeStack.back().empty())
     PrintFatalError("prepReportPreprocessorStackError() called with "
                     "empty control stack");
 
-  auto &PrepControl = PrepIncludeStack.back()->back();
+  auto &PrepControl = PrepIncludeStack.back().back();
   PrintError(CurBuf.end(), "reached EOF without matching #endif");
   PrintError(PrepControl.SrcPos, "the latest preprocessor control is here");
 

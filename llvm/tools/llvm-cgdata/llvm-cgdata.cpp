@@ -51,12 +51,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -67,7 +68,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class CGDataOptTable : public opt::GenericOptTable {
 public:
-  CGDataOptTable() : GenericOptTable(InfoTable) {}
+  CGDataOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // end anonymous namespace
 
@@ -76,6 +78,7 @@ static StringRef ToolName;
 static StringRef OutputFilename = "-";
 static StringRef Filename;
 static bool ShowCGDataVersion;
+static bool SkipTrim;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
@@ -214,7 +217,7 @@ static int merge_main(int argc, const char *argv[]) {
   if (!Result)
     exitWithError("failed to merge codegen data files.");
 
-  GlobalFunctionMapRecord.finalize();
+  GlobalFunctionMapRecord.finalize(SkipTrim);
 
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
@@ -301,6 +304,7 @@ static void parseArgs(int argc, char **argv) {
   }
 
   ShowCGDataVersion = Args.hasArg(OPT_cgdata_version);
+  SkipTrim = Args.hasArg(OPT_skip_trim);
 
   if (opt::Arg *A = Args.getLastArg(OPT_format)) {
     StringRef OF = A->getValue();

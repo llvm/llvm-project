@@ -799,7 +799,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   }
 
   // If we've not parsed a statement yet, parse one now.
-  if (!SubStmt.isInvalid() && !SubStmt.isUsable())
+  if (SubStmt.isUnset())
     SubStmt = ParseStatement(nullptr, StmtCtx);
 
   // Broken substmt shouldn't prevent the label from being added to the AST.
@@ -890,7 +890,15 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     SourceLocation DotDotDotLoc;
     ExprResult RHS;
     if (TryConsumeToken(tok::ellipsis, DotDotDotLoc)) {
-      Diag(DotDotDotLoc, diag::ext_gnu_case_range);
+      // In C++, this is a GNU extension. In C, it's a C2y extension.
+      unsigned DiagId;
+      if (getLangOpts().CPlusPlus)
+        DiagId = diag::ext_gnu_case_range;
+      else if (getLangOpts().C2y)
+        DiagId = diag::warn_c23_compat_case_range;
+      else
+        DiagId = diag::ext_c2y_case_range;
+      Diag(DotDotDotLoc, DiagId);
       RHS = ParseCaseExpression(CaseLoc);
       if (RHS.isInvalid()) {
         if (!SkipUntil(tok::colon, tok::r_brace, StopAtSemi | StopBeforeMatch))
@@ -2352,7 +2360,11 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   // OpenACC Restricts a for-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
-  getActions().OpenACC().ActOnForStmtBegin(ForLoc);
+  if (ForRangeInfo.ParsedForRangeDecl())
+    getActions().OpenACC().ActOnRangeForStmtBegin(ForLoc, ForRangeStmt.get());
+  else
+    getActions().OpenACC().ActOnForStmtBegin(
+        ForLoc, FirstPart.get(), SecondPart.get().second, ThirdPart.get());
 
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this

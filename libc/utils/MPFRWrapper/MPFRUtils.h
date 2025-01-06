@@ -60,6 +60,7 @@ enum class Operation : int {
   Sqrt,
   Tan,
   Tanh,
+  Tanpi,
   Trunc,
   EndUnaryOperationsSingleOutput,
 

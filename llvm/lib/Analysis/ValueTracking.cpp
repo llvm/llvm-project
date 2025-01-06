@@ -31,7 +31,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Analysis/WithCache.h"
@@ -260,7 +259,7 @@ bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    ICmpInst::Predicate P;
+    CmpPredicate P;
     return match(U, m_ICmp(P, m_Value(), m_Zero())) && ICmpInst::isEquality(P);
   });
 }
@@ -615,7 +614,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     // runtime of ~O(#assumes * #values).
 
     Value *RHS;
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
       continue;
@@ -1066,6 +1065,64 @@ void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
   Known = CondRes;
 }
 
+// Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
+// Returns the input and lower/upper bounds.
+static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
+                                const APInt *&CLow, const APInt *&CHigh) {
+  assert(isa<Operator>(Select) &&
+         cast<Operator>(Select)->getOpcode() == Instruction::Select &&
+         "Input should be a Select!");
+
+  const Value *LHS = nullptr, *RHS = nullptr;
+  SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;
+  if (SPF != SPF_SMAX && SPF != SPF_SMIN)
+    return false;
+
+  if (!match(RHS, m_APInt(CLow)))
+    return false;
+
+  const Value *LHS2 = nullptr, *RHS2 = nullptr;
+  SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor;
+  if (getInverseMinMaxFlavor(SPF) != SPF2)
+    return false;
+
+  if (!match(RHS2, m_APInt(CHigh)))
+    return false;
+
+  if (SPF == SPF_SMIN)
+    std::swap(CLow, CHigh);
+
+  In = LHS2;
+  return CLow->sle(*CHigh);
+}
+
+static bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
+                                         const APInt *&CLow,
+                                         const APInt *&CHigh) {
+  assert((II->getIntrinsicID() == Intrinsic::smin ||
+          II->getIntrinsicID() == Intrinsic::smax) &&
+         "Must be smin/smax");
+
+  Intrinsic::ID InverseID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+  auto *InnerII = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
+  if (!InnerII || InnerII->getIntrinsicID() != InverseID ||
+      !match(II->getArgOperand(1), m_APInt(CLow)) ||
+      !match(InnerII->getArgOperand(1), m_APInt(CHigh)))
+    return false;
+
+  if (II->getIntrinsicID() == Intrinsic::smin)
+    std::swap(CLow, CHigh);
+  return CLow->sle(*CHigh);
+}
+
+static void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
+                                          KnownBits &Known) {
+  const APInt *CLow, *CHigh;
+  if (isSignedMinMaxIntrinsicClamp(II, CLow, CHigh))
+    Known = Known.unionWith(
+        ConstantRange::getNonEmpty(*CLow, *CHigh + 1).toKnownBits());
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known, unsigned Depth,
@@ -1427,16 +1484,23 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // this is sufficient to catch some interesting cases.
       unsigned Opcode = BO->getOpcode();
 
-      // If this is a shift recurrence, we know the bits being shifted in.
-      // We can combine that with information about the start value of the
-      // recurrence to conclude facts about the result.
       switch (Opcode) {
+      // If this is a shift recurrence, we know the bits being shifted in. We
+      // can combine that with information about the start value of the
+      // recurrence to conclude facts about the result. If this is a udiv
+      // recurrence, we know that the result can never exceed either the
+      // numerator or the start value, whichever is greater.
       case Instruction::LShr:
       case Instruction::AShr:
-      case Instruction::Shl: {
+      case Instruction::Shl:
+      case Instruction::UDiv:
         if (BO->getOperand(0) != I)
           break;
+        [[fallthrough]];
 
+      // For a urem recurrence, the result can never exceed the start value. The
+      // phi could either be the numerator or the denominator.
+      case Instruction::URem: {
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
         // %iv.next = shift_op %iv, L
@@ -1454,8 +1518,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setLowBits(Known2.countMinTrailingZeros());
           break;
         case Instruction::LShr:
-          // A lshr recurrence will preserve the leading zeros of the
-          // start value
+        case Instruction::UDiv:
+        case Instruction::URem:
+          // lshr, udiv, and urem recurrences will preserve the leading zeros of
+          // the start value.
           Known.Zero.setHighBits(Known2.countMinLeadingZeros());
           break;
         case Instruction::AShr:
@@ -1543,6 +1609,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         }
         break;
       }
+
       default:
         break;
       }
@@ -1566,20 +1633,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Skip direct self references.
         if (IncValue == P) continue;
 
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
-        // TODO: See if we can base recursion limiter on number of incoming phi
-        // edges so we don't overly clamp analysis.
-        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
-
         // If the Use is a select of this phi, use the knownbit of the other
         // operand to break the recursion.
         if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
-          if (SI->getTrueValue() == P || SI->getFalseValue() == P) {
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
             IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
                                                : SI->getTrueValue();
-            IncDepth = Depth + 1;
-          }
         }
 
         // Change the context instruction to the "edge" that flows into the
@@ -1590,12 +1649,18 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
-        computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
+
+        // Recurse, but cap the recursion to one level, because we don't
+        // want to waste time spinning around in loops.
+        // TODO: See if we can base recursion limiter on number of incoming phi
+        // edges so we don't overly clamp analysis.
+        computeKnownBits(IncValue, DemandedElts, Known2,
+                         MaxAnalysisRecursionDepth - 1, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
         if (!Known2.isConstant()) {
-          ICmpInst::Predicate Pred;
+          CmpPredicate Pred;
           const APInt *RHSC;
           BasicBlock *TrueSucc, *FalseSucc;
           // TODO: Use RHS Value and compute range from its known bits.
@@ -1797,11 +1862,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::smin(Known, Known2);
+        unionWithMinMaxIntrinsicClamp(II, Known);
         break;
       case Intrinsic::smax:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
         Known = KnownBits::smax(Known, Known2);
+        unionWithMinMaxIntrinsicClamp(II, Known);
         break;
       case Intrinsic::ptrmask: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
@@ -2248,7 +2315,7 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
 static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
                                              const Value *Cond,
                                              bool CondIsTrue) {
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *RHSC;
   if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
                           m_APInt(RHSC))))
@@ -2573,7 +2640,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(U, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
       continue;
 
@@ -3002,7 +3069,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       // The condition of the select dominates the true/false arm. Check if the
       // condition implies that a given arm is non-zero.
       Value *X;
-      CmpInst::Predicate Pred;
+      CmpPredicate Pred;
       if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
         return false;
 
@@ -3030,7 +3097,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return true;
       RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
       // Check if the branch on the phi excludes zero.
-      ICmpInst::Predicate Pred;
+      CmpPredicate Pred;
       Value *X;
       BasicBlock *TrueSucc, *FalseSucc;
       if (match(RecQ.CxtI,
@@ -3744,55 +3811,6 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
   return false;
 }
 
-// Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
-// Returns the input and lower/upper bounds.
-static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
-                                const APInt *&CLow, const APInt *&CHigh) {
-  assert(isa<Operator>(Select) &&
-         cast<Operator>(Select)->getOpcode() == Instruction::Select &&
-         "Input should be a Select!");
-
-  const Value *LHS = nullptr, *RHS = nullptr;
-  SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;
-  if (SPF != SPF_SMAX && SPF != SPF_SMIN)
-    return false;
-
-  if (!match(RHS, m_APInt(CLow)))
-    return false;
-
-  const Value *LHS2 = nullptr, *RHS2 = nullptr;
-  SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor;
-  if (getInverseMinMaxFlavor(SPF) != SPF2)
-    return false;
-
-  if (!match(RHS2, m_APInt(CHigh)))
-    return false;
-
-  if (SPF == SPF_SMIN)
-    std::swap(CLow, CHigh);
-
-  In = LHS2;
-  return CLow->sle(*CHigh);
-}
-
-static bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
-                                         const APInt *&CLow,
-                                         const APInt *&CHigh) {
-  assert((II->getIntrinsicID() == Intrinsic::smin ||
-          II->getIntrinsicID() == Intrinsic::smax) && "Must be smin/smax");
-
-  Intrinsic::ID InverseID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
-  auto *InnerII = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
-  if (!InnerII || InnerII->getIntrinsicID() != InverseID ||
-      !match(II->getArgOperand(1), m_APInt(CLow)) ||
-      !match(InnerII->getArgOperand(1), m_APInt(CHigh)))
-    return false;
-
-  if (II->getIntrinsicID() == Intrinsic::smin)
-    std::swap(CLow, CHigh);
-  return CLow->sle(*CHigh);
-}
-
 /// For vector constants, loop over the elements and find the constant with the
 /// minimum number of sign bits. Return 0 if the value is not a vector constant
 /// or if any element was not analyzed; otherwise, return the count for the
@@ -4231,6 +4249,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_atanf:
   case LibFunc_atanl:
     return Intrinsic::atan;
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2l:
+    return Intrinsic::atan2;
   case LibFunc_sinh:
   case LibFunc_sinhf:
   case LibFunc_sinhl:
@@ -4871,10 +4893,20 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 }
 
 static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
-                                        bool CondIsTrue,
+                                        unsigned Depth, bool CondIsTrue,
                                         const Instruction *CxtI,
                                         KnownFPClass &KnownFromContext) {
-  CmpInst::Predicate Pred;
+  Value *A, *B;
+  if (Depth < MaxAnalysisRecursionDepth &&
+      (CondIsTrue ? match(Cond, m_LogicalAnd(m_Value(A), m_Value(B)))
+                  : match(Cond, m_LogicalOr(m_Value(A), m_Value(B))))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    return;
+  }
+  CmpPredicate Pred;
   Value *LHS;
   uint64_t ClassVal = 0;
   const APFloat *CRHS;
@@ -4885,10 +4917,10 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
     if (CmpVal == V)
       KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
   } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(
-                             m_Value(LHS), m_ConstantInt(ClassVal)))) {
+                             m_Specific(V), m_ConstantInt(ClassVal)))) {
     FPClassTest Mask = static_cast<FPClassTest>(ClassVal);
     KnownFromContext.knownNot(CondIsTrue ? ~Mask : Mask);
-  } else if (match(Cond, m_ICmp(Pred, m_ElementWiseBitCast(m_Value(LHS)),
+  } else if (match(Cond, m_ICmp(Pred, m_ElementWiseBitCast(m_Specific(V)),
                                 m_APInt(RHS)))) {
     bool TrueIfSigned;
     if (!isSignBitCheck(Pred, *RHS, TrueIfSigned))
@@ -4914,13 +4946,13 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
-        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/true, Q.CxtI,
-                                    KnownFromContext);
+        computeKnownFPClassFromCond(V, Cond, /*Depth=*/0, /*CondIsTrue=*/true,
+                                    Q.CxtI, KnownFromContext);
 
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (Q.DT->dominates(Edge1, Q.CxtI->getParent()))
-        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/false, Q.CxtI,
-                                    KnownFromContext);
+        computeKnownFPClassFromCond(V, Cond, /*Depth=*/0, /*CondIsTrue=*/false,
+                                    Q.CxtI, KnownFromContext);
     }
   }
 
@@ -4942,8 +4974,8 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
       continue;
 
-    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*CondIsTrue=*/true,
-                                Q.CxtI, KnownFromContext);
+    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*Depth=*/0,
+                                /*CondIsTrue=*/true, Q.CxtI, KnownFromContext);
   }
 
   return KnownFromContext;
@@ -5114,7 +5146,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     FPClassTest MaskIfFalse = fcAllFlags;
     uint64_t ClassVal = 0;
     const Function *F = cast<Instruction>(Op)->getFunction();
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *CmpLHS, *CmpRHS;
     if (F && match(Cond, m_FCmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
       // If the select filters out a value based on the class, it no longer
@@ -6714,11 +6746,12 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 }
 
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
-  if (!V->getType()->isPointerTy())
-    return V;
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-      V = GEP->getPointerOperand();
+      const Value *PtrOp = GEP->getPointerOperand();
+      if (!PtrOp->getType()->isPointerTy()) // Only handle scalar pointer base.
+        return V;
+      V = PtrOp;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
@@ -8549,7 +8582,7 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
 bool llvm::isKnownInversion(const Value *X, const Value *Y) {
   // Handle X = icmp pred A, B, Y = icmp pred A, C.
   Value *A, *B, *C;
-  ICmpInst::Predicate Pred1, Pred2;
+  CmpPredicate Pred1, Pred2;
   if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
       !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
     return false;
@@ -8575,6 +8608,37 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
   const auto CR2 = ConstantRange::makeExactICmpRegion(Pred2, *RHSC2);
 
   return CR1.inverse() == CR2;
+}
+
+SelectPatternResult llvm::getSelectPattern(CmpInst::Predicate Pred,
+                                           SelectPatternNaNBehavior NaNBehavior,
+                                           bool Ordered) {
+  switch (Pred) {
+  default:
+    return {SPF_UNKNOWN, SPNB_NA, false}; // Equality.
+  case ICmpInst::ICMP_UGT:
+  case ICmpInst::ICMP_UGE:
+    return {SPF_UMAX, SPNB_NA, false};
+  case ICmpInst::ICMP_SGT:
+  case ICmpInst::ICMP_SGE:
+    return {SPF_SMAX, SPNB_NA, false};
+  case ICmpInst::ICMP_ULT:
+  case ICmpInst::ICMP_ULE:
+    return {SPF_UMIN, SPNB_NA, false};
+  case ICmpInst::ICMP_SLT:
+  case ICmpInst::ICMP_SLE:
+    return {SPF_SMIN, SPNB_NA, false};
+  case FCmpInst::FCMP_UGT:
+  case FCmpInst::FCMP_UGE:
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OGE:
+    return {SPF_FMAXNUM, NaNBehavior, Ordered};
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_ULE:
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_OLE:
+    return {SPF_FMINNUM, NaNBehavior, Ordered};
+  }
 }
 
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
@@ -8684,27 +8748,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   }
 
   // ([if]cmp X, Y) ? X : Y
-  if (TrueVal == CmpLHS && FalseVal == CmpRHS) {
-    switch (Pred) {
-    default: return {SPF_UNKNOWN, SPNB_NA, false}; // Equality.
-    case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: return {SPF_UMAX, SPNB_NA, false};
-    case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: return {SPF_SMAX, SPNB_NA, false};
-    case ICmpInst::ICMP_ULT:
-    case ICmpInst::ICMP_ULE: return {SPF_UMIN, SPNB_NA, false};
-    case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_SLE: return {SPF_SMIN, SPNB_NA, false};
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_UGE:
-    case FCmpInst::FCMP_OGT:
-    case FCmpInst::FCMP_OGE: return {SPF_FMAXNUM, NaNBehavior, Ordered};
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_ULE:
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_OLE: return {SPF_FMINNUM, NaNBehavior, Ordered};
-    }
-  }
+  if (TrueVal == CmpLHS && FalseVal == CmpRHS)
+    return getSelectPattern(Pred, NaNBehavior, Ordered);
 
   if (isKnownNegation(TrueVal, FalseVal)) {
     // Sign-extending LHS does not change its sign, so TrueVal/FalseVal can
@@ -8769,40 +8814,10 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
-/// Helps to match a select pattern in case of a type mismatch.
-///
-/// The function processes the case when type of true and false values of a
-/// select instruction differs from type of the cmp instruction operands because
-/// of a cast instruction. The function checks if it is legal to move the cast
-/// operation after "select". If yes, it returns the new second value of
-/// "select" (with the assumption that cast is moved):
-/// 1. As operand of cast instruction when both values of "select" are same cast
-/// instructions.
-/// 2. As restored constant (by applying reverse cast operation) when the first
-/// value of the "select" is a cast operation and the second value is a
-/// constant.
-/// NOTE: We return only the new second value because the first value could be
-/// accessed as operand of cast instruction.
-static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
-                              Instruction::CastOps *CastOp) {
-  auto *Cast1 = dyn_cast<CastInst>(V1);
-  if (!Cast1)
-    return nullptr;
-
-  *CastOp = Cast1->getOpcode();
-  Type *SrcTy = Cast1->getSrcTy();
-  if (auto *Cast2 = dyn_cast<CastInst>(V2)) {
-    // If V1 and V2 are both the same cast from the same type, look through V1.
-    if (*CastOp == Cast2->getOpcode() && SrcTy == Cast2->getSrcTy())
-      return Cast2->getOperand(0);
-    return nullptr;
-  }
-
-  auto *C = dyn_cast<Constant>(V2);
-  if (!C)
-    return nullptr;
-
+static Value *lookThroughCastConst(CmpInst *CmpI, Type *SrcTy, Constant *C,
+                                   Instruction::CastOps *CastOp) {
   const DataLayout &DL = CmpI->getDataLayout();
+
   Constant *CastedTo = nullptr;
   switch (*CastOp) {
   case Instruction::ZExt:
@@ -8878,6 +8893,63 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
   return CastedTo;
 }
 
+/// Helps to match a select pattern in case of a type mismatch.
+///
+/// The function processes the case when type of true and false values of a
+/// select instruction differs from type of the cmp instruction operands because
+/// of a cast instruction. The function checks if it is legal to move the cast
+/// operation after "select". If yes, it returns the new second value of
+/// "select" (with the assumption that cast is moved):
+/// 1. As operand of cast instruction when both values of "select" are same cast
+/// instructions.
+/// 2. As restored constant (by applying reverse cast operation) when the first
+/// value of the "select" is a cast operation and the second value is a
+/// constant. It is implemented in lookThroughCastConst().
+/// 3. As one operand is cast instruction and the other is not. The operands in
+/// sel(cmp) are in different type integer.
+/// NOTE: We return only the new second value because the first value could be
+/// accessed as operand of cast instruction.
+static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
+                              Instruction::CastOps *CastOp) {
+  auto *Cast1 = dyn_cast<CastInst>(V1);
+  if (!Cast1)
+    return nullptr;
+
+  *CastOp = Cast1->getOpcode();
+  Type *SrcTy = Cast1->getSrcTy();
+  if (auto *Cast2 = dyn_cast<CastInst>(V2)) {
+    // If V1 and V2 are both the same cast from the same type, look through V1.
+    if (*CastOp == Cast2->getOpcode() && SrcTy == Cast2->getSrcTy())
+      return Cast2->getOperand(0);
+    return nullptr;
+  }
+
+  auto *C = dyn_cast<Constant>(V2);
+  if (C)
+    return lookThroughCastConst(CmpI, SrcTy, C, CastOp);
+
+  Value *CastedTo = nullptr;
+  if (*CastOp == Instruction::Trunc) {
+    if (match(CmpI->getOperand(1), m_ZExtOrSExt(m_Specific(V2)))) {
+      // Here we have the following case:
+      //   %y_ext = sext iK %y to iN
+      //   %cond = cmp iN %x, %y_ext
+      //   %tr = trunc iN %x to iK
+      //   %narrowsel = select i1 %cond, iK %tr, iK %y
+      //
+      // We can always move trunc after select operation:
+      //   %y_ext = sext iK %y to iN
+      //   %cond = cmp iN %x, %y_ext
+      //   %widesel = select i1 %cond, iN %x, iN %y_ext
+      //   %tr = trunc iN %widesel to iK
+      assert(V2->getType() == Cast1->getType() &&
+             "V2 and Cast1 should be the same type.");
+      CastedTo = CmpI->getOperand(1);
+    }
+  }
+
+  return CastedTo;
+}
 SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
                                              Instruction::CastOps *CastOp,
                                              unsigned Depth) {
@@ -8946,6 +9018,21 @@ CmpInst::Predicate llvm::getMinMaxPred(SelectPatternFlavor SPF, bool Ordered) {
   if (SPF == SPF_FMAXNUM)
     return Ordered ? FCmpInst::FCMP_OGT : FCmpInst::FCMP_UGT;
   llvm_unreachable("unhandled!");
+}
+
+Intrinsic::ID llvm::getMinMaxIntrinsic(SelectPatternFlavor SPF) {
+  switch (SPF) {
+  case SelectPatternFlavor::SPF_UMIN:
+    return Intrinsic::umin;
+  case SelectPatternFlavor::SPF_UMAX:
+    return Intrinsic::umax;
+  case SelectPatternFlavor::SPF_SMIN:
+    return Intrinsic::smin;
+  case SelectPatternFlavor::SPF_SMAX:
+    return Intrinsic::smax;
+  default:
+    llvm_unreachable("Unexpected SPF");
+  }
 }
 
 SelectPatternFlavor llvm::getInverseMinMaxFlavor(SelectPatternFlavor SPF) {
@@ -9042,12 +9129,14 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, div, gep, uaddo, etc..
+    // TODO: Expand list -- xor, gep, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
     case Instruction::Add:
     case Instruction::Sub:
+    case Instruction::UDiv:
+    case Instruction::URem:
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Mul:
@@ -9328,7 +9417,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
       (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
       (RPred == ICmpInst::ICMP_ULT || RPred == ICmpInst::ICMP_UGE) &&
       match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
-    return LPred == RPred;
+    return CmpPredicate::getMatching(LPred, RPred).has_value();
 
   if (LPred == RPred)
     return isImpliedCondOperands(LPred, L0, L1, R0, R1);
@@ -9341,7 +9430,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 /// expect the RHS to be an icmp and the LHS to be an 'and', 'or', or a 'select'
 /// instruction.
 static std::optional<bool>
-isImpliedCondAndOr(const Instruction *LHS, CmpInst::Predicate RHSPred,
+isImpliedCondAndOr(const Instruction *LHS, CmpPredicate RHSPred,
                    const Value *RHSOp0, const Value *RHSOp1,
                    const DataLayout &DL, bool LHSIsTrue, unsigned Depth) {
   // The LHS must be an 'or', 'and', or a 'select' instruction.
@@ -9371,7 +9460,7 @@ isImpliedCondAndOr(const Instruction *LHS, CmpInst::Predicate RHSPred,
 }
 
 std::optional<bool>
-llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
+llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
                          const Value *RHSOp0, const Value *RHSOp1,
                          const DataLayout &DL, bool LHSIsTrue, unsigned Depth) {
   // Bail out when we hit the limit.
@@ -9425,7 +9514,7 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
 
   if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
     if (auto Implied = isImpliedCondition(
-            LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
+            LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
@@ -9502,7 +9591,7 @@ std::optional<bool> llvm::isImpliedByDomCondition(const Value *Cond,
   return std::nullopt;
 }
 
-std::optional<bool> llvm::isImpliedByDomCondition(CmpInst::Predicate Pred,
+std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
                                                   const Value *LHS,
                                                   const Value *RHS,
                                                   const Instruction *ContextI,
@@ -10003,7 +10092,7 @@ void llvm::findValuesAffectedByCondition(
     if (!Visited.insert(V).second)
       continue;
 
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *A, *B, *X;
 
     if (IsAssume) {
@@ -10076,7 +10165,7 @@ void llvm::findValuesAffectedByCondition(
 
       if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
         AddAffected(X);
-    } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
+    } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);
 
       // fcmp fneg(x), y

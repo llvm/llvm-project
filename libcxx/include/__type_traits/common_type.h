@@ -61,7 +61,7 @@ struct __common_type2_imp {};
 // sub-bullet 3 - "if decay_t<decltype(false ? declval<D1>() : declval<D2>())> ..."
 template <class _Tp, class _Up>
 struct __common_type2_imp<_Tp, _Up, __void_t<decltype(true ? std::declval<_Tp>() : std::declval<_Up>())> > {
-  typedef _LIBCPP_NODEBUG __decay_t<decltype(true ? std::declval<_Tp>() : std::declval<_Up>())> type;
+  using type _LIBCPP_NODEBUG = __decay_t<decltype(true ? std::declval<_Tp>() : std::declval<_Up>())>;
 };
 
 template <class, class = void>

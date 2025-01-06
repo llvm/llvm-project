@@ -917,6 +917,13 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
       return NewInit;
     break;
 
+  case INITIALIZED:
+    if (isa<UnsetInit>(LHS))
+      return IntInit::get(RK, 0);
+    if (LHS->isConcrete())
+      return IntInit::get(RK, 1);
+    break;
+
   case NOT:
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK))))
@@ -1051,6 +1058,9 @@ std::string UnOpInit::getAsString() const {
     break;
   case TOUPPER:
     Result = "!toupper";
+    break;
+  case INITIALIZED:
+    Result = "!initialized";
     break;
   }
   return Result + "(" + LHS->getAsString() + ")";
@@ -1542,6 +1552,23 @@ unresolved:
 const Init *BinOpInit::resolveReferences(Resolver &R) const {
   const Init *lhs = LHS->resolveReferences(R);
   const Init *rhs = RHS->resolveReferences(R);
+
+  unsigned Opc = getOpcode();
+  if (Opc == AND || Opc == OR) {
+    // Short-circuit. Regardless whether this is a logical or bitwise
+    // AND/OR.
+    // Ideally we could also short-circuit `!or(true, ...)`, but it's
+    // difficult to do it right without knowing if rest of the operands
+    // are all `bit` or not. Therefore, we're only implementing a relatively
+    // limited version of short-circuit against all ones (`true` is casted
+    // to 1 rather than all ones before we evaluate `!or`).
+    if (const auto *LHSi = dyn_cast_or_null<IntInit>(
+            lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if ((Opc == AND && !LHSi->getValue()) ||
+          (Opc == OR && LHSi->getValue() == -1))
+        return LHSi;
+    }
+  }
 
   if (LHS != lhs || RHS != rhs)
     return (BinOpInit::get(getOpcode(), lhs, rhs, getType()))

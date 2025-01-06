@@ -44,6 +44,18 @@ enum NodeType : unsigned {
   SELECT_CC,
   BR_CC,
 
+  /// Turn a pair of `i<xlen>`s into an even-odd register pair (`untyped`).
+  /// - Output: `untyped` even-odd register pair
+  /// - Input 0: `i<xlen>` low-order bits, for even register.
+  /// - Input 1: `i<xlen>` high-order bits, for odd register.
+  BuildGPRPair,
+
+  /// Turn an even-odd register pair (`untyped`) into a pair of `i<xlen>`s.
+  /// - Output 0: `i<xlen>` low-order bits, from even register.
+  /// - Output 1: `i<xlen>` high-order bits, from odd register.
+  /// - Input: `untyped` even-odd register pair
+  SplitGPRPair,
+
   /// Turns a pair of `i32`s into an `f64`. Needed for rv32d/ilp32.
   /// - Output: `f64`.
   /// - Input 0: low-order bits (31-0) (as `i32`), for even register.
@@ -357,10 +369,6 @@ enum NodeType : unsigned {
   VWMACCU_VL,
   VWMACCSU_VL,
 
-  // Narrowing logical shift right.
-  // Operands are (source, shift, passthru, mask, vl)
-  VNSRL_VL,
-
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
   SETCC_VL,
@@ -459,7 +467,8 @@ enum NodeType : unsigned {
 
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  FIRST_STRICTFP_OPCODE,
+  STRICT_FCVT_W_RV64 = FIRST_STRICTFP_OPCODE,
   STRICT_FCVT_WU_RV64,
   STRICT_FADD_VL,
   STRICT_FSUB_VL,
@@ -481,17 +490,15 @@ enum NodeType : unsigned {
   STRICT_FSETCC_VL,
   STRICT_FSETCCS_VL,
   STRICT_VFROUND_NOEXCEPT_VL,
-  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
+  LAST_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
-  // WARNING: Do not add anything in the end unless you want the node to
-  // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
-  // opcodes will be thought as target memory ops!
-
-  TH_LWD = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  FIRST_MEMORY_OPCODE,
+  TH_LWD = FIRST_MEMORY_OPCODE,
   TH_LWUD,
   TH_LDD,
   TH_SWD,
   TH_SDD,
+  LAST_MEMORY_OPCODE = TH_SDD,
 };
 // clang-format on
 } // namespace RISCVISD
@@ -546,6 +553,11 @@ public:
   /// as a series of gpr sized integers.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, for inline assembly
+  unsigned
+  getNumRegisters(LLVMContext &Context, EVT VT,
+                  std::optional<MVT> RegisterVT = std::nullopt) const override;
 
   /// Return the number of registers for a given MVT, ensuring vectors are
   /// treated as a series of gpr sized integers.
@@ -690,9 +702,8 @@ public:
   // Note that one specific case requires fence insertion for an
   // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
   // than this hook due to limitations in the interface here.
-  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
-    return isa<LoadInst>(I) || isa<StoreInst>(I);
-  }
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override;
+
   Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -733,7 +744,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
-  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
   /// Returns the register with the specified architectural or ABI name. This
   /// method is necessary to lower the llvm.read_register.* and
@@ -906,6 +917,11 @@ public:
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
 
+  /// True if stack clash protection is enabled for this functions.
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
+
+  unsigned getStackProbeSize(const MachineFunction &MF, Align StackAlign) const;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -979,6 +995,7 @@ private:
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPMergeMask(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSplatExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
@@ -1051,6 +1068,9 @@ private:
 
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
+
+  std::pair<const TargetRegisterClass *, uint8_t>
+  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
 };
 
 namespace RISCVVIntrinsicsTable {

@@ -14,9 +14,11 @@ using namespace clang;
 
 namespace {
 
-class LambdaExprVisitor : public ExpectedLocationVisitor<LambdaExprVisitor> {
+class LambdaExprVisitor : public ExpectedLocationVisitor {
 public:
-  bool VisitLambdaExpr(LambdaExpr *Lambda) {
+  LambdaExprVisitor() { ShouldVisitImplicitCode = false; }
+
+  bool VisitLambdaExpr(LambdaExpr *Lambda) override {
     PendingBodies.push(Lambda->getBody());
     PendingClasses.push(Lambda->getLambdaClass());
     Match("", Lambda->getIntroducerRange().getBegin());
@@ -24,12 +26,12 @@ public:
   }
   /// For each call to VisitLambdaExpr, we expect a subsequent call to visit
   /// the body (and maybe the lambda class, which is implicit).
-  bool VisitStmt(Stmt *S) {
+  bool VisitStmt(Stmt *S) override {
     if (!PendingBodies.empty() && S == PendingBodies.top())
       PendingBodies.pop();
     return true;
   }
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     if (!PendingClasses.empty() && D == PendingClasses.top())
       PendingClasses.pop();
     return true;
@@ -37,9 +39,6 @@ public:
   /// Determine whether parts of lambdas (VisitLambdaExpr) were later traversed.
   bool allBodiesHaveBeenTraversed() const { return PendingBodies.empty(); }
   bool allClassesHaveBeenTraversed() const { return PendingClasses.empty(); }
-
-  bool VisitImplicitCode = false;
-  bool shouldVisitImplicitCode() const { return VisitImplicitCode; }
 
 private:
   std::stack<Stmt *> PendingBodies;
@@ -67,7 +66,7 @@ TEST(RecursiveASTVisitor, LambdaInLambda) {
 
 TEST(RecursiveASTVisitor, TopLevelLambda) {
   LambdaExprVisitor Visitor;
-  Visitor.VisitImplicitCode = true;
+  Visitor.ShouldVisitImplicitCode = true;
   Visitor.ExpectMatch("", 1, 10);
   Visitor.ExpectMatch("", 1, 14);
   EXPECT_TRUE(Visitor.runOver("auto x = []{ [] {}; };",
@@ -78,7 +77,7 @@ TEST(RecursiveASTVisitor, TopLevelLambda) {
 
 TEST(RecursiveASTVisitor, VisitsLambdaExprAndImplicitClass) {
   LambdaExprVisitor Visitor;
-  Visitor.VisitImplicitCode = true;
+  Visitor.ShouldVisitImplicitCode = true;
   Visitor.ExpectMatch("", 1, 12);
   EXPECT_TRUE(Visitor.runOver("void f() { []{ return; }(); }",
                               LambdaExprVisitor::Lang_CXX11));

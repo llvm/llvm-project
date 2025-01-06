@@ -986,8 +986,7 @@ void RegisteredOperationName::insert(
   }
   StringRef name = impl->getName().strref();
   // Insert the operation info if it doesn't exist yet.
-  auto it = ctxImpl.operations.insert({name, nullptr});
-  it.first->second = std::move(ownedImpl);
+  ctxImpl.operations[name] = std::move(ownedImpl);
 
   // Update the registered info for this operation.
   auto emplaced = ctxImpl.registeredOperations.try_emplace(

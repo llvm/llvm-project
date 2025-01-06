@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_INDIRECTLY_COMPARABLE_H
-#define _LIBCPP___ITERATOR_INDIRECTLY_COMPARABLE_H
+#ifndef _LIBCPP___CXX03___ITERATOR_INDIRECTLY_COMPARABLE_H
+#define _LIBCPP___CXX03___ITERATOR_INDIRECTLY_COMPARABLE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
@@ -30,4 +30,4 @@ concept indirectly_comparable = indirect_binary_predicate<_Rp, projected<_I1, _P
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_INDIRECTLY_COMPARABLE_H
+#endif // _LIBCPP___CXX03___ITERATOR_INDIRECTLY_COMPARABLE_H

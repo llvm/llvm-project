@@ -271,3 +271,53 @@ void f() {
 }
 
 } // namespace GH105903
+
+namespace GH116105 {
+
+template <unsigned long Np, class... Ts> using pack_type = Ts...[Np];
+
+template <unsigned long Np, auto... Ts> using pack_expr = decltype(Ts...[Np]);
+
+template <class...> struct types;
+
+template <class, long... Is> struct indices;
+
+template <class> struct repack;
+
+template <long... Idx> struct repack<indices<long, Idx...>> {
+  template <class... Ts>
+  using pack_type_alias = types<pack_type<Idx, Ts...>...>;
+
+  template <class... Ts>
+  using pack_expr_alias = types<pack_expr<Idx, Ts{}...>...>;
+};
+
+template <class... Args> struct mdispatch_ {
+  using Idx = __make_integer_seq<indices, long, sizeof...(Args)>;
+
+  static_assert(__is_same(
+      typename repack<Idx>::template pack_type_alias<Args...>, types<Args...>));
+
+  static_assert(__is_same(
+      typename repack<Idx>::template pack_expr_alias<Args...>, types<Args...>));
+};
+
+mdispatch_<int, int> d;
+
+} // namespace GH116105
+
+namespace GH121242 {
+    // Non-dependent type pack access
+    template <int...x>
+    int y = x...[0];
+
+    struct X {};
+
+    template <X...x>
+    X z = x...[0];
+
+    void foo() {
+        (void)y<0>;
+        (void)z<X{}>;
+    }
+} // namespace GH121242

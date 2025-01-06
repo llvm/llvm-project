@@ -55,25 +55,13 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
   // This is matched by `IgnoreDerivedToBase(canResolveToExpr(InnerMatcher))`
   // below.
   const auto ConditionalOperatorM = [Target](const Expr *E) {
-    if (const auto *OP = dyn_cast<ConditionalOperator>(E)) {
-      if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canExprResolveTo(TE, Target))
-          return true;
-      if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canExprResolveTo(FE, Target))
-          return true;
-    }
-    return false;
-  };
-
-  const auto ElvisOperator = [Target](const Expr *E) {
-    if (const auto *OP = dyn_cast<BinaryConditionalOperator>(E)) {
-      if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canExprResolveTo(TE, Target))
-          return true;
-      if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canExprResolveTo(FE, Target))
-          return true;
+    if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+      const auto *TE = CO->getTrueExpr()->IgnoreParens();
+      if (TE && canExprResolveTo(TE, Target))
+        return true;
+      const auto *FE = CO->getFalseExpr()->IgnoreParens();
+      if (FE && canExprResolveTo(FE, Target))
+        return true;
     }
     return false;
   };
@@ -81,8 +69,7 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
   const Expr *SourceExprP = Source->IgnoreParens();
   return IgnoreDerivedToBase(SourceExprP,
                              [&](const Expr *E) {
-                               return E == Target || ConditionalOperatorM(E) ||
-                                      ElvisOperator(E);
+                               return E == Target || ConditionalOperatorM(E);
                              }) ||
          EvalCommaExpr(SourceExprP, [&](const Expr *E) {
            return IgnoreDerivedToBase(
@@ -231,12 +218,12 @@ ExprMutationAnalyzer::Analyzer::findPointeeMutation(const Decl *Dec) {
 const Stmt *ExprMutationAnalyzer::Analyzer::findMutationMemoized(
     const Expr *Exp, llvm::ArrayRef<MutationFinder> Finders,
     Memoized::ResultMap &MemoizedResults) {
+  // Assume Exp is not mutated before analyzing Exp.
   auto [Memoized, Inserted] = MemoizedResults.try_emplace(Exp);
   if (!Inserted)
     return Memoized->second;
 
-  // Assume Exp is not mutated before analyzing Exp.
-  if (isUnevaluated(Exp))
+  if (ExprMutationAnalyzer::isUnevaluated(Exp, Context))
     return nullptr;
 
   for (const auto &Finder : Finders) {
@@ -268,41 +255,29 @@ ExprMutationAnalyzer::Analyzer::tryEachDeclRef(const Decl *Dec,
   return nullptr;
 }
 
-bool ExprMutationAnalyzer::Analyzer::isUnevaluated(const Stmt *Exp,
-                                                   const Stmt &Stm,
-                                                   ASTContext &Context) {
-  return selectFirst<Stmt>(
-             NodeID<Expr>::value,
-             match(
-                 findFirst(
-                     stmt(canResolveToExpr(Exp),
-                          anyOf(
-                              // `Exp` is part of the underlying expression of
-                              // decltype/typeof if it has an ancestor of
-                              // typeLoc.
-                              hasAncestor(typeLoc(unless(
-                                  hasAncestor(unaryExprOrTypeTraitExpr())))),
-                              hasAncestor(expr(anyOf(
-                                  // `UnaryExprOrTypeTraitExpr` is unevaluated
-                                  // unless it's sizeof on VLA.
-                                  unaryExprOrTypeTraitExpr(unless(sizeOfExpr(
-                                      hasArgumentOfType(variableArrayType())))),
-                                  // `CXXTypeidExpr` is unevaluated unless it's
-                                  // applied to an expression of glvalue of
-                                  // polymorphic class type.
-                                  cxxTypeidExpr(
-                                      unless(isPotentiallyEvaluated())),
-                                  // The controlling expression of
-                                  // `GenericSelectionExpr` is unevaluated.
-                                  genericSelectionExpr(hasControllingExpr(
-                                      hasDescendant(equalsNode(Exp)))),
-                                  cxxNoexceptExpr())))))
-                         .bind(NodeID<Expr>::value)),
-                 Stm, Context)) != nullptr;
-}
-
-bool ExprMutationAnalyzer::Analyzer::isUnevaluated(const Expr *Exp) {
-  return isUnevaluated(Exp, Stm, Context);
+bool ExprMutationAnalyzer::isUnevaluated(const Stmt *Stm, ASTContext &Context) {
+  return !match(stmt(anyOf(
+                    // `Exp` is part of the underlying expression of
+                    // decltype/typeof if it has an ancestor of
+                    // typeLoc.
+                    hasAncestor(typeLoc(
+                        unless(hasAncestor(unaryExprOrTypeTraitExpr())))),
+                    hasAncestor(expr(anyOf(
+                        // `UnaryExprOrTypeTraitExpr` is unevaluated
+                        // unless it's sizeof on VLA.
+                        unaryExprOrTypeTraitExpr(unless(sizeOfExpr(
+                            hasArgumentOfType(variableArrayType())))),
+                        // `CXXTypeidExpr` is unevaluated unless it's
+                        // applied to an expression of glvalue of
+                        // polymorphic class type.
+                        cxxTypeidExpr(unless(isPotentiallyEvaluated())),
+                        // The controlling expression of
+                        // `GenericSelectionExpr` is unevaluated.
+                        genericSelectionExpr(
+                            hasControllingExpr(hasDescendant(equalsNode(Stm)))),
+                        cxxNoexceptExpr()))))),
+                *Stm, Context)
+              .empty();
 }
 
 const Stmt *

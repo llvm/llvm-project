@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LOCALE
-#define _LIBCPP_LOCALE
+#ifndef _LIBCPP___CXX03_LOCALE
+#define _LIBCPP___CXX03_LOCALE
 
 /*
     locale synopsis
@@ -222,7 +222,7 @@ template <class charT> class messages_byname;
 // Most unix variants have catopen.  These are the specific ones that don't.
 #    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
 #      define _LIBCPP_HAS_CATOPEN 1
-#      include <__cxx03/nl_types.h>
+#      include <nl_types.h>
 #    endif
 #  endif
 
@@ -3764,4 +3764,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_LOCALE
+#endif // _LIBCPP___CXX03_LOCALE

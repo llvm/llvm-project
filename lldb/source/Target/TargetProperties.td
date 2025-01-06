@@ -4,6 +4,9 @@ let Definition = "target_experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
+  def UseDIL : Property<"use-DIL", "Boolean">,
+    Global, DefaultFalse,
+    Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
@@ -157,6 +160,12 @@ let Definition = "target" in {
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,
     Desc<"The default disassembly flavor to use for x86 or x86-64 targets.">;
+  def DisassemblyCPU: Property<"disassembly-cpu", "String">,
+    DefaultStringValue<"">,
+    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu clang flag.">;
+  def DisassemblyFeatures: Property<"disassembly-features", "String">,
+    DefaultStringValue<"">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;

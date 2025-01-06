@@ -44,9 +44,9 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 ///   is also scaled down by `dstBits`/`srcBits`. If `indices` is not provided
 ///   0, is returned for the linearized index.
 /// - If the size of the load/store is smaller than the linearized memref
-/// load/store, the memory region emulated is larger than the actual memory
-/// region needed. `intraDataOffset` returns the element offset of the data
-/// relevant at the beginning.
+///   load/store, the memory region emulated is larger than the actual memory
+///   region needed. `intraDataOffset` returns the element offset of the data
+///   relevant at the beginning.
 struct LinearizedMemRefInfo {
   OpFoldResult linearizedOffset;
   OpFoldResult linearizedSize;
@@ -69,8 +69,8 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
                                  ArrayRef<OpFoldResult> sizes);
 
-// Track temporary allocations that are never read from. If this is the case
-// it means both the allocations and associated stores can be removed.
+/// Track temporary allocations that are never read from. If this is the case
+/// it means both the allocations and associated stores can be removed.
 void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp);
 
 /// Given a set of sizes, return the suffix product.
@@ -106,7 +106,7 @@ computeStridesIRBlock(Location loc, OpBuilder &builder,
 /// memory is found (i.e. skip operations that alias the entire view).
 MemrefValue skipFullyAliasingOperations(MemrefValue source);
 
-/// Checks if two (memref) values are the same or are statically known to alias
+/// Checks if two (memref) values are the same or statically known to alias
 /// the same region of memory.
 inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
   return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);

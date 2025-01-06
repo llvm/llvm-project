@@ -358,7 +358,14 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list_tag {
+    //    int* __va_stk;
+    //    int* __va_reg;
+    //    int __va_ndx;
+    //} va_list;
+    XtensaABIBuiltinVaList
   };
 
 protected:
@@ -485,6 +492,13 @@ public:
   /// Get integer value for null pointer.
   /// \param AddrSpace address space of pointee in source language.
   virtual uint64_t getNullPointerValue(LangAS AddrSpace) const { return 0; }
+
+  /// Returns true if an address space can be safely converted to another.
+  /// \param A address space of target in source language.
+  /// \param B address space of source in source language.
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const {
+    return A == B;
+  }
 
   /// Return the size of '_Bool' and C++ 'bool' for this target, in bits.
   unsigned getBoolWidth() const { return BoolWidth; }
@@ -1002,7 +1016,6 @@ public:
   virtual void getTargetDefines(const LangOptions &Opts,
                                 MacroBuilder &Builder) const = 0;
 
-
   /// Return information about target-specific builtins for
   /// the current primary target, and info about which builtins are non-portable
   /// across the current set of primary and secondary targets.
@@ -1497,6 +1510,10 @@ public:
   bool supportsIFunc() const {
     if (getTriple().isOSBinFormatMachO())
       return true;
+    if (getTriple().isOSWindows() && getTriple().isAArch64())
+      return true;
+    if (getTriple().getArch() == llvm::Triple::ArchType::avr)
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
@@ -1514,13 +1531,9 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned multiVersionSortPriority(StringRef Name) const {
+  virtual unsigned getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
-
-  // Return the target-specific cost for feature
-  // that taken into account in priority sorting.
-  virtual unsigned multiVersionFeatureCost() const { return 0; }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
   // argument.
@@ -1859,6 +1872,11 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+namespace targets {
+std::unique_ptr<clang::TargetInfo>
+AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
+} // namespace targets
 
 }  // end namespace clang
 

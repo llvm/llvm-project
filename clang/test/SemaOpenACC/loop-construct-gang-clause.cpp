@@ -10,65 +10,65 @@ void ParallelOrOrphanTempl() {
   T i;
   // expected-error@+1{{'num' argument on 'gang' clause is not permitted on an orphaned 'loop' construct}}
 #pragma acc loop gang(i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // expected-error@+1{{'num' argument on 'gang' clause is not permitted on an orphaned 'loop' construct}}
 #pragma acc loop gang(num:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'parallel' compute construct}}
 #pragma acc parallel
 #pragma acc loop gang(i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'parallel' compute construct}}
 #pragma acc parallel
 #pragma acc loop gang(num:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{argument to 'gang' clause dimension must be a constant expression}}
 #pragma acc loop gang(dim:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{argument to 'gang' clause dimension must be a constant expression}}
 #pragma acc parallel
 #pragma acc loop gang(dim:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 0}}
 #pragma acc loop gang(dim:Zero)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 0}}
 #pragma acc parallel
 #pragma acc loop gang(dim:Zero)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc loop gang(dim:Four)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc parallel
 #pragma acc loop gang(dim:Four)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc loop gang(static:i) gang(dim:Two)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc parallel
 #pragma acc loop gang(dim:Two) gang(static:*)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc parallel
 #pragma acc loop gang(dim:Two, static:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+4{{OpenACC 'gang' clause may have at most one 'static' argument}}
   // expected-note@+3{{previous expression is here}}
   // expected-error@+2{{OpenACC 'gang' clause may have at most one 'dim' argument}}
   // expected-note@+1{{previous expression is here}}
 #pragma acc loop gang(static:i, static:i, dim:Two, dim:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 void ParallelOrOrphan() {
@@ -77,65 +77,65 @@ void ParallelOrOrphan() {
   int i;
   // expected-error@+1{{'num' argument on 'gang' clause is not permitted on an orphaned 'loop' construct}}
 #pragma acc loop gang(i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   // expected-error@+1{{'num' argument on 'gang' clause is not permitted on an orphaned 'loop' construct}}
 #pragma acc loop gang(num:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'parallel' compute construct}}
 #pragma acc parallel
 #pragma acc loop gang(i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'parallel' compute construct}}
 #pragma acc parallel
 #pragma acc loop gang(num:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{argument to 'gang' clause dimension must be a constant expression}}
 #pragma acc loop gang(dim:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{argument to 'gang' clause dimension must be a constant expression}}
 #pragma acc parallel
 #pragma acc loop gang(dim:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 0}}
 #pragma acc loop gang(dim:0)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 0}}
 #pragma acc parallel
 #pragma acc loop gang(dim:0)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc loop gang(dim:4)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc parallel
 #pragma acc loop gang(dim:4)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc loop gang(static:i) gang(dim:2)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   S s;
   // expected-error@+2{{OpenACC clause 'gang' requires expression of integer type ('S' invalid)}}
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:s)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   Converts C;
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:C)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 template<typename SomeS, typename SomeC, typename Int>
@@ -144,20 +144,20 @@ void StaticIsIntegralTempl() {
   // expected-error@+2{{OpenACC clause 'gang' requires expression of integer type ('S' invalid)}}
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:s)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   SomeC C;
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:C)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   Int i;
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:*)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 void StaticIsIntegral() {
@@ -167,12 +167,12 @@ void StaticIsIntegral() {
   // expected-error@+2{{OpenACC clause 'gang' requires expression of integer type ('S' invalid)}}
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:s)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   Converts C;
 #pragma acc parallel
 #pragma acc loop gang(dim:2) gang(static:C)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 template<unsigned I>
@@ -180,21 +180,21 @@ void SerialTempl() {
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop gang(I)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop gang(num:I)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'dim' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop gang(dim:I)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc serial
 #pragma acc loop gang(static:I)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 void Serial() {
@@ -203,27 +203,27 @@ void Serial() {
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop gang(1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop gang(num:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'dim' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop gang(dim:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc serial
 #pragma acc loop gang(static:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   int i;
 
 #pragma acc serial
 #pragma acc loop gang(static:i)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 template<typename T>
@@ -232,23 +232,23 @@ void KernelsTempl() {
   // expected-error@+2{{'dim' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'kernels' compute construct}}
 #pragma acc kernels
 #pragma acc loop gang(dim:t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc kernels
 #pragma acc loop gang(static:t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{'num' argument to 'gang' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'num_gangs' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels num_gangs(t)
 #pragma acc loop gang(t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{'num' argument to 'gang' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'num_gangs' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels num_gangs(t)
 #pragma acc loop gang(num:t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 void Kernels() {
@@ -257,67 +257,74 @@ void Kernels() {
   // expected-error@+2{{'dim' argument on 'gang' clause is not permitted on a 'loop' construct associated with a 'kernels' compute construct}}
 #pragma acc kernels
 #pragma acc loop gang(dim:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
   unsigned t;
 #pragma acc kernels
 #pragma acc loop gang(static:t)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{'num' argument to 'gang' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'num_gangs' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels num_gangs(1)
 #pragma acc loop gang(1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{'num' argument to 'gang' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'num_gangs' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels num_gangs(1)
 #pragma acc loop gang(num:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
 #pragma acc kernels
 #pragma acc loop gang(num:1)
-  for(;;) {
-    // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'gang' clause on a 'kernels' compute construct}}
+  for(int j = 0; j < 5; ++j) {
+    // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'gang' clause on a 'kernels' construct}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop gang(static:1)
-    for(;;);
+    for(int i = 0; i < 5; ++i);
   }
 
 #pragma acc kernels
 #pragma acc loop gang(num:1)
-  for(;;) {
+  for(int j = 0; j < 5; ++j) {
+#pragma acc loop worker(1) vector(1)
+    for(int i = 0; i < 5; ++i);
+  }
+
+#pragma acc kernels
+#pragma acc loop gang(num:1)
+  for(int j = 0; j < 5; ++j) {
     // allowed, intervening compute construct
 #pragma acc serial
 #pragma acc loop gang(static:1)
-    for(;;);
+    for(int i = 0; i < 5; ++i);
   }
 
 #pragma acc kernels
 #pragma acc loop gang(num:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // OK, on a different 'loop', not in the assoc statement.
 #pragma acc loop gang(static:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{OpenACC 'gang' clause may have at most one unnamed or 'num' argument}}
   // expected-note@+2{{previous expression is here}}
 #pragma acc kernels
 #pragma acc loop gang(5, num:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{OpenACC 'gang' clause may have at most one unnamed or 'num' argument}}
   // expected-note@+2{{previous expression is here}}
 #pragma acc kernels
 #pragma acc loop gang(num:5, 1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+3{{OpenACC 'gang' clause may have at most one unnamed or 'num' argument}}
   // expected-note@+2{{previous expression is here}}
 #pragma acc kernels
 #pragma acc loop gang(num:5, num:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 void MaxOneEntry() {
@@ -325,11 +332,11 @@ void MaxOneEntry() {
   // expected-note@+2{{previous expression is here}}
 #pragma acc kernels
 #pragma acc loop gang(static: 1, static:1)
-    for(;;);
+    for(int i = 0; i < 5; ++i);
 
 #pragma acc kernels
 #pragma acc loop gang gang(static:1)
-    for(;;);
+    for(int i = 0; i < 5; ++i);
 }
 
 

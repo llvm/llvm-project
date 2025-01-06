@@ -16,13 +16,12 @@
 #include "GISel/PPCRegisterBankInfo.h"
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -61,12 +60,20 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
               TargetTriple.getArch() == Triple::ppc64le),
       TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<PPCSelectionDAGInfo>();
+
   CallLoweringInfo.reset(new PPCCallLowering(*getTargetLowering()));
   Legalizer.reset(new PPCLegalizerInfo(*this));
   auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
 
   InstSelector.reset(createPPCInstructionSelector(TM, *this, *RBI));
+}
+
+PPCSubtarget::~PPCSubtarget() = default;
+
+const SelectionDAGTargetInfo *PPCSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 void PPCSubtarget::initializeEnvironment() {

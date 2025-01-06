@@ -432,11 +432,11 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
 
   rewriter.inlineRegionBefore(funcOp.getFunctionBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), converter,
-                                         &result))) {
-    return rewriter.notifyMatchFailure(funcOp,
-                                       "region types conversion failed");
-  }
+  // Convert just the entry block. The remaining unstructured control flow is
+  // converted by ControlFlowToLLVM.
+  if (!newFuncOp.getBody().empty())
+    rewriter.applySignatureConversion(&newFuncOp.getBody().front(), result,
+                                      &converter);
 
   // Fix the type mismatch between the materialized `llvm.ptr` and the expected
   // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
@@ -784,11 +784,6 @@ struct ConvertFuncToLLVMPass
 
     RewritePatternSet patterns(&getContext());
     populateFuncToLLVMConversionPatterns(typeConverter, patterns, symbolTable);
-
-    // TODO(https://github.com/llvm/llvm-project/issues/70982): Remove these in
-    // favor of their dedicated conversion passes.
-    arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-    cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, std::move(patterns))))

@@ -139,7 +139,7 @@ public:
 
 protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
-      : name(name), file(f), symbolKind(k), referenced(!config->gcSections),
+      : name(name), file(f), symbolKind(k), referenced(!ctx.arg.gcSections),
         requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
         forceImport(false), canInline(false), traced(false), isStub(false),
         flags(flags) {}
@@ -315,7 +315,9 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedDataKind; }
 
   // Returns the output virtual address of a defined data symbol.
-  uint64_t getVA() const;
+  // For TLS symbols, by default (unless absolute is set), this returns an
+  // address relative the `__tls_base`.
+  uint64_t getVA(bool absolute = false) const;
   void setVA(uint64_t va);
 
   // Returns the offset of a defined data symbol within its OutputSegment.

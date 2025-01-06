@@ -129,6 +129,7 @@ on support follow.
      ``Smaia``         Supported
      ``Smcdeleg``      Supported
      ``Smcsrind``      Supported
+     ``Smdbltrp``      Supported
      ``Smepmp``        Supported
      ``Smmpm``         Supported
      ``Smnpm``         Supported
@@ -140,6 +141,7 @@ on support follow.
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscsrind``      Supported
+     ``Ssdbltrp``      Supported
      ``Ssnpm``         Supported
      ``Sspm``          Supported
      ``Ssqosid``       Assembly Support
@@ -324,8 +326,14 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvbc32e``, ``experimental-zvkgs``
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
+``experimental-sdext``, ``experimental-sdtrig``
+  LLVM implements the `1.0-rc4 specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0.0-rc4/riscv-debug-specification.pdf>`__.
+
 ``experimental-smctr``, ``experimental-ssctr``
   LLVM implements the `1.0-rc3 specification <https://github.com/riscv/riscv-control-transfer-records/releases/tag/v1.0_rc3>`__.
+
+``experimental-svukte``
+  LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -420,6 +428,27 @@ The current vendor extensions supported are:
 
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
+
+``experimental-Xqcia``
+  LLVM implements `version 0.2 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqciac``
+  LLVM implements `version 0.2 of the Qualcomm uC Load-Store Address Calculation extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcicli``
+  LLVM implements `version 0.2 of the Qualcomm uC Conditional Load Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcics``
+  LLVM implements `version 0.2 of the Qualcomm uC Conditional Select extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcicsr``
+  LLVM implements `version 0.2 of the Qualcomm uC CSR extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcilsm``
+  LLVM implements `version 0.2 of the Qualcomm uC Load Store Multiple extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcisls``
+  LLVM implements `version 0.2 of the Qualcomm uC Scaled Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
 Experimental C Intrinsics
 =========================

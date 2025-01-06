@@ -17,9 +17,9 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -8119,6 +8119,14 @@ void Parser::ParseParameterDeclarationClause(
     }
 
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc)) {
+      if (getLangOpts().CPlusPlus26) {
+        // C++26 [dcl.dcl.fct]p3:
+        //   A parameter-declaration-clause of the form
+        //   parameter-list '...' is deprecated.
+        Diag(EllipsisLoc, diag::warn_deprecated_missing_comma_before_ellipsis)
+            << FixItHint::CreateInsertion(EllipsisLoc, ", ");
+      }
+
       if (!getLangOpts().CPlusPlus) {
         // We have ellipsis without a preceding ',', which is ill-formed
         // in C. Complain and provide the fix.

@@ -73,20 +73,7 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
   // Simple case where the start op dominate the destination.
   if (dominators.dominates(start, dest))
     return true;
-  Block *startBlock = start->getBlock();
-  Block *destBlock = dest->getBlock();
-  SmallVector<Block *, 32> worklist(startBlock->succ_begin(),
-                                    startBlock->succ_end());
-  SmallPtrSet<Block *, 32> visited;
-  while (!worklist.empty()) {
-    Block *bb = worklist.pop_back_val();
-    if (!visited.insert(bb).second)
-      continue;
-    if (dominators.dominates(bb, destBlock))
-      return true;
-    worklist.append(bb->succ_begin(), bb->succ_end());
-  }
-  return false;
+  return start->getBlock()->isReachable(dest->getBlock());
 }
 
 /// For transfer_write to overwrite fully another transfer_write must:
@@ -264,7 +251,7 @@ static SmallVector<int64_t> getReducedShape(ArrayRef<OpFoldResult> mixedSizes) {
       continue;
     }
 
-    auto value = cast<IntegerAttr>(size.get<Attribute>()).getValue();
+    auto value = cast<IntegerAttr>(cast<Attribute>(size)).getValue();
     if (value == 1)
       continue;
     reducedShape.push_back(value.getSExtValue());
@@ -583,8 +570,8 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   collapsedOffset = affine::makeComposedFoldedAffineApply(
       rewriter, loc, collapsedExpr, collapsedVals);
 
-  if (collapsedOffset.is<Value>()) {
-    indicesAfterCollapsing.push_back(collapsedOffset.get<Value>());
+  if (auto value = dyn_cast<Value>(collapsedOffset)) {
+    indicesAfterCollapsing.push_back(value);
   } else {
     indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
         loc, *getConstantIntValue(collapsedOffset)));
@@ -854,8 +841,8 @@ class RewriteScalarExtractElementOfTransferRead
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, loc, sym0 + sym1,
           {newIndices[newIndices.size() - 1], extractOp.getPosition()});
-      if (ofr.is<Value>()) {
-        newIndices[newIndices.size() - 1] = ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr)) {
+        newIndices[newIndices.size() - 1] = value;
       } else {
         newIndices[newIndices.size() - 1] =
             rewriter.create<arith::ConstantIndexOp>(loc,
@@ -892,14 +879,14 @@ class RewriteScalarExtractOfTransferRead
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
     for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
-      assert(pos.is<Attribute>() && "Unexpected non-constant index");
-      int64_t offset = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
+      assert(isa<Attribute>(pos) && "Unexpected non-constant index");
+      int64_t offset = cast<IntegerAttr>(cast<Attribute>(pos)).getInt();
       int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, extractOp.getLoc(),
           rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
-      if (ofr.is<Value>()) {
-        newIndices[idx] = ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr)) {
+        newIndices[idx] = value;
       } else {
         newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
             extractOp.getLoc(), *getConstantIntValue(ofr));

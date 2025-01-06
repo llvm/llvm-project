@@ -1,24 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file -verify-diagnostics
 
-// expected-error @+1 {{cannot bufferize a FuncOp with tensors and without a unique ReturnOp}}
-func.func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
-    -> (tensor<f32>, tensor<f32>)
-{
-  cf.cond_br %cond1, ^bb1, ^bb2
-
-  ^bb1:
-    %T:2 = scf.if %cond2 -> (tensor<f32>, tensor<f32>) {
-      scf.yield %t1, %t2 : tensor<f32>, tensor<f32>
-    } else {
-      scf.yield %t2, %t1 : tensor<f32>, tensor<f32>
-    }
-    return %T#0, %T#1 : tensor<f32>, tensor<f32>
-  ^bb2:
-    return %t2, %t1 : tensor<f32>, tensor<f32>
-}
-
-// -----
-
 func.func @scf_for(%A : tensor<?xf32>,
               %B : tensor<?xf32> {bufferization.writable = true},
               %C : tensor<4xf32>,
@@ -95,7 +76,7 @@ func.func @scf_while_non_equiv_yield(%arg0: tensor<5xi1>,
 
 func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
   // expected-error @+1 {{to_tensor ops without `restrict` are not supported by One-Shot Analysis}}
-  %0 = bufferization.to_tensor %m : memref<?xf32>
+  %0 = bufferization.to_tensor %m : memref<?xf32> to tensor<?xf32>
 
   %1 = tensor.extract %0[%idx] : tensor<?xf32>
   return %1 : f32
@@ -146,7 +127,8 @@ func.func @regression_scf_while() {
 
 // -----
 
-// expected-error @below{{cannot bufferize a FuncOp with tensors and without a unique ReturnOp}}
+// expected-error @below{{could not infer buffer type of block argument}}
+// expected-error @below{{failed to bufferize op}}
 func.func @func_multiple_yields(%t: tensor<5xf32>) -> tensor<5xf32> {
   func.return %t : tensor<5xf32>
 ^bb1(%arg1 : tensor<5xf32>):

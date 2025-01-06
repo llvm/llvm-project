@@ -47,6 +47,7 @@
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -1154,6 +1155,21 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
   return expr_result;
 }
 
+SBStructuredData SBFrame::GetLanguageSpecificData() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData sb_data;
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (!frame)
+    return sb_data;
+
+  StructuredData::ObjectSP data(frame->GetLanguageSpecificData());
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
+}
+
 bool SBFrame::IsInlined() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1173,12 +1189,8 @@ bool SBFrame::IsInlined() const {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
-      if (frame) {
-
-        Block *block = frame->GetSymbolContext(eSymbolContextBlock).block;
-        if (block)
-          return block->GetContainingInlinedBlock() != nullptr;
-      }
+      if (frame)
+        return frame->IsInlined();
     }
   }
   return false;
@@ -1255,29 +1267,8 @@ const char *SBFrame::GetFunctionName() const {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
-      if (frame) {
-        SymbolContext sc(frame->GetSymbolContext(eSymbolContextFunction |
-                                                 eSymbolContextBlock |
-                                                 eSymbolContextSymbol));
-        if (sc.block) {
-          Block *inlined_block = sc.block->GetContainingInlinedBlock();
-          if (inlined_block) {
-            const InlineFunctionInfo *inlined_info =
-                inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetName().AsCString();
-          }
-        }
-
-        if (name == nullptr) {
-          if (sc.function)
-            name = sc.function->GetName().GetCString();
-        }
-
-        if (name == nullptr) {
-          if (sc.symbol)
-            name = sc.symbol->GetName().GetCString();
-        }
-      }
+      if (frame)
+        return frame->GetFunctionName();
     }
   }
   return name;
@@ -1298,29 +1289,8 @@ const char *SBFrame::GetDisplayFunctionName() {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
-      if (frame) {
-        SymbolContext sc(frame->GetSymbolContext(eSymbolContextFunction |
-                                                 eSymbolContextBlock |
-                                                 eSymbolContextSymbol));
-        if (sc.block) {
-          Block *inlined_block = sc.block->GetContainingInlinedBlock();
-          if (inlined_block) {
-            const InlineFunctionInfo *inlined_info =
-                inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetDisplayName().AsCString();
-          }
-        }
-
-        if (name == nullptr) {
-          if (sc.function)
-            name = sc.function->GetDisplayName().GetCString();
-        }
-
-        if (name == nullptr) {
-          if (sc.symbol)
-            name = sc.symbol->GetDisplayName().GetCString();
-        }
-      }
+      if (frame)
+        return frame->GetDisplayFunctionName();
     }
   }
   return name;

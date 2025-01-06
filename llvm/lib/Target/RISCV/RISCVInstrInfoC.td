@@ -24,8 +24,7 @@ def uimmlog2xlennonzero : RISCVOp, ImmLeaf<XLenVT, [{
   return isUInt<5>(Imm) && (Imm != 0);
 }]> {
   let ParserMatchClass = UImmLog2XLenNonZeroAsmOperand;
-  // TODO: should ensure invalid shamt is rejected when decoding.
-  let DecoderMethod = "decodeUImmNonZeroOperand<6>";
+  let DecoderMethod = "decodeUImmLog2XLenNonZeroOperand";
   let OperandType = "OPERAND_UIMMLOG2XLEN_NONZERO";
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -152,7 +151,6 @@ def simm9_lsb0 : Operand<OtherVT>,
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<8, 1>(Imm);
     return MCOp.isBareSymbolRef();
-
   }];
   let OperandType = "OPERAND_PCREL";
 }
@@ -228,10 +226,8 @@ def InsnCDirectiveOpcode : AsmOperandClass {
   let PredicateMethod = "isImm";
 }
 
-def uimm2_opcode : RISCVOp {
+def uimm2_opcode : RISCVUImmOp<2> {
   let ParserMatchClass = InsnCDirectiveOpcode;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2";
 }
 
 //===----------------------------------------------------------------------===//

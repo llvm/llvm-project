@@ -21,7 +21,6 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributeParser.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -310,6 +309,8 @@ static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
     return "v71";
   case 73:
     return "v73";
+  case 75:
+    return "v75";
   default:
     return {};
   }
@@ -550,6 +551,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx941";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
     return "gfx942";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:
+    return "gfx950";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -602,6 +605,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
     return "gfx9-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:
+    return "gfx9-4-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:
     return "gfx10-1-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:

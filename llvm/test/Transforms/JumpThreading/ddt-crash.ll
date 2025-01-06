@@ -66,7 +66,7 @@ bb11:
   ret void
 }
 
-define void @spam(ptr %arg) {
+define void @spam(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr undef, align 8
@@ -87,9 +87,11 @@ define void @spam(ptr %arg) {
 ; CHECK-NEXT:      i8 0, label [[BB11]]
 ; CHECK-NEXT:      i8 1, label [[BB10:%.*]]
 ; CHECK-NEXT:      i8 2, label [[BB10]]
-; CHECK-NEXT:      i8 3, label [[BB8]]
-; CHECK-NEXT:      i8 4, label [[BB8]]
+; CHECK-NEXT:      i8 3, label [[BB7:%.*]]
+; CHECK-NEXT:      i8 4, label [[BB7]]
 ; CHECK-NEXT:    ]
+; CHECK:       bb7:
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB8]], label [[BB10]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq ptr undef, [[ARG:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10]], label [[BB2]]
@@ -175,7 +177,7 @@ bb6:
   br label %bb7
 
 bb7:
-  br i1 undef, label %bb8, label %bb10
+  br i1 %arg2, label %bb8, label %bb10
 
 bb8:
   %tmp9 = icmp eq ptr undef, %arg

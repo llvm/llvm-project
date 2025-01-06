@@ -153,8 +153,8 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_TPREL_LO16:
     return R_TPREL;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -190,7 +190,7 @@ static bool isDuplex(uint32_t insn) {
   return (instParsePacketEnd & insn) == 0;
 }
 
-static uint32_t findMaskR6(uint32_t insn) {
+static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
   if (isDuplex(insn))
     return 0x03f00000;
 
@@ -198,8 +198,8 @@ static uint32_t findMaskR6(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  error("unrecognized instruction for 6_X relocation: 0x" +
-        utohexstr(insn));
+  Err(ctx) << "unrecognized instruction for 6_X relocation: 0x"
+           << utohexstr(insn, true);
   return 0;
 }
 
@@ -217,7 +217,7 @@ static uint32_t findMaskR11(uint32_t insn) {
   return 0x06003fe0;
 }
 
-static uint32_t findMaskR16(uint32_t insn) {
+static uint32_t findMaskR16(Ctx &ctx, uint32_t insn) {
   if (isDuplex(insn))
     return 0x03f00000;
 
@@ -246,8 +246,7 @@ static uint32_t findMaskR16(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  error("unrecognized instruction for 16_X type: 0x" +
-        utohexstr(insn));
+  Err(ctx) << "unrecognized instruction for 16_X type: 0x" << utohexstr(insn);
   return 0;
 }
 
@@ -260,7 +259,7 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_HEX_6_PCREL_X:
   case R_HEX_6_X:
-    or32le(loc, applyMask(findMaskR6(read32le(loc)), val));
+    or32le(loc, applyMask(findMaskR6(ctx, read32le(loc)), val));
     break;
   case R_HEX_8_X:
     or32le(loc, applyMask(findMaskR8(read32le(loc)), val));
@@ -289,10 +288,10 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
   case R_HEX_GOT_16_X:
   case R_HEX_GOTREL_16_X:
   case R_HEX_TPREL_16_X:
-    or32le(loc, applyMask(findMaskR16(read32le(loc)), val & 0x3f));
+    or32le(loc, applyMask(findMaskR16(ctx, read32le(loc)), val & 0x3f));
     break;
   case R_HEX_TPREL_16:
-    or32le(loc, applyMask(findMaskR16(read32le(loc)), val & 0xffff));
+    or32le(loc, applyMask(findMaskR16(ctx, read32le(loc)), val & 0xffff));
     break;
   case R_HEX_32:
   case R_HEX_32_PCREL:
@@ -329,7 +328,7 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
   case R_HEX_B22_PCREL:
   case R_HEX_GD_PLT_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
-    checkInt(ctx, loc, val, 22, rel);
+    checkInt(ctx, loc, val, 24, rel);
     or32le(loc, applyMask(0x1ff3ffe, val >> 2));
     break;
   case R_HEX_B22_PCREL_X:
@@ -412,8 +411,7 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_HEX_TPREL_32:
     return SignExtend64<32>(read32(ctx, buf));
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }

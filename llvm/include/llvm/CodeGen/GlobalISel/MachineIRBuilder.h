@@ -1172,6 +1172,17 @@ public:
   MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
                                   const SrcOp &Op, unsigned Index);
 
+  /// Build and insert \p Res = G_STEP_VECTOR \p Step
+  ///
+  /// G_STEP_VECTOR returns a scalable vector of linear sequence of step \p Step
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalable vector type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStepVector(const DstOp &Res, unsigned Step);
+
   /// Build and insert \p Res = G_VSCALE \p MinElts
   ///
   /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts
@@ -1754,6 +1765,34 @@ public:
                                const SrcOp &Src1,
                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  /// Build and insert \p Res = G_ABDS \p Op0, \p Op1
+  ///
+  /// G_ABDS return the signed absolute difference of \p Op0 and \p Op1.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
+  ///      with the same (scalar or vector) type).
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAbds(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_ABDS, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Res = G_ABDU \p Op0, \p Op1
+  ///
+  /// G_ABDU return the unsigned absolute difference of \p Op0 and \p Op1.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
+  ///      with the same (scalar or vector) type).
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAbdu(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1) {
+    return buildInstr(TargetOpcode::G_ABDU, {Dst}, {Src0, Src1});
   }
 
   MachineInstrBuilder buildUMulH(const DstOp &Dst, const SrcOp &Src0,

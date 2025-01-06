@@ -130,7 +130,7 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
 
   // Outline before current function.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(region.getParentOfType<func::FuncOp>());
+  rewriter.setInsertionPoint(region.getParentOfType<FunctionOpInterface>());
 
   SetVector<Value> captures;
   getUsedValuesDefinedAbove(region, captures);
@@ -456,8 +456,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
     OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPoint(forOp->getBlock(),
-                                      std::next(Block::iterator(forOp)));
+    epilogueBuilder.setInsertionPointAfter(forOp);
     auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
     epilogueForOp.setLowerBound(upperBoundUnrolled);
 

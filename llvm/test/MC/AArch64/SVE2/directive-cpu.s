@@ -8,6 +8,10 @@ tbx z0.b, z1.b, z2.b
 aesd z23.b, z23.b, z13.b
 // CHECK: aesd z23.b, z23.b, z13.b
 
+.cpu generic+sve2+sve-aes
+aesd z23.b, z23.b, z13.b
+// CHECK: aesd z23.b, z23.b, z13.b
+
 .cpu generic+sve2-sm4
 sm4e z0.s, z0.s, z0.s
 // CHECK: sm4e z0.s, z0.s, z0.s

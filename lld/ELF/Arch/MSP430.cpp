@@ -83,8 +83,7 @@ void MSP430::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   default:
-    error(getErrorLoc(ctx, loc) + "unrecognized relocation " +
-          toString(rel.type));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unrecognized relocation " << rel.type;
   }
 }
 

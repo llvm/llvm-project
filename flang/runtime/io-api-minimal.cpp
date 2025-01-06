@@ -37,7 +37,7 @@ inline RT_API_ATTRS bool FormattedScalarIntegerOutput(
     IoStatementState &io, INT x, const char *whence) {
   if (io.CheckFormattedStmtType<Direction::Output>(whence)) {
     auto edit{io.GetNextDataEdit()};
-    return edit && EditIntegerOutput<KIND>(io, *edit, x);
+    return edit && EditIntegerOutput<KIND>(io, *edit, x, /*isSigned=*/true);
   } else {
     return false;
   }

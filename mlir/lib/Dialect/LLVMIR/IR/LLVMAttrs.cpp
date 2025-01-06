@@ -27,8 +27,8 @@ using namespace mlir::LLVM;
 /// Parses DWARF expression arguments with respect to the DWARF operation
 /// opcode. Some DWARF expression operations have a specific number of operands
 /// and may appear in a textual form.
-static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
-                                        SmallVector<uint64_t> &args);
+static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                                      SmallVector<uint64_t> &args);
 
 /// Prints DWARF expression arguments with respect to the specific DWARF
 /// operation. Some operands are printed in their textual form.
@@ -48,6 +48,7 @@ void LLVMDialect::registerAttributes() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
+
       >();
 }
 
@@ -144,8 +145,8 @@ DIExpressionAttr DIExpressionAttr::get(MLIRContext *context) {
   return get(context, ArrayRef<DIExpressionElemAttr>({}));
 }
 
-LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
-                                 SmallVector<uint64_t> &args) {
+ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                               SmallVector<uint64_t> &args) {
   auto operandParser = [&]() -> LogicalResult {
     uint64_t operand = 0;
     if (!args.empty() && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
@@ -232,7 +233,7 @@ DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
 
 DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
   return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
-                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {}, {});
+                               {}, {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -288,12 +289,32 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                    }));
 }
 
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context,
+                               llvm::ArrayRef<StringRef> features) {
+  return Base::getChecked(emitError, context,
+                          llvm::map_to_vector(features, [&](StringRef feature) {
+                            return StringAttr::get(context, feature);
+                          }));
+}
+
 TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                                            StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
   return get(context, features);
+}
+
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context, StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
+  ArrayRef featuresRef(features);
+  return getChecked(emitError, context, featuresRef);
 }
 
 LogicalResult

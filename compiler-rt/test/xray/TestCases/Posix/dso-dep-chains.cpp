@@ -17,7 +17,7 @@
 //
 // RUN:  XRAY_OPTIONS="patch_premain=true" %run %t/main.o %t/testlibd.so %t/testlibe.so 2>&1 | FileCheck %s
 
-// REQUIRES: target=x86_64{{.*}}
+// REQUIRES: target={{(aarch64|x86_64)-.*}}
 
 //--- main.cpp
 

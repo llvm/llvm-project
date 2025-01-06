@@ -33,6 +33,7 @@ namespace llvm::sandboxir {
 
 class DependencyGraph;
 class MemDGNode;
+class SchedBundle;
 
 /// SubclassIDs for isa/dyn_cast etc.
 enum class DGNodeID {
@@ -100,6 +101,12 @@ protected:
   unsigned UnscheduledSuccs = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
+  /// The scheduler bundle that this node belongs to.
+  SchedBundle *SB = nullptr;
+
+  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void clearSchedBundle() { this->SB = nullptr; }
+  friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 
   DGNode(Instruction *I, DGNodeID ID) : I(I), SubclassID(ID) {}
   friend class MemDGNode;       // For constructor.
@@ -110,7 +117,7 @@ public:
     assert(!isMemDepNodeCandidate(I) && "Expected Non-Mem instruction, ");
   }
   DGNode(const DGNode &Other) = delete;
-  virtual ~DGNode() = default;
+  virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
   void decrUnscheduledSuccs() {
@@ -122,6 +129,8 @@ public:
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled(bool NewVal) { Scheduled = NewVal; }
+  /// \Returns the scheduling bundle that this node belongs to, or nullptr.
+  SchedBundle *getSchedBundle() const { return SB; }
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
   using iterator = PredIterator;
@@ -211,6 +220,14 @@ class MemDGNode final : public DGNode {
   void setNextNode(MemDGNode *N) { NextMemN = N; }
   void setPrevNode(MemDGNode *N) { PrevMemN = N; }
   friend class DependencyGraph; // For setNextNode(), setPrevNode().
+  void detachFromChain() {
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+    PrevMemN = nullptr;
+    NextMemN = nullptr;
+  }
 
 public:
   MemDGNode(Instruction *I) : DGNode(I, DGNodeID::MemDGNode) {
@@ -281,6 +298,11 @@ private:
   /// The DAG spans across all instructions in this interval.
   Interval<Instruction> DAGInterval;
 
+  Context *Ctx = nullptr;
+  std::optional<Context::CallbackID> CreateInstrCB;
+  std::optional<Context::CallbackID> EraseInstrCB;
+  std::optional<Context::CallbackID> MoveInstrCB;
+
   std::unique_ptr<BatchAAResults> BatchAA;
 
   enum class DependencyType {
@@ -316,9 +338,45 @@ private:
   /// chain.
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
+  /// Helper for `notify*Instr()`. \Returns the first MemDGNode that comes
+  /// before \p N, including or excluding \p N based on \p IncludingN, or
+  /// nullptr if not found.
+  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN) const;
+  /// Helper for `notifyMoveInstr()`. \Returns the first MemDGNode that comes
+  /// after \p N, including or excluding \p N based on \p IncludingN, or nullptr
+  /// if not found.
+  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN) const;
+
+  /// Called by the callbacks when a new instruction \p I has been created.
+  void notifyCreateInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to get
+  /// deleted.
+  void notifyEraseInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to be moved to
+  /// \p To.
+  void notifyMoveInstr(Instruction *I, const BBIterator &To);
+
 public:
-  DependencyGraph(AAResults &AA)
-      : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
+  /// This constructor also registers callbacks.
+  DependencyGraph(AAResults &AA, Context &Ctx)
+      : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
+    CreateInstrCB = Ctx.registerCreateInstrCallback(
+        [this](Instruction *I) { notifyCreateInstr(I); });
+    EraseInstrCB = Ctx.registerEraseInstrCallback(
+        [this](Instruction *I) { notifyEraseInstr(I); });
+    MoveInstrCB = Ctx.registerMoveInstrCallback(
+        [this](Instruction *I, const BBIterator &To) {
+          notifyMoveInstr(I, To);
+        });
+  }
+  ~DependencyGraph() {
+    if (CreateInstrCB)
+      Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
+    if (EraseInstrCB)
+      Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
+    if (MoveInstrCB)
+      Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
+  }
 
   DGNode *getNode(Instruction *I) const {
     auto It = InstrToNodeMap.find(I);
@@ -345,6 +403,10 @@ public:
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
   /// \Returns the range of instructions included in the DAG.
   Interval<Instruction> getInterval() const { return DAGInterval; }
+  void clear() {
+    InstrToNodeMap.clear();
+    DAGInterval = {};
+  }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

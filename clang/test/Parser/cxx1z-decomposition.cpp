@@ -110,7 +110,7 @@ namespace BadSpecifiers {
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
-    auto S::*[g] = s; // expected-error {{cannot be declared with type 'auto BadSpecifiers::S::*'}} expected-error {{incompatible initializer}}
+    auto S::*[g] = s; // expected-error {{cannot be declared with type 'auto S::*'}} expected-error {{incompatible initializer}}
 
     // ref-qualifiers are OK.
     auto &&[ok_1] = S();

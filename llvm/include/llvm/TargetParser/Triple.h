@@ -193,7 +193,8 @@ public:
     Mesa,
     SUSE,
     OpenEmbedded,
-    LastVendorType = OpenEmbedded
+    Intel,
+    LastVendorType = Intel
   };
   enum OSType {
     UnknownOS,
@@ -268,6 +269,7 @@ public:
     MuslF32,
     MuslSF,
     MuslX32,
+    LLVM,
 
     MSVC,
     Itanium,
@@ -843,6 +845,9 @@ public:
     return getArch() == Triple::spirv32 || getArch() == Triple::spirv64 ||
            getArch() == Triple::spirv;
   }
+
+  // Tests whether the target is SPIR-V or SPIR.
+  bool isSPIROrSPIRV() const { return isSPIR() || isSPIRV(); }
 
   /// Tests whether the target is SPIR-V Logical
   bool isSPIRVLogical() const {

@@ -301,18 +301,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  quick_sort_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    quick_sort_test.cpp
-  HDRS
-    SortingTest.h
-  DEPENDS
-    libc.src.stdlib.qsort_util
-)
-
-add_libc_test(
   heap_sort_test
   SUITE
     libc-stdlib-tests
@@ -321,15 +309,15 @@ add_libc_test(
   HDRS
     SortingTest.h
   DEPENDS
-    libc.src.stdlib.qsort_util
+    libc.src.stdlib.qsort
 )
 
 add_libc_test(
-  qsort_test
+  quick_sort_test
   SUITE
     libc-stdlib-tests
   SRCS
-    qsort_test.cpp
+    quick_sort_test.cpp
   HDRS
     SortingTest.h
   DEPENDS
@@ -382,7 +370,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       atexit_test.cpp
     DEPENDS
-      libc.hdr.func._Exit 
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
@@ -398,7 +385,7 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       at_quick_exit_test.cpp
     DEPENDS
-      libc.hdr.func._Exit 
+      libc.src.stdlib._Exit
       libc.src.stdlib.quick_exit
       libc.src.stdlib.at_quick_exit
       libc.src.__support.CPP.array
@@ -432,8 +419,8 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.quick_exit
   )
 
-  # Only the GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_OS_IS_GPU)
+  # Only baremetal and GPU has an in-tree 'malloc' implementation.
+  if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

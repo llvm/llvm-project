@@ -18,7 +18,7 @@
 namespace llvm {
 
 class MachineFunction;
-class LLVMTargetMachine;
+class TargetMachine;
 
 /// This analysis create MachineFunction for given Function.
 /// To release the MachineFunction, users should invalidate it explicitly.
@@ -28,7 +28,7 @@ class MachineFunctionAnalysis
 
   static AnalysisKey Key;
 
-  const LLVMTargetMachine *TM;
+  const TargetMachine *TM;
 
 public:
   class Result {
@@ -41,7 +41,7 @@ public:
                     FunctionAnalysisManager::Invalidator &);
   };
 
-  MachineFunctionAnalysis(const LLVMTargetMachine *TM) : TM(TM){};
+  MachineFunctionAnalysis(const TargetMachine *TM) : TM(TM) {};
   Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 

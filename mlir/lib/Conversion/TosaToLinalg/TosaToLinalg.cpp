@@ -701,9 +701,9 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
 
   // Filter operands with dynamic dimension
   auto operandsWithDynamicDim =
-      llvm::to_vector(llvm::make_filter_range(operands, [&](Value operand) {
+      llvm::filter_to_vector(operands, [&](Value operand) {
         return cast<RankedTensorType>(operand.getType()).isDynamicDim(dim);
-      }));
+      });
 
   // If no operand has a dynamic dimension, it means all sizes were 1
   if (operandsWithDynamicDim.empty())
@@ -1261,14 +1261,7 @@ public:
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
           if (valueTy.getIntOrFloatBitWidth() < 32) {
-            if (valueTy.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(
-                              nestedLoc,
-                              nestedBuilder.getIntegerType(
-                                  valueTy.getIntOrFloatBitWidth()),
-                              value)
-                          .getResult(0);
+            if (op.getInputUnsigned()) {
               value = nestedBuilder.create<arith::ExtUIOp>(
                   nestedLoc, nestedBuilder.getI32Type(), value);
             } else {
@@ -1297,7 +1290,7 @@ public:
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
           // Unsigned integers have a difference output value.
-          if (outIntType.isUnsignedInteger()) {
+          if (op.getOutputUnsigned()) {
             intMin = 0;
             intMax = APInt::getMaxValue(outBitWidth).getZExtValue();
           }
@@ -1314,13 +1307,6 @@ public:
             value = nestedBuilder.create<arith::TruncIOp>(
                 nestedLoc, rewriter.getIntegerType(outIntType.getWidth()),
                 value);
-
-            if (outIntType.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(nestedLoc,
-                                                              outIntType, value)
-                          .getResult(0);
-            }
           }
 
           nestedBuilder.create<linalg::YieldOp>(loc, value);

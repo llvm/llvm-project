@@ -14,7 +14,7 @@ define void @test(ptr %top) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> <i8 0, i8 0, i8 0, i8 poison>, i8 [[TMP4]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i8> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i8> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i8> [[TMP7]], <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i8> [[TMP7]], splat (i8 2)
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    store <4 x i8> [[TMP8]], ptr null, align 1

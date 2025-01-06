@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_PROPAGATE_CONST
-#define _LIBCPP_EXPERIMENTAL_PROPAGATE_CONST
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL_PROPAGATE_CONST
+#define _LIBCPP___CXX03_EXPERIMENTAL_PROPAGATE_CONST
 
 /*
     propagate_const synopsis
@@ -487,4 +487,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_EXPERIMENTAL_PROPAGATE_CONST
+#endif // _LIBCPP___CXX03_EXPERIMENTAL_PROPAGATE_CONST

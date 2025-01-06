@@ -54,7 +54,7 @@ define i1 @icmp_xor_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @icmp_xor_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A:%.*]], <i32 poison, i32 -8, i32 poison, i32 42>
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -80,7 +80,7 @@ define i1 @icmp_add_v8i32(<8 x i32> %a) {
 ; AVX-LABEL: @icmp_add_v8i32(
 ; AVX-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 -8, i32 poison, i32 poison, i32 poison, i32 poison, i32 42>
 ; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[TMP1]], [[SHIFT]]
+; AVX-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[SHIFT]], [[TMP1]]
 ; AVX-NEXT:    [[R:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
 ; AVX-NEXT:    ret i1 [[R]]
 ;
@@ -131,7 +131,7 @@ define i1 @icmp_xor_v4i32_multiuse(<4 x i32> %a) {
 ; CHECK-NEXT:    call void @use(i32 [[E2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    call void @use(i1 [[R]])
 ; CHECK-NEXT:    ret i1 [[R]]

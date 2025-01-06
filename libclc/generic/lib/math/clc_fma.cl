@@ -22,6 +22,10 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/integer/clc_abs.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/shared/clc_max.h>
 
 #include "config.h"
 #include "math.h"
@@ -34,11 +38,12 @@ struct fp {
 
 _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   /* special cases */
-  if (isnan(a) || isnan(b) || isnan(c) || isinf(a) || isinf(b))
+  if (__clc_isnan(a) || __clc_isnan(b) || __clc_isnan(c) || __clc_isinf(a) ||
+      __clc_isinf(b))
     return mad(a, b, c);
 
   /* If only c is inf, and both a,b are regular numbers, the result is c*/
-  if (isinf(c))
+  if (__clc_isinf(c))
     return c;
 
   a = __clc_flush_denormal_if_not_supported(a);
@@ -84,7 +89,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 
   st_c.mantissa <<= C_ADJUST;
   ulong cutoff_bits = 0;
-  ulong cutoff_mask = (1ul << abs(exp_diff)) - 1ul;
+  ulong cutoff_mask = (1ul << __clc_abs(exp_diff)) - 1ul;
   if (exp_diff > 0) {
     cutoff_bits =
         exp_diff >= 64 ? st_c.mantissa : (st_c.mantissa & cutoff_mask);
@@ -97,7 +102,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 
   struct fp st_fma;
   st_fma.sign = st_mul.sign;
-  st_fma.exponent = max(st_mul.exponent, st_c.exponent);
+  st_fma.exponent = __clc_max(st_mul.exponent, st_c.exponent);
   if (st_c.sign == st_mul.sign) {
     st_fma.mantissa = st_mul.mantissa + st_c.mantissa;
   } else {

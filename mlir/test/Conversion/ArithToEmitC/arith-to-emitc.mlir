@@ -587,6 +587,10 @@ func.func @arith_float_to_int_cast_ops(%arg0: f32, %arg1: f64) {
   // CHECK: emitc.cast %[[CAST0]] : ui32 to i32
   %4 = arith.fptoui %arg0 : f32 to i32
 
+  // CHECK: %[[CAST0:.*]] = emitc.cast %arg0 : f32 to ui16
+  // CHECK: emitc.cast %[[CAST0]] : ui16 to i16
+  %5 = arith.fptoui %arg0 : f32 to i16
+
   return
 }
 

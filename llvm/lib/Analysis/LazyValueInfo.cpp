@@ -924,17 +924,64 @@ LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
     Instruction *I, BasicBlock *BB,
     std::function<ConstantRange(const ConstantRange &, const ConstantRange &)>
         OpFn) {
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+
+  auto ThreadBinOpOverSelect =
+      [&](Value *X, const ConstantRange &CRX, SelectInst *Y,
+          bool XIsLHS) -> std::optional<ValueLatticeElement> {
+    Value *Cond = Y->getCondition();
+    // Only handle selects with constant values.
+    Constant *TrueC = dyn_cast<Constant>(Y->getTrueValue());
+    if (!TrueC)
+      return std::nullopt;
+    Constant *FalseC = dyn_cast<Constant>(Y->getFalseValue());
+    if (!FalseC)
+      return std::nullopt;
+    if (!isGuaranteedNotToBeUndef(Cond, AC))
+      return std::nullopt;
+
+    ConstantRange TrueX =
+        CRX.intersectWith(getValueFromCondition(X, Cond, /*CondIsTrue=*/true,
+                                                /*UseBlockValue=*/false)
+                              ->asConstantRange(X->getType()));
+    ConstantRange FalseX =
+        CRX.intersectWith(getValueFromCondition(X, Cond, /*CondIsTrue=*/false,
+                                                /*UseBlockValue=*/false)
+                              ->asConstantRange(X->getType()));
+    ConstantRange TrueY = TrueC->toConstantRange();
+    ConstantRange FalseY = FalseC->toConstantRange();
+
+    if (XIsLHS)
+      return ValueLatticeElement::getRange(
+          OpFn(TrueX, TrueY).unionWith(OpFn(FalseX, FalseY)));
+    return ValueLatticeElement::getRange(
+        OpFn(TrueY, TrueX).unionWith(OpFn(FalseY, FalseX)));
+  };
+
   // Figure out the ranges of the operands.  If that fails, use a
   // conservative range, but apply the transfer rule anyways.  This
   // lets us pick up facts from expressions like "and i32 (call i32
   // @foo()), 32"
-  std::optional<ConstantRange> LHSRes = getRangeFor(I->getOperand(0), I, BB);
+  std::optional<ConstantRange> LHSRes = getRangeFor(LHS, I, BB);
   if (!LHSRes)
     return std::nullopt;
 
-  std::optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
+  // Try to thread binop over rhs select
+  if (auto *SI = dyn_cast<SelectInst>(RHS)) {
+    if (auto Res = ThreadBinOpOverSelect(LHS, *LHSRes, SI, /*XIsLHS=*/true))
+      return *Res;
+  }
+
+  std::optional<ConstantRange> RHSRes = getRangeFor(RHS, I, BB);
   if (!RHSRes)
     return std::nullopt;
+
+  // Try to thread binop over lhs select
+  if (auto *SI = dyn_cast<SelectInst>(LHS)) {
+    if (auto Res = ThreadBinOpOverSelect(RHS, *RHSRes, SI, /*XIsLHS=*/false))
+      return *Res;
+  }
 
   const ConstantRange &LHSRange = *LHSRes;
   const ConstantRange &RHSRange = *RHSRes;
@@ -1004,6 +1051,13 @@ LazyValueInfoImpl::solveBlockValueInsertElement(InsertElementInst *IEI,
       getBlockValue(IEI->getOperand(0), BB, IEI);
   if (!OptVecVal)
     return std::nullopt;
+
+  // Bail out if the inserted element is a constant expression. Unlike other
+  // ValueLattice types, these are not considered an implicit splat when a
+  // vector type is used.
+  // We could call ConstantFoldInsertElementInstruction here to handle these.
+  if (OptEltVal->isConstant())
+    return ValueLatticeElement::getOverdefined();
 
   Res.mergeIn(*OptVecVal);
   return Res;

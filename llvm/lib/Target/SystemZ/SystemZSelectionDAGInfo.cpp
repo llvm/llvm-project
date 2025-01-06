@@ -17,6 +17,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-selectiondag-info"
 
+bool SystemZSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= SystemZISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= SystemZISD::LAST_MEMORY_OPCODE;
+}
+
+bool SystemZSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  return Opcode >= SystemZISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= SystemZISD::LAST_STRICTFP_OPCODE;
+}
+
 static unsigned getMemMemLenAdj(unsigned Op) {
   return Op == SystemZISD::MEMSET_MVC ? 2 : 1;
 }
@@ -53,7 +63,7 @@ static SDValue emitMemMemReg(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
   int64_t Adj = getMemMemLenAdj(Op);
   SDValue LenAdj = DAG.getNode(ISD::ADD, DL, MVT::i64,
                                DAG.getZExtOrTrunc(Size, DL, MVT::i64),
-                               DAG.getConstant(0 - Adj, DL, MVT::i64));
+                               DAG.getSignedConstant(0 - Adj, DL, MVT::i64));
   return createMemMemNode(DAG, DL, Op, Chain, Dst, Src, LenAdj, Byte);
 }
 

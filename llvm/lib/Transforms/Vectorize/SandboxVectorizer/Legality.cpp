@@ -184,7 +184,8 @@ static void dumpBndl(ArrayRef<Value *> Bndl) {
 }
 #endif // NDEBUG
 
-const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl) {
+const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
+                                                     bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
   if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); })) {
     LLVM_DEBUG(dbgs() << "Not vectorizing: Not Instructions:\n";
@@ -197,7 +198,15 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl) {
 
   // TODO: Check for existing vectors containing values in Bndl.
 
-  // TODO: Check with scheduler.
+  if (!SkipScheduling) {
+    // TODO: Try to remove the IBndl vector.
+    SmallVector<Instruction *, 8> IBndl;
+    IBndl.reserve(Bndl.size());
+    for (auto *V : Bndl)
+      IBndl.push_back(cast<Instruction>(V));
+    if (!Sched.trySchedule(IBndl))
+      return createLegalityResult<Pack>(ResultReason::CantSchedule);
+  }
 
   return createLegalityResult<Widen>();
 }

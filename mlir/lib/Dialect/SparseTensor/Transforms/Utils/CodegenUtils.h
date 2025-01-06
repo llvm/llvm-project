@@ -270,9 +270,6 @@ void storeAll(OpBuilder &builder, Location loc, Value mem, ValueRange vs,
 TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
                                        Value tensor);
 
-/// Generates code to retrieve the values size for the sparse tensor.
-Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
-
 /// Generates code to retrieve the slice offset for the sparse tensor slice,
 /// return a constant if the offset is statically known.
 Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,

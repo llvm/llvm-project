@@ -404,6 +404,14 @@ INSTANTIATE_TEST_SUITE_P(
                 ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC |
                 ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD,
             "8.2-A"),
+        ARMCPUTestParams<uint64_t>("cortex-a510", "armv9-a", "neon-fp-armv8",
+                                   ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                                       ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                                       ARM::AEK_DSP | ARM::AEK_CRC |
+                                       ARM::AEK_RAS | ARM::AEK_DOTPROD |
+                                       ARM::AEK_FP16FML | ARM::AEK_BF16 |
+                                       ARM::AEK_I8MM | ARM::AEK_SB,
+                                   "9-A"),
         ARMCPUTestParams<uint64_t>("cortex-a710", "armv9-a", "neon-fp-armv8",
                                    ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
                                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
@@ -521,7 +529,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 93;
+static constexpr unsigned NumARMCPUArchs = 94;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -1150,13 +1158,14 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
+                      AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
                       AArch64CPUTestParams("oryon-1", "armv8.6-a")),
     AArch64CPUTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 81;
+static constexpr unsigned NumAArch64CPUArchs = 82;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1334,7 +1343,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
-  };
+      AArch64::AEK_SVEAES};
 
   std::vector<StringRef> Features;
 
@@ -1369,6 +1378,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-bfscale"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-f16f32mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
@@ -1538,6 +1548,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve-bfscale", "nosve-bfscale", "+sve-bfscale", "-sve-bfscale"},
       {"sve-f16f32mm", "nosve-f16f32mm", "+sve-f16f32mm", "-sve-f16f32mm"},
       {"sve2", "nosve2", "+sve2", "-sve2"},
+      {"sve-aes", "nosve-aes", "+sve-aes", "-sve-aes"},
       {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
       {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
@@ -1840,7 +1851,11 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"sve", "sve-f16f32mm"}},
 
-        // sve2 -> {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4}
+        // aes -> {sve-aes}
+        {AArch64::ARMV8A, {"noaes", "sve-aes"}, {"aes", "sve-aes"}, {}},
+        {AArch64::ARMV8A, {"sve-aes", "noaes"}, {}, {"aes", "sve-aes"}},
+
+        // sve2 -> {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes}
         {AArch64::ARMV8A, {"nosve2", "sve2p1"}, {"sve2", "sve2p1"}, {}},
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
@@ -1855,6 +1870,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2-sha3", "nosve2"}, {}, {"sve2", "sve2-sha3"}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sm4"}, {"sve2", "sve2-sm4"}, {}},
         {AArch64::ARMV8A, {"sve2-sm4", "nosve2"}, {}, {"sve2", "sve2-sm4"}},
+        {AArch64::ARMV8A, {"nosve2", "sve2-aes"}, {"sve2", "sve2-aes"}, {}},
+        {AArch64::ARMV8A, {"sve2-aes", "nosve2"}, {}, {"sve2", "sve2-aes"}},
 
         // sve-b16b16 -> {sme-b16b16}
         {AArch64::ARMV9_4A,
@@ -1955,16 +1972,29 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"norcpc", "rcpc3"}, {"rcpc", "rcpc3"}, {}},
         {AArch64::ARMV8A, {"rcpc3", "norcpc"}, {}, {"rcpc", "rcpc3"}},
 
-        // sve2-aes -> ssve-aes
+        // sve-aes -> {ssve-aes, sve2-aes}
         {AArch64::ARMV9_6A,
-         {"nosve2-aes", "ssve-aes"},
-         {"sve2-aes", "ssve-aes"},
+         {"nosve-aes", "ssve-aes"},
+         {"sve-aes", "ssve-aes"},
          {}},
         {AArch64::ARMV9_6A,
-         {"ssve-aes", "nosve2-aes"},
+         {"ssve-aes", "nosve-aes"},
          {},
-         {"ssve-aes", "sve2-aes"}},
-};
+         {"ssve-aes", "sve-aes"}},
+        {AArch64::ARMV9_6A,
+         {"nosve-aes", "sve2-aes"},
+         {"sve2-aes", "sve-aes"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"sve2-aes", "nosve-aes"},
+         {},
+         {"sve2-aes", "sve-aes"}},
+
+        // -sve2-aes should disable sve-aes (only)
+        {AArch64::ARMV9_6A,
+         {"sve2", "sve-aes", "nosve2-aes"},
+         {"sve2"},
+         {"sve2-aes", "sve-aes"}}};
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseArch,

@@ -33,6 +33,7 @@ unittest("AnalysisTests") {
     "IRSimilarityIdentifierTest.cpp",
     "IVDescriptorsTest.cpp",
     "InlineCostTest.cpp",
+    "LastRunTrackingAnalysisTest.cpp",
     "LazyCallGraphTest.cpp",
     "LoadsTest.cpp",
     "LoopInfoTest.cpp",

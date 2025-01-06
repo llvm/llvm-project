@@ -42,6 +42,8 @@ static mlir::Value createKernelArgArray(mlir::Location loc,
   auto structTy = mlir::LLVM::LLVMStructType::getLiteral(ctx, structTypes);
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Type i32Ty = rewriter.getI32Type();
+  auto zero = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, i32Ty, rewriter.getIntegerAttr(i32Ty, 0));
   auto one = rewriter.create<mlir::LLVM::ConstantOp>(
       loc, i32Ty, rewriter.getIntegerAttr(i32Ty, 1));
   mlir::Value argStruct =
@@ -55,10 +57,11 @@ static mlir::Value createKernelArgArray(mlir::Location loc,
     auto indice = rewriter.create<mlir::LLVM::ConstantOp>(
         loc, i32Ty, rewriter.getIntegerAttr(i32Ty, i));
     mlir::Value structMember = rewriter.create<LLVM::GEPOp>(
-        loc, ptrTy, structTy, argStruct, mlir::ArrayRef<mlir::Value>({indice}));
+        loc, ptrTy, structTy, argStruct,
+        mlir::ArrayRef<mlir::Value>({zero, indice}));
     rewriter.create<LLVM::StoreOp>(loc, arg, structMember);
     mlir::Value arrayMember = rewriter.create<LLVM::GEPOp>(
-        loc, ptrTy, structTy, argArray, mlir::ArrayRef<mlir::Value>({indice}));
+        loc, ptrTy, ptrTy, argArray, mlir::ArrayRef<mlir::Value>({indice}));
     rewriter.create<LLVM::StoreOp>(loc, structMember, arrayMember);
   }
   return argArray;

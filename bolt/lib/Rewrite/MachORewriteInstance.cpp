@@ -74,7 +74,8 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
   ErrorAsOutParameter EAO(&Err);
   Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      InputFile->makeTriple(), InputFile->getFileName(), nullptr,
+      InputFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+      InputFile->getFileName(), nullptr,
       /* IsPIC */ true, DWARFContext::create(*InputFile),
       {llvm::outs(), llvm::errs()});
   if (Error E = BCOrErr.takeError()) {

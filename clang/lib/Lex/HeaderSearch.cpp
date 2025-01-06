@@ -24,7 +24,6 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"

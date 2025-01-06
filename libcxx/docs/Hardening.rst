@@ -351,6 +351,12 @@ Vendors can use the following ABI options to enable additional hardening checks:
               of a few library types that use ``std::unique_ptr`` internally, such as
               the unordered containers.
 
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` -- changes the iterator type of ``std::array`` to a
+  bounded iterator that keeps track of whether it's within the bounds of the container and asserts it
+  on every dereference and when performing iterator arithmetic.
+
+  ABI impact: changes the iterator type of ``std::array``, its size and its layout.
+
 ABI tags
 --------
 
@@ -401,7 +407,7 @@ Hardened containers status
       - ✅
       - ❌
     * - ``forward_list``
-      - ❌
+      - ✅
       - ❌
     * - ``deque``
       - ✅
@@ -452,7 +458,7 @@ Hardened containers status
       - Partial
       - N/A
     * - ``bitset``
-      - ❌
+      - ✅
       - N/A
 
 Note: for ``vector`` and ``string``, the iterator does not check for

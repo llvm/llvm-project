@@ -945,6 +945,18 @@ bool StoreExpression::equals(const Expression &Other) const {
   return true;
 }
 
+bool CallExpression::equals(const Expression &Other) const {
+  if (!MemoryExpression::equals(Other))
+    return false;
+
+  if (auto *RHS = dyn_cast<CallExpression>(&Other))
+    return Call->getAttributes()
+        .intersectWith(Call->getContext(), RHS->Call->getAttributes())
+        .has_value();
+
+  return false;
+}
+
 // Determine if the edge From->To is a backedge
 bool NewGVN::isBackedge(BasicBlock *From, BasicBlock *To) const {
   return From == To ||
@@ -3854,16 +3866,6 @@ Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
   return nullptr;
 }
 
-// Return true iff V1 can be replaced with V2.
-static bool canBeReplacedBy(Value *V1, Value *V2) {
-  if (auto *CB1 = dyn_cast<CallBase>(V1))
-    if (auto *CB2 = dyn_cast<CallBase>(V2))
-      return CB1->getAttributes()
-          .intersectWith(CB2->getContext(), CB2->getAttributes())
-          .has_value();
-  return true;
-}
-
 bool NewGVN::eliminateInstructions(Function &F) {
   // This is a non-standard eliminator. The normal way to eliminate is
   // to walk the dominator tree in order, keeping track of available
@@ -3973,8 +3975,6 @@ bool NewGVN::eliminateInstructions(Function &F) {
           MembersLeft.insert(Member);
           continue;
         }
-        if (!canBeReplacedBy(Member, Leader))
-          continue;
 
         LLVM_DEBUG(dbgs() << "Found replacement " << *(Leader) << " for "
                           << *Member << "\n");
@@ -4082,11 +4082,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
               if (DominatingLeader != Def) {
                 // Even if the instruction is removed, we still need to update
                 // flags/metadata due to downstreams users of the leader.
-                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>())) {
-                  if (!canBeReplacedBy(DefI, DominatingLeader))
-                    continue;
+                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
-                }
 
                 markInstructionForDeletion(DefI);
               }
@@ -4134,11 +4131,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // original operand, as we already know we can just drop it.
           auto *ReplacedInst = cast<Instruction>(U->get());
           auto *PI = PredInfo->getPredicateInfoFor(ReplacedInst);
-          if (!PI || DominatingLeader != PI->OriginalOp) {
-            if (!canBeReplacedBy(ReplacedInst, DominatingLeader))
-              continue;
+          if (!PI || DominatingLeader != PI->OriginalOp)
             patchReplacementInstruction(ReplacedInst, DominatingLeader);
-          }
 
           LLVM_DEBUG(dbgs()
                      << "Found replacement " << *DominatingLeader << " for "

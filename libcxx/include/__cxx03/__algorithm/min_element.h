@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MIN_ELEMENT_H
-#define _LIBCPP___ALGORITHM_MIN_ELEMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MIN_ELEMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_MIN_ELEMENT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -68,4 +68,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_MIN_ELEMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MIN_ELEMENT_H

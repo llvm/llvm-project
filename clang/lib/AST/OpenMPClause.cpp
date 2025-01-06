@@ -19,7 +19,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -1023,12 +1022,17 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
 OMPAllocateClause *
 OMPAllocateClause::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation LParenLoc, Expr *Allocator,
-                          SourceLocation ColonLoc, SourceLocation EndLoc,
-                          ArrayRef<Expr *> VL) {
+                          SourceLocation ColonLoc,
+                          OpenMPAllocateClauseModifier AllocatorModifier,
+                          SourceLocation AllocatorModifierLoc,
+                          SourceLocation EndLoc, ArrayRef<Expr *> VL) {
+
   // Allocate space for private variables and initializer expressions.
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
-  auto *Clause = new (Mem) OMPAllocateClause(StartLoc, LParenLoc, Allocator,
-                                             ColonLoc, EndLoc, VL.size());
+  auto *Clause = new (Mem) OMPAllocateClause(
+      StartLoc, LParenLoc, Allocator, ColonLoc, AllocatorModifier,
+      AllocatorModifierLoc, EndLoc, VL.size());
+
   Clause->setVarRefs(VL);
   return Clause;
 }
@@ -2242,9 +2246,17 @@ void OMPClausePrinter::VisitOMPAllocateClause(OMPAllocateClause *Node) {
   if (Node->varlist_empty())
     return;
   OS << "allocate";
+  OpenMPAllocateClauseModifier Modifier = Node->getAllocatorModifier();
   if (Expr *Allocator = Node->getAllocator()) {
     OS << "(";
-    Allocator->printPretty(OS, nullptr, Policy, 0);
+    if (Modifier == OMPC_ALLOCATE_allocator) {
+      OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier);
+      OS << "(";
+      Allocator->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
+    } else {
+      Allocator->printPretty(OS, nullptr, Policy, 0);
+    }
     OS << ":";
     VisitOMPClauseList(Node, ' ');
   } else {

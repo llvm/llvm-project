@@ -1155,6 +1155,15 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 
+def NoSpecializationsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates which should not be explicitly specialized by users. This is primarily
+used to diagnose user specializations of standard library type traits.
+  }];
+}
+
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
   let Heading = "pass_object_size, pass_dynamic_object_size";
@@ -3351,9 +3360,8 @@ def NoSanitizeAddressDocs : Documentation {
   // This function has multiple distinct spellings, and so it requires a custom
   // heading to be specified. The most common spelling is sufficient.
   let Heading = "no_sanitize_address, no_address_safety_analysis";
+  let Label = "langext-address_sanitizer";
   let Content = [{
-.. _langext-address_sanitizer:
-
 Use ``__attribute__((no_sanitize_address))`` on a function or a global
 variable declaration to specify that address safety instrumentation
 (e.g. AddressSanitizer) should not be applied.
@@ -3363,9 +3371,8 @@ variable declaration to specify that address safety instrumentation
 def NoSanitizeThreadDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_thread";
+  let Label = "langext-thread_sanitizer";
   let Content = [{
-.. _langext-thread_sanitizer:
-
 Use ``__attribute__((no_sanitize_thread))`` on a function declaration to
 specify that checks for data races on plain (non-atomic) memory accesses should
 not be inserted by ThreadSanitizer. The function is still instrumented by the
@@ -3376,9 +3383,8 @@ tool to avoid false positives and provide meaningful stack traces.
 def NoSanitizeMemoryDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_memory";
+  let Label = "langext-memory_sanitizer";
   let Content = [{
-.. _langext-memory_sanitizer:
-
 Use ``__attribute__((no_sanitize_memory))`` on a function declaration to
 specify that checks for uninitialized memory should not be inserted
 (e.g. by MemorySanitizer). The function may still be instrumented by the tool
@@ -3389,9 +3395,8 @@ to avoid false positives in other places.
 def CFICanonicalJumpTableDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "cfi_canonical_jump_table";
+  let Label = "langext-cfi_canonical_jump_table";
   let Content = [{
-.. _langext-cfi_canonical_jump_table:
-
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
@@ -3858,8 +3863,7 @@ def LifetimeBoundDocs : Documentation {
 The ``lifetimebound`` attribute on a function parameter or implicit object
 parameter indicates that objects that are referred to by that parameter may
 also be referred to by the return value of the annotated function (or, for a
-parameter of a constructor, by the value of the constructed object). It is only
-supported in C++.
+parameter of a constructor, by the value of the constructed object).
 
 By default, a reference is considered to refer to its referenced object, a
 pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
@@ -3919,6 +3923,118 @@ have their lifetimes extended.
   }];
 }
 
+def LifetimeCaptureByDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
+function parameter or implicit object parameter indicates that the capturing
+entity ``X`` may refer to the object referred by that parameter.
+
+Below is a list of types of the parameters and what they're considered to refer to:
+
+- A reference param (of non-view type) is considered to refer to its referenced object.
+- A pointer param (of non-view type) is considered to refer to its pointee.
+- View type param (type annotated with ``[[gsl::Pointer()]]``) is considered to refer
+  to its pointee (gsl owner). This holds true even if the view type appears as a reference
+  in the parameter. For example, both ``std::string_view`` and
+  ``const std::string_view &`` are considered to refer to a ``std::string``.
+- A ``std::initializer_list<T>`` is considered to refer to its underlying array.
+- Aggregates (arrays and simple ``struct``\s) are considered to refer to all
+  objects that their transitive subobjects refer to.
+
+Clang would diagnose when a temporary object is used as an argument to such an
+annotated parameter.
+In this case, the capturing entity ``X`` could capture a dangling reference to this
+temporary object.
+
+.. code-block:: c++
+
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+    s.insert(a);
+  }
+  void use() {
+    std::set<std::string_view> s;
+    addToSet(std::string(), s); // Warning: object whose reference is captured by 's' will be destroyed at the end of the full-expression.
+    //       ^^^^^^^^^^^^^
+    std::string local;
+    addToSet(local, s); // Ok.
+  }
+
+The capturing entity ``X`` can be one of the following:
+
+- Another (named) function parameter.
+
+  .. code-block:: c++
+
+    void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+      s.insert(a);
+    }
+
+- ``this`` (in case of member functions).
+
+  .. code-block:: c++
+
+    class S {
+      void addToSet(std::string_view a [[clang::lifetime_capture_by(this)]]) {
+        s.insert(a);
+      }
+      std::set<std::string_view> s;
+    };
+
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+
+- `global`, `unknown`.
+
+  .. code-block:: c++
+
+    std::set<std::string_view> s;
+    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
+      s.insert(a);
+    }
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
+
+The attribute can be applied to the implicit ``this`` parameter of a member
+function by writing the attribute after the function type:
+
+.. code-block:: c++
+
+  struct S {
+    const char *data(std::set<S*>& s) [[clang::lifetime_capture_by(s)]] {
+      s.insert(this);
+    }
+  };
+
+The attribute supports specifying more than one capturing entities:
+
+.. code-block:: c++
+
+  void addToSets(std::string_view a [[clang::lifetime_capture_by(s1, s2)]],
+                 std::set<std::string_view>& s1,
+                 std::set<std::string_view>& s2) {
+    s1.insert(a);
+    s2.insert(a);
+  }
+
+Limitation: The capturing entity ``X`` is not used by the analysis and is
+used for documentation purposes only. This is because the analysis is
+statement-local and only detects use of a temporary as an argument to the
+annotated parameter.
+
+.. code-block:: c++
+
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s);
+  void use() {
+    std::set<std::string_view> s;
+    if (foo()) {
+      std::string str;
+      addToSet(str, s); // Not detected.
+    }
+  }
+
+.. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
+  }];
+}
+
 def TrivialABIDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -3949,7 +4065,8 @@ purposes of calls. For example:
 
 If a type is trivial for the purposes of calls, has a non-trivial destructor,
 and is passed as an argument by value, the convention is that the callee will
-destroy the object before returning.
+destroy the object before returning. The lifetime of the copy of the parameter
+in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
 relocatable for the purpose of ``__is_trivially_relocatable``.
@@ -5982,12 +6099,19 @@ declared entity. The entity must not have weak linkage; for example, in C++,
 it cannot be applied to a declaration if a definition at that location would be
 considered inline.
 
-Not all targets support this attribute. ELF target support depends on both the
-linker and runtime linker, and is available in at least lld 4.0 and later,
-binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later.
-Mach-O targets support it, but with slightly different semantics: the resolver
-is run at first call, instead of at load time by the runtime linker. Targets
-other than ELF and Mach-O currently do not support this attribute.
+Not all targets support this attribute:
+
+- ELF target support depends on both the linker and runtime linker, and is
+  available in at least lld 4.0 and later, binutils 2.20.1 and later, glibc
+  v2.11.1 and later, and FreeBSD 9.1 and later.
+- Mach-O targets support it, but with slightly different semantics: the resolver
+  is run at first call, instead of at load time by the runtime linker.
+- Windows target supports it on AArch64, but with different semantics: the
+  ``ifunc`` is replaced with a global function pointer, and the call is replaced
+  with an indirect call. The function pointer is initialized by a constructor
+  that calls the resolver.
+- Baremetal target supports it on AVR.
+- Other targets currently do not support this attribute.
   }];
 }
 
@@ -7057,8 +7181,8 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress 
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+* Attribute attached to functions: The attribute does not suppress
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
   These warnings still need to be addressed.
 
   The attribute is warranted even if the only way a function can overflow
@@ -7121,10 +7245,10 @@ alternatives, though the attribute can be used even when the fix can't be automa
   and then use the attribute on the original ``baz()`` to help the users
   update their code to use the new function.
 
-* Attribute attached to fields: The attribute should only be attached to 
-  struct fields, if the fields can not be updated to a safe type with bounds 
-  check, such as std::span. In other words, the buffers prone to unsafe accesses 
-  should always be updated to use safe containers/views and attaching the attribute 
+* Attribute attached to fields: The attribute should only be attached to
+  struct fields, if the fields can not be updated to a safe type with bounds
+  check, such as std::span. In other words, the buffers prone to unsafe accesses
+  should always be updated to use safe containers/views and attaching the attribute
   must be last resort when such an update is infeasible.
 
   The attribute can be placed on individual fields or a set of them as shown below.
@@ -7142,7 +7266,7 @@ alternatives, though the attribute can be used even when the fix can't be automa
       size_t sz;
     };
 
-  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning
   that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
 
   }];
@@ -7697,10 +7821,10 @@ def HLSLLoopHintDocs : Documentation {
   let Content = [{
 The ``[loop]`` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows unrolling to
-be disabled and is not compatible with [unroll(x)]. 
+be disabled and is not compatible with [unroll(x)].
 
 Specifying the parameter, ``[loop]``, directs the
-unroller to not unroll the loop. 
+unroller to not unroll the loop.
 
 .. code-block:: hlsl
 
@@ -7814,6 +7938,27 @@ otherwise.
 The attribute ``no_randomize_layout``, when attached to a C structure,
 instructs the compiler that this structure should not have its field layout
 randomized.
+  }];
+}
+
+def HLSLSV_GroupThreadIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
+individual thread within a thread group is executing in. This attribute is
+only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
+  }];
+}
+
+def HLSLSV_GroupIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
+thread group a shader is executing in. This attribute is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
   }];
 }
 
@@ -8640,6 +8785,18 @@ Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify func
 
 .. _`clspv`: https://github.com/google/clspv
 .. _`libclc`: https://libclc.llvm.org
+}];
+}
+
+def NoTrivialAutoVarInitDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__declspec(no_init_all)`` attribute disables the automatic initialization that the
+`-ftrivial-auto-var-init`_ flag would have applied to locals in a marked function, or instances of
+a marked type. Note that this attribute has no effect for locals that are automatically initialized
+without the `-ftrivial-auto-var-init`_ flag.
+
+.. _`-ftrivial-auto-var-init`: ClangCommandLineReference.html#cmdoption-clang-ftrivial-auto-var-init
 }];
 }
 

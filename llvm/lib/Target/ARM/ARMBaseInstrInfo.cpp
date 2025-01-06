@@ -45,7 +45,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1163,6 +1161,13 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
             .addImm(0)
             .addMemOperand(MMO)
             .add(predOps(ARMCC::AL));
+      } else if (ARM::cl_FPSCR_NZCVRegClass.hasSubClassEq(RC)) {
+        BuildMI(MBB, I, DebugLoc(), get(ARM::VSTR_FPSCR_NZCVQC_off))
+            .addReg(SrcReg, getKillRegState(isKill))
+            .addFrameIndex(FI)
+            .addImm(0)
+            .addMemOperand(MMO)
+            .add(predOps(ARMCC::AL));
       } else
         llvm_unreachable("Unknown reg class!");
       break;
@@ -1325,7 +1330,9 @@ Register ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case ARM::tSTRspi:
   case ARM::VSTRD:
   case ARM::VSTRS:
+  case ARM::VSTRH:
   case ARM::VSTR_P0_off:
+  case ARM::VSTR_FPSCR_NZCVQC_off:
   case ARM::MVE_VSTRWU32:
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
@@ -1413,6 +1420,12 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
           .add(predOps(ARMCC::AL));
     } else if (ARM::VCCRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::VLDR_P0_off), DestReg)
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO)
+          .add(predOps(ARMCC::AL));
+    } else if (ARM::cl_FPSCR_NZCVRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, I, DL, get(ARM::VLDR_FPSCR_NZCVQC_off), DestReg)
           .addFrameIndex(FI)
           .addImm(0)
           .addMemOperand(MMO)
@@ -1576,7 +1589,9 @@ Register ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case ARM::tLDRspi:
   case ARM::VLDRD:
   case ARM::VLDRS:
+  case ARM::VLDRH:
   case ARM::VLDR_P0_off:
+  case ARM::VLDR_FPSCR_NZCVQC_off:
   case ARM::MVE_VLDRWU32:
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
@@ -6923,7 +6938,6 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   RegClassInfo.runOnMachineFunction(*MF);
   RPTracker.init(MF, &RegClassInfo, nullptr, EndLoop->getParent(),
                  EndLoop->getParent()->end(), false, false);
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
   bumpCrossIterationPressure(RPTracker, CrossIterationNeeds);
 
@@ -6965,10 +6979,16 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   }
 
   auto &P = RPTracker.getPressure().MaxSetPressure;
-  for (unsigned I = 0, E = P.size(); I < E; ++I)
-    if (P[I] > TRI->getRegPressureSetLimit(*MF, I)) {
+  for (unsigned I = 0, E = P.size(); I < E; ++I) {
+    // Exclude some Neon register classes.
+    if (I == ARM::DQuad_with_ssub_0 || I == ARM::DTripleSpc_with_ssub_0 ||
+        I == ARM::DTriple_with_qsub_0_in_QPR)
+      continue;
+
+    if (P[I] > RegClassInfo.getRegPressureSetLimit(I)) {
       return true;
     }
+  }
   return false;
 }
 

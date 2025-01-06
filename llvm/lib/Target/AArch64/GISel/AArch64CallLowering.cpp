@@ -47,7 +47,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 
 #define DEBUG_TYPE "aarch64-call-lowering"
 

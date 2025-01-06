@@ -173,6 +173,7 @@ class SemaOpenMP;
 class SemaPPC;
 class SemaPseudoObject;
 class SemaRISCV;
+class SemaSPIRV;
 class SemaSYCL;
 class SemaSwift;
 class SemaSystemZ;
@@ -1142,6 +1143,11 @@ public:
     return *RISCVPtr;
   }
 
+  SemaSPIRV &SPIRV() {
+    assert(SPIRVPtr);
+    return *SPIRVPtr;
+  }
+
   SemaSYCL &SYCL() {
     assert(SYCLPtr);
     return *SYCLPtr;
@@ -1219,6 +1225,7 @@ private:
   std::unique_ptr<SemaPPC> PPCPtr;
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaRISCV> RISCVPtr;
+  std::unique_ptr<SemaSPIRV> SPIRVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
   std::unique_ptr<SemaSwift> SwiftPtr;
   std::unique_ptr<SemaSystemZ> SystemZPtr;
@@ -1757,8 +1764,19 @@ public:
   /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
   void inferLifetimeBoundAttribute(FunctionDecl *FD);
 
+  /// Add [[clang:::lifetime_capture_by(this)]] to STL container methods.
+  void inferLifetimeCaptureByAttribute(FunctionDecl *FD);
+
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
+
+  LifetimeCaptureByAttr *ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
+                                                    StringRef ParamName);
+  // Processes the argument 'X' in [[clang::lifetime_capture_by(X)]]. Since 'X'
+  // can be the name of a function parameter, we need to parse the function
+  // declaration and rest of the parameters before processesing 'X'. Therefore
+  // do this lazily instead of processing while parsing the annotation itself.
+  void LazyProcessLifetimeCaptureByParams(FunctionDecl *FD);
 
   /// Add _Nullable attributes for std:: types.
   void inferNullableClassAttribute(CXXRecordDecl *CRD);
@@ -2315,6 +2333,9 @@ public:
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
+  void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
+                              const Expr *ThisArg, ArrayRef<const Expr *> Args);
+
   /// Handles the checks for format strings, non-POD arguments to vararg
   /// functions, NULL arguments passed to non-NULL parameters, diagnose_if
   /// attributes and AArch64 SME attributes.
@@ -2509,6 +2530,19 @@ private:
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
+
+  enum BuiltinCountedByRefKind {
+    AssignmentKind,
+    InitializerKind,
+    FunctionArgKind,
+    ReturnArgKind,
+    ArraySubscriptKind,
+    BinaryExprKind,
+  };
+
+  bool CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                       BuiltinCountedByRefKind K);
+  bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Matrix builtin handling.
   ExprResult BuiltinMatrixTranspose(CallExpr *TheCall, ExprResult CallResult);
@@ -5287,7 +5321,7 @@ public:
   /// is complete.
   void ActOnFinishCXXInClassMemberInitializer(Decl *VarDecl,
                                               SourceLocation EqualLoc,
-                                              Expr *Init);
+                                              ExprResult Init);
 
   /// Handle a C++ member initializer using parentheses syntax.
   MemInitResult
@@ -10632,6 +10666,11 @@ public:
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
 
+  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
+  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
+  /// value has been discarded.
+  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
+
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
   void DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID);
@@ -11328,9 +11367,9 @@ public:
       CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
       const ParsedAttributesView &Attr, TemplateParameterList *TemplateParams,
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
-      SourceLocation FriendLoc,
-      ArrayRef<TemplateParameterList *> OuterTemplateParamLists,
-      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
+      SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
+      TemplateParameterList **OuterTemplateParamLists,
+      SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11369,8 +11408,7 @@ public:
   DeclResult ActOnVarTemplateSpecialization(
       Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
-      StorageClass SC, bool IsPartialSpecialization,
-      bool IsMemberSpecialization);
+      StorageClass SC, bool IsPartialSpecialization);
 
   /// Get the specialization of the given variable template corresponding to
   /// the specified argument list, or a null-but-valid result if the arguments
@@ -13012,14 +13050,40 @@ public:
   /// dealing with a specialization. This is only relevant for function
   /// template specializations.
   ///
+  /// \param Pattern If non-NULL, indicates the pattern from which we will be
+  /// instantiating the definition of the given declaration, \p ND. This is
+  /// used to determine the proper set of template instantiation arguments for
+  /// friend function template specializations.
+  ///
   /// \param ForConstraintInstantiation when collecting arguments,
   /// ForConstraintInstantiation indicates we should continue looking when
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
+  ///
+  /// \param SkipForSpecialization when specified, any template specializations
+  /// in a traversal would be ignored.
+  ///
+  /// \param ForDefaultArgumentSubstitution indicates we should continue looking
+  /// when encountering a specialized member function template, rather than
+  /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
+      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
+      bool ForConstraintInstantiation = false,
+      bool SkipForSpecialization = false,
+      bool ForDefaultArgumentSubstitution = false);
+
+  /// Apart from storing the result to \p Result, this behaves the same as
+  /// another overload.
+  void getTemplateInstantiationArgs(
+      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
+      const DeclContext *DC = nullptr, bool Final = false,
+      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
+      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
+      bool ForConstraintInstantiation = false,
+      bool SkipForSpecialization = false,
+      bool ForDefaultArgumentSubstitution = false);
 
   /// RAII object to handle the state changes required to synthesize
   /// a function body.
@@ -13290,7 +13354,7 @@ public:
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
-  // Unlike the above, this does not evaluates constraints.
+  // Unlike the above, this does not evaluate constraints.
   ExprResult SubstConstraintExprWithoutSatisfaction(
       Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
@@ -14228,7 +14292,7 @@ public:
                                    SourceLocation EllipsisLoc, Expr *IndexExpr,
                                    SourceLocation RSquareLoc,
                                    ArrayRef<Expr *> ExpandedExprs = {},
-                                   bool EmptyPack = false);
+                                   bool FullySubstituted = false);
 
   /// Handle a C++1z fold-expression: ( expr op ... op expr ).
   ExprResult ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
@@ -14411,10 +14475,10 @@ public:
       const MultiLevelTemplateArgumentList &TemplateArgs,
       SourceRange TemplateIDRange);
 
-  bool CheckInstantiatedFunctionTemplateConstraints(
-      SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-      ArrayRef<TemplateArgument> TemplateArgs,
-      ConstraintSatisfaction &Satisfaction);
+  bool CheckFunctionTemplateConstraints(SourceLocation PointOfInstantiation,
+                                        FunctionDecl *Decl,
+                                        ArrayRef<TemplateArgument> TemplateArgs,
+                                        ConstraintSatisfaction &Satisfaction);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.

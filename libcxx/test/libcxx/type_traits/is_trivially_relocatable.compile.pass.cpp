@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__type_traits/is_trivially_relocatable.h>
 #include <array>
 #include <deque>
@@ -79,7 +81,7 @@ static_assert(!std::__libcpp_is_trivially_relocatable<std::array<NotTriviallyCop
 static_assert(std::__libcpp_is_trivially_relocatable<std::array<std::unique_ptr<int>, 1> >::value, "");
 
 // basic_string
-#if !_LIBCPP_HAS_ASAN || !defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if !_LIBCPP_HAS_ASAN || !_LIBCPP_INSTRUMENTED_WITH_ASAN
 struct MyChar {
   char c;
 };

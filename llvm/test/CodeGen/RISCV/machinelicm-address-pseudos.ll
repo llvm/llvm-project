@@ -97,10 +97,10 @@ ret:
 define void @test_la_tls_ie(i32 signext %n) {
 ; RV32I-LABEL: test_la_tls_ie:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:  .Lpcrel_hi2:
-; RV32I-NEXT:    auipc a1, %tls_ie_pcrel_hi(ie)
-; RV32I-NEXT:    lw a2, %pcrel_lo(.Lpcrel_hi2)(a1)
 ; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:  .Lpcrel_hi2:
+; RV32I-NEXT:    auipc a2, %tls_ie_pcrel_hi(ie)
+; RV32I-NEXT:    lw a2, %pcrel_lo(.Lpcrel_hi2)(a2)
 ; RV32I-NEXT:    add a2, a2, tp
 ; RV32I-NEXT:  .LBB2_1: # %loop
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -112,10 +112,10 @@ define void @test_la_tls_ie(i32 signext %n) {
 ;
 ; RV64I-LABEL: test_la_tls_ie:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:  .Lpcrel_hi2:
-; RV64I-NEXT:    auipc a1, %tls_ie_pcrel_hi(ie)
-; RV64I-NEXT:    ld a2, %pcrel_lo(.Lpcrel_hi2)(a1)
 ; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:  .Lpcrel_hi2:
+; RV64I-NEXT:    auipc a2, %tls_ie_pcrel_hi(ie)
+; RV64I-NEXT:    ld a2, %pcrel_lo(.Lpcrel_hi2)(a2)
 ; RV64I-NEXT:    add a2, a2, tp
 ; RV64I-NEXT:  .LBB2_1: # %loop
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1

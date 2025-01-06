@@ -137,7 +137,7 @@ inline constexpr bool enable_nonlocking_formatter_optimization<basic_string<char
 template <class _Traits>
 inline constexpr bool enable_nonlocking_formatter_optimization<basic_string_view<char, _Traits>> = true;
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<wchar_t*> = true;
 template <>
@@ -148,7 +148,7 @@ template <class _Traits, class _Allocator>
 inline constexpr bool enable_nonlocking_formatter_optimization<basic_string<wchar_t, _Traits, _Allocator>> = true;
 template <class _Traits>
 inline constexpr bool enable_nonlocking_formatter_optimization<basic_string_view<wchar_t, _Traits>> = true;
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
 #  endif   // _LIBCPP_STD_VER >= 23
 #endif     // _LIBCPP_STD_VER >= 20
 

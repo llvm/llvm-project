@@ -311,6 +311,20 @@
 // AMX-TRANSPOSE: "-target-feature" "+amx-transpose"
 // NO-AMX-TRANSPOSE: "-target-feature" "-amx-transpose"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-avx512 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-AVX512 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-avx512 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-AVX512 %s
+// AMX-AVX512: "-target-feature" "+amx-avx512"
+// NO-AMX-AVX512: "-target-feature" "-amx-avx512"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-tf32 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TF32 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TF32 %s
+// AMX-TF32: "-target-feature" "+amx-tf32"
+// NO-AMX-TF32: "-target-feature" "-amx-tf32"
+
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"

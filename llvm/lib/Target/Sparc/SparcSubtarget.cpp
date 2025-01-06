@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcSubtarget.h"
-#include "Sparc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"

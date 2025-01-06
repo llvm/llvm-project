@@ -313,7 +313,7 @@ extern unsigned struct_statvfs_sz;
 
 struct __sanitizer_iovec {
   void *iov_base;
-  uptr iov_len;
+  usize iov_len;
 };
 
 #if !SANITIZER_ANDROID
@@ -388,6 +388,16 @@ typedef long __sanitizer_time_t;
 #endif
 
 typedef long __sanitizer_suseconds_t;
+
+struct __sanitizer_timespec {
+  __sanitizer_time_t tv_sec; /* seconds */
+  u64 tv_nsec;               /* nanoseconds */
+};
+
+struct __sanitizer_itimerspec {
+  struct __sanitizer_timespec it_interval; /* timer period */
+  struct __sanitizer_timespec it_value;    /* timer expiration */
+};
 
 struct __sanitizer_timeval {
   __sanitizer_time_t tv_sec;
@@ -513,6 +523,7 @@ struct __sanitizer_dirent64 {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
+extern unsigned struct_sock_fprog_sz;
 #endif
 
 #if defined(__x86_64__) && !defined(_LP64)
@@ -590,7 +601,7 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
-  struct {
+  __extension__ struct {
     int si_signo;
 # if SANITIZER_MIPS
     int si_code;
@@ -1066,7 +1077,6 @@ extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;
 extern unsigned struct_unimapdesc_sz;
 extern unsigned struct_unimapinit_sz;
-extern unsigned struct_sock_fprog_sz;
 #  endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 extern const unsigned long __sanitizer_bufsiz;
@@ -1516,6 +1526,10 @@ extern const int si_SEGV_ACCERR;
                  offsetof(struct CLASS, MEMBER))
 
 #define SIGACTION_SYMNAME sigaction
+
+#  if SANITIZER_LINUX
+typedef void *__sanitizer_timer_t;
+#  endif
 
 #endif  // SANITIZER_LINUX || SANITIZER_APPLE
 

@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Operator.h"
 
 using namespace clang;
 using namespace CodeGen;

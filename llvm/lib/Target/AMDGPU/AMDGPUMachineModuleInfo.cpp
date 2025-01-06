@@ -14,7 +14,6 @@
 
 #include "AMDGPUMachineModuleInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCSymbol.h"
 
 namespace llvm {
 

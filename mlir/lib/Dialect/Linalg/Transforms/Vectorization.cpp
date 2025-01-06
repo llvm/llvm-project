@@ -1115,11 +1115,6 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //  b. contiguous loads.
   // Both cases use vector.transfer_read.
 
-  assert(llvm::count_if(resultType.getShape(),
-                        [](uint64_t dim) { return dim != 1; }) &&
-         "Contiguous loads and scalar loads + broadcast only support 1-D "
-         "vectors ATM!");
-
   // Collect indices for `vector.transfer_read`. At this point, the indices will
   // either be scalars or would have been broadcast to vectors matching the
   // result type. For indices that are vectors, there are two options:
@@ -1134,8 +1129,6 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //   * for vector indices (e.g. `vector<1x1x4xindex>`) - extract the bottom
   //    (0th) element and use that.
   SmallVector<Value> transferReadIdxs;
-  auto zero = rewriter.create<arith::ConstantOp>(
-      loc, rewriter.getI32Type(), rewriter.getZeroAttr(rewriter.getI32Type()));
   for (size_t i = 0; i < extractOp.getIndices().size(); i++) {
     Value idx = bvm.lookup(extractOp.getIndices()[i]);
     if (idx.getType().isIndex()) {
@@ -1149,7 +1142,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
                         resultType.getScalableDims().back()),
         idx);
     transferReadIdxs.push_back(
-        rewriter.create<vector::ExtractElementOp>(loc, indexAs1dVector, zero));
+        rewriter.create<vector::ExtractOp>(loc, indexAs1dVector, 0));
   }
 
   // `tensor.extract_element` is always in-bounds, hence the following holds.
@@ -1167,8 +1160,18 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         loc, resultType, extractOp.getTensor(), transferReadIdxs,
         permutationMap, inBounds);
 
+    // Mask this broadcasting xfer_read here rather than relying on the generic
+    // path (the generic path assumes identity masking map, which wouldn't be
+    // valid here).
+    SmallVector<int64_t> readMaskShape = {1};
+    auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
+    auto allTrue = rewriter.create<vector::ConstantMaskOp>(
+        loc, readMaskType, vector::ConstantMaskKind::AllTrue);
+    auto *maskedReadOp =
+        mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+
     LDBG("Vectorised as scalar broadcast load: " << extractOp << "\n");
-    return VectorizationResult{VectorizationStatus::NewOp, transferReadOp};
+    return VectorizationResult{VectorizationStatus::NewOp, maskedReadOp};
   }
 
   // 2b. Handle contiguous access.
@@ -1415,7 +1418,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // 3.c. Not all ops support 0-d vectors, extract the scalar for now.
     // TODO: remove this.
     if (readType.getRank() == 0)
-      readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
+      readValue = rewriter.create<vector::ExtractOp>(loc, readValue,
+                                                     ArrayRef<int64_t>());
 
     LDBG("New vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue
                                  << "\n");
@@ -2023,26 +2027,36 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
   // Cond 3: Look at the configuration in `inputScalableVecDims` and verify that
   // it matches one of the supported cases:
-  //  1. exactly 1 dim is scalable and that's the _last_ parallel dim
-  //  2. exactly 2 dims are scalable and those are the _last two adjacent_
-  //     parallel dims
-  //  3. exactly 1 reduction dim is scalable and that's the last (innermost) dim
+  //  1. Exactly 1 dim is scalable and that's the _last_ non-unit parallel dim
+  //    (*).
+  //  2. Exactly 2 dims are scalable and those are the _last two adjacent_
+  //     parallel dims.
+  //  3. Exactly 1 reduction dim is scalable and that's the last (innermost)
+  //  dim.
   // The 2nd restriction above means that only Matmul-like Ops are supported
   // when 2 dims are scalable, e.g. :
   //    * iterators = [parallel, parallel, reduction]
   //    * scalable flags = [true, true, false]
+  //
+  // (*) Non-unit dims get folded away in practice.
+  // TODO: Relax these conditions as good motivating examples are identified.
 
-  // Find the first scalable flag
-  bool seenParalell = false;
+  // Find the first scalable flag.
+  bool seenNonUnitParallel = false;
   auto iterators = linalgOp.getIteratorTypesArray();
   SmallVector<bool> scalableFlags(inputScalableVecDims);
-  while (!scalableFlags.back()) {
-    seenParalell |= (iterators.back() == utils::IteratorType::parallel);
+  int64_t idx = scalableFlags.size() - 1;
+  while (!scalableFlags[idx]) {
+    bool isNonUnitDim = (inputVectorSizes[idx] != 1);
+    seenNonUnitParallel |=
+        (iterators[idx] == utils::IteratorType::parallel && isNonUnitDim);
 
     iterators.pop_back();
     scalableFlags.pop_back();
+    --idx;
   }
 
+  // Analyze the iterator corresponding to the first scalable dim.
   switch (iterators.back()) {
   case utils::IteratorType::reduction: {
     // Check 3. above is met.
@@ -2060,7 +2074,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   }
   case utils::IteratorType::parallel: {
     // Check 1. and 2. above are met.
-    if (seenParalell) {
+    if (seenNonUnitParallel) {
       LDBG("Inner parallel dim not requested for scalable "
            "vectorization\n");
       return failure();
@@ -2089,6 +2103,11 @@ vectorizeScalableVectorPrecondition(Operation *op,
         (iterators.back() != utils::IteratorType::parallel))
       return failure();
   }
+
+  // Check to not let go the matmul with extended semantic, through this
+  // transform.
+  if (linalgOp.hasUserDefinedMaps())
+    return failure();
 
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
@@ -2268,7 +2287,8 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
       loc, readType, copyOp.getSource(), indices,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
   if (cast<VectorType>(readValue.getType()).getRank() == 0) {
-    readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
+    readValue =
+        rewriter.create<vector::ExtractOp>(loc, readValue, ArrayRef<int64_t>());
     readValue = rewriter.create<vector::BroadcastOp>(loc, writeType, readValue);
   }
   Operation *writeValue = rewriter.create<vector::TransferWriteOp>(
@@ -2765,12 +2785,6 @@ void mlir::linalg::populateInsertSliceVectorizationPatterns(
 
 void mlir::linalg::populatePadOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
-  // TODO: The following pattern implements "decomposition" and
-  // optional "vectorization". Seperate "decomposition" into a sepereate
-  // pre-processing pattern group.
-  patterns.add<GeneralizePadOpPattern>(patterns.getContext(), baseBenefit);
-
-  // Try these specialized patterns first before resorting to the generic one.
   patterns.add<PadOpVectorizationWithTransferReadPattern,
                PadOpVectorizationWithTransferWritePattern,
                PadOpVectorizationWithInsertSlicePattern>(

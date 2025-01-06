@@ -956,6 +956,15 @@ MLIR_CAPI_EXPORTED MlirOpOperand mlirValueGetFirstUse(MlirValue value);
 MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
                                                       MlirValue with);
 
+/// Replace all uses of 'of' value with 'with' value, updating anything in the
+/// IR that uses 'of' to use 'with' instead, except if the user is listed in
+/// 'exceptions'. The 'exceptions' parameter is an array of MlirOperation
+/// pointers with a length of 'numExceptions'.
+MLIR_CAPI_EXPORTED void
+mlirValueReplaceAllUsesExcept(MlirValue of, MlirValue with,
+                              intptr_t numExceptions,
+                              MlirOperation *exceptions);
+
 //===----------------------------------------------------------------------===//
 // OpOperand API.
 //===----------------------------------------------------------------------===//
