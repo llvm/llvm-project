@@ -225,27 +225,6 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   if (getNumLocalVars() == 0)
     return PresburgerRelation(*this);
 
-  // Move all the non-div locals to the end, as the current API to
-  // SymbolicLexOpt requires these to form a contiguous range.
-  //
-  // Take a copy so we can perform mutations.
-  std::vector<MaybeLocalRepr> reprs(getNumLocalVars());
-  this->getLocalReprs(&reprs);
-
-  unsigned numNonDivLocals = 0;
-  llvm::SmallBitVector isSymbol(getNumVars(), true);
-  unsigned offset = getVarKindOffset(VarKind::Local);
-  for (unsigned i = 0, e = getNumLocalVars(); i < e; ++i) {
-    if (reprs[i])
-      continue;
-    isSymbol[offset + i] = false;
-    ++numNonDivLocals;
-  }
-
-  // If there are no non-div locals, we're done.
-  if (numNonDivLocals == 0)
-    return PresburgerRelation(*this);
-
   // We computeSymbolicIntegerLexMin by considering the non-div locals as
   // "non-symbols" and considering everything else as "symbols". This will
   // compute a function mapping assignments to "symbols" to the
@@ -257,10 +236,28 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // exists, which is the union of the domain of the returned lexmin function
   // and the returned set of assignments to the "symbols" that makes the lexmin
   // unbounded.
+
+  // Construct a BitVector that identifies which variables we would like to
+  // treat as symbols. We want to treat all variables as "symbols" except for
+  // the locals that don't have a division representation.
+  std::vector<MaybeLocalRepr> reprs(getNumLocalVars());
+  this->getLocalReprs(&reprs);
+
+  llvm::SmallBitVector isSymbol(getNumVars(), true);
+  unsigned offset = getVarKindOffset(VarKind::Local);
+  for (unsigned i = 0, e = getNumLocalVars(); i < e; ++i) {
+    isSymbol[offset + i] = reprs[i].hasRepr();
+  }
+
+  // If there are no non-div locals (non-symbols), we're done.
+  if (isSymbol.all())
+    return PresburgerRelation(*this);
+
   SymbolicLexOpt lexminResult =
-      SymbolicLexSimplex(*this,
+      SymbolicLexSimplex(/*constraints=*/*this,
+                         /*symbolDomain=*/
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                             /*numDims=*/getNumVars() - numNonDivLocals)),
+                             /*numDims=*/isSymbol.count())),
                          isSymbol)
           .computeSymbolicIntegerLexMin();
   PresburgerRelation result =
