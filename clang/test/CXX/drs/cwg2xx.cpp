@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,since-cxx14,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: diagnostic above is emitted only on Windows platforms
 // PR13819 -- __SIZE_TYPE__ is incompatible.
@@ -41,6 +41,141 @@ namespace cwg202 { // cwg202: 3.1
   };
   template struct X<f>;
 } // namespace cwg202
+
+namespace cwg203 { // cwg203: 3.0
+namespace ex1 {
+struct B {
+  int i;
+};
+struct D1 : B {};
+struct D2 : B {};
+
+int(D1::*pmD1) = &D2::i;
+} // namespace ex1
+
+#if __cplusplus >= 202002L
+namespace ex2 {
+struct A {
+  int i;
+  virtual void f() = 0; // #cwg203-ex2-A-f
+};
+
+struct B : A {
+  int j;
+  constexpr B() : j(5) {}
+  virtual void f();
+};
+
+struct C : B {
+  constexpr C() { j = 10; }
+};
+
+template <class T>
+constexpr int DefaultValue(int(T::*m)) {
+  return T().*m;
+  // since-cxx20-error@-1 {{allocating an object of abstract class type 'cwg203::ex2::A'}}
+  //   since-cxx20-note@#cwg203-ex2-a {{in instantiation of function template specialization 'cwg203::ex2::DefaultValue<cwg203::ex2::A>' requested here}}
+  //   since-cxx20-note@#cwg203-ex2-A-f {{unimplemented pure virtual method 'f' in 'A'}}
+} // #cwg203-ex2-DefaultValue
+
+int a = DefaultValue(&B::i); // #cwg203-ex2-a
+static_assert(DefaultValue(&C::j) == 5, "");
+} // namespace ex2
+#endif
+
+namespace ex3 {
+class Base {
+public:
+  int func() const;
+};
+
+class Derived : public Base {};
+
+template <class T> class Templ { // #cwg203-ex3-Templ
+public:
+  template <class S> Templ(S (T::*ptmf)() const); // #cwg203-ex3-Templ-ctor
+};
+
+void foo() { Templ<Derived> x(&Derived::func); }
+// expected-error@-1 {{no matching constructor for initialization of 'Templ<Derived>'}}
+//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'const Templ<Derived>' for 1st argument}}
+//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'Templ<Derived>' for 1st argument}}
+//   expected-note@#cwg203-ex3-Templ-ctor {{candidate template ignored: could not match 'cwg203::ex3::Derived' against 'cwg203::ex3::Base'}}
+} // namespace ex3
+
+namespace ex4 {
+struct Very_base {
+  int a;
+};
+struct Base1 : Very_base {};
+struct Base2 : Very_base {};
+struct Derived : Base1, Base2 {
+};
+
+int f() {
+  Derived d;
+  // FIXME: in the diagnostic below, Very_base is fully qualified, but Derived is not
+  int Derived::*a_ptr = &Derived::Base1::a;
+  /* expected-error@-1
+  {{ambiguous conversion from pointer to member of base class 'cwg203::ex4::Very_base' to pointer to member of derived class 'Derived':
+    struct cwg203::ex4::Derived -> Base1 -> Very_base
+    struct cwg203::ex4::Derived -> Base2 -> Very_base}}*/
+}
+} // namespace ex4
+
+namespace ex5 {
+struct Base {
+  int a;
+};
+struct Derived : Base {
+  int b;
+};
+
+template <typename Class, typename Member_type, Member_type Base::*ptr>
+Member_type get(Class &c) {
+  return c.*ptr;
+}
+
+void call(int (*f)(Derived &)); // #cwg203-ex5-call
+
+int f() {
+  // ill-formed, contrary to Core issue filing:
+  // `&Derived::b` yields `int Derived::*`, which can't initialize NTTP of type `int Base::*`,
+  // because (implicit) pointer-to-member conversion doesn't upcast.
+  call(&get<Derived, int, &Derived::b>);
+  // expected-error@-1 {{no matching function for call to 'call'}}
+  //   expected-note@#cwg203-ex5-call {{candidate function not viable: no overload of 'get' matching 'int (*)(Derived &)' for 1st argument}}
+
+  // well-formed, contrary to Core issue filing:
+  // `&Derived::a` yields `int Base::*`,
+  // which can initialize NTTP of type `int Base::*`.
+  call(&get<Derived, int, &Derived::a>);
+
+  call(&get<Base, int, &Derived::a>);
+  // expected-error@-1 {{no matching function for call to 'call'}}
+  //   expected-note@#cwg203-ex5-call {{candidate function not viable: no overload of 'get' matching 'int (*)(Derived &)' for 1st argument}}
+}
+} // namespace ex5
+
+namespace ex6 {
+struct Base {
+  int a;
+};
+struct Derived : private Base { // #cwg203-ex6-Derived
+public:
+  using Base::a; // make `a` accessible
+};
+
+int f() {
+  Derived d;
+  int b = d.a;
+  // FIXME: in the diagnostic below, Base is fully qualified, but Derived is not
+  int Derived::*ptr = &Derived::a;
+  // expected-error@-1 {{cannot cast private base class 'cwg203::ex6::Base' to 'Derived'}}
+  //   expected-note@#cwg203-ex6-Derived {{declared private here}}
+}
+} // namespace ex6
+} // namespace cwg203
 
 // cwg204: sup 820
 
