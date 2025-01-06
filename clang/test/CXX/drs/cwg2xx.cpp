@@ -950,21 +950,7 @@ namespace cwg272 { // cwg272: yes
   };
 } // namespace cwg272
 
-#include <stdarg.h>
-#include <stddef.h>
-namespace cwg273 { // cwg273: yes
-  struct A {
-    int n;
-  };
-  void operator&(A);
-  void f(A a, ...) {
-    offsetof(A, n);
-    va_list val;
-    va_start(val, a);
-    va_end(val);
-  }
-} // namespace cwg273
-
+// cwg273 is in cwg273.cpp
 // cwg274: na
 
 namespace cwg275 { // cwg275: no
