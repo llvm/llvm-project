@@ -1545,7 +1545,7 @@ def Zn4WriteSCALErr: SchedWriteRes<[Zn4FPFMisc23]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[Zn4WriteSCALErr], (instregex
-        "V(SCALEF|REDUCE)(S|P)(S|D)(Z?|Z128?|Z256?)(rr|rrb|rrkz|rrik|rrikz|rri)(_Int?|_Intkz?)",
+        "V(SCALEF|REDUCE)(S|P)(S|D)(Z?|Z128?|Z256?)(rr|rrb|rrkz|rrik|rrikz|rri)(_Int?)",
         "(V?)REDUCE(PD|PS|SD|SS)(Z?|Z128?)(rri|rrikz|rrib)"
 	)>;
 
@@ -1585,7 +1585,7 @@ def : InstRW<[Zn4WriteSHIFTrr], (instregex
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z256?)(ri|rik|rikz)",
         "(V?)P(ROL|ROR)(D|Q)(Z?|Z128?)(ri|rik|rikz)",
-	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZr_Intkz"
+	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
 	)>;
 
 def Zn4WriteSHIFTri: SchedWriteRes<[Zn4FPFMisc01]> {

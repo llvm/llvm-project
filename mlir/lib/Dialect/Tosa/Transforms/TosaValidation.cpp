@@ -542,9 +542,13 @@ bool TosaValidation::isValidElementType(Type type) {
 
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
+
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   getOperation().walk([&](Operation *op) {
-    if (!op->getDialect() ||
-        op->getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
+    if (op->getDialect() != tosaDialect)
       return;
 
     for (Value operand : op->getOperands()) {
