@@ -36,9 +36,9 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
   return ParsedKind;
 }
 
-SanitizerMask clang::parseSanitizerWeightedValue(StringRef Value,
-                                                 bool AllowGroups,
-                                                 SanitizerMaskWeights *Weights) {
+SanitizerMask
+clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
+                                   SanitizerMaskWeights *Weights) {
   SanitizerMask ParsedKind = llvm::StringSwitch<SanitizerMask>(Value)
 #define SANITIZER(NAME, ID) .StartsWith(NAME "=", SanitizerKind::ID)
 #define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \

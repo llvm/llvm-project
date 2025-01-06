@@ -261,7 +261,7 @@ static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
-                  int OptOutID, SanitizerMaskWeights* Weights) {
+                  int OptOutID, SanitizerMaskWeights *Weights) {
   assert(!(AlwaysIn & AlwaysOut) &&
          "parseSanitizeArgs called with contradictory in/out requirements");
 
