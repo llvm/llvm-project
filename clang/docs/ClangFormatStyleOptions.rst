@@ -4661,12 +4661,13 @@ the configuration (without a prefix: ``Auto``).
 .. _KeepEmptyLinesAtEOF:
 
 **KeepEmptyLinesAtEOF** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <KeepEmptyLinesAtEOF>`
-  This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
 
 .. _KeepEmptyLinesAtTheStartOfBlocks:
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
-  This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtStartOfBlock`` of
+  ``KeepEmptyLines``.
 
 .. _KeepFormFeed:
 
@@ -6730,8 +6731,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TemplateNames:
 
 **TemplateNames** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <TemplateNames>`
-  A vector of non-keyword identifiers that should be interpreted as
-  template names.
+  A vector of non-keyword identifiers that should be interpreted as template
+  names.
 
   A ``<`` after a template name is annotated as a template opener instead of
   a binary operator.
@@ -6798,6 +6799,15 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _VariableTemplates:
+
+**VariableTemplates** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <VariableTemplates>`
+  A vector of non-keyword identifiers that should be interpreted as variable
+  template names.
+
+  A ``)`` after a variable template instantiation is **not** annotated as
+  the closing parenthesis of C-style cast operator.
+
 .. _VerilogBreakBetweenInstancePorts:
 
 **VerilogBreakBetweenInstancePorts** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <VerilogBreakBetweenInstancePorts>`
@@ -6833,6 +6843,45 @@ the configuration (without a prefix: ``Auto``).
     WhitespaceSensitiveMacros: [STRINGIZE, PP_STRINGIZE]
 
   For example: BOOST_PP_STRINGIZE
+
+.. _WrapNamespaceBodyWithEmptyLines:
+
+**WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
+  Wrap namespace body with empty lines.
+
+  Possible values:
+
+  * ``WNBWELS_Never`` (in configuration: ``Never``)
+    Remove all empty lines at the beginning and the end of namespace body.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2
+      function();
+      }
+      }
+
+  * ``WNBWELS_Always`` (in configuration: ``Always``)
+    Always have at least one empty line at the beginning and the end of
+    namespace body except that the number of empty lines between consecutive
+    nested namespace definitions is not increased.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2 {
+
+      function();
+
+      }
+      }
+
+  * ``WNBWELS_Leave`` (in configuration: ``Leave``)
+    Keep existing newlines at the beginning and the end of namespace body.
+    ``MaxEmptyLinesToKeep`` still applies.
+
+
 
 .. END_FORMAT_STYLE_OPTIONS
 

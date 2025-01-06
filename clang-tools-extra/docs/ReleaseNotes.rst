@@ -119,7 +119,8 @@ Improvements to clang-tidy
 
 - Removed :program:`clang-tidy`'s global options for most of checks. All options
   are changed to local options except `IncludeStyle`, `StrictMode` and
-  `IgnoreMacros`.
+  `IgnoreMacros`. Global scoped `StrictMode` and `IgnoreMacros` are deprecated
+  and will be removed in further releases.
 
 .. csv-table::
   :header: "Check", "Options removed from global option"

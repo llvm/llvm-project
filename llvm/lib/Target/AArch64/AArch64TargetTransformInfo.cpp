@@ -35,6 +35,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
+static cl::opt<bool> SVEPreferFixedOverScalableIfEqualCost(
+    "sve-prefer-fixed-over-scalable-if-equal", cl::Hidden);
+
 static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
                                            cl::Hidden);
 
@@ -256,7 +259,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
   }
 
-  if (CalleeAttrs.isNewZA())
+  if (CalleeAttrs.isNewZA() || CalleeAttrs.isNewZT0())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
@@ -1635,10 +1638,8 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
       !match(OpPredicate, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
                               m_ConstantInt<AArch64SVEPredPattern::all>())))
     return std::nullopt;
-  IRBuilderBase::FastMathFlagGuard FMFGuard(IC.Builder);
-  IC.Builder.setFastMathFlags(II.getFastMathFlags());
-  auto BinOp =
-      IC.Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2));
+  auto BinOp = IC.Builder.CreateBinOpFMF(
+      BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
   return IC.replaceInstUsesWith(II, BinOp);
 }
 
@@ -4917,6 +4918,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
     }
   }
   return false;
+}
+
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+  if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
+    return SVEPreferFixedOverScalableIfEqualCost;
+  return ST->useFixedOverScalableIfEqualCost();
 }
 
 unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {

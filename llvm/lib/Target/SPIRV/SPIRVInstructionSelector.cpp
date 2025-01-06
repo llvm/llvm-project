@@ -2881,6 +2881,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // translated to a `LocalInvocationId` builtin variable
     return loadVec3BuiltinInputID(SPIRV::BuiltIn::LocalInvocationId, ResVReg,
                                   ResType, I);
+  case Intrinsic::spv_group_id:
+    // The HLSL SV_GroupId semantic is lowered to
+    // llvm.spv.group.id intrinsic in LLVM IR for SPIR-V backend.
+    //
+    // In SPIR-V backend, llvm.spv.group.id is now translated to a `WorkgroupId`
+    // builtin variable
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::WorkgroupId, ResVReg, ResType,
+                                  I);
   case Intrinsic::spv_fdot:
     return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
