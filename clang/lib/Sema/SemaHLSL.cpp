@@ -1859,7 +1859,7 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
         (VTy && VTy->getElementType()->isScalarType()))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_any_scalar_or_vector)
-        << ArgType;
+        << ArgType << 1;
     return true;
   }
   return false;
@@ -1875,8 +1875,8 @@ static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
       (VTy &&
        S->Context.hasSameUnqualifiedType(VTy->getElementType(), BoolType))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
-            diag::err_typecheck_expect_scalar_or_vector_not_type)
-        << ArgType << BoolType;
+            diag::err_typecheck_expect_any_scalar_or_vector)
+        << ArgType << 0;
     return true;
   }
   return false;
