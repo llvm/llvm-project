@@ -112,7 +112,7 @@ enum BinaryMetadataFeature {
 /// invalid components. Returns a SanitizerMask.
 static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                                     bool DiagnoseErrors,
-                                    SanitizerMaskWeights Weights);
+                                    SanitizerMaskWeights *Weights);
 
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
@@ -261,7 +261,7 @@ static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
-                  int OptOutID, SanitizerMaskWeights Weights) {
+                  int OptOutID, SanitizerMaskWeights* Weights) {
   assert(!(AlwaysIn & AlwaysOut) &&
          "parseSanitizeArgs called with contradictory in/out requirements");
 
@@ -327,7 +327,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 static SanitizerMask parseNoSanitizeHotArgs(const Driver &D,
                                             const llvm::opt::ArgList &Args,
                                             bool DiagnoseErrors,
-                                            SanitizerMaskWeights Weights) {
+                                            SanitizerMaskWeights *Weights) {
   return parseSanitizeArgs(D, Args, DiagnoseErrors, {}, {}, {},
                            options::OPT_fno_sanitize_top_hot_EQ, -1, Weights);
 }
@@ -724,7 +724,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Parse -fno-sanitize-top-hot flags
   SanitizerMask TopHotMask =
-      parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, TopHotWeights);
+      parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, &TopHotWeights);
   (void)TopHotMask;
 
   // Setup ignorelist files.
@@ -1505,7 +1505,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                              bool DiagnoseErrors,
-                             SanitizerMaskWeights Weights) {
+                             SanitizerMaskWeights *Weights) {
   assert((A->getOption().matches(options::OPT_fsanitize_EQ) ||
           A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
           A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
