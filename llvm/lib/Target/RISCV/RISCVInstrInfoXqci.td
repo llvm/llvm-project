@@ -154,8 +154,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIMVCC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
                (ins GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $rs2, $rs3"> {
-}
+               opcodestr, "$rd, $rs1, $rs2, $rs3">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
