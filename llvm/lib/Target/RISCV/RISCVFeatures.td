@@ -316,6 +316,7 @@ def FeatureStdExtZfa
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
                    AssemblerPredicate<(all_of FeatureStdExtZfa),
                                       "'Zfa' (Additional Floating-Point)">;
+def NoStdExtZfa : Predicate<"!Subtarget->hasStdExtZfa()">;
 
 def FeatureStdExtZfinx
     : RISCVExtension<1, 0, "Float in Integer", [FeatureStdExtZicsr]>;
@@ -843,6 +844,10 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 // Supervisor extensions
 
+def FeatureStdExtSdext : RISCVExperimentalExtension<1, 0, "External debugger">;
+
+def FeatureStdExtSdtrig : RISCVExperimentalExtension<1, 0, "Debugger triggers">;
+
 def FeatureStdExtShgatpa
     : RISCVExtension<1, 0,
                      "SvNNx4 mode supported for all modes supported by satp, as well as Bare">;
@@ -1272,6 +1277,22 @@ def HasVendorXqcilsm
     : Predicate<"Subtarget->hasVendorXqcilsm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilsm),
                          "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
+
+def FeatureVendorXqciac
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load-Store Address Calculation Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqciac
+    : Predicate<"Subtarget->hasVendorXqciac()">,
+      AssemblerPredicate<(all_of FeatureVendorXqciac),
+                         "'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)">;
+
+def FeatureVendorXqcicli
+    : RISCVExperimentalExtension<0, 2,
+                                 "Qualcomm uC Conditional Load Immediate Extension">;
+def HasVendorXqcicli
+    : Predicate<"Subtarget->hasVendorXqcicli()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicli),
+                         "'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

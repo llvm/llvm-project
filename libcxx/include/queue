@@ -254,8 +254,9 @@ template <class T, class Container, class Compare>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/queue>
+#else
 #  include <__algorithm/make_heap.h>
 #  include <__algorithm/pop_heap.h>
 #  include <__algorithm/push_heap.h>
@@ -954,6 +955,6 @@ _LIBCPP_POP_MACROS
 #    include <functional>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_QUEUE

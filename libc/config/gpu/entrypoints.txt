@@ -257,6 +257,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # time.h entrypoints
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.timespec_get
     libc.src.time.nanosleep
 
     # wchar.h entrypoints
@@ -270,9 +271,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.locale.newlocale
     libc.src.locale.setlocale
     libc.src.locale.uselocale
-
-    # gpu/rpc.h entrypoints
-    libc.src.gpu.rpc_host_call
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

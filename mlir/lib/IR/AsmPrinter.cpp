@@ -4019,6 +4019,11 @@ void Operation::dump() {
   llvm::errs() << "\n";
 }
 
+void Operation::dumpPretty() {
+  print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
+  llvm::errs() << "\n";
+}
+
 void Block::print(raw_ostream &os) {
   Operation *parentOp = getParentOp();
   if (!parentOp) {

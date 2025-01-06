@@ -225,13 +225,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
-  if (Triple.isRISCV64()) {
-    CmdArgs.push_back("-X");
-    if (Args.hasArg(options::OPT_mno_relax))
-      CmdArgs.push_back("--no-relax");
-  }
-
-  if (Triple.isLoongArch64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");

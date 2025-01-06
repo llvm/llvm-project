@@ -296,13 +296,15 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
-      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      // 'async', 'worker', 'vector', and 'wait' have an optional IntExpr, so be
+      // tolerant of that.
       if ((ClauseKind == OpenACCClauseKind::Async ||
            ClauseKind == OpenACCClauseKind::Worker ||
            ClauseKind == OpenACCClauseKind::Vector ||
@@ -346,6 +348,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
               ClauseKind == OpenACCClauseKind::Worker ||
@@ -482,6 +485,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -493,6 +497,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::DeviceNum ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -679,12 +684,18 @@ public:
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
-                                   SourceLocation StartLoc,
-                                   SourceLocation DirLoc,
-                                   SourceLocation EndLoc,
-                                   ArrayRef<OpenACCClause *> Clauses,
-                                   StmtResult AssocStmt);
+  /// LParenLoc: Location of the left paren, if it exists (not on all
+  /// constructs).
+  /// MiscLoc: First misc location, if necessary (not all constructs).
+  /// Exprs: List of expressions on the construct itself, if necessary (not all
+  /// constructs).
+  /// RParenLoc: Location of the right paren, if it exists (not on all
+  /// constructs).
+  StmtResult ActOnEndStmtDirective(
+      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+      SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
+      SourceLocation RParenLoc, SourceLocation EndLoc,
+      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.

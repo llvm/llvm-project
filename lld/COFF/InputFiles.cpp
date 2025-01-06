@@ -114,15 +114,15 @@ void ArchiveFile::parse() {
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (isArm64EC(ctx.config.machine)) {
+  if (ctx.symtabEC) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtab.addLazyArchive(this, sym);
+        ctx.symtabEC->addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (ctx.config.machine != ARM64X)
+      if (!ctx.hybridSymtab)
         return;
     }
   }
@@ -149,11 +149,19 @@ std::vector<MemoryBufferRef>
 lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
+
+  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  bool addToTar = file->isThin() && ctx.driver.tar;
+
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               file->getFileName() +
                   ": could not get the buffer for a child of the archive");
+    if (addToTar) {
+      ctx.driver.tar->append(relativeToRoot(check(c.getFullName())),
+                             mbref.getBuffer());
+    }
     v.push_back(mbref);
   }
   if (err)
@@ -177,7 +185,8 @@ ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
     Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
 
   bin->release();
-  return make<ObjFile>(ctx.symtab, obj, lazy);
+  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj,
+                       lazy);
 }
 
 void ObjFile::parseLazy() {
@@ -192,6 +201,8 @@ void ObjFile::parseLazy() {
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab.addLazyObject(this, name);
+    if (!lazy)
+      return;
     i += coffSym.getNumberOfAuxSymbols();
   }
 }
@@ -1291,8 +1302,11 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined())
+    if (!sym.isUndefined()) {
       symtab.addLazyObject(this, sym.getName());
+      if (!lazy)
+        return;
+    }
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
@@ -1406,5 +1420,5 @@ void DLLFile::makeImport(DLLFile::Symbol *s) {
   memcpy(p, s->dllName.data(), s->dllName.size());
   MemoryBufferRef mbref = MemoryBufferRef(StringRef(buf, size), s->dllName);
   ImportFile *impFile = make<ImportFile>(symtab.ctx, mbref);
-  symtab.addFile(impFile);
+  symtab.ctx.driver.addFile(impFile);
 }

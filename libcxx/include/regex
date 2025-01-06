@@ -789,8 +789,9 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 } // std
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/regex>
+#else
 #  include <__algorithm/find.h>
 #  include <__algorithm/search.h>
 #  include <__assert>
@@ -5834,6 +5835,6 @@ _LIBCPP_POP_MACROS
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_REGEX

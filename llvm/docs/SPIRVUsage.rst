@@ -395,7 +395,7 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
-   * - `int_spv_handle_fromBinding`
+   * - `int_spv_resource_handlefrombinding`
      - spirv.Image
      - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
      - Returns the handle for the resource at the given set and binding.\
@@ -410,7 +410,7 @@ SPIR-V backend, along with their descriptions and argument details.
        return type is a scalar, then the first element of the vector is \
        returned. If the return type is an n-element vector, then the first \
        n-elements of the 4-element vector are returned.
-   * - `int_spv_typedBufferStore`
+   * - `int_spv_resource_store_typedbuffer`
      - void
      - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
      - Stores the data to the image buffer at the given coordinate. The \

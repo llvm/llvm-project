@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/OpenACC.h"
-#include "DirectivesCommon.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -2669,11 +2670,13 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           asyncOnlyDeviceTypes);
       attachEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                  dataClauseOperands.end());
-    } else if(const auto *defaultClause = 
-                  std::get_if<Fortran::parser::AccClause::Default>(&clause.u)) {
+    } else if (const auto *defaultClause =
+                   std::get_if<Fortran::parser::AccClause::Default>(
+                       &clause.u)) {
       if ((defaultClause->v).v == llvm::acc::DefaultValue::ACC_Default_none)
         hasDefaultNone = true;
-      else if ((defaultClause->v).v == llvm::acc::DefaultValue::ACC_Default_present)
+      else if ((defaultClause->v).v ==
+               llvm::acc::DefaultValue::ACC_Default_present)
         hasDefaultPresent = true;
     }
   }
@@ -3829,7 +3832,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
 
 static void
 genDeclareInModule(Fortran::lower::AbstractConverter &converter,
-                   mlir::ModuleOp &moduleOp,
+                   mlir::ModuleOp moduleOp,
                    const Fortran::parser::AccClauseList &accClauseList) {
   mlir::OpBuilder modBuilder(moduleOp.getBodyRegion());
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
@@ -3980,7 +3983,7 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
 
 void Fortran::lower::genOpenACCRoutineConstruct(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semanticsContext, mlir::ModuleOp &mod,
+    Fortran::semantics::SemanticsContext &semanticsContext, mlir::ModuleOp mod,
     const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
     Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -4138,7 +4141,7 @@ void Fortran::lower::genOpenACCRoutineConstruct(
 }
 
 void Fortran::lower::finalizeOpenACCRoutineAttachment(
-    mlir::ModuleOp &mod,
+    mlir::ModuleOp mod,
     Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
   for (auto &mapping : accRoutineInfos) {
     mlir::func::FuncOp funcOp =

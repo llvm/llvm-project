@@ -803,29 +803,21 @@ void IntExprParsing() {
 #pragma acc parallel num_workers(returns_int())
   {}
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected '('}}
 #pragma acc init device_num
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc init device_num()
 
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc init device_num(invalid)
 
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc init device_num(5, 4)
 
-  // expected-warning@+2{{OpenACC clause 'device_num' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
 #pragma acc init device_num(5)
 
-  // expected-warning@+2{{OpenACC clause 'device_num' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented, pragma ignored}}
 #pragma acc init device_num(returns_int())
 
   // expected-error@+2{{expected '('}}
