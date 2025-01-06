@@ -60,6 +60,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   SmartPtrArrayMismatchCheck.cpp
+  SprintfArgumentOverlapCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
   StringConstructorCheck.cpp
@@ -83,7 +84,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   TooSmallLoopVariableCheck.cpp
   UncheckedOptionalAccessCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
-  SprintfArgumentOverlapCheck.cpp
   UndelegatedConstructorCheck.cpp
   UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp

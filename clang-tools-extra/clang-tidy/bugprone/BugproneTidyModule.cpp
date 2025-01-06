@@ -205,6 +205,8 @@ public:
         "bugprone-sizeof-container");
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "bugprone-sizeof-expression");
+    CheckFactories.registerCheck<SprintfArgumentOverlapCheck>(
+        "bugprone-sprintf-argument-overlap");
     CheckFactories.registerCheck<SpuriouslyWakeUpFunctionsCheck>(
         "bugprone-spuriously-wake-up-functions");
     CheckFactories.registerCheck<StandaloneEmptyCheck>(
@@ -249,8 +251,6 @@ public:
         "bugprone-unchecked-optional-access");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
-    CheckFactories.registerCheck<SprintfArgumentOverlapCheck>(
-        "bugprone-sprintf-argument-overlap");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
         "bugprone-undelegated-constructor");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(

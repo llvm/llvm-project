@@ -131,6 +131,7 @@ Clang-Tidy Checks
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
    :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
+   :doc:`bugprone-sprintf-argument-overlap <bugprone/sprintf-argument-overlap>`,
    :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes"
    :doc:`bugprone-string-constructor <bugprone/string-constructor>`, "Yes"
@@ -154,7 +155,6 @@ Clang-Tidy Checks
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
    :doc:`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
-   :doc:`bugprone-sprintf-argument-overlap <bugprone/sprintf-argument-overlap>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
