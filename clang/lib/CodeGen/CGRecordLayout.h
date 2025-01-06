@@ -193,6 +193,10 @@ public:
     return IsZeroInitializableAsBase;
   }
 
+  bool containsFieldDecl(const FieldDecl *FD) const {
+    return FieldInfo.count(FD) != 0;
+  }
+
   /// Return llvm::StructType element number that corresponds to the
   /// field FD.
   unsigned getLLVMFieldNo(const FieldDecl *FD) const {

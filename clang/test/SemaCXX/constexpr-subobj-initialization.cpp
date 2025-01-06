@@ -1,11 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 namespace baseclass_uninit {
 struct DelBase {
   constexpr DelBase() = delete; // expected-note {{'DelBase' has been explicitly marked deleted here}}
 };
 
-struct Foo : DelBase {  // expected-note 2{{constructor of base class 'DelBase' is not called}}
+struct Foo : DelBase {  // expected-note-re 2{{constructor of base class '{{.*}}DelBase' is not called}}
   constexpr Foo() {}; // expected-error {{call to deleted constructor of 'DelBase'}}
 };
 constexpr Foo f; // expected-error {{must be initialized by a constant expression}}
@@ -15,13 +16,13 @@ struct Bar : Foo {
 constexpr Bar bar; // expected-error {{must be initialized by a constant expression}}
 
 struct Base {};
-struct A : Base { // expected-note {{constructor of base class 'Base' is not called}}
+struct A : Base { // expected-note-re {{constructor of base class '{{.*}}Base' is not called}}
   constexpr A() : value() {} // expected-error {{member initializer 'value' does not name a non-static data member or base class}}
 };
 
 constexpr A a; // expected-error {{must be initialized by a constant expression}}
 
-struct B : Base { // expected-note {{constructor of base class 'Base' is not called}}
+struct B : Base { // expected-note-re {{constructor of base class '{{.*}}Base' is not called}}
   constexpr B() : {} // expected-error {{expected class member or base class name}}
 };
 

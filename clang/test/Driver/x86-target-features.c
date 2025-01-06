@@ -8,8 +8,13 @@
 
 // RUN: %clang --target=i386 -march=i386 -mmmx -m3dnow -m3dnowa %s -### 2>&1 | FileCheck -check-prefix=MMX %s
 // RUN: %clang --target=i386 -march=i386 -mno-mmx -mno-3dnow -mno-3dnowa %s -### 2>&1 | FileCheck -check-prefix=NO-MMX %s
-// MMX: "-target-feature" "+mmx" "-target-feature" "+3dnow" "-target-feature" "+3dnowa"
-// NO-MMX: "-target-feature" "-mmx" "-target-feature" "-3dnow" "-target-feature" "-3dnowa"
+// MMX: warning: the clang compiler does not support '-m3dnowa'
+// MMX: warning: the clang compiler does not support '-m3dnow'
+// MMX-NOT: "3dnow"
+// MMX: "-target-feature" "+mmx"
+// MMX-NOT: "3dnow"
+// NO-MMX-NOT: warning
+// NO-MMX: "-target-feature" "-mmx"
 
 // RUN: %clang --target=i386 -march=i386 -msse -msse2 -msse3 -mssse3 -msse4a -msse4.1 -msse4.2 %s -### 2>&1 | FileCheck -check-prefix=SSE %s
 // RUN: %clang --target=i386 -march=i386 -mno-sse -mno-sse2 -mno-sse3 -mno-ssse3 -mno-sse4a -mno-sse4.1 -mno-sse4.2 %s -### 2>&1 | FileCheck -check-prefix=NO-SSE %s
@@ -299,13 +304,34 @@
 // AMX-COMPLEX: "-target-feature" "+amx-complex"
 // NO-AMX-COMPLEX: "-target-feature" "-amx-complex"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-transpose %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TRANSPOSE %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-transpose %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TRANSPOSE %s
+// AMX-TRANSPOSE: "-target-feature" "+amx-transpose"
+// NO-AMX-TRANSPOSE: "-target-feature" "-amx-transpose"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-avx512 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-AVX512 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-avx512 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-AVX512 %s
+// AMX-AVX512: "-target-feature" "+amx-avx512"
+// NO-AMX-AVX512: "-target-feature" "-amx-avx512"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-tf32 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TF32 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TF32 %s
+// AMX-TF32: "-target-feature" "+amx-tf32"
+// NO-AMX-TF32: "-target-feature" "-amx-tf32"
+
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"
 // NO-HRESET: "-target-feature" "-hreset"
 
-// RUN: %clang --target=i386 -march=i386 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
-// RUN: %clang --target=i386 -march=i386 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
+// RUN: %clang --target=x86_64 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
+// RUN: %clang --target=x86_64 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
 // UINTR: "-target-feature" "+uintr"
 // NO-UINTR: "-target-feature" "-uintr"
 
@@ -381,6 +407,13 @@
 // RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-avx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
 // RUN: %clang --target=i386 -march=i386 -mavx10.1 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
 // RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
+// RUN: %clang --target=i386 -mavx10.2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_2_256 %s
+// RUN: %clang --target=i386 -mavx10.2-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_2_256 %s
+// RUN: %clang --target=i386 -mavx10.2-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_2_512 %s
+// RUN: %clang --target=i386 -mavx10.2-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,AVX10_1_512 %s
+// RUN: %clang --target=i386 -mavx10.2-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,AVX10_1_256 %s
+// AVX10_2_256: "-target-feature" "+avx10.2-256"
+// AVX10_2_512: "-target-feature" "+avx10.2-512"
 // AVX10_1_256: "-target-feature" "+avx10.1-256"
 // AVX10_1_512: "-target-feature" "+avx10.1-512"
 // BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
@@ -391,6 +424,11 @@
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
 // USERMSR: "-target-feature" "+usermsr"
 // NO-USERMSR: "-target-feature" "-usermsr"
+
+// RUN: %clang --target=i386 -mmovrs %s -### -o %t.o 2>&1 | FileCheck -check-prefix=MOVRS %s
+// RUN: %clang --target=i386 -mno-movrs %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-MOVRS %s
+// MOVRS: "-target-feature" "+movrs"
+// NO-MOVRS: "-target-feature" "-movrs"
 
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
@@ -403,6 +441,15 @@
 /// TODO: This warning is a workaround for https://github.com/llvm/llvm-project/issues/63270
 // NONX86-NEXT: warning: argument unused during compilation: '-msse4.2' [-Wunused-command-line-argument]
 // NONX86-NEXT: error: unsupported option '-mno-sgx' for target 'aarch64'
+
+// RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
+// RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
+// NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
+// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s
@@ -423,8 +470,8 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s

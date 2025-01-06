@@ -174,6 +174,8 @@ void check_integer_overflows_in_function_calls(void) {
 }
 void check_integer_overflows_in_array_size(void) {
   int arr[4608 * 1024 * 1024]; // expected-warning {{overflow in expression; result is 536'870'912 with type 'int'}}
+                               // expected-warning@-1 {{variable length array folded to constant array as an extension}}
+                               // expected-note@-2 {{value 4831838208 is outside the range of representable values of type 'int'}}
 }
 
 struct s {

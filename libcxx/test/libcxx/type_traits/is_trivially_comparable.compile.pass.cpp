@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_signed.h>

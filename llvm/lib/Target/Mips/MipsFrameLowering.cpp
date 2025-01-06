@@ -11,17 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsFrameLowering.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MipsInstrInfo.h"
-#include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
@@ -86,11 +80,11 @@ const MipsFrameLowering *MipsFrameLowering::create(const MipsSubtarget &ST) {
   return llvm::createMipsSEFrameLowering(ST);
 }
 
-// hasFP - Return true if the specified function should have a dedicated frame
-// pointer register.  This is true if the function has variable sized allocas,
-// if it needs dynamic stack realignment, if frame pointer elimination is
-// disabled, or if the frame address is taken.
-bool MipsFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function should have a dedicated
+// frame pointer register.  This is true if the function has variable sized
+// allocas, if it needs dynamic stack realignment, if frame pointer elimination
+// is disabled, or if the frame address is taken.
+bool MipsFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 

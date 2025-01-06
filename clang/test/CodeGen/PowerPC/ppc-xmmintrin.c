@@ -23,7 +23,7 @@
 
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10-BE
@@ -218,30 +218,30 @@ test_cmp() {
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpord_ps
 // CHECK: call <4 x float> @vec_abs(float vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @vec_abs(float vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_and(unsigned int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpord_ss
 // CHECK: call <4 x float> @vec_abs(float vector[4])
 // CHECK: call <4 x float> @vec_abs(float vector[4])
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef splat (i32 2139095040), <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_and(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x float> @vec_sel(float vector[4], float vector[4], unsigned int vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 -1, i32 0, i32 0, i32 0>)
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpunord_ps
 // CHECK: call <4 x float> @vec_abs(float vector[4])
 // CHECK: call <4 x float> @vec_abs(float vector[4])
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
 // CHECK: call <4 x i32> @vec_or(unsigned int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cmpunord_ss
 // CHECK: call <4 x float> @vec_abs(float vector[4])
 // CHECK: call <4 x float> @vec_abs(float vector[4])
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
-// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>)
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
+// CHECK: call <4 x i32> @vec_cmpgt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 2139095040))
 // CHECK: call <4 x i32> @vec_or(unsigned int vector[4], unsigned int vector[4])
 // CHECK: call <4 x float> @vec_sel(float vector[4], float vector[4], unsigned int vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 -1, i32 0, i32 0, i32 0>)
 
@@ -894,16 +894,16 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
 // CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
 // CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
 // CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: getelementptr inbounds [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i16], ptr @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
 // CHECK-BE: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
@@ -923,14 +923,14 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: %[[ADD2:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD2]], i32 3
 // CHECK: call <4 x float> @vec_perm(float vector[4], float vector[4], unsigned char vector[16])

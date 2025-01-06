@@ -159,7 +159,7 @@ char X86CmovConverterPass::ID = 0;
 
 void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
 }
 
 bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
@@ -176,7 +176,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
                     << "**********\n");
 
   bool Changed = false;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   MRI = &MF.getRegInfo();
   TII = STI.getInstrInfo();
@@ -882,14 +882,14 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
 
   // Add new basic blocks to MachineLoopInfo.
   if (MachineLoop *L = MLI->getLoopFor(MBB)) {
-    L->addBasicBlockToLoop(FalseMBB, MLI->getBase());
-    L->addBasicBlockToLoop(SinkMBB, MLI->getBase());
+    L->addBasicBlockToLoop(FalseMBB, *MLI);
+    L->addBasicBlockToLoop(SinkMBB, *MLI);
   }
 }
 
 INITIALIZE_PASS_BEGIN(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                     false, false)
 

@@ -10,7 +10,7 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <stdlib.h>
+#include "hdr/types/size_t.h"
 
 static int int_compare(const void *l, const void *r) {
   int li = *reinterpret_cast<const int *>(l);

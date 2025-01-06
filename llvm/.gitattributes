@@ -25,6 +25,7 @@ test/tools/llvm-mca/X86/directives-handle-crlf.s text eol=crlf
 
 # These files must have LF line endings because the test requires exact matching
 test/Object/Inputs/*.tbd eol=lf
+test/tools/llvm-rc/Inputs/webpage*.html text eol=lf
 test/tools/llvm-strings/radix.test text eol=lf
 test/tools/llvm-tapi-diff/Inputs/*.tbd text eol=lf
 test/tools/split-file/basic.test text eol=lf

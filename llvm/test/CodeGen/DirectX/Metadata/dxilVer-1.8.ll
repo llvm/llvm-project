@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-metadata-emit %s | FileCheck %s
+; RUN: opt -S -passes=dxil-translate-metadata %s | FileCheck %s
 target triple = "dxil-pc-shadermodel6.8-compute"
 
 ; CHECK: !dx.version = !{![[DXVER:[0-9]+]]}

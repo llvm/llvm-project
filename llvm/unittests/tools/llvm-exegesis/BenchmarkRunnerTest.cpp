@@ -17,7 +17,7 @@ namespace {
 
 TEST(ScratchSpaceTest, Works) {
   BenchmarkRunner::ScratchSpace Space;
-  EXPECT_EQ(reinterpret_cast<intptr_t>(Space.ptr()) %
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(Space.ptr()) %
                 BenchmarkRunner::ScratchSpace::kAlignment,
             0u);
   Space.ptr()[0] = 42;

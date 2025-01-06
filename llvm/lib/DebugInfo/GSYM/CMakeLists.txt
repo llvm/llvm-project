@@ -8,6 +8,8 @@ add_llvm_component_library(LLVMDebugInfoGSYM
   InlineInfo.cpp
   LineTable.cpp
   LookupResult.cpp
+  CallSiteInfo.cpp
+  MergedFunctionsInfo.cpp
   ObjectFileTransformer.cpp
   ExtractRanges.cpp
 

@@ -183,7 +183,7 @@ define void @f3(ptr %x_addr, ptr %y_addr, ptr %tmp_addr) {
 ; CHECK-NEXT:    %s3.zext = zext i8 %s3 to i16
 ; CHECK-NEXT:    --> (1 + (zext i8 (4 + (32 * %x) + (36 * %y)) to i16))<nuw><nsw> U: [1,254) S: [1,257)
 ; CHECK-NEXT:    %ptr = bitcast ptr @z_addr to ptr
-; CHECK-NEXT:    --> @z_addr U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> @z_addr U: [4,-19) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %int0 = ptrtoint ptr %ptr to i32
 ; CHECK-NEXT:    --> (trunc i64 (ptrtoint ptr @z_addr to i64) to i32) U: [0,-3) S: [-2147483648,2147483645)
 ; CHECK-NEXT:    %int5 = add i32 %int0, 5
@@ -191,7 +191,7 @@ define void @f3(ptr %x_addr, ptr %y_addr, ptr %tmp_addr) {
 ; CHECK-NEXT:    %int.zext = zext i32 %int5 to i64
 ; CHECK-NEXT:    --> (1 + (zext i32 (4 + (trunc i64 (ptrtoint ptr @z_addr to i64) to i32)) to i64))<nuw><nsw> U: [1,4294967294) S: [1,4294967297)
 ; CHECK-NEXT:    %ptr_noalign = bitcast ptr @z_addr_noalign to ptr
-; CHECK-NEXT:    --> @z_addr_noalign U: full-set S: full-set
+; CHECK-NEXT:    --> @z_addr_noalign U: [1,-16) S: full-set
 ; CHECK-NEXT:    %int0_na = ptrtoint ptr %ptr_noalign to i32
 ; CHECK-NEXT:    --> (trunc i64 (ptrtoint ptr @z_addr_noalign to i64) to i32) U: full-set S: full-set
 ; CHECK-NEXT:    %int5_na = add i32 %int0_na, 5
@@ -361,4 +361,41 @@ loop:
 
 exit2:
   ret i1 false
+}
+
+
+define void @dereferenceable_arg(ptr dereferenceable(128) %len_addr, ptr dereferenceable(128) align(8) %len_addr2, ptr dereferenceable(13) align(1) %len_addr3) {
+; CHECK-LABEL: 'dereferenceable_arg'
+; CHECK-NEXT:  Classifying expressions for: @dereferenceable_arg
+; CHECK-NEXT:    %ptr = bitcast ptr %len_addr to ptr
+; CHECK-NEXT:    --> %len_addr U: [1,-128) S: full-set
+; CHECK-NEXT:    %ptr2 = bitcast ptr %len_addr2 to ptr
+; CHECK-NEXT:    --> %len_addr2 U: [8,-135) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr3 = bitcast ptr %len_addr3 to ptr
+; CHECK-NEXT:    --> %len_addr3 U: [1,-13) S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @dereferenceable_arg
+;
+  entry:
+  %ptr = bitcast ptr %len_addr to ptr
+  %ptr2 = bitcast ptr %len_addr2 to ptr
+  %ptr3 = bitcast ptr %len_addr3 to ptr
+
+  ret void
+}
+
+
+define void @dereferenceable_or_null_arg(ptr dereferenceable_or_null(128) %len_addr, ptr dereferenceable_or_null(128) align(8) %len_addr2) {
+; CHECK-LABEL: 'dereferenceable_or_null_arg'
+; CHECK-NEXT:  Classifying expressions for: @dereferenceable_or_null_arg
+; CHECK-NEXT:    %ptr = bitcast ptr %len_addr to ptr
+; CHECK-NEXT:    --> %len_addr U: [0,-128) S: full-set
+; CHECK-NEXT:    %ptr2 = bitcast ptr %len_addr2 to ptr
+; CHECK-NEXT:    --> %len_addr2 U: [0,-135) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:  Determining loop execution counts for: @dereferenceable_or_null_arg
+;
+  entry:
+  %ptr = bitcast ptr %len_addr to ptr
+  %ptr2 = bitcast ptr %len_addr2 to ptr
+
+  ret void
 }

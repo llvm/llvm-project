@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: llc -march=hexagon -mcpu=hexagonv65 -O3 -debug-only=pipeliner \
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv65 -O3 -debug-only=pipeliner \
 ; RUN: < %s 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 
 ; As part of https://reviews.llvm.org/D106308 this test broke.

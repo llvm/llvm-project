@@ -17,6 +17,7 @@
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -60,7 +61,8 @@ class SymMap;
 struct SymbolBox;
 namespace pft {
 struct Variable;
-}
+struct FunctionLikeUnit;
+} // namespace pft
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
@@ -85,6 +87,9 @@ public:
 
   /// Get the mlir instance of a symbol.
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
+
+  virtual fir::ExtendedValue
+  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) = 0;
 
   virtual fir::ExtendedValue
   getSymbolExtendedValue(const Fortran::semantics::Symbol &sym,
@@ -116,8 +121,11 @@ public:
 
   /// For a given symbol which is host-associated, create a clone using
   /// parameters from the host-associated symbol.
+  /// The clone is default initialized if its type has any default
+  /// initialization unless `skipDefaultInit` is set.
   virtual bool
-  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
+  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym,
+                              bool skipDefaultInit) = 0;
 
   virtual void
   createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;
@@ -126,8 +134,8 @@ public:
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
-  virtual void copyVar(mlir::Location loc, mlir::Value dst,
-                       mlir::Value src) = 0;
+  virtual void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
+                       fir::FortranVariableFlagsEnum attrs) = 0;
 
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.
@@ -232,6 +240,10 @@ public:
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
 
+  /// Returns the FunctionLikeUnit being lowered, if any.
+  virtual const Fortran::lower::pft::FunctionLikeUnit *
+  getCurrentFunctionUnit() const = 0;
+
   //===--------------------------------------------------------------------===//
   // Types
   //===--------------------------------------------------------------------===//
@@ -283,7 +295,7 @@ public:
   /// Get the OpBuilder
   virtual fir::FirOpBuilder &getFirOpBuilder() = 0;
   /// Get the ModuleOp
-  virtual mlir::ModuleOp &getModuleOp() = 0;
+  virtual mlir::ModuleOp getModuleOp() = 0;
   /// Get the MLIRContext
   virtual mlir::MLIRContext &getMLIRContext() = 0;
   /// Unique a symbol (add a containing scope specific prefix)

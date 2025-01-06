@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Configuration.h"
+#include "DeviceTypes.h"
 #include "State.h"
-#include "Types.h"
 
 using namespace ompx;
 

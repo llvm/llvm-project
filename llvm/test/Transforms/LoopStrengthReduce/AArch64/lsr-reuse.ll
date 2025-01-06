@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-unknown-unknown -print-lsr-output < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=aarch64 -stop-after=loop-reduce < %s | FileCheck %s
 
 declare void @foo(i64)
 

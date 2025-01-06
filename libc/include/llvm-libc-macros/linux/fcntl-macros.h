@@ -88,6 +88,9 @@
 // Close on succesful
 #define F_CLOEXEC 1
 
+// Close on execute for fcntl.
+#define FD_CLOEXEC 1
+
 #define F_RDLCK 0
 #define F_WRLCK 1
 #define F_UNLCK 2

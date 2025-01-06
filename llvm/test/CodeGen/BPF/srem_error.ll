@@ -2,7 +2,7 @@
 ; RUN: FileCheck %s < %t1
 ; CHECK: unsupported signed division
 
-define i32 @test(i32 %len) {
-  %1 = srem i32 %len, 15
-  ret i32 %1
+define i64 @test(i64 %len) {
+  %1 = srem i64 %len, 15
+  ret i64 %1
 }

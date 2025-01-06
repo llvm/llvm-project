@@ -3,17 +3,17 @@
 target triple = "aarch64-unknown-linux-gnu"
 @d = internal unnamed_addr global i32 5, align 4
 
-define dso_local void @l() local_unnamed_addr {
+define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK-LABEL: @l(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[BB:%.*]] ], [ [[TMP9:%.*]], [[BB25:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB11:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB3:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[I4:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i16> [[TMP0]], undef
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i16> [[TMP1]], <i16 8, i16 8>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i16> [[TMP1]], splat (i16 8)
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[I12:%.*]] = zext i1 undef to i32
@@ -34,7 +34,7 @@ define dso_local void @l() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
 ; CHECK-NEXT:    [[I32:%.*]] = and i32 [[I31]], [[TMP13]]
 ; CHECK-NEXT:    [[I33:%.*]] = and i32 [[I32]], [[I28]]
-; CHECK-NEXT:    br i1 undef, label [[BB34:%.*]], label [[BB1]]
+; CHECK-NEXT:    br i1 %arg, label [[BB34:%.*]], label [[BB1]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    [[I35:%.*]] = phi i32 [ [[I33]], [[BB25]] ]
 ; CHECK-NEXT:    br label [[BB36:%.*]]
@@ -48,7 +48,7 @@ bb:
 bb1:                                              ; preds = %bb25, %bb
   %i = phi i16 [ undef, %bb ], [ %i29, %bb25 ]
   %i2 = phi i16 [ undef, %bb ], [ %i30, %bb25 ]
-  br i1 undef, label %bb3, label %bb11
+  br i1 %arg, label %bb3, label %bb11
 
 bb3:                                              ; preds = %bb1
   %i4 = zext i1 undef to i32
@@ -85,7 +85,7 @@ bb25:                                             ; preds = %bb11, %bb3
   %i31 = and i32 undef, %i26
   %i32 = and i32 %i31, %i27
   %i33 = and i32 %i32, %i28
-  br i1 undef, label %bb34, label %bb1
+  br i1 %arg, label %bb34, label %bb1
 
 bb34:                                             ; preds = %bb25
   %i35 = phi i32 [ %i33, %bb25 ]

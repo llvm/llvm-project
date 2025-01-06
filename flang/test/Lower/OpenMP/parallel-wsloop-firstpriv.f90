@@ -15,7 +15,7 @@ subroutine omp_do_firstprivate(a)
   ! CHECK: %[[A_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "a", pinned, uniq_name = "_QFomp_do_firstprivateEa"}
   ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivateEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK-NEXT: %[[LD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<i32>
-  ! CHECK-NEXT: hlfir.assign %[[LD]] to %[[A_PVT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[LD]] to %[[A_PVT_DECL]]#0 : i32, !fir.ref<i32>
 
   ! CHECK: %[[I_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -29,7 +29,6 @@ subroutine omp_do_firstprivate(a)
   ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK-NEXT: omp.yield
   ! CHECK-NEXT: }
-  ! CHECK-NEXT: omp.terminator
   ! CHECK-NEXT: }
     do i=1, a
       call foo(i, a)
@@ -52,12 +51,12 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK: %[[A_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "a", pinned, {{.*}}}
   ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[LD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: hlfir.assign %[[LD]] to %[[A_PVT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[LD]] to %[[A_PVT_DECL]]#0 : i32, !fir.ref<i32>
 
   ! CHECK: %[[N_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "n", pinned, uniq_name = "_QFomp_do_firstprivate2En"}
   ! CHECK: %[[N_PVT_DECL:.*]]:2 = hlfir.declare %[[N_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[LD1:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: hlfir.assign %[[LD1]] to %[[N_PVT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[LD1]] to %[[N_PVT_DECL]]#0 : i32, !fir.ref<i32>
 
   ! CHECK: %[[I_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -70,7 +69,6 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK: fir.store %[[ARG2]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK: omp.yield
-  ! CHECK: omp.terminator
     do i= a, n
       call foo(i, a)
     end do

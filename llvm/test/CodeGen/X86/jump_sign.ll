@@ -249,16 +249,16 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:  .LBB12_7: # %if.else.i97
 entry:
   %0 = load i16, ptr undef, align 2
-  br i1 undef, label %if.then.i, label %if.end.i
+  br i1 poison, label %if.then.i, label %if.end.i
 
 if.then.i:                                        ; preds = %entry
   unreachable
 
 if.end.i:                                         ; preds = %entry
-  br i1 undef, label %sw.bb, label %sw.default
+  br i1 poison, label %sw.bb, label %sw.default
 
 sw.bb:                                            ; preds = %if.end.i
-  br i1 undef, label %if.then44, label %if.end29
+  br i1 poison, label %if.then44, label %if.end29
 
 if.end29:                                         ; preds = %sw.bb
   %1 = urem i16 %0, 10
@@ -267,7 +267,7 @@ if.end29:                                         ; preds = %sw.bb
   br i1 %cmp25, label %if.then44, label %sw.default
 
 sw.default:                                       ; preds = %if.end29, %if.end.i
-  br i1 undef, label %if.then.i96, label %if.else.i97
+  br i1 poison, label %if.then.i96, label %if.else.i97
 
 if.then.i96:                                      ; preds = %sw.default
   unreachable
@@ -277,7 +277,7 @@ if.else.i97:                                      ; preds = %sw.default
 
 if.then44:                                        ; preds = %if.end29, %sw.bb
   %aModeRefSel.1.ph = phi i16 [ %., %if.end29 ], [ 3, %sw.bb ]
-  br i1 undef, label %if.then.i103, label %if.else.i104
+  br i1 poison, label %if.then.i103, label %if.else.i104
 
 if.then.i103:                                     ; preds = %if.then44
   unreachable
@@ -420,4 +420,3 @@ if.end:
 }
 
 !1 = !{!"branch_weights", i32 2, i32 1}
-

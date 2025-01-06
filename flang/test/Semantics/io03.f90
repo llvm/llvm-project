@@ -58,6 +58,13 @@
   read(internal_file2, *) jj
   read(internal_file4, *) jj
 
+  !This is a valid statement but it's not what it looks like; "(internal-file)"
+  !must be parsed as a format expression, not as an internal unit.
+  read(internal_file) jj
+
+  !ERROR: If UNIT=internal-file appears, FMT or NML must also appear
+  read(internal_file, iostat=stat1) jj
+
   !ERROR: Internal file must not have a vector subscript
   read(internal_fileA(vv), *) jj
 
@@ -106,11 +113,12 @@
   !ERROR: If UNIT=* appears, POS must not appear
   read(*, pos=13)
 
+  !ERROR: If UNIT=internal-file appears, FMT or NML must also appear
   !ERROR: If UNIT=internal-file appears, REC must not appear
   read(internal_file, rec=13)
 
   !ERROR: If UNIT=internal-file appears, POS must not appear
-  read(internal_file, pos=13)
+  read(internal_file, *, pos=13)
 
   !ERROR: If REC appears, END must not appear
   read(10, fmt='(I4)', end=9, rec=13) jj
@@ -135,7 +143,7 @@
   read(*, asynchronous='yes')
 
   !ERROR: If ASYNCHRONOUS='YES' appears, UNIT=number must also appear
-  read(internal_file, asynchronous='y'//'es')
+  read(internal_file, *, asynchronous='y'//'es')
 
   !ERROR: If ID appears, ASYNCHRONOUS='YES' must also appear
   read(10, id=id)

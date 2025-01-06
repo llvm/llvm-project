@@ -59,6 +59,8 @@
 // RUN: | FileCheck -check-prefixes=HIP,GFX900 %s
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx902 -nogpuinc -nogpulib %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=HIP,GFX902 %s
+// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=amdgcnspirv -nogpuinc -nogpulib %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=HIP,SPIRV %s
 
 // CUDA: ptxas
 // CUDA-SAME: -m64
@@ -95,3 +97,4 @@
 // GFX810:-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx810
 // GFX900:-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx900
 // GFX902:-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx902
+// SPIRV:-targets=host-x86_64-unknown-linux,hip-spirv64-amd-amdhsa--amdgcnspirv

@@ -23,6 +23,7 @@ namespace clang {
   class ASTDeserializationListener; // layering violation because void* is ugly
   class SemaConsumer; // layering violation required for safe SemaConsumer
   class TagDecl;
+  class DeclaratorDecl;
   class VarDecl;
   class FunctionDecl;
   class ImportDecl;
@@ -105,7 +106,7 @@ public:
   /// CompleteExternalDeclaration - Callback invoked at the end of a translation
   /// unit to notify the consumer that the given external declaration should be
   /// completed.
-  virtual void CompleteExternalDeclaration(VarDecl *D) {}
+  virtual void CompleteExternalDeclaration(DeclaratorDecl *D) {}
 
   /// Callback invoked when an MSInheritanceAttr has been attached to a
   /// CXXRecordDecl.

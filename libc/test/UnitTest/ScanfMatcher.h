@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H
 #define LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 class FormatSectionMatcher : public Matcher<scanf_core::FormatSection> {
@@ -31,7 +30,7 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define EXPECT_SFORMAT_EQ(expected, actual)                                    \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::FormatSectionMatcher(expected))

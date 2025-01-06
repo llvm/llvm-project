@@ -121,7 +121,15 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
     "number of blocks reached from a conditional instruction, in the callee")  \
   M(int64_t, {1}, callee_users,                                                \
     "number of module-internal users of the callee, +1 if the callee is "      \
-    "exposed externally")
+    "exposed externally")                                                      \
+  M(int64_t, {1}, is_callee_avail_external,                                    \
+    "Is callee an available-externally linkage type (i.e. could be DCEd if "   \
+    "not "                                                                     \
+    "fully inlined by ElimAvailExtern)")                                       \
+  M(int64_t, {1}, is_caller_avail_external,                                    \
+    "Is caller an available-externally linkage type (i.e. could be DCEd if "   \
+    "not "                                                                     \
+    "fully inlined by ElimAvailExtern)")
 
 // clang-format off
 enum class FeatureIndex : size_t {

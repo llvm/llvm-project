@@ -20,7 +20,7 @@ A B::foo(A x) {
 
 // CHECK-LABEL: define dso_local x86_thiscallcc ptr @"?foo@B@@QAE?AUA@@U2@@Z"
 // CHECK:       (ptr noundef %this, ptr inalloca(<{ ptr, %struct.A }>) %0)
-// CHECK:   getelementptr inbounds <{ ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 0
+// CHECK:   getelementptr inbounds nuw <{ ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 0
 // CHECK:   load ptr, ptr
 // CHECK:   ret ptr
 
@@ -30,7 +30,7 @@ A B::bar(A x) {
 
 // CHECK-LABEL: define dso_local ptr @"?bar@B@@QAA?AUA@@U2@@Z"
 // CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) %0)
-// CHECK:   getelementptr inbounds <{ ptr, ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 1
+// CHECK:   getelementptr inbounds nuw <{ ptr, ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 1
 // CHECK:   load ptr, ptr
 // CHECK:   ret ptr
 
@@ -40,7 +40,7 @@ A B::baz(A x) {
 
 // CHECK-LABEL: define dso_local x86_stdcallcc ptr @"?baz@B@@QAG?AUA@@U2@@Z"
 // CHECK:       (ptr inalloca(<{ ptr, ptr, %struct.A }>) %0)
-// CHECK:   getelementptr inbounds <{ ptr, ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 1
+// CHECK:   getelementptr inbounds nuw <{ ptr, ptr, %struct.A }>, ptr %{{.*}}, i32 0, i32 1
 // CHECK:   load ptr, ptr
 // CHECK:   ret ptr
 

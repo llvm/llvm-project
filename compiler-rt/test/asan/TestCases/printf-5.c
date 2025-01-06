@@ -7,6 +7,9 @@
 // FIXME: printf is not intercepted on Windows yet.
 // XFAIL: target={{.*windows-(msvc.*|gnu)}}
 
+// FIXME: The test is flaky after build bot upgrade. #97515
+// UNSUPPORTED: android
+
 #include <stdio.h>
 #include <string.h>
 int main() {

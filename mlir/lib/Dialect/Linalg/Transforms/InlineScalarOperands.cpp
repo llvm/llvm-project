@@ -78,9 +78,12 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
       for (auto idx : indices)
         indicesValues.emplace_back(
             rewriter.create<arith::ConstantIndexOp>(loc, idx));
-      Value extractedValue = rewriter.create<tensor::ExtractOp>(
-          loc, opOperand->get(), indicesValues);
-      body->getArgument(idx).replaceAllUsesWith(extractedValue);
+      Value scalarValue = opOperand->get();
+      if (isa<RankedTensorType>(scalarValue.getType())) {
+        scalarValue =
+            rewriter.create<tensor::ExtractOp>(loc, scalarValue, indicesValues);
+      }
+      body->getArgument(idx).replaceAllUsesWith(scalarValue);
       body->eraseArgument(idx);
     }
 
@@ -110,7 +113,7 @@ struct LinalgInlineScalarOperandsPass
     MLIRContext &ctx = getContext();
     RewritePatternSet patterns(&ctx);
     populateInlineConstantOperandsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+    (void)applyPatternsGreedily(op, std::move(patterns));
   }
 };
 } // namespace

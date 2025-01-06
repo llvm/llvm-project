@@ -59,7 +59,7 @@ struct MapInfoOpConversion
     : public OpenMPFIROpConversion<mlir::omp::MapInfoOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(mlir::omp::MapInfoOp curOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     const mlir::TypeConverter *converter = getTypeConverter();
@@ -93,6 +93,6 @@ struct MapInfoOpConversion
 } // namespace
 
 void fir::populateOpenMPFIRToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
   patterns.add<MapInfoOpConversion>(converter);
 }

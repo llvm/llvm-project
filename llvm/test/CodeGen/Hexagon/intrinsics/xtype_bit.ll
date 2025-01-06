@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
-; RUN: llc -march=hexagon -O0 < %s | FileCheck -check-prefix=CHECK-CALL %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck -check-prefix=CHECK-CALL %s
 ; Hexagon Programmer's Reference Manual 11.10.2 XTYPE/BIT
 
 ; CHECK-CALL-NOT: call

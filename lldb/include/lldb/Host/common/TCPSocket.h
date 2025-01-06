@@ -9,16 +9,18 @@
 #ifndef LLDB_HOST_COMMON_TCPSOCKET_H
 #define LLDB_HOST_COMMON_TCPSOCKET_H
 
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include <map>
+#include <string>
+#include <vector>
 
 namespace lldb_private {
 class TCPSocket : public Socket {
 public:
-  TCPSocket(bool should_close, bool child_processes_inherit);
-  TCPSocket(NativeSocket socket, bool should_close,
-            bool child_processes_inherit);
+  explicit TCPSocket(bool should_close);
+  TCPSocket(NativeSocket socket, bool should_close);
   ~TCPSocket() override;
 
   // returns port number or 0 if error
@@ -40,13 +42,19 @@ public:
 
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
-  Status Accept(Socket *&conn_socket) override;
+
+  using Socket::Accept;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+  Accept(MainLoopBase &loop,
+         std::function<void(std::unique_ptr<Socket> socket)> sock_cb) override;
 
   Status CreateSocket(int domain);
 
   bool IsValid() const override;
 
   std::string GetRemoteConnectionURI() const override;
+
+  std::vector<std::string> GetListeningConnectionURI() const override;
 
 private:
   TCPSocket(NativeSocket socket, const TCPSocket &listen_socket);

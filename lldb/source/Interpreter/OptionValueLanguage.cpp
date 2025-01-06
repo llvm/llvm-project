@@ -57,7 +57,7 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
         error_strm.Printf("    %s\n",
                           Language::GetNameForLanguageType(language));
       }
-      error.SetErrorString(error_strm.GetString());
+      error = Status(error_strm.GetString().str());
     }
   } break;
 

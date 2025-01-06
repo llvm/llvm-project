@@ -1,7 +1,16 @@
+lldb_tablegen(DynamicLoaderDarwinProperties.inc -gen-lldb-property-defs
+  SOURCE DynamicLoaderDarwinProperties.td
+  TARGET LLDBPluginDynamicLoaderDarwinPropertiesGen)
+
+lldb_tablegen(DynamicLoaderDarwinPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE DynamicLoaderDarwinProperties.td
+  TARGET LLDBPluginDynamicLoaderDarwinPropertiesEnumGen)
+
 add_lldb_library(lldbPluginDynamicLoaderMacOSXDYLD PLUGIN
   DynamicLoaderMacOSXDYLD.cpp
   DynamicLoaderMacOS.cpp
   DynamicLoaderDarwin.cpp
+  DynamicLoaderDarwinProperties.cpp
 
   LINK_LIBS
     lldbBreakpoint
@@ -16,3 +25,7 @@ add_lldb_library(lldbPluginDynamicLoaderMacOSXDYLD PLUGIN
     Support
     TargetParser
   )
+
+add_dependencies(lldbPluginDynamicLoaderMacOSXDYLD
+  LLDBPluginDynamicLoaderDarwinPropertiesGen
+  LLDBPluginDynamicLoaderDarwinPropertiesEnumGen)

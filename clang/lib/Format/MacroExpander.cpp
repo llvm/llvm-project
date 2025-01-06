@@ -191,9 +191,10 @@ MacroExpander::expand(FormatToken *ID,
   auto expandArgument = [&](FormatToken *Tok) -> bool {
     // If the current token references a parameter, expand the corresponding
     // argument.
-    if (Tok->isNot(tok::identifier) || ExpandedArgs.contains(Tok->TokenText))
+    if (Tok->isNot(tok::identifier))
       return false;
-    ExpandedArgs.insert(Tok->TokenText);
+    if (!ExpandedArgs.insert(Tok->TokenText).second)
+      return false;
     auto I = Def.ArgMap.find(Tok->TokenText);
     if (I == Def.ArgMap.end())
       return false;
@@ -232,6 +233,10 @@ MacroExpander::expand(FormatToken *ID,
   if (Result.size() > 1) {
     ++Result[0]->MacroCtx->StartOfExpansion;
     ++Result[Result.size() - 2]->MacroCtx->EndOfExpansion;
+  } else {
+    // If the macro expansion is empty, mark the start and end.
+    Result[0]->MacroCtx->StartOfExpansion = 1;
+    Result[0]->MacroCtx->EndOfExpansion = 1;
   }
   return Result;
 }

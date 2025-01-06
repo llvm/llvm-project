@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN: -finalizing-bufferize -buffer-deallocation-pipeline -convert-bufferization-to-memref \
+// RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -expand-strided-metadata \
 // RUN: -lower-affine -convert-arith-to-llvm --finalize-memref-to-llvm \
 // RUN: -convert-func-to-llvm -reconcile-unrealized-casts | \

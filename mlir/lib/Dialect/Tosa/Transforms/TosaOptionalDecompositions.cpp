@@ -42,7 +42,7 @@ struct TosaOptionalDecompositions
     mlir::tosa::populateTosaDecomposeTransposeConv(ctx, patterns);
     mlir::tosa::populateTosaDecomposeDepthwise(ctx, patterns);
 
-    if (applyPatternsAndFoldGreedily(func, std::move(patterns)).failed())
+    if (applyPatternsGreedily(func, std::move(patterns)).failed())
       signalPassFailure();
   }
 };

@@ -4,7 +4,7 @@ REQUIRES: zlib
 # unsupported by this test.
 UNSUPPORTED: i386, target=arm{{.*}}
 # Custom mutator should find this bug, w/o custom -- no chance.
-RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestCustom -DCUSTOM_MUTATOR -lz
-RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestPlain -lz
+RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestCustom -DCUSTOM_MUTATOR -I%zlib_include_dir %zlib_library
+RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestPlain -I%zlib_include_dir %zlib_library
 RUN: not %run %t-CompressedTestCustom -seed=1 -runs=1000000
 RUN:     %run %t-CompressedTestPlain  -seed=1 -runs=1000000

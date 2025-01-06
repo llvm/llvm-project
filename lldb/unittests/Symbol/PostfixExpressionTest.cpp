@@ -161,7 +161,7 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
   llvm::raw_string_ostream os(result);
   llvm::DWARFExpression(extractor, addr_size, llvm::dwarf::DWARF32)
       .print(os, llvm::DIDumpOptions(), nullptr);
-  return std::move(os.str());
+  return result;
 }
 
 TEST(PostfixExpression, ToDWARF) {

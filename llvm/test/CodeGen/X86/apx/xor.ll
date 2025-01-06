@@ -133,14 +133,12 @@ entry:
 define i16 @xor16ri8(i16 noundef %a) {
 ; CHECK-LABEL: xor16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xf7,0x7b]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    xorw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xor16ri8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} xorl $123, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0xf7,0x7b]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} xorw $123, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0xf7,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %xor = xor i16 %a, 123
@@ -195,16 +193,14 @@ entry:
 define i16 @xor16ri(i16 noundef %a) {
 ; CHECK-LABEL: xor16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl $1234, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xf7,0xd2,0x04,0x00,0x00]
+; CHECK-NEXT:    xorw $1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xf7,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xor16ri:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} xorl $1234, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xf7,0xd2,0x04,0x00,0x00]
+; NF-NEXT:    {nf} xorw $1234, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0xf7,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %xor = xor i16 %a, 1234
@@ -312,16 +308,12 @@ entry:
 define i16 @xor16mi8(ptr %a) {
 ; CHECK-LABEL: xor16mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    xorl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xf0,0x7b]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    xorw $123, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x37,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xor16mi8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    xorl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xf0,0x7b]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} xorw $123, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0x37,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -380,18 +372,14 @@ entry:
 define i16 @xor16mi(ptr %a) {
 ; CHECK-LABEL: xor16mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    xorl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x35,0xd2,0x04,0x00,0x00]
+; CHECK-NEXT:    xorw $1234, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0x37,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xor16mi:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    xorl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x35,0xd2,0x04,0x00,0x00]
+; NF-NEXT:    {nf} xorw $1234, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0x37,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -440,8 +428,8 @@ entry:
 define i1 @xorflag8rr(i8 %a, i8 %b) {
 ; CHECK-LABEL: xorflag8rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %edi, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x31,0xfe]
-; CHECK-NEXT:    xorb $-1, %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf0,0xff]
+; CHECK-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
+; CHECK-NEXT:    xorb $-1, %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf6,0xff]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
@@ -449,8 +437,8 @@ define i1 @xorflag8rr(i8 %a, i8 %b) {
 ;
 ; NF-LABEL: xorflag8rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    {nf} xorl %edi, %esi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x31,0xfe]
-; NF-NEXT:    xorb $-1, %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf0,0xff]
+; NF-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
+; NF-NEXT:    xorb $-1, %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xf6,0xff]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
@@ -465,8 +453,8 @@ define i1 @xorflag8rr(i8 %a, i8 %b) {
 define i1 @xorflag16rr(i16 %a, i16 %b) {
 ; CHECK-LABEL: xorflag16rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %edi, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x31,0xfe]
-; CHECK-NEXT:    xorw $-1, %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf0,0xff]
+; CHECK-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
+; CHECK-NEXT:    xorw $-1, %si, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf6,0xff]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
@@ -474,8 +462,8 @@ define i1 @xorflag16rr(i16 %a, i16 %b) {
 ;
 ; NF-LABEL: xorflag16rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    {nf} xorl %edi, %esi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x31,0xfe]
-; NF-NEXT:    xorw $-1, %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf0,0xff]
+; NF-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
+; NF-NEXT:    xorw $-1, %si, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf6,0xff]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
@@ -490,17 +478,17 @@ define i1 @xorflag16rr(i16 %a, i16 %b) {
 define i1 @xorflag32rr(i32 %a, i32 %b) {
 ; CHECK-LABEL: xorflag32rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %esi, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x31,0xf7]
+; CHECK-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag32rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorl %esi, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x31,0xf7]
+; NF-NEXT:    xorl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x31,0xfe]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = xor i32 %a, %b  ; 0xff << 50
@@ -512,17 +500,17 @@ define i1 @xorflag32rr(i32 %a, i32 %b) {
 define i1 @xorflag64rr(i64 %a, i64 %b) {
 ; CHECK-LABEL: xorflag64rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorq %rsi, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x31,0xf7]
+; CHECK-NEXT:    xorq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xfe]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag64rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorq %rsi, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x31,0xf7]
+; NF-NEXT:    xorq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xfe]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = xor i64 %a, %b  ; 0xff << 50
@@ -586,17 +574,17 @@ define i1 @xorflag16rm(ptr %ptr, i16 %b) {
 define i1 @xorflag32rm(ptr %ptr, i32 %b) {
 ; CHECK-LABEL: xorflag32rm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl (%rdi), %esi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x33,0x37]
+; CHECK-NEXT:    xorl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x33,0x37]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag32rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorl (%rdi), %esi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x33,0x37]
+; NF-NEXT:    xorl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x33,0x37]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
@@ -609,17 +597,17 @@ define i1 @xorflag32rm(ptr %ptr, i32 %b) {
 define i1 @xorflag64rm(ptr %ptr, i64 %b) {
 ; CHECK-LABEL: xorflag64rm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorq (%rdi), %rsi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x33,0x37]
+; CHECK-NEXT:    xorq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x33,0x37]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag64rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorq (%rdi), %rsi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x33,0x37]
+; NF-NEXT:    xorq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x33,0x37]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
@@ -680,19 +668,19 @@ define i1 @xorflag16ri(i16 %a) {
 define i1 @xorflag32ri(i32 %a) {
 ; CHECK-LABEL: xorflag32ri:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl $123456, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xf7,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    xorl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xf7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag32ri:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorl $123456, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xf7,0x40,0xe2,0x01,0x00]
+; NF-NEXT:    xorl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xf7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = xor i32 %a, 123456  ; 0xff << 50
@@ -704,19 +692,19 @@ define i1 @xorflag32ri(i32 %a) {
 define i1 @xorflag64ri(i64 %a) {
 ; CHECK-LABEL: xorflag64ri:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorq $123456, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xf7,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    xorq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xf7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag64ri:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorq $123456, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xf7,0x40,0xe2,0x01,0x00]
+; NF-NEXT:    xorq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xf7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = xor i64 %a, 123456  ; 0xff << 50
@@ -751,17 +739,17 @@ define i1 @xorflag16ri8(i16 %a) {
 define i1 @xorflag32ri8(i32 %a) {
 ; CHECK-LABEL: xorflag32ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xf7,0x7b]
+; CHECK-NEXT:    xorl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xf7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag32ri8:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xf7,0x7b]
+; NF-NEXT:    xorl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xf7,0x7b]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = xor i32 %a, 123  ; 0xff << 50
@@ -773,17 +761,17 @@ define i1 @xorflag32ri8(i32 %a) {
 define i1 @xorflag64ri8(i64 %a) {
 ; CHECK-LABEL: xorflag64ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xf7,0x7b]
+; CHECK-NEXT:    xorq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: xorflag64ri8:
 ; NF:       # %bb.0:
-; NF-NEXT:    xorq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xf7,0x7b]
+; NF-NEXT:    xorq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xf7,0x7b]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NF-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
   %v0 = xor i64 %a, 123  ; 0xff << 50

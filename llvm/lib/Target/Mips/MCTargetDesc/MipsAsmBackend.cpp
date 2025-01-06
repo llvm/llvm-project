@@ -14,13 +14,11 @@
 #include "MCTargetDesc/MipsAsmBackend.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsFixupKinds.h"
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -28,7 +26,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -596,10 +593,30 @@ bool MipsAsmBackend::isMicroMips(const MCSymbol *Sym) const {
   return false;
 }
 
+namespace {
+
+class WindowsMipsAsmBackend : public MipsAsmBackend {
+public:
+  WindowsMipsAsmBackend(const Target &T, const MCRegisterInfo &MRI,
+                        const MCSubtargetInfo &STI)
+      : MipsAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(), false) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createMipsWinCOFFObjectWriter();
+  }
+};
+
+} // end anonymous namespace
+
 MCAsmBackend *llvm::createMipsAsmBackend(const Target &T,
                                          const MCSubtargetInfo &STI,
                                          const MCRegisterInfo &MRI,
                                          const MCTargetOptions &Options) {
+  const Triple &TheTriple = STI.getTargetTriple();
+  if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
+    return new WindowsMipsAsmBackend(T, MRI, STI);
+
   MipsABIInfo ABI = MipsABIInfo::computeTargetABI(STI.getTargetTriple(),
                                                   STI.getCPU(), Options);
   return new MipsAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),

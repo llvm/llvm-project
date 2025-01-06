@@ -12,10 +12,10 @@
 
 #include "Allocator.h"
 #include "Configuration.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Mapping.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
 

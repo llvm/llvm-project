@@ -103,14 +103,14 @@ getSymbolStrings(ArrayRef<Symbol *> syms) {
 }
 
 void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
-  if (config->mapFile.empty())
+  if (ctx.arg.mapFile.empty())
     return;
 
   // Open a map file for writing.
   std::error_code ec;
-  raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os(ctx.arg.mapFile, ec, sys::fs::OF_None);
   if (ec) {
-    error("cannot open " + config->mapFile + ": " + ec.message());
+    error("cannot open " + ctx.arg.mapFile + ": " + ec.message());
     return;
   }
 

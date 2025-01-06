@@ -40,7 +40,7 @@ dispatch_block_t test_block_inside_block_async_leak() {
 // called.
 void output_block(dispatch_block_t * blk) {
   int x = 0;
-  *blk = ^{ f(x); }; // expected-warning {{Address of stack-allocated block declared on line 43 is still referred to by the stack variable 'blk' upon returning to the caller.  This will be a dangling reference [core.StackAddressEscape]}}
+  *blk = ^{ f(x); }; // expected-warning {{Address of stack-allocated block declared on line 43 is still referred to by the caller variable 'blk' upon returning to the caller.  This will be a dangling reference [core.StackAddressEscape]}}
 }
 
 // The block literal captures nothing thus is treated as a constant.
@@ -54,7 +54,7 @@ void test_block_leak() {
   __block dispatch_block_t blk;
   int x = 0;
   dispatch_block_t p = ^{
-    blk = ^{ // expected-warning {{Address of stack-allocated block declared on line 57 is still referred to by the stack variable 'blk' upon returning to the caller.  This will be a dangling reference [core.StackAddressEscape]}}
+    blk = ^{ // expected-warning {{Address of stack-allocated block declared on line 57 is still referred to by the caller variable 'blk' upon returning to the caller.  This will be a dangling reference [core.StackAddressEscape]}}
       f(x);
     };
   };

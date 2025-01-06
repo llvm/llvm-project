@@ -47,7 +47,7 @@ define <4 x float> @h1(i1 %A, <4 x i32> %B) {
 ; CHECK-LABEL: @h1(
 ; CHECK-NEXT:  EntryBlock:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], <4 x float> <float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000, float 0x36A0000000000000>, <4 x float> [[TMP0]]
+; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], <4 x float> splat (float 0x36A0000000000000), <4 x float> [[TMP0]]
 ; CHECK-NEXT:    ret <4 x float> [[BC]]
 ;
 EntryBlock:

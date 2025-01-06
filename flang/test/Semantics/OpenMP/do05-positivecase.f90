@@ -20,12 +20,12 @@ program omp_do
   !$omp parallel  default(shared)
   !$omp do
   !DEF: /omp_do/OtherConstruct2/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  !REF: /omp_do/n
+  !DEF: /omp_do/OtherConstruct2/n HostAssoc INTEGER(4)
   do i=1,n
     !$omp parallel
     !$omp single
     !DEF: /work EXTERNAL (Subroutine) ProcEntity
-    !REF: /omp_do/OtherConstruct2/OtherConstruct1/i
+    !DEF: /omp_do/OtherConstruct2/OtherConstruct1/OtherConstruct1/i HostAssoc INTEGER(4)
     call work(i, 1)
     !$omp end single
     !$omp end parallel
@@ -42,4 +42,19 @@ program omp_do
   end do
   !$omp end parallel
 
+  !$omp target teams distribute parallel do
+  !DEF:/omp_do/OtherConstruct4/i (OmpPrivate ,OmpPreDetermined) HostAssoc INTEGER(4)
+  do i=1,100
+    !REF:/omp_do/OtherConstruct4/i
+    if(i<10) cycle
+  end do
+  !$omp end target teams distribute parallel do
+
+  !$omp target teams distribute parallel do simd
+  !DEF:/omp_do/OtherConstruct5/i (OmpLinear,OmpPreDetermined) HostAssoc INTEGER(4)
+  do i=1,100
+    !REF:/omp_do/OtherConstruct5/i
+    if(i<10) cycle
+  end do
+  !$omp end target teams distribute parallel do simd
 end program omp_do

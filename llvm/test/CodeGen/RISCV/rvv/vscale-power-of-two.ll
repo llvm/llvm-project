@@ -92,9 +92,9 @@ define i64 @con2048_minus_rem() {
 ; CHECK-LABEL: con2048_minus_rem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    slli a1, a1, 11
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret

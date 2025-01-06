@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass none -o - %s | FileCheck %s
 # Check that the MIR parser can parse lane masks in block liveins.
 
 # CHECK-LABEL: name: foo

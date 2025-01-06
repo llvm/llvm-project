@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 declare <4 x float> @llvm.mips.fmax.w(<4 x float>, <4 x float>) nounwind
 declare <2 x double> @llvm.mips.fmax.d(<2 x double>, <2 x double>) nounwind

@@ -432,7 +432,7 @@ cold_exit:
 }
 
 ; TODO: PRE via splittinga backedge in the cold loop. Make sure we don't insert a load into an inner loop.
-define i32 @test_inner_loop(ptr %p) {
+define i32 @test_inner_loop(ptr %p, i1 %arg) {
 ; CHECK-LABEL: @test_inner_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -447,7 +447,7 @@ define i32 @test_inner_loop(ptr %p) {
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner_loop:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    br i1 undef, label [[INNER_LOOP]], label [[BACKEDGE]]
+; CHECK-NEXT:    br i1 %arg, label [[INNER_LOOP]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
@@ -472,7 +472,7 @@ cold_path:
 
 inner_loop:
   call void @side_effect()
-  br i1 undef, label %inner_loop, label %backedge
+  br i1 %arg, label %inner_loop, label %backedge
 
 backedge:
   %iv.next = add i32 %iv, %x

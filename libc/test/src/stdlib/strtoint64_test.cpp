@@ -8,13 +8,14 @@
 
 #include <stdint.h>
 
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/errno/libc_errno.h"
 
 #include "StrtolTest.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int64_t strtoint64(const char *__restrict str, char **__restrict str_end,
                    int base) {
@@ -39,7 +40,7 @@ uint64_t strtouint64(const char *__restrict str, char **__restrict str_end,
 
   return result;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 STRTOL_TEST(Strtoint64, LIBC_NAMESPACE::strtoint64)
 STRTOL_TEST(Strtouint64, LIBC_NAMESPACE::strtouint64)

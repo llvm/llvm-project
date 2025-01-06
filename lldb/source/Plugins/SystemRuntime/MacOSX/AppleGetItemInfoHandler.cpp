@@ -234,7 +234,8 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   if (!thread.SafeToCallFunctions()) {
     LLDB_LOGF(log, "Not safe to call functions on thread 0x%" PRIx64,
               thread.GetID());
-    error.SetErrorString("Not safe to call functions on this thread.");
+    error =
+        Status::FromErrorString("Not safe to call functions on this thread.");
     return return_value;
   }
 
@@ -336,8 +337,9 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   thread.CalculateExecutionContext(exe_ctx);
 
   if (!m_get_item_info_impl_code) {
-    error.SetErrorString("Unable to compile function to call "
-                         "__introspection_dispatch_queue_item_get_info");
+    error =
+        Status::FromErrorString("Unable to compile function to call "
+                                "__introspection_dispatch_queue_item_get_info");
     return return_value;
   }
 
@@ -347,8 +349,9 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   if (!func_caller) {
     LLDB_LOGF(log, "Could not retrieve function caller for "
                    "__introspection_dispatch_queue_item_get_info.");
-    error.SetErrorString("Could not retrieve function caller for "
-                         "__introspection_dispatch_queue_item_get_info.");
+    error = Status::FromErrorString(
+        "Could not retrieve function caller for "
+        "__introspection_dispatch_queue_item_get_info.");
     return return_value;
   }
 
@@ -360,9 +363,10 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
               "__introspection_dispatch_queue_item_get_info(), got "
               "ExpressionResults %d, error contains %s",
               func_call_ret, error.AsCString(""));
-    error.SetErrorString("Unable to call "
-                         "__introspection_dispatch_queue_get_item_info() for "
-                         "list of queues");
+    error = Status::FromErrorString(
+        "Unable to call "
+        "__introspection_dispatch_queue_get_item_info() for "
+        "list of queues");
     return return_value;
   }
 

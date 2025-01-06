@@ -1,6 +1,6 @@
-// REQUIRES: darwin
+// REQUIRES: continuous-mode
 
-// RUN: %clang_profgen -fcoverage-mapping -fcoverage-mcdc -O3 -o %t.exe %s
+// RUN: %clang_profgen_cont -fcoverage-mapping -fcoverage-mcdc -O3 -o %t.exe %s
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe 3 3
 // RUN: llvm-profdata show --text --all-functions %t.profraw | FileCheck %s
 

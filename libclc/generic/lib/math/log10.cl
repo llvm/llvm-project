@@ -20,13 +20,17 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
-#include "../clcmacro.h"
 #include "tables.h"
+#include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #endif // cl_khr_fp64
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif // cl_khr_fp16
 
 #define COMPILING_LOG10
 #include "log_base.h"
@@ -37,3 +41,7 @@ _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, log10, float);
 #ifdef cl_khr_fp64
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, log10, double);
 #endif // cl_khr_fp64
+
+#ifdef cl_khr_fp16
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, log10, half);
+#endif // cl_khr_fp16

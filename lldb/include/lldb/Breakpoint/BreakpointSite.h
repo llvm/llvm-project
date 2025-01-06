@@ -170,6 +170,11 @@ public:
   /// \see lldb::DescriptionLevel
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
+  // This runs through all the breakpoint locations owning this site and returns
+  // the greatest of their suggested stack frame indexes.  This only handles
+  // inlined stack changes.
+  std::optional<uint32_t> GetSuggestedStackFrameIndex();
+
   /// Tell whether a breakpoint has a location at this site.
   ///
   /// \param[in] bp_id

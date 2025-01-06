@@ -31,6 +31,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
@@ -661,6 +662,17 @@ Loop::LocRange Loop::getLocRange() const {
     return LocRange(HeadBB->getTerminator()->getDebugLoc());
 
   return LocRange();
+}
+
+std::string Loop::getLocStr() const {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  if (const DebugLoc LoopDbgLoc = getStartLoc())
+    LoopDbgLoc.print(OS);
+  else
+    // Just print the module name.
+    OS << getHeader()->getParent()->getParent()->getModuleIdentifier();
+  return Result;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -70,16 +70,16 @@ public:
   SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref) override;
 
 protected:
-  DIEToTypePtr &GetDIEToType() override;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
 
-  CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() override;
+  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+  GetForwardDeclCompilerTypeToDIE() override;
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 
-  lldb::TypeSP
-  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) override;
+  DWARFDIE FindDefinitionDIE(const DWARFDIE &die) override;
 
   lldb::TypeSP
   FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,

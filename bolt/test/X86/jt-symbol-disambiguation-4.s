@@ -10,7 +10,7 @@
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
-# RUN: %clang -no-pie %t.o -o %t.exe -Wl,-q
+# RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt --funcs=main,foo/1 %t.exe -o %t.exe.bolt --print-normalized \
 # RUN:   2>&1 | FileCheck %s
 
@@ -18,7 +18,7 @@
 	.globl	main
 	.type	main,@function
 main:
-# CHECK: Binary Function "main"
+# CHECK: Binary Function "main
 	pushq   %rbp
 	movq	%rsp, %rbp
 	movq	$-16, %rax

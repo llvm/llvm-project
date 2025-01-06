@@ -1021,16 +1021,10 @@ define <16 x i8> @ld1_16b(<16 x i8> %V, ptr %bar) {
 }
 
 define <8 x i16> @ld1_8h(<8 x i16> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_8h:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1.h { v0 }[0], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_8h:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    mov.h v0[0], v1[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1.h { v0 }[0], [x0]
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i16, ptr %bar
   %tmp2 = insertelement <8 x i16> %V, i16 %tmp1, i32 0
@@ -1038,16 +1032,10 @@ define <8 x i16> @ld1_8h(<8 x i16> %V, ptr %bar) {
 }
 
 define <4 x i32> @ld1_4s(<4 x i32> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1.s { v0 }[0], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
-; CHECK-GI-NEXT:    mov.s v0[0], v1[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1.s { v0 }[0], [x0]
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i32, ptr %bar
   %tmp2 = insertelement <4 x i32> %V, i32 %tmp1, i32 0
@@ -1055,16 +1043,10 @@ define <4 x i32> @ld1_4s(<4 x i32> %V, ptr %bar) {
 }
 
 define <4 x float> @ld1_4s_float(<4 x float> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_4s_float:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1.s { v0 }[0], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_4s_float:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
-; CHECK-GI-NEXT:    mov.s v0[0], v1[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_4s_float:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1.s { v0 }[0], [x0]
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load float, ptr %bar
   %tmp2 = insertelement <4 x float> %V, float %tmp1, i32 0
@@ -1072,16 +1054,10 @@ define <4 x float> @ld1_4s_float(<4 x float> %V, ptr %bar) {
 }
 
 define <2 x i64> @ld1_2d(<2 x i64> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_2d:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1.d { v0 }[0], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_2d:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr d1, [x0]
-; CHECK-GI-NEXT:    mov.d v0[0], v1[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1.d { v0 }[0], [x0]
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i64, ptr %bar
   %tmp2 = insertelement <2 x i64> %V, i64 %tmp1, i32 0
@@ -1089,16 +1065,10 @@ define <2 x i64> @ld1_2d(<2 x i64> %V, ptr %bar) {
 }
 
 define <2 x double> @ld1_2d_double(<2 x double> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_2d_double:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1.d { v0 }[0], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_2d_double:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr d1, [x0]
-; CHECK-GI-NEXT:    mov.d v0[0], v1[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_2d_double:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1.d { v0 }[0], [x0]
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load double, ptr %bar
   %tmp2 = insertelement <2 x double> %V, double %tmp1, i32 0
@@ -1137,20 +1107,12 @@ define <8 x i8> @ld1_8b(<8 x i8> %V, ptr %bar) {
 }
 
 define <4 x i16> @ld1_4h(<4 x i16> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_4h:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    ld1.h { v0 }[0], [x0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_4h:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov.h v0[0], v1[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ld1.h { v0 }[0], [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i16, ptr %bar
   %tmp2 = insertelement <4 x i16> %V, i16 %tmp1, i32 0
@@ -1158,20 +1120,12 @@ define <4 x i16> @ld1_4h(<4 x i16> %V, ptr %bar) {
 }
 
 define <2 x i32> @ld1_2s(<2 x i32> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_2s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    ld1.s { v0 }[0], [x0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_2s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov.s v0[0], v1[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ld1.s { v0 }[0], [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load i32, ptr %bar
   %tmp2 = insertelement <2 x i32> %V, i32 %tmp1, i32 0
@@ -1179,20 +1133,12 @@ define <2 x i32> @ld1_2s(<2 x i32> %V, ptr %bar) {
 }
 
 define <2 x float> @ld1_2s_float(<2 x float> %V, ptr %bar) {
-; CHECK-SD-LABEL: ld1_2s_float:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    ld1.s { v0 }[0], [x0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld1_2s_float:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s1, [x0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov.s v0[0], v1[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld1_2s_float:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ld1.s { v0 }[0], [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 ; Make sure we are using the operands defined by the ABI
   %tmp1 = load float, ptr %bar
   %tmp2 = insertelement <2 x float> %V, float %tmp1, i32 0
@@ -1202,13 +1148,21 @@ define <2 x float> @ld1_2s_float(<2 x float> %V, ptr %bar) {
 
 ; Add rdar://13098923 test case: vld1_dup_u32 doesn't generate ld1r.2s
 define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture %diff) nounwind ssp {
-; CHECK-LABEL: ld1r_2s_from_dup:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r.2s { v0 }, [x0]
-; CHECK-NEXT:    ld1r.2s { v1 }, [x1]
-; CHECK-NEXT:    usubl.8h v0, v0, v1
-; CHECK-NEXT:    str d0, [x2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ld1r_2s_from_dup:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
+; CHECK-SD-NEXT:    str d0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ld1r_2s_from_dup:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ld1r.2s { v0 }, [x0]
+; CHECK-GI-NEXT:    ld1r.2s { v1 }, [x1]
+; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str d0, [x2]
+; CHECK-GI-NEXT:    ret
 entry:
   %tmp1 = load i32, ptr %a, align 4
   %tmp2 = insertelement <2 x i32> undef, i32 %tmp1, i32 0

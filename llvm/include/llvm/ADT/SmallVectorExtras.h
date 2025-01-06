@@ -19,12 +19,28 @@
 
 namespace llvm {
 
+/// Filter a range to a SmallVector with the element types deduced.
+template <unsigned Size, class ContainerTy, class PredicateFn>
+auto filter_to_vector(ContainerTy &&C, PredicateFn &&Pred) {
+  return to_vector<Size>(make_filter_range(std::forward<ContainerTy>(C),
+                                           std::forward<PredicateFn>(Pred)));
+}
+
+/// Filter a range to a SmallVector with the element types deduced.
+template <class ContainerTy, class PredicateFn>
+auto filter_to_vector(ContainerTy &&C, PredicateFn &&Pred) {
+  return to_vector(make_filter_range(std::forward<ContainerTy>(C),
+                                     std::forward<PredicateFn>(Pred)));
+}
+
 /// Map a range to a SmallVector with element types deduced from the mapping.
 template <unsigned Size, class ContainerTy, class FuncTy>
 auto map_to_vector(ContainerTy &&C, FuncTy &&F) {
   return to_vector<Size>(
       map_range(std::forward<ContainerTy>(C), std::forward<FuncTy>(F)));
 }
+
+/// Map a range to a SmallVector with element types deduced from the mapping.
 template <class ContainerTy, class FuncTy>
 auto map_to_vector(ContainerTy &&C, FuncTy &&F) {
   return to_vector(

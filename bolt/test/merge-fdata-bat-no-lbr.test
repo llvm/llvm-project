@@ -1,0 +1,20 @@
+## Check that merge-fdata correctly handles merging two fdata files with both boltedcollection and no_lbr tags.
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata
+# RUN: FileCheck %s --input-file %t/merged.fdata
+
+# CHECK: boltedcollection
+# CHECK: no_lbr
+# CHECK: main 2
+
+#--- a.fdata
+boltedcollection
+no_lbr
+main 1
+#--- b.fdata
+boltedcollection
+no_lbr
+main 1

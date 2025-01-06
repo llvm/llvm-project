@@ -9,11 +9,14 @@
 #include "src/compiler/__stack_chk_fail.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/stdlib/abort.h"
+#include <stdint.h> // For uintptr_t
 
 extern "C" {
 
+uintptr_t __stack_chk_guard = static_cast<uintptr_t>(0xa9fff01234);
+
 void __stack_chk_fail(void) {
-  LIBC_NAMESPACE::write_to_stderr("stack smashing detected");
+  LIBC_NAMESPACE::write_to_stderr("stack smashing detected\n");
   LIBC_NAMESPACE::abort();
 }
 

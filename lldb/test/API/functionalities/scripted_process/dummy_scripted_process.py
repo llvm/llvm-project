@@ -8,7 +8,7 @@ from lldb.plugins.scripted_process import ScriptedThread
 
 
 class DummyStopHook:
-    def __init__(self, target, args, internal_dict):
+    def __init__(self, target, args):
         self.target = target
         self.args = args
 

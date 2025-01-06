@@ -23,7 +23,7 @@ ORC_RT_INTERFACE int __orc_rt_coff_jit_dlclose(void *header);
 ORC_RT_INTERFACE void *__orc_rt_coff_jit_dlsym(void *header,
                                                const char *symbol);
 
-namespace __orc_rt {
+namespace orc_rt {
 namespace coff {
 
 enum dlopen_mode : int {
@@ -33,7 +33,7 @@ enum dlopen_mode : int {
   ORC_RT_RTLD_GLOBAL = 0x8
 };
 
-} // end namespace coff
-} // end namespace __orc_rt
+} // namespace coff
+} // namespace orc_rt
 
 #endif

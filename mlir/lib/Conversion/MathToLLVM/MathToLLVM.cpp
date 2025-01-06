@@ -298,9 +298,9 @@ struct ConvertMathToLLVMPass
 };
 } // namespace
 
-void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                RewritePatternSet &patterns,
-                                                bool approximateLog1p) {
+void mlir::populateMathToLLVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool approximateLog1p) {
   if (approximateLog1p)
     patterns.add<Log1pOpLowering>(converter);
   // clang-format off

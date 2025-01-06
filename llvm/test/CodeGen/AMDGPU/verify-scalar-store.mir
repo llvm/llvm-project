@@ -1,5 +1,7 @@
 # RUN: not --crash llc -mtriple=amdgcn -mcpu=tonga -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX8-ERR %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=machineverifier -o - %s 2>&1 | FileCheck -check-prefix=GFX9 %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=tonga --passes='machine-function(verify)' -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX8-ERR %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 --passes='machine-function(verify)' -o - %s 2>&1 | FileCheck -check-prefix=GFX9 %s
 
 # GFX8-ERR: *** Bad machine code: scalar stores must use m0 as offset register ***
 # GFX9: S_STORE_DWORD_SGPR

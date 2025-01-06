@@ -8,10 +8,11 @@
 
 #include "src/inttypes/strtoumax.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uintmax_t, strtoumax,
                    (const char *__restrict str, char **__restrict str_end,
@@ -26,4 +27,4 @@ LLVM_LIBC_FUNCTION(uintmax_t, strtoumax,
   return result;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

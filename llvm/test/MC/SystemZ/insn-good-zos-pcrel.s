@@ -3,7 +3,7 @@
 
 *CHECK: brcl	0, FOO                  * encoding: [0xc0,0x04,A,A,A,A]
 *CHECK:  fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
-*CHECK: brcl	0, FOO                  * encoding: [0xc0,0x04,A,A,A,A]
+*CHECK: jgnop	FOO                     * encoding: [0xc0,0x04,A,A,A,A]
 *CHECK:  fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL
 	brcl	0,FOO
 	jlnop	FOO

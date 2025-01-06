@@ -123,13 +123,12 @@ define i64 @caller_large_scalars() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -80
 ; CHECK-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $zero, $sp, 24
-; CHECK-NEXT:    st.d $zero, $sp, 16
-; CHECK-NEXT:    st.d $zero, $sp, 8
+; CHECK-NEXT:    vrepli.b $vr0, 0
+; CHECK-NEXT:    vst $vr0, $sp, 8
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.d $a0, $sp, 0
 ; CHECK-NEXT:    st.d $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.d $zero, $sp, 40
+; CHECK-NEXT:    vst $vr0, $sp, 40
 ; CHECK-NEXT:    ori $a2, $zero, 1
 ; CHECK-NEXT:    addi.d $a0, $sp, 32
 ; CHECK-NEXT:    addi.d $a1, $sp, 0
@@ -182,14 +181,13 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a0, $zero, 9
 ; CHECK-NEXT:    st.d $a0, $sp, 0
 ; CHECK-NEXT:    st.d $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    st.d $zero, $sp, 24
+; CHECK-NEXT:    vrepli.b $vr0, 0
+; CHECK-NEXT:    vst $vr0, $sp, 24
 ; CHECK-NEXT:    ori $a0, $zero, 10
 ; CHECK-NEXT:    st.d $a0, $sp, 16
 ; CHECK-NEXT:    st.d $zero, $sp, 72
-; CHECK-NEXT:    st.d $zero, $sp, 64
-; CHECK-NEXT:    st.d $zero, $sp, 56
-; CHECK-NEXT:    ori $t0, $zero, 8
+; CHECK-NEXT:    ori $a0, $zero, 8
+; CHECK-NEXT:    st.d $a0, $sp, 48
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    ori $a2, $zero, 3
@@ -198,7 +196,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a5, $zero, 6
 ; CHECK-NEXT:    ori $a6, $zero, 7
 ; CHECK-NEXT:    addi.d $a7, $sp, 48
-; CHECK-NEXT:    st.d $t0, $sp, 48
+; CHECK-NEXT:    vst $vr0, $sp, 56
 ; CHECK-NEXT:    bl %plt(callee_large_scalars_exhausted_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 96

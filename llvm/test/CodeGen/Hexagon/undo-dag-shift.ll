@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; DAG combiner folds sequences of shifts, which can sometimes obscure
 ; optimization opportunities. For example

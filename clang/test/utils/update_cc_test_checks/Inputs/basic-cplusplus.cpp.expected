@@ -16,7 +16,7 @@ public:
 // CHECK-NEXT:    store i32 [[ARG:%.*]], ptr [[ARG_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[CLASS_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    ret i32 [[ADD]]
@@ -55,7 +55,7 @@ Foo::~Foo() {}
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[ARG:%.*]], ptr [[ARG_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[CLASS_FOO:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
 // CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP0]], [[TMP1]]

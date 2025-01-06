@@ -1,4 +1,4 @@
-# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -experimental-debug-variable-locations -o - 2>&1 | FileCheck %s
+# RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -experimental-debug-variable-locations -o - 2>&1 | FileCheck %s
 #
 # Test that when we have a subregister qualifiers in substitutions, that
 # InstrRefBasedLDV correctly applies them to the variable location. Below, a

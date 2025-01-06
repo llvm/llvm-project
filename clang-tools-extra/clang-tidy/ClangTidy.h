@@ -58,12 +58,12 @@ private:
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
                                        bool AllowEnablingAnalyzerAlphaCheckers);
 
-struct NamesAndOptions {
-  llvm::StringSet<> Names;
+struct ChecksAndOptions {
+  llvm::StringSet<> Checks;
   llvm::StringSet<> Options;
 };
 
-NamesAndOptions
+ChecksAndOptions
 getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers = true);
 
 /// Returns the effective check-specific options.

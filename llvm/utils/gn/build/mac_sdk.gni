@@ -2,6 +2,10 @@ import("//llvm/utils/gn/build/sysroot.gni")
 
 have_ios_sdks = true
 
+declare_args() {
+  mac_deployment_target = "12"
+}
+
 if (sysroot == "") {
   declare_args() {
     # Set to true if you don't have Xcode installed, but do have the commandline

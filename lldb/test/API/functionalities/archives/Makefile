@@ -12,12 +12,10 @@ libfoo.a: a.o b.o
 
 # This tests whether lldb can load a thin archive
 libbar.a: c.o
-	$(eval LLVM_AR := $(LLVM_TOOLS_DIR)/llvm-ar)
 	$(eval LLVM_ARFLAGS := -rcsDT)
 	$(LLVM_AR) $(LLVM_ARFLAGS) $@ $^
 
 libfoo-thin.a: a.o b.o
-	$(eval LLVM_AR := $(LLVM_TOOLS_DIR)/llvm-ar)
 	$(eval LLVM_ARFLAGS := -rcsUT)
 	$(LLVM_AR) $(LLVM_ARFLAGS) $@ $^
 

@@ -14,7 +14,7 @@
 namespace clang::tidy::modernize {
 
 /// Checks for common roundabout ways to express ``starts_with`` and
-/// ``ends_with`` and suggests replacing with ``starts_with`` when the method is
+/// ``ends_with`` and suggests replacing with the simpler method when it is
 /// available. Notably, this will work with ``std::string`` and
 /// ``std::string_view``.
 ///

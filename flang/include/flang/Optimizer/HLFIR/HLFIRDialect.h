@@ -61,6 +61,10 @@ inline mlir::Type getFortranElementOrSequenceType(mlir::Type type) {
   return type;
 }
 
+/// Build the hlfir.expr type for the value held in a variable of type \p
+/// variableType.
+mlir::Type getExprType(mlir::Type variableType);
+
 /// Is this a fir.box or fir.class address type?
 inline bool isBoxAddressType(mlir::Type type) {
   type = fir::dyn_cast_ptrEleTy(type);
@@ -131,6 +135,9 @@ mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
 /// that cannot depend on HLFIRBuilder (there will be a cyclic dependency).
 /// This has to be cleaned up, when HLFIR is the default.
 bool mayHaveAllocatableComponent(mlir::Type ty);
+
+/// Scalar integer or a sequence of integers (via boxed array or expr).
+bool isFortranIntegerScalarOrArrayObject(mlir::Type type);
 
 } // namespace hlfir
 

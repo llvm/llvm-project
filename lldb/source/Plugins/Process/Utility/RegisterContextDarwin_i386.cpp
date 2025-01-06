@@ -165,11 +165,6 @@ enum {
    sizeof(RegisterContextDarwin_i386::EXC))
 
 static RegisterInfo g_register_infos[] = {
-    //  Macro auto defines most stuff   eh_frame                DWARF
-    //  GENERIC                    PROCESS PLUGIN       LLDB
-    //  =============================== =======================
-    //  ===================   =========================  ==================
-    //  =================
     {DEFINE_GPR(eax, nullptr),
      {ehframe_eax, dwarf_eax, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       gpr_eax},

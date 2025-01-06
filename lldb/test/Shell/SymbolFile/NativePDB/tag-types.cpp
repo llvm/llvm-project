@@ -4,7 +4,7 @@
 // Test that we can display tag types.
 // RUN: %clang_cl --target=x86_64-windows-msvc -GS- -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/tag-types.lldbinit | FileCheck %s
 
 // Test struct

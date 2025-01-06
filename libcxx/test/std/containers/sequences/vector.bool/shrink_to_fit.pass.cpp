@@ -11,39 +11,57 @@
 
 // void shrink_to_fit();
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
-#include "test_macros.h"
+#include "increasing_allocator.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
-        std::vector<bool> v(100);
-        v.push_back(1);
-        v.shrink_to_fit();
-        assert(v.capacity() >= 101);
-        assert(v.size() >= 101);
-    }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
+    std::vector<bool> v(100);
+    v.push_back(1);
+    v.shrink_to_fit();
+    assert(v.capacity() >= 101);
+    assert(v.size() >= 101);
+  }
 #if TEST_STD_VER >= 11
-    {
-        std::vector<bool, min_allocator<bool>> v(100);
-        v.push_back(1);
-        v.shrink_to_fit();
-        assert(v.capacity() >= 101);
-        assert(v.size() >= 101);
-    }
+  {
+    std::vector<bool, min_allocator<bool>> v(100);
+    v.push_back(1);
+    v.shrink_to_fit();
+    assert(v.capacity() >= 101);
+    assert(v.size() >= 101);
+  }
 #endif
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+#if TEST_STD_VER >= 23
+// https://github.com/llvm/llvm-project/issues/95161
+constexpr bool test_increasing_allocator() {
+  std::vector<bool, increasing_allocator<bool>> v;
+  v.push_back(1);
+  std::size_t capacity = v.capacity();
+  v.shrink_to_fit();
+  assert(v.capacity() <= capacity);
+  assert(v.size() == 1);
+
+  return true;
+}
+#endif // TEST_STD_VER >= 23
+
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+#if TEST_STD_VER >= 23
+  test_increasing_allocator();
+  static_assert(test_increasing_allocator());
+#endif // TEST_STD_VER >= 23
+
+  return 0;
 }

@@ -7,17 +7,17 @@ define void @mainTest(i32 %param, ptr %vals, i32 %len) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 31>, i32 [[PARAM:%.*]], i32 0
 ; CHECK-NEXT:    br label [[BCI_15:%.*]]
 ; CHECK:       bci_15:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], [[BCI_15]] ], [ [[TMP0]], [[BCI_15_PREHEADER:%.*]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <16 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i32> [[SHUFFLE]], <i32 -1, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 0
-; CHECK-NEXT:    store atomic i32 [[TMP4]], ptr [[VALS:%.*]] unordered, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP3]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    [[V44:%.*]] = add i32 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX]], i32 0
-; CHECK-NEXT:    [[TMP7]] = insertelement <2 x i32> [[TMP6]], i32 [[V44]], i32 1
+; CHECK-NEXT:    [[LOCAL_0_:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[BCI_15]] ], [ [[PARAM]], [[BCI_15_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[LOCAL_4_:%.*]] = phi i32 [ [[V44:%.*]], [[BCI_15]] ], [ 31, [[BCI_15_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP6:%.*]], [[BCI_15]] ], [ [[TMP0]], [[BCI_15_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <16 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i32> [[TMP2]], <i32 -1, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store atomic i32 [[LOCAL_0_]], ptr [[VALS:%.*]] unordered, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP3]])
+; CHECK-NEXT:    [[OP_RDX]] = and i32 [[TMP4]], [[LOCAL_4_]]
+; CHECK-NEXT:    [[V44]] = add i32 [[LOCAL_4_]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX]], i32 0
+; CHECK-NEXT:    [[TMP6]] = insertelement <2 x i32> [[TMP5]], i32 [[V44]], i32 1
 ; CHECK-NEXT:    br i1 true, label [[BCI_15]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret void

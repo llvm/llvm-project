@@ -28,7 +28,7 @@ define void @unroll_upper(ptr noundef %pSrc, ptr nocapture noundef writeonly %pD
 ; CHECK-NEXT:    [[NEXT_GEP37:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 [[INDEX]], i32 [[AND]])
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[NEXT_GEP37]], i32 2, <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i16> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[WIDE_MASKED_LOAD]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i16> [[TMP2]] to <8 x i8>
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP3]], ptr [[NEXT_GEP]], i32 1, <8 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8

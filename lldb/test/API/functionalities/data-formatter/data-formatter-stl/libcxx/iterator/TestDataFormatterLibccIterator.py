@@ -54,8 +54,34 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         self.expect("frame variable iimI", substrs=["first = 43981", "second = 61681"])
         self.expect("expr iimI", substrs=["first = 43981", "second = 61681"])
 
+        self.expect("frame variable iimI.first", substrs=["first = 43981"])
+        self.expect("frame variable iimI.first", substrs=["second"], matching=False)
+        self.expect("frame variable iimI.second", substrs=["second = 61681"])
+        self.expect("frame variable iimI.second", substrs=["first"], matching=False)
+
         self.expect("frame variable simI", substrs=['first = "world"', "second = 42"])
         self.expect("expr simI", substrs=['first = "world"', "second = 42"])
 
+        self.expect("frame variable simI.first", substrs=['first = "world"'])
+        self.expect("frame variable simI.first", substrs=["second"], matching=False)
+        self.expect("frame variable simI.second", substrs=["second = 42"])
+        self.expect("frame variable simI.second", substrs=["first"], matching=False)
+
         self.expect("frame variable svI", substrs=['item = "hello"'])
         self.expect("expr svI", substrs=['item = "hello"'])
+
+        self.expect("frame variable iiumI", substrs=["first = 61453", "second = 51966"])
+        self.expect("expr iiumI", substrs=["first = 61453", "second = 51966"])
+
+        self.expect("frame variable siumI", substrs=['first = "hello"', "second = 137"])
+        self.expect("expr siumI", substrs=['first = "hello"', "second = 137"])
+
+        self.expect("frame variable iiumI.first", substrs=["first = 61453"])
+        self.expect("frame variable iiumI.first", substrs=["second"], matching=False)
+        self.expect("frame variable iiumI.second", substrs=["second = 51966"])
+        self.expect("frame variable iiumI.second", substrs=["first"], matching=False)
+
+        self.expect("frame variable siumI.first", substrs=['first = "hello"'])
+        self.expect("frame variable siumI.first", substrs=["second"], matching=False)
+        self.expect("frame variable siumI.second", substrs=["second = 137"])
+        self.expect("frame variable siumI.second", substrs=["first"], matching=False)

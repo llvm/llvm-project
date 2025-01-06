@@ -1,8 +1,10 @@
 ; RUN: opt -passes="ipsccp<func-spec>" -force-specialization \
-; RUN:   -funcspec-max-clones=2 -S < %s | FileCheck %s
+; RUN:   -funcspec-for-literal-constant=false -funcspec-max-clones=2 \
+; RUN:   -S < %s | FileCheck %s
 
 ; RUN: opt -passes="ipsccp<func-spec>" -force-specialization \
-; RUN:   -funcspec-max-clones=1 -S < %s | FileCheck %s --check-prefix=CONST1
+; RUN:   -funcspec-for-literal-constant=false -funcspec-max-clones=1 \
+; RUN:   -S < %s | FileCheck %s --check-prefix=CONST1
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

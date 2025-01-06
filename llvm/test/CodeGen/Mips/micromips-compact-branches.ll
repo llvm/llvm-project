@@ -1,4 +1,4 @@
-; RUN: llc %s -march=mipsel -mattr=micromips -filetype=asm -O3 \
+; RUN: llc %s -mtriple=mipsel -mattr=micromips -filetype=asm -O3 \
 ; RUN: -disable-mips-delay-filler -relocation-model=pic -o - | FileCheck %s
 
 define void @main() nounwind uwtable {

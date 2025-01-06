@@ -83,7 +83,7 @@ namespace Test6 {
 namespace Test7 {
   #pragma pack (1)
   class A {};
-  // CHECK: %"class.Test7::B" = type <{ ptr, %"class.Test7::A" }>
+  // CHECK: %"class.Test7::B" = type <{ ptr, i8 }>
   class B {
      virtual ~B();
      A a;

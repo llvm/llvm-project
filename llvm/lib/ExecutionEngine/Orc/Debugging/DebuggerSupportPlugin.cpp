@@ -148,7 +148,7 @@ public:
         DSec.BuilderSec->align = Log2_64(SR.getFirstBlock()->getAlignment());
         StringRef SectionData(SR.getFirstBlock()->getContent().data(),
                               SR.getFirstBlock()->getSize());
-        DebugSectionMap[SecName] =
+        DebugSectionMap[SecName.drop_front(2)] = // drop "__" prefix.
             MemoryBuffer::getMemBuffer(SectionData, G.getName(), false);
         if (SecName == "__debug_line")
           DebugLineSectionData = SectionData;
@@ -167,11 +167,10 @@ public:
           DebugLineSectionData, G.getEndianness() == llvm::endianness::little,
           G.getPointerSize());
       uint64_t Offset = 0;
-      DWARFDebugLine::LineTable LineTable;
+      DWARFDebugLine::Prologue P;
 
       // Try to parse line data. Consume error on failure.
-      if (auto Err = LineTable.parse(DebugLineData, &Offset, *DWARFCtx, nullptr,
-                                     consumeError)) {
+      if (auto Err = P.parse(DebugLineData, &Offset, consumeError, *DWARFCtx)) {
         handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
           LLVM_DEBUG({
             dbgs() << "Cannot parse line table for \"" << G.getName() << "\": ";
@@ -180,15 +179,26 @@ public:
           });
         });
       } else {
-        if (!LineTable.Prologue.FileNames.empty())
-          FileName = *dwarf::toString(LineTable.Prologue.FileNames[0].Name);
+        for (auto &FN : P.FileNames)
+          if ((FileName = dwarf::toString(FN.Name))) {
+            LLVM_DEBUG({
+              dbgs() << "Using FileName = \"" << *FileName
+                     << "\" from DWARF line table\n";
+            });
+            break;
+          }
       }
     }
 
     // If no line table (or unable to use) then use graph name.
     // FIXME: There are probably other debug sections we should look in first.
-    if (!FileName)
-      FileName = StringRef(G.getName());
+    if (!FileName) {
+      LLVM_DEBUG({
+        dbgs() << "Could not find source name from DWARF line table. "
+                  "Using FileName = \"\"\n";
+      });
+      FileName = "";
+    }
 
     Builder.addSymbol("", MachO::N_SO, 0, 0, 0);
     Builder.addSymbol(*FileName, MachO::N_SO, 0, 0, 0);
@@ -214,8 +224,8 @@ public:
 
         Builder.addSymbol("", MachO::N_BNSYM, 1, 0, 0);
         StabSymbols.push_back(
-            {*Sym, Builder.addSymbol(Sym->getName(), SymType, 1, 0, 0),
-             Builder.addSymbol(Sym->getName(), SymType, 0, 0, 0)});
+            {*Sym, Builder.addSymbol(*Sym->getName(), SymType, 1, 0, 0),
+             Builder.addSymbol(*Sym->getName(), SymType, 0, 0, 0)});
         Builder.addSymbol("", MachO::N_ENSYM, 1, 0, 0);
       }
     }

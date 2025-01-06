@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 %struct.RESULTS_S.A = type { i16, i16, i16, [4 x ptr], i32, i32, i32, ptr, %struct.MAT_PARAMS_S.D, i16, i16, i16, i16, i16, %struct.CORE_PORTABLE_S.E }
 %struct.list_head_s.B = type { ptr, ptr }

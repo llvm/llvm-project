@@ -44,7 +44,7 @@ enum OutputKind {
   OK_OutputBitcode,
   OK_OutputThinLTOBitcode,
 };
-enum VerifierKind { VK_NoVerifier, VK_VerifyOut, VK_VerifyEachPass };
+enum class VerifierKind { None, InputOutput, EachPass };
 enum PGOKind {
   NoPGO,
   InstrGen,

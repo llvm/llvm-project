@@ -113,25 +113,24 @@ protected:
     DeclLink(PreviousTag, decl_type *D) : Link(NotKnownLatest(Previous(D))) {}
 
     bool isFirst() const {
-      return Link.is<KnownLatest>() ||
+      return isa<KnownLatest>(Link) ||
              // FIXME: 'template' is required on the next line due to an
              // apparent clang bug.
-             Link.get<NotKnownLatest>().template is<UninitializedLatest>();
+             isa<UninitializedLatest>(cast<NotKnownLatest>(Link));
     }
 
     decl_type *getPrevious(const decl_type *D) const {
-      if (Link.is<NotKnownLatest>()) {
-        NotKnownLatest NKL = Link.get<NotKnownLatest>();
-        if (NKL.is<Previous>())
-          return static_cast<decl_type*>(NKL.get<Previous>());
+      if (NotKnownLatest NKL = dyn_cast<NotKnownLatest>(Link)) {
+        if (auto *Prev = dyn_cast<Previous>(NKL))
+          return static_cast<decl_type *>(Prev);
 
         // Allocate the generational 'most recent' cache now, if needed.
         Link = KnownLatest(*reinterpret_cast<const ASTContext *>(
-                               NKL.get<UninitializedLatest>()),
+                               cast<UninitializedLatest>(NKL)),
                            const_cast<decl_type *>(D));
       }
 
-      return static_cast<decl_type*>(Link.get<KnownLatest>().get(D));
+      return static_cast<decl_type *>(cast<KnownLatest>(Link).get(D));
     }
 
     void setPrevious(decl_type *D) {
@@ -141,25 +140,24 @@ protected:
 
     void setLatest(decl_type *D) {
       assert(isFirst() && "decl became canonical unexpectedly");
-      if (Link.is<NotKnownLatest>()) {
-        NotKnownLatest NKL = Link.get<NotKnownLatest>();
+      if (NotKnownLatest NKL = dyn_cast<NotKnownLatest>(Link)) {
         Link = KnownLatest(*reinterpret_cast<const ASTContext *>(
-                               NKL.get<UninitializedLatest>()),
+                               cast<UninitializedLatest>(NKL)),
                            D);
       } else {
-        auto Latest = Link.get<KnownLatest>();
+        auto Latest = cast<KnownLatest>(Link);
         Latest.set(D);
         Link = Latest;
       }
     }
 
-    void markIncomplete() { Link.get<KnownLatest>().markIncomplete(); }
+    void markIncomplete() { cast<KnownLatest>(Link).markIncomplete(); }
 
     Decl *getLatestNotUpdated() const {
       assert(isFirst() && "expected a canonical decl");
-      if (Link.is<NotKnownLatest>())
+      if (isa<NotKnownLatest>(Link))
         return nullptr;
-      return Link.get<KnownLatest>().getNotUpdated();
+      return cast<KnownLatest>(Link).getNotUpdated();
     }
   };
 
@@ -191,6 +189,7 @@ protected:
   }
 
 public:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class IncrementalParser;
@@ -281,10 +280,10 @@ public:
       return tmp;
     }
 
-    friend bool operator==(redecl_iterator x, redecl_iterator y) {
+    friend bool operator==(const redecl_iterator &x, const redecl_iterator &y) {
       return x.Current == y.Current;
     }
-    friend bool operator!=(redecl_iterator x, redecl_iterator y) {
+    friend bool operator!=(const redecl_iterator &x, const redecl_iterator &y) {
       return x.Current != y.Current;
     }
   };

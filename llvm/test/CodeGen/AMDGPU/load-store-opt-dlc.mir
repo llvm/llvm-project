@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -passes=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
 
 # The purpose of this test is to make sure we are combining relevant memory
 # operations correctly with/without DLC bit.

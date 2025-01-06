@@ -68,7 +68,7 @@ define void @pr56282() {
 ; CHECK-NEXT:    [[INNER_1_IV_UNR_PH:%.*]] = phi i64 [ [[INNER_1_IV_NEXT_7]], [[INNER_1_LATCH_7]] ]
 ; CHECK-NEXT:    br label [[OUTER_MIDDLE_UNR_LCSSA]]
 ; CHECK:       outer.middle.unr-lcssa:
-; CHECK-NEXT:    [[V_LCSSA1_PH:%.*]] = phi i32 [ undef, [[OUTER_HEADER]] ], [ [[V_LCSSA1_PH_PH]], [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[V_LCSSA1_PH:%.*]] = phi i32 [ poison, [[OUTER_HEADER]] ], [ [[V_LCSSA1_PH_PH]], [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[INNER_1_IV_UNR:%.*]] = phi i64 [ 0, [[OUTER_HEADER]] ], [ [[INNER_1_IV_UNR_PH]], [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[INNER_1_HEADER_EPIL_PREHEADER:%.*]], label [[OUTER_MIDDLE:%.*]]
@@ -186,7 +186,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[INNER_1_IV_UNR_PH:%.*]] = phi i64 [ [[INNER_1_IV_NEXT_PROL]], [[INNER_1_LATCH_PROL]] ]
 ; CHECK-NEXT:    br label [[INNER_1_HEADER_PROL_LOOPEXIT]]
 ; CHECK:       inner.1.header.prol.loopexit:
-; CHECK-NEXT:    [[L_1_LCSSA_UNR:%.*]] = phi i32 [ undef, [[OUTER_HEADER]] ], [ [[L_1_LCSSA_UNR_PH]], [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[L_1_LCSSA_UNR:%.*]] = phi i32 [ poison, [[OUTER_HEADER]] ], [ [[L_1_LCSSA_UNR_PH]], [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[INNER_1_IV_UNR:%.*]] = phi i64 [ [[X]], [[OUTER_HEADER]] ], [ [[INNER_1_IV_UNR_PH]], [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 7
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[OUTER_MIDDLE:%.*]], label [[OUTER_HEADER_NEW:%.*]], !prof [[PROF3]]

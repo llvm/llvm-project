@@ -1,7 +1,7 @@
 ; RUN: opt -O2 -mtriple=bpf-pc-linux %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK %s
+; RUN: llc -mcpu=v1 %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK %s
 ; RUN: opt -O2 -mtriple=bpf-pc-linux -bpf-disable-avoid-speculation %s | llvm-dis > %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK-DISABLE %s
+; RUN: llc -mcpu=v1 %t1 -o - | FileCheck -check-prefixes=CHECK-COMMON,CHECK-DISABLE %s
 ;
 ; Source:
 ;   unsigned foo();

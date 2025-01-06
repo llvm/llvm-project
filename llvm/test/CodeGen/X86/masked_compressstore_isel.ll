@@ -9,9 +9,9 @@ define void @_Z3fooiPiPs(<8 x i32> %gepload, <8 x i1> %0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr256x = COPY $ymm0
   ; CHECK-NEXT:   [[VPSLLWZ128ri:%[0-9]+]]:vr128x = VPSLLWZ128ri [[COPY]], 15
-  ; CHECK-NEXT:   [[VPMOVW2MZ128rr:%[0-9]+]]:vk16wm = VPMOVW2MZ128rr killed [[VPSLLWZ128ri]]
+  ; CHECK-NEXT:   [[VPMOVW2MZ128kr:%[0-9]+]]:vk16wm = VPMOVW2MZ128kr killed [[VPSLLWZ128ri]]
   ; CHECK-NEXT:   [[VPMOVDWZ256rr:%[0-9]+]]:vr128x = VPMOVDWZ256rr [[COPY1]]
-  ; CHECK-NEXT:   VPCOMPRESSWZ128mrk $noreg, 1, $noreg, 0, $noreg, killed [[VPMOVW2MZ128rr]], killed [[VPMOVDWZ256rr]] :: (store unknown-size into `ptr null`, align 1)
+  ; CHECK-NEXT:   VPCOMPRESSWZ128mrk $noreg, 1, $noreg, 0, $noreg, killed [[VPMOVW2MZ128kr]], killed [[VPMOVDWZ256rr]] :: (store unknown-size into `ptr null`, align 1)
   ; CHECK-NEXT:   RET 0
 entry:
   %1 = trunc <8 x i32> %gepload to <8 x i16>
@@ -28,9 +28,9 @@ define void @_Z3foo2iPiPs(<8 x i32> %gepload, <8 x i1> %0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr256x = COPY $ymm0
   ; CHECK-NEXT:   [[VPSLLWZ128ri:%[0-9]+]]:vr128x = VPSLLWZ128ri [[COPY]], 15
-  ; CHECK-NEXT:   [[VPMOVW2MZ128rr:%[0-9]+]]:vk16wm = VPMOVW2MZ128rr killed [[VPSLLWZ128ri]]
+  ; CHECK-NEXT:   [[VPMOVW2MZ128kr:%[0-9]+]]:vk16wm = VPMOVW2MZ128kr killed [[VPSLLWZ128ri]]
   ; CHECK-NEXT:   [[VPMOVDWZ256rr:%[0-9]+]]:vr128x = VPMOVDWZ256rr [[COPY1]]
-  ; CHECK-NEXT:   VPCOMPRESSWZ128mrk $noreg, 1, $noreg, 0, $noreg, killed [[VPMOVW2MZ128rr]], killed [[VPMOVDWZ256rr]] :: (store unknown-size into `ptr null`, align 16)
+  ; CHECK-NEXT:   VPCOMPRESSWZ128mrk $noreg, 1, $noreg, 0, $noreg, killed [[VPMOVW2MZ128kr]], killed [[VPMOVDWZ256rr]] :: (store unknown-size into `ptr null`, align 16)
   ; CHECK-NEXT:   RET 0
 entry:
   %1 = trunc <8 x i32> %gepload to <8 x i16>

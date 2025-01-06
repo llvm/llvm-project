@@ -265,3 +265,27 @@ define i6 @sub_shl_same_amount_partial_nuw2(i6 %x, i6 %y, i6 %z) {
   ret i6 %diff
 }
 
+define i8 @add_shl_same_amount_constants(i8 %z) {
+; CHECK-LABEL: @add_shl_same_amount_constants(
+; CHECK-NEXT:    [[SUM:%.*]] = shl i8 7, [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[SUM]]
+;
+  %s1 = shl i8 4, %z
+  %s2 = shl i8 3, %z
+  %sum = add i8 %s1, %s2
+  ret i8 %sum
+}
+
+define i8 @add_shl_same_amount_constants_extra_use(i8 %z) {
+; CHECK-LABEL: @add_shl_same_amount_constants_extra_use(
+; CHECK-NEXT:    [[S1:%.*]] = shl i8 4, [[Z:%.*]]
+; CHECK-NEXT:    [[SUM:%.*]] = shl i8 7, [[Z]]
+; CHECK-NEXT:    call void @use8(i8 [[S1]])
+; CHECK-NEXT:    ret i8 [[SUM]]
+;
+  %s1 = shl i8 4, %z
+  %s2 = shl i8 3, %z
+  %sum = add i8 %s1, %s2
+  call void @use8(i8 %s1)
+  ret i8 %sum
+}

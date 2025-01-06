@@ -17,7 +17,7 @@
 #include <utility>
 #include <tuple>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// Substitute for std::identity.
 /// Switch to std::identity once we can use c++20.
@@ -40,6 +40,6 @@ constexpr uint64_t bit_ceil(uint64_t Val) noexcept {
   return Val + 1;
 }
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_STL_EXTRAS

@@ -17,3 +17,13 @@
 // RUN: not %clang -fprofile-sample-use=code.prof --target=powerpc-ibm-aix %s 2>&1 | \
 // RUN: FileCheck %s --check-prefix=AIX-PROFILE-SAMPLE
 // AIX-PROFILE-SAMPLE: error: unsupported option '-fprofile-sample-use=' for target
+
+// -mhtm is unsupported on x86_64. Test that using it in different command
+// line permutations generates an `unsupported option` error.
+// RUN: not %clang --target=x86_64 -### %s -mhtm 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=UNSUP_OPT
+// RUN: not %clang --target=x86_64 -### %s -mhtm -lc 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=UNSUP_OPT
+// RUN: not %clang --target=x86_64 -### -mhtm -lc %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=UNSUP_OPT
+// UNSUP_OPT: error: unsupported option

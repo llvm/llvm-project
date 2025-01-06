@@ -30,12 +30,12 @@ define void @test2(ptr %p1, ptr %p2, ptr %p3) {
 ; Make sure that attributes are not dropped
 define void @test3(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: @test
-; CHECK: call void @llvm.memset.p0.i64(ptr nonnull align 4 %p1, i8 signext 55, i64 zeroext 100, i1 immarg false)
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %p1, ptr readonly align 4 %p2, i64 zeroext 50, i1 immarg false)
-; CHECK: call void @llvm.memmove.p0.p0.i64(ptr nonnull align 4 %p2, ptr readonly align 4 %p3, i64 zeroext 1000, i1 immarg false)
-  call void @llvm.memset.p0.i64(ptr nonnull %p1, i8 signext 55, i64 zeroext 100, i32 signext 4, i1 immarg false)
-  call void @llvm.memcpy.p0.p0.i64(ptr nonnull %p1, ptr readonly %p2, i64 zeroext 50, i32 signext 4, i1 immarg false)
-  call void @llvm.memmove.p0.p0.i64(ptr nonnull %p2, ptr readonly %p3, i64 zeroext 1000, i32 signext 4, i1 immarg false)
+; CHECK: call void @llvm.memset.p0.i64(ptr nonnull align 4 %p1, i8 signext 55, i64 zeroext 100, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %p1, ptr readonly align 4 %p2, i64 zeroext 50, i1 false)
+; CHECK: call void @llvm.memmove.p0.p0.i64(ptr nonnull align 4 %p2, ptr readonly align 4 %p3, i64 zeroext 1000, i1 false)
+  call void @llvm.memset.p0.i64(ptr nonnull %p1, i8 signext 55, i64 zeroext 100, i32 signext 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull %p1, ptr readonly %p2, i64 zeroext 50, i32 signext 4, i1 false)
+  call void @llvm.memmove.p0.p0.i64(ptr nonnull %p2, ptr readonly %p3, i64 zeroext 1000, i32 signext 4, i1 false)
   ret void
 }
 

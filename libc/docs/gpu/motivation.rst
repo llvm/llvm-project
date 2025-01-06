@@ -44,7 +44,7 @@ Limitations
 
 We only implement a subset of the standard C library. The GPU does not
 currently support thread local variables in all cases, so variables like
-``errno`` are not provided. Furthermore, the GPU under the OpenCL execution
+``errno`` are atomic and global. Furthermore, the GPU under the OpenCL execution
 model cannot safely provide a mutex interface. This means that features like
 file buffering are not implemented on the GPU. We can also not easily provide
 threading features on the GPU due to the execution model so these will be

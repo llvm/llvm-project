@@ -1,6 +1,5 @@
 # RUN: llvm-mc -show-encoding -mcpu=mips32 -triple mips-unknown-unknown %s | FileCheck %s
 #
-# CHECK:  .text
 # CHECK:  $BB0_2:
 # CHECK:  .abicalls
 $BB0_2:

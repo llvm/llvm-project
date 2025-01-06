@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "toy/AST.h"
 #include "toy/Dialect.h"
 #include "toy/Lexer.h"
@@ -300,6 +300,7 @@ int main(int argc, char **argv) {
   // If we aren't dumping the AST, then we are compiling with/to MLIR.
   mlir::DialectRegistry registry;
   mlir::func::registerAllExtensions(registry);
+  mlir::LLVM::registerInlinerInterface(registry);
 
   mlir::MLIRContext context(registry);
   // Load our Dialect in this MLIR Context.

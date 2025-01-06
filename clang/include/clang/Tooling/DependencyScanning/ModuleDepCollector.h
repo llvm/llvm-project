@@ -120,10 +120,6 @@ struct ModuleDeps {
   /// additionally appear in \c FileDeps as a dependency.
   std::string ClangModuleMapFile;
 
-  /// A collection of absolute paths to files that this module directly depends
-  /// on, not including transitive dependencies.
-  llvm::StringSet<> FileDeps;
-
   /// A collection of absolute paths to module map files that this module needs
   /// to know about. The ordering is significant.
   std::vector<std::string> ModuleMapFileDeps;
@@ -143,12 +139,24 @@ struct ModuleDeps {
   /// an entity from this module is used.
   llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
 
+  /// Invokes \c Cb for all file dependencies of this module. Each provided
+  /// \c StringRef is only valid within the individual callback invocation.
+  void forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const;
+
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
   const std::vector<std::string> &getBuildArguments();
 
 private:
+  friend class ModuleDepCollector;
   friend class ModuleDepCollectorPP;
+
+  /// The base directory for relative paths in \c FileDeps.
+  std::string FileDepsBaseDir;
+
+  /// A collection of paths to files that this module directly depends on, not
+  /// including transitive dependencies.
+  std::vector<std::string> FileDeps;
 
   std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
       BuildInfo;

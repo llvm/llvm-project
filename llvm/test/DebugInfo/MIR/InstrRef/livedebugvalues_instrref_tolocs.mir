@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
 
   define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
   entry:

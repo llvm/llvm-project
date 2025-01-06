@@ -1,10 +1,10 @@
 ; RUN: opt -passes=gvn -S %s | FileCheck %s
 
 %MyStruct = type { i32, i32 }
-define i8 @foo(i64 %in, ptr %arr) {
+define i8 @foo(i64 %in, ptr %arr, i1 %arg) {
   %addr = alloca %MyStruct
   %dead = trunc i64 %in to i32
-  br i1 undef, label %next, label %tmp
+  br i1 %arg, label %next, label %tmp
 
 tmp:
   call void @bar()

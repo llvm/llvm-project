@@ -39,6 +39,29 @@ entry:
   ret half %c
 }
 
+define fp128 @frem_fp128(fp128 %a, fp128 %b) {
+; CHECK-LABEL: frem_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b fmodl
+entry:
+  %c = frem fp128 %a, %b
+  ret fp128 %c
+}
+
+define <1 x double> @frem_v1f64(<1 x double> %a, <1 x double> %b) {
+; CHECK-LABEL: frem_v1f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl fmod
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %c = frem <1 x double> %a, %b
+  ret <1 x double> %c
+}
+
 define <2 x double> @frem_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-SD-LABEL: frem_v2f64:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -952,22 +975,22 @@ define <4 x half> @frem_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-GI-NEXT:    fcvt s2, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h12
-; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s2
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    fcvt s2, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s1, h13
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s2
 ; CHECK-GI-NEXT:    bl fmodf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
@@ -1576,4 +1599,45 @@ define <16 x half> @frem_v16f16(<16 x half> %a, <16 x half> %b) {
 entry:
   %c = frem <16 x half> %a, %b
   ret <16 x half> %c
+}
+
+define <2 x fp128> @frem_v2fp128(<2 x fp128> %a, <2 x fp128> %b) {
+; CHECK-SD-LABEL: frem_v2fp128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #64
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    stp q1, q3, [sp, #16] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
+; CHECK-SD-NEXT:    bl fmodl
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    bl fmodl
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    add sp, sp, #64
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem_v2fp128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #64
+; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    stp q3, q1, [sp, #16] // 32-byte Folded Spill
+; CHECK-GI-NEXT:    mov v1.16b, v2.16b
+; CHECK-GI-NEXT:    bl fmodl
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    bl fmodl
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #64
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = frem <2 x fp128> %a, %b
+  ret <2 x fp128> %c
 }

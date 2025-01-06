@@ -160,6 +160,10 @@ static char GetFirstChar(const Preprocessor &PP, const Token &Tok) {
 bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
                                      const Token &PrevTok,
                                      const Token &Tok) const {
+  // No space is required between header unit name in quote and semi.
+  if (PrevTok.is(tok::annot_header_unit) && Tok.is(tok::semi))
+    return false;
+
   // Conservatively assume that every annotation token that has a printable
   // form requires whitespace.
   if (PrevTok.isAnnotation())

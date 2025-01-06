@@ -18,9 +18,9 @@
 // CHECK: #pragma nounroll{{$}}
 // CHECK: #pragma clang loop vectorize_width(V)
 // CHECK: #pragma clang loop interleave_count(I)
-// CHECK: #pragma omp simd
-// CHECK: #pragma omp for
-// CHECK: #pragma omp distribute
+// CHECK: #pragma omp loop bind(thread)
+// CHECK: #pragma omp loop bind(parallel)
+// CHECK: #pragma omp loop bind(teams)
 
 #ifndef HEADER
 #define HEADER

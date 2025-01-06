@@ -32,7 +32,7 @@ class BadAddressBreakpointTestCase(TestBase):
         for region_idx in range(regions.GetSize()):
             region = lldb.SBMemoryRegionInfo()
             regions.GetMemoryRegionAtIndex(region_idx, region)
-            if illegal_address == None or region.GetRegionEnd() > illegal_address:
+            if illegal_address is None or region.GetRegionEnd() > illegal_address:
                 illegal_address = region.GetRegionEnd()
 
         if illegal_address is not None:

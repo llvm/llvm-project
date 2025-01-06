@@ -15,11 +15,12 @@
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <signal.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 constexpr size_t max_buff_size() {
@@ -77,4 +78,4 @@ cpp::string_view get_signal_string(int sig_num, cpp::span<char> buffer) {
     return internal::build_signal_string(sig_num, buffer);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

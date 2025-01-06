@@ -47,3 +47,35 @@ namespace qualifiers {
 
   // CHECK: candidate template ignored: deduced conflicting types for parameter 'T' ('const vector<...>' vs. 'volatile vector<...>')
 }
+
+namespace integers {
+  template <int x>
+  class wrapper{};
+
+  template <int x>
+  class foo {
+   public:
+    wrapper<x> make();
+  };
+
+  wrapper<1> w1 = foo<2>().make();
+  // CHECK: no viable conversion from 'wrapper<2>' to 'wrapper<1>'
+
+  wrapper<1> w2 = foo<-3>().make();
+  // CHECK: no viable conversion from 'wrapper<-3>' to 'wrapper<1>'
+
+  template <int x>
+  wrapper<x> make();
+
+  wrapper<1> w3 = make<4>();
+  // CHECK: no viable conversion from 'wrapper<4>' to 'wrapper<1>'
+
+  template <int x>
+  wrapper<-x> makeNegative();
+
+  wrapper<1> w4 = makeNegative<5>();
+  // CHECK: no viable conversion from 'wrapper<-5>' to 'wrapper<1>'
+
+  wrapper<1> w5 = makeNegative<-6>();
+  // CHECK: no viable conversion from 'wrapper<6>' to 'wrapper<1>'
+}

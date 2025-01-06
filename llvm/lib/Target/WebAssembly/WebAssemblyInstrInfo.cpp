@@ -57,7 +57,9 @@ bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
 void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        const DebugLoc &DL, MCRegister DestReg,
-                                       MCRegister SrcReg, bool KillSrc) const {
+                                       MCRegister SrcReg, bool KillSrc,
+                                       bool RenamableDest,
+                                       bool RenamableSrc) const {
   // This method is called by post-RA expansion, which expects only pregs to
   // exist. However we need to handle both here.
   auto &MRI = MBB.getParent()->getRegInfo();

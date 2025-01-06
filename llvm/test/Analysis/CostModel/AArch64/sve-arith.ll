@@ -43,6 +43,7 @@ define void @scalable_mul() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul_nxv8i16 = mul <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul_nxv4i32 = mul <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul_nxv2i64 = mul <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mul_nxv1i64 = mul <vscale x 1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
@@ -50,6 +51,26 @@ entry:
   %mul_nxv8i16 = mul <vscale x 8 x i16> undef, undef
   %mul_nxv4i32 = mul <vscale x 4 x i32> undef, undef
   %mul_nxv2i64 = mul <vscale x 2 x i64> undef, undef
+  %mul_nxv1i64 = mul <vscale x 1 x i64> undef, undef
+
+  ret void
+}
+
+define void @scalable_add() #0 {
+; CHECK-LABEL: 'scalable_add'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add_nxv16i8 = add <vscale x 16 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add_nxv8i16 = add <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add_nxv4i32 = add <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add_nxv2i64 = add <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %add_nxv1i64 = add <vscale x 1 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+entry:
+  %add_nxv16i8 = add <vscale x 16 x i8> undef, undef
+  %add_nxv8i16 = add <vscale x 8 x i16> undef, undef
+  %add_nxv4i32 = add <vscale x 4 x i32> undef, undef
+  %add_nxv2i64 = add <vscale x 2 x i64> undef, undef
+  %add_nxv1i64 = add <vscale x 1 x i64> undef, undef
 
   ret void
 }

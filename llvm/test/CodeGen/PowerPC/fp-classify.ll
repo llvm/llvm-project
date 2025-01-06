@@ -7,13 +7,13 @@
 define zeroext i1 @abs_isinff(float %x) {
 ; P8-LABEL: abs_isinff:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    li 4, 1
-; P8-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
-; P8-NEXT:    li 3, 0
-; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    iseleq 3, 4, 3
+; P8-NEXT:    xscvdpspn 0, 1
+; P8-NEXT:    lis 4, 32640
+; P8-NEXT:    mffprwz 3, 0
+; P8-NEXT:    clrlwi 3, 3, 1
+; P8-NEXT:    xor 3, 3, 4
+; P8-NEXT:    cntlzw 3, 3
+; P8-NEXT:    srwi 3, 3, 5
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinff:
@@ -32,13 +32,13 @@ entry:
 define zeroext i1 @abs_isinf(double %x) {
 ; P8-LABEL: abs_isinf:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    li 4, 1
-; P8-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
-; P8-NEXT:    li 3, 0
-; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    iseleq 3, 4, 3
+; P8-NEXT:    mffprd 3, 1
+; P8-NEXT:    li 4, 2047
+; P8-NEXT:    rldic 4, 4, 52, 1
+; P8-NEXT:    clrldi 3, 3, 1
+; P8-NEXT:    xor 3, 3, 4
+; P8-NEXT:    cntlzd 3, 3
+; P8-NEXT:    rldicl 3, 3, 58, 63
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinf:

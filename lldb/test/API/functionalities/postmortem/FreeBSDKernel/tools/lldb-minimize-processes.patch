@@ -74,7 +74,7 @@ index e3707365a9c3..c4a9c82f3c63 100644
 +  rd = fvc_write(m_fvc, vm_addr, buf, size);
 +  printf("fvc_write(%p, %p, %d) -> %d\n", vm_addr, buf, size, rd);
 +  if (rd < 0 || static_cast<size_t>(rd) != size) {
-+    error.SetErrorStringWithFormat("Writing memory failed: %s", GetError());
++    error = Status::FromErrorStringWithFormat("Writing memory failed: %s", GetError());
 +    return rd > 0 ? rd : 0;
 +  }
 +  return rd;

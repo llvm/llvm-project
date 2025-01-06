@@ -1,16 +1,10 @@
 ; Test that the msan layout customization options work as expected
 ;
-; RUN: opt < %s -msan-shadow-base 3735928559 -S -passes=msan 2>&1 | FileCheck  \
-; RUN: --check-prefix=CHECK-BASE %s
-; RUN: opt < %s -msan-shadow-base 3735928559 -msan-and-mask 4294901760 -S      \
-; RUN: -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-AND %s
-; RUN: opt < %s -msan-shadow-base 3735928559 -msan-xor-mask 48879 -S           \
-; RUN: -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-XOR %s
-; RUN: opt < %s -msan-shadow-base 3735928559 -msan-xor-mask 48879              \
-; RUN: -msan-and-mask 4294901760 -S -passes=msan 2>&1 | FileCheck              \
-; RUN: --check-prefix=CHECK-XOR-AND %s
-; RUN: opt < %s -msan-track-origins 1 -msan-origin-base 1777777 -S -passes=msan\
-; RUN: 2>&1 | FileCheck --check-prefix=CHECK-ORIGIN-BASE %s
+; RUN: opt < %s -msan-shadow-base 3735928559 -S -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-BASE %s
+; RUN: opt < %s -msan-shadow-base 3735928559 -msan-and-mask 4294901760 -S -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-AND %s
+; RUN: opt < %s -msan-shadow-base 3735928559 -msan-xor-mask 48879 -S -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-XOR %s
+; RUN: opt < %s -msan-shadow-base 3735928559 -msan-xor-mask 48879 -msan-and-mask 4294901760 -S -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-XOR-AND %s
+; RUN: opt < %s -msan-track-origins 1 -msan-origin-base 1777777 -S -passes=msan 2>&1 | FileCheck --check-prefix=CHECK-ORIGIN-BASE %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

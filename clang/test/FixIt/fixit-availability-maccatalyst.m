@@ -11,14 +11,15 @@ int use(void) {
 // CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:14-[[@LINE-2]]:14}:"\n  } else {\n      // Fallback on earlier versions\n  }"
 }
 
-#define API_AVAILABLE(X) __attribute__((availability(macCatalyst, introduced=13.2))) __attribute__((availability(ios, introduced=13.1))) // dummy macro
+#define API_AVAILABLE(x) __attribute__((availability(__API_AVAILABLE_PLATFORM_##x)))
+#define __API_AVAILABLE_PLATFORM_macCatalyst(x) macCatalyst,introduced=x
 
-API_AVAILABLE(macos(10.12))
+API_AVAILABLE(macCatalyst(13.2))
 @interface NewClass
 @end
 
 @interface OldButOfferFixit
 @property(copy) NewClass *prop;
-// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:1-[[@LINE-2]]:1}:"API_AVAILABLE(maccatalyst(13.2))\n"
+// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:1-[[@LINE-2]]:1}:"API_AVAILABLE(macCatalyst(13.2))\n"
 
 @end

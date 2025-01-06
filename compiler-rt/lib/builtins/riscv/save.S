@@ -18,7 +18,7 @@
 
 #if __riscv_xlen == 32
 
-#ifndef __riscv_32e
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_save_12
   .type   __riscv_save_12,@function
@@ -115,7 +115,7 @@ __riscv_save_0:
 
 #elif __riscv_xlen == 64
 
-#ifndef __riscv_64e
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_save_12
   .type   __riscv_save_12,@function

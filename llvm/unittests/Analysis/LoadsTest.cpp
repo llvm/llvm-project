@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -113,4 +118,86 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   EXPECT_FALSE(canReplacePointersInUseIfEqual(GEPUse, P2, DL));
   EXPECT_TRUE(canReplacePointersInUseIfEqual(PtrToIntUse, P2, DL));
   EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2, DL));
+}
+
+TEST(LoadsTest, IsDerefReadOnlyLoop) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"IR(
+define i64 @f1() {
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+define i64 @f2(ptr %p1) {
+entry:
+  %p2 = alloca [1024 x i8]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+)IR");
+  auto *GV1 = M->getNamedValue("f1");
+  auto *GV2 = M->getNamedValue("f2");
+  ASSERT_TRUE(GV1 && GV2);
+  auto *F1 = dyn_cast<Function>(GV1);
+  auto *F2 = dyn_cast<Function>(GV2);
+  ASSERT_TRUE(F1 && F2);
+
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+
+  auto IsDerefReadOnlyLoop = [&TLI](Function *F) -> bool {
+    AssumptionCache AC(*F);
+    DominatorTree DT(*F);
+    LoopInfo LI(DT);
+    ScalarEvolution SE(*F, TLI, AC, DT, LI);
+
+    Function::iterator FI = F->begin();
+    // First basic block is entry - skip it.
+    BasicBlock *Header = &*(++FI);
+    assert(Header->getName() == "loop");
+    Loop *L = LI.getLoopFor(Header);
+
+    return isDereferenceableReadOnlyLoop(L, &SE, &DT, &AC);
+  };
+
+  ASSERT_TRUE(IsDerefReadOnlyLoop(F1));
+  ASSERT_FALSE(IsDerefReadOnlyLoop(F2));
 }

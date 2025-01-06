@@ -28,7 +28,7 @@ kernel void test_single(int_single input, global int* output) {
 // CHECK: spir_kernel
 // AMDGCN: define{{.*}} amdgpu_kernel void @test_single
 // CHECK: ptr nocapture {{.*}} byval(%struct.int_single)
-// CHECK: ptr nocapture noundef writeonly align 4 %output
+// CHECK: ptr nocapture noundef writeonly align 4 initializes((0, 4)) %output
  output[0] = input.a;
 }
 
@@ -36,7 +36,7 @@ kernel void test_pair(int_pair input, global int* output) {
 // CHECK: spir_kernel
 // AMDGCN: define{{.*}} amdgpu_kernel void @test_pair
 // CHECK: ptr nocapture {{.*}} byval(%struct.int_pair)
-// CHECK: ptr nocapture noundef writeonly align 4 %output
+// CHECK: ptr nocapture noundef writeonly align 4 initializes((0, 8)) %output
  output[0] = (int)input.a;
  output[1] = (int)input.b;
 }
@@ -45,7 +45,7 @@ kernel void test_kernel(test_struct input, global int* output) {
 // CHECK: spir_kernel
 // AMDGCN: define{{.*}} amdgpu_kernel void @test_kernel
 // CHECK: ptr nocapture {{.*}} byval(%struct.test_struct)
-// CHECK: ptr nocapture noundef writeonly align 4 %output
+// CHECK: ptr nocapture noundef writeonly align 4 initializes((0, 32)) %output
  output[0] = input.elementA;
  output[1] = input.elementB;
  output[2] = (int)input.elementC;
@@ -59,7 +59,7 @@ kernel void test_kernel(test_struct input, global int* output) {
 void test_function(int_pair input, global int* output) {
 // CHECK-NOT: spir_kernel
 // AMDGCN-NOT: define{{.*}} amdgpu_kernel void @test_function
-// CHECK: i64 %input.coerce0, i64 %input.coerce1, ptr nocapture noundef writeonly %output
+// CHECK: i64 %input.coerce0, i64 %input.coerce1, ptr nocapture noundef writeonly initializes((0, 8)) %output
  output[0] = (int)input.a;
  output[1] = (int)input.b;
 }

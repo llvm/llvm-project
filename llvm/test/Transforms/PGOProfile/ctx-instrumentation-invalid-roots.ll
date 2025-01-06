@@ -1,4 +1,4 @@
-; RUN: not opt -passes=pgo-instr-gen,ctx-instr-lower -profile-context-root=good \
+; RUN: not opt -passes=ctx-instr-gen,ctx-instr-lower -profile-context-root=good \
 ; RUN:   -profile-context-root=bad \
 ; RUN:   -S < %s 2>&1 | FileCheck %s
 

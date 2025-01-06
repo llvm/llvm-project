@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ; Check that absolute loads are generated for 64-bit
 
 target triple = "hexagon-unknown--elf"

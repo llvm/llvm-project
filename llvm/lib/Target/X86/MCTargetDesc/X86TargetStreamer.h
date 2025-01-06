@@ -27,12 +27,12 @@ public:
   virtual bool emitFPOData(const MCSymbol *ProcSym, SMLoc L = {}) {
     return false;
   }
-  virtual bool emitFPOPushReg(unsigned Reg, SMLoc L = {}) { return false; }
+  virtual bool emitFPOPushReg(MCRegister Reg, SMLoc L = {}) { return false; }
   virtual bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L = {}) {
     return false;
   }
   virtual bool emitFPOStackAlign(unsigned Align, SMLoc L = {}) { return false; }
-  virtual bool emitFPOSetFrame(unsigned Reg, SMLoc L = {}) { return false; }
+  virtual bool emitFPOSetFrame(MCRegister Reg, SMLoc L = {}) { return false; }
 };
 
 /// Implements X86-only null emission.

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -triple x86_64-unknown-unknown -verify
+// RUN: %clang_cc1 %s -fsyntax-only -triple aarch64-unknown-unknown -verify
 
 typedef void typedef_fun_t(int);
 

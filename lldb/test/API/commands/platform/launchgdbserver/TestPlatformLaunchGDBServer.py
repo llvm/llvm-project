@@ -16,7 +16,8 @@ class TestPlatformProcessLaunchGDBServer(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
-    # Windows doesn't use lldb-server and on Darwin we may be using debugserver.
+    # Windows cannot delete the executable while it is running.
+    # On Darwin we may be using debugserver.
     @skipUnlessPlatform(["linux"])
     @add_test_categories(["lldb-server"])
     def test_platform_process_launch_gdb_server(self):
@@ -44,15 +45,16 @@ class TestPlatformProcessLaunchGDBServer(TestBase):
         self.spawnSubprocess(new_lldb_server, commandline_args)
         socket_id = lldbutil.wait_for_file_on_target(self, port_file)
 
-        # Remove our new lldb-server so that when it tries to invoke itself as a
-        # gdbserver, it fails.
-        os.remove(new_lldb_server)
-
         new_platform = lldb.SBPlatform("remote-" + self.getPlatform())
         self.dbg.SetSelectedPlatform(new_platform)
 
         connect_url = "connect://[%s]:%s" % (hostname, socket_id)
         self.runCmd("platform connect %s" % connect_url)
+
+        # First connect to lldb-server which spawn a process to handle the connection.
+        # Then remove our new lldb-server so that when it tries to invoke itself as a
+        # gdbserver, it fails.
+        os.remove(new_lldb_server)
 
         self.runCmd("target create {}".format(self.getBuildArtifact("a.out")))
         self.expect("run", substrs=["unable to launch a GDB server on"], error=True)

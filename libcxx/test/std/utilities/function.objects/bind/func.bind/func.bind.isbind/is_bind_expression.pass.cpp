@@ -13,6 +13,8 @@
 // template<class T> struct is_bind_expression
 
 #include <functional>
+#include <type_traits>
+
 #include "test_macros.h"
 
 template <bool Expected, class T>

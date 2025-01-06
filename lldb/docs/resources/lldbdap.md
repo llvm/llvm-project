@@ -1,15 +1,94 @@
-# LLDB-DAP
+# Contributing to LLDB-DAP
 
-The `lldb-dap` tool (formerly `lldb-vscode`) is a command line tool that
-implements the [Debug Adapter
-Protocol](https://microsoft.github.io/debug-adapter-protocol/). It can be
-installed as an extension for Visual Studio Code and other IDEs supporting DAP.
-The protocol is easy to run remotely and also can allow other tools and IDEs to
-get a full featured debugger with a well defined protocol.
+This guide describes how to extend and contribute to lldb-dap.
+For documentation on how to use lldb-dap, see [lldb-dap's README](https://github.com/llvm/llvm-project/blob/main/lldb/tools/lldb-dap/README.md).
 
-## Local Installation for Visual Studio Code
+lldb-dap and LLDB are developed under the umbrella of the
+[LLVM project](https://llvm.org/). As such, the
+"[Getting Started with the LLVM System](https://llvm.org/docs/GettingStarted.html)",
+"[Contributing to LLVM](https://llvm.org/docs/Contributing.html)" and
+"[LLVM coding standard](https://llvm.org/docs/CodingStandards.html)"
+guides might also be relevant, if you are a first-time contributor to the LLVM
+project.
+
+lldb-dap's source code is [part of the LLVM
+repository](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
+on Github. We use Github's [issue
+tracker](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
+and patches can be submitted via [pull
+requests](https://github.com/llvm/llvm-project/pulls).
+
+## Building `lldb-dap` from soruce
+
+To build lldb-dap from source, first need to [setup a LLDB build](https://lldb.llvm.org/resources/build.html).
+After doing so, run `ninja lldb-dap`. To use your freshly built `lldb-dap`
+binary, install the VS Code extension and point it to lldb-dap by setting the
+`lldb-dap.executable-path` setting.
+
+## Responsibilities of LLDB, lldb-dap and the Visual Studio Code Extension
+
+Under the hood, the UI-based debugging experience is fueled by three separate
+components:
+
+* LLDB provides general, IDE-indepedent debugging features, such as:
+  loading binaries / core dumps, interpreting debug info, setting breakpoints,
+  pretty-printing variables, etc. The `lldb` binary exposes this functionality
+  via a command line interface.
+* `lldb-dap` exposes LLDB's functionality via the
+  "[Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/)",
+  i.e. a protocol through which various IDEs (VS Code, Emacs, vim, neovim, ...)
+  can interact with a wide range of debuggers (`lldb-dap` and many others).
+* The VS Code extension exposes the lldb-dap binary within VS Code. It acts
+  as a thin wrapper around the lldb-dap binary, and adds VS-Code-specific UI
+  integration on top of lldb-dap, such as autocompletion for `launch.json`
+  configuration files.
+
+Since lldb-dap builds on top of LLDB, all of LLDB's extensibility mechanisms
+such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
+[Frame recognizers](https://lldb.llvm.org/use/python-reference.html#writing-lldb-frame-recognizers-in-python)
+and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
+also in lldb-dap.
+
+When adding new functionality, you generally want to add it on the lowest
+applicable level. I.e., quite frequently you actually want to add functionality
+to LLDB's core in order to improve your debugging experience in VS Code.
+
+### The Debug Adapter Protocol
+
+The most relevant resources for the Debug Adapter Protocol are:
+* [The overview](https://microsoft.github.io/debug-adapter-protocol/overview)
+  which provides a high-level introduction,
+* the [human-readable specification](https://microsoft.github.io/debug-adapter-protocol/specification), and
+* the [JSON-schema specification](https://github.com/microsoft/debug-adapter-protocol/blob/main/debugAdapterProtocol.json).
+
+lldb-dap adds some additional non-standard extensions to the protocol. To take
+advantage of those extensions, IDE-specific support code is needed, usually
+inside the VS Code extension. When adding a new extension, please first look
+through the [issue tracker of the Debug Adapter
+Protocol](https://github.com/microsoft/debug-adapter-protocol/issues) to check
+if there already is a proposal serving your use case. If so, try to take
+inspiration from it. If not, consider opening an upstream issue.
+
+To avoid naming collisions with potential future extensions of the Debug
+Adapter protocol, all non-standard extensions should use the prefix
+`$__lldb_extension` in their JSON property names.
+
+### Debugging the Debug Adapter Protocol
+
+To debug the Debug Adapter Protocol, point the `LLDBDAP_LOG` environment
+variable to a file on your disk. lldb-dap will log all communication received
+from / sent to the IDE to the provided path. In the VS Code extension, you
+can also set the log path through the `lldb-dap.log-path` VS Code setting.
+
+## Building the VS Code extension from source
 
 Installing the plug-in is very straightforward and involves just a few steps.
+
+In most cases, installing the VS Code extension from the [VS Code
+Marketplace](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
+and pointing it to a locally built lldb-dap binary is sufficient. Building
+the VS Code extension from source is only necessary if the TypeScript code is
+changed.
 
 ### Pre-requisites
 
@@ -32,10 +111,6 @@ build of `lldb-dap`.
 And then you are ready!
 
 ### Updating the extension
-
-*Note: It's not necessary to update the extension if there has been changes
-to  `lldb-dap`. The extension needs to be updated only if the TypesScript code
-has changed.*
 
 Updating the extension is pretty much the same process as installing it from
 scratch. However, VS Code expects the version number of the upgraded extension

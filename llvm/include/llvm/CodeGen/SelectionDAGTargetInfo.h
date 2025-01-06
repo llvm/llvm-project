@@ -35,6 +35,19 @@ public:
   SelectionDAGTargetInfo &operator=(const SelectionDAGTargetInfo &) = delete;
   virtual ~SelectionDAGTargetInfo();
 
+  /// Returns true if a node with the given target-specific opcode has
+  /// a memory operand. Nodes with such opcodes can only be created with
+  /// `SelectionDAG::getMemIntrinsicNode`.
+  virtual bool isTargetMemoryOpcode(unsigned Opcode) const { return false; }
+
+  /// Returns true if a node with the given target-specific opcode has
+  /// strict floating-point semantics.
+  virtual bool isTargetStrictFPOpcode(unsigned Opcode) const { return false; }
+
+  /// Returns true if a node with the given target-specific opcode
+  /// may raise a floating-point exception.
+  virtual bool mayRaiseFPException(unsigned Opcode) const;
+
   /// Emit target-specific code that performs a memcpy.
   /// This can be used by targets to provide code sequences for cases
   /// that don't fit the target's parameters for simple loads/stores and can be

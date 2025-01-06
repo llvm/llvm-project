@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols %s | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=51 -fdebug-dump-symbols %s | FileCheck %s
 ! OpenMP Version 5.1
 ! 2.14.2 use_device_addr clause
 ! List item that appears in a use_device_addr clause has corresponding storage

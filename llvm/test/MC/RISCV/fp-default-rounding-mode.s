@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+experimental-zfbfmin -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+experimental-zfbfmin \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin \
 # RUN:     | FileCheck -check-prefixes=CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+d,+zfh,+experimental-zfbfmin < %s \
-# RUN:     | llvm-objdump -M no-aliases --mattr=+d,+zfh,+experimental-zfbfmin -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+d,+zfh,+zfbfmin < %s \
+# RUN:     | llvm-objdump -M no-aliases --mattr=+d,+zfh,+zfbfmin -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+d,+zfh,+experimental-zfbfmin < %s \
-# RUN:     | llvm-objdump --mattr=+d,+zfh,+experimental-zfbfmin -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+d,+zfh,+zfbfmin < %s \
+# RUN:     | llvm-objdump --mattr=+d,+zfh,+zfbfmin -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-ALIAS %s
 
 # This test aims to check what the default rounding mode is for a given
@@ -193,9 +193,12 @@ fcvt.h.lu fa0, a0
 
 # Zfbfmin instructions
 
-# CHECK-INST: fcvt.s.bf16 fa0, fa0, dyn{{$}}
+# CHECK-INST: fcvt.s.bf16 fa0, fa0{{$}}
 # CHECK-ALIAS: fcvt.s.bf16 fa0, fa0{{$}}
 fcvt.s.bf16 fa0, fa0
+# CHECK-INST: fcvt.s.bf16 fa0, fa0{{$}}
+# CHECK-ALIAS: fcvt.s.bf16 fa0, fa0{{$}}
+fcvt.s.bf16 fa0, fa0, rne
 
 # CHECK-INST: fcvt.bf16.s fa0, fa0, dyn{{$}}
 # CHECK-ALIAS: fcvt.bf16.s fa0, fa0{{$}}

@@ -14,7 +14,6 @@
 
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -42,7 +41,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -109,7 +107,6 @@ initializeRecordStreamer(const Module &M,
   MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
-  MOFI->setSDKVersion(M.getSDKVersion());
   MCCtx.setObjectFileInfo(MOFI.get());
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);

@@ -34,9 +34,9 @@ private:
   DeleteValueTy DeleteValue;
 
 public:
-  DerivedUser(Type *Ty, unsigned VK, Use *U, unsigned NumOps,
+  DerivedUser(Type *Ty, unsigned VK, AllocInfo AllocInfo,
               DeleteValueTy DeleteValue)
-      : User(Ty, VK, U, NumOps), DeleteValue(DeleteValue) {}
+      : User(Ty, VK, AllocInfo), DeleteValue(DeleteValue) {}
 };
 
 } // end namespace llvm

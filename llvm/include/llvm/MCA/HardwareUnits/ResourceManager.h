@@ -232,6 +232,8 @@ public:
   /// `NumUnits` available units.
   bool isReady(unsigned NumUnits = 1) const;
 
+  uint64_t getNumReadyUnits() const { return llvm::popcount(ReadyMask); }
+
   bool isAResourceGroup() const { return IsAGroup; }
 
   bool containsResource(uint64_t ID) const { return ResourceMask & ID; }
@@ -428,9 +430,32 @@ public:
   uint64_t getProcResUnitMask() const { return ProcResUnitMask; }
   uint64_t getAvailableProcResUnits() const { return AvailableProcResUnits; }
 
-  void issueInstruction(
-      const InstrDesc &Desc,
-      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes);
+  using ResourceWithCycles = std::pair<ResourceRef, ReleaseAtCycles>;
+
+  void issueInstruction(const InstrDesc &Desc,
+                        SmallVectorImpl<ResourceWithCycles> &Pipes) {
+    if (Desc.HasPartiallyOverlappingGroups)
+      return issueInstructionImpl(Desc, Pipes);
+
+    return fastIssueInstruction(Desc, Pipes);
+  }
+
+  // Selects pipeline resources consumed by an instruction.
+  // This method works under the assumption that used group resources don't
+  // partially overlap. The logic is guaranteed to find a valid resource unit
+  // schedule, no matter in which order individual uses are processed. For that
+  // reason, the vector of resource uses is simply (and quickly) processed in
+  // sequence. The resulting schedule is eventually stored into vector `Pipes`.
+  void fastIssueInstruction(const InstrDesc &Desc,
+                            SmallVectorImpl<ResourceWithCycles> &Pipes);
+
+  // Selects pipeline resources consumed by an instruction.
+  // This method works under the assumption that used resource groups may
+  // partially overlap. This complicates the selection process, because the
+  // order in which uses are processed matters. The logic internally prioritizes
+  // groups which are more constrained than others.
+  void issueInstructionImpl(const InstrDesc &Desc,
+                            SmallVectorImpl<ResourceWithCycles> &Pipes);
 
   void cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed);
 

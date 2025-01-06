@@ -53,8 +53,8 @@ secure_entry:
 // CHECK1-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
 // CHECK1-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
 // CHECK1-NEXT:      1: 00020000     0 NOTYPE  LOCAL  DEFAULT     2 $t
-// CHECK1-NEXT:      2: 00008000     0 NOTYPE  LOCAL  DEFAULT     1 $t.0
-// CHECK1-NEXT:      3: 00008004     0 NOTYPE  LOCAL  DEFAULT     1 $t.0
+// CHECK1-NEXT:      2: 00008000     0 NOTYPE  LOCAL  DEFAULT     1 $t
+// CHECK1-NEXT:      3: 00008004     0 NOTYPE  LOCAL  DEFAULT     1 $t
 // CHECK1-NEXT:      4: 00008001     2 FUNC    GLOBAL DEFAULT     1 secure_entry
 // CHECK1-NEXT:      5: 00020001     8 FUNC    GLOBAL DEFAULT     2 foo
 // CHECK1-NEXT:      6: 00008005     2 FUNC    GLOBAL DEFAULT     1 __acle_se_foo
@@ -82,8 +82,8 @@ secure_entry:
 // CHECK2-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
 // CHECK2-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
 // CHECK2-NEXT:      1: 00020000     0 NOTYPE  LOCAL  DEFAULT     2 $t
-// CHECK2-NEXT:      2: 00008000     0 NOTYPE  LOCAL  DEFAULT     1 $t.0
-// CHECK2-NEXT:      3: 00008004     0 NOTYPE  LOCAL  DEFAULT     1 $t.0
+// CHECK2-NEXT:      2: 00008000     0 NOTYPE  LOCAL  DEFAULT     1 $t
+// CHECK2-NEXT:      3: 00008004     0 NOTYPE  LOCAL  DEFAULT     1 $t
 // CHECK2-NEXT:      4: 00008001     2 FUNC    GLOBAL DEFAULT     1 secure_entry
 // CHECK2-NEXT:      5: 00020011     8 FUNC    WEAK   DEFAULT     2 baz
 // CHECK2-NEXT:      6: 00008005     2 FUNC    GLOBAL DEFAULT     1 __acle_se_baz

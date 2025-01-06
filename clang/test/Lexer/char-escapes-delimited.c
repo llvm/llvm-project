@@ -123,3 +123,16 @@ void separators(void) {
 static_assert('\N??<DOLLAR SIGN??>' == '$'); // expected-warning 2{{trigraph converted}} \
                                              // ext-warning {{extension}} cxx23-warning {{C++23}}
 #endif
+
+void GH102218(void) {
+  // The format specifier checking code runs the lexer with diagnostics
+  // disabled. This used to crash Clang for malformed \o and \x because the
+  // lexer missed a null pointer check for the diagnostics engine in that case.
+  extern int printf(const char *, ...);
+  printf("\o{}"); // expected-error {{delimited escape sequence cannot be empty}}
+  printf("\x{}"); // expected-error {{delimited escape sequence cannot be empty}}
+
+  // These cases always worked but are here for completeness.
+  printf("\u{}"); // expected-error {{delimited escape sequence cannot be empty}}
+  printf("\N{}"); // expected-error {{delimited escape sequence cannot be empty}}
+}

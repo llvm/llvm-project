@@ -8,12 +8,13 @@
 
 #include "src/threads/thrd_create.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <threads.h> // For thrd_* type definitions.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(thrd_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between thrd_t and internal Thread.");
@@ -30,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
     return thrd_error;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

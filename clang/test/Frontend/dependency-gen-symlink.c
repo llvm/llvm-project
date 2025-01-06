@@ -15,7 +15,7 @@
 // CHECK: dependency-gen-symlink.c.o
 // CHECK: dependency-gen-symlink.c
 // CHECK: a/header.h
-// CHECK: b/header.h
+// CHECK-NOT: b/header.h
 // CHECK-NOT: with-header-guard.h
 #include "a/header.h"
 #include "b/header.h"

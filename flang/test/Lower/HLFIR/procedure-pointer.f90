@@ -128,7 +128,7 @@ use m
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub4Ep2"} : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>, !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>)
 ! CHECK: %[[VAL_4:.*]] = fir.address_of(@_QPchar_func) : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
-! CHECK: %[[VAL_12:.*]] = arith.constant -1 : index
+! CHECK: %[[VAL_12:.*]] = arith.constant 0 : index
 ! CHECK: %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[VAL_6:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
 ! CHECK: %[[VAL_7:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
@@ -375,7 +375,7 @@ end subroutine
 
 ! CHECK-LABEL: fir.global internal @_QFsub1Ep7 : !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>> {
 ! CHECK: %[[VAL_0:.*]] = fir.address_of(@_QPchar_func) : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
-! CHECK: %[[VAL_11:.*]] = arith.constant -1 : index
+! CHECK: %[[VAL_11:.*]] = arith.constant 0 : index
 ! CHECK: %[[VAL_1:.*]] = fir.emboxproc %[[VAL_0]] : ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[VAL_2:.*]] = fir.convert %[[VAL_11]] : (index) -> i64
 ! CHECK: %[[VAL_3:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>

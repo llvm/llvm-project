@@ -695,9 +695,11 @@ define <8 x i16> @vwaddu_vx_v8i16_i8(ptr %x, ptr %y) {
 define <8 x i16> @vwaddu_vx_v8i16_i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwaddu_vx_v8i16_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    lh a1, 0(a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vlse16.v v8, (a1), zero
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
@@ -748,9 +750,11 @@ define <4 x i32> @vwaddu_vx_v4i32_i16(ptr %x, ptr %y) {
 define <4 x i32> @vwaddu_vx_v4i32_i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwaddu_vx_v4i32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vlse32.v v8, (a1), zero
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
@@ -769,8 +773,8 @@ define <2 x i64> @vwaddu_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
 ; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -801,8 +805,8 @@ define <2 x i64> @vwaddu_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
 ; RV32-NEXT:    lhu a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -833,8 +837,8 @@ define <2 x i64> @vwaddu_vx_v2i64_i32(ptr %x, ptr %y) nounwind {
 ; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -862,12 +866,12 @@ define <2 x i64> @vwaddu_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ; RV32-LABEL: vwaddu_vx_v2i64_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    lw a2, 4(a1)
-; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -876,9 +880,11 @@ define <2 x i64> @vwaddu_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ;
 ; RV64-LABEL: vwaddu_vx_v2i64_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    ld a1, 0(a1)
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vlse64.v v8, (a1), zero
+; RV64-NEXT:    vmv.v.x v8, a1
+; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vwaddu.wv v8, v8, v9
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x

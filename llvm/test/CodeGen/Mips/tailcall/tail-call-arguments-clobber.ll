@@ -1,8 +1,8 @@
-; RUN: llc -march=mips -mcpu=mips32 -O0 -relocation-model=pic -mips-tail-calls=1 < %s | FileCheck \
+; RUN: llc -mtriple=mips -mcpu=mips32 -O0 -relocation-model=pic -mips-tail-calls=1 < %s | FileCheck \
 ; RUN:     %s -check-prefix=MIPS32
-; RUN: llc -march=mips64 -mcpu=mips64 -O0 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mips64 -mcpu=mips64 -O0 -relocation-model=pic -target-abi n64 \
 ; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=MIPS64
-; RUN: llc -march=mips64 -mcpu=mips64 -O0 -relocation-model=pic -target-abi n32 \
+; RUN: llc -mtriple=mips64 -mcpu=mips64 -O0 -relocation-model=pic -target-abi n32 \
 ; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=MIPS64
 
 

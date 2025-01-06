@@ -476,7 +476,8 @@
     typedef enum omp_pause_resource_t {
       omp_pause_resume = 0,
       omp_pause_soft = 1,
-      omp_pause_hard = 2
+      omp_pause_hard = 2,
+      omp_pause_stop_tool = 3
     } omp_pause_resource_t;
     extern int __KAI_KMPC_CONVENTION omp_pause_resource(omp_pause_resource_t, int);
     extern int __KAI_KMPC_CONVENTION omp_pause_resource_all(omp_pause_resource_t);

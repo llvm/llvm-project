@@ -86,6 +86,14 @@ spirv.module Logical GLSL450 {
 //===----------------------------------------------------------------------===//
 
 spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @empty_loop
+  spirv.func @empty_loop() "None" {
+    // CHECK: llvm.return
+    spirv.mlir.loop {
+    }
+    spirv.Return
+  }
+
   // CHECK-LABEL: @infinite_loop
   spirv.func @infinite_loop(%count : i32) -> () "None" {
     // CHECK:   llvm.br ^[[BB1:.*]]

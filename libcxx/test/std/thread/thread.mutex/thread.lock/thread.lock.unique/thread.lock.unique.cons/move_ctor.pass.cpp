@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads, c++03
 
 // <mutex>
 
@@ -14,34 +12,27 @@
 
 // unique_lock(unique_lock&& u);
 
-#include <mutex>
 #include <cassert>
-#include "nasty_containers.h"
+#include <memory>
+#include <mutex>
+#include <type_traits>
 
+#include "checking_mutex.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-    typedef std::mutex M;
-    M m;
-    std::unique_lock<M> lk0(m);
-    std::unique_lock<M> lk = std::move(lk0);
-    assert(lk.mutex() == std::addressof(m));
-    assert(lk.owns_lock() == true);
-    assert(lk0.mutex() == nullptr);
-    assert(lk0.owns_lock() == false);
-    }
-    {
-    typedef nasty_mutex M;
-    M m;
-    std::unique_lock<M> lk0(m);
-    std::unique_lock<M> lk = std::move(lk0);
-    assert(lk.mutex() == std::addressof(m));
-    assert(lk.owns_lock() == true);
-    assert(lk0.mutex() == nullptr);
-    assert(lk0.owns_lock() == false);
-    }
+#if TEST_STD_VER >= 11
+static_assert(std::is_nothrow_move_constructible<std::unique_lock<checking_mutex>>::value, "");
+#endif
+
+int main(int, char**) {
+  checking_mutex m;
+  std::unique_lock<checking_mutex> lk0(m);
+  std::unique_lock<checking_mutex> lk = std::move(lk0);
+
+  assert(lk.mutex() == std::addressof(m));
+  assert(lk.owns_lock());
+  assert(lk0.mutex() == nullptr);
+  assert(!lk0.owns_lock());
 
   return 0;
 }

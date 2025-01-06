@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <deque>
@@ -67,10 +68,13 @@ struct OverflowTracking {
   bool HasNUW;
   bool HasNSW;
   bool AllKnownNonNegative;
+  bool AllKnownNonZero;
   // Note: AllKnownNonNegative can be true in a case where one of the operands
   // is negative, but one the operators is not NSW. AllKnownNonNegative should
   // not be used independently of HasNSW
-  OverflowTracking() : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
+  OverflowTracking()
+      : HasNUW(true), HasNSW(true), AllKnownNonNegative(true),
+        AllKnownNonZero(true) {}
 };
 
 class XorOpnd;

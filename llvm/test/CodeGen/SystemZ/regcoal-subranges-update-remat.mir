@@ -29,13 +29,12 @@ tracksRegLiveness: true
 body:             |
   bb.0:
 
-    ; CHECK-LABEL
     ; CHECK-LABEL: name: main
     ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = LGHI 25
-    ; CHECK: CHIMux [[LGHI]].subreg_l32, 0, implicit-def $cc
-    ; CHECK: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 25
-    ; CHECK: undef [[LGHI1]].subreg_l32:gr64bit = MSFI [[LGHI1]].subreg_l32, -117440512
-    ; CHECK: Return implicit [[LGHI1]].subreg_l32
+    ; CHECK-NEXT: CHIMux [[LGHI]].subreg_l32, 0, implicit-def $cc
+    ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 25
+    ; CHECK-NEXT: undef [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = MSFI [[LGHI1]].subreg_l32, -117440512
+    ; CHECK-NEXT: Return implicit [[LGHI1]].subreg_l32
     %0:gr64bit = LGHI 25
     %1:gr32bit = COPY %0.subreg_l32
     %1:gr32bit = MSFI %1, -117440512

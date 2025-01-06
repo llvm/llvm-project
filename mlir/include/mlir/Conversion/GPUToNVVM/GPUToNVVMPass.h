@@ -31,17 +31,21 @@ LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type);
 /// Configure target to convert from the GPU dialect to NVVM.
 void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 
+/// Configure the LLVM type convert to convert types and address spaces from the
+/// GPU dialect to NVVM.
+void configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter);
+
 /// Collect a set of patterns to convert from the GPU dialect to NVVM.
-void populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
+void populateGpuToNVVMConversionPatterns(const LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns);
 
 /// Populate GpuSubgroupReduce pattern to NVVM. It generates a specific nvvm
 /// op that is not available on every GPU.
-void populateGpuSubgroupReduceOpLoweringPattern(LLVMTypeConverter &converter,
-                                                RewritePatternSet &patterns);
+void populateGpuSubgroupReduceOpLoweringPattern(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert WMMA ops from GPU dialect to NVVM.
-void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
+void populateGpuWMMAToNVVMConversionPatterns(const LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns);
 } // namespace mlir
 

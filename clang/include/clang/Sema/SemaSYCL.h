@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_SEMA_SEMASYCL_H
 #define LLVM_CLANG_SEMA_SEMASYCL_H
 
-#include "clang/AST/Decl.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
@@ -62,6 +62,7 @@ public:
                                        ParsedType ParsedTy);
 
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
+  void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
 };
 
 } // namespace clang

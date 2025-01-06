@@ -16,12 +16,13 @@ using namespace llvm;
 
 extern cl::OptionCategory LLVMReduceOptions;
 
-static cl::opt<std::string> PassPipeline(
-    "ir-passes",
-    cl::desc("A textual description of the pass pipeline, same as "
-             "what's passed to `opt -passes`."),
-    cl::init("function(sroa,instcombine,gvn,simplifycfg,infer-address-spaces)"),
-    cl::cat(LLVMReduceOptions));
+static cl::opt<std::string>
+    PassPipeline("ir-passes",
+                 cl::desc("A textual description of the pass pipeline, same as "
+                          "what's passed to `opt -passes`."),
+                 cl::init("function(sroa,instcombine<no-verify-fixpoint>,gvn,"
+                          "simplifycfg,infer-address-spaces)"),
+                 cl::cat(LLVMReduceOptions));
 
 static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();

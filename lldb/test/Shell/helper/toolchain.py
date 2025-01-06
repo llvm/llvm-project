@@ -1,14 +1,17 @@
 import os
 import itertools
 import platform
+import re
 import subprocess
 import sys
 
 import lit.util
+from lit.formats import ShTest
 from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+import posixpath
 
 def _get_lldb_init_path(config):
     return os.path.join(config.test_exec_root, "lit-lldb-init-quiet")
@@ -20,6 +23,68 @@ def _disallow(config, execName):
     exit 1 && echo
   """
     config.substitutions.append((" {0} ".format(execName), warning.format(execName)))
+
+
+def get_lldb_args(config, suffix=""):
+    lldb_args = []
+    if "remote-linux" in config.available_features:
+        lldb_args += [
+            "-O",
+            '"platform select remote-linux"',
+            "-O",
+            f'"platform connect {config.lldb_platform_url}"',
+        ]
+        if config.lldb_platform_working_dir:
+            dir = posixpath.join(f"{config.lldb_platform_working_dir}", "shell")
+            if suffix:
+                dir += posixpath.join(dir, f"{suffix}")
+            lldb_args += [
+                "-O",
+                f'"platform shell mkdir -p {dir}"',
+                "-O",
+                f'"platform settings -w {dir}"',
+            ]
+    lldb_args += ["--no-lldbinit", "-S", _get_lldb_init_path(config)]
+    return lldb_args
+
+
+class ShTestLldb(ShTest):
+    def __init__(
+        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
+    ):
+        super().__init__(execute_external, extra_substitutions, preamble_commands)
+
+    def execute(self, test, litConfig):
+        # Run each Shell test in a separate directory (on remote).
+
+        # Find directory change command in %lldb substitution.
+        for i, t in enumerate(test.config.substitutions):
+            if re.match(t[0], "%lldb"):
+                cmd = t[1]
+                if '-O "platform settings -w ' in cmd:
+                    # If command is present, it is added by get_lldb_args.
+                    # Replace the path with the tests' path in suite.
+                    # Example:
+                    # bin/lldb
+                    #   -O "platform shell mkdir -p /home/user/shell"
+                    #   -O "platform settings -w /home/user/shell" ...
+                    # =>
+                    # bin/lldb
+                    #   -O "platform shell mkdir -p /home/user/shell/SymbolFile/Breakpad/inline-record.test"
+                    #   -O "platform settings -w /home/user/shell/SymbolFile/Breakpad/inline-record.test" ...
+                    args_def = " ".join(get_lldb_args(test.config))
+                    args_unique = " ".join(
+                        get_lldb_args(
+                            test.config,
+                            posixpath.join(*test.path_in_suite),
+                        )
+                    )
+                    test.config.substitutions[i] = (
+                        t[0],
+                        cmd.replace(args_def, args_unique),
+                    )
+                break
+        return super().execute(test, litConfig)
 
 
 def use_lldb_substitutions(config):
@@ -34,7 +99,9 @@ def use_lldb_substitutions(config):
     build_script = os.path.join(build_script, "build.py")
     build_script_args = [
         build_script,
-        "--compiler=any",  # Default to best compiler
+        (
+            "--compiler=clang" if config.enable_remote else "--compiler=any"
+        ),  # Default to best compiler
         "--arch=" + str(config.lldb_bitness),
     ]
     if config.lldb_lit_tools_dir:
@@ -56,7 +123,7 @@ def use_lldb_substitutions(config):
         ToolSubst(
             "%lldb",
             command=FindTool("lldb"),
-            extra_args=["--no-lldbinit", "-S", lldb_init],
+            extra_args=get_lldb_args(config),
             unresolved="fatal",
         ),
         ToolSubst(
@@ -138,7 +205,10 @@ def use_support_substitutions(config):
     # Set up substitutions for support tools.  These tools can be overridden at the CMake
     # level (by specifying -DLLDB_LIT_TOOLS_DIR), installed, or as a last resort, we can use
     # the just-built version.
-    host_flags = ["--target=" + config.host_triple]
+    if config.enable_remote:
+        host_flags = ["--target=" + config.target_triple]
+    else:
+        host_flags = ["--target=" + config.host_triple]
     if platform.system() in ["Darwin"]:
         try:
             out = subprocess.check_output(["xcrun", "--show-sdk-path"]).strip()
@@ -164,6 +234,12 @@ def use_support_substitutions(config):
 
     if config.cmake_sysroot:
         host_flags += ["--sysroot={}".format(config.cmake_sysroot)]
+
+    if config.enable_remote and config.has_libcxx:
+        host_flags += [
+            "-L{}".format(config.libcxx_libs_dir),
+            "-lc++",
+        ]
 
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))
@@ -207,20 +283,3 @@ def use_support_substitutions(config):
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)
 
     _disallow(config, "clang")
-
-
-def use_lldb_repro_substitutions(config, mode):
-    lldb_init = _get_lldb_init_path(config)
-    substitutions = [
-        ToolSubst(
-            "%lldb",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "--no-lldbinit", "-S", lldb_init],
-        ),
-        ToolSubst(
-            "%lldb-init",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "-S", lldb_init],
-        ),
-    ]
-    llvm_config.add_tool_substitutions(substitutions, [config.lldb_tools_dir])

@@ -17,7 +17,7 @@
 
 #ifndef NDEBUG
 
-namespace __orc_rt {
+namespace orc_rt {
 
 extern std::atomic<const char *> DebugTypes;
 extern char DebugTypesAll;
@@ -27,18 +27,16 @@ const char *initializeDebug();
 bool debugTypeEnabled(const char *Type, const char *Types);
 void printdbg(const char *format, ...);
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 #define ORC_RT_DEBUG_WITH_TYPE(TYPE, X)                                        \
   do {                                                                         \
-    const char *Types =                                                        \
-        ::__orc_rt::DebugTypes.load(std::memory_order_relaxed);                \
+    const char *Types = ::orc_rt::DebugTypes.load(std::memory_order_relaxed);  \
     if (!Types)                                                                \
       Types = initializeDebug();                                               \
     if (Types == &DebugTypesNone)                                              \
       break;                                                                   \
-    if (Types == &DebugTypesAll ||                                             \
-        ::__orc_rt::debugTypeEnabled(TYPE, Types)) {                           \
+    if (Types == &DebugTypesAll || ::orc_rt::debugTypeEnabled(TYPE, Types)) {  \
       X;                                                                       \
     }                                                                          \
   } while (false)

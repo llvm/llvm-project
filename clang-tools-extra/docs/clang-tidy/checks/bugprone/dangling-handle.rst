@@ -28,11 +28,18 @@ Examples:
     return Array;
   }
 
+  span<int> g() {
+    array<int, 1> V;
+    return {V};
+    int Array[10]{};
+    return {Array};
+  }
+
 Options
 -------
 
 .. option:: HandleClasses
 
    A semicolon-separated list of class names that should be treated as handles.
-   By default only ``std::basic_string_view`` and
-   ``std::experimental::basic_string_view`` are considered.
+   By default only ``std::basic_string_view``,
+   ``std::experimental::basic_string_view`` and ``std::span`` are considered.

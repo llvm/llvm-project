@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=spm,spmx -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=spm,spmx < %s | llvm-objdump -d --mattr=spm,spmx - | FileCheck -check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=spm,spmx < %s | llvm-objdump -dr --mattr=spm,spmx - | FileCheck -check-prefix=CHECK-INST %s
 
 foo:
-
   spm
   spm Z+
 

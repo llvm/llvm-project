@@ -419,7 +419,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -427,9 +427,10 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot read directly",
+        reg_info->name);
     return error;
   }
 
@@ -487,7 +488,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
           reg_value.SetBytes(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes,
                              reg_info->byte_size, byte_order);
         else {
-          error.SetErrorString("failed to copy ymm register value");
+          error = Status::FromErrorString("failed to copy ymm register value");
           return error;
         }
       }
@@ -496,7 +497,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
           reg_value.SetBytes(m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes,
                              reg_info->byte_size, byte_order);
         else {
-          error.SetErrorString("failed to copy mpx register value");
+          error = Status::FromErrorString("failed to copy mpx register value");
           return error;
         }
       }
@@ -505,19 +506,19 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
           reg_value.SetBytes(m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes,
                              reg_info->byte_size, byte_order);
         else {
-          error.SetErrorString("failed to copy mpx register value");
+          error = Status::FromErrorString("failed to copy mpx register value");
           return error;
         }
       }
 
       if (reg_value.GetType() != RegisterValue::eTypeBytes)
-        error.SetErrorString(
+        error = Status::FromErrorString(
             "write failed - type was expected to be RegisterValue::eTypeBytes");
 
       return error;
     }
 
-    error.SetErrorString("byte order is invalid");
+    error = Status::FromErrorString("byte order is invalid");
     return error;
   }
 
@@ -557,8 +558,8 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
     break;
   default:
     assert(false && "Unhandled data size.");
-    error.SetErrorStringWithFormat("unhandled byte size: %" PRIu32,
-                                   reg_info->byte_size);
+    error = Status::FromErrorStringWithFormat("unhandled byte size: %" PRIu32,
+                                              reg_info->byte_size);
     break;
   }
 
@@ -587,9 +588,9 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
 
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg_index == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   UpdateXSTATEforWrite(reg_index);
 
@@ -617,7 +618,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyYMMtoXSTATE(reg_index, GetByteOrder()))
-          return Status("CopyYMMtoXSTATE() failed");
+          return Status::FromErrorString("CopyYMMtoXSTATE() failed");
       }
 
       if (reg_index >= m_reg_info.first_mpxr &&
@@ -625,7 +626,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         ::memcpy(m_mpx_set.mpxr[reg_index - m_reg_info.first_mpxr].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyMPXtoXSTATE(reg_index))
-          return Status("CopyMPXtoXSTATE() failed");
+          return Status::FromErrorString("CopyMPXtoXSTATE() failed");
       }
 
       if (reg_index >= m_reg_info.first_mpxc &&
@@ -633,7 +634,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         ::memcpy(m_mpx_set.mpxc[reg_index - m_reg_info.first_mpxc].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyMPXtoXSTATE(reg_index))
-          return Status("CopyMPXtoXSTATE() failed");
+          return Status::FromErrorString("CopyMPXtoXSTATE() failed");
       }
     } else {
       // Get pointer to m_xstate->fxsave variable and set the data to it.
@@ -670,8 +671,8 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
           break;
         default:
           assert(false && "Unhandled data size.");
-          return Status("unhandled register data size %" PRIu32,
-                        reg_info->byte_size);
+          return Status::FromErrorStringWithFormat(
+              "unhandled register data size %" PRIu32, reg_info->byte_size);
         }
       }
     }
@@ -682,17 +683,18 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
 
     if (IsAVX(reg_index)) {
       if (!CopyYMMtoXSTATE(reg_index, GetByteOrder()))
-        return Status("CopyYMMtoXSTATE() failed");
+        return Status::FromErrorString("CopyYMMtoXSTATE() failed");
     }
 
     if (IsMPX(reg_index)) {
       if (!CopyMPXtoXSTATE(reg_index))
-        return Status("CopyMPXtoXSTATE() failed");
+        return Status::FromErrorString("CopyMPXtoXSTATE() failed");
     }
     return Status();
   }
-  return Status("failed - register wasn't recognized to be a GPR or an FPR, "
-                "write strategy unknown");
+  return Status::FromErrorString(
+      "failed - register wasn't recognized to be a GPR or an FPR, "
+      "write strategy unknown");
 }
 
 Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
@@ -721,7 +723,7 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
       for (uint32_t reg = m_reg_info.first_ymm; reg <= m_reg_info.last_ymm;
            ++reg) {
         if (!CopyXSTATEtoYMM(reg, byte_order)) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "NativeRegisterContextLinux_x86_64::%s "
               "CopyXSTATEtoYMM() failed for reg num "
               "%" PRIu32,
@@ -735,7 +737,7 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
       for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc;
            ++reg) {
         if (!CopyXSTATEtoMPX(reg)) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "NativeRegisterContextLinux_x86_64::%s "
               "CopyXSTATEtoMPX() failed for reg num "
               "%" PRIu32,
@@ -748,7 +750,8 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
     ::memcpy(dst, m_xstate.get(), sizeof(FPR));
   } else {
     assert(false && "how do we save the floating point registers?");
-    error.SetErrorString("unsure how to save the floating point registers");
+    error = Status::FromErrorString(
+        "unsure how to save the floating point registers");
   }
   /** The following code is specific to Linux x86 based architectures,
    *  where the register orig_eax (32 bit)/orig_rax (64 bit) is set to
@@ -769,14 +772,14 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   Status error;
 
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_x86_64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "data_sp contained mismatched data size, expected {0}, actual {1}",
         REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
@@ -784,10 +787,11 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
 
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux_x86_64::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
   ::memcpy(&m_gpr_x86_64, src, GetRegisterInfoInterface().GetGPRSize());
@@ -814,7 +818,7 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
       for (uint32_t reg = m_reg_info.first_ymm; reg <= m_reg_info.last_ymm;
            ++reg) {
         if (!CopyYMMtoXSTATE(reg, byte_order)) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "NativeRegisterContextLinux_x86_64::%s "
               "CopyYMMtoXSTATE() failed for reg num "
               "%" PRIu32,
@@ -828,7 +832,7 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
       for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc;
            ++reg) {
         if (!CopyMPXtoXSTATE(reg)) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "NativeRegisterContextLinux_x86_64::%s "
               "CopyMPXtoXSTATE() failed for reg num "
               "%" PRIu32,
@@ -906,7 +910,7 @@ Status NativeRegisterContextLinux_x86_64::WriteFPR() {
   case XStateType::XSAVE:
     return WriteRegisterSet(&m_iovec, sizeof(m_xstate->xsave), NT_X86_XSTATE);
   default:
-    return Status("Unrecognized FPR type.");
+    return Status::FromErrorString("Unrecognized FPR type.");
   }
 }
 
@@ -989,7 +993,7 @@ Status NativeRegisterContextLinux_x86_64::ReadFPR() {
     m_xstate_type = XStateType::FXSAVE;
     return error;
   }
-  return Status("Unrecognized FPR type.");
+  return Status::FromErrorString("Unrecognized FPR type.");
 }
 
 bool NativeRegisterContextLinux_x86_64::IsMPX(uint32_t reg_index) const {

@@ -34,19 +34,19 @@
 # NO-PAUTHLR: invalid instruction encoding
 
 [0x1e,0x90,0xc1,0xda]
-# CHECK: autiasppc x0
+# CHECK: autiasppcr x0
 # NO-PAUTHLR: invalid instruction encoding
 
 [0x3e,0x94,0xc1,0xda]
-# CHECK: autibsppc x1
+# CHECK: autibsppcr x1
 # NO-PAUTHLR: invalid instruction encoding
 
 [0xfe,0x93,0xc1,0xda]
-# CHECK: autiasppc xzr
+# CHECK: autiasppcr xzr
 # NO-PAUTHLR: invalid instruction encoding
 
 [0xfe,0x97,0xc1,0xda]
-# CHECK: autibsppc xzr
+# CHECK: autibsppcr xzr
 # NO-PAUTHLR: invalid instruction encoding
 
 [0xfe,0x8b,0xc1,0xda]
@@ -82,11 +82,11 @@
 # NO-PAUTHLR: invalid instruction encoding
 
 [0xe2,0x0b,0x5f,0xd6]
-# CHECK: retaasppc x2
+# CHECK: retaasppcr x2
 # NO-PAUTHLR: invalid instruction encoding
 
 [0xe3,0x0f,0x5f,0xd6]
-# CHECK: retabsppc x3
+# CHECK: retabsppcr x3
 # NO-PAUTHLR: invalid instruction encoding
 
 [0xff,0x24,0x03,0xd5]

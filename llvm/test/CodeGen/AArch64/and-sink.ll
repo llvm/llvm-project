@@ -46,9 +46,8 @@ bb2:
 define dso_local i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-LABEL: and_sink2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    adrp x9, A
-; CHECK-NEXT:    str wzr, [x9, :lo12:A]
+; CHECK-NEXT:    adrp x8, A
+; CHECK-NEXT:    str wzr, [x8, :lo12:A]
 ; CHECK-NEXT:    tbz w1, #0, .LBB1_5
 ; CHECK-NEXT:  // %bb.1: // %bb0.preheader
 ; CHECK-NEXT:    adrp x8, B
@@ -56,17 +55,15 @@ define dso_local i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-NEXT:  .LBB1_2: // %bb0
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str wzr, [x8, :lo12:B]
-; CHECK-NEXT:    tbz w2, #0, .LBB1_6
+; CHECK-NEXT:    tbz w2, #0, .LBB1_5
 ; CHECK-NEXT:  // %bb.3: // %bb1
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    str wzr, [x9, :lo12:C]
 ; CHECK-NEXT:    tbnz w0, #2, .LBB1_2
 ; CHECK-NEXT:  // %bb.4:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:  .LBB1_5: // %common.ret
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_6:
+; CHECK-NEXT:  .LBB1_5:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 

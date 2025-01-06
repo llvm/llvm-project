@@ -17,20 +17,43 @@ using namespace LIBC_NAMESPACE;
 // as long as they are mirrored.
 static void test_interface(bool end_with_send) {
   uint64_t cnt = 0;
-  rpc::Client::Port port = rpc::client.open<RPC_TEST_INTERFACE>();
-  port.send([&](rpc::Buffer *buffer) { buffer->data[0] = end_with_send; });
-  port.send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-  port.recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-  port.send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-  port.recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-  port.send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-  port.send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-  port.recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-  port.recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+  LIBC_NAMESPACE::rpc::Client::Port port =
+      LIBC_NAMESPACE::rpc::client.open<RPC_TEST_INTERFACE>();
+  port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = end_with_send;
+  });
+  port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = cnt = cnt + 1;
+  });
+  port.recv([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    cnt = buffer->data[0];
+  });
+  port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = cnt = cnt + 1;
+  });
+  port.recv([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    cnt = buffer->data[0];
+  });
+  port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = cnt = cnt + 1;
+  });
+  port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = cnt = cnt + 1;
+  });
+  port.recv([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    cnt = buffer->data[0];
+  });
+  port.recv([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+    cnt = buffer->data[0];
+  });
   if (end_with_send)
-    port.send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+    port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
   else
-    port.recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+    port.recv([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
+      cnt = buffer->data[0];
+    });
   port.close();
 
   ASSERT_TRUE(cnt == 9 && "Invalid number of increments");

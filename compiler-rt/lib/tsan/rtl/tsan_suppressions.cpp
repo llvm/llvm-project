@@ -42,7 +42,7 @@ const char *__tsan_default_suppressions() {
 
 namespace __tsan {
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char *kSuppressionTypes[] = {
     kSuppressionRace,   kSuppressionRaceTop, kSuppressionMutex,

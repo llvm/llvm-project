@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; PR28608
 ; Check that we don't crash on this test.
 
-define void @foo() {
+define void @foo(i1 %arg) {
 entry:
   br label %bb1
 
@@ -14,10 +14,10 @@ bb1:
 
 bb2:
   %x = phi i32 [ undef, %bb5 ], [ undef, %bb1 ]
-  br i1 undef, label %bb3, label %bb6
+  br i1 %arg, label %bb3, label %bb6
 
 bb3:
-  br i1 undef, label %bb5, label %bb4
+  br i1 %arg, label %bb5, label %bb4
 
 bb4:
   br label %bb6

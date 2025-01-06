@@ -114,7 +114,7 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   // Replay decision, if it has one
   auto Iter = InlineSitesFromRemarks.find(Combined);
   if (Iter != InlineSitesFromRemarks.end()) {
-    if (InlineSitesFromRemarks[Combined]) {
+    if (Iter->second) {
       LLVM_DEBUG(dbgs() << "Replay Inliner: Inlined " << Callee << " @ "
                         << CallSiteLoc << "\n");
       return std::make_unique<DefaultInlineAdvice>(

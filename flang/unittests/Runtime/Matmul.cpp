@@ -40,7 +40,7 @@ TEST(Matmul, Basic) {
   StaticDescriptor<2, true> statDesc;
   Descriptor &result{statDesc.descriptor()};
 
-  RTNAME(Matmul)(result, *x, *y, __FILE__, __LINE__);
+  RTNAME(MatmulInteger4Integer2)(result, *x, *y, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 2);
@@ -56,14 +56,14 @@ TEST(Matmul, Basic) {
       result.raw().base_addr, 0, result.Elements() * result.ElementBytes());
   result.GetDimension(0).SetLowerBound(0);
   result.GetDimension(1).SetLowerBound(2);
-  RTNAME(MatmulDirect)(result, *x, *y, __FILE__, __LINE__);
+  RTNAME(MatmulDirectInteger4Integer2)(result, *x, *y, __FILE__, __LINE__);
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(0), 46);
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(1), 67);
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(2), 64);
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
-  RTNAME(Matmul)(result, *v, *x, __FILE__, __LINE__);
+  RTNAME(MatmulInteger8Integer4)(result, *v, *x, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 3);
@@ -73,7 +73,7 @@ TEST(Matmul, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(2), -14);
   result.Destroy();
 
-  RTNAME(Matmul)(result, *y, *v, __FILE__, __LINE__);
+  RTNAME(MatmulInteger2Integer8)(result, *y, *v, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 3);
@@ -116,7 +116,7 @@ TEST(Matmul, Basic) {
       /*uppers=*/nullptr, /*strides=*/nullptr)};
   ASSERT_EQ(errorY2, 0) << "CFI_section failed for Y2: " << errorY2;
 
-  RTNAME(Matmul)(result, sectionX2, *y, __FILE__, __LINE__);
+  RTNAME(MatmulInteger4Integer2)(result, sectionX2, *y, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 2);
@@ -129,7 +129,7 @@ TEST(Matmul, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
-  RTNAME(Matmul)(result, *x, sectionY2, __FILE__, __LINE__);
+  RTNAME(MatmulInteger4Integer2)(result, *x, sectionY2, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 2);
@@ -142,7 +142,8 @@ TEST(Matmul, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
-  RTNAME(Matmul)(result, sectionX2, sectionY2, __FILE__, __LINE__);
+  RTNAME(MatmulInteger4Integer2)
+  (result, sectionX2, sectionY2, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 2);
@@ -155,7 +156,7 @@ TEST(Matmul, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(3), 94);
   result.Destroy();
 
-  RTNAME(Matmul)(result, *v, sectionX2, __FILE__, __LINE__);
+  RTNAME(MatmulInteger8Integer4)(result, *v, sectionX2, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 3);
@@ -165,7 +166,7 @@ TEST(Matmul, Basic) {
   EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int64_t>(2), -14);
   result.Destroy();
 
-  RTNAME(Matmul)(result, sectionY2, *v, __FILE__, __LINE__);
+  RTNAME(MatmulInteger2Integer8)(result, sectionY2, *v, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 1);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 3);
@@ -182,7 +183,7 @@ TEST(Matmul, Basic) {
       std::vector<std::uint8_t>{false, false, false, true, true, false})};
   auto yLog{MakeArray<TypeCategory::Logical, 2>(std::vector<int>{3, 2},
       std::vector<std::uint16_t>{false, false, false, true, true, false})};
-  RTNAME(Matmul)(result, *xLog, *yLog, __FILE__, __LINE__);
+  RTNAME(MatmulLogical1Logical2)(result, *xLog, *yLog, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(result.GetDimension(0).Extent(), 2);
@@ -197,4 +198,5 @@ TEST(Matmul, Basic) {
       static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(2)));
   EXPECT_TRUE(
       static_cast<bool>(*result.ZeroBasedIndexedElement<std::uint16_t>(3)));
+  result.Destroy();
 }

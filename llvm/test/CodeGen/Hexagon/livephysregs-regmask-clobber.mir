@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -verify-machineinstrs -run-pass prologepilog -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -verify-machineinstrs -run-pass prologepilog -o - %s | FileCheck %s
 
 # The PS_vstorerw_ai of W0 would normally expand into stores of V0 and V1,
 # but both are clobbered by the regmask. Only V0 is re-defined before the

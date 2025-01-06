@@ -102,7 +102,7 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
     fesetround(FE_TONEAREST);
     if (context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingFailure)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingFailure,
           "TiesAwayFromZero rounding mode is not available when folding "
           "constants"
           " with host runtime; using TiesToEven instead"_warn_en_US);

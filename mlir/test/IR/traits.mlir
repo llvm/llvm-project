@@ -502,6 +502,25 @@ func.func @succeededOilistTrivial() {
 
 // -----
 
+// CHECK-LABEL: @succeededOilistTrivialProperties
+func.func @succeededOilistTrivialProperties() {
+  // CHECK: test.oilist_with_keywords_only_properties keyword
+  test.oilist_with_keywords_only_properties keyword
+  // CHECK: test.oilist_with_keywords_only_properties otherKeyword
+  test.oilist_with_keywords_only_properties otherKeyword
+  // CHECK: test.oilist_with_keywords_only_properties keyword otherKeyword
+  test.oilist_with_keywords_only_properties keyword otherKeyword
+  // CHECK: test.oilist_with_keywords_only_properties keyword otherKeyword
+  test.oilist_with_keywords_only_properties otherKeyword keyword
+  // CHECK: test.oilist_with_keywords_only_properties thirdKeyword
+  test.oilist_with_keywords_only_properties thirdKeyword
+  // CHECK: test.oilist_with_keywords_only_properties keyword thirdKeyword
+  test.oilist_with_keywords_only_properties keyword thirdKeyword
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @succeededOilistSimple
 func.func @succeededOilistSimple(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
   // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32

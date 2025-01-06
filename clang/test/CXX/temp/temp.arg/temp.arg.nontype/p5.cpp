@@ -223,7 +223,7 @@ namespace pointer_to_member_function {
   template<int (Y::*)(int)> struct X0 {}; // expected-note 0-1{{template parameter is declared here}}
   X0<&Y::f> x0a;
   X0<&Y::g> x0b;
-  X0<&Y::h> x0c; // expected-error-re{{type 'float (pointer_to_member_function::Y::*)(float){{( __attribute__\(\(thiscall\)\))?}}' {{.*}} convert{{.*}} 'int (pointer_to_member_function::Y::*)(int){{( __attribute__\(\(thiscall\)\))?}}'}}
+  X0<&Y::h> x0c; // expected-error-re{{type 'float (pointer_to_member_function::Y::*)(float){{( __attribute__\(\(thiscall\)\))?}}' {{.*}} convert{{.*}} 'int (Y::*)(int){{( __attribute__\(\(thiscall\)\))?}}'}}
 }
 
 //     -- For a non-type template-parameter of type pointer to data member,
@@ -238,9 +238,9 @@ namespace pointer_to_member_data {
   X0<&Y::y> x0a;
   X0<&Y::x> x0b;
 #if __cplusplus <= 201402L
-  // expected-error@-2 {{non-type template argument of type 'int pointer_to_member_data::X::*' cannot be converted to a value of type 'int pointer_to_member_data::Y::*'}}
+  // expected-error@-2 {{non-type template argument of type 'int pointer_to_member_data::X::*' cannot be converted to a value of type 'int Y::*'}}
 #else
-  // expected-error@-4 {{conversion from 'int pointer_to_member_data::X::*' to 'int pointer_to_member_data::Y::*' is not allowed in a converted constant expression}}
+  // expected-error@-4 {{conversion from 'int pointer_to_member_data::X::*' to 'int Y::*' is not allowed in a converted constant expression}}
 #endif
 
   // Test qualification conversions

@@ -221,20 +221,20 @@ namespace test1 {
 
   void QualifierTest() {
     void (Qualifiers::*X)();
-    X = &Qualifiers::C; // expected-error-re {{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const': different qualifiers (unqualified vs 'const')}}
-    X = &Qualifiers::V; // expected-error-re{{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile': different qualifiers (unqualified vs 'volatile')}}
-    X = &Qualifiers::R; // expected-error-re{{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} __restrict': different qualifiers (unqualified vs '__restrict')}}
-    X = &Qualifiers::CV; // expected-error-re{{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile': different qualifiers (unqualified vs 'const volatile')}}
-    X = &Qualifiers::CR; // expected-error-re{{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const __restrict': different qualifiers (unqualified vs 'const __restrict')}}
-    X = &Qualifiers::VR; // expected-error-re{{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile __restrict': different qualifiers (unqualified vs 'volatile __restrict')}}
-    X = &Qualifiers::CVR; // expected-error-re{{assigning to 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile __restrict': different qualifiers (unqualified vs 'const volatile __restrict')}}
+    X = &Qualifiers::C; // expected-error-re {{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const': different qualifiers (unqualified vs 'const')}}
+    X = &Qualifiers::V; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile': different qualifiers (unqualified vs 'volatile')}}
+    X = &Qualifiers::R; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} __restrict': different qualifiers (unqualified vs '__restrict')}}
+    X = &Qualifiers::CV; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile': different qualifiers (unqualified vs 'const volatile')}}
+    X = &Qualifiers::CR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const __restrict': different qualifiers (unqualified vs 'const __restrict')}}
+    X = &Qualifiers::VR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile __restrict': different qualifiers (unqualified vs 'volatile __restrict')}}
+    X = &Qualifiers::CVR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile __restrict': different qualifiers (unqualified vs 'const volatile __restrict')}}
   }
 
   struct Dummy {
     void N() {};
   };
 
-  void (Qualifiers::*X)() = &Dummy::N; // expected-error-re{{cannot initialize a variable of type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (test1::Dummy::*)(){{( __attribute__\(\(thiscall\)\))?}}': different classes ('test1::Qualifiers' vs 'test1::Dummy')}}
+  void (Qualifiers::*X)() = &Dummy::N; // expected-error-re{{cannot initialize a variable of type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (test1::Dummy::*)(){{( __attribute__\(\(thiscall\)\))?}}': different classes ('Qualifiers' vs 'test1::Dummy')}}
 }
 
 template <typename T> class PR16561 {

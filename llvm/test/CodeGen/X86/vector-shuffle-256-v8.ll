@@ -831,7 +831,7 @@ define <8 x float> @shuffle_v8f32_002u6u44(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,2,u,6,u,4,4]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 2, i32 undef, i32 6, i32 undef, i32 4, i32 4>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 2, i32 poison, i32 6, i32 poison, i32 4, i32 4>
   ret <8 x float> %shuffle
 }
 
@@ -840,7 +840,7 @@ define <8 x float> @shuffle_v8f32_00uu66uu(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,u,u,6,6,u,u]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 undef, i32 undef, i32 6, i32 6, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 6, i32 6, i32 poison, i32 poison>
   ret <8 x float> %shuffle
 }
 
@@ -849,7 +849,7 @@ define <8 x float> @shuffle_v8f32_103245uu(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,4,5,u,u]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 4, i32 5, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 4, i32 5, i32 poison, i32 poison>
   ret <8 x float> %shuffle
 }
 
@@ -858,7 +858,7 @@ define <8 x float> @shuffle_v8f32_1133uu67(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,3,3,u,u,6,7]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 undef, i32 undef, i32 6, i32 7>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 poison, i32 poison, i32 6, i32 7>
   ret <8 x float> %shuffle
 }
 
@@ -867,7 +867,7 @@ define <8 x float> @shuffle_v8f32_0uu354uu(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,u,u,3,5,4,u,u]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 undef, i32 undef, i32 3, i32 5, i32 4, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 poison, i32 poison, i32 3, i32 5, i32 4, i32 poison, i32 poison>
   ret <8 x float> %shuffle
 }
 
@@ -876,7 +876,7 @@ define <8 x float> @shuffle_v8f32_uuu3uu66(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[u,u,u,3,u,u,6,6]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 6, i32 6>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 6, i32 6>
   ret <8 x float> %shuffle
 }
 
@@ -1320,7 +1320,7 @@ define <8 x float> @shuffle_v8f32_80u1c4u5(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[4],ymm0[4],ymm1[5],ymm0[5]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 8, i32 0, i32 undef, i32 1, i32 12, i32 4, i32 undef, i32 5>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 8, i32 0, i32 poison, i32 1, i32 12, i32 4, i32 poison, i32 5>
   ret <8 x float> %shuffle
 }
 
@@ -1329,7 +1329,7 @@ define <8 x float> @shuffle_v8f32_a2u3e6f7(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[6],ymm0[6],ymm1[7],ymm0[7]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 10, i32 2, i32 undef, i32 3, i32 14, i32 6, i32 15, i32 7>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 10, i32 2, i32 poison, i32 3, i32 14, i32 6, i32 15, i32 7>
   ret <8 x float> %shuffle
 }
 
@@ -1381,7 +1381,7 @@ define <8 x float> @shuffle_v8f32_01452367(<8 x float> %a) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 2, i32 3, i32 6, i32 7>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 2, i32 3, i32 6, i32 7>
   ret <8 x float> %shuffle
 }
 
@@ -1473,7 +1473,7 @@ define <8 x float> @shuffle_v8f32_uuuu1111(<8 x float> %a, <8 x float> %b) {
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 1, i32 1, i32 1>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 1, i32 1, i32 1>
   ret <8 x float> %shuffle
 }
 
@@ -1528,7 +1528,7 @@ define <8 x float> @shuffle_v8f32_1188uuuu(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[0,0]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 8, i32 8, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 8, i32 8, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %shuffle
 }
 
@@ -1538,7 +1538,7 @@ define <8 x float> @shuffle_v8f32_uuuu3210(<8 x float> %a, <8 x float> %b) {
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 3, i32 2, i32 1, i32 0>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 3, i32 2, i32 1, i32 0>
   ret <8 x float> %shuffle
 }
 
@@ -1548,7 +1548,7 @@ define <8 x float> @shuffle_v8f32_uuuu1188(<8 x float> %a, <8 x float> %b) {
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[0,0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 1, i32 8, i32 8>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 1, i32 8, i32 8>
   ret <8 x float> %shuffle
 }
 
@@ -1557,7 +1557,7 @@ define <8 x float> @shuffle_v8f32_1111uuuu(<8 x float> %a, <8 x float> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %shuffle
 }
 
@@ -1567,7 +1567,7 @@ define <8 x float> @shuffle_v8f32_5555uuuu(<8 x float> %a, <8 x float> %b) {
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %shuffle
 }
 
@@ -1578,8 +1578,8 @@ define <8 x float> @shuffle_v8f32_32107654_v4f32(<4 x float> %a, <4 x float> %b)
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; ALL-NEXT:    retq
-  %1 = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %2 = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %1 = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %2 = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %3 = shufflevector <4 x float> %1, <4 x float> %2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %3
 }
@@ -2529,7 +2529,7 @@ define <8 x i32> @shuffle_v8i32_002u6u44(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,0,2,u,6,u,4,4]
 ; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 0, i32 2, i32 undef, i32 6, i32 undef, i32 4, i32 4>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 0, i32 2, i32 poison, i32 6, i32 poison, i32 4, i32 4>
   ret <8 x i32> %shuffle
 }
 
@@ -2544,7 +2544,7 @@ define <8 x i32> @shuffle_v8i32_00uu66uu(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,0,u,u,6,6,u,u]
 ; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 0, i32 undef, i32 undef, i32 6, i32 6, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 6, i32 6, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -2559,7 +2559,7 @@ define <8 x i32> @shuffle_v8i32_103245uu(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [1,0,3,2,4,5,u,u]
 ; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 4, i32 5, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 4, i32 5, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -2574,7 +2574,7 @@ define <8 x i32> @shuffle_v8i32_1133uu67(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [1,1,3,3,u,u,6,7]
 ; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 undef, i32 undef, i32 6, i32 7>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 poison, i32 poison, i32 6, i32 7>
   ret <8 x i32> %shuffle
 }
 
@@ -2589,7 +2589,7 @@ define <8 x i32> @shuffle_v8i32_0uu354uu(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,u,u,3,5,4,u,u]
 ; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 undef, i32 undef, i32 3, i32 5, i32 4, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 poison, i32 poison, i32 3, i32 5, i32 4, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -2604,7 +2604,7 @@ define <8 x i32> @shuffle_v8i32_uuu3uu66(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [u,u,u,3,u,u,6,6]
 ; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 6, i32 6>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 6, i32 6>
   ret <8 x i32> %shuffle
 }
 
@@ -3069,7 +3069,7 @@ define <8 x i32> @shuffle_v8i32_zuu8zuuc(<8 x i32> %a) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vpslldq {{.*#+}} ymm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,18,19]
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> zeroinitializer, <8 x i32> %a, <8 x i32> <i32 0, i32 undef, i32 undef, i32 8, i32 0, i32 undef, i32 undef, i32 12>
+  %shuffle = shufflevector <8 x i32> zeroinitializer, <8 x i32> %a, <8 x i32> <i32 0, i32 poison, i32 poison, i32 8, i32 0, i32 poison, i32 poison, i32 12>
   ret <8 x i32> %shuffle
 }
 
@@ -3085,7 +3085,7 @@ define <8 x i32> @shuffle_v8i32_9ubzdefz(<8 x i32> %a) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vpsrldq {{.*#+}} ymm0 = ymm0[4,5,6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,ymm0[20,21,22,23,24,25,26,27,28,29,30,31],zero,zero,zero,zero
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> zeroinitializer, <8 x i32> %a, <8 x i32> <i32 9, i32 undef, i32 11, i32 0, i32 13, i32 14, i32 15, i32 0>
+  %shuffle = shufflevector <8 x i32> zeroinitializer, <8 x i32> %a, <8 x i32> <i32 9, i32 poison, i32 11, i32 0, i32 13, i32 14, i32 15, i32 0>
   ret <8 x i32> %shuffle
 }
 
@@ -3094,7 +3094,7 @@ define <8 x i32> @shuffle_v8i32_80u1b4uu(<8 x i32> %a, <8 x i32> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[4],ymm0[4],ymm1[5],ymm0[5]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 8, i32 0, i32 undef, i32 1, i32 12, i32 4, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 8, i32 0, i32 poison, i32 1, i32 12, i32 4, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -3104,7 +3104,7 @@ define <8 x i32> @shuffle_v8i32_uuuu1111(<8 x i32> %a, <8 x i32> %b) {
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 1, i32 1, i32 1>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %shuffle
 }
 
@@ -3113,7 +3113,7 @@ define <8 x i32> @shuffle_v8i32_2222uuuu(<8 x i32> %a, <8 x i32> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -3122,7 +3122,7 @@ define <8 x i32> @shuffle_v8i32_2A3Buuuu(<8 x i32> %a, <8 x i32> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -3226,7 +3226,7 @@ define <8 x i32> @shuffle_v8i32_5555uuuu(<8 x i32> %a, <8 x i32> %b) {
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -3271,7 +3271,7 @@ define <8 x i32> @shuffle_v8i32_uuuuuu7u(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,3,3,3,7,7,7,7]
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 7, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -3282,8 +3282,8 @@ define <8 x i32> @shuffle_v8i32_32107654_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; ALL-NEXT:    retq
-  %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %2 = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %1 = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %2 = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %3 = shufflevector <4 x i32> %1, <4 x i32> %2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %3
 }
@@ -3305,8 +3305,8 @@ define <8 x float> @splat_mem_v8f32_2(ptr %p) {
 ; ALL-NEXT:    vbroadcastss (%rdi), %ymm0
 ; ALL-NEXT:    retq
   %1 = load float, ptr %p
-  %2 = insertelement <4 x float> undef, float %1, i32 0
-  %3 = shufflevector <4 x float> %2, <4 x float> undef, <8 x i32> zeroinitializer
+  %2 = insertelement <4 x float> poison, float %1, i32 0
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <8 x i32> zeroinitializer
   ret <8 x float> %3
 }
 
@@ -3321,7 +3321,7 @@ define <8 x float> @splat_v8f32(<4 x float> %r) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %1 = shufflevector <4 x float> %r, <4 x float> undef, <8 x i32> zeroinitializer
+  %1 = shufflevector <4 x float> %r, <4 x float> poison, <8 x i32> zeroinitializer
   ret <8 x float> %1
 }
 
@@ -3341,7 +3341,7 @@ define <8 x i32> @shuffle_v8i32_z0U2zUz6(<8 x i32> %a) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vpsllq $32, %ymm0, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 8, i32 0, i32 undef, i32 2, i32 8, i32 undef, i32 8, i32 6>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 8, i32 0, i32 poison, i32 2, i32 8, i32 poison, i32 8, i32 6>
   ret <8 x i32> %shuffle
 }
 
@@ -3357,7 +3357,7 @@ define <8 x i32> @shuffle_v8i32_1U3z5zUU(<8 x i32> %a) {
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX2OR512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 1, i32 undef, i32 3, i32 8, i32 5, i32 8, i32 undef, i32 undef>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 1, i32 poison, i32 3, i32 8, i32 5, i32 8, i32 poison, i32 poison>
   ret <8 x i32> %shuffle
 }
 
@@ -3448,9 +3448,9 @@ define <8x float> @concat_v2f32_1(ptr %tmp64, ptr %tmp65) {
 entry:
   %tmp74 = load <2 x float>, ptr %tmp65, align 8
   %tmp72 = load <2 x float>, ptr %tmp64, align 8
-  %tmp73 = shufflevector <2 x float> %tmp72, <2 x float> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp75 = shufflevector <2 x float> %tmp74, <2 x float> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp76 = shufflevector <8 x float> %tmp73, <8 x float> %tmp75, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp73 = shufflevector <2 x float> %tmp72, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp75 = shufflevector <2 x float> %tmp74, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp76 = shufflevector <8 x float> %tmp73, <8 x float> %tmp75, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %tmp76
 }
 
@@ -3463,7 +3463,7 @@ define <8x float> @concat_v2f32_2(ptr %tmp64, ptr %tmp65) {
 entry:
   %tmp74 = load <2 x float>, ptr %tmp65, align 8
   %tmp72 = load <2 x float>, ptr %tmp64, align 8
-  %tmp76 = shufflevector <2 x float> %tmp72, <2 x float> %tmp74, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp76 = shufflevector <2 x float> %tmp72, <2 x float> %tmp74, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %tmp76
 }
 
@@ -3477,7 +3477,7 @@ entry:
   %tmp74 = load <2 x float>, ptr %tmp65, align 8
   %tmp72 = load <2 x float>, ptr %tmp64, align 8
   %tmp76 = shufflevector <2 x float> %tmp72, <2 x float> %tmp74, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res = shufflevector <4 x float> %tmp76, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %res = shufflevector <4 x float> %tmp76, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %res
 }
 
@@ -3487,7 +3487,7 @@ define <8 x i32> @insert_mem_and_zero_v8i32(ptr %ptr) {
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    retq
   %a = load i32, ptr %ptr
-  %v = insertelement <8 x i32> undef, i32 %a, i32 0
+  %v = insertelement <8 x i32> poison, i32 %a, i32 0
   %shuffle = shufflevector <8 x i32> %v, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %shuffle
 }
@@ -3497,8 +3497,8 @@ define <8 x i32> @concat_v8i32_0123CDEF(<8 x i32> %a, <8 x i32> %b) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; ALL-NEXT:    retq
-  %alo = shufflevector <8 x i32> %a, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %bhi = shufflevector <8 x i32> %b, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %alo = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %bhi = shufflevector <8 x i32> %b, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %shuf = shufflevector <4 x i32> %alo, <4 x i32> %bhi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %shuf
 }
@@ -3529,8 +3529,8 @@ define <8 x float> @concat_v8f32_4567CDEF_bc(<8 x float> %f0, <8 x float> %f1) {
 ; ALL-NEXT:    retq
   %a0 = bitcast <8 x float> %f0 to <4 x i64>
   %a1 = bitcast <8 x float> %f1 to <8 x i32>
-  %a0hi = shufflevector <4 x i64> %a0, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-  %a1hi = shufflevector <8 x i32> %a1, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %a0hi = shufflevector <4 x i64> %a0, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+  %a1hi = shufflevector <8 x i32> %a1, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %bc0hi = bitcast <2 x i64> %a0hi to <2 x i64>
   %bc1hi = bitcast <4 x i32> %a1hi to <2 x i64>
   %shuffle64 = shufflevector <2 x i64> %bc0hi, <2 x i64> %bc1hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -3545,7 +3545,7 @@ define <8 x i32> @insert_dup_mem_v8i32(ptr %ptr) {
 ; ALL-NEXT:    retq
   %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
-  %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <8 x i32> zeroinitializer
+  %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> poison, <8 x i32> zeroinitializer
   ret <8 x i32> %tmp2
 }
 
@@ -3589,7 +3589,7 @@ define <8 x i32> @shuffle_v8i32_12345670(<8 x i32> %a) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    valignd {{.*#+}} ymm0 = ymm0[1,2,3,4,5,6,7,0]
 ; AVX512VL-NEXT:    retq
-  %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
   ret <8 x i32> %shuffle
 }
 
@@ -3723,7 +3723,7 @@ entry:
   %tmp1 = extractelement <4 x i64> %bc, i32 3
   %tmp2 = bitcast i64 %tmp1 to <2 x float>
   %tmp4 = extractelement <2 x float> %tmp2, i32 1
-  %tmp5 = insertelement <8 x float> undef, float %tmp4, i32 4
+  %tmp5 = insertelement <8 x float> poison, float %tmp4, i32 4
   %tmp6 = insertelement <8 x float> %tmp5, float %z, i32 5
   ret <8 x float> %tmp6
 }
@@ -3736,7 +3736,7 @@ define <8 x i32> @unpckh_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; ALL-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
-  %unpckh = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 15, i32 undef, i32 undef, i32 undef, i32 undef>
+  %unpckh = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 15, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %unpckh
 }
 
@@ -3748,7 +3748,7 @@ define <8 x float> @unpckh_v8f32(<8 x float> %x, <8 x float> %y) {
 ; ALL-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
-  %unpckh = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 15, i32 undef, i32 undef, i32 undef, i32 undef>
+  %unpckh = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 15, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %unpckh
 }
 
@@ -3761,7 +3761,7 @@ define <8 x i32> @blend_perm_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
   %unpckh = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
-  %r = shufflevector <8 x i32> %unpckh, <8 x i32> undef, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %r = shufflevector <8 x i32> %unpckh, <8 x i32> poison, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %r
 }
 
@@ -3774,7 +3774,7 @@ define <8 x float> @blend_perm_v8f32(<8 x float> %x, <8 x float> %y) {
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
   %unpckh = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
-  %r = shufflevector <8 x float> %unpckh, <8 x float> undef, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %r = shufflevector <8 x float> %unpckh, <8 x float> poison, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %r
 }
 
@@ -3786,7 +3786,7 @@ define <8 x i32> @unpckh_v8i32_unary(<8 x i32> %x) {
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
-  %r = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %r = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %r
 }
 
@@ -3798,7 +3798,7 @@ define <8 x float> @unpckh_v8f32_unary(<8 x float> %x) {
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ALL-NEXT:    retq
-  %r = shufflevector <8 x float> %x, <8 x float> undef, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %r = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 2, i32 6, i32 3, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %r
 }
 
@@ -3824,7 +3824,7 @@ define <8 x i32> @lowhalf_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [2,14,3,14]
 ; AVX512VL-NEXT:    vpermt2d %ymm1, %ymm2, %ymm0
 ; AVX512VL-NEXT:    retq
-  %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 14, i32 undef, i32 undef, i32 undef, i32 undef>
+  %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 14, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %r
 }
 
@@ -3850,7 +3850,7 @@ define <8 x float> @lowhalf_v8f32(<8 x float> %x, <8 x float> %y) {
 ; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm2 = [2,14,3,14]
 ; AVX512VL-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
 ; AVX512VL-NEXT:    retq
-  %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 14, i32 undef, i32 undef, i32 undef, i32 undef>
+  %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 14, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %r
 }
 

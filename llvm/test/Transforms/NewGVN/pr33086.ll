@@ -3,10 +3,10 @@
 ; REQUIRES: asserts
 
 
-define void @tinkywinky() {
-; CHECK-LABEL: define void @tinkywinky() {
+define void @tinkywinky(i1 %arg) {
+; CHECK-LABEL: define void @tinkywinky(i1 %arg) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND18:%.*]], label [[FOR_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_COND18:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND2THREAD_PRE_SPLIT:%.*]]
 ; CHECK:       for.cond2thread-pre-split:
@@ -28,7 +28,7 @@ define void @tinkywinky() {
 ; CHECK-NEXT:    br label [[L1]]
 ;
 entry:
-  br i1 undef, label %for.cond18, label %for.cond.preheader
+  br i1 %arg, label %for.cond18, label %for.cond.preheader
 
 for.cond.preheader:
   br label %for.cond2thread-pre-split

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -triple=riscv32 -mattr=+experimental-zicfiss,+c -riscv-no-aliases -show-encoding \
+# RUN: not llvm-mc %s -triple=riscv32 -mattr=+experimental-zicfiss,+c -M no-aliases -show-encoding \
 # RUN:     2>&1 | FileCheck -check-prefixes=CHECK-ERR %s
 
 # CHECK-ERR: error: invalid operand for instruction

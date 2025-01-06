@@ -208,8 +208,8 @@ std::unique_ptr<Module> llvm::CloneModule(
   // And named metadata....
   for (const NamedMDNode &NMD : M.named_metadata()) {
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    for (const MDNode *N : NMD.operands())
+      NewNMD->addOperand(MapMetadata(N, VMap));
   }
 
   return New;

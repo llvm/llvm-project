@@ -19,7 +19,6 @@
 #include "R600ISelLowering.h"
 #include "R600InstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "R600GenSubtargetInfo.inc"
@@ -41,11 +40,13 @@ private:
   Generation Gen = R600;
   R600TargetLowering TLInfo;
   InstrItineraryData InstrItins;
-  SelectionDAGTargetInfo TSInfo;
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
 
 public:
   R600Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                 const TargetMachine &TM);
+
+  ~R600Subtarget() override;
 
   const R600InstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
@@ -65,10 +66,7 @@ public:
     return &InstrItins;
   }
 
-  // Nothing implemented, just prevent crashes on use.
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
@@ -159,6 +157,12 @@ public:
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
     return AMDGPU::IsaInfo::getMinWavesPerEU(this);
+  }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
   }
 };
 

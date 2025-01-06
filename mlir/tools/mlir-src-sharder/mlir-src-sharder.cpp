@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     // any.
     if (auto existingOrErr =
             llvm::MemoryBuffer::getFile(outputFilename, /*IsText=*/true))
-      if (std::move(existingOrErr.get())->getBuffer() == os.str())
+      if (std::move(existingOrErr.get())->getBuffer() == outputStr)
         shouldWriteOutput = false;
   }
 

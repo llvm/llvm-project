@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -I%S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -I%S -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <typeinfo>
 

@@ -331,9 +331,9 @@ private:
   lldb_private::TypeFromParser m_result_type;
   /// The module being processed, or NULL if that has not been determined yet.
   llvm::Module *m_module = nullptr;
-  /// The target data for the module being processed, or NULL if there is no
+  /// The target data for the module being processed, or nullptr if there is no
   /// module.
-  std::unique_ptr<llvm::DataLayout> m_target_data;
+  const llvm::DataLayout *m_target_data = nullptr;
   /// The DeclMap containing the Decls
   lldb_private::ClangExpressionDeclMap *m_decl_map;
   /// The address of the function CFStringCreateWithBytes, cast to the

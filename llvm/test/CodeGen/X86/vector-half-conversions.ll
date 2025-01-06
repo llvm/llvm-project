@@ -4966,22 +4966,14 @@ define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
 ;
 ; F16C-LABEL: fptosi_2f16_to_4i32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpsrld $16, %xmm0, %xmm1
-; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; F16C-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; F16C-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: fptosi_2f16_to_4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    retq
@@ -4990,6 +4982,7 @@ define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
   ret <4 x i32> %ext
 }
 
+; PR83402
 define <4 x i32> @fptosi_4f16_to_4i32(<4 x half> %a) nounwind {
 ; AVX-LABEL: fptosi_4f16_to_4i32:
 ; AVX:       # %bb.0:
@@ -5024,16 +5017,14 @@ define <4 x i32> @fptosi_4f16_to_4i32(<4 x half> %a) nounwind {
 ;
 ; F16C-LABEL: fptosi_4f16_to_4i32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvttps2dq %xmm0, %xmm0
-; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: fptosi_4f16_to_4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = fptosi <4 x half> %a to <4 x i32>
   ret <4 x i32> %cvt
@@ -5085,11 +5076,9 @@ define <4 x i32> @fptoui_2f16_to_4i32(<2 x half> %a) nounwind {
 ;
 ; F16C-LABEL: fptoui_2f16_to_4i32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpsrld $16, %xmm0, %xmm1
-; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; F16C-NEXT:    vcvttps2dq %xmm0, %xmm1
 ; F16C-NEXT:    vpsrad $31, %xmm1, %xmm2
 ; F16C-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -5101,11 +5090,9 @@ define <4 x i32> @fptoui_2f16_to_4i32(<2 x half> %a) nounwind {
 ;
 ; AVX512F-LABEL: fptoui_2f16_to_4i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512F-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512F-NEXT:    vzeroupper
@@ -5113,11 +5100,7 @@ define <4 x i32> @fptoui_2f16_to_4i32(<2 x half> %a) nounwind {
 ;
 ; AVX512-FASTLANE-LABEL: fptoui_2f16_to_4i32:
 ; AVX512-FASTLANE:       # %bb.0:
-; AVX512-FASTLANE-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512-FASTLANE-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-FASTLANE-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512-FASTLANE-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-FASTLANE-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512-FASTLANE-NEXT:    vcvttps2udq %xmm0, %xmm0
 ; AVX512-FASTLANE-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-FASTLANE-NEXT:    retq
@@ -5213,19 +5196,17 @@ define <4 x i32> @fptoui_4f16_to_4i32(<4 x half> %a) nounwind {
 ;
 ; F16C-LABEL: fptoui_4f16_to_4i32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
-; F16C-NEXT:    vcvttps2dq %ymm0, %ymm1
-; F16C-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; F16C-NEXT:    vcvttps2dq %ymm0, %ymm0
-; F16C-NEXT:    vorps %ymm0, %ymm1, %ymm0
-; F16C-NEXT:    vblendvps %ymm1, %ymm0, %ymm1, %ymm0
-; F16C-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; F16C-NEXT:    vzeroupper
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    vcvttps2dq %xmm0, %xmm1
+; F16C-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-NEXT:    vcvttps2dq %xmm0, %xmm0
+; F16C-NEXT:    vorps %xmm0, %xmm1, %xmm0
+; F16C-NEXT:    vblendvps %xmm1, %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512F-LABEL: fptoui_4f16_to_4i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -5233,10 +5214,8 @@ define <4 x i32> @fptoui_4f16_to_4i32(<4 x half> %a) nounwind {
 ;
 ; AVX512-FASTLANE-LABEL: fptoui_4f16_to_4i32:
 ; AVX512-FASTLANE:       # %bb.0:
-; AVX512-FASTLANE-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX512-FASTLANE-NEXT:    vcvttps2udq %ymm0, %ymm0
-; AVX512-FASTLANE-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512-FASTLANE-NEXT:    vzeroupper
+; AVX512-FASTLANE-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-FASTLANE-NEXT:    vcvttps2udq %xmm0, %xmm0
 ; AVX512-FASTLANE-NEXT:    retq
   %cvt = fptoui <4 x half> %a to <4 x i32>
   ret <4 x i32> %cvt

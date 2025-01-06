@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 
 class CppBitfieldsTestCase(TestBase):
     @no_debug_info_test
+    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/105019")
     def test_bitfields(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

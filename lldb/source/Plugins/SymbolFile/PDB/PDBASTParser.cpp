@@ -420,7 +420,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
       clang_type = m_ast.CreateRecordType(
           decl_context, OptionalClangModuleID(), access, name, tag_type_kind,
-          lldb::eLanguageTypeC_plus_plus, &metadata);
+          lldb::eLanguageTypeC_plus_plus, metadata);
       assert(clang_type.IsValid());
 
       auto record_decl =

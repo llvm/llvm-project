@@ -9,10 +9,11 @@
 #include "pthread_condattr_destroy.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_destroy,
                    (pthread_condattr_t * attr [[gnu::unused]])) {
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, pthread_condattr_destroy,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

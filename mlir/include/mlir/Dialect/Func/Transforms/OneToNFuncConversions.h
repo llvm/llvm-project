@@ -18,7 +18,7 @@ namespace mlir {
 
 // Populates the provided pattern set with patterns that do 1:N type conversions
 // on func ops. This is intended to be used with `applyPartialOneToNConversion`.
-void populateFuncTypeConversionPatterns(TypeConverter &typeConverter,
+void populateFuncTypeConversionPatterns(const TypeConverter &typeConverter,
                                         RewritePatternSet &patterns);
 
 } // namespace mlir

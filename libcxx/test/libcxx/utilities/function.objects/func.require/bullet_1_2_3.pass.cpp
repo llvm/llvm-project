@@ -56,8 +56,9 @@
 //       objects that are equally or less cv-qualified.
 
 #include <functional>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "invoke_helpers.h"

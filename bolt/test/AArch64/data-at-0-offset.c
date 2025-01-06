@@ -1,4 +1,4 @@
-// RUN: %clang %cflags -O2 -fPIE -Wl,-q -pie  %s -o %t.exe
+// RUN: %clang %cflags -O2 -fPIE -std=gnu99 -Wl,-q -pie  %s -o %t.exe
 // RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
 // CHECK-NOT: BOLT-WARNING: unable to disassemble instruction at offset
 

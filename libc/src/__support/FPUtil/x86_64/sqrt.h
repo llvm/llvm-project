@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_SQRT_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
@@ -19,7 +20,7 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <> LIBC_INLINE float sqrt<float>(float x) {
@@ -48,6 +49,6 @@ template <> LIBC_INLINE long double sqrt<long double>(long double x) {
 #endif
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_SQRT_H

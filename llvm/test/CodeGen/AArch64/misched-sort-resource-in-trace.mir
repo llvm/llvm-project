@@ -1,11 +1,11 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=exynos-m3 -verify-machineinstrs \
 # RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
-# RUN:  -misched-topdown=true -sched-print-cycles=true \
+# RUN:  -misched-prera-direction=topdown -sched-print-cycles=true \
 # RUN:  -misched-dump-schedule-trace=true --misched-sort-resources-in-trace=true 2>&1 | FileCheck --check-prefix=SORTED %s
 
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=exynos-m3 -verify-machineinstrs \
 # RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
-# RUN:  -misched-topdown=true -sched-print-cycles=true \
+# RUN:  -misched-prera-direction=topdown -sched-print-cycles=true \
 # RUN:  -misched-dump-schedule-trace=true --misched-sort-resources-in-trace=false 2>&1 | FileCheck --check-prefix=UNSORTED %s
 
 # REQUIRES: asserts, aarch64-registered-target

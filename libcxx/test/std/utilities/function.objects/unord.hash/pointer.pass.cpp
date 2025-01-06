@@ -19,10 +19,10 @@
 
 // Not very portable
 
-#include <functional>
 #include <cassert>
+#include <cstddef>
+#include <functional>
 #include <type_traits>
-#include <limits>
 
 #include "test_macros.h"
 

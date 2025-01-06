@@ -1,0 +1,8 @@
+# Check that llvm-bolt can overwrite .eh_frame section in-place.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
+RUN: llvm-bolt %t -o %t.bolt --strict | FileCheck %s
+
+CHECK: rewriting .eh_frame in-place

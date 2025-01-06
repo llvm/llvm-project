@@ -136,6 +136,8 @@ void ABIAArch64::AugmentRegisterInfo(
 
   std::array<std::optional<uint32_t>, 32> x_regs;
   std::array<std::optional<uint32_t>, 32> v_regs;
+  std::array<std::optional<uint32_t>, 32> z_regs;
+  std::optional<uint32_t> z_byte_size;
 
   for (auto it : llvm::enumerate(regs)) {
     lldb_private::DynamicRegisterInfo::Register &info = it.value();
@@ -157,16 +159,44 @@ void ABIAArch64::AugmentRegisterInfo(
       x_regs[reg_num] = it.index();
     else if (get_reg("v"))
       v_regs[reg_num] = it.index();
+    else if (get_reg("z")) {
+      z_regs[reg_num] = it.index();
+      if (!z_byte_size)
+        z_byte_size = info.byte_size;
+    }
     // if we have at least one subregister, abort
     else if (get_reg("w") || get_reg("s") || get_reg("d"))
       return;
   }
 
-  // Create aliases for partial registers: wN for xN, and sN/dN for vN.
+  // Create aliases for partial registers.
+
+  // Wn for Xn.
   addPartialRegisters(regs, x_regs, 8, "w{0}", 4, lldb::eEncodingUint,
                       lldb::eFormatHex);
-  addPartialRegisters(regs, v_regs, 16, "s{0}", 4, lldb::eEncodingIEEE754,
-                      lldb::eFormatFloat);
-  addPartialRegisters(regs, v_regs, 16, "d{0}", 8, lldb::eEncodingIEEE754,
-                      lldb::eFormatFloat);
+
+  auto bool_predicate = [](const auto &reg_num) { return bool(reg_num); };
+  bool saw_v_regs = std::any_of(v_regs.begin(), v_regs.end(), bool_predicate);
+  bool saw_z_regs = std::any_of(z_regs.begin(), z_regs.end(), bool_predicate);
+
+  // Sn/Dn for Vn.
+  if (saw_v_regs) {
+    addPartialRegisters(regs, v_regs, 16, "s{0}", 4, lldb::eEncodingIEEE754,
+                        lldb::eFormatFloat);
+    addPartialRegisters(regs, v_regs, 16, "d{0}", 8, lldb::eEncodingIEEE754,
+                        lldb::eFormatFloat);
+  } else if (saw_z_regs && z_byte_size) {
+    // When SVE is enabled, some debug stubs will not describe the Neon V
+    // registers because they can be read from the bottom 128 bits of the SVE
+    // registers.
+
+    // The size used here is the one sent by the debug server. This only needs
+    // to be correct right now. Later we will rely on the value of vg instead.
+    addPartialRegisters(regs, z_regs, *z_byte_size, "v{0}", 16,
+                        lldb::eEncodingVector, lldb::eFormatVectorOfUInt8);
+    addPartialRegisters(regs, z_regs, *z_byte_size, "s{0}", 4,
+                        lldb::eEncodingIEEE754, lldb::eFormatFloat);
+    addPartialRegisters(regs, z_regs, *z_byte_size, "d{0}", 8,
+                        lldb::eEncodingIEEE754, lldb::eFormatFloat);
+  }
 }

@@ -19,4 +19,5 @@ add_mlir_dialect_library(MLIRMemRefTransformOps
   MLIRNVGPUDialect
   MLIRTransformDialect
   MLIRVectorDialect
+  MLIRVectorTransforms
 )

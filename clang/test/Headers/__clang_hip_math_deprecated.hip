@@ -21,7 +21,7 @@ extern "C" __device__ _Float16 test_rcpf16_wrapper(_Float16 x) {
 
 // CHECK-LABEL: @test_rcp2f16_wrapper(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DIV_I:%.*]] = fdiv contract <2 x half> <half 0xH3C00, half 0xH3C00>, [[X:%.*]]
+// CHECK-NEXT:    [[DIV_I:%.*]] = fdiv contract <2 x half> splat (half 0xH3C00), [[X:%.*]]
 // CHECK-NEXT:    ret <2 x half> [[DIV_I]]
 //
 extern "C" __device__ __2f16 test_rcp2f16_wrapper(__2f16 x) {

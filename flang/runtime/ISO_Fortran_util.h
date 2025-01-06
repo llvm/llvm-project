@@ -86,7 +86,7 @@ static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor,
   descriptor->rank = rank;
   descriptor->type = type;
   descriptor->attribute = attribute;
-  descriptor->f18Addendum = 0;
+  descriptor->extra = 0;
   std::size_t byteSize{elem_len};
   constexpr std::size_t lower_bound{0};
   if (base_addr) {

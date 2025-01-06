@@ -23,10 +23,9 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
     const typeInfo::Component &comp, const Descriptor &derivedInstance) {
   const typeInfo::Value *bounds{comp.bounds()};
   for (int dim{0}; dim < comp.rank(); ++dim) {
-    SubscriptValue lb{bounds[2 * dim].GetValue(&derivedInstance).value_or(0)};
-    SubscriptValue ub{
-        bounds[2 * dim + 1].GetValue(&derivedInstance).value_or(0)};
-    extents[dim] = ub >= lb ? ub - lb + 1 : 0;
+    auto lb{bounds[2 * dim].GetValue(&derivedInstance).value_or(0)};
+    auto ub{bounds[2 * dim + 1].GetValue(&derivedInstance).value_or(0)};
+    extents[dim] = ub >= lb ? static_cast<SubscriptValue>(ub - lb + 1) : 0;
   }
 }
 
@@ -118,6 +117,84 @@ RT_API_ATTRS int Initialize(const Descriptor &instance,
       auto &pptr{*instance.ElementComponent<typeInfo::ProcedurePointer>(
           at, comp.offset)};
       pptr = comp.procInitialization;
+    }
+  }
+  return stat;
+}
+
+RT_API_ATTRS int InitializeClone(const Descriptor &clone,
+    const Descriptor &orig, const typeInfo::DerivedType &derived,
+    Terminator &terminator, bool hasStat, const Descriptor *errMsg) {
+  const Descriptor &componentDesc{derived.component()};
+  std::size_t elements{orig.Elements()};
+  int stat{StatOk};
+
+  // Initialize each data component.
+  std::size_t components{componentDesc.Elements()};
+  for (std::size_t i{0}; i < components; ++i) {
+    const typeInfo::Component &comp{
+        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(i)};
+    SubscriptValue at[maxRank];
+    orig.GetLowerBounds(at);
+    // Allocate allocatable components that are also allocated in the original
+    // object.
+    if (comp.genre() == typeInfo::Component::Genre::Allocatable) {
+      // Initialize each element.
+      for (std::size_t j{0}; j < elements; ++j, orig.IncrementSubscripts(at)) {
+        Descriptor &origDesc{
+            *orig.ElementComponent<Descriptor>(at, comp.offset())};
+        Descriptor &cloneDesc{
+            *clone.ElementComponent<Descriptor>(at, comp.offset())};
+        if (origDesc.IsAllocated()) {
+          cloneDesc.ApplyMold(origDesc, origDesc.rank());
+          stat = ReturnError(terminator, cloneDesc.Allocate(), errMsg, hasStat);
+          if (stat == StatOk) {
+            if (const DescriptorAddendum * addendum{cloneDesc.Addendum()}) {
+              if (const typeInfo::DerivedType *
+                  derived{addendum->derivedType()}) {
+                if (!derived->noInitializationNeeded()) {
+                  // Perform default initialization for the allocated element.
+                  stat = Initialize(
+                      cloneDesc, *derived, terminator, hasStat, errMsg);
+                }
+                // Initialize derived type's allocatables.
+                if (stat == StatOk) {
+                  stat = InitializeClone(cloneDesc, origDesc, *derived,
+                      terminator, hasStat, errMsg);
+                }
+              }
+            }
+          }
+        }
+        if (stat != StatOk) {
+          break;
+        }
+      }
+    } else if (comp.genre() == typeInfo::Component::Genre::Data &&
+        comp.derivedType()) {
+      // Handle nested derived types.
+      const typeInfo::DerivedType &compType{*comp.derivedType()};
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, comp, orig);
+      // Data components don't have descriptors, allocate them.
+      StaticDescriptor<maxRank, true, 0> origStaticDesc;
+      StaticDescriptor<maxRank, true, 0> cloneStaticDesc;
+      Descriptor &origDesc{origStaticDesc.descriptor()};
+      Descriptor &cloneDesc{cloneStaticDesc.descriptor()};
+      // Initialize each element.
+      for (std::size_t j{0}; j < elements; ++j, orig.IncrementSubscripts(at)) {
+        origDesc.Establish(compType,
+            orig.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extents);
+        cloneDesc.Establish(compType,
+            clone.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extents);
+        stat = InitializeClone(
+            cloneDesc, origDesc, compType, terminator, hasStat, errMsg);
+        if (stat != StatOk) {
+          break;
+        }
+      }
     }
   }
   return stat;

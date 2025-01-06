@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx81 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx81 | FileCheck %s
 
 declare { float, float, float, float } @llvm.nvvm.mma.m16n8k4.row.col.tf32(i32, i32, i32, float, float, float, float) #1
 

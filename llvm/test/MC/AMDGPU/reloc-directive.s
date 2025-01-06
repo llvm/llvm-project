@@ -19,6 +19,9 @@
 # PRINT-NEXT: .reloc 0, R_AMDGPU_REL32_HI, .data
 # PRINT-NEXT: .reloc 0, R_AMDGPU_RELATIVE64, .data
 # PRINT-NEXT: .reloc 0, R_AMDGPU_REL16, .data
+# PRINT-NEXT: .reloc 0, BFD_RELOC_NONE, .data
+# PRINT-NEXT: .reloc 0, BFD_RELOC_32, .data
+# PRINT-NEXT: .reloc 0, BFD_RELOC_64, .data
 
 # CHECK:      0x2 R_AMDGPU_NONE .data
 # CHECK-NEXT: 0x1 R_AMDGPU_NONE foo 0x4
@@ -36,6 +39,9 @@
 # CHECK-NEXT: 0x0 R_AMDGPU_REL32_HI .data
 # CHECK-NEXT: 0x0 R_AMDGPU_RELATIVE64 .data
 # CHECK-NEXT: 0x0 R_AMDGPU_REL16 .data
+# CHECK-NEXT: 0x0 R_AMDGPU_NONE .data
+# CHECK-NEXT: 0x0 R_AMDGPU_ABS32 .data
+# CHECK-NEXT: 0x0 R_AMDGPU_ABS64 .data
 
 .text
   s_nop 0
@@ -56,6 +62,9 @@
   .reloc 0, R_AMDGPU_REL32_HI, .data
   .reloc 0, R_AMDGPU_RELATIVE64, .data
   .reloc 0, R_AMDGPU_REL16, .data
+  .reloc 0, BFD_RELOC_NONE, .data
+  .reloc 0, BFD_RELOC_32, .data
+  .reloc 0, BFD_RELOC_64, .data
 
 .data
 .globl foo

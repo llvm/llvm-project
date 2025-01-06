@@ -1,22 +1,22 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck  %s -check-prefix=__call_stub_fp___fixunsdfsi 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunsdfsi
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___floatdidf 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___floatdidf
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___floatdisf 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___floatdisf
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___floatundidf
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___floatundidf
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___fixsfdi 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___fixsfdi
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunsdfdi 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunsdfdi
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___fixdfdi
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___fixdfdi
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunssfsi 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunssfsi
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunssfdi 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___fixunssfdi
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static  < %s | FileCheck %s -check-prefix=__call_stub_fp___floatundisf 
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=__call_stub_fp___floatundisf
 
 @ll1 = global i64 0, align 8
 @ll2 = global i64 0, align 8

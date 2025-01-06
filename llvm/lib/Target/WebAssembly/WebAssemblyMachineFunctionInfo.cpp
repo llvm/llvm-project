@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
@@ -56,7 +55,7 @@ void llvm::computeLegalValueVTs(const WebAssemblyTargetLowering &TLI,
 
 void llvm::computeLegalValueVTs(const Function &F, const TargetMachine &TM,
                                 Type *Ty, SmallVectorImpl<MVT> &ValueVTs) {
-  const DataLayout &DL(F.getParent()->getDataLayout());
+  const DataLayout &DL(F.getDataLayout());
   const WebAssemblyTargetLowering &TLI =
       *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
   computeLegalValueVTs(TLI, F.getContext(), DL, Ty, ValueVTs);
@@ -141,8 +140,8 @@ yaml::WebAssemblyFunctionInfo::WebAssemblyFunctionInfo(
     for (const auto &MBB : MF)
       MBBs.insert(&MBB);
     for (auto KV : EHInfo->SrcToUnwindDest) {
-      auto *SrcBB = KV.first.get<MachineBasicBlock *>();
-      auto *DestBB = KV.second.get<MachineBasicBlock *>();
+      auto *SrcBB = cast<MachineBasicBlock *>(KV.first);
+      auto *DestBB = cast<MachineBasicBlock *>(KV.second);
       if (MBBs.count(SrcBB) && MBBs.count(DestBB))
         SrcToUnwindDest[SrcBB->getNumber()] = DestBB->getNumber();
     }

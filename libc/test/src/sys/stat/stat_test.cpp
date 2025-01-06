@@ -14,7 +14,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 #include <sys/stat.h>
 
 TEST(LlvmLibcStatTest, CreatAndReadMode) {

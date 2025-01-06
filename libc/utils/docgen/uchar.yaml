@@ -1,0 +1,21 @@
+functions:
+  c16rtomb:
+    c-definition: 7.30.2.5
+    in-latest-posix: ''
+  c32rtomb:
+    c-definition: 7.30.2.7
+    in-latest-posix: ''
+  c8rtomb:
+    c-definition: 7.30.2.3
+  mbrtoc16:
+    c-definition: 7.30.2.4
+    in-latest-posix: ''
+  mbrtoc32:
+    c-definition: 7.30.2.6
+    in-latest-posix: ''
+  mbrtoc8:
+    c-definition: 7.30.2.2
+macros:
+  __STDC_VERSION_UCHAR_H__:
+    c-definition: 7.30.1
+

@@ -40,12 +40,20 @@ define amdgpu_cs i64 @constant_true() {
 ; Test ballot of a non-comparison operation
 
 define amdgpu_cs i64 @non_compare(i32 %x) {
-; CHECK-LABEL: non_compare:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
-; CHECK-NEXT:    ; return to shader part epilog
+; DAGISEL-LABEL: non_compare:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; DAGISEL-NEXT:    s_mov_b32 s1, 0
+; DAGISEL-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; DAGISEL-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: non_compare:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-NEXT:    s_mov_b32 s1, 0
+; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GISEL-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
+; GISEL-NEXT:    ; return to shader part epilog
   %trunc = trunc i32 %x to i1
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %trunc)
   ret i64 %ballot

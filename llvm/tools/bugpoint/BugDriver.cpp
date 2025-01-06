@@ -142,7 +142,7 @@ bool BugDriver::addSources(const std::vector<std::string> &Filenames) {
 
   for (unsigned i = 1, e = Filenames.size(); i != e; ++i) {
     std::unique_ptr<Module> M = parseInputFile(Filenames[i], Context);
-    if (!M.get())
+    if (!M)
       return true;
 
     outs() << "Linking in input file: '" << Filenames[i] << "'\n";

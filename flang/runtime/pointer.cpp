@@ -127,7 +127,7 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
 RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t byteSize) {
   // Add space for a footer to validate during deallocation.
   constexpr std::size_t align{sizeof(std::uintptr_t)};
-  byteSize = ((byteSize / align) + 1) * align;
+  byteSize = ((byteSize + align - 1) / align) * align;
   std::size_t total{byteSize + sizeof(std::uintptr_t)};
   void *p{std::malloc(total)};
   if (p) {
@@ -197,7 +197,7 @@ static RT_API_ATTRS std::size_t GetByteSize(
 bool RT_API_ATTRS ValidatePointerPayload(const ISO::CFI_cdesc_t &desc) {
   std::size_t byteSize{GetByteSize(desc)};
   constexpr std::size_t align{sizeof(std::uintptr_t)};
-  byteSize = ((byteSize / align) + 1) * align;
+  byteSize = ((byteSize + align - 1) / align) * align;
   const void *p{desc.base_addr};
   const std::uintptr_t *footer{reinterpret_cast<const std::uintptr_t *>(
       static_cast<const char *>(p) + byteSize)};

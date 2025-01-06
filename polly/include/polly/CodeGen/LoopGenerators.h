@@ -55,7 +55,7 @@ extern int PollyChunkSize;
 /// @param Builder            The builder used to create the loop.
 /// @param P                  A pointer to the pass that uses this function.
 ///                           It is used to update analysis information.
-/// @param LI                 The loop info for the current function
+/// @param LI                 The loop info we need to update
 /// @param DT                 The dominator tree we need to update
 /// @param ExitBlock          The block the loop will exit to.
 /// @param Predicate          The predicate used to generate the upper loop
@@ -128,11 +128,9 @@ llvm::DebugLoc createDebugLocForGeneratedCode(Function *F);
 class ParallelLoopGenerator {
 public:
   /// Create a parallel loop generator for the current function.
-  ParallelLoopGenerator(PollyIRBuilder &Builder, LoopInfo &LI,
-                        DominatorTree &DT, const DataLayout &DL)
-      : Builder(Builder), LI(LI), DT(DT),
-        LongType(
-            Type::getIntNTy(Builder.getContext(), DL.getPointerSizeInBits())),
+  ParallelLoopGenerator(PollyIRBuilder &Builder, const DataLayout &DL)
+      : Builder(Builder), LongType(Type::getIntNTy(Builder.getContext(),
+                                                   DL.getPointerSizeInBits())),
         M(Builder.GetInsertBlock()->getParent()->getParent()),
         DLGenerated(createDebugLocForGeneratedCode(
             Builder.GetInsertBlock()->getParent())) {}
@@ -164,11 +162,11 @@ protected:
   /// The IR builder we use to create instructions.
   PollyIRBuilder &Builder;
 
-  /// The loop info of the current function we need to update.
-  LoopInfo &LI;
+  /// The loop info for the generated subfunction.
+  std::unique_ptr<LoopInfo> SubFnLI;
 
-  /// The dominance tree of the current function we need to update.
-  DominatorTree &DT;
+  /// The dominance tree for the generated subfunction.
+  std::unique_ptr<DominatorTree> SubFnDT;
 
   /// The type of a "long" on this hardware used for backend calls.
   Type *LongType;
@@ -184,6 +182,12 @@ protected:
   llvm::DebugLoc DLGenerated;
 
 public:
+  /// Returns the DominatorTree for the generated subfunction.
+  DominatorTree *getCalleeDominatorTree() const { return SubFnDT.get(); }
+
+  /// Returns the LoopInfo for the generated subfunction.
+  LoopInfo *getCalleeLoopInfo() const { return SubFnLI.get(); }
+
   /// Create a struct for all @p Values and store them in there.
   ///
   /// @param Values The values which should be stored in the struct.

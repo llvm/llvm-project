@@ -41,6 +41,50 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///
   Pointer32,
 
+  /// A 16-bit PC-relative branch.
+  ///
+  /// Represents a PC-relative branch to a target within +/-128Kb. The target
+  /// must be 4-byte aligned.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int16
+  ///
+  /// Notes:
+  ///   The '16' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 18-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int16 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Branch16PCRel,
+
+  /// A 21-bit PC-relative branch.
+  ///
+  /// Represents a PC-relative branch to a target within +/-4Mb. The Target must
+  /// be 4-byte aligned.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int21
+  ///
+  /// Notes:
+  ///   The '21' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 23-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int21 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Branch21PCRel,
+
   /// A 26-bit PC-relative branch.
   ///
   /// Represents a PC-relative call or branch to a target within +/-128Mb. The
@@ -158,6 +202,29 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///   NONE
   ///
   RequestGOTAndTransformToPageOffset12,
+
+  /// A 36-bit PC-relative call.
+  ///
+  /// Represents a PC-relative call to a target within [-128G - 0x20000, +128G
+  /// - 0x20000). The target must be 4-byte aligned. For adjacent pcaddu18i+jirl
+  /// instruction pairs.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int36
+  ///
+  /// Notes:
+  ///   The '36' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 38-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int36 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Call36PCRel,
 };
 
 /// Returns a string name for the given loongarch edge. For debugging purposes
@@ -165,8 +232,8 @@ enum EdgeKind_loongarch : Edge::Kind {
 const char *getEdgeKindName(Edge::Kind K);
 
 // Returns extract bits Val[Hi:Lo].
-inline uint32_t extractBits(uint32_t Val, unsigned Hi, unsigned Lo) {
-  return (Val & (((1UL << (Hi + 1)) - 1))) >> Lo;
+inline uint32_t extractBits(uint64_t Val, unsigned Hi, unsigned Lo) {
+  return Hi == 63 ? Val >> Lo : (Val & ((((uint64_t)1 << (Hi + 1)) - 1))) >> Lo;
 }
 
 /// Apply fixup expression for edge to block content.
@@ -188,6 +255,37 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     if (Value > std::numeric_limits<uint32_t>::max())
       return makeTargetOutOfRangeError(G, B, E);
     *(ulittle32_t *)FixupPtr = Value;
+    break;
+  }
+  case Branch16PCRel: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    if (!isInt<18>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+
+    if (!isShiftedInt<16, 2>(Value))
+      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+    uint32_t RawInstr = *(little32_t *)FixupPtr;
+    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+    *(little32_t *)FixupPtr = RawInstr | Imm15_0;
+    break;
+  }
+  case Branch21PCRel: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    if (!isInt<23>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+
+    if (!isShiftedInt<21, 2>(Value))
+      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+    uint32_t RawInstr = *(little32_t *)FixupPtr;
+    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
+    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
+    uint32_t Imm20_16 = extractBits(Imm, /*Hi=*/20, /*Lo=*/16);
+    *(little32_t *)FixupPtr = RawInstr | Imm15_0 | Imm20_16;
     break;
   }
   case Branch26PCRel: {
@@ -245,6 +343,23 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
     uint32_t Imm11_0 = TargetOffset << 10;
     *(ulittle32_t *)FixupPtr = RawInstr | Imm11_0;
+    break;
+  }
+  case Call36PCRel: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    if ((Value + 0x20000) != llvm::SignExtend64(Value + 0x20000, 38))
+      return makeTargetOutOfRangeError(G, B, E);
+
+    if (!isShiftedInt<36, 2>(Value))
+      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
+
+    uint32_t Pcaddu18i = *(little32_t *)FixupPtr;
+    uint32_t Hi20 = extractBits(Value + (1 << 17), /*Hi=*/37, /*Lo=*/18) << 5;
+    *(little32_t *)FixupPtr = Pcaddu18i | Hi20;
+    uint32_t Jirl = *(little32_t *)(FixupPtr + 4);
+    uint32_t Lo16 = extractBits(Value, /*Hi=*/17, /*Lo=*/2) << 10;
+    *(little32_t *)(FixupPtr + 4) = Jirl | Lo16;
     break;
   }
   default:
@@ -363,7 +478,8 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getKind() == Branch26PCRel && !E.getTarget().isDefined()) {
+    if ((E.getKind() == Branch26PCRel || E.getKind() == Call36PCRel) &&
+        !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
                << B->getFixupAddress(E) << " (" << B->getAddress() << " + "

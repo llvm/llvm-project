@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-cext-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=hexagon-cext-opt %s -o - | FileCheck %s
 
 # Check that this test doesn't crash.
 # CHECK: %0:intregs = A2_tfrsi @0

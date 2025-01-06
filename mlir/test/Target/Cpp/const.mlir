@@ -11,6 +11,8 @@ func.func @emitc_constant() {
   %c6 = "emitc.constant"(){value = 2 : index} : () -> index
   %c7 = "emitc.constant"(){value = 2.0 : f32} : () -> f32
   %f64 = "emitc.constant"(){value = 4.0 : f64} : () -> f64
+  %f16 = "emitc.constant"(){value = 2.0 : f16} : () -> f16
+  %bf16 = "emitc.constant"(){value = 4.0 : bf16} : () -> bf16
   %c8 = "emitc.constant"(){value = dense<0> : tensor<i32>} : () -> tensor<i32>
   %c9 = "emitc.constant"(){value = dense<[0, 1]> : tensor<2xindex>} : () -> tensor<2xindex>
   %c10 = "emitc.constant"(){value = dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>} : () -> tensor<2x2xf32>
@@ -26,6 +28,8 @@ func.func @emitc_constant() {
 // CPP-DEFAULT-NEXT: size_t [[V6:[^ ]*]] = 2;
 // CPP-DEFAULT-NEXT: float [[V7:[^ ]*]] = 2.000000000e+00f;
 // CPP-DEFAULT-NEXT: double [[F64:[^ ]*]] = 4.00000000000000000e+00;
+// CPP-DEFAULT-NEXT: _Float16 [[F16:[^ ]*]] = 2.00000e+00f16;
+// CPP-DEFAULT-NEXT: __bf16 [[BF16:[^ ]*]] = 4.0000e+00bf16;
 // CPP-DEFAULT-NEXT: Tensor<int32_t> [[V8:[^ ]*]] = {0};
 // CPP-DEFAULT-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]] = {0, 1};
 // CPP-DEFAULT-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};
@@ -40,6 +44,8 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: size_t [[V6:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[V7:[^ ]*]];
 // CPP-DECLTOP-NEXT: double [[F64:[^ ]*]];
+// CPP-DECLTOP-NEXT: _Float16 [[F16:[^ ]*]];
+// CPP-DECLTOP-NEXT: __bf16 [[BF16:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<int32_t> [[V8:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]];
@@ -52,6 +58,8 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: [[V6]] = 2;
 // CPP-DECLTOP-NEXT: [[V7]] = 2.000000000e+00f;
 // CPP-DECLTOP-NEXT: [[F64]] = 4.00000000000000000e+00;
+// CPP-DECLTOP-NEXT: [[F16]] = 2.00000e+00f16;
+// CPP-DECLTOP-NEXT: [[BF16]] = 4.0000e+00bf16;
 // CPP-DECLTOP-NEXT: [[V8]] = {0};
 // CPP-DECLTOP-NEXT: [[V9]] = {0, 1};
 // CPP-DECLTOP-NEXT: [[V10]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};

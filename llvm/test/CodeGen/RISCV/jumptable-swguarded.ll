@@ -8,6 +8,7 @@
 define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-LABEL: above_threshold:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lpad 0
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    li a2, 5
 ; CHECK-NEXT:    bltu a2, a0, .LBB0_9

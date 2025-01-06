@@ -106,7 +106,7 @@ define i64 @bts63() nounwind {
 ; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    movl v64+4, %edx
 ; X86-NEXT:    movl v64, %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB4_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %edx, %ecx
@@ -230,7 +230,7 @@ define i64 @btc63() nounwind {
 ; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    movl v64+4, %edx
 ; X86-NEXT:    movl v64, %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB9_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %edx, %ecx
@@ -360,7 +360,7 @@ define i64 @btr63() nounwind {
 ; X86-NEXT:    movl $-1, %edi
 ; X86-NEXT:    movl v64+4, %edx
 ; X86-NEXT:    movl v64, %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB14_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %ebx
@@ -396,7 +396,7 @@ define i16 @multi_use1() nounwind {
 ; X86-LABEL: multi_use1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl v16, %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB15_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %ecx
@@ -416,7 +416,7 @@ define i16 @multi_use1() nounwind {
 ; X64-LABEL: multi_use1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzwl v16(%rip), %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB15_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movl %eax, %ecx
@@ -471,7 +471,7 @@ define i16 @use_in_diff_bb() nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzwl v16, %esi
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB17_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %esi, %ecx
@@ -496,7 +496,7 @@ define i16 @use_in_diff_bb() nounwind {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movzwl v16(%rip), %ebx
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB17_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movl %ebx, %ecx
@@ -582,7 +582,6 @@ define i32 @split_hoist_and(i32 %0) nounwind {
 ; X64-NEXT:    lock btsl $3, v32(%rip)
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    shll $3, %eax
-; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    retq
   %2 = atomicrmw or ptr @v32, i32 8 monotonic, align 4
   %3 = tail call i32 @llvm.ctlz.i32(i32 %0, i1 false)

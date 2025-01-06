@@ -2,7 +2,7 @@
 
 // REQUIRES: system-windows
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck %s
+// RUN: lldb-test symbols -dump-ast %t.exe | FileCheck %s
 
 namespace A {
   namespace B {

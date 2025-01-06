@@ -173,7 +173,7 @@ __m128i test_mm_hsubq_epi32(__m128i a) {
 __m128i test_mm_cmov_si128(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_cmov_si128
   // CHECK: [[AND:%.*]] = and <2 x i64> %{{.*}}, %{{.*}}
-  // CHECK: [[NEG:%.*]] = xor <2 x i64> %{{.*}}, <i64 -1, i64 -1>
+  // CHECK: [[NEG:%.*]] = xor <2 x i64> %{{.*}}, splat (i64 -1)
   // CHECK-NEXT: [[ANDN:%.*]] = and <2 x i64> %{{.*}}, [[NEG]]
   // CHECK-NEXT: %{{.*}} = or <2 x i64> [[AND]], [[ANDN]]
   return _mm_cmov_si128(a, b, c);
@@ -182,7 +182,7 @@ __m128i test_mm_cmov_si128(__m128i a, __m128i b, __m128i c) {
 __m256i test_mm256_cmov_si256(__m256i a, __m256i b, __m256i c) {
   // CHECK-LABEL: test_mm256_cmov_si256
   // CHECK: [[AND:%.*]] = and <4 x i64> %{{.*}}, %{{.*}}
-  // CHECK: [[NEG:%.*]] = xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: [[NEG:%.*]] = xor <4 x i64> %{{.*}}, splat (i64 -1)
   // CHECK-NEXT: [[ANDN:%.*]] = and <4 x i64> %{{.*}}, [[NEG]]
   // CHECK-NEXT: %{{.*}} = or <4 x i64> [[AND]], [[ANDN]]
   return _mm256_cmov_si256(a, b, c);
@@ -220,25 +220,25 @@ __m128i test_mm_rot_epi64(__m128i a, __m128i b) {
 
 __m128i test_mm_roti_epi8(__m128i a) {
   // CHECK-LABEL: test_mm_roti_epi8
-  // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+  // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> splat (i8 1))
   return _mm_roti_epi8(a, 1);
 }
 
 __m128i test_mm_roti_epi16(__m128i a) {
   // CHECK-LABEL: test_mm_roti_epi16
-  // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> <i16 50, i16 50, i16 50, i16 50, i16 50, i16 50, i16 50, i16 50>)
+  // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> splat (i16 50))
   return _mm_roti_epi16(a, 50);
 }
 
 __m128i test_mm_roti_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_roti_epi32
-  // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 226, i32 226, i32 226, i32 226>)
+  // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> splat (i32 226))
   return _mm_roti_epi32(a, -30);
 }
 
 __m128i test_mm_roti_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_roti_epi64
-  // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> <i64 100, i64 100>)
+  // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> splat (i64 100))
   return _mm_roti_epi64(a, 100);
 }
 

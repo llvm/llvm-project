@@ -18,15 +18,12 @@ define i32 @main() #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[STOREMERGE]], [[PHIOFOPS]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END6:%.*]]
 ; CHECK:       if.then3:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[STOREMERGE]], -1
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
-; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i1 [[TOBOOL5]] to i32
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 1, [[IF_THEN3]] ], [ [[PHITMP]], [[LOR_RHS]] ]
-; CHECK-NEXT:    store i32 [[TMP1]], ptr @a, align 4
+; CHECK-NEXT:    store i32 1, ptr @a, align 4
 ; CHECK-NEXT:    br label [[IF_END6]]
 ; CHECK:       if.end6:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @a, align 4

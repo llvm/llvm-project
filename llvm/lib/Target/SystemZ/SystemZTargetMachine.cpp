@@ -59,6 +59,14 @@ static std::string computeDataLayout(const Triple &TT) {
   // Data mangling.
   Ret += DataLayout::getManglingComponent(TT);
 
+  // Special features for z/OS.
+  if (TT.isOSzOS()) {
+    if (TT.isArch64Bit()) {
+      // Custom address space for ptr32.
+      Ret += "-p1:32:32";
+    }
+  }
+
   // Make sure that global data has at least 16 bits of alignment by
   // default, so that we can refer to it using LARL.  We don't have any
   // special requirements for stack variables though.
@@ -150,7 +158,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
@@ -249,7 +257,7 @@ bool SystemZPassConfig::addInstSelector() {
 }
 
 bool SystemZPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);

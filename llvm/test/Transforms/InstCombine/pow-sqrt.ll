@@ -51,8 +51,8 @@ define <2 x double> @pow_intrinsic_half_approx(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_half_approx(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[POW:%.*]] = select afn <2 x i1> [[ISINF]], <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[ABS]]
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], splat (double 0xFFF0000000000000)
+; CHECK-NEXT:    [[POW:%.*]] = select afn <2 x i1> [[ISINF]], <2 x double> splat (double 0x7FF0000000000000), <2 x double> [[ABS]]
 ; CHECK-NEXT:    ret <2 x double> [[POW]]
 ;
   %pow = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 5.0e-01, double 5.0e-01>)
@@ -206,7 +206,7 @@ define float @pow_libcall_neghalf_afn(float %x) {
 
 define <2 x double> @pow_intrinsic_neghalf_no_FMF(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_no_FMF(
-; CHECK-NEXT:    [[POW:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[X:%.*]], <2 x double> <double -5.000000e-01, double -5.000000e-01>)
+; CHECK-NEXT:    [[POW:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[X:%.*]], <2 x double> splat (double -5.000000e-01))
 ; CHECK-NEXT:    ret <2 x double> [[POW]]
 ;
   %pow = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
@@ -221,8 +221,8 @@ define <2 x double> @pow_intrinsic_neghalf_reassoc(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_reassoc(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call reassoc <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp reassoc oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp reassoc oeq <2 x double> [[X]], splat (double 0xFFF0000000000000)
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc <2 x double> splat (double 1.000000e+00), [[ABS]]
 ; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
@@ -238,8 +238,8 @@ define <2 x double> @pow_intrinsic_neghalf_afn(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_afn(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv afn <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], splat (double 0xFFF0000000000000)
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv afn <2 x double> splat (double 1.000000e+00), [[ABS]]
 ; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
@@ -264,7 +264,7 @@ define <2 x double> @pow_intrinsic_neghalf_ninf(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_ninf(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call ninf afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call ninf afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf afn <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv ninf afn <2 x double> splat (double 1.000000e+00), [[ABS]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
   %pow = call afn ninf <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)

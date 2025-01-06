@@ -30,7 +30,10 @@ static cl::opt<RegAllocPriorityAdvisorAnalysis::AdvisorMode> Mode(
         clEnumValN(RegAllocPriorityAdvisorAnalysis::AdvisorMode::Release,
                    "release", "precompiled"),
         clEnumValN(RegAllocPriorityAdvisorAnalysis::AdvisorMode::Development,
-                   "development", "for training")));
+                   "development", "for training"),
+        clEnumValN(
+            RegAllocPriorityAdvisorAnalysis::AdvisorMode::Dummy, "dummy",
+            "prioritize low virtual register numbers for test and debug")));
 
 char RegAllocPriorityAdvisorAnalysis::ID = 0;
 INITIALIZE_PASS(RegAllocPriorityAdvisorAnalysis, "regalloc-priority",
@@ -51,13 +54,13 @@ public:
 
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<SlotIndexes>();
+    AU.addRequired<SlotIndexesWrapperPass>();
     RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
   }
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     return std::make_unique<DefaultPriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexes>());
+        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI());
   }
   bool doInitialization(Module &M) override {
     if (NotAsRequested)
@@ -67,6 +70,31 @@ private:
   }
   const bool NotAsRequested;
 };
+
+class DummyPriorityAdvisorAnalysis final
+    : public RegAllocPriorityAdvisorAnalysis {
+public:
+  DummyPriorityAdvisorAnalysis()
+      : RegAllocPriorityAdvisorAnalysis(AdvisorMode::Dummy) {}
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocPriorityAdvisorAnalysis *R) {
+    return R->getAdvisorMode() == AdvisorMode::Dummy;
+  }
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<SlotIndexesWrapperPass>();
+    RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
+  }
+
+  std::unique_ptr<RegAllocPriorityAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+    return std::make_unique<DummyPriorityAdvisor>(
+        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI());
+  }
+};
+
 } // namespace
 
 template <> Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysis>() {
@@ -74,6 +102,9 @@ template <> Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysis>() {
   switch (Mode) {
   case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Default:
     Ret = new DefaultPriorityAdvisorAnalysis(/*NotAsRequested*/ false);
+    break;
+  case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Dummy:
+    Ret = new DummyPriorityAdvisorAnalysis();
     break;
   case RegAllocPriorityAdvisorAnalysis::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
@@ -97,6 +128,8 @@ StringRef RegAllocPriorityAdvisorAnalysis::getPassName() const {
     return "Release mode Regalloc Priority Advisor";
   case AdvisorMode::Development:
     return "Development mode Regalloc Priority Advisor";
+  case AdvisorMode::Dummy:
+    return "Dummy Regalloc Priority Advisor";
   }
   llvm_unreachable("Unknown advisor kind");
 }

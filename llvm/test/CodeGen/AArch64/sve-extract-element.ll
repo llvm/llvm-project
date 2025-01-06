@@ -644,8 +644,8 @@ define i1 @test_lane4_2xi1(<vscale x 2 x i1> %a) #0 {
 ; CHECK-LABEL: test_lane4_2xi1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.d, z0.d[4]
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov z0.s, z0.s[8]
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 2 x i1> %a, i32 4

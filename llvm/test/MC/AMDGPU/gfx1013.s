@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1013 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1013 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck %s
 
 image_bvh64_intersect_ray v[5:8], v[1:12], s[8:11]
 // CHECK: [0x01,0x9f,0x9c,0xf1,0x01,0x05,0x02,0x00]

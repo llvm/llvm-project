@@ -205,9 +205,11 @@ class CheckRunner:
                 self.temp_file_name,
             ]
             + [
-                "-fix"
-                if self.export_fixes is None
-                else "--export-fixes=" + self.export_fixes
+                (
+                    "-fix"
+                    if self.export_fixes is None
+                    else "--export-fixes=" + self.export_fixes
+                )
             ]
             + [
                 "--checks=-*," + self.check_name,
@@ -299,19 +301,37 @@ class CheckRunner:
             self.check_notes(clang_tidy_output)
 
 
+CPP_STANDARDS = [
+    "c++98",
+    "c++11",
+    ("c++14", "c++1y"),
+    ("c++17", "c++1z"),
+    ("c++20", "c++2a"),
+    ("c++23", "c++2b"),
+    ("c++26", "c++2c"),
+]
+C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
+
+
 def expand_std(std):
-    if std == "c++98-or-later":
-        return ["c++98", "c++11", "c++14", "c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++11-or-later":
-        return ["c++11", "c++14", "c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++14-or-later":
-        return ["c++14", "c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++17-or-later":
-        return ["c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++20-or-later":
-        return ["c++20", "c++23", "c++2c"]
-    if std == "c++23-or-later":
-        return ["c++23", "c++2c"]
+    split_std, or_later, _ = std.partition("-or-later")
+
+    if not or_later:
+        return [split_std]
+
+    for standard_list in (CPP_STANDARDS, C_STANDARDS):
+        item = next(
+            (
+                i
+                for i, v in enumerate(standard_list)
+                if (split_std in v if isinstance(v, (list, tuple)) else split_std == v)
+            ),
+            None,
+        )
+        if item is not None:
+            return [split_std] + [
+                x if isinstance(x, str) else x[0] for x in standard_list[item + 1 :]
+            ]
     return [std]
 
 

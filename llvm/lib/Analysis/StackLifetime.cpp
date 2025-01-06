@@ -87,7 +87,7 @@ void StackLifetime::collectMarkers() {
   DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
       BBMarkerSet;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Compute the set of start/end markers per basic block.
   for (const BasicBlock *BB : depth_first(&F)) {

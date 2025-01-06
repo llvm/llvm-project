@@ -91,15 +91,84 @@ void bar() {
 
 namespace GH82104 {
 
-template <typename, typename...> int Zero = 0;
+template <typename, typename... D> constexpr int Value = sizeof...(D);
 
-template <typename T, typename...U>
-using T14 = decltype([]<int V = 0>() { return Zero<T, U...>; }());
+template <typename T, typename... U>
+using T14 = decltype([]<int V = 0>(auto Param) {
+  return Value<T, U...> + V + (int)sizeof(Param);
+}("hello"));
 
 template <typename T> using T15 = T14<T, T>;
 
 static_assert(__is_same(T15<char>, int));
 
+// FIXME: This still crashes because we can't extract template arguments T and U
+// outside of the instantiation context of T16.
+#if 0
+template <typename T, typename... U>
+using T16 = decltype([](auto Param) requires (sizeof(Param) != 1 && sizeof...(U) > 0) {
+  return Value<T, U...> + sizeof(Param);
+});
+static_assert(T16<int, char, float>()(42) == 2 + sizeof(42));
+#endif
 } // namespace GH82104
+
+namespace GH89853 {
+
+template <typename = void>
+static constexpr auto innocuous = []<int m> { return m; };
+
+template <auto Pred = innocuous<>>
+using broken = decltype(Pred.template operator()<42>());
+
+broken<> *boom;
+
+template <auto Pred =
+              []<char c> {
+                (void)static_cast<char>(c);
+              }>
+using broken2 = decltype(Pred.template operator()<42>());
+
+broken2<> *boom2;
+
+template <auto Pred = []<char m> { return m; }>
+using broken3 = decltype(Pred.template operator()<42>());
+
+broken3<> *boom3;
+
+static constexpr auto non_default = []<char c>(True auto) {
+    (void) static_cast<char>(c);
+};
+
+template<True auto Pred>
+using broken4 = decltype(Pred.template operator()<42>(Pred));
+
+broken4<non_default>* boom4;
+
+} // namespace GH89853
+
+namespace GH105885 {
+
+template<int>
+using test = decltype([](auto...) {
+}());
+
+static_assert(__is_same(test<0>, void));
+
+} // namespace GH105885
+
+namespace GH102760 {
+
+auto make_tuple = []< class Tag, class... Captures>(Tag, Captures...) {
+  return []< class _Fun >( _Fun) -> void requires requires { 0; }
+  {};
+};
+
+template < class, class... _As >
+using Result = decltype(make_tuple(0)(_As{}...));
+
+using T = Result<int, int>;
+
+} // namespace GH102760
 
 } // namespace lambda_calls

@@ -185,19 +185,17 @@ ArrayRef<MemorySizeDistribution> getMemcmpSizeDistributions() {
 MemorySizeDistribution
 getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
                      StringRef Name) {
-  size_t Index = 0;
-  for (const auto &MSD : Distributions) {
+  for (const auto &MSD : Distributions)
     if (MSD.Name == Name)
       return MSD;
-    ++Index;
-  }
+
   std::string Message;
   raw_string_ostream Stream(Message);
   Stream << "Unknown MemorySizeDistribution '" << Name
          << "', available distributions:\n";
   for (const auto &MSD : Distributions)
     Stream << "'" << MSD.Name << "'\n";
-  report_fatal_error(Stream.str());
+  report_fatal_error(Message);
 }
 
 } // namespace libc_benchmarks

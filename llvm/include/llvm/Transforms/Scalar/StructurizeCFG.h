@@ -13,6 +13,15 @@
 
 namespace llvm {
 struct StructurizeCFGPass : PassInfoMixin<StructurizeCFGPass> {
+private:
+  bool SkipUniformRegions;
+
+public:
+  StructurizeCFGPass(bool SkipUniformRegions = false);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm

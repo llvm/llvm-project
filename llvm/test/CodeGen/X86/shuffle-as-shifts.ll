@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-server  | FileCheck %s --check-prefixes=CHECK,CHECK-ICX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4  | FileCheck %s --check-prefixes=CHECK,CHECK-V4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver4  | FileCheck %s --check-prefixes=CHECK,CHECK-ZNVER4
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver5  | FileCheck %s --check-prefixes=CHECK,CHECK-ZNVER4
 
 
 define <4 x i32> @shuf_rot_v4i32_1032(<4 x i32> %x) {

@@ -22,7 +22,7 @@ define i64 @test(ptr %p) {
 ; CHECK-NEXT:    [[P1:%.*]] = load ptr, ptr [[A2]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[RES_PRE]], [[ENTRY_EXIT_CRIT_EDGE]] ], [ undef, [[IF]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[RES_PRE]], [[ENTRY_EXIT_CRIT_EDGE]] ], [ poison, [[IF]] ]
 ; CHECK-NEXT:    store ptr @willreturn, ptr [[P]], align 8
 ; CHECK-NEXT:    tail call void @willreturn()
 ; CHECK-NEXT:    ret i64 [[RES]]

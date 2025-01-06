@@ -142,6 +142,15 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
     Streamer.emitLabel(BC.Ctx->getOrCreateSymbol("__hot_data_end"));
 }
 
+uint64_t BinarySection::write(raw_ostream &OS) const {
+  const uint64_t NumValidContentBytes =
+      std::min<uint64_t>(getOutputContents().size(), getOutputSize());
+  OS.write(getOutputContents().data(), NumValidContentBytes);
+  if (getOutputSize() > NumValidContentBytes)
+    OS.write_zeros(getOutputSize() - NumValidContentBytes);
+  return getOutputSize();
+}
+
 void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
                                             SymbolResolverFuncTy Resolver) {
   if (PendingRelocations.empty() && Patches.empty())

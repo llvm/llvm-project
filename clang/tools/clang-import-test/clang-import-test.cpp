@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 #include <memory>
@@ -164,7 +165,8 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   auto Ins = std::make_unique<CompilerInstance>();
   auto DC = std::make_unique<TestDiagnosticConsumer>();
   const bool ShouldOwnClient = true;
-  Ins->createDiagnostics(DC.release(), ShouldOwnClient);
+  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
+                         ShouldOwnClient);
 
   auto Inv = std::make_unique<CompilerInvocation>();
 

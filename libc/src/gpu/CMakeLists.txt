@@ -8,15 +8,3 @@ add_entrypoint_object(
     libc.src.__support.RPC.rpc_client
     libc.src.__support.GPU.utils
 )
-
-add_entrypoint_object(
-  rpc_fprintf
-  SRCS
-    rpc_fprintf.cpp
-  HDRS
-    rpc_fprintf.h
-  DEPENDS
-    libc.src.stdio.gpu.gpu_file
-    libc.src.__support.RPC.rpc_client
-    libc.src.__support.GPU.utils
-)

@@ -497,7 +497,7 @@ private:
 
   /// Types of operands to CFI instructions
   /// In DWARF, this type is implicitly tied to a CFI instruction opcode and
-  /// thus this type doesn't need to be explictly written to the file (this is
+  /// thus this type doesn't need to be explicitly written to the file (this is
   /// not a DWARF encoding). The relationship of instrs to operand types can
   /// be obtained from getOperandTypes() and is only used to simplify
   /// instruction printing.

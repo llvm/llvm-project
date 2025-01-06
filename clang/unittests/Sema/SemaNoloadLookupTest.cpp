@@ -57,11 +57,12 @@ public:
     std::string FileName = llvm::Twine(ModuleName + ".cppm").str();
     addFile(FileName, Contents);
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS,
+                                            new DiagnosticOptions());
+    CIOpts.Diags = Diags;
 
     std::string CacheBMIPath =
         llvm::Twine(TestDir + "/" + ModuleName + ".pcm").str();

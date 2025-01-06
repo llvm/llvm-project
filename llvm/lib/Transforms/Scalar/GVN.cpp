@@ -143,6 +143,8 @@ struct llvm::GVNPass::Expression {
   Type *type = nullptr;
   SmallVector<uint32_t, 4> varargs;
 
+  AttributeList attrs;
+
   Expression(uint32_t o = ~2U) : opcode(o) {}
 
   bool operator==(const Expression &other) const {
@@ -153,6 +155,9 @@ struct llvm::GVNPass::Expression {
     if (type != other.type)
       return false;
     if (varargs != other.varargs)
+      return false;
+    if ((!attrs.isEmpty() || !other.attrs.isEmpty()) &&
+        !attrs.intersectWith(type->getContext(), other.attrs).has_value())
       return false;
     return true;
   }
@@ -364,6 +369,8 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
   } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
     e.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    e.attrs = CB->getAttributes();
   }
 
   return e;
@@ -420,9 +427,9 @@ GVNPass::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
 GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
   Expression E;
   Type *PtrTy = GEP->getType()->getScalarType();
-  const DataLayout &DL = GEP->getModule()->getDataLayout();
+  const DataLayout &DL = GEP->getDataLayout();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
     // Convert into offset representation, to recognize equivalent address
@@ -1072,7 +1079,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                                                 GVNPass &gvn) const {
   Value *Res;
   Type *LoadTy = Load->getType();
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
@@ -1122,6 +1129,9 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     assert(V1 && V2 && "both value operands of the select must be present");
     Res =
         SelectInst::Create(Sel->getCondition(), V1, V2, "", Sel->getIterator());
+    // We use the DebugLoc from the original load here, as this instruction
+    // materializes the value that would previously have been loaded.
+    cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());
   } else {
     llvm_unreachable("Should not materialize value from dead block");
   }
@@ -1238,7 +1248,7 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
 
   Instruction *DepInst = DepInfo.getInst();
 
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   if (DepInfo.isClobber()) {
     // If the dependence is to a store that writes to a superset of the bits
     // read by the load, we can extract the bits we need for the load from the
@@ -1723,7 +1733,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 
   // Check if the load can safely be moved to all the unavailable predecessors.
   bool CanDoPRE = true;
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   SmallVector<Instruction*, 8> NewInsts;
   for (auto &PredLoad : PredLoads) {
     BasicBlock *UnavailablePred = PredLoad.first;
@@ -1989,59 +1999,6 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   return Changed;
 }
 
-static bool impliesEquivalanceIfTrue(CmpInst* Cmp) {
-  if (Cmp->getPredicate() == CmpInst::Predicate::ICMP_EQ)
-    return true;
-
-  // Floating point comparisons can be equal, but not equivalent.  Cases:
-  // NaNs for unordered operators
-  // +0.0 vs 0.0 for all operators
-  if (Cmp->getPredicate() == CmpInst::Predicate::FCMP_OEQ ||
-      (Cmp->getPredicate() == CmpInst::Predicate::FCMP_UEQ &&
-       Cmp->getFastMathFlags().noNaNs())) {
-      Value *LHS = Cmp->getOperand(0);
-      Value *RHS = Cmp->getOperand(1);
-      // If we can prove either side non-zero, then equality must imply
-      // equivalence.
-      // FIXME: We should do this optimization if 'no signed zeros' is
-      // applicable via an instruction-level fast-math-flag or some other
-      // indicator that relaxed FP semantics are being used.
-      if (isa<ConstantFP>(LHS) && !cast<ConstantFP>(LHS)->isZero())
-        return true;
-      if (isa<ConstantFP>(RHS) && !cast<ConstantFP>(RHS)->isZero())
-        return true;
-      // TODO: Handle vector floating point constants
-  }
-  return false;
-}
-
-static bool impliesEquivalanceIfFalse(CmpInst* Cmp) {
-  if (Cmp->getPredicate() == CmpInst::Predicate::ICMP_NE)
-    return true;
-
-  // Floating point comparisons can be equal, but not equivelent.  Cases:
-  // NaNs for unordered operators
-  // +0.0 vs 0.0 for all operators
-  if ((Cmp->getPredicate() == CmpInst::Predicate::FCMP_ONE &&
-       Cmp->getFastMathFlags().noNaNs()) ||
-      Cmp->getPredicate() == CmpInst::Predicate::FCMP_UNE) {
-      Value *LHS = Cmp->getOperand(0);
-      Value *RHS = Cmp->getOperand(1);
-      // If we can prove either side non-zero, then equality must imply
-      // equivalence.
-      // FIXME: We should do this optimization if 'no signed zeros' is
-      // applicable via an instruction-level fast-math-flag or some other
-      // indicator that relaxed FP semantics are being used.
-      if (isa<ConstantFP>(LHS) && !cast<ConstantFP>(LHS)->isZero())
-        return true;
-      if (isa<ConstantFP>(RHS) && !cast<ConstantFP>(RHS)->isZero())
-        return true;
-      // TODO: Handle vector floating point constants
-  }
-  return false;
-}
-
-
 static bool hasUsersIn(Value *V, BasicBlock *BB) {
   return llvm::any_of(V->users(), [BB](User *U) {
     auto *I = dyn_cast<Instruction>(U);
@@ -2143,7 +2100,7 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
   // call void @llvm.assume(i1 %cmp)
   // ret float %load ; will change it to ret float %0
   if (auto *CmpI = dyn_cast<CmpInst>(V)) {
-    if (impliesEquivalanceIfTrue(CmpI)) {
+    if (CmpI->isEquivalence()) {
       Value *CmpLHS = CmpI->getOperand(0);
       Value *CmpRHS = CmpI->getOperand(1);
       // Heuristically pick the better replacement -- the choice of heuristic
@@ -2477,8 +2434,8 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
     const DataLayout &DL =
         isa<Argument>(LHS)
-            ? cast<Argument>(LHS)->getParent()->getParent()->getDataLayout()
-            : cast<Instruction>(LHS)->getModule()->getDataLayout();
+            ? cast<Argument>(LHS)->getParent()->getDataLayout()
+            : cast<Instruction>(LHS)->getDataLayout();
 
     // If there is no obvious reason to prefer the left-hand side over the
     // right-hand side, ensure the longest lived term is on the right-hand side,
@@ -2567,8 +2524,7 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
       // If "A == B" is known true, or "A != B" is known false, then replace
       // A with B everywhere in the scope.  For floating point operations, we
       // have to be careful since equality does not always imply equivalance.
-      if ((isKnownTrue && impliesEquivalanceIfTrue(Cmp)) ||
-          (isKnownFalse && impliesEquivalanceIfFalse(Cmp)))
+      if (Cmp->isEquivalence(isKnownFalse))
         Worklist.push_back(std::make_pair(Op0, Op1));
 
       // If "A >= B" is known true, replace "A < B" with false everywhere.
@@ -2621,7 +2577,7 @@ bool GVNPass::processInstruction(Instruction *I) {
   // to value numbering it.  Value numbering often exposes redundancies, for
   // example if it determines that %y is equal to %x then the instruction
   // "%z = and i32 %x, %y" becomes "%z = and i32 %x, %x" which we now simplify.
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
   if (Value *V = simplifyInstruction(I, {DL, TLI, DT, AC})) {
     bool Changed = false;
     if (!I->use_empty()) {

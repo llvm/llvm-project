@@ -132,7 +132,7 @@ define i32 @tryFactorization_add_nuw_mul(i32 %x) {
 define i32 @tryFactorization_add_nuw_mul_nuw_mul_nuw_var(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @tryFactorization_add_nuw_mul_nuw_mul_nuw_var(
 ; CHECK-NEXT:    [[MUL21:%.*]] = add i32 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[ADD1:%.*]] = mul nuw i32 [[MUL21]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = mul nuw i32 [[X:%.*]], [[MUL21]]
 ; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %mul1 = mul nuw i32 %x, %y
@@ -144,7 +144,7 @@ define i32 @tryFactorization_add_nuw_mul_nuw_mul_nuw_var(i32 %x, i32 %y, i32 %z)
 define i32 @tryFactorization_add_nuw_mul_mul_nuw_var(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @tryFactorization_add_nuw_mul_mul_nuw_var(
 ; CHECK-NEXT:    [[MUL21:%.*]] = add i32 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[ADD1:%.*]] = mul i32 [[MUL21]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = mul i32 [[X:%.*]], [[MUL21]]
 ; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %mul1 = mul i32 %x, %y
@@ -156,7 +156,7 @@ define i32 @tryFactorization_add_nuw_mul_mul_nuw_var(i32 %x, i32 %y, i32 %z) {
 define i32 @tryFactorization_add_nuw_mul_nuw_mul_var(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @tryFactorization_add_nuw_mul_nuw_mul_var(
 ; CHECK-NEXT:    [[MUL21:%.*]] = add i32 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[ADD1:%.*]] = mul i32 [[MUL21]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = mul i32 [[X:%.*]], [[MUL21]]
 ; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %mul1 = mul nuw i32 %x, %y
@@ -168,7 +168,7 @@ define i32 @tryFactorization_add_nuw_mul_nuw_mul_var(i32 %x, i32 %y, i32 %z) {
 define i32 @tryFactorization_add_mul_nuw_mul_var(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @tryFactorization_add_mul_nuw_mul_var(
 ; CHECK-NEXT:    [[MUL21:%.*]] = add i32 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[ADD1:%.*]] = mul i32 [[MUL21]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = mul i32 [[X:%.*]], [[MUL21]]
 ; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %mul1 = mul nuw i32 %x, %y

@@ -35,11 +35,11 @@ define void @aliasing(ptr %p) {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vs1r.v v8, (a2)
-; CHECK-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vs4r.v v12, (a0)
 ; CHECK-NEXT:    addi a2, a0, 64
 ; CHECK-NEXT:    vs1r.v v8, (a2)
+; CHECK-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    sw a1, 84(a0)
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i64 84

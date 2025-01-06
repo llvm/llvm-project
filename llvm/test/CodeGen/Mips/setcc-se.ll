@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
-; RUN: llc  -march=mips -mcpu=mips32r6 -mattr=micromips -relocation-model=pic < %s -asm-show-inst | FileCheck %s -check-prefix=MMR6
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s
+; RUN: llc  -mtriple=mips -mcpu=mips32r6 -mattr=micromips -relocation-model=pic < %s -asm-show-inst | FileCheck %s -check-prefix=MMR6
 
 @g1 = external global i32
 

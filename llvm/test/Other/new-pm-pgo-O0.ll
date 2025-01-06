@@ -9,14 +9,18 @@
 ; RUN:     |FileCheck %s --check-prefixes=USE_POST_LINK,USE
 ; RUN: opt -debug-pass-manager -passes='lto<O0>' -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' %s 2>&1 \
 ; RUN:     |FileCheck %s --check-prefixes=USE_POST_LINK,USE
+; RUN: opt -debug-pass-manager -passes='default<O0>' -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-pgo.prof' %s 2>&1 \
+; RUN:     |FileCheck %s --check-prefixes=SAMPLE_USE
 
-;
 ; GEN: Running pass: PGOInstrumentationGen
 ; USE_DEFAULT: Running pass: PGOInstrumentationUse
 ; USE_PRE_LINK: Running pass: PGOInstrumentationUse
 ; USE_POST_LINK-NOT: Running pass: PGOInstrumentationUse
 ; USE-NOT: Running pass: PGOIndirectCallPromotion
 ; USE-NOT: Running pass: PGOMemOPSizeOpt
+
+; SAMPLE_USE: Running pass: AddDiscriminatorsPass
+; SAMPLE_USE: Running pass: SampleProfileLoaderPass
 
 define void @foo() {
   ret void

@@ -1,5 +1,5 @@
 ; This test does not check the machine code output.   
-; RUN: llc -march=mips < %s 
+; RUN: llc -mtriple=mips < %s 
 
 @stat_vol_ptr_int = internal global ptr null, align 4
 @stat_ptr_vol_int = internal global ptr null, align 4

@@ -45,6 +45,12 @@ STRING_EXTENSION_OUTSIDE(SBThread)
                 frames.append(frame)
             return frames
 
+        def get_stop_reason_data(self):
+            return [
+                self.GetStopReasonDataAtIndex(idx)
+                for idx in range(self.GetStopReasonDataCount())
+            ]
+
         id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
         idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
         return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
@@ -56,6 +62,7 @@ STRING_EXTENSION_OUTSIDE(SBThread)
         queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
         queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
         stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
+        stop_reason_data = property(get_stop_reason_data, None, doc='''A read only property that returns the stop reason data as a list.''')
         is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
         is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
     %}

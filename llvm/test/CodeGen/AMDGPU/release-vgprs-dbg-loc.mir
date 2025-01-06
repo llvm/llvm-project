@@ -30,11 +30,11 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test
-    ; CHECK: GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
+    ; CHECK: GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr97, 0, 4, implicit $exec
     ; CHECK-NEXT: S_NOP 0, debug-location !8
     ; CHECK-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0, debug-location !8
     ; CHECK-NEXT: S_ENDPGM 0, debug-location !8
-    GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
+    GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr97, 0, 4, implicit $exec
     S_ENDPGM 0, debug-location !8
 ...
 

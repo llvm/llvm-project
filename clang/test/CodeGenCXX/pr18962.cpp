@@ -23,7 +23,6 @@ D p3;
 
 // We end up using an opaque type for 'append' to avoid circular references.
 // CHECK: %class.A = type { ptr }
-// CHECK: %class.C = type <{ ptr, %class.B, [3 x i8] }>
-// CHECK: %class.B = type { i8 }
+// CHECK: %class.C = type <{ ptr, [4 x i8] }>
 // CHECK: %class.D = type { %class.C.base, [3 x i8] }
-// CHECK: %class.C.base = type <{ ptr, %class.B }>
+// CHECK: %class.C.base = type <{ ptr, i8 }>

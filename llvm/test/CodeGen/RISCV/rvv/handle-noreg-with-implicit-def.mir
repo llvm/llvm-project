@@ -9,8 +9,8 @@ body:             |
     ; MIR-LABEL: name: vrgather_all_undef
     ; MIR: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
     ; MIR-NEXT: [[DEF1:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; MIR-NEXT: [[PseudoRVVInitUndefM1_:%[0-9]+]]:vr = PseudoRVVInitUndefM1
-    ; MIR-NEXT: early-clobber %1:vr = PseudoVRGATHER_VI_M1 [[DEF1]], killed [[PseudoRVVInitUndefM1_]], 0, 0, 5 /* e32 */, 0 /* tu, mu */
+    ; MIR-NEXT: [[INIT_UNDEF:%[0-9]+]]:vr = INIT_UNDEF
+    ; MIR-NEXT: early-clobber %1:vr = PseudoVRGATHER_VI_M1 [[DEF1]], killed [[INIT_UNDEF]], 0, 0, 5 /* e32 */, 0 /* tu, mu */
     ; MIR-NEXT: $v8 = COPY %1
     ; MIR-NEXT: PseudoRET implicit $v8
     %2:vr = IMPLICIT_DEF

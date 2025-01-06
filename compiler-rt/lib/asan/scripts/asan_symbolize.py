@@ -316,7 +316,7 @@ class DarwinSymbolizer(Symbolizer):
         #   * For C functions atos omits parentheses and argument types.
         #   * For C++ functions the function name (i.e., `foo` above) may contain
         #     templates which may contain parentheses.
-        match = re.match("^(.*) \(in (.*)\) \((.*:\d*)\)$", atos_line)
+        match = re.match(r"^(.*) \(in (.*)\) \((.*:\d*)\)$", atos_line)
         logging.debug("atos_line: %s", atos_line)
         if match:
             function_name = match.group(1)
@@ -541,7 +541,7 @@ class SymbolizationLoop(object):
         # names in the regex because it could be an
         # Objective-C or C++ demangled name.
         stack_trace_line_format = (
-            "^( *#([0-9]+) *)(0x[0-9a-f]+) *(?:in *.+)? *\((.*)\+(0x[0-9a-f]+)\)"
+            r"^( *#([0-9]+) *)(0x[0-9a-f]+) *(?:in *.+)? *\((.*)\+(0x[0-9a-f]+)\)"
         )
         match = re.match(stack_trace_line_format, line)
         if not match:

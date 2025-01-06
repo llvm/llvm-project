@@ -97,10 +97,8 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
   StringRef sbss[4] = {".sbss.1", ".sbss.2", ".sbss.4", ".sbss.8"};
 
   auto ELFSymbol = cast<MCSymbolELF>(Symbol);
-  if (!ELFSymbol->isBindingSet()) {
+  if (!ELFSymbol->isBindingSet())
     ELFSymbol->setBinding(ELF::STB_GLOBAL);
-    ELFSymbol->setExternal(true);
-  }
 
   ELFSymbol->setType(ELF::STT_OBJECT);
 
@@ -184,6 +182,12 @@ static unsigned featureToArchVersion(unsigned Feature) {
   case Hexagon::ArchV73:
   case Hexagon::ExtensionHVXV73:
     return 73;
+  case Hexagon::ArchV75:
+  case Hexagon::ExtensionHVXV75:
+    return 75;
+  case Hexagon::ArchV79:
+  case Hexagon::ExtensionHVXV79:
+    return 79;
   }
   llvm_unreachable("Expected valid arch feature");
   return 0;

@@ -26,7 +26,7 @@ template <typename T>
 class CRTP {
 public:
     CRTP() = default;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public contructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP() = default;{{[[:space:]]*}}public:
     // CHECK-FIXES: friend T;
 };
@@ -39,7 +39,7 @@ template <typename T>
 class CRTP {
 public:
     CRTP(int) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public contructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP(int) {}{{[[:space:]]*}}public:
     // CHECK-FIXES: friend T;
 };
@@ -52,10 +52,10 @@ template <typename T>
 class CRTP {
 public:
     CRTP(int) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public contructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP(int) {}{{[[:space:]]*}}public:
     CRTP(float) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public contructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP(float) {}{{[[:space:]]*}}public:
     
     // CHECK-FIXES: friend T;
@@ -70,13 +70,13 @@ template <typename T>
 class CRTP {
 protected:
     CRTP(int) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: protected contructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: protected constructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP(int) {}{{[[:space:]]*}}protected:
     CRTP() = default;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: protected contructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: protected constructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP() = default;{{[[:space:]]*}}protected:
     CRTP(float) {}
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: protected contructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: protected constructor allows the CRTP to be inherited from as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP(float) {}{{[[:space:]]*}}protected:
     
     // CHECK-FIXES: friend T;
@@ -101,7 +101,7 @@ namespace struct_default_ctor {
 template <typename T>
 struct CRTP {
     CRTP() = default;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public contructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
     // CHECK-FIXES: private:{{[[:space:]]*}}CRTP() = default;{{[[:space:]]*}}public:
     // CHECK-FIXES: friend T;
 };

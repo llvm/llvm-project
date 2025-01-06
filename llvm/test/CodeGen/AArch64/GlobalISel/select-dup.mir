@@ -453,3 +453,22 @@ body:             |
     %dup:fpr(<2 x p0>) = G_DUP %cst(p0)
     $q0 = COPY %dup(<2 x p0>)
     RET_ReallyLR implicit $q0
+...
+---
+name:            cstv4i16gpri32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins:
+    ; CHECK-LABEL: name: cstv4i16gpri32
+    ; CHECK: %dup:fpr64 = MOVIv4i16 3, 0
+    ; CHECK-NEXT: $d0 = COPY %dup
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %cst:gpr(s32) = G_CONSTANT i32 3
+    %dup:fpr(<4 x s16>) = G_DUP %cst(s32)
+    $d0 = COPY %dup(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...

@@ -1,4 +1,4 @@
-add_clang_library(clangdRemoteMarshalling
+add_clang_library(clangdRemoteMarshalling STATIC
   Marshalling.cpp
 
   LINK_LIBS

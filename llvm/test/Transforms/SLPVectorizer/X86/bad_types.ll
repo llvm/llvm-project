@@ -4,68 +4,6 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test1(x86_mmx %a, x86_mmx %b, ptr %ptr) {
-; Ensure we can handle x86_mmx values which are primitive and can be bitcast
-; with integer types but can't be put into a vector.
-;
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast x86_mmx [[A:%.*]] to i64
-; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast x86_mmx [[B:%.*]] to i64
-; CHECK-NEXT:    [[A_AND:%.*]] = and i64 [[A_CAST]], 42
-; CHECK-NEXT:    [[B_AND:%.*]] = and i64 [[B_CAST]], 42
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i64 [[A_AND]], ptr [[PTR]], align 8
-; CHECK-NEXT:    store i64 [[B_AND]], ptr [[GEP]], align 8
-; CHECK-NEXT:    ret void
-;
-entry:
-  %a.cast = bitcast x86_mmx %a to i64
-  %b.cast = bitcast x86_mmx %b to i64
-  %a.and = and i64 %a.cast, 42
-  %b.and = and i64 %b.cast, 42
-  %gep = getelementptr i64, ptr %ptr, i32 1
-  store i64 %a.and, ptr %ptr
-  store i64 %b.and, ptr %gep
-  ret void
-}
-
-define void @test2(x86_mmx %a, x86_mmx %b) {
-; Same as @test1 but using phi-input vectorization instead of store
-; vectorization.
-;
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[EXIT:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast x86_mmx [[A:%.*]] to i64
-; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast x86_mmx [[B:%.*]] to i64
-; CHECK-NEXT:    [[A_AND:%.*]] = and i64 [[A_CAST]], 42
-; CHECK-NEXT:    [[B_AND:%.*]] = and i64 [[B_CAST]], 42
-; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[A_PHI:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[A_AND]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[B_PHI:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[B_AND]], [[IF_THEN]] ]
-; CHECK-NEXT:    tail call void @f(i64 [[A_PHI]], i64 [[B_PHI]])
-; CHECK-NEXT:    ret void
-;
-entry:
-  br i1 undef, label %if.then, label %exit
-
-if.then:
-  %a.cast = bitcast x86_mmx %a to i64
-  %b.cast = bitcast x86_mmx %b to i64
-  %a.and = and i64 %a.cast, 42
-  %b.and = and i64 %b.cast, 42
-  br label %exit
-
-exit:
-  %a.phi = phi i64 [ 0, %entry ], [ %a.and, %if.then ]
-  %b.phi = phi i64 [ 0, %entry ], [ %b.and, %if.then ]
-  tail call void @f(i64 %a.phi, i64 %b.phi)
-  ret void
-}
-
 define i8 @test3(ptr %addr) {
 ; Check that we do not vectorize types that are padded to a bigger ones.
 ;

@@ -2,6 +2,7 @@
 ## does not exist.
 
 # RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
+# RUN: not yaml2obj -DTYPE=SHT_CREL %s -o %t 2>&1 | FileCheck %s
 
 ## Check we are able to report multiple errors.
 
@@ -18,7 +19,7 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
   - Name: .rela.text
-    Type: SHT_RELA
+    Type: [[TYPE=SHT_RELA]]
     Info: .text
     Link: .symtab
     Relocations:

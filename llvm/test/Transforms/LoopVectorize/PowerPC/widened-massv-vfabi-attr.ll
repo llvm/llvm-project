@@ -7,19 +7,19 @@ define dso_local double @test(ptr %Arr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[ARR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast <2 x double> @__sind2_P8(<2 x double> [[TMP3]])
-; CHECK-NEXT:    [[TMP5]] = fadd fast <2 x double> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @__sind2_P8(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4]] = fadd fast <2 x double> [[VEC_PHI]], [[TMP3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP5]])
-; CHECK-NEXT:    ret double [[TMP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP4]])
+; CHECK-NEXT:    ret double [[TMP6]]
 ;
 entry:
   br label %for.cond

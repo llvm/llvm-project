@@ -15,6 +15,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -137,6 +138,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("arm64pe");
     break;
+  case llvm::Triple::mipsel:
+    CmdArgs.push_back("mipspe");
+    break;
   default:
     D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }
@@ -186,6 +190,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << GuardArgs;
   }
+
+  if (Args.hasArg(options::OPT_fms_hotpatch))
+    CmdArgs.push_back("--functionpadmin");
 
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
@@ -250,7 +257,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  if (C.getDriver().IsFlangMode()) {
+  if (C.getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
     addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
@@ -725,6 +733,30 @@ void toolchains::MinGW::addClangTargetOptions(
           << A->getSpelling() << GuardArgs;
     }
   }
+
+  // Default to not enabling sized deallocation, but let user provided options
+  // override it.
+  //
+  // If using sized deallocation, user code that invokes delete will end up
+  // calling delete(void*,size_t). If the user wanted to override the
+  // operator delete(void*), there may be a fallback operator
+  // delete(void*,size_t) which calls the regular operator delete(void*).
+  //
+  // However, if the C++ standard library is linked in the form of a DLL,
+  // and the fallback operator delete(void*,size_t) is within this DLL (which is
+  // the case for libc++ at least) it will only redirect towards the library's
+  // default operator delete(void*), not towards the user's provided operator
+  // delete(void*).
+  //
+  // This issue can be avoided, if the fallback operators are linked statically
+  // into the callers, even if the C++ standard library is linked as a DLL.
+  //
+  // This is meant as a temporary workaround until libc++ implements this
+  // technique, which is tracked in
+  // https://github.com/llvm/llvm-project/issues/96899.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 
   CC1Args.push_back("-fno-use-init-array");
 

@@ -1,0 +1,54 @@
+name: Release Asset Audit
+
+on:
+  workflow_dispatch:
+  release:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Run once an hour
+    - cron:  '5 * * * *'
+
+  pull_request:
+    paths:
+      - ".github/workflows/release-asset-audit.py"
+      - ".github/workflows/release-asset-audit.yml"
+
+permissions:
+  contents: read # Default everything to read-only
+
+jobs:
+  audit:
+    name: "Release Asset Audit"
+    runs-on: ubuntu-22.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 #v4.1.6
+      - name: "Run Audit Script"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+          python3 ./.github/workflows/release-asset-audit.py $GITHUB_TOKEN
+      - name: "File Issue"
+        if: >-
+          github.event_name != 'pull_request' &&
+          failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        with:
+          github-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
+          script: |
+            var fs = require('fs');
+            var body = ''
+            if (fs.existsSync('./comment')) {
+              body = fs.readFileSync('./comment') + "\n\n";
+            }
+            body = body + `\n\nhttps://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+
+            const issue = await github.rest.issues.create({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               title: "Release Asset Audit Failed",
+               labels: ['infrastructure'],
+               body: body
+            });
+            console.log(issue);

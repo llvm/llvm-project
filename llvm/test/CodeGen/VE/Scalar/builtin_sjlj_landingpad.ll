@@ -53,13 +53,13 @@ define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality ptr @__gxx_pe
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, .LBB0_3@hi(, %s0)
 ; CHECK-NEXT:    st %s0, -32(, %s9)
-; CHECK-NEXT:    or %s0, 1, (0)1
-; CHECK-NEXT:    st %s0, -96(, %s9)
 ; CHECK-NEXT:    lea %s0, _Unwind_SjLj_Register@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Unwind_SjLj_Register@hi(, %s0)
 ; CHECK-NEXT:    lea %s0, -104(, %s9)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s0, 1, (0)1
+; CHECK-NEXT:    st %s0, -96(, %s9)
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    lea %s0, errorbar@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -175,14 +175,14 @@ define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality ptr @__gxx_pe
 ; PIC-NEXT:    and %s0, %s0, (32)0
 ; PIC-NEXT:    lea.sl %s0, .LBB0_3@gotoff_hi(%s0, %s15)
 ; PIC-NEXT:    st %s0, -32(, %s9)
-; PIC-NEXT:    or %s0, 1, (0)1
-; PIC-NEXT:    st %s0, -96(, %s9)
 ; PIC-NEXT:    lea %s12, _Unwind_SjLj_Register@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0
 ; PIC-NEXT:    sic %s16
 ; PIC-NEXT:    lea.sl %s12, _Unwind_SjLj_Register@plt_hi(%s16, %s12)
 ; PIC-NEXT:    lea %s0, -104(, %s9)
 ; PIC-NEXT:    bsic %s10, (, %s12)
+; PIC-NEXT:    or %s0, 1, (0)1
+; PIC-NEXT:    st %s0, -96(, %s9)
 ; PIC-NEXT:  .Ltmp0:
 ; PIC-NEXT:    lea %s12, errorbar@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0

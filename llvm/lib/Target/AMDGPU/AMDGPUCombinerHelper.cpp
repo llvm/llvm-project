@@ -17,6 +17,13 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+AMDGPUCombinerHelper::AMDGPUCombinerHelper(
+    GISelChangeObserver &Observer, MachineIRBuilder &B, bool IsPreLegalize,
+    GISelKnownBits *KB, MachineDominatorTree *MDT, const LegalizerInfo *LI,
+    const GCNSubtarget &STI)
+    : CombinerHelper(Observer, B, IsPreLegalize, KB, MDT, LI), STI(STI),
+      TII(*STI.getInstrInfo()) {}
+
 LLVM_READNONE
 static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
@@ -444,4 +451,68 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
   auto C1 = Builder.buildFMaxNumIEEE(Ty, A1, Src2);
   Builder.buildFMinNumIEEE(MI.getOperand(0), B1, C1);
   MI.eraseFromParent();
+}
+
+bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
+    MachineInstr &MI, MachineInstr &Sel,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FMUL);
+  assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
+  assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DestTy = MRI.getType(Dst);
+  LLT ScalarDestTy = DestTy.getScalarType();
+
+  if ((ScalarDestTy != LLT::float64() && ScalarDestTy != LLT::float32() &&
+       ScalarDestTy != LLT::float16()) ||
+      !MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))
+    return false;
+
+  Register SelectCondReg = Sel.getOperand(1).getReg();
+  MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
+  MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
+
+  const auto SelectTrueVal =
+      isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
+  if (!SelectTrueVal)
+    return false;
+  const auto SelectFalseVal =
+      isConstantOrConstantSplatVectorFP(*SelectFalse, MRI);
+  if (!SelectFalseVal)
+    return false;
+
+  if (SelectTrueVal->isNegative() != SelectFalseVal->isNegative())
+    return false;
+
+  // For f32, only non-inline constants should be transformed.
+  if (ScalarDestTy == LLT::float32() && TII.isInlineConstant(*SelectTrueVal) &&
+      TII.isInlineConstant(*SelectFalseVal))
+    return false;
+
+  int SelectTrueLog2Val = SelectTrueVal->getExactLog2Abs();
+  if (SelectTrueLog2Val == INT_MIN)
+    return false;
+  int SelectFalseLog2Val = SelectFalseVal->getExactLog2Abs();
+  if (SelectFalseLog2Val == INT_MIN)
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
+    LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+    auto NewSel = Builder.buildSelect(
+        IntDestTy, SelectCondReg,
+        Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
+        Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
+
+    Register XReg = MI.getOperand(1).getReg();
+    if (SelectTrueVal->isNegative()) {
+      auto NegX =
+          Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
+      Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
+    } else {
+      Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
+    }
+  };
+
+  return true;
 }

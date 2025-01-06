@@ -176,7 +176,7 @@ void populateSpecializedTransposeLoweringPatterns(
 /// Collect a set of patterns to lower X86Vector ops to ops that map to LLVM
 /// intrinsics.
 void populateX86VectorLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns);
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
 /// Configure the target to support lowering X86Vector ops to ops that map to
 /// LLVM intrinsics.

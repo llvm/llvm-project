@@ -20,8 +20,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::EQ;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::NE;

@@ -1,6 +1,9 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -o /dev/null %s \
 # RUN:   -run-pass=livevars,phi-node-elimination,twoaddressinstruction \
 # RUN:   -no-phi-elim-live-out-early-exit=1 -phi-elim-split-all-critical-edges=1
+# RUN: llc -mtriple=aarch64-linux-gnu -verify-each -o /dev/null %s \
+# RUN:   --passes='require<live-vars>,phi-node-elimination,two-address-instruction' \
+# RUN:   -no-phi-elim-live-out-early-exit=1 -phi-elim-split-all-critical-edges=1
 
 # Used to result in
 #

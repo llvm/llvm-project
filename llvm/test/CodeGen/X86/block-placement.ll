@@ -251,7 +251,7 @@ define i32 @test_loop_align(i32 %i, ptr %a) {
 ; pass.
 ; CHECK-LABEL: test_loop_align:
 ; CHECK: %entry
-; CHECK: .p2align [[ALIGN:[0-9]+]],
+; CHECK: .p2align [[ALIGN:[0-9]+]]
 ; CHECK-NEXT: %body
 ; CHECK: %exit
 
@@ -276,9 +276,9 @@ define i32 @test_nested_loop_align(i32 %i, ptr %a, ptr %b) {
 ; Check that we provide nested loop body alignment.
 ; CHECK-LABEL: test_nested_loop_align:
 ; CHECK: %entry
-; CHECK: .p2align [[ALIGN]],
+; CHECK: .p2align [[ALIGN]]
 ; CHECK-NEXT: %loop.body.1
-; CHECK: .p2align [[ALIGN]],
+; CHECK: .p2align [[ALIGN]]
 ; CHECK-NEXT: %inner.loop.body
 ; CHECK-NOT: .p2align
 ; CHECK: %exit
@@ -312,7 +312,7 @@ exit:
   ret i32 %sum
 }
 
-define void @unnatural_cfg1() {
+define void @unnatural_cfg1(i1 %arg) {
 ; Test that we can handle a loop with an inner unnatural loop at the end of
 ; a function. This is a gross CFG reduced out of the single source GCC.
 ; CHECK-LABEL: unnatural_cfg1
@@ -327,7 +327,7 @@ loop.header:
   br label %loop.body1
 
 loop.body1:
-  br i1 undef, label %loop.body3, label %loop.body2
+  br i1 %arg, label %loop.body3, label %loop.body2
 
 loop.body2:
   %ptr = load ptr, ptr undef, align 4
@@ -341,14 +341,14 @@ loop.body3:
   br i1 %comp, label %loop.body4, label %loop.body5
 
 loop.body4:
-  br i1 undef, label %loop.header, label %loop.body5
+  br i1 %arg, label %loop.header, label %loop.body5
 
 loop.body5:
   %ptr2 = load ptr, ptr undef, align 4
   br label %loop.body3
 }
 
-define void @unnatural_cfg2(ptr %p0, i32 %a0) {
+define void @unnatural_cfg2(ptr %p0, i32 %a0, i1 %arg) {
 ; Test that we can handle a loop with a nested natural loop *and* an unnatural
 ; loop. This was reduced from a crash on block placement when run over
 ; single-source GCC.
@@ -372,10 +372,10 @@ loop.header:
 
 loop.body1:
   %val0 = load ptr, ptr undef, align 4
-  br i1 undef, label %loop.body2, label %loop.inner1.begin
+  br i1 %arg, label %loop.body2, label %loop.inner1.begin
 
 loop.body2:
-  br i1 undef, label %loop.body4, label %loop.body3
+  br i1 %arg, label %loop.body4, label %loop.body3
 
 loop.body3:
   %ptr1 = getelementptr inbounds i32, ptr %val0, i32 0
@@ -467,7 +467,7 @@ exit:
   ret i32 %merge
 }
 
-define void @fpcmp_unanalyzable_branch(i1 %cond, double %a0) {
+define void @fpcmp_unanalyzable_branch(i1 %cond, double %a0, i1 %arg) {
 ; This function's CFG contains an once-unanalyzable branch (une on floating
 ; points). As now it becomes analyzable, we should get best layout in which each
 ; edge in 'entry' -> 'entry.if.then_crit_edge' -> 'if.then' -> 'if.end' is
@@ -493,7 +493,7 @@ entry.if.then_crit_edge:
   br label %if.then
 
 lor.lhs.false:
-  br i1 undef, label %if.end, label %exit
+  br i1 %arg, label %if.end, label %exit
 
 exit:
   %cmp.i = fcmp une double 0.000000e+00, %a0
@@ -516,7 +516,7 @@ declare i32 @f()
 declare i32 @g()
 declare i32 @h(i32 %x)
 
-define i32 @test_global_cfg_break_profitability() {
+define i32 @test_global_cfg_break_profitability(i1 %arg) {
 ; Check that our metrics for the profitability of a CFG break are global rather
 ; than local. A successor may be very hot, but if the current block isn't, it
 ; doesn't matter. Within this test the 'then' block is slightly warmer than the
@@ -530,7 +530,7 @@ define i32 @test_global_cfg_break_profitability() {
 ; CHECK: ret
 
 entry:
-  br i1 undef, label %then, label %else, !prof !2
+  br i1 %arg, label %then, label %else, !prof !2
 
 then:
   %then.result = call i32 @f()
@@ -600,7 +600,7 @@ cleanup:
   unreachable
 }
 
-define void @test_unnatural_cfg_backwards_inner_loop() {
+define void @test_unnatural_cfg_backwards_inner_loop(i1 %arg) {
 ; Test that when we encounter an unnatural CFG structure after having formed
 ; a chain for an inner loop which happened to be laid out backwards we don't
 ; attempt to merge onto the wrong end of the inner loop just because we find it
@@ -612,7 +612,7 @@ define void @test_unnatural_cfg_backwards_inner_loop() {
 ; CHECK: %loop3
 
 entry:
-  br i1 undef, label %loop2a, label %body
+  br i1 %arg, label %loop2a, label %body
 
 body:
   br label %loop2a
@@ -692,7 +692,7 @@ exit:
   ret void
 }
 
-define void @unanalyzable_branch_to_free_block(float %x) {
+define void @unanalyzable_branch_to_free_block(float %x, i1 %arg) {
 ; Ensure that we can handle unanalyzable branches where the destination block
 ; gets selected as the best free block in the CFG.
 ;
@@ -704,7 +704,7 @@ define void @unanalyzable_branch_to_free_block(float %x) {
 ; CHECK: %exit
 
 entry:
-  br i1 undef, label %a, label %b
+  br i1 %arg, label %a, label %b
 
 a:
   call i32 @f()

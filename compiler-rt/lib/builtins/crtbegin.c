@@ -8,6 +8,14 @@
 
 #include <stddef.h>
 
+#ifndef __has_feature
+# define __has_feature(x) 0
+#endif
+
+#if __has_feature(ptrauth_init_fini)
+#include <ptrauth.h>
+#endif
+
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
 #ifdef EH_USE_FRAME_REGISTRY
@@ -46,8 +54,22 @@ static void __attribute__((used)) __do_init(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
+#if __has_feature(ptrauth_init_fini)
+// TODO: use __ptrauth-qualified pointers when they are supported on clang side
+#if __has_feature(ptrauth_init_fini_address_discrimination)
+__attribute__((section(".init_array"), used)) static void *__init =
+    ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
+                          ptrauth_blend_discriminator(
+                              &__init, __ptrauth_init_fini_discriminator));
+#else
+__attribute__((section(".init_array"), used)) static void *__init =
+    ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
+                          __ptrauth_init_fini_discriminator);
+#endif
+#else
 __attribute__((section(".init_array"),
                used)) static void (*__init)(void) = __do_init;
+#endif
 #elif defined(__i386__) || defined(__x86_64__)
 __asm__(".pushsection .init,\"ax\",@progbits\n\t"
         "call __do_init\n\t"
@@ -103,8 +125,22 @@ static void __attribute__((used)) __do_fini(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
+#if __has_feature(ptrauth_init_fini)
+// TODO: use __ptrauth-qualified pointers when they are supported on clang side
+#if __has_feature(ptrauth_init_fini_address_discrimination)
+__attribute__((section(".fini_array"), used)) static void *__fini =
+    ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
+                          ptrauth_blend_discriminator(
+                              &__fini, __ptrauth_init_fini_discriminator));
+#else
+__attribute__((section(".fini_array"), used)) static void *__fini =
+    ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
+                          __ptrauth_init_fini_discriminator);
+#endif
+#else
 __attribute__((section(".fini_array"),
                used)) static void (*__fini)(void) = __do_fini;
+#endif
 #elif defined(__i386__) || defined(__x86_64__)
 __asm__(".pushsection .fini,\"ax\",@progbits\n\t"
         "call __do_fini\n\t"

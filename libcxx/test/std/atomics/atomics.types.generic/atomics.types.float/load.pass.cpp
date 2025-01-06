@@ -11,10 +11,11 @@
 //  floating-point-type load(memory_order = memory_order::seq_cst) volatile noexcept;
 //  floating-point-type load(memory_order = memory_order::seq_cst) noexcept;
 
-#include <algorithm>
 #include <atomic>
+#include <algorithm>
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <ranges>
 #include <type_traits>
 #include <vector>

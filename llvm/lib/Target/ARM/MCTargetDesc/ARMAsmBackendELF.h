@@ -6,16 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_ARM_ELFARMASMBACKEND_H
-#define LLVM_LIB_TARGET_ARM_ELFARMASMBACKEND_H
+#ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ELFARMASMBACKEND_H
+#define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ELFARMASMBACKEND_H
 
 #include "ARMAsmBackend.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/MC/MCObjectWriter.h"
 
-using namespace llvm;
-
-namespace {
+namespace llvm {
 class ARMAsmBackendELF : public ARMAsmBackend {
 public:
   uint8_t OSABI;
@@ -30,6 +28,6 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 };
-}
+} // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_MCTARGETDESC_ELFARMASMBACKEND_H

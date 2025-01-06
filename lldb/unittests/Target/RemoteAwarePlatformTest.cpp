@@ -33,8 +33,8 @@ public:
   MOCK_METHOD0(CalculateTrapHandlerSymbolNames, void());
 
   MOCK_METHOD2(ResolveExecutable,
-               std::pair<Status, ModuleSP>(const ModuleSpec &,
-                                           const FileSpecList *));
+               std::pair<bool, ModuleSP>(const ModuleSpec &,
+                                         const FileSpecList *));
   Status
   ResolveExecutable(const ModuleSpec &module_spec,
                     lldb::ModuleSP &exe_module_sp,
@@ -42,7 +42,7 @@ public:
   { // NOLINT(modernize-use-override)
     auto pair = ResolveExecutable(module_spec, module_search_paths_ptr);
     exe_module_sp = pair.second;
-    return pair.first;
+    return pair.first ? Status() : Status::FromErrorString("error");
   }
 
   void SetRemotePlatform(lldb::PlatformSP platform) {
@@ -81,7 +81,7 @@ TEST_F(RemoteAwarePlatformTest, TestResolveExecutabelOnClientByPlatform) {
   EXPECT_CALL(platform, GetSupportedArchitectures(process_host_arch))
       .WillRepeatedly(Return(std::vector<ArchSpec>()));
   EXPECT_CALL(platform, ResolveExecutable(_, _))
-      .WillRepeatedly(Return(std::make_pair(Status(), expected_executable)));
+      .WillRepeatedly(Return(std::make_pair(true, expected_executable)));
 
   platform.SetRemotePlatform(std::make_shared<TargetPlatformTester>(false));
 

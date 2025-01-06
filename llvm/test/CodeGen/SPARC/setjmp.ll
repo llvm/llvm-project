@@ -1,5 +1,5 @@
-;RUN: llc -march=sparc   < %s | FileCheck %s
-;RUN: llc -march=sparcv9 < %s | FileCheck %s --check-prefix=V9
+;RUN: llc -mtriple=sparc < %s | FileCheck %s
+;RUN: llc -mtriple=sparcv9 < %s | FileCheck %s --check-prefix=V9
 
 
 %0 = type { [32 x i32] }

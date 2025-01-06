@@ -68,7 +68,7 @@ of the call to `intentOutFunc()`:
 
 I also used this program to produce a parse tree for the program using the command:
 ```bash
-  flang-new -fc1 -fdebug-dump-parse-tree testfun.f90
+  flang -fc1 -fdebug-dump-parse-tree testfun.f90
 ```
 
 Here's the relevant fragment of the parse tree produced by the compiler:
@@ -296,7 +296,7 @@ In `lib/Semantics/check-do.cpp`, I added an (almost empty) implementation:
 I then built the compiler with these changes and ran it on my test program.
 This time, I made sure to invoke semantic checking.  Here's the command I used:
 ```bash
-  flang-new -fc1 -fdebug-unparse-with-symbols testfun.f90
+  flang -fc1 -fdebug-unparse-with-symbols testfun.f90
 ```
 
 This produced the output:

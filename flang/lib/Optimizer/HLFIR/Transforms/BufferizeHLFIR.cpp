@@ -26,11 +26,12 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -180,7 +181,7 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
   using mlir::OpConversionPattern<hlfir::AsExprOp>::OpConversionPattern;
   explicit AsExprOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::AsExprOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AsExprOp asExpr, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = asExpr->getLoc();
@@ -205,7 +206,7 @@ struct ShapeOfOpConversion
     : public mlir::OpConversionPattern<hlfir::ShapeOfOp> {
   using mlir::OpConversionPattern<hlfir::ShapeOfOp>::OpConversionPattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ShapeOfOp shapeOf, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = shapeOf.getLoc();
@@ -237,7 +238,7 @@ struct ApplyOpConversion : public mlir::OpConversionPattern<hlfir::ApplyOp> {
   using mlir::OpConversionPattern<hlfir::ApplyOp>::OpConversionPattern;
   explicit ApplyOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::ApplyOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ApplyOp apply, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = apply->getLoc();
@@ -262,7 +263,7 @@ struct AssignOpConversion : public mlir::OpConversionPattern<hlfir::AssignOp> {
   using mlir::OpConversionPattern<hlfir::AssignOp>::OpConversionPattern;
   explicit AssignOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::AssignOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     llvm::SmallVector<mlir::Value> newOperands;
@@ -279,7 +280,7 @@ struct ConcatOpConversion : public mlir::OpConversionPattern<hlfir::ConcatOp> {
   using mlir::OpConversionPattern<hlfir::ConcatOp>::OpConversionPattern;
   explicit ConcatOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::ConcatOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ConcatOp concat, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = concat->getLoc();
@@ -318,7 +319,7 @@ struct SetLengthOpConversion
   using mlir::OpConversionPattern<hlfir::SetLengthOp>::OpConversionPattern;
   explicit SetLengthOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::SetLengthOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::SetLengthOp setLength, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = setLength->getLoc();
@@ -351,7 +352,7 @@ struct GetLengthOpConversion
   using mlir::OpConversionPattern<hlfir::GetLengthOp>::OpConversionPattern;
   explicit GetLengthOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::GetLengthOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::GetLengthOp getLength, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = getLength->getLoc();
@@ -441,7 +442,7 @@ struct AssociateOpConversion
   using mlir::OpConversionPattern<hlfir::AssociateOp>::OpConversionPattern;
   explicit AssociateOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::AssociateOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssociateOp associate, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = associate->getLoc();
@@ -660,7 +661,7 @@ struct EndAssociateOpConversion
   using mlir::OpConversionPattern<hlfir::EndAssociateOp>::OpConversionPattern;
   explicit EndAssociateOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::EndAssociateOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::EndAssociateOp endAssociate, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = endAssociate->getLoc();
@@ -677,7 +678,7 @@ struct DestroyOpConversion
   using mlir::OpConversionPattern<hlfir::DestroyOp>::OpConversionPattern;
   explicit DestroyOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::DestroyOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DestroyOp destroy, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // If expr was bufferized on the heap, now is time to deallocate the buffer.
@@ -706,7 +707,7 @@ struct NoReassocOpConversion
   using mlir::OpConversionPattern<hlfir::NoReassocOp>::OpConversionPattern;
   explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::NoReassocOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NoReassocOp noreassoc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = noreassoc->getLoc();
@@ -767,7 +768,7 @@ struct ElementalOpConversion
     // by the nesting level of ElementalOp's.
     setHasBoundedRewriteRecursion();
   }
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = elemental->getLoc();
@@ -792,9 +793,10 @@ struct ElementalOpConversion
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
     hlfir::LoopNest loopNest =
-        hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered());
+        hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered(),
+                           flangomp::shouldUseWorkshareLowering(elemental));
     auto insPt = builder.saveInsertionPoint();
-    builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+    builder.setInsertionPointToStart(loopNest.body);
     auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                           loopNest.oneBasedIndices);
     hlfir::Entity elementValue(yield.getElementValue());
@@ -804,8 +806,12 @@ struct ElementalOpConversion
     // elemental is a "view" over a variable (e.g parentheses or transpose).
     if (auto asExpr = elementValue.getDefiningOp<hlfir::AsExprOp>()) {
       if (asExpr->hasOneUse() && !asExpr.isMove()) {
-        elementValue = hlfir::Entity{asExpr.getVar()};
-        rewriter.eraseOp(asExpr);
+        // Check that the asExpr is the final operation before the yield,
+        // otherwise, clean-ups could impact the memory being re-used.
+        if (asExpr->getNextNode() == yield.getOperation()) {
+          elementValue = hlfir::Entity{asExpr.getVar()};
+          rewriter.eraseOp(asExpr);
+        }
       }
     }
     rewriter.eraseOp(yield);
@@ -860,7 +866,7 @@ struct CharExtremumOpConversion
   using mlir::OpConversionPattern<hlfir::CharExtremumOp>::OpConversionPattern;
   explicit CharExtremumOpConversion(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<hlfir::CharExtremumOp>{ctx} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CharExtremumOp char_extremum, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = char_extremum->getLoc();
@@ -903,6 +909,26 @@ struct CharExtremumOpConversion
   }
 };
 
+struct EvaluateInMemoryOpConversion
+    : public mlir::OpConversionPattern<hlfir::EvaluateInMemoryOp> {
+  using mlir::OpConversionPattern<
+      hlfir::EvaluateInMemoryOp>::OpConversionPattern;
+  explicit EvaluateInMemoryOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::EvaluateInMemoryOp>{ctx} {}
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::EvaluateInMemoryOp evalInMemOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = evalInMemOp->getLoc();
+    fir::FirOpBuilder builder(rewriter, evalInMemOp.getOperation());
+    auto [temp, isHeapAlloc] = hlfir::computeEvaluateOpInNewTemp(
+        loc, builder, evalInMemOp, adaptor.getShape(), adaptor.getTypeparams());
+    mlir::Value bufferizedExpr =
+        packageBufferizedExpr(loc, builder, temp, isHeapAlloc);
+    rewriter.replaceOp(evalInMemOp, bufferizedExpr);
+    return mlir::success();
+  }
+};
+
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
   void runOnOperation() override {
@@ -916,12 +942,13 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                    AssociateOpConversion, CharExtremumOpConversion,
-                    ConcatOpConversion, DestroyOpConversion,
-                    ElementalOpConversion, EndAssociateOpConversion,
-                    NoReassocOpConversion, SetLengthOpConversion,
-                    ShapeOfOpConversion, GetLengthOpConversion>(context);
+    patterns
+        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                AssociateOpConversion, CharExtremumOpConversion,
+                ConcatOpConversion, DestroyOpConversion, ElementalOpConversion,
+                EndAssociateOpConversion, EvaluateInMemoryOpConversion,
+                NoReassocOpConversion, SetLengthOpConversion,
+                ShapeOfOpConversion, GetLengthOpConversion>(context);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
     // It must be erased by its parent converter and there is no explicit

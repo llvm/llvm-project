@@ -27,32 +27,32 @@ void test() {
   res_vf = vec_ctf(vsll, 4);
 // CHECK:         [[TMP0:%.*]] = load <2 x i64>, ptr @vsll, align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.ppc.vsx.xvcvsxdsp(<2 x i64> [[TMP0]])
-// CHECK-NEXT:    fmul <4 x float> [[TMP1]], <float 6.250000e-02, float 6.250000e-02, float 6.250000e-02, float 6.250000e-02>
+// CHECK-NEXT:    fmul <4 x float> [[TMP1]], splat (float 6.250000e-02)
 // NOCOMPAT:      [[TMP0:%.*]] = load <2 x i64>, ptr @vsll, align 16
 // NOCOMPAT-NEXT: [[CONV:%.*]] = sitofp <2 x i64> [[TMP0]] to <2 x double>
-// NOCOMPAT-NEXT: fmul <2 x double> [[CONV]], <double 6.250000e-02, double 6.250000e-02>
+// NOCOMPAT-NEXT: fmul <2 x double> [[CONV]], splat (double 6.250000e-02)
 
   res_vf = vec_ctf(vull, 4);
 // CHECK:         [[TMP2:%.*]] = load <2 x i64>, ptr @vull, align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.ppc.vsx.xvcvuxdsp(<2 x i64> [[TMP2]])
-// CHECK-NEXT:    fmul <4 x float> [[TMP3]], <float 6.250000e-02, float 6.250000e-02, float 6.250000e-02, float 6.250000e-02>
+// CHECK-NEXT:    fmul <4 x float> [[TMP3]], splat (float 6.250000e-02)
 // NOCOMPAT:      [[TMP2:%.*]] = load <2 x i64>, ptr @vull, align 16
 // NOCOMPAT-NEXT: [[CONV1:%.*]] = uitofp <2 x i64> [[TMP2]] to <2 x double>
-// NOCOMPAT-NEXT: fmul <2 x double> [[CONV1]], <double 6.250000e-02, double 6.250000e-02>
+// NOCOMPAT-NEXT: fmul <2 x double> [[CONV1]], splat (double 6.250000e-02)
 
   res_vsll = vec_cts(vd, 4);
 // CHECK:         [[TMP4:%.*]] = load <2 x double>, ptr @vd, align 16
-// CHECK-NEXT:    fmul <2 x double> [[TMP4]], <double 1.600000e+01, double 1.600000e+01>
+// CHECK-NEXT:    fmul <2 x double> [[TMP4]], splat (double 1.600000e+01)
 // CHECK:         call <4 x i32> @llvm.ppc.vsx.xvcvdpsxws(<2 x double>
 // NOCOMPAT:      [[TMP4:%.*]] = load <2 x double>, ptr @vd, align 16
-// NOCOMPAT-NEXT: fmul <2 x double> [[TMP4]], <double 1.600000e+01, double 1.600000e+01>
+// NOCOMPAT-NEXT: fmul <2 x double> [[TMP4]], splat (double 1.600000e+01)
 
   res_vull = vec_ctu(vd, 4);
 // CHECK:         [[TMP8:%.*]] = load <2 x double>, ptr @vd, align 16
-// CHECK-NEXT:    fmul <2 x double> [[TMP8]], <double 1.600000e+01, double 1.600000e+01>
+// CHECK-NEXT:    fmul <2 x double> [[TMP8]], splat (double 1.600000e+01)
 // CHECK:         call <4 x i32> @llvm.ppc.vsx.xvcvdpuxws(<2 x double>
 // NOCOMPAT:      [[TMP7:%.*]] = load <2 x double>, ptr @vd, align 16
-// NOCOMPAT-NEXT: fmul <2 x double> [[TMP7]], <double 1.600000e+01, double 1.600000e+01>
+// NOCOMPAT-NEXT: fmul <2 x double> [[TMP7]], splat (double 1.600000e+01)
 
   res_vd = vec_round(vd);
 // CHECK:         call double @llvm.ppc.readflm()

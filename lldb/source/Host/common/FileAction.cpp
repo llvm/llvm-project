@@ -41,7 +41,7 @@ bool FileAction::Open(int fd, const FileSpec &file_spec, bool read,
     else if (read)
       m_arg = O_NOCTTY | O_RDONLY;
     else
-      m_arg = O_NOCTTY | O_CREAT | O_WRONLY;
+      m_arg = O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
     m_file_spec = file_spec;
     return true;
   } else {

@@ -52,7 +52,7 @@ Status OptionValueString::SetValueFromString(llvm::StringRef value,
     case '"':
     case '\'': {
       if (value.size() <= 1 || value.back() != value.front()) {
-        error.SetErrorString("mismatched quotes");
+        error = Status::FromErrorString("mismatched quotes");
         return error;
       }
       value = value.drop_front().drop_back();

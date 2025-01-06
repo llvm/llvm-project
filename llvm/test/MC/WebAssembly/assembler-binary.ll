@@ -20,7 +20,6 @@ entry:
 ; Checking assembly is not the point of this test, but if something breaks
 ; it is easier to spot it here than in the yaml output.
 
-; ASM:     	.text
 ; ASM:      	.file	"assembler-binary.ll"
 ; ASM:       	.functype	bar () -> ()
 ; ASM:      	.globl	foo

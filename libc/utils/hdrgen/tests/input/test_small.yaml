@@ -1,0 +1,66 @@
+header: test_header.h
+macros:
+  - macro_name: MACRO_A
+    macro_value: 1
+  - macro_name: MACRO_B
+    macro_value: 2
+types:
+  - type_name: type_a
+  - type_name: type_b
+enums:
+  - name: enum_a
+    value: value_1
+  - name: enum_b
+    value: value_2
+objects:
+  - object_name: object_1
+    object_type: obj
+  - object_name: object_2
+    object_type: obj
+functions:
+  - name: func_a
+    return_type: void
+    arguments: []
+    standards:
+      - stdc
+    attributes:
+      - CONST_FUNC_A
+  - name: func_b
+    return_type: float128
+    arguments: []
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: func_c
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: float
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: func_d
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: float
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: func_e
+    return_type: _Float16
+    arguments:
+      - type: float128
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: func_f
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: double
+      - type: float
+    standards:
+      - stdc
+
+

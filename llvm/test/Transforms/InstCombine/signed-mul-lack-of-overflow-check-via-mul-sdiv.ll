@@ -23,7 +23,7 @@ define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t1_vec(
 ; CHECK-NEXT:    [[MUL:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.smul.with.overflow.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]])
 ; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[MUL]], 1
-; CHECK-NEXT:    [[MUL_NOT_OV:%.*]] = xor <2 x i1> [[MUL_OV]], <i1 true, i1 true>
+; CHECK-NEXT:    [[MUL_NOT_OV:%.*]] = xor <2 x i1> [[MUL_OV]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[MUL_NOT_OV]]
 ;
   %t0 = mul <2 x i8> %x, %y

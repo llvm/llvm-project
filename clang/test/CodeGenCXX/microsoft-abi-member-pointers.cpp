@@ -647,7 +647,7 @@ void (Multiple::*convertB2FuncToMultiple(void (B2::*mp)()))() {
 // CHECK:   br i1 %{{.*}} label %{{.*}}, label %{{.*}}
 //
 //        memptr.convert:                                   ; preds = %entry
-// CHECK:   insertvalue { ptr, i32 } undef, ptr %[[mp]], 0
+// CHECK:   insertvalue { ptr, i32 } poison, ptr %[[mp]], 0
 // CHECK:   insertvalue { ptr, i32 } %{{.*}}, i32 4, 1
 // CHECK:   br label
 //
@@ -705,7 +705,7 @@ void (D::*convertCToD(void (C::*mp)()))() {
 // CHECK:   %[[nv_adj:.*]] = select i1 %[[is_nvbase]], i32 %[[nv_disp]], i32 0
 // CHECK:   %[[dst_adj:.*]] = select i1 %[[is_nvbase]], i32 4, i32 0
 // CHECK:   %[[adj:.*]] = sub nsw i32 %[[nv_adj]], %[[dst_adj]]
-// CHECK:   insertvalue { ptr, i32, i32 } undef, ptr {{.*}}, 0
+// CHECK:   insertvalue { ptr, i32, i32 } poison, ptr {{.*}}, 0
 // CHECK:   insertvalue { ptr, i32, i32 } {{.*}}, i32 %[[adj]], 1
 // CHECK:   insertvalue { ptr, i32, i32 } {{.*}}, i32 {{.*}}, 2
 // CHECK:   br label

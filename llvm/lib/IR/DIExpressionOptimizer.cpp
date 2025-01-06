@@ -59,12 +59,14 @@ foldOperationIfPossible(uint64_t Const1, uint64_t Const2,
     return Const1 - Const2;
   }
   case dwarf::DW_OP_shl: {
-    if ((uint64_t)countl_zero(Const1) < Const2)
+    if (Const2 >= std::numeric_limits<uint64_t>::digits ||
+        static_cast<uint64_t>(countl_zero(Const1)) < Const2)
       return std::nullopt;
     return Const1 << Const2;
   }
   case dwarf::DW_OP_shr: {
-    if ((uint64_t)countr_zero(Const1) < Const2)
+    if (Const2 >= std::numeric_limits<uint64_t>::digits ||
+        static_cast<uint64_t>(countr_zero(Const1)) < Const2)
       return std::nullopt;
     return Const1 >> Const2;
   }

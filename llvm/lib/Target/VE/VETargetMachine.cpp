@@ -89,9 +89,9 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  std::optional<Reloc::Model> RM,
                                  std::optional<CodeModel::Model> CM,
                                  CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();

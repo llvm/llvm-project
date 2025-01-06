@@ -452,6 +452,7 @@ struct ClientCapabilities {
   std::optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
   /// Whether the client accepts diagnostics with codeActions attached inline.
+  /// This is a clangd extension.
   /// textDocument.publishDiagnostics.codeActionsInline.
   bool DiagnosticFixes = false;
 
@@ -475,6 +476,7 @@ struct ClientCapabilities {
 
   /// Client supports displaying a container string for results of
   /// textDocument/reference (clangd extension)
+  /// textDocument.references.container
   bool ReferenceContainer = false;
 
   /// Client supports hierarchical document symbols.
@@ -563,6 +565,7 @@ struct ClientCapabilities {
 
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
+  /// textDocument.inactiveRegionsCapabilities.inactiveRegions
   bool InactiveRegions = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
@@ -1680,6 +1683,15 @@ enum class InlayHintKind {
   /// Uses comment-like syntax like "// func".
   /// This is a clangd extension.
   BlockEnd = 4,
+
+  /// An inlay hint that is for a default argument.
+  ///
+  /// An example of a parameter hint for a default argument:
+  ///    void foo(bool A = true);
+  ///    foo(^);
+  /// Adds an inlay hint "A: true".
+  /// This is a clangd extension.
+  DefaultArgument = 6,
 
   /// Other ideas for hints that are not currently implemented:
   ///

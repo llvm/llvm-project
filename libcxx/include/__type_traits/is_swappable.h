@@ -10,15 +10,16 @@
 #define _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

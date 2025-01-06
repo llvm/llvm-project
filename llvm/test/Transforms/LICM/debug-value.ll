@@ -3,18 +3,18 @@
 
 ; RUN: opt -passes=licm < %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
-define void @dgefa() nounwind ssp {
+define void @dgefa(i1 %arg) nounwind ssp {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.cond.backedge, %entry
-  br i1 undef, label %if.then, label %for.cond.backedge, !dbg !11
+  br i1 %arg, label %if.then, label %for.cond.backedge, !dbg !11
 
 for.cond.backedge:                                ; preds = %for.body61, %for.body61.us, %for.body
-  br i1 undef, label %for.end104, label %for.body, !dbg !15
+  br i1 %arg, label %for.end104, label %for.body, !dbg !15
 
 if.then:                                          ; preds = %for.body
-  br i1 undef, label %if.then27, label %if.end.if.end.split_crit_edge.critedge, !dbg !16
+  br i1 %arg, label %if.then27, label %if.end.if.end.split_crit_edge.critedge, !dbg !16
 
 if.then27:                                        ; preds = %if.then
 ; CHECK: #dbg_value
@@ -25,10 +25,10 @@ if.end.if.end.split_crit_edge.critedge:           ; preds = %if.then
   br label %for.body61
 
 for.body61.us:                                    ; preds = %for.body61.us, %if.then27
-  br i1 undef, label %for.cond.backedge, label %for.body61.us, !dbg !23
+  br i1 %arg, label %for.cond.backedge, label %for.body61.us, !dbg !23
 
 for.body61:                                       ; preds = %for.body61, %if.end.if.end.split_crit_edge.critedge
-  br i1 undef, label %for.cond.backedge, label %for.body61, !dbg !23
+  br i1 %arg, label %for.cond.backedge, label %for.body61, !dbg !23
 
 for.end104:                                       ; preds = %for.cond.backedge
   ret void, !dbg !24

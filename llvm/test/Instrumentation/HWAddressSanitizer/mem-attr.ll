@@ -11,5 +11,13 @@ entry:
   ret void
 }
 
-; CHECK: attributes #0 = { sanitize_hwaddress uwtable }
+; CHECK: define dso_local void @test_readonly(ptr nocapture noundef readonly %p) local_unnamed_addr #0
+define dso_local void @test_readonly(ptr nocapture noundef readonly %p) local_unnamed_addr #1 {
+entry:
+  store i32 42, ptr %p, align 4
+  ret void
+}
+
+; CHECK: attributes #0 = { nobuiltin sanitize_hwaddress uwtable }
 attributes #0 = { sanitize_hwaddress memory(argmem: write) uwtable }
+attributes #1 = { sanitize_hwaddress memory(argmem: read) uwtable }

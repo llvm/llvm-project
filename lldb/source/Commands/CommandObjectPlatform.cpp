@@ -78,16 +78,16 @@ public:
     case 'v': {
       if (option_arg.getAsInteger(8, m_permissions)) {
         m_permissions = 0777;
-        error.SetErrorStringWithFormat("invalid value for permissions: %s",
-                                       option_arg.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid value for permissions: %s", option_arg.str().c_str());
       }
 
     } break;
     case 's': {
       mode_t perms = ParsePermissionString(option_arg);
       if (perms == (mode_t)-1)
-        error.SetErrorStringWithFormat("invalid value for permissions: %s",
-                                       option_arg.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid value for permissions: %s", option_arg.str().c_str());
       else
         m_permissions = perms;
     } break;
@@ -609,13 +609,13 @@ protected:
       switch (short_option) {
       case 'o':
         if (option_arg.getAsInteger(0, m_offset))
-          error.SetErrorStringWithFormat("invalid offset: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid offset: '%s'",
+                                                    option_arg.str().c_str());
         break;
       case 'c':
         if (option_arg.getAsInteger(0, m_count))
-          error.SetErrorStringWithFormat("invalid offset: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid offset: '%s'",
+                                                    option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -702,8 +702,8 @@ protected:
       switch (short_option) {
       case 'o':
         if (option_arg.getAsInteger(0, m_offset))
-          error.SetErrorStringWithFormat("invalid offset: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid offset: '%s'",
+                                                    option_arg.str().c_str());
         break;
       case 'd':
         m_data.assign(std::string(option_arg));
@@ -1328,14 +1328,14 @@ protected:
       case 'p': {
         match_info.GetProcessInfo().SetProcessID(id);
         if (!success)
-          error.SetErrorStringWithFormat("invalid process ID string: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid process ID string: '%s'", option_arg.str().c_str());
         break;
       }
       case 'P':
         match_info.GetProcessInfo().SetParentProcessID(id);
         if (!success)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid parent process ID string: '%s'",
               option_arg.str().c_str());
         break;
@@ -1343,15 +1343,15 @@ protected:
       case 'u':
         match_info.GetProcessInfo().SetUserID(success ? id : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat("invalid user ID string: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid user ID string: '%s'", option_arg.str().c_str());
         break;
 
       case 'U':
         match_info.GetProcessInfo().SetEffectiveUserID(success ? id
                                                                : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid effective user ID string: '%s'",
               option_arg.str().c_str());
         break;
@@ -1359,15 +1359,15 @@ protected:
       case 'g':
         match_info.GetProcessInfo().SetGroupID(success ? id : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat("invalid group ID string: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid group ID string: '%s'", option_arg.str().c_str());
         break;
 
       case 'G':
         match_info.GetProcessInfo().SetEffectiveGroupID(success ? id
                                                                 : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid effective group ID string: '%s'",
               option_arg.str().c_str());
         break;
@@ -1630,7 +1630,7 @@ public:
       case 't':
         uint32_t timeout_sec;
         if (option_arg.getAsInteger(10, timeout_sec))
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "could not convert \"%s\" to a numeric value.",
               option_arg.str().c_str());
         else
@@ -1638,7 +1638,7 @@ public:
         break;
       case 's': {
         if (option_arg.empty()) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "missing shell interpreter path for option -i|--interpreter.");
           return error;
         }
@@ -1734,7 +1734,7 @@ public:
     } else {
       result.GetOutputStream().Printf(
           "error: cannot run remote shell commands without a platform\n");
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "error: cannot run remote shell commands without a platform");
     }
 

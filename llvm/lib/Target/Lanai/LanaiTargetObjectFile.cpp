@@ -7,11 +7,8 @@
 
 #include "LanaiTargetObjectFile.h"
 
-#include "LanaiSubtarget.h"
-#include "LanaiTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -95,7 +92,7 @@ bool LanaiTargetObjectFile::isGlobalInSmallSectionImpl(
 
   Type *Ty = GVA->getValueType();
   return isInSmallSection(
-      GVA->getParent()->getDataLayout().getTypeAllocSize(Ty));
+      GVA->getDataLayout().getTypeAllocSize(Ty));
 }
 
 MCSection *LanaiTargetObjectFile::SelectSectionForGlobal(

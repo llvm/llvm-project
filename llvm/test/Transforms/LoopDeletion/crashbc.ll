@@ -2,12 +2,12 @@
 ; RUN: opt < %s -passes=loop-deletion -o /dev/null
 ; RUN: opt < %s -passes=loop-deletion -o /dev/null --try-experimental-debuginfo-iterators
 
-define void @f() {
+define void @f(i1 %arg) {
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %0
   call void @llvm.dbg.value(metadata i16 undef, metadata !1, metadata !DIExpression()), !dbg !11
-  br i1 undef, label %bb1, label %bb3
+  br i1 %arg, label %bb1, label %bb3
 
 bb3:                                              ; preds = %bb1
   ret void

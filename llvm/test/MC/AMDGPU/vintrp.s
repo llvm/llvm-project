@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SI %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
 
 v_interp_p1_f32 v1, v0, attr0.x

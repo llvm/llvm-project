@@ -55,7 +55,7 @@ class FindInMemoryTestCase(TestBase):
         error = lldb.SBError()
         addr = self.process.FindInMemory(
             SINGLE_INSTANCE_PATTERN_STACK,
-            GetStackRange(self),
+            GetStackRange(self, True),
             1,
             error,
         )
@@ -70,7 +70,7 @@ class FindInMemoryTestCase(TestBase):
         error = lldb.SBError()
         addr = self.process.FindInMemory(
             DOUBLE_INSTANCE_PATTERN_HEAP,
-            GetHeapRanges(self)[0],
+            GetHeapRanges(self, True)[0],
             1,
             error,
         )
@@ -86,7 +86,7 @@ class FindInMemoryTestCase(TestBase):
         error = lldb.SBError()
         addr = self.process.FindInMemory(
             SINGLE_INSTANCE_PATTERN_STACK,
-            GetStackRange(self),
+            GetStackRange(self, True),
             0,
             error,
         )
@@ -118,7 +118,7 @@ class FindInMemoryTestCase(TestBase):
         error = lldb.SBError()
         addr = self.process.FindInMemory(
             "",
-            GetStackRange(self),
+            GetStackRange(self, True),
             1,
             error,
         )
@@ -131,7 +131,7 @@ class FindInMemoryTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
         error = lldb.SBError()
-        range = GetAlignedRange(self)
+        range = GetAlignedRange(self, True)
 
         # First we make sure the pattern is found with alignment 1
         addr = self.process.FindInMemory(
@@ -152,3 +152,16 @@ class FindInMemoryTestCase(TestBase):
         )
         self.assertSuccess(error)
         self.assertEqual(addr, lldb.LLDB_INVALID_ADDRESS)
+
+    def test_memory_info_list_iterable(self):
+        """Make sure the SBMemoryRegionInfoList is iterable"""
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+
+        info_list = self.process.GetMemoryRegions()
+        self.assertTrue(info_list.GetSize() > 0)
+        try:
+            for info in info_list:
+                pass
+        except Exception:
+            self.fail("SBMemoryRegionInfoList is not iterable")

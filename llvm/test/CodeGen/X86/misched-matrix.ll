@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=generic -pre-RA-sched=source -enable-misched \
-; RUN:          -misched-topdown -verify-machineinstrs \
+; RUN:          -misched-prera-direction=topdown -verify-machineinstrs \
 ; RUN:     | FileCheck %s -check-prefix=TOPDOWN
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=generic -pre-RA-sched=source -enable-misched \
 ; RUN:          -misched=ilpmin -verify-machineinstrs \

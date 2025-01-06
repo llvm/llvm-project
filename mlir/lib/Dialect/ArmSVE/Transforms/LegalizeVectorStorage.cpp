@@ -317,8 +317,7 @@ struct LegalizeVectorStorage
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateLegalizeVectorStoragePatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(getOperation(),
-                                            std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
       signalPassFailure();
     }
     ConversionTarget target(getContext());

@@ -45,7 +45,7 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, NoChangeIfClockIsMonotonic) {
   ensure_monotonicity(*result);
   ASSERT_FALSE(result->is_realtime());
   ASSERT_EQ(result->get_timespec().tv_sec, static_cast<time_t>(10000));
-  ASSERT_EQ(result->get_timespec().tv_nsec, static_cast<time_t>(0));
+  ASSERT_EQ(result->get_timespec().tv_nsec, static_cast<long int>(0));
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, ValidAfterConversion) {
   timespec ts;

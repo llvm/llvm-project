@@ -195,7 +195,10 @@ def main():
     with ir.Context() as ctx, ir.Location.unknown():
         sparsification_options = f"parallelization-strategy=none "
         compiler = sparsifier.Sparsifier(
-            options=sparsification_options, opt_level=0, shared_libs=[support_lib]
+            extras="",
+            options=sparsification_options,
+            opt_level=0,
+            shared_libs=[support_lib],
         )
         f64 = ir.F64Type.get()
         # Be careful about increasing this because

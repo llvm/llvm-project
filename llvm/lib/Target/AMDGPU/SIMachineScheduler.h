@@ -120,8 +120,8 @@ public:
   ArrayRef<std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind>>
     getSuccs() const { return Succs; }
 
-  unsigned Height;  // Maximum topdown path length to block without outputs
-  unsigned Depth;   // Maximum bottomup path length to block without inputs
+  unsigned Height = 0;  // Maximum topdown path length to block without outputs
+  unsigned Depth = 0;   // Maximum bottomup path length to block without inputs
 
   unsigned getNumHighLatencySuccessors() const {
     return NumHighLatencySuccessors;

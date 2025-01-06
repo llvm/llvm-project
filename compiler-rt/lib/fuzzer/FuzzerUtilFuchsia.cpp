@@ -607,7 +607,11 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  // TODO ?
+  if (zx_status_t s = zx_object_set_property(
+          thread.native_handle(), ZX_PROP_NAME, name.data(), name.size());
+      s != ZX_OK)
+    Printf("SetThreadName for name %s failed: %s", name.c_str(),
+           zx_status_get_string(s));
 }
 
 } // namespace fuzzer

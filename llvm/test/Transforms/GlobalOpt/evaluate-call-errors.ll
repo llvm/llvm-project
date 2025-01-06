@@ -3,8 +3,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=globalopt,instcombine -S -debug-only=evaluator %s -o %t 2>&1 | FileCheck %s
 
-; CHECK: Failed to fold bitcast call expr
-; CHECK: Can not convert function argument
+; CHECK: Signature mismatch.
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

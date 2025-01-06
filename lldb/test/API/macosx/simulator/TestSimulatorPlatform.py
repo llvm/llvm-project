@@ -59,10 +59,10 @@ class TestSimulatorPlatformLaunching(TestBase):
         self.build(
             dictionary={
                 "ARCH": arch,
-                "CC": clang,
                 "ARCH_CFLAGS": "-target {} {}".format(triple, version_min),
                 "SDKROOT": sdk_root,
-            }
+            },
+            compiler=clang,
         )
 
         self.check_load_commands(expected_load_command)

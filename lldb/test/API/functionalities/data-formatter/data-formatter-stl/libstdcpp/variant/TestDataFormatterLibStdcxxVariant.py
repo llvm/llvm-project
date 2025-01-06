@@ -21,15 +21,17 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process, bkpt)
 
-        self.expect(
-            "frame variable v1",
-            substrs=["v1 =  Active Type = int  {", "Value = 12", "}"],
-        )
+        for name in ["v1", "v1_typedef"]:
+            self.expect(
+                "frame variable " + name,
+                substrs=[name + " =  Active Type = int  {", "Value = 12", "}"],
+            )
 
-        self.expect(
-            "frame variable v1_ref",
-            substrs=["v1_ref =  Active Type = int : {", "Value = 12", "}"],
-        )
+        for name in ["v1_ref", "v1_typedef_ref"]:
+            self.expect(
+                "frame variable " + name,
+                substrs=[name + " =  Active Type = int : {", "Value = 12", "}"],
+            )
 
         self.expect(
             "frame variable v_v1",

@@ -13,5 +13,5 @@ RUN: not lld-link /out:gamma.exe /subsystem:console /entry:mainCRTStartup gamma.
 
 CHECK-GAMMA: error: duplicate symbol: __declspec(dllimport) f
 CHECK-GAMMA: defined at {{.*}}gamma.obj
-CHECK-GAMMA: defined at alpha.dll
+CHECK-GAMMA: defined at alpha.lib(alpha.dll)
 

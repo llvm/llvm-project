@@ -389,12 +389,12 @@ Compiled to LLVM, this function would be represented like this:
     %X = alloca i32, align 4
     %Y = alloca i32, align 4
     %Z = alloca i32, align 4
-      #dbg_declare(ptr %X, !11, !DIExpression(), !14)
-    store i32 21, i32* %X, align 4, !dbg !14
-      #dbg_declare(ptr %Y, !15, !DIExpression(), !16)
-    store i32 22, i32* %Y, align 4, !dbg !16
-      #dbg_declare(ptr %Z, !17, !DIExpression(), !19)
-    store i32 23, i32* %Z, align 4, !dbg !19
+      #dbg_declare(ptr %X, !11, !DIExpression(), !13)
+    store i32 21, i32* %X, align 4, !dbg !13
+      #dbg_declare(ptr %Y, !14, !DIExpression(), !15)
+    store i32 22, i32* %Y, align 4, !dbg !15
+      #dbg_declare(ptr %Z, !16, !DIExpression(), !18)
+    store i32 23, i32* %Z, align 4, !dbg !18
     %0 = load i32, i32* %X, align 4, !dbg !20
     store i32 %0, i32* %Z, align 4, !dbg !21
     %1 = load i32, i32* %Y, align 4, !dbg !22
@@ -427,9 +427,9 @@ Compiled to LLVM, this function would be represented like this:
   !15 = !DILocation(line: 3, column: 9, scope: !4)
   !16 = !DILocalVariable(name: "Z", scope: !18, file: !1, line: 5, type: !12)
   !17 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
-  !18 = !DILocation(line: 5, column: 11, scope: !18)
-  !29 = !DILocation(line: 6, column: 11, scope: !18)
-  !20 = !DILocation(line: 6, column: 9, scope: !18)
+  !18 = !DILocation(line: 5, column: 11, scope: !17)
+  !29 = !DILocation(line: 6, column: 11, scope: !17)
+  !20 = !DILocation(line: 6, column: 9, scope: !17)
   !21 = !DILocation(line: 8, column: 9, scope: !4)
   !22 = !DILocation(line: 8, column: 7, scope: !4)
   !23 = !DILocation(line: 9, column: 3, scope: !4)
@@ -443,21 +443,21 @@ variable definitions, and the code used to implement the function.
 
 .. code-block:: llvm
 
-    #dbg_declare(ptr %X, !11, !DIExpression(), !14)
-    ; [debug line = 2:7] [debug variable = X]
+    #dbg_declare(ptr %X, !11, !DIExpression(), !13)
+    ; [debug line = 2:9] [debug variable = X]
 
 The first record ``#dbg_declare`` encodes debugging information for the
-variable ``X``.  The location ``!14`` at the end of the record provides
+variable ``X``.  The location ``!13`` at the end of the record provides
 scope information for the variable ``X``.
 
 .. code-block:: text
 
-  !14 = !DILocation(line: 2, column: 9, scope: !4)
+  !13 = !DILocation(line: 2, column: 9, scope: !4)
   !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5,
                               isLocal: false, isDefinition: true, scopeLine: 1,
                               isOptimized: false, retainedNodes: !2)
 
-Here ``!14`` is metadata providing `location information
+Here ``!13`` is metadata providing `location information
 <LangRef.html#dilocation>`_.  In this example, scope is encoded by ``!4``, a
 `subprogram descriptor <LangRef.html#disubprogram>`_.  This way the location
 information parameter to the records indicates that the variable ``X`` is
@@ -467,20 +467,20 @@ Now lets take another example.
 
 .. code-block:: llvm
 
-    #dbg_declare(ptr %Z, !17, !DIExpression(), !19)
-    ; [debug line = 5:9] [debug variable = Z]
+    #dbg_declare(ptr %Z, !16, !DIExpression(), !18)
+    ; [debug line = 5:11] [debug variable = Z]
 
 The third record ``#dbg_declare`` encodes debugging information for
-variable ``Z``.  The metadata ``!19`` at the end of the record provides
+variable ``Z``.  The metadata ``!18`` at the end of the record provides
 scope information for the variable ``Z``.
 
 .. code-block:: text
 
-  !18 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
-  !19 = !DILocation(line: 5, column: 11, scope: !18)
+  !17 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
+  !18 = !DILocation(line: 5, column: 11, scope: !17)
 
-Here ``!19`` indicates that ``Z`` is declared at line number 5 and column
-number 11 inside of lexical scope ``!18``.  The lexical scope itself resides
+Here ``!18`` indicates that ``Z`` is declared at line number 5 and column
+number 11 inside of lexical scope ``!17``.  The lexical scope itself resides
 inside of subprogram ``!4`` described above.
 
 The scope information attached with each instruction provides a straightforward

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-late-parse-attributes %s -verify
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 

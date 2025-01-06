@@ -35,7 +35,7 @@ define void @test_simple_arg(i32 %in) {
 ; CHECK-LABEL: name: test_indirect_call
 ; CHECK: registers:
 ; Make sure the register feeding the indirect call is properly constrained.
-; CHECK: - { id: [[FUNC:[0-9]+]], class: gpr64, preferred-register: '' }
+; CHECK: - { id: [[FUNC:[0-9]+]], class: gpr64, preferred-register: '', flags: [  ] }
 ; CHECK: %[[FUNC]]:gpr64(p0) = COPY $x0
 ; CHECK: BLR %[[FUNC]](p0), csr_aarch64_aapcs, implicit-def $lr, implicit $sp
 ; CHECK: RET_ReallyLR

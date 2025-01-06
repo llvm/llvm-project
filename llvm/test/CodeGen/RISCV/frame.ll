@@ -12,10 +12,10 @@ define i32 @test() nounwind {
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -32
 ; RV32I-FPELIM-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32I-FPELIM-NEXT:    sw zero, 24(sp)
-; RV32I-FPELIM-NEXT:    sw zero, 20(sp)
-; RV32I-FPELIM-NEXT:    sw zero, 16(sp)
-; RV32I-FPELIM-NEXT:    sw zero, 12(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 8(sp)
+; RV32I-FPELIM-NEXT:    sw zero, 12(sp)
+; RV32I-FPELIM-NEXT:    sw zero, 16(sp)
+; RV32I-FPELIM-NEXT:    sw zero, 20(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, sp, 12
 ; RV32I-FPELIM-NEXT:    call test1
 ; RV32I-FPELIM-NEXT:    li a0, 0
@@ -30,10 +30,10 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 32
 ; RV32I-WITHFP-NEXT:    sw zero, -16(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -20(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -24(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -28(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -32(s0)
+; RV32I-WITHFP-NEXT:    sw zero, -28(s0)
+; RV32I-WITHFP-NEXT:    sw zero, -24(s0)
+; RV32I-WITHFP-NEXT:    sw zero, -20(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, -28
 ; RV32I-WITHFP-NEXT:    call test1
 ; RV32I-WITHFP-NEXT:    li a0, 0

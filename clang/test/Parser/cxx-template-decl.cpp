@@ -297,3 +297,7 @@ namespace PR46231 {
   template<> int; // expected-error {{declaration does not declare anything}}
   template<int> int; // expected-error {{declaration does not declare anything}}
 }
+
+namespace PR99933 {
+  void foo() { template <typename> int i; } // expected-error {{templates can only be declared in namespace or class scope}}
+}

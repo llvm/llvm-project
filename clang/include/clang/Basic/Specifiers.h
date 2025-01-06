@@ -98,6 +98,9 @@ namespace clang {
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
     TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \
+    TST_##Name, // HLSL Intangible Types
+#include "clang/Basic/HLSLIntangibleTypes.def"
     TST_error // erroneous type
   };
 
@@ -382,6 +385,12 @@ namespace clang {
     /// Swift asynchronous context-pointer ABI treatment.  There can be at
     /// most one parameter on a given function that uses this treatment.
     SwiftAsyncContext,
+
+    // This parameter is a copy-out HLSL parameter.
+    HLSLOut,
+
+    // This parameter is a copy-in/copy-out HLSL parameter.
+    HLSLInOut,
   };
 
   /// Assigned inheritance model for a class in the MS C++ ABI. Must match order

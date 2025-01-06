@@ -126,7 +126,7 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants(ptr addrspac
 }
 
 ; GCN-LABEL: {{^}}sel_constants_sub_constant_sel_constants_i16:
-; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 2, 9,
+; GCN: s_cselect_b32 s{{[0-9]+}}, 9, 2
 define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_i16(ptr addrspace(1) %p, i1 %cond) {
   %sel = select i1 %cond, i16 -4, i16 3
   %bo = sub i16 5, %sel
@@ -135,8 +135,7 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_i16(ptr addr
 }
 
 ; GCN-LABEL: {{^}}sel_constants_sub_constant_sel_constants_i16_neg:
-; GCN: v_mov_b32_e32 [[F:v[0-9]+]], 0xfffff449
-; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, [[F]], -3,
+; GCN: s_cselect_b32 s[[SGPR:[0-9]+]], s[[SGPR]], 0xf449
 define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_i16_neg(ptr addrspace(1) %p, i1 %cond) {
   %sel = select i1 %cond, i16 4, i16 3000
   %bo = sub i16 1, %sel

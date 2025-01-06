@@ -12,8 +12,8 @@ define i8 @test_fixed_i8(i8 %a0, i8 %a1) nounwind {
 ; RV32I-LABEL: test_fixed_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 24
-; RV32I-NEXT:    srai a1, a1, 24
 ; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srai a1, a1, 24
 ; RV32I-NEXT:    srai a0, a0, 24
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srai a0, a0, 1
@@ -22,8 +22,8 @@ define i8 @test_fixed_i8(i8 %a0, i8 %a1) nounwind {
 ; RV64I-LABEL: test_fixed_i8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 56
-; RV64I-NEXT:    srai a1, a1, 56
 ; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srai a1, a1, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 1
@@ -39,8 +39,8 @@ define i8 @test_ext_i8(i8 %a0, i8 %a1) nounwind {
 ; RV32I-LABEL: test_ext_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 24
-; RV32I-NEXT:    srai a1, a1, 24
 ; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srai a1, a1, 24
 ; RV32I-NEXT:    srai a0, a0, 24
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srai a0, a0, 1
@@ -49,8 +49,8 @@ define i8 @test_ext_i8(i8 %a0, i8 %a1) nounwind {
 ; RV64I-LABEL: test_ext_i8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 56
-; RV64I-NEXT:    srai a1, a1, 56
 ; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srai a1, a1, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 1
@@ -67,8 +67,8 @@ define i16 @test_fixed_i16(i16 %a0, i16 %a1) nounwind {
 ; RV32I-LABEL: test_fixed_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 16
-; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srai a0, a0, 1
@@ -77,8 +77,8 @@ define i16 @test_fixed_i16(i16 %a0, i16 %a1) nounwind {
 ; RV64I-LABEL: test_fixed_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 48
-; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 1
@@ -94,8 +94,8 @@ define i16 @test_ext_i16(i16 %a0, i16 %a1) nounwind {
 ; RV32I-LABEL: test_ext_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 16
-; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srai a0, a0, 1
@@ -104,8 +104,8 @@ define i16 @test_ext_i16(i16 %a0, i16 %a1) nounwind {
 ; RV64I-LABEL: test_ext_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 48
-; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 1
@@ -172,8 +172,8 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; RV32I-NEXT:    xor a1, a1, a3
 ; RV32I-NEXT:    srai a3, a1, 1
 ; RV32I-NEXT:    add a3, a4, a3
-; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    xor a4, a0, a2
+; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    srli a4, a4, 1
 ; RV32I-NEXT:    or a1, a4, a1
 ; RV32I-NEXT:    and a2, a0, a2
@@ -203,8 +203,8 @@ define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; RV32I-NEXT:    xor a1, a1, a3
 ; RV32I-NEXT:    srai a3, a1, 1
 ; RV32I-NEXT:    add a3, a4, a3
-; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    xor a4, a0, a2
+; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    srli a4, a4, 1
 ; RV32I-NEXT:    or a1, a4, a1
 ; RV32I-NEXT:    and a2, a0, a2

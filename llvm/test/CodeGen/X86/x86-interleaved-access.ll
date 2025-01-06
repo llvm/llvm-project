@@ -405,14 +405,13 @@ define <8 x i8> @interleaved_load_vf8_i8_stride4(ptr %ptr) nounwind {
 ; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [3,7,11,15,7,15,6,7]
-; AVX512-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
+; AVX512-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm3
-; AVX512-NEXT:    vpackusdw %xmm1, %xmm3, %xmm1
-; AVX512-NEXT:    vpaddb %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vmovdqu (%rdi), %ymm2
+; AVX512-NEXT:    vpsrld $16, %ymm2, %ymm3
+; AVX512-NEXT:    vpmovdw %zmm3, %ymm3
+; AVX512-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovdw %zmm2, %ymm2
 ; AVX512-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
@@ -1890,19 +1889,11 @@ define void @splat4_v4i64_load_store(ptr %s, ptr %d) nounwind {
 }
 
 define <2 x i64> @PR37616(ptr %a0) nounwind {
-; AVX1-LABEL: PR37616:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX1-NEXT:    vunpcklpd 48(%rdi), %xmm0, %xmm0 # xmm0 = xmm0[0],mem[0]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512-LABEL: PR37616:
-; AVX2OR512:       # %bb.0:
-; AVX2OR512-NEXT:    vmovaps (%rdi), %ymm0
-; AVX2OR512-NEXT:    vunpcklpd 32(%rdi), %ymm0, %ymm0 # ymm0 = ymm0[0],mem[0],ymm0[2],mem[2]
-; AVX2OR512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2OR512-NEXT:    vzeroupper
-; AVX2OR512-NEXT:    retq
+; AVX-LABEL: PR37616:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX-NEXT:    vunpcklpd 48(%rdi), %xmm0, %xmm0 # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    retq
   %load = load <16 x i64>, ptr %a0, align 128
   %shuffle = shufflevector <16 x i64> %load, <16 x i64> undef, <2 x i32> <i32 2, i32 6>
   ret <2 x i64> %shuffle

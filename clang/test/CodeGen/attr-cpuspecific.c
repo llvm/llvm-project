@@ -154,6 +154,12 @@ void usages(void) {
   CpuSpecificNoDispatch();
   // LINUX: @CpuSpecificNoDispatch.ifunc()
   // WINDOWS: @CpuSpecificNoDispatch()
+  //
+  // Adding another use of CpuSpecificNoDispatch reproduces the
+  // crash in https://github.com/llvm/llvm-project/issues/115299
+  CpuSpecificNoDispatch();
+  // LINUX: @CpuSpecificNoDispatch.ifunc()
+  // WINDOWS: @CpuSpecificNoDispatch()
   OrderDispatchUsageSpecific();
   // LINUX: @OrderDispatchUsageSpecific.ifunc()
   // WINDOWS: @OrderDispatchUsageSpecific()

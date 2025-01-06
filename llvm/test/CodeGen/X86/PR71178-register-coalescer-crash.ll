@@ -8,7 +8,7 @@ define i32 @h(i1 %arg, i32 %arg1) {
 ; CHECK-NEXT:    movabsq $9166129423, %rcx # imm = 0x22258090F
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_9: # %bb18
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax

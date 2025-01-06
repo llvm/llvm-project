@@ -18,13 +18,14 @@ if(LIBC_TARGET_OS_IS_GPU)
   endif()
 endif()
 
-add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
+
+add_subdirectory(include)
 
 if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
    NOT ${LIBC_TARGET_OS} STREQUAL "gpu")

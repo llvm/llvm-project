@@ -1,4 +1,5 @@
 # RUN: llc -mtriple powerpc64-unknown-linux-gnu -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple powerpc64-unknown-linux-gnu --passes='require<live-vars>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
 
 # This test case was originally known as
 #   test/CodeGen/PowerPC/2013-07-01-PHIElimBug.ll

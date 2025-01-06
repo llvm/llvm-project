@@ -9,8 +9,9 @@
 #include "uhksqrtus.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/sqrt.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(unsigned short accum, uhksqrtus, (unsigned short x)) {
 #ifdef LIBC_FAST_MATH
@@ -20,4 +21,4 @@ LLVM_LIBC_FUNCTION(unsigned short accum, uhksqrtus, (unsigned short x)) {
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

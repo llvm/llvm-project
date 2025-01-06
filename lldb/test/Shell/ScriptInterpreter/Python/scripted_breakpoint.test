@@ -1,5 +1,3 @@
-# UNSUPPORTED: lldb-repro
-#
 # Test that the scripting language argument to "breakpoint command" is honored
 # even if the global scripting language is different.
 #

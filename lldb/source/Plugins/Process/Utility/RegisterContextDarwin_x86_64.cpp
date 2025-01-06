@@ -184,11 +184,6 @@ enum ehframe_dwarf_regnums {
 
 // General purpose registers for 64 bit
 static RegisterInfo g_register_infos[] = {
-    //  Macro auto defines most stuff   EH_FRAME                    DWARF
-    //  GENERIC                    PROCESS PLUGIN       LLDB
-    //  =============================== ======================
-    //  ===================      ========================== ====================
-    //  ===================
     {DEFINE_GPR(rax, nullptr),
      {ehframe_dwarf_gpr_rax, ehframe_dwarf_gpr_rax, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rax},

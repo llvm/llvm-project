@@ -9,8 +9,9 @@
 #include "src/math/llrint.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
   return fputil::round_to_signed_integer_using_current_rounding_mode<double,
@@ -18,4 +19,4 @@ LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
       x);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

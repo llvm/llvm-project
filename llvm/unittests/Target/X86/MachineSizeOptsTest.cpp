@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -27,20 +28,20 @@ using namespace llvm;
 
 namespace {
 
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("x86_64--"));
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, "", "", TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
 class MachineSizeOptsTest : public testing::Test {
  protected:
   static const char* MIRString;
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MIRParser> Parser;
   std::unique_ptr<Module> M;
@@ -77,7 +78,7 @@ class MachineSizeOptsTest : public testing::Test {
     M->setTargetTriple(TM->getTargetTriple().getTriple());
     M->setDataLayout(TM->createDataLayout());
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
-    if (Parser->parseMachineFunctions(*M, *MMI.get()))
+    if (Parser->parseMachineFunctions(*M, *MMI))
       report_fatal_error("parseMachineFunctions failed");
   }
 
@@ -97,7 +98,7 @@ TEST_F(MachineSizeOptsTest, Test) {
   ASSERT_TRUE(G != nullptr);
   MachineFunction *H = getMachineFunction(M.get(), "h");
   ASSERT_TRUE(H != nullptr);
-  ProfileSummaryInfo PSI = ProfileSummaryInfo(*M.get());
+  ProfileSummaryInfo PSI = ProfileSummaryInfo(*M);
   ASSERT_TRUE(PSI.hasProfileSummary());
   BFIData BFID_F(*F);
   BFIData BFID_G(*G);

@@ -1,6 +1,6 @@
 ; RUN: llc -stop-after=livedebugvalues -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=SANITY
-; RUN: llc -march=x86-64 -o - %s -filetype=obj \
+; RUN: llc -o - %s -filetype=obj \
 ; RUN:   | llvm-dwarfdump -v -all - | FileCheck %s
 ;
 ; CHECK: .debug_info contents:

@@ -327,7 +327,7 @@ define <16 x i8> @concat_trunc_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 define void @autogen_SD10339(<1 x i32> %I49) {
 ; CHECK-LABEL: autogen_SD10339:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB8_1: # %CF
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movw $1, 0

@@ -60,7 +60,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
@@ -1684,7 +1683,7 @@ private:
           PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
       L1HeaderPHI->insertBefore(L1HeaderIP);
       L1HeaderPHI->addIncoming(LCV, FC0.Latch);
-      L1HeaderPHI->addIncoming(UndefValue::get(LCV->getType()),
+      L1HeaderPHI->addIncoming(PoisonValue::get(LCV->getType()),
                                FC0.ExitingBlock);
 
       LCPHI->setIncomingValue(L1LatchBBIdx, L1HeaderPHI);
@@ -1729,7 +1728,9 @@ private:
     // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
-    SE.forgetLoopDispositions();
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks.
+    SE.forgetBlockAndLoopDispositions();
 
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
@@ -2023,7 +2024,9 @@ private:
     // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
-    SE.forgetLoopDispositions();
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks.
+    SE.forgetBlockAndLoopDispositions();
 
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
@@ -2072,7 +2075,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added

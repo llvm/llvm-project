@@ -223,77 +223,69 @@ define half @test_v16f16(<16 x half> %a) nounwind {
 ; CHECK-NOFP-SD-NEXT:    fcvt s5, h0
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s3, s2
-; CHECK-NOFP-SD-NEXT:    fcsel s2, s3, s2, gt
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[2]
+; CHECK-NOFP-SD-NEXT:    fmaxnm s4, s5, s4
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[2]
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s3, s2
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[3]
+; CHECK-NOFP-SD-NEXT:    mov h3, v1.h[2]
+; CHECK-NOFP-SD-NEXT:    fcvt h4, s4
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s3, s5, s3
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[3]
+; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s4, s2
+; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[3]
 ; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
 ; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
-; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[4]
+; CHECK-NOFP-SD-NEXT:    fmaxnm s4, s5, s4
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[4]
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[5]
+; CHECK-NOFP-SD-NEXT:    mov h3, v1.h[4]
+; CHECK-NOFP-SD-NEXT:    fcvt h4, s4
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s3, s5, s3
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[5]
+; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s4
+; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[5]
 ; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
 ; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
-; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[6]
+; CHECK-NOFP-SD-NEXT:    fmaxnm s4, s5, s4
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[6]
-; CHECK-NOFP-SD-NEXT:    mov h1, v1.h[7]
 ; CHECK-NOFP-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
-; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    fcmp s0, s1
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s0, s0, s1, gt
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt h0, s0
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fcvt h3, s4
+; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[6]
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
+; CHECK-NOFP-SD-NEXT:    mov h1, v1.h[7]
 ; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
+; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
+; CHECK-NOFP-SD-NEXT:    fmaxnm s3, s5, s4
+; CHECK-NOFP-SD-NEXT:    fcvt h0, s0
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
+; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
 ; CHECK-NOFP-SD-NEXT:    fcvt h1, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
@@ -410,72 +402,44 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v11f16:
 ; CHECK-NOFP:       // %bb.0:
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #8]
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    ldr h17, [sp]
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcvt s17, h17
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcvt s4, h4
-; CHECK-NOFP-NEXT:    fcmp s1, s16
-; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, gt
-; CHECK-NOFP-NEXT:    fcmp s0, s17
+; CHECK-NOFP-NEXT:    fmaxnm s1, s1, s16
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s17
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
-; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, gt
-; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI14_0]
-; CHECK-NOFP-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fmaxnm s1, s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s3, s2
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h3
+; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fmov s1, w8
-; CHECK-NOFP-NEXT:    fcsel s3, s3, s1, gt
-; CHECK-NOFP-NEXT:    fcmp s4, s2
+; CHECK-NOFP-NEXT:    fcvt s1, h4
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h3, s3
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s4, h5
-; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h5
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s2
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s4, h6
-; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h6
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s2
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s4, h7
-; CHECK-NOFP-NEXT:    fcvt h3, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s2
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcsel s1, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h7
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
@@ -517,73 +481,44 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v11f16_ninf:
 ; CHECK-NOFP:       // %bb.0:
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #8]
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    ldr h17, [sp]
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcvt s17, h17
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcvt s4, h4
-; CHECK-NOFP-NEXT:    fcmp s1, s16
-; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, gt
-; CHECK-NOFP-NEXT:    fcmp s0, s17
+; CHECK-NOFP-NEXT:    fmaxnm s1, s1, s16
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s17
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
-; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, gt
-; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI15_0]
-; CHECK-NOFP-NEXT:    mov w8, #57344 // =0xe000
-; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    movk w8, #51071, lsl #16
-; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fmaxnm s1, s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s3, s2
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h3
+; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fmov s1, w8
-; CHECK-NOFP-NEXT:    fcsel s3, s3, s1, gt
-; CHECK-NOFP-NEXT:    fcmp s4, s2
+; CHECK-NOFP-NEXT:    fcvt s1, h4
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h3, s3
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s4, h5
-; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h5
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s2
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s4, h6
-; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h6
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s2
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcsel s3, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s4, h7
-; CHECK-NOFP-NEXT:    fcvt h3, s3
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcmp s4, s2
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcsel s1, s4, s1, gt
-; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s3
-; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h7
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1

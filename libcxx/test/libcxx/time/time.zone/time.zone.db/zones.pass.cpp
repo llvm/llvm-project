@@ -17,7 +17,7 @@
 // Tests the IANA database zones parsing and operations.
 // This is not part of the public tzdb interface.
 // The test uses private implementation headers.
-// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src/include
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src/experimental/include
 
 #include <cassert>
 #include <chrono>

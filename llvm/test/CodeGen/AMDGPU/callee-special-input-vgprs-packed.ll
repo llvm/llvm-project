@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX7,UNPACKED-TID %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=-xnack -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,PACKED-TID %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri < %s | llc -mcpu=gfx90a -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX7,UNPACKED-TID %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx90a -mattr=-xnack < %s | llc -mcpu=gfx90a -mattr=-xnack -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,PACKED-TID %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt

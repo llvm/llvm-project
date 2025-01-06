@@ -39,6 +39,7 @@ enum MlirSparseTensorLevelFormat {
 enum MlirSparseTensorLevelPropertyNondefault {
   MLIR_SPARSE_PROPERTY_NON_UNIQUE = 0x0001,
   MLIR_SPARSE_PROPERTY_NON_ORDERED = 0x0002,
+  MLIR_SPARSE_PROPERTY_SOA = 0x0004,
 };
 
 //===----------------------------------------------------------------------===//

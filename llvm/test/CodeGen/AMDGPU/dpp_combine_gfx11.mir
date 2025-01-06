@@ -82,9 +82,9 @@ body:             |
 
 # Regression test for src_modifiers on base u16 opcode
 # GCN-LABEL: name: vop3_u16
-# GCN: %5:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 0, %1, 0, %3, 0, 0, 1, 15, 15, 1, implicit $exec
-# GCN: %7:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 1, %5, 2, %5, 0, 0, 1, 15, 15, 1, implicit $exec
-# GCN: %9:vgpr_32 = V_ADD_NC_U16_e64 4, %8, 8, %7, 0, 0, implicit $exec
+# GCN: %5:vgpr_32 = V_ADD_NC_U16_fake16_e64_dpp %3, 0, %1, 0, %3, 0, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %7:vgpr_32 = V_ADD_NC_U16_fake16_e64_dpp %3, 1, %5, 2, %5, 0, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %9:vgpr_32 = V_ADD_NC_U16_fake16_e64 4, %8, 8, %7, 0, 0, implicit $exec
 name: vop3_u16
 tracksRegLiveness: true
 body:             |
@@ -96,11 +96,11 @@ body:             |
     %2:vgpr_32 = COPY $vgpr2
     %3:vgpr_32 = IMPLICIT_DEF
     %4:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
-    %5:vgpr_32 = V_ADD_NC_U16_e64 0, %4, 0, %3, 0, 0, implicit $exec
+    %5:vgpr_32 = V_ADD_NC_U16_fake16_e64 0, %4, 0, %3, 0, 0, implicit $exec
     %6:vgpr_32 = V_MOV_B32_dpp %3, %5, 1, 15, 15, 1, implicit $exec
-    %7:vgpr_32 = V_ADD_NC_U16_e64 1, %6, 2, %5, 0, 0, implicit $exec
+    %7:vgpr_32 = V_ADD_NC_U16_fake16_e64 1, %6, 2, %5, 0, 0, implicit $exec
     %8:vgpr_32 = V_MOV_B32_dpp %3, %7, 1, 15, 15, 1, implicit $exec
-    %9:vgpr_32 = V_ADD_NC_U16_e64 4, %8, 8, %7, 0, 0, implicit $exec
+    %9:vgpr_32 = V_ADD_NC_U16_fake16_e64 4, %8, 8, %7, 0, 0, implicit $exec
 ...
 
 name: vop3p
@@ -880,11 +880,11 @@ body: |
 
 # Check op_sel is all 0s when combining
 # GCN-LABEL: name: opsel_vop3
-# GCN: %4:vgpr_32 = V_ADD_I16_e64_dpp %2, 0, %0, 0, %1, 0, 0, 1, 15, 15, 1, implicit $exec
-# GCN: %6:vgpr_32 = V_ADD_I16_e64 4, %5, 0, %1, 0, 0, implicit $exec
-# GCN: %8:vgpr_32 = V_ADD_I16_e64 0, %7, 4, %1, 0, 0, implicit $exec
-# GCN: %10:vgpr_32 = V_ADD_I16_e64 4, %9, 4, %1, 0, 0, implicit $exec
-# GCN: %12:vgpr_32 = V_ADD_I16_e64 8, %11, 0, %1, 0, 0, implicit $exec
+# GCN: %4:vgpr_32 = V_ADD_I16_fake16_e64_dpp %2, 0, %0, 0, %1, 0, 0, 1, 15, 15, 1, implicit $exec
+# GCN: %6:vgpr_32 = V_ADD_I16_fake16_e64 4, %5, 0, %1, 0, 0, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_I16_fake16_e64 0, %7, 4, %1, 0, 0, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_I16_fake16_e64 4, %9, 4, %1, 0, 0, implicit $exec
+# GCN: %12:vgpr_32 = V_ADD_I16_fake16_e64 8, %11, 0, %1, 0, 0, implicit $exec
 name:            opsel_vop3
 tracksRegLiveness: true
 body:             |
@@ -897,23 +897,23 @@ body:             |
 
     ; Combine for op_sel:[0,0,0]
     %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
-    %4:vgpr_32 = V_ADD_I16_e64 0, %3, 0, %1, 0, 0, implicit $exec
+    %4:vgpr_32 = V_ADD_I16_fake16_e64 0, %3, 0, %1, 0, 0, implicit $exec
 
     ; Do not combine for op_sel:[1,0,0]
     %5:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
-    %6:vgpr_32 = V_ADD_I16_e64 4, %5, 0, %1, 0, 0, implicit $exec
+    %6:vgpr_32 = V_ADD_I16_fake16_e64 4, %5, 0, %1, 0, 0, implicit $exec
 
     ; Do not combine for op_sel:[0,1,0]
     %7:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
-    %8:vgpr_32 = V_ADD_I16_e64 0, %7, 4, %1, 0, 0, implicit $exec
+    %8:vgpr_32 = V_ADD_I16_fake16_e64 0, %7, 4, %1, 0, 0, implicit $exec
 
     ; Do not combine for op_sel:[1,1,0]
     %9:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
-    %10:vgpr_32 = V_ADD_I16_e64 4, %9, 4, %1, 0, 0, implicit $exec
+    %10:vgpr_32 = V_ADD_I16_fake16_e64 4, %9, 4, %1, 0, 0, implicit $exec
 
     ; Do not combine for op_sel:[0,0,1] (dst_op_sel only)
     %11:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
-    %12:vgpr_32 = V_ADD_I16_e64 8, %11, 0, %1, 0, 0, implicit $exec
+    %12:vgpr_32 = V_ADD_I16_fake16_e64 8, %11, 0, %1, 0, 0, implicit $exec
 ...
 
 # Check op_sel is all 0s and op_sel_hi is all 1s when combining

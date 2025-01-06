@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify=expected,not-cxx03,expected-cxx14 -fblocks %s
 // RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify=expected,not-cxx03 -ast-dump -fblocks %s | FileCheck %s
 
+// RUN: %clang_cc1 -std=c++11 -Wno-unused-value -fsyntax-only -verify=expected,not-cxx03,cxx03-cxx11,cxx11,expected-cxx14 -fblocks %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++03 -Wno-unused-value -fsyntax-only -verify=expected,cxx03,cxx03-cxx11,expected-cxx14 -fblocks %s -Ddecltype=__decltype -Dstatic_assert=_Static_assert -Wno-c++11-extensions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify=expected,not-cxx03,expected-cxx14 -fblocks %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify=expected,not-cxx03 -ast-dump -fblocks %s -fexperimental-new-constant-interpreter| FileCheck %s
+
 namespace std { class type_info; };
 
 namespace ExplicitCapture {
@@ -607,6 +612,15 @@ namespace PR25627_dont_odr_use_local_consts {
     const int N = 10;
     (void) [] { X<N> x; };
   }
+}
+
+namespace PR94764 {
+  struct X {
+    int x;
+    void foo() {
+      [x](){}; // expected-error{{class member 'x' cannot appear in capture list as it is not a variable}}
+    }
+  };
 }
 
 namespace ConversionOperatorDoesNotHaveDeducedReturnType {

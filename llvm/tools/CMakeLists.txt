@@ -32,6 +32,7 @@ add_llvm_tool_subdirectory(lto)
 add_llvm_tool_subdirectory(gold)
 add_llvm_tool_subdirectory(llvm-ar)
 add_llvm_tool_subdirectory(llvm-config)
+add_llvm_tool_subdirectory(llvm-ctxprof-util)
 add_llvm_tool_subdirectory(llvm-lto)
 add_llvm_tool_subdirectory(llvm-profdata)
 

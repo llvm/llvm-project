@@ -24,9 +24,11 @@ class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
+class DWARFFormValue;
 
 class DWARFBaseDIE {
 public:
+  using DWARFFormValue = dwarf::DWARFFormValue;
   DWARFBaseDIE() = default;
 
   DWARFBaseDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
@@ -116,6 +118,12 @@ public:
 
   enum class Recurse : bool { no, yes };
   DWARFAttributes GetAttributes(Recurse recurse = Recurse::yes) const;
+
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  dw_tag_t getTag() const { return Tag(); }
+
+  const char *getShortName() const { return GetName(); }
 
 protected:
   DWARFUnit *m_cu = nullptr;

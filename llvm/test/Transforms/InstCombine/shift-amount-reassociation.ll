@@ -24,7 +24,7 @@ define i32 @t0(i32 %x, i32 %y) {
 
 define <2 x i32> @t1_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t1_vec_splat(
-; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 30, i32 30>
+; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 30)
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %y
@@ -36,7 +36,7 @@ define <2 x i32> @t1_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @t2_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t2_vec_nonsplat(
-; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 30, i32 30>
+; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 30)
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 30>, %y

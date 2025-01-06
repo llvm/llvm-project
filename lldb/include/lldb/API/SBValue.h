@@ -89,6 +89,8 @@ public:
 
   lldb::SBValue GetNonSyntheticValue();
 
+  lldb::SBValue GetSyntheticValue();
+
   lldb::DynamicValueType GetPreferDynamicValue();
 
   void SetPreferDynamicValue(lldb::DynamicValueType use_dynamic);
@@ -143,6 +145,8 @@ public:
   // AddressOf() on the return of this call all return invalid
   lldb::SBValue CreateValueFromData(const char *name, lldb::SBData data,
                                     lldb::SBType type);
+  // Returned value has no address.
+  lldb::SBValue CreateBoolValue(const char *name, bool value);
 
   /// Get a child value by index from a value.
   ///

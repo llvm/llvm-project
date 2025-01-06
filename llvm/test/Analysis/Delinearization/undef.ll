@@ -2,17 +2,17 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo(ptr %Ey) {
+define void @foo(ptr %Ey, i1 %arg) {
 entry:
-  br i1 undef, label %for.cond55.preheader, label %for.end324
+  br i1 %arg, label %for.cond55.preheader, label %for.end324
 
 for.cond55.preheader:
   %iz.069 = phi i64 [ %inc323, %for.inc322 ], [ 0, %entry ]
-  br i1 undef, label %for.cond58.preheader, label %for.inc322
+  br i1 %arg, label %for.cond58.preheader, label %for.inc322
 
 for.cond58.preheader:
   %iy.067 = phi i64 [ %inc320, %for.end ], [ 0, %for.cond55.preheader ]
-  br i1 undef, label %for.body60, label %for.end
+  br i1 %arg, label %for.body60, label %for.end
 
 for.body60:
   %ix.062 = phi i64 [ %inc, %for.body60 ], [ 0, %for.cond58.preheader ]
@@ -27,11 +27,11 @@ for.body60:
 
 for.end:
   %inc320 = add nsw i64 %iy.067, 1
-  br i1 undef, label %for.cond58.preheader, label %for.inc322
+  br i1 %arg, label %for.cond58.preheader, label %for.inc322
 
 for.inc322:
   %inc323 = add nsw i64 %iz.069, 1
-  br i1 undef, label %for.cond55.preheader, label %for.end324
+  br i1 %arg, label %for.cond55.preheader, label %for.end324
 
 for.end324:
   ret void

@@ -108,6 +108,17 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
+  if(MSVC AND NOT CLANG_LINK_CLANG_DYLIB)
+    # Make sure all consumers also turn off visibility macros so there not trying to dllimport symbols.
+    target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)
+    if(TARGET "obj.${name}")
+      target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
+    endif()
+  elseif(NOT ARG_SHARED AND NOT ARG_STATIC)
+    # Clang component libraries linked in to clang-cpp are declared without SHARED or STATIC
+    target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
+  endif()
+
   set(libs ${name})
   if(ARG_SHARED AND ARG_STATIC)
     list(APPEND libs ${name}_static)
@@ -147,6 +158,7 @@ endmacro(add_clang_library)
 macro(add_clang_executable name)
   add_llvm_executable( ${name} ${ARGN} )
   set_clang_windows_version_resource_properties(${name})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro(add_clang_executable)
 
 macro(add_clang_tool name)
@@ -181,6 +193,7 @@ macro(add_clang_tool name)
       set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
     endif()
   endif()
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro()
 
 macro(add_clang_symlink name dest)

@@ -6,7 +6,7 @@
 !
 !===------------------------------------------------------------------------===!
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 ! These naming shenanigans prevent names from Fortran intrinsic modules
 ! from being usable on INTRINSIC statements, and force the program
@@ -102,13 +102,19 @@ module __fortran_builtins
     __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, &
     __builtin_gridDim
   integer, parameter, public :: __builtin_warpsize = 32
+  
+  type, public, bind(c) :: __builtin_c_devptr
+    type(__builtin_c_ptr) :: cptr
+  end type
 
   intrinsic :: __builtin_fma
+  intrinsic :: __builtin_ieee_int
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   intrinsic :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
   intrinsic :: scale ! for ieee_scalb
+  intrinsic :: __builtin_ieee_real
   intrinsic :: __builtin_ieee_selected_real_kind
   intrinsic :: __builtin_ieee_support_datatype, &
     __builtin_ieee_support_denormal, __builtin_ieee_support_divide, &
@@ -119,10 +125,12 @@ module __fortran_builtins
     __builtin_ieee_support_standard, __builtin_ieee_support_subnormal, &
     __builtin_ieee_support_underflow_control
   public :: __builtin_fma
+  public :: __builtin_ieee_int
   public :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   public :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
+  public :: __builtin_ieee_real
   public :: scale ! for ieee_scalb
   public :: __builtin_ieee_selected_real_kind
   public :: __builtin_ieee_support_datatype, &

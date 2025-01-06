@@ -10,8 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_SLEEP_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
@@ -22,13 +23,15 @@ LIBC_INLINE void sleep_briefly() {
   __builtin_amdgcn_s_sleep(2);
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
   __builtin_ia32_pause();
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && __has_builtin(__builtin_arm_isb)
   __builtin_arm_isb(0xf);
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+  asm volatile("isb\n" ::: "memory");
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_SLEEP_H

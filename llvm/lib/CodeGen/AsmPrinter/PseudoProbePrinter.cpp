@@ -20,8 +20,6 @@
 
 using namespace llvm;
 
-PseudoProbeHandler::~PseudoProbeHandler() = default;
-
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
                                          const DILocation *DebugLoc) {

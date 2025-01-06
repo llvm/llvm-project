@@ -58,11 +58,10 @@ public:
     bool moved() const {return int_ == -1;}
 };
 
-namespace std {
-    template <> struct hash<Moveable> {
-        std::size_t operator () (const Moveable &m) const { return m.hash(); }
-    };
-}
+template <>
+struct std::hash<Moveable> {
+  std::size_t operator()(const Moveable& m) const { return m.hash(); }
+};
 
 int main(int, char**)
 {

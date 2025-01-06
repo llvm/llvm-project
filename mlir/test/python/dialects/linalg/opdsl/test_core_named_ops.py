@@ -2,3 +2,7 @@
 
 # Just verify that at least one known op is generated.
 # CHECK: name: matmul
+
+# verify some special cases: negf->NegFOp, powf->PowFOp
+# CHECK cpp_class_name: NegFOp
+# CHECK cpp_class_name: PowFOp

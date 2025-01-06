@@ -58,6 +58,9 @@ static inline RT_API_ATTRS std::size_t MeasureUTF8Bytes(char first) {
   return UTF8FirstByteTable[static_cast<std::uint8_t>(first)];
 }
 
+RT_API_ATTRS std::size_t MeasurePreviousUTF8Bytes(
+    const char *end, std::size_t limit);
+
 // Ensure that all bytes are present in sequence in the input buffer
 // before calling; use MeasureUTF8Bytes(first byte) to count them.
 RT_API_ATTRS Fortran::common::optional<char32_t> DecodeUTF8(const char *);

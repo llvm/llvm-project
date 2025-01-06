@@ -72,6 +72,17 @@ building the LLDB framework for macOS, the headers are processed with
 ``unifdef`` prior to being copied into the framework bundle to remove macros
 involving SWIG.
 
+Another good principle when adding SB API methods is: if you find yourself
+implementing a significant algorithm in the SB API method, you should not do
+that, but instead look for and then add it - if not found - as a method in the
+underlying lldb_private class, and then call that from your SB API method.
+If it was a useful algorithm, it's very likely it already exists
+because the lldb_private code also needed to do it.  And if it doesn't at
+present, if it was a useful thing to do, it's likely someone will later need
+it in lldb_private and then we end up with two implementations of the same
+algorithm.  If we keep the SB API code to just what's needed to manage the SB
+objects and requests, we won't get into this situation.
+
 Lifetime
 --------
 Many SB API methods will return strings in the form of ``const char *`` values.

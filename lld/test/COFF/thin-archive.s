@@ -5,7 +5,22 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc -o %t.lib.obj \
 # RUN:     %S/Inputs/mangled-symbol.s
 # RUN: lld-link /lib /out:%t.lib %t.lib.obj
-# RUN: lld-link /lib /llvmlibthin /out:%t_thin.lib %t.lib.obj
+# RUN: lld-link /lib /llvmlibindex:no /out:%t_noindex.lib %t.lib.obj
+# RUN: lld-link /lib /llvmlibthin /llvmlibindex /out:%t_thin.lib %t.lib.obj
+# RUN: lld-link /lib /llvmlibthin /llvmlibindex:no \
+# RUN:     /out:%t_thin_noindex.lib %t.lib.obj
+
+# RUN: llvm-nm --print-armap %t.lib \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+# RUN: llvm-nm --print-armap %t_noindex.lib \
+# RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+# RUN: llvm-nm --print-armap %t_thin.lib \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+# RUN: llvm-nm --print-armap %t_thin_noindex.lib \
+# RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+
+# SYMTAB:        ?f@@YAHXZ in
+# NO-SYMTAB-NOT: ?f@@YAHXZ in
 
 # RUN: lld-link /entry:main %t.main.obj %t.lib /out:%t.exe 2>&1 | \
 # RUN:     FileCheck --allow-empty %s

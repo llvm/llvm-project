@@ -170,11 +170,10 @@ define i64 @unsigned_sat_constant_i64_using_cmp_sum(i64 %x) {
 define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i64_using_cmp_notval:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, -43
 ; CHECK-NEXT:    addi 4, 3, 42
-; CHECK-NEXT:    cmpld 3, 5
+; CHECK-NEXT:    cmpld 4, 3
 ; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    blr
   %a = add i64 %x, 42
   %c = icmp ugt i64 %x, -43

@@ -1,5 +1,11 @@
 @LIT_SITE_CFG_IN_HEADER@
 
+# Tool-specific config options.
+config.name_suffix = "@CONFIG_NAME@"
+config.safestack_lit_test_mode = "@SAFESTACK_LIT_TEST_MODE@"
+config.target_cflags = "@SAFESTACK_TEST_TARGET_CFLAGS@"
+config.target_arch = "@SAFESTACK_TEST_TARGET_ARCH@"
+
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 

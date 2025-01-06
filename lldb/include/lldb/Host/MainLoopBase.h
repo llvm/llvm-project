@@ -13,8 +13,10 @@
 #include "lldb/Utility/Status.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <chrono>
 #include <functional>
 #include <mutex>
+#include <queue>
 
 namespace lldb_private {
 
@@ -38,6 +40,9 @@ private:
   class ReadHandle;
 
 public:
+  using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
+                                            std::chrono::nanoseconds>;
+
   MainLoopBase() : m_terminate_request(false) {}
   virtual ~MainLoopBase() = default;
 
@@ -52,7 +57,18 @@ public:
   // Add a pending callback that will be executed once after all the pending
   // events are processed. The callback will be executed even if termination
   // was requested.
-  void AddPendingCallback(const Callback &callback);
+  void AddPendingCallback(const Callback &callback) {
+    AddCallback(callback, std::chrono::steady_clock::time_point());
+  }
+
+  // Add a callback that will be executed after a certain amount of time has
+  // passed.
+  void AddCallback(const Callback &callback, std::chrono::nanoseconds delay) {
+    AddCallback(callback, std::chrono::steady_clock::now() + delay);
+  }
+
+  // Add a callback that will be executed after a given point in time.
+  void AddCallback(const Callback &callback, TimePoint point);
 
   // Waits for registered events and invoke the proper callbacks. Returns when
   // all callbacks deregister themselves or when someone requests termination.
@@ -69,14 +85,18 @@ protected:
 
   virtual void UnregisterReadObject(IOObject::WaitableHandle handle) = 0;
 
-  // Interrupt the loop that is currently waiting for events and execute
-  // the current pending callbacks immediately.
-  virtual void TriggerPendingCallbacks() = 0;
+  // Interrupt the loop that is currently waiting for events.
+  virtual void Interrupt() = 0;
 
-  void ProcessPendingCallbacks();
+  void ProcessCallbacks();
+
+  std::optional<TimePoint> GetNextWakeupTime();
 
   std::mutex m_callback_mutex;
-  std::vector<Callback> m_pending_callbacks;
+  std::priority_queue<std::pair<TimePoint, Callback>,
+                      std::vector<std::pair<TimePoint, Callback>>,
+                      llvm::on_first<std::greater<TimePoint>>>
+      m_callbacks;
   bool m_terminate_request : 1;
 
 private:

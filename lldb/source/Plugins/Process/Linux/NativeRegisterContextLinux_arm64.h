@@ -84,6 +84,7 @@ private:
   bool m_sve_buffer_is_valid;
   bool m_mte_ctrl_is_valid;
   bool m_zt_buffer_is_valid;
+  bool m_fpmr_is_valid;
 
   bool m_sve_header_is_valid;
   bool m_za_buffer_is_valid;
@@ -133,6 +134,8 @@ private:
   // SME2's ZT is a 512 bit register.
   std::array<uint8_t, 64> m_zt_reg;
 
+  uint64_t m_fpmr_reg;
+
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
@@ -174,11 +177,16 @@ private:
   // SVCR is a pseudo register and we do not allow writes to it.
   Status ReadSMEControl();
 
+  Status ReadFPMR();
+
+  Status WriteFPMR();
+
   bool IsSVE(unsigned reg) const;
   bool IsSME(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
   bool IsTLS(unsigned reg) const;
+  bool IsFPMR(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -202,6 +210,8 @@ private:
 
   void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
 
+  void *GetFPMRBuffer() { return &m_fpmr_reg; }
+
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
@@ -221,6 +231,8 @@ private:
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
   size_t GetZTBufferSize() { return m_zt_reg.size(); }
+
+  size_t GetFPMRBufferSize() { return sizeof(m_fpmr_reg); }
 
   llvm::Error ReadHardwareDebugInfo() override;
 

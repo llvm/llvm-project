@@ -34,7 +34,8 @@ static void test_stream() {
 
   inline_memcpy(send_ptr, str, send_size);
   ASSERT_TRUE(inline_memcmp(send_ptr, str, send_size) == 0 && "Data mismatch");
-  rpc::Client::Port port = rpc::client.open<RPC_TEST_STREAM>();
+  LIBC_NAMESPACE::rpc::Client::Port port =
+      LIBC_NAMESPACE::rpc::client.open<RPC_TEST_STREAM>();
   port.send_n(send_ptr, send_size);
   port.recv_n(&recv_ptr, &recv_size,
               [](uint64_t size) { return malloc(size); });
@@ -77,7 +78,8 @@ static void test_divergent() {
   inline_memcpy(buffer, &data[offset], offset);
   ASSERT_TRUE(inline_memcmp(buffer, &data[offset], offset) == 0 &&
               "Data mismatch");
-  rpc::Client::Port port = rpc::client.open<RPC_TEST_STREAM>();
+  LIBC_NAMESPACE::rpc::Client::Port port =
+      LIBC_NAMESPACE::rpc::client.open<RPC_TEST_STREAM>();
   port.send_n(buffer, offset);
   inline_memset(buffer, offset, 0);
   port.recv_n(&recv_ptr, &recv_size, [&](uint64_t) { return buffer; });

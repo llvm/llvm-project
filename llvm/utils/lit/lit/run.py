@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import platform
 import time
 
 import lit.Test
@@ -136,6 +137,6 @@ class Run(object):
                     "Raised process limit from %d to %d" % (soft_limit, desired_limit)
                 )
         except Exception as ex:
-            # Warn, unless this is Windows, in which case this is expected.
-            if os.name != "nt":
+            # Warn, unless this is Windows or z/OS, in which case this is expected.
+            if os.name != "nt" and platform.system() != "OS/390":
                 self.lit_config.warning("Failed to raise process limit: %s" % ex)

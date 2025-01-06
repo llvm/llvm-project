@@ -8,13 +8,13 @@
 
 #include "mlir-c/Dialect/SparseTensor.h"
 
-#include <pybind11/pybind11.h>
+#include "mlir/Bindings/Python/Nanobind.h"
 
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlirSparseTensorPasses, m) {
+NB_MODULE(_mlirSparseTensorPasses, m) {
   m.doc() = "MLIR SparseTensor Dialect Passes";
 
   // Register all SparseTensor passes on load.

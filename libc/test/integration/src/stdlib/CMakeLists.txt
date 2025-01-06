@@ -13,4 +13,3 @@ add_integration_test(
     FRANCE=Paris
     GERMANY=Berlin
 )
-

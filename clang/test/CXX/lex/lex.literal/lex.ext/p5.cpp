@@ -3,19 +3,19 @@
 
 using size_t = decltype(sizeof(int));
 
-int &operator "" _x1 (const char *);
-double &operator "" _x1 (const char *, size_t);
+int &operator ""_x1 (const char *);
+double &operator ""_x1 (const char *, size_t);
 double &i1 = "foo"_x1;
 #if __cplusplus >= 202002L
 using char8 = float;
-float &operator "" _x1 (const char8_t *, size_t);
+float &operator ""_x1 (const char8_t *, size_t);
 #else
 using char8 = double;
 #endif
 char8 &i2 = u8"foo"_x1;
 double &i3 = L"foo"_x1; // expected-error {{no matching literal operator for call to 'operator""_x1' with arguments of types 'const wchar_t *' and 'unsigned long'}}
 
-char &operator "" _x1(const wchar_t *, size_t);
+char &operator ""_x1(const wchar_t *, size_t);
 char &i4 = L"foo"_x1; // ok
 double &i5 = R"(foo)"_x1; // ok
 char8 &i6 = u\

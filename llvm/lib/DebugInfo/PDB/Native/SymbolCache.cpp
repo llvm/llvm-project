@@ -388,12 +388,16 @@ SymbolCache::findPublicSymbolBySectOffset(uint32_t Sect, uint32_t Offset) {
     return getSymbolById(Iter->second);
 
   auto Publics = Session.getPDBFile().getPDBPublicsStream();
-  if (!Publics)
+  if (!Publics) {
+    consumeError(Publics.takeError());
     return nullptr;
+  }
 
   auto ExpectedSyms = Session.getPDBFile().getPDBSymbolStream();
-  if (!ExpectedSyms)
+  if (!ExpectedSyms) {
+    consumeError(ExpectedSyms.takeError());
     return nullptr;
+  }
   BinaryStreamRef SymStream =
       ExpectedSyms->getSymbolArray().getUnderlyingStream();
 
@@ -447,11 +451,11 @@ SymbolCache::findPublicSymbolBySectOffset(uint32_t Sect, uint32_t Offset) {
 std::vector<SymbolCache::LineTableEntry>
 SymbolCache::findLineTable(uint16_t Modi) const {
   // Check if this module has already been added.
-  auto LineTableIter = LineTable.find(Modi);
-  if (LineTableIter != LineTable.end())
+  auto [LineTableIter, Inserted] = LineTable.try_emplace(Modi);
+  if (!Inserted)
     return LineTableIter->second;
 
-  std::vector<LineTableEntry> &ModuleLineTable = LineTable[Modi];
+  std::vector<LineTableEntry> &ModuleLineTable = LineTableIter->second;
 
   // If there is an error or there are no lines, just return the
   // empty vector.
@@ -618,8 +622,7 @@ SymbolCache::getSourceFileById(SymIndexId FileId) const {
   if (FileId == 0)
     return nullptr;
 
-  return std::unique_ptr<NativeSourceFile>(
-      new NativeSourceFile(*SourceFiles[FileId].get()));
+  return std::make_unique<NativeSourceFile>(*SourceFiles[FileId].get());
 }
 
 SymIndexId

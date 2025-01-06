@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexbit-extract=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexbit-extract=0 < %s | FileCheck %s
 
 ; Make sure we don't generate zxtb to transfer a predicate register into
 ; a general purpose register.

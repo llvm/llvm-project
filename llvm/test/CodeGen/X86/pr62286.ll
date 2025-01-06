@@ -8,18 +8,17 @@ define i64 @PR62286(i32 %a) {
 ; SSE-LABEL: PR62286:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %edi, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,1,0]
-; SSE-NEXT:    paddd %xmm0, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,0]
+; SSE-NEXT:    paddd %xmm1, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm3
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE-NEXT:    paddq %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE-NEXT:    pcmpgtd %xmm1, %xmm3
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,0]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE-NEXT:    paddq %xmm1, %xmm0
 ; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    retq

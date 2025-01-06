@@ -73,9 +73,8 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   // expansion when the value in ValueOffsetPair is a ptr and the offset
   // is not divisible by the elem type size of value.
   auto *I8Ty = Type::getInt8Ty(Context);
-  auto *I8PtrTy = PointerType::get(Context, 0);
+  auto *PtrTy = PointerType::get(Context, 0);
   auto *I32Ty = Type::getInt32Ty(Context);
-  auto *I32PtrTy = PointerType::get(Context, 0);
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
@@ -87,37 +86,33 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 
   // loop:                            ; preds = %loop, %entry
   //   %alloca = alloca i32
-  //   %gep0 = getelementptr i32, i32* %alloca, i32 1
-  //   %bitcast1 = bitcast i32* %gep0 to i8*
-  //   %gep1 = getelementptr i8, i8* %bitcast1, i32 1
-  //   %gep2 = getelementptr i8, i8* undef, i32 1
-  //   %cmp = icmp ult i8* undef, %bitcast1
-  //   %select = select i1 %cmp, i8* %gep1, i8* %gep2
-  //   %bitcast2 = bitcast i8* %select to i32*
+  //   %gep0 = getelementptr i32, ptr %alloca, i32 1
+  //   %gep1 = getelementptr i8, ptr %gep0, i32 1
+  //   %gep2 = getelementptr i8, ptr undef, i32 1
+  //   %cmp = icmp ult ptr undef, %gep0
+  //   %select = select i1 %cmp, ptr %gep1, ptr %gep2
   //   br i1 undef, label %loop, label %exit
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   BranchInst *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  AllocaInst *Alloca =
-      new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca", Br);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca",
+                                      Br->getIterator());
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
+  UndefValue *UndefPtr = UndefValue::get(PtrTy);
   GetElementPtrInst *Gep0 =
-      GetElementPtrInst::Create(I32Ty, Alloca, Ci32, "gep0", Br);
-  CastInst *CastA =
-      CastInst::CreateBitOrPointerCast(Gep0, I8PtrTy, "bitcast1", Br);
+      GetElementPtrInst::Create(I32Ty, Alloca, Ci32, "gep0", Br->getIterator());
   GetElementPtrInst *Gep1 =
-      GetElementPtrInst::Create(I8Ty, CastA, Ci32, "gep1", Br);
+      GetElementPtrInst::Create(I8Ty, Gep0, Ci32, "gep1", Br->getIterator());
   GetElementPtrInst *Gep2 = GetElementPtrInst::Create(
-      I8Ty, UndefValue::get(I8PtrTy), Ci32, "gep2", Br);
+      I8Ty, UndefPtr, Ci32, "gep2", Br->getIterator());
   CmpInst *Cmp = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_ULT,
-                                 UndefValue::get(I8PtrTy), CastA, "cmp", Br);
-  SelectInst *Sel = SelectInst::Create(Cmp, Gep1, Gep2, "select", Br);
-  CastInst *CastB =
-      CastInst::CreateBitOrPointerCast(Sel, I32PtrTy, "bitcast2", Br);
+                                 UndefPtr, Gep0, "cmp", Br->getIterator());
+  SelectInst *Select =
+      SelectInst::Create(Cmp, Gep1, Gep2, "select", Br->getIterator());
 
   ScalarEvolution SE = buildSE(*F);
-  auto *S = SE.getSCEV(CastB);
+  const SCEV *S = SE.getSCEV(Select);
   EXPECT_TRUE(isa<SCEVUnknown>(S));
 }
 
@@ -177,7 +172,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Builder.SetInsertPoint(L);
   PHINode *Phi = Builder.CreatePHI(T_int64, 2);
   Value *Add = Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add");
-  Builder.CreateCondBr(UndefValue::get(T_int1), L, Post);
+  Builder.CreateCondBr(PoisonValue::get(T_int1), L, Post);
   Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
   Phi->addIncoming(Add, L);
 
@@ -185,7 +180,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);
-  auto *AddRec =
+  const SCEV *AddRec =
       SE.getAddRecExpr(SE.getUnknown(GepBase), SE.getConstant(T_int64, 1),
                        LI->getLoopFor(L), SCEV::FlagNUW);
 
@@ -762,7 +757,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
                     SCEVExpander Exp(SE, M->getDataLayout(), "expander");
                     auto *InsertAt = I.getNextNode();
                     Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
-                    auto *ExpandedAR = SE.getSCEV(V);
+                    const SCEV *ExpandedAR = SE.getSCEV(V);
                     // Check that the expansion happened literally.
                     EXPECT_EQ(AR, ExpandedAR);
                   });
@@ -811,7 +806,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
       SCEVExpander Exp(SE, M->getDataLayout(), "expander");
       auto *InsertAt = I.getNextNode();
       Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
-      auto *ExpandedAR = SE.getSCEV(V);
+      const SCEV *ExpandedAR = SE.getSCEV(V);
       // Check that the expansion happened literally.
       EXPECT_EQ(AR, ExpandedAR);
     });
@@ -866,7 +861,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
               SCEVExpander Exp(SE, M->getDataLayout(), "expander");
               auto *InsertAt = I.getNextNode();
               Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
-              auto *ExpandedAR = SE.getSCEV(V);
+              const SCEV *ExpandedAR = SE.getSCEV(V);
               // Check that the expansion happened literally.
               EXPECT_EQ(AR, ExpandedAR);
             });
@@ -957,6 +952,38 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
               cast<PointerType>(I.getType())->getAddressSpace());
     EXPECT_FALSE(verifyFunction(F, &errs()));
   });
+}
+
+TEST_F(ScalarEvolutionExpanderTest, GEPFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  StringRef ModStr = R"(
+  define void @f(ptr %p, i64 %x) {
+    %gep_inbounds = getelementptr inbounds i8, ptr %p, i64 %x
+    ret void
+  })";
+  std::unique_ptr<Module> M = parseAssemblyString(ModStr, Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  Function *F = M->getFunction("f");
+  ASSERT_NE(F, nullptr) << "Could not find function 'f'";
+  BasicBlock &Entry = F->getEntryBlock();
+  auto *GEP = cast<GetElementPtrInst>(&Entry.front());
+
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *Ptr = SE.getSCEV(F->getArg(0));
+  const SCEV *X = SE.getSCEV(F->getArg(1));
+  const SCEV *PtrX = SE.getAddExpr(Ptr, X);
+
+  SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+  auto *I = cast<Instruction>(
+      Exp.expandCodeFor(PtrX, nullptr, Entry.getTerminator()));
+  // Check that the GEP is reused, but the inbounds flag cleared. We don't
+  // know that the newly introduced use is inbounds.
+  EXPECT_EQ(I, GEP);
+  EXPECT_EQ(GEP->getNoWrapFlags(), GEPNoWrapFlags::none());
 }
 
 } // end namespace llvm

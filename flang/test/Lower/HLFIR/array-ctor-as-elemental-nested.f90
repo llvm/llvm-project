@@ -31,7 +31,7 @@
 ! CHECK:             %[[VAL_21:.*]]:3 = hlfir.associate %[[VAL_22:.*]](%[[VAL_17]]) {adapt.valuebyref} : (!hlfir.expr<2xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>, i1)
 ! CHECK:             %[[VAL_23:.*]] = fir.embox %[[VAL_21]]#0(%[[VAL_17]]) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
 ! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.box<!fir.array<2xf32>>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:             %[[VAL_25:.*]] = fir.call @_QPfoo(%[[VAL_24]]) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> f32
+! CHECK:             %[[VAL_25:.*]] = fir.call @_QPfoo(%[[VAL_24]]) proc_attrs<pure> fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> f32
 ! CHECK:             hlfir.end_associate %[[VAL_21]]#1, %[[VAL_21]]#2 : !fir.ref<!fir.array<2xf32>>, i1
 ! CHECK:             hlfir.destroy %[[VAL_22]] : !hlfir.expr<2xf32>
 ! CHECK:             hlfir.yield_element %[[VAL_25]] : f32

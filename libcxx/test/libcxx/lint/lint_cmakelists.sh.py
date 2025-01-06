@@ -20,7 +20,9 @@ if __name__ == "__main__":
     okay = True
     prevline = lines[1]
     for line in lines[2:]:
-        if line == "  )\n":
+        if line == "\n":
+            continue
+        if line == "# C++03 frozen headers\n":
             break
         if line < prevline:
             okay = False

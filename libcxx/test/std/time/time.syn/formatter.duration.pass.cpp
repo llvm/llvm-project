@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -1158,11 +1159,23 @@ static void test_pr62082() {
 }
 
 template <class CharT>
+static void test_unsigned_duration() {
+  // Reported in https://github.com/llvm/llvm-project/issues/96820
+  using namespace std::literals::chrono_literals;
+
+  check(SV("1as"), SV("{}"), std::chrono::duration<unsigned short, std::atto>(1));
+  check(SV("1fs"), SV("{}"), std::chrono::duration<unsigned, std::femto>(1));
+  check(SV("1ps"), SV("{}"), std::chrono::duration<unsigned long, std::pico>(1));
+  check(SV("1ns"), SV("{}"), std::chrono::duration<unsigned long long, std::nano>(1));
+}
+
+template <class CharT>
 static void test() {
   using namespace std::literals::chrono_literals;
 
   test_no_chrono_specs<CharT>();
   test_valid_values<CharT>();
+  test_unsigned_duration<CharT>();
   test_pr62082<CharT>();
 
   check_invalid_types<CharT>(

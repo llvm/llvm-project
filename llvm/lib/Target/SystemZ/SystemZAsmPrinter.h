@@ -111,6 +111,15 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    AsmPrinter::runOnMachineFunction(MF);
+
+    // Emit the XRay table for this function.
+    emitXRayTable();
+
+    return false;
+  }
+
   bool doInitialization(Module &M) override {
     SM.reset();
     return AsmPrinter::doInitialization(M);
@@ -124,6 +133,9 @@ private:
   void LowerFENTRY_CALL(const MachineInstr &MI, SystemZMCInstLower &MCIL);
   void LowerSTACKMAP(const MachineInstr &MI);
   void LowerPATCHPOINT(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
+                                     SystemZMCInstLower &Lower);
+  void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

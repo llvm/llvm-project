@@ -1464,15 +1464,3 @@ test.dialect_custom_format_fallback custom_format_fallback
 // Check that an op with an optional result parses f80 as type.
 // CHECK: test.format_optional_result_d_op : f80
 test.format_optional_result_d_op : f80
-
-
-// -----
-
-// This is a testing that a non-qualified attribute in a custom format
-// correctly preload the dialect before creating the attribute.
-#attr = #test.nested_polynomial<<1 + x**2>>
-// CHECK-lABLE: @parse_correctly
-llvm.func @parse_correctly() {
-  test.containing_int_polynomial_attr #attr
-  llvm.return
-}

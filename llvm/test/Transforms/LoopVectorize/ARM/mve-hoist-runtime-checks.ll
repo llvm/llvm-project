@@ -18,7 +18,8 @@ target triple = "thumbv8.1m.main-none-unknown-eabi"
 ; NOTE: The strides of the starting address values in the inner loop differ, i.e.
 ; '(i * (n + 1))' vs '(i * n)'.
 
-; DEBUG-LABEL: LAA: Found a loop in diff_checks:
+; DEBUG-LABEL: 'diff_checks'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Not creating diff runtime check, since these  cannot be hoisted out of the outer loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -81,7 +82,7 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[INNER_LOOP_EXIT]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[OUTER_LOOP]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[OUTER_LOOP]] ]
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
 ; CHECK-NEXT:    [[J_021_US:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_US:%.*]], [[INNER_LOOP]] ]

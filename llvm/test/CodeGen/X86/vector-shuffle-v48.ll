@@ -79,10 +79,9 @@ define <32 x i8> @foo(ptr %x0) {
 ;
 ; AVX512VBMI-LABEL: foo:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512VBMI-NEXT:    vmovdqu 32(%rdi), %xmm2
-; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,1,3,4,6,7,9,10,12,13,15,16,18,19,21,22,24,25,27,28,30,31,33,34,36,37,39,40,42,43,45,46]
-; AVX512VBMI-NEXT:    vpermi2b %ymm2, %ymm1, %ymm0
+; AVX512VBMI-NEXT:    vmovdqu 32(%rdi), %xmm1
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} ymm0 = [32,33,35,36,38,39,41,42,44,45,47,48,50,51,53,54,56,57,59,60,62,63,1,2,4,5,7,8,10,11,13,14]
+; AVX512VBMI-NEXT:    vpermi2b (%rdi), %ymm1, %ymm0
 ; AVX512VBMI-NEXT:    retq
   %1 = load <48 x i8>, ptr %x0, align 1
   %2 = shufflevector <48 x i8> %1, <48 x i8> undef, <32 x i32> <i32 0, i32 1, i32 3, i32 4, i32 6, i32 7, i32 9, i32 10, i32 12, i32 13, i32 15, i32 16, i32 18, i32 19, i32 21, i32 22, i32 24, i32 25, i32 27, i32 28, i32 30, i32 31, i32 33, i32 34, i32 36, i32 37, i32 39, i32 40, i32 42, i32 43, i32 45, i32 46>

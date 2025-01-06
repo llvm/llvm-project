@@ -1,8 +1,8 @@
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=ALL
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL
-; RUN: llc -march=mips64 -mcpu=mips64r2 < %s | \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=ALL
+; RUN: llc -mtriple=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL
+; RUN: llc -mtriple=mips64 -mcpu=mips64r2 < %s | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,M64
-; RUN: llc -march=mips64 -mcpu=mips64r6 < %s | \
+; RUN: llc -mtriple=mips64 -mcpu=mips64r6 < %s | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,M64
 
 define void @store_i8(ptr %ptr, i8 signext %v) {

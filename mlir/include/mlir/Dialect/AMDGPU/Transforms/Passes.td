@@ -24,6 +24,7 @@ def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "arith::ArithDialect",
+    "vector::VectorDialect"
   ];
   let options = [Option<"chipset", "chipset", "std::string",
                         /*default=*/"\"gfx000\"",

@@ -101,7 +101,7 @@ int test_omp_parallel_num_threads_list() {
     int threads[2] = {3, 3};
     __kmpc_push_num_threads_list(NULL, __kmpc_global_thread_num(NULL), 2,
                                  threads);
-#pragma omp parallel reduction(+ : num_failed) // num_clause(3,3) // 2nd level
+#pragma omp parallel reduction(+ : num_failed) // num_threads(3,3) // 2nd level
     {
 #pragma omp single
       num_failed = num_failed + !(omp_get_num_threads() == 3);
@@ -127,54 +127,54 @@ int test_omp_parallel_num_threads_list() {
   } // end 1st level parallel
 
   // Test lists at multiple levels
-  int threads2[2] = {4, 3};
+  int threads2[2] = {3,2};
   __kmpc_push_num_threads_list(NULL, __kmpc_global_thread_num(NULL), 2,
                                threads2);
-#pragma omp parallel reduction(+ : num_failed) // num_clause(4,3) // 1st level
+#pragma omp parallel reduction(+ : num_failed) // num_threads(3,2) // 1st level
   {
 #pragma omp single
-    num_failed = num_failed + !(omp_get_num_threads() == 4);
+    num_failed = num_failed + !(omp_get_num_threads() == 3);
 #pragma omp parallel reduction(+ : num_failed) // 2nd level
     {
 #pragma omp single
-      num_failed = num_failed + !(omp_get_num_threads() == 3);
+      num_failed = num_failed + !(omp_get_num_threads() == 2);
 #pragma omp parallel reduction(+ : num_failed) // 3rd level
       {
 #pragma omp single
-        num_failed = num_failed + !(omp_get_num_threads() == 3);
-        int threads3[2] = {2, 5};
+        num_failed = num_failed + !(omp_get_num_threads() == 2);
+        int threads3[2] = {3,1};
         __kmpc_push_num_threads_list(NULL, __kmpc_global_thread_num(NULL), 2,
                                      threads3);
-#pragma omp parallel reduction(+ : num_failed) // num_clause(2,5) // 4th level
+#pragma omp parallel reduction(+ : num_failed) // num_threads(3,1) // 4th level
         {
 #pragma omp single
-          num_failed = num_failed + !(omp_get_num_threads() == 2);
+          num_failed = num_failed + !(omp_get_num_threads() == 3);
 #pragma omp parallel reduction(+ : num_failed) // 5th level
           {
 #pragma omp single
-            num_failed = num_failed + !(omp_get_num_threads() == 5);
+            num_failed = num_failed + !(omp_get_num_threads() == 1);
 #pragma omp parallel reduction(+ : num_failed) // 6th level
             {
 #pragma omp single
-              num_failed = num_failed + !(omp_get_num_threads() == 5);
+              num_failed = num_failed + !(omp_get_num_threads() == 1);
             } // end 6th level parallel
           } // end 5th level parallel
         } // end 4th level parallel
 #pragma omp parallel reduction(+ : num_failed) // 4th level
         {
 #pragma omp single
-          num_failed = num_failed + !(omp_get_num_threads() == 3);
+          num_failed = num_failed + !(omp_get_num_threads() == 2);
         } // end 4th level parallel
       } // end 3rd level parallel
     } // end 2nd level parallel
 #pragma omp parallel reduction(+ : num_failed) // 2nd level
     {
 #pragma omp single
-      num_failed = num_failed + !(omp_get_num_threads() == 3);
+      num_failed = num_failed + !(omp_get_num_threads() == 2);
 #pragma omp parallel reduction(+ : num_failed) // 3rd level
       {
 #pragma omp single
-        num_failed = num_failed + !(omp_get_num_threads() == 3);
+        num_failed = num_failed + !(omp_get_num_threads() == 2);
       } // end 3rd level parallel
     } // end 2nd level parallel
   } // end 1st level parallel

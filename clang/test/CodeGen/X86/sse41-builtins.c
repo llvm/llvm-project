@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
 
 #include <immintrin.h>
@@ -34,37 +38,37 @@ __m128i test_mm_blendv_epi8(__m128i V1, __m128i V2, __m128i V3) {
 
 __m128d test_mm_blendv_pd(__m128d V1, __m128d V2, __m128d V3) {
   // CHECK-LABEL: test_mm_blendv_pd
-  // CHECK: call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_blendv_pd(V1, V2, V3);
 }
 
 __m128 test_mm_blendv_ps(__m128 V1, __m128 V2, __m128 V3) {
   // CHECK-LABEL: test_mm_blendv_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.blendvps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_blendv_ps(V1, V2, V3);
 }
 
 __m128d test_mm_ceil_pd(__m128d x) {
   // CHECK-LABEL: test_mm_ceil_pd
-  // CHECK: call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 2)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 2)
   return _mm_ceil_pd(x);
 }
 
 __m128 test_mm_ceil_ps(__m128 x) {
   // CHECK-LABEL: test_mm_ceil_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 2)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 2)
   return _mm_ceil_ps(x);
 }
 
 __m128d test_mm_ceil_sd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_ceil_sd
-  // CHECK: call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 2)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 2)
   return _mm_ceil_sd(x, y);
 }
 
 __m128 test_mm_ceil_ss(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_ceil_ss
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 2)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 2)
   return _mm_ceil_ss(x, y);
 }
 
@@ -161,13 +165,13 @@ __m128i test_mm_cvtepu32_epi64(__m128i a) {
 
 __m128d test_mm_dp_pd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_dp_pd
-  // CHECK: call <2 x double> @llvm.x86.sse41.dppd(<2 x double> {{.*}}, <2 x double> {{.*}}, i8 7)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.dppd(<2 x double> {{.*}}, <2 x double> {{.*}}, i8 7)
   return _mm_dp_pd(x, y, 7);
 }
 
 __m128 test_mm_dp_ps(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_dp_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.dpps(<4 x float> {{.*}}, <4 x float> {{.*}}, i8 7)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.dpps(<4 x float> {{.*}}, <4 x float> {{.*}}, i8 7)
   return _mm_dp_ps(x, y, 7);
 }
 
@@ -198,25 +202,25 @@ int test_mm_extract_ps(__m128 x) {
 
 __m128d test_mm_floor_pd(__m128d x) {
   // CHECK-LABEL: test_mm_floor_pd
-  // CHECK: call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 1)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 1)
   return _mm_floor_pd(x);
 }
 
 __m128 test_mm_floor_ps(__m128 x) {
   // CHECK-LABEL: test_mm_floor_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 1)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 1)
   return _mm_floor_ps(x);
 }
 
 __m128d test_mm_floor_sd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_floor_sd
-  // CHECK: call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 1)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 1)
   return _mm_floor_sd(x, y);
 }
 
 __m128 test_mm_floor_ss(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_floor_ss
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 1)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 1)
   return _mm_floor_ss(x, y);
 }
 
@@ -242,7 +246,7 @@ __m128i test_mm_insert_epi64(__m128i x, long long b) {
 
 __m128 test_mm_insert_ps(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_insert_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 4)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.insertps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 4)
   return _mm_insert_ps(x, y, 4);
 }
 
@@ -308,10 +312,10 @@ __m128i test_mm_mpsadbw_epu8(__m128i x, __m128i y) {
 
 __m128i test_mm_mul_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_mul_epi32
-  // CHECK: shl <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: ashr <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: shl <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: ashr <2 x i64> %{{.*}}, <i64 32, i64 32>
+  // CHECK: shl <2 x i64> %{{.*}}, splat (i64 32)
+  // CHECK: ashr <2 x i64> %{{.*}}, splat (i64 32)
+  // CHECK: shl <2 x i64> %{{.*}}, splat (i64 32)
+  // CHECK: ashr <2 x i64> %{{.*}}, splat (i64 32)
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_epi32(x, y);
 }
@@ -330,25 +334,25 @@ __m128i test_mm_packus_epi32(__m128i x, __m128i y) {
 
 __m128d test_mm_round_pd(__m128d x) {
   // CHECK-LABEL: test_mm_round_pd
-  // CHECK: call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 4)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 4)
   return _mm_round_pd(x, 4);
 }
 
 __m128 test_mm_round_ps(__m128 x) {
   // CHECK-LABEL: test_mm_round_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 4)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 4)
   return _mm_round_ps(x, 4);
 }
 
 __m128d test_mm_round_sd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_round_sd
-  // CHECK: call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 4)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 4)
   return _mm_round_sd(x, y, 4);
 }
 
 __m128 test_mm_round_ss(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 4)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 4)
   return _mm_round_ss(x, y, 4);
 }
 
@@ -366,54 +370,37 @@ __m128i test_mm_stream_load_si128_void(const void *a) {
 
 int test_mm_test_all_ones(__m128i x) {
   // CHECK-LABEL: test_mm_test_all_ones
-  // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_test_all_ones(x);
 }
 
 int test_mm_test_all_zeros(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_test_all_zeros
-  // CHECK: call i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_test_all_zeros(x, y);
 }
 
 int test_mm_test_mix_ones_zeros(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_test_mix_ones_zeros
-  // CHECK: call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_test_mix_ones_zeros(x, y);
 }
 
 int test_mm_testc_si128(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_testc_si128
-  // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testc_si128(x, y);
 }
 
 int test_mm_testnzc_si128(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_testnzc_si128
-  // CHECK: call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testnzc_si128(x, y);
 }
 
 int test_mm_testz_si128(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_testz_si128
-  // CHECK: call i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testz_si128(x, y);
 }
 
-// Make sure brackets work after macro intrinsics.
-float pr51324(__m128 a) {
-  // CHECK-LABEL: pr51324
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 0)
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
-  return _mm_round_ps(a, 0)[0];
-}
-
-// Ensure _mm_test_all_ones macro doesn't reuse argument
-__m128i expensive_call();
-int pr60006() {
-  // CHECK-LABEL: pr60006
-  // CHECK: call {{.*}} @expensive_call
-  // CHECK-NOT: call {{.*}} @expensive_call
-  // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  return _mm_test_all_ones(expensive_call());
-}

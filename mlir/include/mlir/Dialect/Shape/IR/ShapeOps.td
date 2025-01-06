@@ -321,11 +321,6 @@ def Shape_DimOp : Shape_Op<"dim",
   let assemblyFormat = "$value `,` $index attr-dict `:` type($value) `,`"
                        "type($index) `->` type($extent)";
 
-  let builders = [
-    // Builder that allows passing a constant dimension as a simple integer.
-    OpBuilder<(ins "Value":$value, "int64_t":$index)>
-  ];
-
   let extraClassDeclaration = [{
     /// Get the `index` value as integer if it is constant.
     std::optional<int64_t> getConstantIndex();

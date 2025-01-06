@@ -32,9 +32,21 @@ public:
   /// If given, the name of the target CPU to generate code for.
   std::string cpu;
 
+  /// If given, the name of the target CPU to tune code for.
+  std::string cpuToTuneFor;
+
   /// The list of target specific features to enable or disable, as written on
   /// the command line.
   std::vector<std::string> featuresAsWritten;
+
+  /// The real KINDs disabled for this target
+  std::vector<int> disabledRealKinds;
+
+  /// The integer KINDs disabled for this target
+  std::vector<int> disabledIntegerKinds;
+
+  /// Extended Altivec ABI on AIX
+  bool EnableAIXExtendedAltivecABI;
 };
 
 } // end namespace Fortran::frontend

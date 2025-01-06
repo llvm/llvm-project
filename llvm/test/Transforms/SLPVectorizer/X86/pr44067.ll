@@ -7,7 +7,7 @@ define <2 x float> @foo(ptr %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
 entry:

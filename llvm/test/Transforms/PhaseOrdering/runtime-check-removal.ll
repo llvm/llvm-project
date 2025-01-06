@@ -10,7 +10,7 @@ define void @test_remove_check_with_incrementing_integer_induction(i16 %start, i
 ; CHECK-LABEL: @test_remove_check_with_incrementing_integer_induction(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = zext i8 [[LEN_N:%.*]] to i16
-; CHECK-NEXT:    [[LEN_NEG_NOT:%.*]] = icmp ult i16 [[LEN]], [[A:%.*]]
+; CHECK-NEXT:    [[LEN_NEG_NOT:%.*]] = icmp ugt i16 [[A:%.*]], [[LEN]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[LEN_N]], 0
 ; CHECK-NEXT:    [[OR_COND3:%.*]] = and i1 [[LEN_NEG_NOT]], [[C1]]
 ; CHECK-NEXT:    br i1 [[OR_COND3]], label [[LOOP_LATCH_PREHEADER:%.*]], label [[EXIT:%.*]]

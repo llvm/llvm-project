@@ -65,6 +65,17 @@ namespace attribute_annotate {
 template<typename T> [[clang::annotate("ANNOTATE_FOO"), clang::annotate("ANNOTATE_BAR")]] void HasAnnotations();
 void UseAnnotations() { HasAnnotations<int>(); }
 
+// CHECK: FunctionTemplateDecl {{.*}} HasStmtAnnotations
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAZ"
+// CHECK: FunctionDecl {{.*}} HasStmtAnnotations
+// CHECK:   TemplateArgument type 'int'
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAZ"
+template<typename T> void HasStmtAnnotations() {
+  int x = 0;
+  [[clang::annotate("ANNOTATE_BAZ")]] x++;
+}
+void UseStmtAnnotations() { HasStmtAnnotations<int>(); }
+
 // CHECK:      FunctionTemplateDecl {{.*}} HasPackAnnotations
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   FunctionDecl {{.*}} HasPackAnnotations 'void ()'
@@ -94,6 +105,33 @@ void UseAnnotations() { HasAnnotations<int>(); }
 // CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 3
 template <int... Is> [[clang::annotate("ANNOTATE_BAZ", Is...)]] void HasPackAnnotations();
 void UsePackAnnotations() { HasPackAnnotations<1, 2, 3>(); }
+
+// CHECK:      FunctionTemplateDecl {{.*}} HasStmtPackAnnotations
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} HasStmtPackAnnotations 'void ()'
+// CHECK:          AttributedStmt {{.*}}
+// CHECK-NEXT:       AnnotateAttr {{.*}} "ANNOTATE_QUUX"
+// CHECK-NEXT:         PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:           DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK:        FunctionDecl {{.*}} used HasStmtPackAnnotations 'void ()'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
+// CHECK:          AttributedStmt {{.*}}
+// CHECK-NEXT:       AnnotateAttr {{.*}} "ANNOTATE_QUUX"
+// CHECK-NEXT:         PackExpansionExpr {{.*}}
+// CHECK-NEXT:         SubstNonTypeTemplateParmPackExpr {{.*}}
+// CHECK-NEXT:         NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           TemplateArgument pack '<1, 2, 3>'
+// CHECK-NEXT:             TemplateArgument integral '1'
+// CHECK-NEXT:             TemplateArgument integral '2'
+// CHECK-NEXT:             TemplateArgument integral '3'
+template <int... Is> void HasStmtPackAnnotations() {
+  int x = 0;
+  [[clang::annotate("ANNOTATE_QUUX", Is...)]] x++;
+}
+void UseStmtPackAnnotations() { HasStmtPackAnnotations<1, 2, 3>(); }
 
 template <int... Is> [[clang::annotate(Is...)]] void HasOnlyPackAnnotation() {} // expected-error {{expected string literal as argument of 'annotate' attribute}}
 

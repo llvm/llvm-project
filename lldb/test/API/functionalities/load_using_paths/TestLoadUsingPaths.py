@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that SBProcess.LoadImageUsingPaths works correctly.
 """
 

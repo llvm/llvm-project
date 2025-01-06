@@ -76,7 +76,7 @@ int foo(int n) {
 
 // CHECK:       [[ADD:%.+]] = add nsw i32
 // CHECK:       store i32 [[ADD]], ptr [[DEVICE_CAP:%.+]],
-// CHECK:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 0
+// CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 0
 // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
 // CHECK:       store i32 [[DEV]], ptr [[GEP]],
 // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[GTID:%.+]], i32 1, i[[SZ]] {{20|40}}, i[[SZ]] 4, ptr [[TASK_ENTRY0:@.+]])
@@ -122,29 +122,29 @@ int foo(int n) {
 
   // CHECK-DAG:   [[BP_START:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP]], i32 0, i32 0
   // CHECK-DAG:   [[P_START:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P]], i32 0, i32 0
-  // CHECK:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+  // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
   // CHECK:       [[DEV1:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       [[DEV2:%.+]] = sext i32 [[DEV1]] to i64
 
   // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{.*}}, i32 [[GTID]], i32 1, i[[SZ]] {{152|88}}, i[[SZ]] {{16|12}}, ptr [[TASK_ENTRY1_:@.+]], i64 [[DEV2]])
-  // CHECK:       [[BASE:%.+]] = getelementptr inbounds [[TASK_TY1_:%.+]], ptr [[TASK]], i32 0, i32 1
-  // CHECK-64:    [[BP_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 1
+  // CHECK:       [[BASE:%.+]] = getelementptr inbounds nuw [[TASK_TY1_:%.+]], ptr [[TASK]], i32 0, i32 1
+  // CHECK-64:    [[BP_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 1
   // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BP_BASE]], ptr align 8 [[BP_START]], i64 24, i1 false)
-  // CHECK-64:    [[P_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 2
+  // CHECK-64:    [[P_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 2
   // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P_BASE]], ptr align 8 [[P_START]], i64 24, i1 false)
-  // CHECK-64:    [[SZ_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 3
+  // CHECK-64:    [[SZ_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 3
   // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SZ_BASE]], ptr align 8 [[SIZET]], i64 24, i1 false)
-  // CHECK-64:    [[M_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
+  // CHECK-64:    [[M_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
   // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[M_BASE]], ptr align 8 [[M]], i64 24, i1 false)
-  // CHECK-32:    [[SZ_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 0
+  // CHECK-32:    [[SZ_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 0
   // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SZ_BASE]], ptr align 4 [[SIZET]], i32 24, i1 false)
-  // CHECK-32:    [[BP_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 3
+  // CHECK-32:    [[BP_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 3
   // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BP_BASE]], ptr align 4 [[BP_START]], i32 12, i1 false)
-  // CHECK-32:    [[P_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
+  // CHECK-32:    [[P_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
   // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[P_BASE]], ptr align 4 [[P_START]], i32 12, i1 false)
-  // CHECK-32:    [[M_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 5
+  // CHECK-32:    [[M_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 5
   // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[M_BASE]], ptr align 4 [[M]], i32 12, i1 false)
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START:%.+]], i[[SZ]] 1
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START]], i[[SZ]] 2
@@ -153,7 +153,7 @@ int foo(int n) {
 
   // CHECK:       [[ELSE]]:
   // CHECK-NOT:   getelementptr inbounds [2 x ptr], ptr
-  // CHECK:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+  // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
   // CHECK:       [[DEV1:%.+]] = load i32, ptr [[DEVICE_CAP]],
@@ -218,7 +218,7 @@ int foo(int n) {
 // CHECK:       [[PTR_REF:%.+]] = load ptr, ptr [[PTR_ADDR]],
 // CHECK:       [[SZ_REF:%.+]] = load ptr, ptr [[SZ_ADDR]],
 // CHECK:       [[M_REF:%.+]] = load ptr, ptr [[M_ADDR]],
-// CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+// CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
 // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
 // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
 // CHECK:       [[RET:%.+]] = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE]], i32 -1, i32 0, ptr @.[[TGT_REGION:.+]].region_id, ptr %[[KERNEL_ARGS:.+]])
@@ -238,7 +238,7 @@ int foo(int n) {
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1__]](i32{{.*}}, ptr noalias noundef %1)
 // CHECK:       call void {{%.*}}(
-// CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+// CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
 // CHECK:       [[BP0:%.+]] = load ptr, ptr %
 // CHECK:       [[BP1_I32:%.+]] = load i32, ptr @
 // CHECK-64:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],

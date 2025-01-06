@@ -48,6 +48,7 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class ModuleMap;
 class TargetInfo;
 
 /// Describes the name of a module.
@@ -97,6 +98,15 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     std::copy(First, Last, Signature.begin());
     return Signature;
   }
+};
+
+/// Required to construct a Module.
+///
+/// This tag type is only constructible by ModuleMap, guaranteeing it ownership
+/// of all Module instances.
+class ModuleConstructorTag {
+  explicit ModuleConstructorTag() = default;
+  friend ModuleMap;
 };
 
 /// Describes a module or submodule.
@@ -217,7 +227,7 @@ private:
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
-  llvm::StringMap<unsigned> SubModuleIndex;
+  mutable llvm::StringMap<unsigned> SubModuleIndex;
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
@@ -243,8 +253,6 @@ public:
     HK_PrivateTextual,
     HK_Excluded
   };
-  static const int NumHeaderKinds = HK_Excluded + 1;
-
   /// Information about a header directive as found in the module map
   /// file.
   struct Header {
@@ -253,16 +261,35 @@ public:
     FileEntryRef Entry;
   };
 
-  /// Information about a directory name as found in the module map
-  /// file.
+private:
+  static const int NumHeaderKinds = HK_Excluded + 1;
+  // The begin index for a HeaderKind also acts the end index of HeaderKind - 1.
+  // The extra element at the end acts as the end index of the last HeaderKind.
+  unsigned HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
+  SmallVector<Header, 2> HeadersStorage;
+
+public:
+  ArrayRef<Header> getAllHeaders() const { return HeadersStorage; }
+  ArrayRef<Header> getHeaders(HeaderKind HK) const {
+    assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    auto BeginIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK];
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    return {BeginIt, EndIt};
+  }
+  void addHeader(HeaderKind HK, Header H) {
+    assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    HeadersStorage.insert(EndIt, std::move(H));
+    for (unsigned HKI = HK + 1; HKI != NumHeaderKinds + 1; ++HKI)
+      ++HeaderKindBeginIndex[HKI];
+  }
+
+  /// Information about a directory name as found in the module map file.
   struct DirectoryName {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
     DirectoryEntryRef Entry;
   };
-
-  /// The headers that are part of this module.
-  SmallVector<Header, 2> Headers[5];
 
   /// Stored information about a header directive that was found in the
   /// module map file but has not been resolved to a file.
@@ -497,8 +524,9 @@ public:
   std::vector<Conflict> Conflicts;
 
   /// Construct a new module or submodule.
-  Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-         bool IsFramework, bool IsExplicit, unsigned VisibilityID);
+  Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
+         Module *Parent, bool IsFramework, bool IsExplicit,
+         unsigned VisibilityID);
 
   ~Module();
 
@@ -584,7 +612,6 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 
@@ -749,7 +776,6 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
-  Module *findOrInferSubmodule(StringRef Name);
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.

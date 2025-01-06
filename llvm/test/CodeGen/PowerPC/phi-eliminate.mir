@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 %s -o - \
 # RUN:   -run-pass=livevars,phi-node-elimination | FileCheck %s
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 %s -o - \
+# RUN:   --passes='require<live-vars>,phi-node-elimination' | FileCheck %s
 
 --- |
   define void @phi_eliminate(i32 %0, i32 %1, ptr %2) {

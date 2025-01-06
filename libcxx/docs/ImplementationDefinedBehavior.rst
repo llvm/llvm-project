@@ -51,6 +51,25 @@ Libc++ determines that a stream is Unicode-capable terminal by:
   <http://eel.is/c++draft/print.fun#7>`_. This function is used for other
   ``std::print`` overloads that don't take an ``ostream&`` argument.
 
+`[sf.cmath] <https://wg21.link/sf.cmath>`_ Mathematical Special Functions: Large indices
+----------------------------------------------------------------------------------------
+
+Most functions within the Mathematical Special Functions section contain integral indices.
+The Standard specifies the result for larger indices as implementation-defined.
+Libc++ pursuits reasonable results by choosing the same formulas as for indices below that threshold.
+E.g.
+
+- ``std::hermite(unsigned n, T x)`` for ``n >= 128``
+
+
+`[stringbuf.cons] <http://eel.is/c++draft/stringbuf.cons>`_ Whether sequence pointers are initialized to null pointers
+----------------------------------------------------------------------------------------------------------------------
+
+Libc++ does not initialize the pointers to null pointers. It resizes the buffer
+to its capacity and uses that size. This means the SSO buffer of
+``std::string`` is used as initial output buffer.
+
+
 Listed in the index of implementation-defined behavior
 ======================================================
 

@@ -61,21 +61,21 @@ void foo(int arg) {
   // CK1-DAG:     [[TASK]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i{{32|64}} {{36|64}}, i{{32|64}} 4, ptr [[OMP_TASK_ENTRY:@[^,]+]], i64 [[DEV:%.+]])
   // CK1-DAG:     [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
   // CK1-DAG:     [[DEVi32]] = load i32, ptr %{{[^,]+}},
-  // CK1-DAG:     [[TASK_WITH_PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
-  // CK1-32-DAG:  [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 1
-  // CK1-64-DAG:  [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 0
+  // CK1-DAG:     [[TASK_WITH_PRIVATES:%.+]] = getelementptr inbounds nuw [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
+  // CK1-32-DAG:  [[FPBPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 1
+  // CK1-64-DAG:  [[FPBPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 0
   // CK1-DAG:     call void @llvm.memcpy.p0.p0.i{{32|64}}(ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i{{32|64}} {{4|8}}, i1 false)
   // CK1-DAG:     [[BPGEP]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK1-DAG:     [[BPGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP]], i32 0, i32 0
   // CK1-DAG:     store ptr @gc, ptr [[BPGEP]], align
-  // CK1-32-DAG:  [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 2
-  // CK1-64-DAG:  [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 1
+  // CK1-32-DAG:  [[FPPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 2
+  // CK1-64-DAG:  [[FPPGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 1
   // CK1-DAG:     call void @llvm.memcpy.p0.p0.i{{32|64}}(ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i{{32|64}} {{4|8}}, i1 false)
   // CK1-DAG:     [[PGEP]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i32 0, i32 0
   // CK1-DAG:     [[PGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK1-DAG:     store ptr @gc, ptr [[PGEP]], align
-  // CK1-32-DAG:  [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 0
-  // CK1-64-DAG:  [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 2
+  // CK1-32-DAG:  [[FPSZGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 0
+  // CK1-64-DAG:  [[FPSZGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES]], i32 0, i32 2
   // CK1-DAG:     call void @llvm.memcpy.p0.p0.i{{32|64}}(ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[SIZE00]], i{{32|64}} 8, i1 false)
   // CK1-NOT:     __tgt_target_data_end
   #pragma omp target enter data if(1+3-5) device(arg) map(alloc: gc) nowait
@@ -143,17 +143,17 @@ void foo(int arg) {
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: store ptr @gb, ptr [[BP0]]
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[P0]]
-  // CK1-DAG: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+  // CK1-DAG: store ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1), ptr [[P0]]
+  // CK1-DAG: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr (ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1) to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
   // CK1-DAG: store i64 [[DIV]], ptr [[S0]],
 
 
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK1-DAG: store ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
+  // CK1-DAG: store ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1), ptr [[BP1]]
   // CK1-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
   // CK1-DAG: [[SEC1]] = getelementptr inbounds {{.+}}ptr [[SEC11:%[^,]+]], i{{.+}} 0
-  // CK1-DAG: [[SEC11]] = load ptr, ptr getelementptr inbounds ([[ST]], ptr @gb, i32 0, i32 1),
+  // CK1-DAG: [[SEC11]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i32 0, i32 1),
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   // CK1-NOT: __tgt_target_data_end
@@ -209,7 +209,7 @@ void foo(int arg) {
 
 
 // CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, ptr noalias noundef %1)
-// CK1-DAG: call void @__tgt_target_data_begin_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BPADDR:%[^,]+]], ptr [[PADDR:%[^,]+]], ptr [[SZADDR:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK1-DAG: call void @__tgt_target_data_begin_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BPADDR:%[^,]+]], ptr [[PADDR:%[^,]+]], ptr [[SZADDR:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null, i32 0, ptr null, i32 0, ptr null)
 // CK1-DAG: [[BPADDR]] = load ptr, ptr [[FPBP:%[^,]+]], align
 // CK1-DAG: [[PADDR]] = load ptr, ptr [[FPP:%[^,]+]], align
 // CK1-DAG: [[SZADDR]] = load ptr, ptr [[FPSZ:%[^,]+]], align

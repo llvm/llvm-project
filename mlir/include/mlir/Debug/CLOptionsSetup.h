@@ -10,7 +10,6 @@
 #define MLIR_DEBUG_CLOPTIONSSETUP_H
 
 #include "mlir/Debug/BreakpointManagers/FileLineColLocBreakpointManager.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <memory>

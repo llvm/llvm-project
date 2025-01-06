@@ -1,20 +1,20 @@
-# RUN: llvm-mc -triple=riscv32 -show-encoding -mattr=+experimental-zvfbfmin %s \
+# RUN: llvm-mc -triple=riscv32 -show-encoding -mattr=+zvfbfmin %s \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv32 -show-encoding -mattr=+v,+f %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv32 -filetype=obj -mattr=+experimental-zvfbfmin %s \
-# RUN:    | llvm-objdump -d --mattr=+experimental-zvfbfmin - \
+# RUN: llvm-mc -triple=riscv32 -filetype=obj -mattr=+zvfbfmin %s \
+# RUN:    | llvm-objdump -d --mattr=+zvfbfmin - \
 # RUN:    | FileCheck %s --check-prefix=CHECK-INST
-# RUN: llvm-mc -triple=riscv32 -filetype=obj -mattr=+experimental-zvfbfmin %s \
+# RUN: llvm-mc -triple=riscv32 -filetype=obj -mattr=+zvfbfmin %s \
 # RUN:    | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
-# RUN: llvm-mc -triple=riscv64 -show-encoding -mattr=+experimental-zvfbfmin %s \
+# RUN: llvm-mc -triple=riscv64 -show-encoding -mattr=+zvfbfmin %s \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding -mattr=+v,+f %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv64 -filetype=obj -mattr=+experimental-zvfbfmin %s \
-# RUN:    | llvm-objdump -d --mattr=+experimental-zvfbfmin - \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj -mattr=+zvfbfmin %s \
+# RUN:    | llvm-objdump -d --mattr=+zvfbfmin - \
 # RUN:    | FileCheck %s --check-prefix=CHECK-INST
-# RUN: llvm-mc -triple=riscv64 -filetype=obj -mattr=+experimental-zvfbfmin %s \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj -mattr=+zvfbfmin %s \
 # RUN:    | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 # CHECK-INST: vfncvtbf16.f.f.w v8, v4, v0.t

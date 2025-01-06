@@ -59,7 +59,6 @@ public:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "convertYAML() failed");
 
-    os.flush();
     auto data_buffer_sp =
         std::make_shared<DataBufferHeap>(data.data(), data.size());
     auto expected_parser = MinidumpParser::Create(std::move(data_buffer_sp));
@@ -85,7 +84,6 @@ Streams:
   )");
 
   ASSERT_TRUE(llvm::yaml::convertYAML(YIn, os, [](const llvm::Twine &Msg){}));
-  os.flush();
   auto data_buffer_sp = std::make_shared<DataBufferHeap>(
       duplicate_streams.data(), duplicate_streams.size());
   ASSERT_THAT_EXPECTED(MinidumpParser::Create(data_buffer_sp), llvm::Failed());
@@ -251,10 +249,15 @@ Streams:
 
 TEST_F(MinidumpParserTest, GetExceptionStream) {
   SetUpData("linux-x86_64.dmp");
-  const llvm::minidump::ExceptionStream *exception_stream =
-      parser->GetExceptionStream();
-  ASSERT_NE(nullptr, exception_stream);
-  ASSERT_EQ(11UL, exception_stream->ExceptionRecord.ExceptionCode);
+  auto exception_streams = parser->GetExceptionStreams();
+  size_t count = 0;
+  for (auto exception_stream : exception_streams) {
+    ASSERT_THAT_EXPECTED(exception_stream, llvm::Succeeded());
+    ASSERT_EQ(16001UL, exception_stream->ThreadId);
+    count++;
+  }
+
+  ASSERT_THAT(1UL, count);
 }
 
 void check_mem_range_exists(MinidumpParser &parser, const uint64_t range_start,

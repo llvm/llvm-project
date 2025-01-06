@@ -27,11 +27,7 @@ constexpr bool test() {
     assert(it[2] == *(it + 2));
     assert(it[4] == *(it + 4));
 
-#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
-    static_assert(std::is_same_v<decltype(it[2]), std::pair<int&, int>>);
-#else
     static_assert(std::is_same_v<decltype(it[2]), std::tuple<int&, int>>);
-#endif
   }
 
   {
@@ -42,11 +38,7 @@ constexpr bool test() {
     assert(it[2] == *(it + 2));
     assert(it[4] == *(it + 4));
 
-#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
-    static_assert(std::is_same_v<decltype(it[2]), std::pair<int&, int&>>);
-#else
     static_assert(std::is_same_v<decltype(it[2]), std::tuple<int&, int&>>);
-#endif
   }
 
   {

@@ -78,6 +78,12 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv73") {
     Builder.defineMacro("__HEXAGON_V73__");
     Builder.defineMacro("__HEXAGON_ARCH__", "73");
+  } else if (CPU == "hexagonv75") {
+    Builder.defineMacro("__HEXAGON_V75__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "75");
+  } else if (CPU == "hexagonv79") {
+    Builder.defineMacro("__HEXAGON_V79__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "79");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -229,14 +235,27 @@ struct CPUSuffix {
 };
 
 static constexpr CPUSuffix Suffixes[] = {
-    {{"hexagonv5"},  {"5"}},  {{"hexagonv55"},  {"55"}},
-    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
-    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
+    {{"hexagonv5"}, {"5"}},   {{"hexagonv55"}, {"55"}},
+    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"}, {"62"}},
+    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"}, {"66"}},
     {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
-    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"},  {"69"}},
-    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"},  {"71t"}},
-    {{"hexagonv73"}, {"73"}},
+    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"}, {"69"}},
+    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"}, {"71t"}},
+    {{"hexagonv73"}, {"73"}}, {{"hexagonv75"}, {"75"}},
+    {{"hexagonv79"}, {"79"}},
 };
+
+std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
+  StringRef Arch = Name;
+  Arch.consume_front("hexagonv");
+  Arch.consume_back("t");
+
+  unsigned Val;
+  if (!Arch.getAsInteger(0, Val))
+    return Val;
+
+  return std::nullopt;
+}
 
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {
   const CPUSuffix *Item = llvm::find_if(

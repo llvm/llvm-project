@@ -940,6 +940,36 @@
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
 
+// Check that we pass --no-rosegment for pre-29 Android versions and do not for
+// 29+.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android28 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ROSEGMENT-28 %s
+// CHECK-ANDROID-ROSEGMENT-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ROSEGMENT-28: "--no-rosegment"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android29 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ROSEGMENT-29 %s
+// CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
+
+// Check that we pass --pack-dyn-relocs=relr for API 28+ and not before.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android27 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-27 %s
+// CHECK-ANDROID-RELR-27: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=android+relr"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android28 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-28 %s
+// CHECK-ANDROID-RELR-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-28: "--use-android-relr-tags"
+// CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android+relr"
+
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s
 // CHECK-MIPS64EL-GNUABIN32: "{{.*}}ld{{(.exe)?}}"

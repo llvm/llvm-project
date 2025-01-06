@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -mattr=+hvx,+hvx-length64b -run-pass hexagon-vextract %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -mattr=+hvx,+hvx-length64b -run-pass hexagon-vextract %s -o - | FileCheck %s
 
 ---
 name: fred

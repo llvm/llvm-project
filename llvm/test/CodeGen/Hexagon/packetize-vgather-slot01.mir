@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -mcpu=hexagonv65 -mattr=+hvxv65,+hvx-length64b -run-pass=hexagon-packetizer -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv65 -mattr=+hvxv65,+hvx-length64b -run-pass=hexagon-packetizer -o - %s | FileCheck %s
 
 # Check that we don't generate a packet with 5 instructions.
 

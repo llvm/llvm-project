@@ -10,6 +10,7 @@
 #define TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H
 
 #include <cassert>
+#include <cerrno>
 #include <concepts>
 #include <cstdio>
 #include <fstream>

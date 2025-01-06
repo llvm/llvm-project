@@ -5,7 +5,7 @@
 define i32 @test1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[T61:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T7:%.*]] = and i32 [[T61]], [[Z:%.*]]
+; CHECK-NEXT:    [[T7:%.*]] = and i32 [[Z:%.*]], [[T61]]
 ; CHECK-NEXT:    ret i32 [[T7]]
 ;
   %t3 = and i32 %z, %x
@@ -43,8 +43,8 @@ define i32 @PR38781(i32 %a, i32 %b) {
 
 ; (a ^ 4) & (a ^ ~4) -> 0
 define i32 @PR75692_1(i32 %x) {
-; CHECK-LABEL: @PR75692_1
-; CHECK-NEXT:  ret i32 0
+; CHECK-LABEL: @PR75692_1(
+; CHECK-NEXT:    ret i32 0
 ;
   %t2 = xor i32 %x, 4
   %t3 = xor i32 %x, -5
@@ -54,11 +54,11 @@ define i32 @PR75692_1(i32 %x) {
 
 ; (a ^ 4) & (a ^ 3) is not zero
 define i32 @PR75692_2(i32 %x) {
-; CHECK-LABEL: @PR75692_2
-; CHECK-NEXT:  %t2 = xor i32 %x, 4
-; CHECK-NEXT:  %t3 = xor i32 %x, -4
-; CHECK-NEXT:  %t4 = and i32 %t2, %t3
-; CHECK-NEXT:  ret i32 %t4
+; CHECK-LABEL: @PR75692_2(
+; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[X]], -4
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T2]], [[T3]]
+; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t2 = xor i32 %x, 4
   %t3 = xor i32 %x, -4
@@ -68,11 +68,11 @@ define i32 @PR75692_2(i32 %x) {
 
 ; (a ^ 4) & (b ^ ~4) is not zero, since a != b is possible
 define i32 @PR75692_3(i32 %x, i32 %y) {
-; CHECK-LABEL: @PR75692_3
-; CHECK-NEXT:  %t2 = xor i32 %x, 4
-; CHECK-NEXT:  %t3 = xor i32 %y, -5
-; CHECK-NEXT:  %t4 = and i32 %t2, %t3
-; CHECK-NEXT:  ret i32 %t4
+; CHECK-LABEL: @PR75692_3(
+; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[Y:%.*]], -5
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T2]], [[T3]]
+; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t2 = xor i32 %x, 4
   %t3 = xor i32 %y, -5

@@ -187,14 +187,18 @@ bool DylibVerifier::shouldIgnoreObsolete(const Record *R, SymbolContext &SymCtx,
 
 bool DylibVerifier::shouldIgnoreReexport(const Record *R,
                                          SymbolContext &SymCtx) const {
+  StringRef SymName = SymCtx.SymbolName;
+  // Linker directive symbols can never be ignored.
+  if (SymName.starts_with("$ld$"))
+    return false;
+
   if (Reexports.empty())
     return false;
 
   for (const InterfaceFile &Lib : Reexports) {
     if (!Lib.hasTarget(Ctx.Target))
       continue;
-    if (auto Sym =
-            Lib.getSymbol(SymCtx.Kind, SymCtx.SymbolName, SymCtx.ObjCIFKind))
+    if (auto Sym = Lib.getSymbol(SymCtx.Kind, SymName, SymCtx.ObjCIFKind))
       if ((*Sym)->hasTarget(Ctx.Target))
         return true;
   }

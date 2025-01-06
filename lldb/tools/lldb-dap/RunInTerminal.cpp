@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RunInTerminal.h"
+#include "JSONUtils.h"
 
 #if !defined(_WIN32)
 #include <sys/stat.h>
@@ -15,13 +16,9 @@
 #endif
 
 #include <chrono>
-#include <fstream>
 #include <future>
-#include <thread>
 
 #include "llvm/Support/FileSystem.h"
-
-#include "lldb/lldb-defines.h"
 
 using namespace llvm;
 

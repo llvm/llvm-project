@@ -8,9 +8,9 @@
 
 @c = external global ptr, align 8
 
-define void @test1() {
+define void @test1(i1 %arg) {
 entry:
-  br i1 undef, label %for.end12, label %for.cond.preheader
+  br i1 %arg, label %for.end12, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
   %0 = load ptr, ptr @c, align 8

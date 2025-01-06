@@ -411,6 +411,9 @@ public:
     if (Throttler)
       Throttler->release(ID);
   }
+  PreambleThrottlerRequest(const PreambleThrottlerRequest &) = delete;
+  PreambleThrottlerRequest &
+  operator=(const PreambleThrottlerRequest &) = delete;
 
 private:
   PreambleThrottler::RequestID ID;
@@ -621,7 +624,8 @@ public:
          AsyncTaskRunner *Tasks, Semaphore &Barrier,
          const TUScheduler::Options &Opts, ParsingCallbacks &Callbacks);
   ~ASTWorker();
-
+  ASTWorker(const ASTWorker &other) = delete;
+  ASTWorker &operator=(const ASTWorker &other) = delete;
   void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged);
   void
   runWithAST(llvm::StringRef Name,
@@ -1838,7 +1842,7 @@ DebouncePolicy::compute(llvm::ArrayRef<clock::duration> History) const {
   // Base the result on the median rebuild.
   // nth_element needs a mutable array, take the chance to bound the data size.
   History = History.take_back(15);
-  llvm::SmallVector<clock::duration, 15> Recent(History.begin(), History.end());
+  llvm::SmallVector<clock::duration, 15> Recent(History);
   auto *Median = Recent.begin() + Recent.size() / 2;
   std::nth_element(Recent.begin(), Median, Recent.end());
 

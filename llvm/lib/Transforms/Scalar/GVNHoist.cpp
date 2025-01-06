@@ -70,7 +70,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>

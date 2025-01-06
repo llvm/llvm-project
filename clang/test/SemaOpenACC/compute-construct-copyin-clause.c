@@ -68,11 +68,11 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 
   // expected-error@+1{{OpenACC 'copyin' clause is not valid on 'loop' directive}}
 #pragma acc loop copyin(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
   // expected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'loop' directive}}
 #pragma acc loop pcopyin(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
   // expected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copyin(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

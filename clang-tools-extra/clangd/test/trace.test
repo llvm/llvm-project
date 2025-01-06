@@ -8,17 +8,17 @@
 # CHECK:   "traceEvents": [
 # CHECK:     {
 # CHECK:       "ph": "X",
-# CHECK:       "name": "BuildPreamble",
 # CHECK:       "args": {
 # CHECK:         "File": "{{.*(/|\\)}}foo.c"
 # CHECK:       },
+# CHECK:       "name": "BuildPreamble",
 # CHECK:     }
 # CHECK:     {
 # CHECK:       "ph": "X",
-# CHECK:       "name": "BuildAST",
 # CHECK:       "args": {
 # CHECK:         "File": "{{.*(/|\\)}}foo.c"
 # CHECK:       },
+# CHECK:       "name": "BuildAST",
 # CHECK:     }
 # CHECK:   ]
 # CHECK: }

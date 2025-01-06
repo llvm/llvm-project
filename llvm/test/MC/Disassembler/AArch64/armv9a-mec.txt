@@ -1,6 +1,5 @@
-# RUN: llvm-mc -triple=aarch64             -mattr=+mec -disassemble %s      | FileCheck %s
-# RUN: llvm-mc -triple=aarch64 -mattr=+v9a             -disassemble %s      | FileCheck %s
-# RUN: llvm-mc -triple=aarch64                         -disassemble %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-MEC
+# RUN: llvm-mc -triple=aarch64 -mattr=+mec -disassemble %s      | FileCheck %s
+# RUN: llvm-mc -triple=aarch64             -disassemble %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-MEC
 
 [0xe0,0xa8,0x3c,0xd5]
 # CHECK: mrs x0, MECIDR_EL2

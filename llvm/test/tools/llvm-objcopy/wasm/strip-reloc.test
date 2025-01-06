@@ -5,13 +5,15 @@
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-all %t %t2
-# RUN: obj2yaml %t2 | FileCheck --implicit-check-not=Type: %s
+# RUN: obj2yaml %t2 | FileCheck %s
 
 ## Check that the known sections are still present.
 # CHECK: Sections:
 # CHECK: - Type: TYPE
 # CHECK: - Type: FUNCTION
 # CHECK: - Type: CODE
+# CHECK-NOT: Relocations
+# CHECK-NOT: linking
 ## Check that there are still functions in the code section.
 # CHECK: Functions:
 

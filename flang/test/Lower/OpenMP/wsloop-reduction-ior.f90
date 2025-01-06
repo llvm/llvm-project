@@ -41,7 +41,6 @@
 ! CHECK:                 %[[VAL_20:.*]] = arith.ori %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_20]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 
 

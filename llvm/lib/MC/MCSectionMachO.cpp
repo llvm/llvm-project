@@ -92,8 +92,9 @@ ENTRY("" /*FIXME*/,          S_ATTR_LOC_RELOC)
 MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
                                unsigned TAA, unsigned reserved2, SectionKind K,
                                MCSymbol *Begin)
-    : MCSection(SV_MachO, Section, K.isText(), Begin), TypeAndAttributes(TAA),
-      Reserved2(reserved2) {
+    : MCSection(SV_MachO, Section, K.isText(),
+                MachO::isVirtualSection(TAA & MachO::SECTION_TYPE), Begin),
+      TypeAndAttributes(TAA), Reserved2(reserved2) {
   assert(Segment.size() <= 16 && Section.size() <= 16 &&
          "Segment or section string too long");
   for (unsigned i = 0; i != 16; ++i) {
@@ -170,12 +171,6 @@ void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
 bool MCSectionMachO::useCodeAlign() const {
   return hasAttribute(MachO::S_ATTR_PURE_INSTRUCTIONS);
-}
-
-bool MCSectionMachO::isVirtualSection() const {
-  return (getType() == MachO::S_ZEROFILL ||
-          getType() == MachO::S_GB_ZEROFILL ||
-          getType() == MachO::S_THREAD_LOCAL_ZEROFILL);
 }
 
 /// ParseSectionSpecifier - Parse the section specifier indicated by "Spec".

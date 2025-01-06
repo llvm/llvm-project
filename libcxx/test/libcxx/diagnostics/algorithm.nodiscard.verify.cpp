@@ -372,6 +372,18 @@ void test() {
   // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::contains_subrange(iter, iter, iter, iter);
   // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if_not(iter, iter, pred);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if_not(range, pred);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if(iter, iter, pred);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if(range, pred);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last(iter, iter, 1);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last(range, 1);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::fold_left(range, 0, std::plus());
   // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::fold_left(iter, iter, 0, std::plus());

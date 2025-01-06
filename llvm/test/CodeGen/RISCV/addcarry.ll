@@ -12,16 +12,16 @@ define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32:       # %bb.0:
 ; RISCV32-NEXT:    mul a4, a0, a3
 ; RISCV32-NEXT:    mulhu a5, a0, a2
-; RISCV32-NEXT:    add a6, a5, a4
-; RISCV32-NEXT:    mul a4, a1, a2
-; RISCV32-NEXT:    add a4, a6, a4
-; RISCV32-NEXT:    sltu a7, a4, a6
-; RISCV32-NEXT:    sltu a5, a6, a5
-; RISCV32-NEXT:    mulhu a6, a0, a3
+; RISCV32-NEXT:    mul a6, a1, a2
+; RISCV32-NEXT:    mulhu a7, a0, a3
 ; RISCV32-NEXT:    mulhu t0, a1, a2
-; RISCV32-NEXT:    add a6, a6, t0
-; RISCV32-NEXT:    add a5, a6, a5
-; RISCV32-NEXT:    add a5, a5, a7
+; RISCV32-NEXT:    add t1, a5, a4
+; RISCV32-NEXT:    add a7, a7, t0
+; RISCV32-NEXT:    add a4, t1, a6
+; RISCV32-NEXT:    sltu a5, t1, a5
+; RISCV32-NEXT:    sltu a6, a4, t1
+; RISCV32-NEXT:    add a5, a7, a5
+; RISCV32-NEXT:    add a5, a5, a6
 ; RISCV32-NEXT:    mul a6, a1, a3
 ; RISCV32-NEXT:    add a5, a5, a6
 ; RISCV32-NEXT:    bgez a1, .LBB0_2
@@ -34,9 +34,9 @@ define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32-NEXT:  .LBB0_4:
 ; RISCV32-NEXT:    slli a5, a5, 30
 ; RISCV32-NEXT:    srli a1, a4, 2
-; RISCV32-NEXT:    or a1, a5, a1
 ; RISCV32-NEXT:    slli a4, a4, 30
 ; RISCV32-NEXT:    mul a0, a0, a2
+; RISCV32-NEXT:    or a1, a5, a1
 ; RISCV32-NEXT:    srli a0, a0, 2
 ; RISCV32-NEXT:    or a0, a4, a0
 ; RISCV32-NEXT:    ret
@@ -49,8 +49,8 @@ define { i32, i32, i1 } @addcarry_2x32(i32 %x0, i32 %x1, i32 %y0, i32 %y1) nounw
 ; RISCV32-LABEL: addcarry_2x32:
 ; RISCV32:       # %bb.0:
 ; RISCV32-NEXT:    add a3, a1, a3
-; RISCV32-NEXT:    sltu a1, a3, a1
 ; RISCV32-NEXT:    add a4, a2, a4
+; RISCV32-NEXT:    sltu a1, a3, a1
 ; RISCV32-NEXT:    sltu a2, a4, a2
 ; RISCV32-NEXT:    add a1, a4, a1
 ; RISCV32-NEXT:    sltu a4, a1, a4

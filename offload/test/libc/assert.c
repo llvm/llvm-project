@@ -2,15 +2,7 @@
 // RUN:   %fcheck-generic --check-prefix=CHECK
 
 // REQUIRES: libc
-
-// NVPTX without LTO uses the implementation in OpenMP currently.
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: powerpc64-ibm-linux-gnu
-// UNSUPPORTED: powerpc64-ibm-linux-gnu-LTO
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// REQUIRES: gpu
 
 #include <assert.h>
 

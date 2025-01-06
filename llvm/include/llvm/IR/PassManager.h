@@ -28,9 +28,9 @@
 /// polymorphism as outlined in the "Value Semantics and Concept-based
 /// Polymorphism" talk (or its abbreviated sibling "Inheritance Is The Base
 /// Class of Evil") by Sean Parent:
-/// * http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations
+/// * https://sean-parent.stlab.cc/papers-and-presentations
 /// * http://www.youtube.com/watch?v=_BpMYeUFXv8
-/// * http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil
+/// * https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil
 ///
 //===----------------------------------------------------------------------===//
 
@@ -42,8 +42,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
@@ -57,6 +55,9 @@
 #include <vector>
 
 namespace llvm {
+
+class Function;
+class Module;
 
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -224,10 +225,20 @@ protected:
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 };
 
+template <typename IRUnitT>
+void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
+
+template <>
+void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+
 extern template class PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
+
+template <>
+void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                            const Function &IR);
 
 extern template class PassManager<Function>;
 
@@ -387,6 +398,11 @@ public:
     AnalysisResultLists.clear();
   }
 
+  /// Returns true if the specified analysis pass is registered.
+  template <typename PassT> bool isPassRegistered() const {
+    return AnalysisPasses.count(PassT::ID());
+  }
+
   /// Get the result of an analysis pass for a given IR unit.
   ///
   /// Runs the analysis if a cached result is not available.
@@ -447,10 +463,9 @@ public:
   /// and this function returns true.
   ///
   /// (Note: Although the return value of this function indicates whether or not
-  /// an analysis was previously registered, there intentionally isn't a way to
-  /// query this directly.  Instead, you should just register all the analyses
-  /// you might want and let this class run them lazily.  This idiom lets us
-  /// minimize the number of times we have to look up analyses in our
+  /// an analysis was previously registered, you should just register all the
+  /// analyses you might want and let this class run them lazily.  This idiom
+  /// lets us minimize the number of times we have to look up analyses in our
   /// hashtable.)
   template <typename PassBuilderT>
   bool registerPass(PassBuilderT &&PassBuilder) {

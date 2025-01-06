@@ -21,16 +21,13 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 
 #define DEBUG_TYPE "wasm-object"
 
@@ -347,7 +344,7 @@ static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
 
 WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
     : ObjectFile(Binary::ID_Wasm, Buffer) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   Header.Magic = getData().substr(0, 4);
   if (Header.Magic != StringRef("\0asm", 4)) {
     Err = make_error<StringError>("invalid magic number",
@@ -509,11 +506,14 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> SeenGlobals;
   llvm::DenseSet<uint64_t> SeenSegments;
 
-  // If there is symbol info from the export section, this info will supersede
-  // it, but not info from a linking section
-  if (!HasLinkingSection) {
+  // If we have linking section (symbol table) or if we are parsing a DSO
+  // then we don't use the name section for symbol information.
+  bool PopulateSymbolTable = !HasLinkingSection && !HasDylinkSection;
+
+  // If we are using the name section for symbol information then it will
+  // supersede any symbols created by the export section.
+  if (PopulateSymbolTable)
     Symbols.clear();
-  }
 
   while (Ctx.Ptr < Ctx.End) {
     uint8_t Type = readUint8(Ctx);
@@ -589,7 +589,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
               Index, 0, DataSegments[Index].Data.Content.size()};
         }
         DebugNames.push_back(wasm::WasmDebugName{nameType, Index, Name});
-        if (!HasLinkingSection)
+        if (PopulateSymbolTable)
           Symbols.emplace_back(Info, GlobalType, TableType, Signature);
       }
       break;
@@ -996,7 +996,6 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
     Feature.Prefix = readUint8(Ctx);
     switch (Feature.Prefix) {
     case wasm::WASM_FEATURE_PREFIX_USED:
-    case wasm::WASM_FEATURE_PREFIX_REQUIRED:
     case wasm::WASM_FEATURE_PREFIX_DISALLOWED:
       break;
     default:
@@ -1240,7 +1239,6 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
       Sig.Params.push_back(parseValType(Ctx, ParamType));
-      continue;
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
     while (ReturnCount--) {

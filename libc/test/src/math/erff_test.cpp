@@ -13,7 +13,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -64,12 +63,12 @@ TEST_F(LlvmLibcErffTest, InFloatRange) {
 
     for (uint32_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       float x = FPBits(v).get_val();
-      if (isnan(x))
+      if (FPBits(v).is_nan())
         continue;
 
       float result = LIBC_NAMESPACE::erff(x);
       ++cc;
-      if (isnan(result))
+      if (FPBits(result).is_nan())
         continue;
 
       ++count;

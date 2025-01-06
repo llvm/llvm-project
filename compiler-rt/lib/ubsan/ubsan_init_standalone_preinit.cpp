@@ -30,6 +30,6 @@ static void PreInitAsStandalone() {
 
 } // namespace __ubsan
 
-__attribute__((section(".preinit_array"), used)) void (*__local_ubsan_preinit)(
-    void) = __ubsan::PreInitAsStandalone;
+__attribute__((section(".preinit_array"), used)) static auto preinit =
+    __ubsan::PreInitAsStandalone;
 #endif // SANITIZER_CAN_USE_PREINIT_ARRAY

@@ -113,4 +113,93 @@ def SPIRV_INTELConvertBF16ToFOp : SPIRV_IntelVendorOp<"ConvertBF16ToF", []> {
 
 // -----
 
+class SPIRV_IntelSplitBarrierOp<string mnemonic>
+    : SPIRV_IntelVendorOp<mnemonic, []> {
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_split_barrier]>,
+    Capability<[SPIRV_C_SplitBarrierINTEL]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $execution_scope $memory_scope $memory_semantics attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+def SPIRV_INTELControlBarrierArriveOp
+    : SPIRV_IntelSplitBarrierOp<"ControlBarrierArrive"> {
+  let summary = "See extension SPV_INTEL_split_barrier";
+
+  let description = [{
+    Indicates that an invocation has arrived at a split control barrier. This
+    may allow other invocations waiting on the split control barrier to continue
+    executing.
+
+    When `Execution` is `Workgroup` or larger, behavior is undefined unless all
+    invocations within `Execution` execute the same dynamic instance of this
+    instruction. When `Execution` is `Subgroup` or `Invocation`, the behavior of
+    this instruction in non-uniform control flow is defined by the client API.
+
+    If `Semantics` is not `None`, this instruction also serves as the start of a
+    memory barrier similar to an `OpMemoryBarrier` instruction with the same
+    `Memory` and `Semantics` operands. This allows atomically specifying both a
+    control barrier and a memory barrier (that is, without needing two
+    instructions). If `Semantics` is `None`, `Memory` is ignored.
+
+    #### Example:
+
+    ```mlir
+    spirv.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
+    ```
+  }];
+}
+
+
+// -----
+
+def SPIRV_INTELControlBarrierWaitOp
+    : SPIRV_IntelSplitBarrierOp<"ControlBarrierWait"> {
+  let summary = "See extension SPV_INTEL_split_barrier";
+
+  let description = [{
+    Waits for other invocations of this module to arrive at a split control
+    barrier.
+
+    When `Execution` is `Workgroup` or larger, behavior is undefined unless all
+    invocations within `Execution` execute the same dynamic instance of this
+    instruction. When `Execution` is `Subgroup` or `Invocation`, the behavior of
+    this instruction in non-uniform control flow is defined by the client API.
+
+    If `Semantics` is not `None`, this instruction also serves as the end of a
+    memory barrier similar to an `OpMemoryBarrier` instruction with the same
+    `Memory` and `Semantics` operands. This ensures that memory accesses issued
+    before arriving at the split barrier are observed before memory accesses
+    issued after this instruction. This control is ensured only for memory
+    accesses issued by this invocation and observed by another invocation
+    executing within `Memory` scope. This allows atomically specifying both a
+    control barrier and a memory barrier (that is, without needing two
+    instructions). If `Semantics` is `None`, `Memory` is ignored.
+
+    #### Example:
+
+    ```mlir
+    spirv.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
+    ```
+  }];
+}
+
+
+// -----
+
 #endif // MLIR_DIALECT_SPIRV_IR_INTEL_EXT_OPS

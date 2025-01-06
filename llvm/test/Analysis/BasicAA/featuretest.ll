@@ -59,7 +59,7 @@ define i32 @constant_array_index_test() {
 ; CHECK-LABEL: @constant_array_index_test(
 ; CHECK-NEXT:    [[ARRAY1:%.*]] = alloca [100 x i32], align 4
 ; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY1]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[ARRAY1]], i64 24
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAY1]], i64 24
 ; CHECK-NEXT:    store i32 1, ptr [[P2]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;

@@ -281,11 +281,13 @@ define zeroext i1 @maxi1(i1 zeroext, i1 zeroext) {
 ; CHECK-LABEL: maxi1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or %s0, %s0, %s1
+; CHECK-NEXT:    and %s0, 1, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; OPT-LABEL: maxi1:
 ; OPT:       # %bb.0:
 ; OPT-NEXT:    or %s0, %s0, %s1
+; OPT-NEXT:    and %s0, 1, %s0
 ; OPT-NEXT:    b.l.t (, %s10)
   %3 = xor i1 %1, true
   %4 = and i1 %3, %0

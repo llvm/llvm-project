@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -35,7 +34,7 @@ void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
   if (GVs.empty())
     return;
 
-  MangleAndInterner Mangle(ES, GVs[0]->getParent()->getDataLayout());
+  MangleAndInterner Mangle(ES, GVs[0]->getDataLayout());
   for (auto *G : GVs) {
     assert(G && "GVs cannot contain null elements");
     if (!G->hasName() || G->isDeclaration() || G->hasLocalLinkage() ||

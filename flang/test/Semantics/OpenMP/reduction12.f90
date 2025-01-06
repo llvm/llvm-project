@@ -6,7 +6,7 @@
   procedure(foo), pointer :: ptr
   integer :: i
   ptr => foo
-!ERROR: A procedure pointer 'ptr' must not appear in a REDUCTION clause.
+!ERROR: Procedure pointer 'ptr' may not appear in a REDUCTION clause
 !$omp do reduction (+ : ptr)
   do i = 1, 10
   end do

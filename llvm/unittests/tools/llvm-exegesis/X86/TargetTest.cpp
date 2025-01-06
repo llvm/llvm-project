@@ -242,7 +242,20 @@ TEST_F(X86Core2AvxTargetTest, SetRegToVR128Value_Use_VMOVDQUrm) {
                   IsStackDeallocate(16)));
 }
 
-TEST_F(X86Core2Avx512TargetTest, SetRegToVR128Value_Use_VMOVDQU32Z128rm) {
+TEST_F(X86Core2Avx512TargetTest,
+       SetRegToVR128ValueHighXMM_Use_VMOVDQU32Z128rm) {
+  EXPECT_THAT(
+      setRegTo(X86::XMM16, APInt(128, "11112222333344445555666677778888", 16)),
+      ElementsAre(IsStackAllocate(16),
+                  IsMovValueToStack(X86::MOV32mi, 0x77778888UL, 0),
+                  IsMovValueToStack(X86::MOV32mi, 0x55556666UL, 4),
+                  IsMovValueToStack(X86::MOV32mi, 0x33334444UL, 8),
+                  IsMovValueToStack(X86::MOV32mi, 0x11112222UL, 12),
+                  IsMovValueFromStack(X86::VMOVDQU32Z128rm, X86::XMM16),
+                  IsStackDeallocate(16)));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToVR128ValueLowXMM_Use_VMOVDQUrm) {
   EXPECT_THAT(
       setRegTo(X86::XMM0, APInt(128, "11112222333344445555666677778888", 16)),
       ElementsAre(IsStackAllocate(16),
@@ -250,7 +263,7 @@ TEST_F(X86Core2Avx512TargetTest, SetRegToVR128Value_Use_VMOVDQU32Z128rm) {
                   IsMovValueToStack(X86::MOV32mi, 0x55556666UL, 4),
                   IsMovValueToStack(X86::MOV32mi, 0x33334444UL, 8),
                   IsMovValueToStack(X86::MOV32mi, 0x11112222UL, 12),
-                  IsMovValueFromStack(X86::VMOVDQU32Z128rm, X86::XMM0),
+                  IsMovValueFromStack(X86::VMOVDQUrm, X86::XMM0),
                   IsStackDeallocate(16)));
 }
 
@@ -272,7 +285,26 @@ TEST_F(X86Core2AvxTargetTest, SetRegToVR256Value_Use_VMOVDQUYrm) {
                         IsStackDeallocate(32)}));
 }
 
-TEST_F(X86Core2Avx512TargetTest, SetRegToVR256Value_Use_VMOVDQU32Z256rm) {
+TEST_F(X86Core2Avx512TargetTest,
+       SetRegToVR256ValueHighYMM_Use_VMOVDQU32Z256rm) {
+  const char ValueStr[] =
+      "1111111122222222333333334444444455555555666666667777777788888888";
+  EXPECT_THAT(
+      setRegTo(X86::YMM16, APInt(256, ValueStr, 16)),
+      ElementsAreArray({IsStackAllocate(32),
+                        IsMovValueToStack(X86::MOV32mi, 0x88888888UL, 0),
+                        IsMovValueToStack(X86::MOV32mi, 0x77777777UL, 4),
+                        IsMovValueToStack(X86::MOV32mi, 0x66666666UL, 8),
+                        IsMovValueToStack(X86::MOV32mi, 0x55555555UL, 12),
+                        IsMovValueToStack(X86::MOV32mi, 0x44444444UL, 16),
+                        IsMovValueToStack(X86::MOV32mi, 0x33333333UL, 20),
+                        IsMovValueToStack(X86::MOV32mi, 0x22222222UL, 24),
+                        IsMovValueToStack(X86::MOV32mi, 0x11111111UL, 28),
+                        IsMovValueFromStack(X86::VMOVDQU32Z256rm, X86::YMM16),
+                        IsStackDeallocate(32)}));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToVR256ValueLowYMM_Use_VMOVDQUYrm) {
   const char ValueStr[] =
       "1111111122222222333333334444444455555555666666667777777788888888";
   EXPECT_THAT(
@@ -286,7 +318,7 @@ TEST_F(X86Core2Avx512TargetTest, SetRegToVR256Value_Use_VMOVDQU32Z256rm) {
                         IsMovValueToStack(X86::MOV32mi, 0x33333333UL, 20),
                         IsMovValueToStack(X86::MOV32mi, 0x22222222UL, 24),
                         IsMovValueToStack(X86::MOV32mi, 0x11111111UL, 28),
-                        IsMovValueFromStack(X86::VMOVDQU32Z256rm, X86::YMM0),
+                        IsMovValueFromStack(X86::VMOVDQUYrm, X86::YMM0),
                         IsStackDeallocate(32)}));
 }
 
@@ -553,6 +585,14 @@ TEST_F(X86Core2TargetTest, SetRegToFP1_4Bits) {
                           OpcodeIs(X86::LD_Fp80m), IsStackDeallocate(10)));
 }
 
+TEST_F(X86Core2TargetTest, SetRegToDf1) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 1)), ElementsAre(OpcodeIs(X86::STD)));
+}
+
+TEST_F(X86Core2TargetTest, SetRegToDf0) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 0)), ElementsAre(OpcodeIs(X86::CLD)));
+}
+
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
   const Instruction &I = getInstr(X86::ADD64rm);
   InstructionTemplate IT(&I);
@@ -599,9 +639,9 @@ TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
 }
 
 #ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {

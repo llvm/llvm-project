@@ -22,7 +22,14 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "LoongArchGenSubtargetInfo.inc"
 
+static cl::opt<bool> UseAA("loongarch-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
 void LoongArchSubtarget::anchor() {}
+
+// Enable use of alias analysis during code generation (during MI scheduling,
+// DAGCombine, etc.).
+bool LoongArchSubtarget::useAA() const { return UseAA; }
 
 LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
     const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,

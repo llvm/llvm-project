@@ -103,8 +103,8 @@ define <2 x double> @test3_reassoc(<2 x double> %a, <2 x double> %b, <2 x double
 
 define <2 x float> @test4(<2 x float> %A) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[X:%.*]] = fadd <2 x float> [[A:%.*]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[Y:%.*]] = fadd <2 x float> [[A]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[X:%.*]] = fadd <2 x float> [[A:%.*]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[Y:%.*]] = fadd <2 x float> [[A]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[X]], [[Y]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
@@ -118,7 +118,7 @@ define <2 x float> @test4(<2 x float> %A) {
 
 define <2 x float> @test5(<2 x float> %X) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 9.400000e+01, float 9.400000e+01>
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 9.400000e+01)
 ; CHECK-NEXT:    ret <2 x float> [[FACTOR]]
 ;
   %Y = fmul fast <2 x float> %X, <float 4.700000e+01, float 4.700000e+01>
@@ -130,7 +130,7 @@ define <2 x float> @test5(<2 x float> %X) {
 
 define <2 x float> @test5_reassoc(<2 x float> %X) {
 ; CHECK-LABEL: @test5_reassoc(
-; CHECK-NEXT:    [[Y:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 4.700000e+01, float 4.700000e+01>
+; CHECK-NEXT:    [[Y:%.*]] = fmul reassoc <2 x float> [[X:%.*]], splat (float 4.700000e+01)
 ; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc <2 x float> [[Y]], [[Y]]
 ; CHECK-NEXT:    ret <2 x float> [[Z]]
 ;
@@ -143,7 +143,7 @@ define <2 x float> @test5_reassoc(<2 x float> %X) {
 
 define <2 x float> @test6(<2 x float> %X) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[FACTOR]]
 ;
   %Y = fadd fast <2 x float> %X ,%X
@@ -168,7 +168,7 @@ define <2 x float> @test6_reassoc(<2 x float> %X) {
 
 define <2 x double> @test7(<2 x double> %W) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[W:%.*]], <double 1.770000e+02, double 1.770000e+02>
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[W:%.*]], splat (double 1.770000e+02)
 ; CHECK-NEXT:    ret <2 x double> [[REASS_MUL]]
 ;
   %X = fmul fast <2 x double> %W, <double 127.0, double 127.0>
@@ -181,8 +181,8 @@ define <2 x double> @test7(<2 x double> %W) {
 
 define <2 x double> @test7_reassoc(<2 x double> %W) {
 ; CHECK-LABEL: @test7_reassoc(
-; CHECK-NEXT:    [[X:%.*]] = fmul reassoc <2 x double> [[W:%.*]], <double 1.270000e+02, double 1.270000e+02>
-; CHECK-NEXT:    [[Y:%.*]] = fmul reassoc <2 x double> [[W]], <double 5.000000e+01, double 5.000000e+01>
+; CHECK-NEXT:    [[X:%.*]] = fmul reassoc <2 x double> [[W:%.*]], splat (double 1.270000e+02)
+; CHECK-NEXT:    [[Y:%.*]] = fmul reassoc <2 x double> [[W]], splat (double 5.000000e+01)
 ; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc <2 x double> [[Y]], [[X]]
 ; CHECK-NEXT:    ret <2 x double> [[Z]]
 ;
@@ -196,7 +196,7 @@ define <2 x double> @test7_reassoc(<2 x double> %W) {
 
 define <2 x float> @test8(<2 x float> %arg) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[ARG:%.*]], <float 1.440000e+02, float 1.440000e+02>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[ARG:%.*]], splat (float 1.440000e+02)
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp1 = fmul fast <2 x float> <float 1.200000e+01, float 1.200000e+01>, %arg
@@ -208,8 +208,8 @@ define <2 x float> @test8(<2 x float> %arg) {
 
 define <2 x float> @test8_reassoc(<2 x float> %arg) {
 ; CHECK-LABEL: @test8_reassoc(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[ARG:%.*]], <float 1.200000e+01, float 1.200000e+01>
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc <2 x float> [[TMP1]], <float 1.200000e+01, float 1.200000e+01>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[ARG:%.*]], splat (float 1.200000e+01)
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc <2 x float> [[TMP1]], splat (float 1.200000e+01)
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp1 = fmul reassoc <2 x float> <float 1.200000e+01, float 1.200000e+01>, %arg
@@ -222,7 +222,7 @@ define <2 x float> @test8_reassoc(<2 x float> %arg) {
 define <2 x double> @test9(<2 x double> %b, <2 x double> %a) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <2 x double> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[B:%.*]], <double 1.234000e+03, double 1.234000e+03>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[B:%.*]], splat (double 1.234000e+03)
 ; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %1 = fadd fast <2 x double> %a, <double 1.234000e+03, double 1.234000e+03>
@@ -235,7 +235,7 @@ define <2 x double> @test9(<2 x double> %b, <2 x double> %a) {
 define <2 x double> @test9_unary_fneg(<2 x double> %b, <2 x double> %a) {
 ; CHECK-LABEL: @test9_unary_fneg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast <2 x double> [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[B:%.*]], <double 1.234000e+03, double 1.234000e+03>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[B:%.*]], splat (double 1.234000e+03)
 ; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %1 = fadd fast <2 x double> %a, <double 1.234000e+03, double 1.234000e+03>
@@ -249,7 +249,7 @@ define <2 x double> @test9_unary_fneg(<2 x double> %b, <2 x double> %a) {
 
 define <2 x double> @test9_reassoc(<2 x double> %b, <2 x double> %a) {
 ; CHECK-LABEL: @test9_reassoc(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc <2 x double> [[A:%.*]], <double 1.234000e+03, double 1.234000e+03>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc <2 x double> [[A:%.*]], splat (double 1.234000e+03)
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc <2 x double> [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc <2 x double> zeroinitializer, [[A]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc <2 x double> [[TMP3]], [[TMP2]]
@@ -264,7 +264,7 @@ define <2 x double> @test9_reassoc(<2 x double> %b, <2 x double> %a) {
 
 define <2 x double> @test9_reassoc_unary_fneg(<2 x double> %b, <2 x double> %a) {
 ; CHECK-LABEL: @test9_reassoc_unary_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc <2 x double> [[A:%.*]], <double 1.234000e+03, double 1.234000e+03>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc <2 x double> [[A:%.*]], splat (double 1.234000e+03)
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc <2 x double> [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fneg reassoc <2 x double> [[A]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc <2 x double> [[TMP3]], [[TMP2]]
@@ -281,7 +281,7 @@ define <2 x double> @test9_reassoc_unary_fneg(<2 x double> %b, <2 x double> %a) 
 
 define <2 x float> @test10(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[C:%.*]] = fmul fast <2 x float> [[A:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[C:%.*]] = fmul fast <2 x float> [[A:%.*]], splat (float 4.000000e+01)
 ; CHECK-NEXT:    [[E:%.*]] = fmul fast <2 x float> [[C]], [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[E]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
@@ -295,7 +295,7 @@ define <2 x float> @test10(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 
 define <2 x float> @test10_unary_fneg(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 ; CHECK-LABEL: @test10_unary_fneg(
-; CHECK-NEXT:    [[E:%.*]] = fmul fast <2 x float> [[A:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[E:%.*]] = fmul fast <2 x float> [[A:%.*]], splat (float 4.000000e+01)
 ; CHECK-NEXT:    [[F:%.*]] = fmul fast <2 x float> [[E]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
@@ -310,7 +310,7 @@ define <2 x float> @test10_unary_fneg(<2 x float> %a, <2 x float> %b, <2 x float
 
 define <2 x float> @test10_reassoc(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 ; CHECK-LABEL: @test10_reassoc(
-; CHECK-NEXT:    [[D:%.*]] = fmul reassoc <2 x float> [[Z:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc <2 x float> [[Z:%.*]], splat (float 4.000000e+01)
 ; CHECK-NEXT:    [[C:%.*]] = fsub reassoc <2 x float> zeroinitializer, [[D]]
 ; CHECK-NEXT:    [[E:%.*]] = fmul reassoc <2 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    [[F:%.*]] = fsub reassoc <2 x float> zeroinitializer, [[E]]
@@ -325,7 +325,7 @@ define <2 x float> @test10_reassoc(<2 x float> %a, <2 x float> %b, <2 x float> %
 
 define <2 x float> @test10_reassoc_unary_fneg(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 ; CHECK-LABEL: @test10_reassoc_unary_fneg(
-; CHECK-NEXT:    [[D:%.*]] = fmul reassoc <2 x float> [[Z:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc <2 x float> [[Z:%.*]], splat (float 4.000000e+01)
 ; CHECK-NEXT:    [[C:%.*]] = fneg reassoc <2 x float> [[D]]
 ; CHECK-NEXT:    [[E:%.*]] = fmul reassoc <2 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    [[F:%.*]] = fneg reassoc <2 x float> [[E]]
@@ -343,7 +343,7 @@ define <2 x float> @test10_reassoc_unary_fneg(<2 x float> %a, <2 x float> %b, <2
 define <2 x double> @test11(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x double> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[FACTOR]], <double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[FACTOR]], splat (double 2.000000e+00)
 ; CHECK-NEXT:    ret <2 x double> [[REASS_MUL]]
 ;
   %1 = fmul fast <2 x double> %x, %y
@@ -372,7 +372,7 @@ define <2 x double> @test11_reassoc(<2 x double> %x, <2 x double> %y) {
 define <2 x i64> @test12(<2 x i64> %b, <2 x i64> %c) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i64> [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[MUL]], <i64 5, i64 5>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[MUL]], splat (i64 5)
 ; CHECK-NEXT:    ret <2 x i64> [[SHL]]
 ;
   %mul = mul <2 x i64> %c, %b
@@ -384,7 +384,7 @@ define <2 x i64> @test12(<2 x i64> %b, <2 x i64> %c) {
 
 define <4 x float> @test13(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <4 x float> [[B:%.*]], <float 5.000000e+00, float 5.000000e+00, float 5.000000e+00, float 5.000000e+00>
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <4 x float> [[B:%.*]], splat (float 5.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <4 x float> [[A:%.*]], [[MUL]]
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;

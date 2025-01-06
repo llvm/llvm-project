@@ -72,6 +72,7 @@ module m01
  contains
   elemental real function elem03(x)
     real, value :: x
+    elem03 = 0.
   end function
   subroutine test
     intrinsic :: cos
@@ -87,6 +88,7 @@ module m01
    contains
     elemental real function elem04(x)
       real, value :: x
+      elem04 = 0.
     end function
   end subroutine
 end module

@@ -56,7 +56,7 @@ public:
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
-  virtual ResultType DesiredResultType() { return eResultTypeAny; }
+  virtual ResultType DesiredResultType() const { return eResultTypeAny; }
 
   /// Flags
 

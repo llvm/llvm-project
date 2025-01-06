@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 target triple = "avr-unknown-unknown"
 
 ; The case illustrate DAG schedular may pre-schedule the node has

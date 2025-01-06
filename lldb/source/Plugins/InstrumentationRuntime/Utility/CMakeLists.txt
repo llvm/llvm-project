@@ -7,4 +7,5 @@ add_lldb_library(lldbPluginInstrumentationRuntimeUtility
     lldbExpression
     lldbSymbol
     lldbTarget
+    lldbValueObject
   )

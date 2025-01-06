@@ -94,7 +94,6 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
   std::string s;
   raw_string_ostream rso(s);
   V->print(rso);
-  rso.flush();
   if (truncate)
     s.resize(s.length() - 1);
   return s;
@@ -280,10 +279,9 @@ protected:
 
   IntegerType *GetIntptrTy() {
     if (!m_intptr_ty) {
-      llvm::DataLayout data_layout(&m_module);
-
-      m_intptr_ty = llvm::Type::getIntNTy(m_module.getContext(),
-                                          data_layout.getPointerSizeInBits());
+      m_intptr_ty = llvm::Type::getIntNTy(
+          m_module.getContext(),
+          m_module.getDataLayout().getPointerSizeInBits());
     }
 
     return m_intptr_ty;
@@ -332,7 +330,8 @@ protected:
       return false;
 
     // Insert an instruction to call the helper with the result
-    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "", inst);
+    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "",
+                     inst->getIterator());
 
     return true;
   }
@@ -419,7 +418,7 @@ protected:
 
     ArrayRef<llvm::Value *> args(arg_array, 2);
 
-    CallInst::Create(m_objc_object_check_func, args, "", inst);
+    CallInst::Create(m_objc_object_check_func, args, "", inst->getIterator());
 
     return true;
   }
@@ -553,8 +552,6 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
     raw_string_ostream oss(s);
 
     M.print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOGF(log, "Module after dynamic checks: \n%s", s.c_str());
   }

@@ -159,18 +159,18 @@ int foo(int n) {
   // CHECK: [[DEVICE:%.+]] = sext i32 {{%.+}} to i64
   // CHECK-32: [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr {{.+}}, i32 %0, i32 1, i32 60, i32 12, ptr [[OMP_TASK_ENTRY:@.+]], i64 [[DEVICE]])
   // CHECK-64: [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr {{.+}}, i32 %0, i32 1, i64 104, i64 16, ptr [[OMP_TASK_ENTRY:@.+]], i64 [[DEVICE]])
-  // CHECK: [[TASK_WITH_PRIVATES_GEP:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
-  // CHECK-32: [[SIZEGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 0
+  // CHECK: [[TASK_WITH_PRIVATES_GEP:%.+]] = getelementptr inbounds nuw [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
+  // CHECK-32: [[SIZEGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 0
   // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SIZEGEP]], ptr align 4 [[SIZET]], i32 16, i1 false)
-  // CHECK-32: [[FPBPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 3
+  // CHECK-32: [[FPBPRGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 3
   // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[FPBPRGEP]], ptr align 4 [[BPRGEP]], i32 8, i1 false)
-  // CHECK-32: [[FPPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 4
+  // CHECK-32: [[FPPRGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 4
   // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[FPPRGEP]], ptr align 4 [[PRGEP]], i32 8, i1 false)
-  // CHECK-64: [[FPBPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 1
+  // CHECK-64: [[FPBPRGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 1
   // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPRGEP]], ptr align 8 [[BPRGEP]], i64 16, i1 false)
-  // CHECK-64: [[FPPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 2
+  // CHECK-64: [[FPPRGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 2
   // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPRGEP]], ptr align 8 [[PRGEP]], i64 16, i1 false)
-  // CHECK-64: [[SIZEGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 3
+  // CHECK-64: [[SIZEGEP:%.+]] = getelementptr inbounds nuw [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 3
   // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZEGEP]], ptr align 8 [[SIZET]], i64 16, i1 false)
   // CHECK: call i32 @__kmpc_omp_task(ptr {{.+}}, i32 {{.+}}, ptr [[TASK]])
   #pragma omp target device(global + a) nowait
@@ -372,7 +372,7 @@ int foo(int n) {
 // CHECK-DAG: store ptr [[SIZE:%.+]], ptr [[SARG]]
 // CHECK-DAG: [[DEVICE]] = sext i32 [[DEV:%.+]] to i64
 // CHECK-DAG: [[DEV]] = load i32, ptr [[DEVADDR:%.+]], align
-// CHECK-DAG: [[DEVADDR]] = getelementptr inbounds [[ANON_T]], ptr {{%.+}}, i32 0, i32 2
+// CHECK-DAG: [[DEVADDR]] = getelementptr inbounds nuw [[ANON_T]], ptr {{%.+}}, i32 0, i32 2
 // CHECK-DAG: [[BPR]] = load ptr, ptr [[FPPTR_BPR:%.+]], align
 // CHECK-DAG: [[PR]] = load ptr, ptr [[FPPTR_PR:%.+]], align
 // CHECK-DAG: [[SIZE]] = load ptr, ptr [[FPPTR_SIZE:%.+]], align
@@ -451,7 +451,7 @@ int foo(int n) {
 // CHECK-DAG:   getelementptr inbounds float, ptr [[REF_BN]], i[[SZ]] 3
 // CHECK-DAG:   getelementptr inbounds [5 x [10 x double]], ptr [[REF_C]], i[[SZ]] 0, i[[SZ]] 1
 // CHECK-DAG:   getelementptr inbounds double, ptr [[REF_CN]], i[[SZ]] %{{.+}}
-// CHECK-DAG:   getelementptr inbounds [[TT]], ptr [[REF_D]], i32 0, i32 0
+// CHECK-DAG:   getelementptr inbounds nuw [[TT]], ptr [[REF_D]], i32 0, i32 0
 
 template<typename tx>
 tx ftemplate(int n) {
@@ -736,7 +736,7 @@ int bar(int n){
 // CHECK-DAG:   [[VAL_VLA2:%.+]] = load i[[SZ]], ptr [[LOCAL_VLA2]],
 // CHECK-DAG:   [[REF_C:%.+]] = load ptr, ptr [[LOCAL_C]],
 // Use captures.
-// CHECK-DAG:   getelementptr inbounds [[S1]], ptr [[REF_THIS]], i32 0, i32 0
+// CHECK-DAG:   getelementptr inbounds nuw [[S1]], ptr [[REF_THIS]], i32 0, i32 0
 // CHECK-64-DAG:load i32, ptr [[LOCAL_B]]
 // CHECK-32-DAG:load i32, ptr [[LOCAL_B]]
 // CHECK-DAG:   getelementptr inbounds i16, ptr [[REF_C]], i[[SZ]] %{{.+}}

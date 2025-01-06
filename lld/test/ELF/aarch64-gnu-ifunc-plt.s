@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %S/Inputs/shared2.s -o %t1.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/shared2.s -o %t1.o
 // RUN: ld.lld %t1.o --shared --soname=t.so -o %t.so
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT

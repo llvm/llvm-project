@@ -92,13 +92,14 @@ public:
   /// Accepts an incoming connection on the listening socket. This method can
   /// optionally either block until a connection is available or timeout after a
   /// specified amount of time has passed. By default the method will block
-  /// until the socket has recieved a connection.
+  /// until the socket has recieved a connection. If the accept timesout this
+  /// method will return std::errc:timed_out
   ///
   /// \param Timeout An optional timeout duration in milliseconds. Setting
-  /// Timeout to -1 causes accept to block indefinitely
+  /// Timeout to a negative number causes ::accept to block indefinitely
   ///
-  Expected<std::unique_ptr<raw_socket_stream>>
-  accept(std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
+  Expected<std::unique_ptr<raw_socket_stream>> accept(
+      const std::chrono::milliseconds &Timeout = std::chrono::milliseconds(-1));
 
   /// Creates a listening socket bound to the specified file system path.
   /// Handles the socket creation, binding, and immediately starts listening for
@@ -124,11 +125,28 @@ class raw_socket_stream : public raw_fd_stream {
 
 public:
   raw_socket_stream(int SocketFD);
+  ~raw_socket_stream();
+
   /// Create a \p raw_socket_stream connected to the UNIX domain socket at \p
   /// SocketPath.
   static Expected<std::unique_ptr<raw_socket_stream>>
   createConnectedUnix(StringRef SocketPath);
-  ~raw_socket_stream();
+
+  /// Attempt to read from the raw_socket_stream's file descriptor.
+  ///
+  /// This method can optionally either block until data is read or an error has
+  /// occurred or timeout after a specified amount of time has passed. By
+  /// default the method will block until the socket has read data or
+  /// encountered an error. If the read times out this method will return
+  /// std::errc:timed_out
+  ///
+  /// \param Ptr The start of the buffer that will hold any read data
+  /// \param Size The number of bytes to be read
+  /// \param Timeout An optional timeout duration in milliseconds
+  ///
+  ssize_t read(
+      char *Ptr, size_t Size,
+      const std::chrono::milliseconds &Timeout = std::chrono::milliseconds(-1));
 };
 
 } // end namespace llvm

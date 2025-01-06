@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[SCALAR_SHL:%.+]] "scalar_shl"
 ; CHECK-DAG: OpName [[SCALAR_LSHR:%.+]] "scalar_lshr"

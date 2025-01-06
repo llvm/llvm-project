@@ -78,15 +78,14 @@ define { i32, i1 } @test_cmpxchg_32(ptr %addr, i32 %desired, i32 %new) nounwind 
 
 define { i64, i1 } @test_cmpxchg_64(ptr %addr, i64 %desired, i64 %new) nounwind {
 ; CHECK-LABEL: test_cmpxchg_64:
-; CHECK:     mov [[ADDR:r[0-9]+]], r0
 ; CHECK:     dmb ish
 ; CHECK-NOT: uxt
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
-; CHECK:     ldrexd [[OLDLO:r[0-9]+]], [[OLDHI:r[0-9]+]], [[[ADDR]]]
+; CHECK:     ldrexd [[OLDLO:r[0-9]+]], [[OLDHI:r[0-9]+]], [r0]
 ; CHECK:     cmp [[OLDLO]], r6
 ; CHECK:     cmpeq [[OLDHI]], r7
 ; CHECK:     bne [[DONE:.LBB[0-9]+_[0-9]+]]
-; CHECK:     strexd [[STATUS:[lr0-9]+]], r8, r9, [r1]
+; CHECK:     strexd [[STATUS:[lr0-9]+]], r8, r9, [r0]
 ; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
 ; CHECK:     bne [[RETRY]]
 ; CHECK: [[DONE]]:

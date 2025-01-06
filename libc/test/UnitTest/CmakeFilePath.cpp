@@ -10,11 +10,14 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/c_string.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::testing {
+namespace LIBC_NAMESPACE_DECL {
+namespace testing {
 
 CString libc_make_test_file_path_func(const char *file_name) {
   return cpp::string(file_name);
 }
 
-} // namespace LIBC_NAMESPACE::testing
+} // namespace testing
+} // namespace LIBC_NAMESPACE_DECL

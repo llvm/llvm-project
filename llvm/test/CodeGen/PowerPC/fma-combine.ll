@@ -202,7 +202,6 @@ define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ; CHECK-FAST-NEXT:    xvcvsxwdp 4, 34
 ; CHECK-FAST-NEXT:    lfs 3, .LCPI5_0@toc@l(3)
 ; CHECK-FAST-NEXT:    xssubdp 0, 1, 4
-; CHECK-FAST-NEXT:    # kill: def $f4 killed $f4 killed $vsl4
 ; CHECK-FAST-NEXT:    xsmaddadp 4, 1, 3
 ; CHECK-FAST-NEXT:    xsmaddadp 0, 4, 2
 ; CHECK-FAST-NEXT:    fmr 1, 0
@@ -226,7 +225,6 @@ define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ; CHECK-NEXT:    xvcvsxwdp 4, 34
 ; CHECK-NEXT:    lfs 3, .LCPI5_0@toc@l(3)
 ; CHECK-NEXT:    xssubdp 0, 1, 4
-; CHECK-NEXT:    # kill: def $f4 killed $f4 killed $vsl4
 ; CHECK-NEXT:    xsmaddadp 4, 1, 3
 ; CHECK-NEXT:    xsmaddadp 0, 4, 2
 ; CHECK-NEXT:    fmr 1, 0

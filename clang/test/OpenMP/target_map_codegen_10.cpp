@@ -63,6 +63,6 @@ void implicit_maps_double_complex (int a, int *b){
 // CK11: [[ADDR:%.+]] = alloca ptr,
 // CK11: store ptr [[ARG]], ptr [[ADDR]],
 // CK11: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK11: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK11: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif // CK11
 #endif

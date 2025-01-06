@@ -264,7 +264,7 @@ define <2 x i15> @shl_vector_zero(<2 x i15> %a, <2 x i15> %b) {
 
 define <2 x i32> @shl_vector_for_real(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_vector_for_real(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 3)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[AND]]
 ; CHECK-NEXT:    ret <2 x i32> [[SHL]]
 ;
@@ -318,7 +318,7 @@ define i32 @lshr_cttz_zero_is_undef(i32 %x) {
 define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
@@ -342,7 +342,7 @@ define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
 define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)

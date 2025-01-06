@@ -12,7 +12,7 @@
         .type _start, %function
 _start: ret
 
-// CHECK:     Name: $x.0
+// CHECK:     Name: $x
 // CHECK-NEXT:     Value: 0x0
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local (0x0)

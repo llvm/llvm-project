@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -start-before=hexagon-packetizer -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -start-before=hexagon-packetizer -o - %s | FileCheck %s
 # This used to generate an invalid packet:
 # {
 #   r1 = #0

@@ -12,10 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86CustomBehaviour.h"
-#include "TargetInfo/X86TargetInfo.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "TargetInfo/X86TargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/WithColor.h"
 
 namespace llvm {
 namespace mca {
@@ -56,7 +55,7 @@ static InstrPostProcess *createX86InstrPostProcess(const MCSubtargetInfo &STI,
 
 /// Extern function to initialize the targets for the X86 backend
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMCA() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMCA() {
   TargetRegistry::RegisterInstrPostProcess(getTheX86_32Target(),
                                            createX86InstrPostProcess);
   TargetRegistry::RegisterInstrPostProcess(getTheX86_64Target(),

@@ -33,6 +33,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang

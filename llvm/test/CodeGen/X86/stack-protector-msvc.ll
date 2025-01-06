@@ -49,10 +49,15 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X64-NEXT:    callq printf
 ; MSVC-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; MSVC-X64-NEXT:    xorq %rsp, %rcx
-; MSVC-X64-NEXT:    callq __security_check_cookie
+; MSVC-X64-NEXT:    cmpq __security_cookie(%rip), %rcx
+; MSVC-X64-NEXT:    jne .LBB0_2
+; MSVC-X64-NEXT:  # %bb.1:
 ; MSVC-X64-NEXT:    addq $64, %rsp
 ; MSVC-X64-NEXT:    popq %rsi
 ; MSVC-X64-NEXT:    retq
+; MSVC-X64-NEXT:  .LBB0_2:
+; MSVC-X64-NEXT:    callq __security_check_cookie
+; MSVC-X64-NEXT:    int3
 ;
 ; MSVC-X86-O0-LABEL: test:
 ; MSVC-X86-O0:       # %bb.0: # %entry
@@ -155,11 +160,17 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:    addq $32, %rsp
 ; MSVC-X64-NEXT:    movq -8(%rbp), %rcx
 ; MSVC-X64-NEXT:    xorq %rbp, %rcx
-; MSVC-X64-NEXT:    subq $32, %rsp
-; MSVC-X64-NEXT:    callq __security_check_cookie
+; MSVC-X64-NEXT:    cmpq __security_cookie(%rip), %rcx
+; MSVC-X64-NEXT:    jne .LBB1_2
+; MSVC-X64-NEXT:  # %bb.1:
 ; MSVC-X64-NEXT:    movq %rbp, %rsp
 ; MSVC-X64-NEXT:    popq %rbp
 ; MSVC-X64-NEXT:    retq
+; MSVC-X64-NEXT:  .LBB1_2:
+; MSVC-X64-NEXT:    subq $32, %rsp
+; MSVC-X64-NEXT:    callq __security_check_cookie
+; MSVC-X64-NEXT:    addq $32, %rsp
+; MSVC-X64-NEXT:    int3
 ;
 ; MSVC-X86-O0-LABEL: test_vla:
 ; MSVC-X86-O0:       # %bb.0:
@@ -277,13 +288,19 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:    addq $32, %rsp
 ; MSVC-X64-NEXT:    movq 24(%rbx), %rcx
 ; MSVC-X64-NEXT:    xorq %rbp, %rcx
-; MSVC-X64-NEXT:    subq $32, %rsp
-; MSVC-X64-NEXT:    callq __security_check_cookie
+; MSVC-X64-NEXT:    cmpq __security_cookie(%rip), %rcx
+; MSVC-X64-NEXT:    jne .LBB2_2
+; MSVC-X64-NEXT:  # %bb.1:
 ; MSVC-X64-NEXT:    movq %rbp, %rsp
 ; MSVC-X64-NEXT:    popq %rbx
 ; MSVC-X64-NEXT:    popq %rsi
 ; MSVC-X64-NEXT:    popq %rbp
 ; MSVC-X64-NEXT:    retq
+; MSVC-X64-NEXT:  .LBB2_2:
+; MSVC-X64-NEXT:    subq $32, %rsp
+; MSVC-X64-NEXT:    callq __security_check_cookie
+; MSVC-X64-NEXT:    addq $32, %rsp
+; MSVC-X64-NEXT:    int3
 ;
 ; MSVC-X86-O0-LABEL: test_vla_realign:
 ; MSVC-X86-O0:       # %bb.0:
@@ -360,4 +377,3 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 declare ptr @strcpy(ptr, ptr) nounwind
 
 declare i32 @printf(ptr, ...) nounwind
-

@@ -401,9 +401,9 @@ void bar() {
 }
 // WIN32-LABEL: define dso_local void @"?bar@test2@@YAXXZ"() {{.*}} {
 // WIN32:   %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty:<{ %"struct.test2::NonTrivial", %"struct.test2::POD" }>]]
-// WIN32:   getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
+// WIN32:   getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
 // WIN32:   call void @llvm.memcpy
-// WIN32:   getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
+// WIN32:   getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
 // WIN32:   call x86_thiscallcc noundef ptr @"??0NonTrivial@test2@@QAE@XZ"
 // WIN32:   call noundef i32 @"?foo@test2@@YAHUNonTrivial@1@UPOD@1@@Z"(ptr inalloca([[argmem_ty]]) %argmem)
 // WIN32:   ret void
@@ -437,12 +437,12 @@ struct ForwardDeclare1 {};
 
 void fn2(FnPtr1 a, SmallWithDtor b) { fn1(a, b); };
 // WIN32-LABEL: define dso_local void @"?fn2@@YAXP6AXUForwardDeclare1@@@ZUSmallWithDtor@@@Z"
-// WIN32:   %[[a:[^ ]*]] = getelementptr inbounds [[argmem_ty:<{ ptr, %struct.SmallWithDtor }>]], ptr %{{.*}}, i32 0, i32 0
+// WIN32:   %[[a:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty:<{ ptr, %struct.SmallWithDtor }>]], ptr %{{.*}}, i32 0, i32 0
 // WIN32:   %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty:<{ ptr, %struct.SmallWithDtor }>]]
-// WIN32:   %[[gep1:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
+// WIN32:   %[[gep1:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
 // WIN32:   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[gep1]], ptr align 4 {{.*}}, i32 4, i1 false)
 // WIN32:   %[[a2:[^ ]*]] = load ptr, ptr %[[a]], align 4
-// WIN32:   %[[gep2:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
+// WIN32:   %[[gep2:[^ ]*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
 // WIN32:   store ptr %[[a2]], ptr %[[gep2]], align 4
 // WIN32:   call void @"?fn1@@YAXP6AXUForwardDeclare1@@@ZUSmallWithDtor@@@Z"(ptr inalloca([[argmem_ty]]) %[[argmem]])
 

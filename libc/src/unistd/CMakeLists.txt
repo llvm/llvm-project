@@ -70,6 +70,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fpathconf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
   execv
   ALIAS
   DEPENDS
@@ -161,10 +168,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pathconf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pathconf
+)
+
+
+add_entrypoint_object(
   pipe
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.pipe
+)
+
+add_entrypoint_object(
+  pipe2
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pipe2
 )
 
 add_entrypoint_object(
@@ -317,4 +339,14 @@ add_entrypoint_external(
 
 add_entrypoint_external(
   opterr
+)
+
+add_entrypoint_object(
+  gettid
+  SRCS
+    gettid.cpp
+  HDRS
+    gettid.h
+  DEPENDS
+    libc.src.__support.threads.identifier
 )

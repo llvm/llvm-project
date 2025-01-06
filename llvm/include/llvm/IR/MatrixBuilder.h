@@ -72,7 +72,7 @@ public:
                     B.getInt32(Columns)};
     Type *OverloadedTypes[] = {RetType, Stride->getType()};
 
-    Function *TheFn = Intrinsic::getDeclaration(
+    Function *TheFn = Intrinsic::getOrInsertDeclaration(
         getModule(), Intrinsic::matrix_column_major_load, OverloadedTypes);
 
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
@@ -95,7 +95,7 @@ public:
                     B.getInt32(Rows), B.getInt32(Columns)};
     Type *OverloadedTypes[] = {Matrix->getType(), Stride->getType()};
 
-    Function *TheFn = Intrinsic::getDeclaration(
+    Function *TheFn = Intrinsic::getOrInsertDeclaration(
         getModule(), Intrinsic::matrix_column_major_store, OverloadedTypes);
 
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
@@ -115,7 +115,7 @@ public:
 
     Type *OverloadedTypes[] = {ReturnType};
     Value *Ops[] = {Matrix, B.getInt32(Rows), B.getInt32(Columns)};
-    Function *TheFn = Intrinsic::getDeclaration(
+    Function *TheFn = Intrinsic::getOrInsertDeclaration(
         getModule(), Intrinsic::matrix_transpose, OverloadedTypes);
 
     return B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
@@ -136,7 +136,7 @@ public:
                     B.getInt32(RHSColumns)};
     Type *OverloadedTypes[] = {ReturnType, LHSType, RHSType};
 
-    Function *TheFn = Intrinsic::getDeclaration(
+    Function *TheFn = Intrinsic::getOrInsertDeclaration(
         getModule(), Intrinsic::matrix_multiply, OverloadedTypes);
     return B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
   }

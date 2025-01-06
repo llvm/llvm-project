@@ -62,8 +62,8 @@ define i16 @testi32i16i8(i32 %add) {
 
 define <4 x i16> @testv4i32i16i8(<4 x i32> %add) {
 ; CHECK-LABEL: @testv4i32i16i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[ADD:%.*]], <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP1]], <4 x i32> <i32 127, i32 127, i32 127, i32 127>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[ADD:%.*]], <4 x i32> splat (i32 -128))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP1]], <4 x i32> splat (i32 127))
 ; CHECK-NEXT:    [[R:%.*]] = trunc nsw <4 x i32> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -147,8 +147,8 @@ define i32 @testi64i32addsat(i32 %a, i32 %b) {
 
 define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[ADD:%.*]], <4 x i16> <i16 -128, i16 -128, i16 -128, i16 -128>)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP1]], <4 x i16> <i16 127, i16 127, i16 127, i16 127>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[ADD:%.*]], <4 x i16> splat (i16 -128))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP1]], <4 x i16> splat (i16 127))
 ; CHECK-NEXT:    [[COND_I:%.*]] = trunc nsw <4 x i16> [[TMP2]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[COND_I]]
 ;
@@ -567,7 +567,7 @@ define i8 @C0zero(i8 %X, i8 %y, i8 %z) {
 
 define <2 x i8> @C0zeroV(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @C0zeroV(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 -10)
 ; CHECK-NEXT:    [[F:%.*]] = select <2 x i1> [[C]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[F]]
 ;
@@ -581,9 +581,9 @@ define <2 x i8> @C0zeroV(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 
 define <2 x i8> @C0zeroVu(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @C0zeroVu(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 10, i8 10>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 10)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[A]], <i8 0, i8 10>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X]], splat (i8 -10)
 ; CHECK-NEXT:    [[F:%.*]] = select <2 x i1> [[C]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[F]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]

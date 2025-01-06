@@ -39,11 +39,11 @@ declare void @use8xi32(<8 x i32>)
 define <8 x i32> @t1_vec_splat(<8 x i32> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <8 x i32> [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], splat (i32 -1)
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i32> [[X]], [[T2]]
-; CHECK-NEXT:    [[T3:%.*]] = and <8 x i32> [[TMP1]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[T3:%.*]] = and <8 x i32> [[TMP1]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <8 x i32> [[T3]]
 ;
   %t0 = shl <8 x i32> %x, %nbits

@@ -1254,6 +1254,13 @@ def IMPLICIT_DEF : StandardPseudoInstruction {
   let isAsCheapAsAMove = true;
   let isMeta = true;
 }
+def INIT_UNDEF : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+}
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$implsrc, unknown:$subsrc, i32imm:$subidx);
@@ -1417,6 +1424,16 @@ def FAULTING_OP : StandardPseudoInstruction {
   let mayStore = true;
   let isTerminator = true;
   let isBranch = true;
+}
+def FAKE_USE : StandardPseudoInstruction {
+  // An instruction that uses its operands but does nothing; this instruction
+  // will be treated specially by CodeGen passes, distinguishing it from any
+  // otherwise equivalent instructions.
+  let OutOperandList = (outs);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "FAKE_USE";
+  let hasSideEffects = 0;
+  let isMeta = true;
 }
 def PATCHABLE_OP : StandardPseudoInstruction {
   let OutOperandList = (outs);

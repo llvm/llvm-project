@@ -15,7 +15,7 @@ define <4 x i32> @insert_known_idx(<4 x i32> %x) {
 
 define <4 x i32> @insert_unknown_idx(<4 x i32> %x, i32 %idx) {
 ; CHECK-LABEL: @insert_unknown_idx(
-; CHECK-NEXT:    [[V1:%.*]] = and <4 x i32> [[X:%.*]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[V1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 7)
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 6, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[V2]]
 ;
@@ -27,7 +27,7 @@ define <4 x i32> @insert_unknown_idx(<4 x i32> %x, i32 %idx) {
 
 define <2 x i8> @insert_known_any_idx(<2 x i8> %xx, i8 %yy, i32 %idx) {
 ; CHECK-LABEL: @insert_known_any_idx(
-; CHECK-NEXT:    ret <2 x i8> <i8 16, i8 16>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 16)
 ;
   %x = or <2 x i8> %xx, <i8 16, i8 16>
   %y = or i8 %yy, 16
@@ -42,7 +42,7 @@ define <2 x i8> @insert_known_any_idx_fail1(<2 x i8> %xx, i8 %yy, i32 %idx) {
 ; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 17, i8 33>
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], 16
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[X]], i8 [[Y]], i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[INS]], <i8 16, i8 16>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[INS]], splat (i8 16)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x = or <2 x i8> %xx, <i8 17, i8 33>
@@ -59,7 +59,7 @@ define <2 x i8> @insert_known_any_idx_fail2(<2 x i8> %xx, i8 %yy, i32 %idx) {
 ; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 17, i8 31>
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], 15
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[X]], i8 [[Y]], i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[INS]], <i8 16, i8 16>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[INS]], splat (i8 16)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x = or <2 x i8> %xx, <i8 17, i8 31>

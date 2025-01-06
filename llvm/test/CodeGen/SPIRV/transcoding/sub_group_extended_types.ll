@@ -179,7 +179,8 @@
 ;;     dst[8] = sub_group_scan_exclusive_max(v);
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#char:]] = OpTypeInt 8 0
 ; CHECK-SPIRV-DAG: %[[#short:]] = OpTypeInt 16 0

@@ -109,6 +109,15 @@ func.func @lds_barrier() {
   func.return
 }
 
+// CHECK-LABEL: func @sched_barrier
+func.func @sched_barrier() {
+  // CHECK: amdgpu.sched_barrier allow = <none>
+  amdgpu.sched_barrier allow = <none>
+  // CHECK: amdgpu.sched_barrier allow = <valu|all_vmem>
+  amdgpu.sched_barrier allow = <valu|all_vmem>
+  func.return
+}
+
 // CHECK-LABEL: func @mfma
 func.func @mfma(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
   // CHECK: amdgpu.mfma

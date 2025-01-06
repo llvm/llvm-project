@@ -1427,6 +1427,8 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_PAUSE_RESOURCE)(kmp_pause_status_t kind,
 #ifdef KMP_STUB
   return 1; // just fail
 #else
+  if (kind == kmp_stop_tool_paused)
+    return 1; // stop_tool must not be specified
   if (device_num == KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)())
     return __kmpc_pause_resource(kind);
   else {

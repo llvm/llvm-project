@@ -281,15 +281,16 @@ public:
     }
     if constexpr (bits == 80) { // x87
       // 7FFF8000000000000000 is Infinity, not NaN, on 80387 & later.
-      infinity.IBSET(63);
+      infinity = infinity.IBSET(63);
     }
     return {infinity};
   }
 
   template <typename INT>
   static ValueWithRealFlags<Real> FromInteger(const INT &n,
+      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
-    bool isNegative{n.IsNegative()};
+    bool isNegative{!isUnsigned && n.IsNegative()};
     INT absN{n};
     if (isNegative) {
       absN = n.Negate().value; // overflow is safe to ignore

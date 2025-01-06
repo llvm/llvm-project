@@ -1,4 +1,4 @@
-# RUN: llc -march=mips64 -mcpu=mips64r6 -start-after=block-placement -o - %s | FileCheck %s
+# RUN: llc -mtriple=mips64 -mcpu=mips64r6 -start-after=block-placement -o - %s | FileCheck %s
 
 # Check that MipsHazardSchedule sees through basic blocks with transient instructions.
 # The mir code in this file isn't representative of the llvm-ir.

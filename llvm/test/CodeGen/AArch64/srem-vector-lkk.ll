@@ -263,16 +263,14 @@ define <2 x i32> @fold_srem_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: fold_srem_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #26215 // =0x6667
-; CHECK-NEXT:    movi v3.2s, #10
+; CHECK-NEXT:    movi v2.2s, #10
 ; CHECK-NEXT:    movk w8, #26214, lsl #16
 ; CHECK-NEXT:    dup v1.2s, w8
 ; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v2.2d, v1.2d, #63
 ; CHECK-NEXT:    sshr v1.2d, v1.2d, #34
-; CHECK-NEXT:    xtn v2.2s, v2.2d
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    mls v0.2s, v1.2s, v3.2s
+; CHECK-NEXT:    usra v1.2s, v1.2s, #31
+; CHECK-NEXT:    mls v0.2s, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
   %1 = srem <2 x i32> %x, <i32 10, i32 10>
   ret <2 x i32> %1

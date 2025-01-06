@@ -52,7 +52,7 @@ uint64_t Symbol::getLazyPtrVA() const {
 uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
-Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
+Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
                  uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
                  bool isPrivateExtern, bool includeInSymtab,
                  bool isReferencedDynamically, bool noDeadStrip,
@@ -60,7 +60,7 @@ Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
                  bool interposable)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
       privateExtern(isPrivateExtern), includeInSymtab(includeInSymtab),
-      wasIdenticalCodeFolded(false),
+      identicalCodeFoldingKind(ICFFoldKind::None),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
       weakDef(isWeakDef), external(isExternal), originalIsec(isec),

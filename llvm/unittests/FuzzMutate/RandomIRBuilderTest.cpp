@@ -487,7 +487,7 @@ TEST(RandomIRBuilderTest, findSourceAndSink) {
     ASSERT_TRUE(DT.dominates(Insts[IP - 1], Sink));
   }
 }
-TEST(RandomIRBuilderTest, sinkToInstrinsic) {
+TEST(RandomIRBuilderTest, sinkToIntrinsic) {
   const char *Source = "\n\
         declare double @llvm.sqrt.f64(double %Val)  \n\
         declare void   @llvm.ubsantrap(i8 immarg) cold noreturn nounwind  \n\

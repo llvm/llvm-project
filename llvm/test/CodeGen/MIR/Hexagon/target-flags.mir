@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass none -o - %s | FileCheck %s
 ---
 name: fred
 

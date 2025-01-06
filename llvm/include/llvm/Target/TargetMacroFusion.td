@@ -14,7 +14,7 @@ def first_fusion_target : FusionTarget;
 def second_fusion_target : FusionTarget;
 def both_fusion_target : FusionTarget;
 
-// Base class of FusionPredicate, etc. The avaliable variables are:
+// Base class of FusionPredicate, etc. The available variables are:
 // * const TargetInstrInfo &TII
 // * const TargetSubtargetInfo &STI
 // * const MachineRegisterInfo &MRI

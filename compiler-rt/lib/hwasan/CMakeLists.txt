@@ -24,16 +24,19 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
   if(${arch} MATCHES "aarch64")
     list(APPEND HWASAN_RTL_SOURCES
       hwasan_setjmp_aarch64.S
-      hwasan_tag_mismatch_aarch64.S)
+      hwasan_tag_mismatch_aarch64.S
+      )
   endif()
   if(${arch} MATCHES "riscv64")
     list(APPEND HWASAN_RTL_SOURCES
       hwasan_setjmp_riscv64.S
-      hwasan_tag_mismatch_riscv64.S)
+      hwasan_tag_mismatch_riscv64.S
+      )
   endif()
   if(${arch} MATCHES "x86_64")
     list(APPEND HWASAN_RTL_SOURCES
-      hwasan_setjmp_x86_64.S)
+      hwasan_setjmp_x86_64.S
+      )
   endif()
 endforeach()
 
@@ -185,7 +188,6 @@ function(add_hwasan_runtimes arch use_aliases)
     STATIC
     ARCHS ${arch}
     OBJECT_LIBS RTHwasan_cxx
-                RTUbsan_cxx
     CFLAGS ${hwasan_rtl_flags}
     PARENT_TARGET hwasan)
 

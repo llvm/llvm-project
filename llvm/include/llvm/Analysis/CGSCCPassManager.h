@@ -99,7 +99,6 @@
 namespace llvm {
 
 class Function;
-class Value;
 template <typename T, unsigned int N> class SmallPriorityWorklist;
 struct CGSCCUpdateResult;
 
@@ -244,14 +243,6 @@ struct CGSCCUpdateResult {
   /// to observe SCCs in post-order. When adding SCCs, clients should add them
   /// in reverse post-order.
   SmallPriorityWorklist<LazyCallGraph::SCC *, 1> &CWorklist;
-
-  /// The set of invalidated RefSCCs which should be skipped if they are found
-  /// in \c RCWorklist.
-  ///
-  /// This is used to quickly prune out RefSCCs when they get deleted and
-  /// happen to already be on the worklist. We use this primarily to avoid
-  /// scanning the list and removing entries from it.
-  SmallPtrSetImpl<LazyCallGraph::RefSCC *> &InvalidatedRefSCCs;
 
   /// The set of invalidated SCCs which should be skipped if they are found
   /// in \c CWorklist.

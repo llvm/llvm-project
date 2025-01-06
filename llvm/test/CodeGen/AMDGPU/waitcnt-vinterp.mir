@@ -15,16 +15,16 @@ body: |
     ; GFX11-NEXT: $vgpr2 = LDS_PARAM_LOAD 0, 1, 0, implicit $m0, implicit $exec
     ; GFX11-NEXT: $vgpr3 = LDS_PARAM_LOAD 0, 2, 0, implicit $m0, implicit $exec
     ; GFX11-NEXT: $vgpr4 = LDS_PARAM_LOAD 0, 3, 0, implicit $m0, implicit $exec
-    ; GFX11-NEXT: $vgpr5 = V_INTERP_P10_F16_F32_inreg 0, $vgpr1, 0, $vgpr0, 0, $vgpr1, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
-    ; GFX11-NEXT: $vgpr6 = V_INTERP_P10_F16_F32_inreg 0, $vgpr2, 0, $vgpr0, 0, $vgpr2, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
-    ; GFX11-NEXT: $vgpr7 = V_INTERP_P10_F16_F32_inreg 0, $vgpr3, 0, $vgpr0, 0, $vgpr3, 0, 0, 1, implicit $m0, implicit $exec, implicit $mode
-    ; GFX11-NEXT: $vgpr8 = V_INTERP_P10_F16_F32_inreg 0, $vgpr4, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, implicit $m0, implicit $exec, implicit $mode
+    ; GFX11-NEXT: $vgpr5 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr1, 0, $vgpr0, 0, $vgpr1, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
+    ; GFX11-NEXT: $vgpr6 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr2, 0, $vgpr0, 0, $vgpr2, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
+    ; GFX11-NEXT: $vgpr7 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr3, 0, $vgpr0, 0, $vgpr3, 0, 0, 1, implicit $m0, implicit $exec, implicit $mode
+    ; GFX11-NEXT: $vgpr8 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr4, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, implicit $m0, implicit $exec, implicit $mode
     $vgpr1 = LDS_PARAM_LOAD 0, 0, 0, implicit $m0, implicit $exec
     $vgpr2 = LDS_PARAM_LOAD 0, 1, 0, implicit $m0, implicit $exec
     $vgpr3 = LDS_PARAM_LOAD 0, 2, 0, implicit $m0, implicit $exec
     $vgpr4 = LDS_PARAM_LOAD 0, 3, 0, implicit $m0, implicit $exec
-    $vgpr5 = V_INTERP_P10_F16_F32_inreg 0, $vgpr1, 0, $vgpr0, 0, $vgpr1, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
-    $vgpr6 = V_INTERP_P10_F16_F32_inreg 0, $vgpr2, 0, $vgpr0, 0, $vgpr2, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
-    $vgpr7 = V_INTERP_P10_F16_F32_inreg 0, $vgpr3, 0, $vgpr0, 0, $vgpr3, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
-    $vgpr8 = V_INTERP_P10_F16_F32_inreg 0, $vgpr4, 0, $vgpr0, 0, $vgpr4, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
+    $vgpr5 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr1, 0, $vgpr0, 0, $vgpr1, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
+    $vgpr6 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr2, 0, $vgpr0, 0, $vgpr2, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
+    $vgpr7 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr3, 0, $vgpr0, 0, $vgpr3, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
+    $vgpr8 = V_INTERP_P10_F16_F32_inreg_fake16 0, $vgpr4, 0, $vgpr0, 0, $vgpr4, 0, 0, 2, implicit $m0, implicit $exec, implicit $mode
 ...

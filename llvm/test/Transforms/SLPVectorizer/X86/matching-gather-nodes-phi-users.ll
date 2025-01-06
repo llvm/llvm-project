@@ -24,7 +24,7 @@ define void @test(ptr %dst, float %a, float %b, float %c, float %d) {
 ; CHECK-NEXT:  Entry:
 ; CHECK-NEXT:    br i1 poison, label [[LOOP0:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop0:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>, [[ENTRY:%.*]] ], [ [[TMP7:%.*]], [[USERBLOCK1:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ splat (float 5.000000e-01), [[ENTRY:%.*]] ], [ [[TMP7:%.*]], [[USERBLOCK1:%.*]] ]
 ; CHECK-NEXT:    br i1 poison, label [[USERBLOCK0:%.*]], label [[BLKX:%.*]]
 ; CHECK:       UserBlock0:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x float> [ zeroinitializer, [[LOOP0]] ], [ [[TMP5:%.*]], [[BLKX]] ]
@@ -48,7 +48,7 @@ define void @test(ptr %dst, float %a, float %b, float %c, float %d) {
 ; CHECK-NEXT:    [[TMP9]] = fadd fast <4 x float> [[TMP8]], poison
 ; CHECK-NEXT:    br i1 poison, label [[USERBLOCK1]], label [[LOOP_INNER]]
 ; CHECK:       Exit:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x float> [ <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>, [[ENTRY]] ], [ [[TMP7]], [[USERBLOCK1]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x float> [ splat (float 5.000000e-01), [[ENTRY]] ], [ [[TMP7]], [[USERBLOCK1]] ]
 ; CHECK-NEXT:    [[IDX0:%.*]] = add i64 0, poison
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IDX0]]
 ; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[GEP0]], align 4

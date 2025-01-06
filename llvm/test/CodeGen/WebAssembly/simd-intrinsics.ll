@@ -44,9 +44,9 @@ define <16 x i8> @add_sat_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT: .functype sub_sat_s_v16i8 (v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: i8x16.sub_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @sub_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(
+  %a = call <16 x i8> @llvm.ssub.sat.v16i8(
     <16 x i8> %x, <16 x i8> %y
   )
   ret <16 x i8> %a
@@ -56,9 +56,9 @@ define <16 x i8> @sub_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT: .functype sub_sat_u_v16i8 (v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: i8x16.sub_sat_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.usub.sat.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @sub_sat_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(
+  %a = call <16 x i8> @llvm.usub.sat.v16i8(
     <16 x i8> %x, <16 x i8> %y
   )
   ret <16 x i8> %a
@@ -216,9 +216,9 @@ define <8 x i16> @add_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT: .functype sub_sat_s_v8i16 (v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: i16x8.sub_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @sub_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(
+  %a = call <8 x i16> @llvm.ssub.sat.v8i16(
     <8 x i16> %x, <8 x i16> %y
   )
   ret <8 x i16> %a
@@ -228,9 +228,9 @@ define <8 x i16> @sub_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT: .functype sub_sat_u_v8i16 (v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: i16x8.sub_sat_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.usub.sat.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @sub_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(
+  %a = call <8 x i16> @llvm.usub.sat.v8i16(
     <8 x i16> %x, <8 x i16> %y
   )
   ret <8 x i16> %a

@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=COMMON,NOCARRY
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -mattr=+ptx43 | FileCheck %s --check-prefixes=COMMON,CARRY
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=COMMON,NOCARRY
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -mattr=+ptx43 | FileCheck %s --check-prefixes=COMMON,CARRY
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 

@@ -31,6 +31,9 @@
 class MyExtension
     : public ::mlir::transform::TransformDialectExtension<MyExtension> {
 public:
+  // The TypeID of this extension.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MyExtension)
+
   // The extension must derive the base constructor.
   using Base::Base;
 
@@ -166,7 +169,7 @@ void mlir::transform::HasOperandSatisfyingOp::getEffects(
 
 // Verify well-formedness of the operation and emit diagnostics if it is
 // ill-formed.
-mlir::LogicalResult mlir::transform::HasOperandSatisfyingOp::verify() {
+llvm::LogicalResult mlir::transform::HasOperandSatisfyingOp::verify() {
   mlir::Block &bodyBlock = getBody().front();
   if (bodyBlock.getNumArguments() != 1 ||
       !isa<TransformValueHandleTypeInterface>(

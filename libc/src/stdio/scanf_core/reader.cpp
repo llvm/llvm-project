@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/scanf_core/reader.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 void Reader::ungetc(char c) {
@@ -25,4 +26,4 @@ void Reader::ungetc(char c) {
   stream_ungetc(static_cast<int>(c), input_stream);
 }
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

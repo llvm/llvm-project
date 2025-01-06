@@ -455,48 +455,6 @@ void unimplemented_spill_fill_za(void (*share_zt0_only)(void) __arm_inout("zt0")
   share_zt0_only();
 }
 
-// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
-// expected-error@+1 {{streaming function cannot be multi-versioned}}
-__attribute__((target_version("sme2")))
-void cannot_work_version(void) __arm_streaming {}
-// expected-cpp-error@+5 {{function declared 'void ()' was previously declared 'void () __arm_streaming', which has different SME function attributes}}
-// expected-cpp-note@-2 {{previous declaration is here}}
-// expected-error@+3 {{function declared 'void (void)' was previously declared 'void (void) __arm_streaming', which has different SME function attributes}}
-// expected-note@-4 {{previous declaration is here}}
-__attribute__((target_version("default")))
-void cannot_work_version(void) {}
-
-
-// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
-// expected-error@+1 {{streaming function cannot be multi-versioned}}
-__attribute__((target_clones("sme2")))
-void cannot_work_clones(void) __arm_streaming {}
-
-
-__attribute__((target("sme2")))
-void just_fine_streaming(void) __arm_streaming {}
-__attribute__((target_version("sme2")))
-void just_fine(void) { just_fine_streaming(); }
-__attribute__((target_version("default")))
-void just_fine(void) {}
-
-
-__arm_locally_streaming
-__attribute__((target_version("sme2")))
-void incompatible_locally_streaming(void) {}
-// expected-error@-1 {{attribute 'target_version' multiversioning cannot be combined with attribute '__arm_locally_streaming'}}
-// expected-cpp-error@-2 {{attribute 'target_version' multiversioning cannot be combined with attribute '__arm_locally_streaming'}}
-__attribute__((target_version("default")))
-void incompatible_locally_streaming(void) {}
-
-
-void fmv_caller() {
-    cannot_work_version();
-    cannot_work_clones();
-    just_fine();
-    incompatible_locally_streaming();
-}
-
 void sme_streaming_with_vl_arg(__SVInt8_t a) __arm_streaming { }
 
 __SVInt8_t sme_streaming_returns_vl(void) __arm_streaming { __SVInt8_t r; return r; }

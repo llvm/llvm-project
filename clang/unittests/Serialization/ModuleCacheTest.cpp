@@ -106,11 +106,11 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
 
   SmallString<256> MCPArg("-fmodules-cache-path=");
   MCPArg.append(ModuleCachePath);
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags = Diags;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
+  CIOpts.Diags = Diags;
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",
@@ -156,11 +156,11 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
 
   SmallString<256> MCPArg("-fmodules-cache-path=");
   MCPArg.append(ModuleCachePath);
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags = Diags;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
+  CIOpts.Diags = Diags;
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",

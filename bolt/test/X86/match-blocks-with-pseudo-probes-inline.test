@@ -1,0 +1,65 @@
+## Test stale block matching with pseudo probes including inline tree matching.
+# RUN: split-file %s %t
+# RUN: llvm-bolt \
+# RUN:   %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin \
+# RUN:   -o %t.bolt -data %t/yaml -infer-stale-profile -v=2 \
+# RUN:   --stale-matching-with-pseudo-probes 2>&1 | FileCheck %s
+
+# CHECK: BOLT-WARNING: 3 (100.0% of all profiled) functions have invalid (possibly stale) profile
+# CHECK: BOLT-INFO: inference found an exact pseudo probe match for 100.00% of basic blocks (3 out of 3 stale)
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'inline-cs-pseudoprobe.perfbin'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  perf data aggregator
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:            bar
+    fid:             9
+    hash:            0x1
+    exec:            1
+    nblocks:         1
+    blocks:
+      - bid:             0
+        insns:           11
+        hash:            0x1
+        exec:            1
+        probes:          [ { blx: 9 } ]
+    inline_tree:     [ {  } ]
+  - name:            foo
+    fid:             10
+    hash:            0x2
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             0
+        insns:           3
+        hash:            0x2
+        exec:            1
+        succ:            [ { bid: 3, cnt: 0 } ]
+        probes:          [ { blx: 3 } ]
+    inline_tree:     [ { g: 1 }, { g: 0, cs: 8 } ]
+  - name:            main
+    fid:             11
+    hash:            0x3
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             0
+        insns:           3
+        hash:            0x3
+        exec:            1
+        succ:            [ { bid: 3, cnt: 0 } ]
+        probes:          [ { blx: 3, id: 1 }, { blx: 1 } ]
+    inline_tree:     [ { g: 2 }, { g: 1, cs: 2 }, { g: 0, p: 1, cs: 8 } ]
+pseudo_probe_desc:
+  gs:              [ 0xE413754A191DB537, 0x5CF8C24CDB18BDAC, 0xDB956436E78DD5FA ]
+  gh:              [ 2, 0, 1 ]
+  hs:              [ 0x200205A19C5B4, 0x10000FFFFFFFF, 0x10E852DA94 ]
+...

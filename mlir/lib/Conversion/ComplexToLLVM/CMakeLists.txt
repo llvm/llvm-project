@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRComplexToLLVM
   Core
 
   LINK_LIBS PUBLIC
+  MLIRArithAttrToLLVMConversion
   MLIRComplexDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect

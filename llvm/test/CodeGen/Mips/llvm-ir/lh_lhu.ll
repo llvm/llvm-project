@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=mips -mcpu=mips32r2 -mattr=+micromips -relocation-model=pic | FileCheck %s
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -relocation-model=pic | FileCheck %s
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r2 -mattr=+micromips -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r3 -mattr=+micromips -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s
 
 @us = global i16 0, align 2
 

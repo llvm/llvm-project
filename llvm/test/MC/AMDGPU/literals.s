@@ -1,10 +1,8 @@
-// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck %s --check-prefix=SICI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=SICI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefixes=SICI,CI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GFX89
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefixes=GFX89,GFX9
 
-// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSI,NOSICI,NOSICIVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSI,NOSICI,NOSICIVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOCIVI,NOSICIVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICIVI,NOVI,NOGFX89 --implicit-check-not=error:
@@ -650,89 +648,89 @@ v_ceil_f32_sdwa v5, |execz| dst_sel:DWORD src0_sel:DWORD
 // named inline values: shared_base, shared_limit, private_base, etc
 //---------------------------------------------------------------------------//
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: buffer_atomic_add v0, off, s[0:3], src_shared_base offset:4095 ; encoding: [0xff,0x0f,0x08,0xe1,0x00,0x00,0x00,0xeb]
 buffer_atomic_add v0, off, s[0:3], src_shared_base offset:4095
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: s_add_i32 s0, src_shared_base, s0 ; encoding: [0xeb,0x00,0x00,0x81]
 s_add_i32 s0, src_shared_base, s0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_limit register not available on this GPU
 // GFX9: s_add_i32 s0, src_shared_limit, s0 ; encoding: [0xec,0x00,0x00,0x81]
 s_add_i32 s0, src_shared_limit, s0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 // GFX9: s_add_i32 s0, src_private_base, s0 ; encoding: [0xed,0x00,0x00,0x81]
 s_add_i32 s0, src_private_base, s0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_limit register not available on this GPU
 // GFX9: s_add_i32 s0, src_private_limit, s0 ; encoding: [0xee,0x00,0x00,0x81]
 s_add_i32 s0, src_private_limit, s0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_pops_exiting_wave_id register not available on this GPU
 // GFX9: s_add_i32 s0, src_pops_exiting_wave_id, s0 ; encoding: [0xef,0x00,0x00,0x81]
 s_add_i32 s0, src_pops_exiting_wave_id, s0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: s_and_b64 s[0:1], s[0:1], src_shared_base ; encoding: [0x00,0xeb,0x80,0x86]
 s_and_b64 s[0:1], s[0:1], src_shared_base
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_limit register not available on this GPU
 // GFX9: s_and_b64 s[0:1], s[0:1], src_shared_limit ; encoding: [0x00,0xec,0x80,0x86]
 s_and_b64 s[0:1], s[0:1], src_shared_limit
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 // GFX9: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x86]
 s_and_b64 s[0:1], s[0:1], src_private_base
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_limit register not available on this GPU
 // GFX9: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x86]
 s_and_b64 s[0:1], s[0:1], src_private_limit
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_pops_exiting_wave_id register not available on this GPU
 // GFX9: s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id ; encoding: [0x00,0xef,0x80,0x86]
 s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id
 
 // GFX9: v_add_u16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x4c]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_add_u16 v0, src_shared_base, v0
 
 // GFX9: v_add_u16_sdwa v0, src_shared_base, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x00,0x00,0x4c,0xeb,0x06,0x86,0x06]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_add_u16_sdwa v0, src_shared_base, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 // GFX9: v_add_u16_sdwa v0, v0, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xd6,0x01,0x4c,0x00,0x06,0x06,0x86]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_add_u16_sdwa v0, v0, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 // GFX9: v_add_u32_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x68]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_add_u32 v0, src_shared_base, v0
 
 // GFX9: v_add_u32_e64 v0, src_shared_base, v0 ; encoding: [0x00,0x00,0x34,0xd1,0xeb,0x00,0x02,0x00]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_add_u32_e64 v0, src_shared_base, v0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: v_cmp_eq_i64_e32 vcc, src_shared_base, v[0:1] ; encoding: [0xeb,0x00,0xc4,0x7d]
 v_cmp_eq_i64 vcc, src_shared_base, v[0:1]
 
 // GFX9: v_max_f16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x5a]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_max_f16 v0, src_shared_base, v0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: v_max_f32_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x16]
 v_max_f32 v0, src_shared_base, v0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: v_max_f64 v[0:1], src_shared_base, v[0:1] ; encoding: [0x00,0x00,0x83,0xd2,0xeb,0x00,0x02,0x00]
 v_max_f64 v[0:1], src_shared_base, v[0:1]
 
@@ -742,52 +740,52 @@ v_pk_add_f16 v0, src_shared_base, v0
 
 // GFX9: v_ceil_f16_e64 v0, -src_shared_base ; encoding: [0x00,0x00,0x85,0xd1,0xeb,0x00,0x00,0x20]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f16 v0, neg(src_shared_base)
 
 // GFX9: v_ceil_f16_e64 v0, |src_shared_base| ; encoding: [0x00,0x01,0x85,0xd1,0xeb,0x00,0x00,0x00]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f16 v0, abs(src_shared_base)
 
 // GFX9: v_ceil_f64_e64 v[5:6], |src_shared_base| ; encoding: [0x05,0x01,0x58,0xd1,0xeb,0x00,0x00,0x00]
 // NOSI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOCIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOCIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f64 v[5:6], |src_shared_base|
 
 // GFX9: v_ceil_f64_e64 v[5:6], -src_shared_base ; encoding: [0x05,0x00,0x58,0xd1,0xeb,0x00,0x00,0x20]
 // NOSI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOCIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOCIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f64 v[5:6], -src_shared_base
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: v_ceil_f32_e64 v0, -src_shared_base ; encoding: [0x00,0x00,0x5d,0xd1,0xeb,0x00,0x00,0x20]
 v_ceil_f32 v0, -src_shared_base
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // GFX9: v_ceil_f32_e64 v0, |src_shared_base| ; encoding: [0x00,0x01,0x5d,0xd1,0xeb,0x00,0x00,0x00]
 v_ceil_f32 v0, |src_shared_base|
 
 // GFX9: v_ceil_f16_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xeb,0x16,0xa6,0x00]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f16_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 
 // GFX9: v_ceil_f16_sdwa v5, -src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xeb,0x16,0x96,0x00]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f16_sdwa v5, -src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 
 // GFX9: v_ceil_f32_sdwa v5, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xeb,0x16,0x86,0x00]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f32_sdwa v5, src_shared_base dst_sel:DWORD src0_sel:DWORD
 
 // GFX9: v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xeb,0x16,0xa6,0x00]
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 
 //---------------------------------------------------------------------------//
@@ -796,7 +794,7 @@ v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 
 // NOGFX9: :[[@LINE+3]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+1]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 v_add_u32 v0, private_base, s0
 
 // NOGFX9: :[[@LINE+3]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
@@ -805,17 +803,17 @@ v_add_u32 v0, private_base, s0
 v_add_u32 v0, scc, s0
 
 // v_div_fmas implicitly reads VCC
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_div_fmas_f32 v0, shared_base, v0, v1
 
 // v_div_fmas implicitly reads VCC
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_limit register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_div_fmas_f32 v0, v0, shared_limit, v1
 
 // v_div_fmas implicitly reads VCC
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_limit register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_div_fmas_f32 v0, v0, v1, private_limit
 
@@ -836,7 +834,7 @@ v_div_fmas_f32 v0, v0, v1, vccz
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_addc_co_u32 v0, vcc, shared_base, v0, vcc
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_shared_base register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_madak_f32 v0, shared_base, v0, 0x11213141
 
@@ -871,11 +869,11 @@ v_madmk_f16 v0, 0xff32, 0x1122, v0
 // NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 v_madmk_f16 v0, 0xff32, 1, v0
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32 s[0:1], private_base, private_limit
 
-// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: src_private_base register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32 s[0:1], private_base, s0
 

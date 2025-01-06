@@ -10,15 +10,15 @@
 define void @f(i1 %x) #0 {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr getelementptr inbounds ([[STRUCT_A:%.*]], ptr @a, i32 0, i32 0, i32 1), align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @a, align 8
 ; CHECK-NEXT:    br i1 [[X:%.*]], label [[WHILE_BODY_LR_PH:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.body.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[ICMP_A1:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @b, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i1> poison, i1 [[ICMP_A1]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[SHUFFLE]], <2 x i64> [[TMP2]], <2 x i64> [[TMP0]]
+; CHECK-NEXT:    [[ICMP_A1:%.*]] = icmp eq i64 [[A1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @b, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> poison, i1 [[ICMP_A1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP3]], <2 x i64> [[TMP1]], <2 x i64> [[TMP0]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i64> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP4]], [[WHILE_BODY_LR_PH]] ]

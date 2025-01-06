@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_EPOLL_EVENT_H
 #define LLVM_LIBC_TYPES_STRUCT_EPOLL_EVENT_H
 
-#include "llvm-libc-types/struct_epoll_data.h"
+#include "struct_epoll_data.h"
 
 typedef struct
 #ifdef __x86_64__

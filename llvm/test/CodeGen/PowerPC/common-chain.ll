@@ -642,8 +642,8 @@ define i64 @two_chain_two_bases_succ(ptr %p, i64 %offset, i64 %base1, i64 %base2
 ; CHECK-NEXT:    cmpdi r7, 0
 ; CHECK-NEXT:    ble cr0, .LBB6_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    add r6, r6, r4
 ; CHECK-NEXT:    add r5, r5, r4
+; CHECK-NEXT:    add r6, r6, r4
 ; CHECK-NEXT:    mtctr r7
 ; CHECK-NEXT:    sldi r4, r4, 1
 ; CHECK-NEXT:    add r5, r3, r5

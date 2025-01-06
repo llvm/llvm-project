@@ -24,8 +24,8 @@
 // CHECK-NEXT: GNU_RELRO
 // CHECK: Section to Segment mapping:
 
-// FULLRELRO:  03     .openbsd.randomdata .dynamic .got .got.plt .relro_padding {{$}}
-// PARTRELRO:  03     .openbsd.randomdata .dynamic .got .relro_padding {{$}}
+// FULLRELRO:  03     .data.rel.ro .dynamic .got .got.plt .relro_padding {{$}}
+// PARTRELRO:  03     .data.rel.ro .dynamic .got .relro_padding {{$}}
 
 
 // NORELRO-NOT: GNU_RELRO
@@ -42,5 +42,5 @@ _start:
 .section .foo,"aw"
 .section .bss,"",@nobits
 
-.section .openbsd.randomdata, "aw"
+.section .data.rel.ro, "aw"
 .quad 0

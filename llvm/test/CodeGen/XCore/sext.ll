@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 define i32 @sext1(i32 %a) {
 	%1 = trunc i32 %a to i1
 	%2 = sext i1 %1 to i32

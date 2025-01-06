@@ -10,11 +10,11 @@ create-empty-corefile:
 		CXX_SOURCES=create-multibin-corefile.cpp
 
 libone.dylib: one.c
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES DYLIB_NAME=one DYLIB_C_SOURCES=one.c
 
 libtwo.dylib: two.c
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES DYLIB_NAME=two DYLIB_C_SOURCES=two.c
 
 include Makefile.rules

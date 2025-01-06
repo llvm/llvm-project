@@ -13,6 +13,7 @@
 // UNSUPPORTED: no-rtti
 
 #include <memory_resource>
+#include <cstddef>
 #include <type_traits>
 
 static_assert(std::is_same_v<std::pmr::polymorphic_allocator<>, std::pmr::polymorphic_allocator<std::byte>>);

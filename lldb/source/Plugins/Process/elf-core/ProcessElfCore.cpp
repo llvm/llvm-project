@@ -160,19 +160,19 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromMemoryTagSegment(
 Status ProcessElfCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFileELF *core = (ObjectFileELF *)(m_core_module_sp->GetObjectFile());
   if (core == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
   llvm::ArrayRef<elf::ELFProgramHeader> segments = core->ProgramHeaders();
   if (segments.size() == 0) {
-    error.SetErrorString("core file has no segments");
+    error = Status::FromErrorString("core file has no segments");
     return error;
   }
 
@@ -194,7 +194,7 @@ Status ProcessElfCore::DoLoadCore() {
     // Parse thread contexts and auxv structure
     if (H.p_type == llvm::ELF::PT_NOTE) {
       if (llvm::Error error = ParseThreadContextsFromNoteSegment(H, data))
-        return Status(std::move(error));
+        return Status::FromError(std::move(error));
     }
     // PT_LOAD segments contains address map
     if (H.p_type == llvm::ELF::PT_LOAD) {
@@ -224,7 +224,7 @@ Status ProcessElfCore::DoLoadCore() {
   ArchSpec core_arch(m_core_module_sp->GetArchitecture());
   target_arch.MergeFrom(core_arch);
   GetTarget().SetArchitecture(target_arch);
- 
+
   SetUnixSignals(UnixSignals::Create(GetArchitecture()));
 
   // Ensure we found at least one thread that was stopped on a signal.
@@ -232,7 +232,7 @@ Status ProcessElfCore::DoLoadCore() {
   bool prstatus_signal_found = false;
   // Check we found a signal in a SIGINFO note.
   for (const auto &thread_data : m_thread_data) {
-    if (thread_data.signo != 0)
+    if (thread_data.siginfo.si_signo != 0)
       siginfo_signal_found = true;
     if (thread_data.prstatus_sig != 0)
       prstatus_signal_found = true;
@@ -242,10 +242,10 @@ Status ProcessElfCore::DoLoadCore() {
     // PRSTATUS note.
     if (prstatus_signal_found) {
       for (auto &thread_data : m_thread_data)
-        thread_data.signo = thread_data.prstatus_sig;
+        thread_data.siginfo.si_signo = thread_data.prstatus_sig;
     } else if (m_thread_data.size() > 0) {
       // If all else fails force the first thread to be SIGSTOP
-      m_thread_data.begin()->signo =
+      m_thread_data.begin()->siginfo.si_signo =
           GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
     }
   }
@@ -276,9 +276,22 @@ Status ProcessElfCore::DoLoadCore() {
 }
 
 void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
+  Log *log = GetLog(LLDBLog::Process);
   for (NT_FILE_Entry &entry : m_nt_file_entries) {
     entry.uuid = FindBuidIdInCoreMemory(entry.start);
+    if (log && entry.uuid.IsValid())
+      LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
+                __FUNCTION__, entry.start, entry.uuid.GetAsString().c_str(),
+                entry.path.c_str());
   }
+}
+
+UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
+  // Returns the gnu uuid from matched NT_FILE entry
+  for (NT_FILE_Entry &entry : m_nt_file_entries)
+    if (path == entry.path)
+      return entry.uuid;
+  return UUID();
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
@@ -383,8 +396,8 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   const VMRangeToFileOffset::Entry *address_range =
       m_core_aranges.FindEntryThatContains(addr);
   if (address_range == nullptr || address_range->GetRangeEnd() < addr) {
-    error.SetErrorStringWithFormat("core file does not contain 0x%" PRIx64,
-                                   addr);
+    error = Status::FromErrorStringWithFormat(
+        "core file does not contain 0x%" PRIx64, addr);
     return 0;
   }
 
@@ -493,7 +506,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   else
     offset += 16;
 
-  thread_data.signo = data.GetU32(&offset); // pr_cursig
+  thread_data.siginfo.si_signo = data.GetU32(&offset); // pr_cursig
   thread_data.tid = data.GetU32(&offset);   // pr_pid
   if (lp64)
     offset += 4;
@@ -576,7 +589,7 @@ static void ParseOpenBSDProcInfo(ThreadData &thread_data,
     return;
 
   offset += 4;
-  thread_data.signo = data.GetU32(&offset);
+  thread_data.siginfo.si_signo = data.GetU32(&offset);
 }
 
 llvm::Expected<std::vector<CoreNote>>
@@ -814,7 +827,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   // Signal targeted at the whole process.
   if (siglwp == 0) {
     for (auto &data : m_thread_data)
-      data.signo = signo;
+      data.siginfo.si_signo = signo;
   }
   // Signal destined for a particular LWP.
   else {
@@ -822,7 +835,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 
     for (auto &data : m_thread_data) {
       if (data.tid == siglwp) {
-        data.signo = signo;
+        data.siginfo.si_signo = signo;
         passed = true;
         break;
       }
@@ -875,7 +888,7 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 /// - NT_SIGINFO - Information about the signal that terminated the process
 /// - NT_AUXV - Process auxiliary vector
 /// - NT_FILE - Files mapped into memory
-/// 
+///
 /// Additionally, for each thread in the process the core file will contain at
 /// least the NT_PRSTATUS note, containing the thread id and general purpose
 /// registers. It may include additional notes for other register sets (floating
@@ -925,12 +938,12 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       break;
     }
     case ELF::NT_SIGINFO: {
+      const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
       ELFLinuxSigInfo siginfo;
-      Status status = siginfo.Parse(note.data, arch);
+      Status status = siginfo.Parse(note.data, arch, unix_signals);
       if (status.Fail())
         return status.ToError();
-      thread_data.signo = siginfo.si_signo;
-      thread_data.code = siginfo.si_code;
+      thread_data.siginfo = siginfo;
       break;
     }
     case ELF::NT_FILE: {
@@ -1034,15 +1047,20 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
     std::vector<uint8_t> note_bytes;
     note_bytes.resize(program_header.p_memsz);
 
-    byte_read = ReadMemory(program_header.p_vaddr, note_bytes.data(),
-                           program_header.p_memsz, error);
+    // We need to slide the address of the p_vaddr as these values don't get
+    // relocated in memory.
+    const lldb::addr_t vaddr = program_header.p_vaddr + address;
+    byte_read =
+        ReadMemory(vaddr, note_bytes.data(), program_header.p_memsz, error);
     if (byte_read != program_header.p_memsz)
       continue;
     DataExtractor segment_data(note_bytes.data(), note_bytes.size(),
                                GetByteOrder(), addr_size);
     auto notes_or_error = parseSegment(segment_data);
-    if (!notes_or_error)
+    if (!notes_or_error) {
+      llvm::consumeError(notes_or_error.takeError());
       return invalid_uuid;
+    }
     for (const CoreNote &note : *notes_or_error) {
       if (note.info.n_namesz == 4 &&
           note.info.n_type == llvm::ELF::NT_GNU_BUILD_ID &&
@@ -1077,10 +1095,10 @@ ArchSpec ProcessElfCore::GetArchitecture() {
 }
 
 DataExtractor ProcessElfCore::GetAuxvData() {
-  const uint8_t *start = m_auxv.GetDataStart();
-  size_t len = m_auxv.GetByteSize();
-  lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(start, len));
-  return DataExtractor(buffer, GetByteOrder(), GetAddressByteSize());
+  assert(m_auxv.GetByteSize() == 0 ||
+         (m_auxv.GetByteOrder() == GetByteOrder() &&
+          m_auxv.GetAddressByteSize() == GetAddressByteSize()));
+  return DataExtractor(m_auxv);
 }
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {

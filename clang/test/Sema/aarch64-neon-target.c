@@ -58,7 +58,7 @@ __attribute__((target("arch=armv8.3-a+fp16")))
 void test_v83(float32x4_t v4f32, float16x4_t v4f16, float64x2_t v2f64) {
   vcaddq_rot90_f32(v4f32, v4f32);
   vcmla_rot90_f16(v4f16, v4f16, v4f16);
-  vcmlaq_rot270_laneq_f64(v2f64, v2f64, v2f64, 1);
+  vcmlaq_rot270_f64(v2f64, v2f64, v2f64);
 }
 
 __attribute__((target("arch=armv8.5-a")))
@@ -95,7 +95,7 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   // 8.3 - complex
   vcaddq_rot90_f32(v4f32, v4f32); // expected-error {{always_inline function 'vcaddq_rot90_f32' requires target feature 'v8.3a'}}
   vcmla_rot90_f16(v4f16, v4f16, v4f16); // expected-error {{always_inline function 'vcmla_rot90_f16' requires target feature 'v8.3a'}}
-  vcmlaq_rot270_laneq_f64(v2f64, v2f64, v2f64, 1); // expected-error {{always_inline function 'vcmlaq_rot270_f64' requires target feature 'v8.3a'}}
+  vcmlaq_rot270_f64(v2f64, v2f64, v2f64); // expected-error {{always_inline function 'vcmlaq_rot270_f64' requires target feature 'v8.3a'}}
   // 8.5 - frint
   vrnd32xq_f32(v4f32); // expected-error {{always_inline function 'vrnd32xq_f32' requires target feature 'v8.5a'}}
 

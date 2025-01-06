@@ -38,3 +38,17 @@ exit:
 }
 
 declare void @llvm.assume(i1)
+
+define i1 @negate_overflow_add_1(i64 %x) {
+; CHECK-LABEL: define i1 @negate_overflow_add_1(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], -9223372036854775807
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 0, [[SUB]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %sub = add nsw i64 %x, -9223372036854775807
+  %c = icmp slt i64 0, %sub
+  ret i1 %c
+}

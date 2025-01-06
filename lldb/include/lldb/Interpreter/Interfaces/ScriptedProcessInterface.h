@@ -29,23 +29,28 @@ public:
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
 
   virtual Status Attach(const ProcessAttachInfo &attach_info) {
-    return Status("ScriptedProcess did not attach");
+    return Status::FromErrorString("ScriptedProcess did not attach");
   }
 
-  virtual Status Launch() { return Status("ScriptedProcess did not launch"); }
+  virtual Status Launch() {
+    return Status::FromErrorString("ScriptedProcess did not launch");
+  }
 
-  virtual Status Resume() { return Status("ScriptedProcess did not resume"); }
+  virtual Status Resume() {
+    return Status::FromErrorString("ScriptedProcess did not resume");
+  }
 
   virtual std::optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
-    error.SetErrorString("ScriptedProcess have no memory region.");
+    error = Status::FromErrorString("ScriptedProcess have no memory region.");
     return {};
   }
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
   virtual bool CreateBreakpoint(lldb::addr_t addr, Status &error) {
-    error.SetErrorString("ScriptedProcess don't support creating breakpoints.");
+    error = Status::FromErrorString(
+        "ScriptedProcess don't support creating breakpoints.");
     return {};
   }
 

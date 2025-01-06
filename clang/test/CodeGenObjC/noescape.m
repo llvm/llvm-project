@@ -93,13 +93,13 @@ void test5(BlockTy2 b, int *p) {
 // CHECK-NOARC: store ptr %[[B]], ptr %[[B_ADDR]], align 8
 // CHECK-ARC: store ptr null, ptr %[[B_ADDR]], align 8
 // CHECK-ARC: call void @llvm.objc.storeStrong(ptr %[[B_ADDR]], ptr %[[B]])
-// CHECK: %[[BLOCK_ISA:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 0
+// CHECK: %[[BLOCK_ISA:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 0
 // CHECK: store ptr @_NSConcreteGlobalBlock, ptr %[[BLOCK_ISA]], align 8
-// CHECK: %[[BLOCK_FLAGS:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 1
+// CHECK: %[[BLOCK_FLAGS:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 1
 // CHECK: store i32 -796917760, ptr %[[BLOCK_FLAGS]], align 8
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCIPTOR_TMP_2]], ptr %[[BLOCK_DESCRIPTOR]], align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK-NOARC: %[[V1:.*]] = load ptr, ptr %[[B_ADDR]], align 8
 // CHECK-NOARC: store ptr %[[V1]], ptr %[[BLOCK_CAPTURED]], align 8
 // CHECK-ARC: %[[V2:.*]] = load ptr, ptr %[[B_ADDR]], align 8
@@ -127,7 +127,7 @@ void test6(id a, id b) {
 // CHECK: alloca ptr, align 8
 // CHECK: %[[B0:.*]] = alloca ptr, align 8
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: store ptr %[[B0]], ptr %[[BLOCK_CAPTURED]], align 8
 
 // CHECK-ARC-NOT: define internal void @__Block_byref_object_copy_
@@ -146,7 +146,7 @@ void test7(void) {
 // CHECK: %[[B0:.*]] = alloca %[[STRUCT_BLOCK_BYREF_B0]], align 8
 // CHECK: alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
 // CHECK: %[[BLOCK1:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// CHECK: %[[BLOCK_CAPTURED7:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK1]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED7:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK1]], i32 0, i32 5
 // CHECK: store ptr %[[B0]], ptr %[[BLOCK_CAPTURED7]], align 8
 
 // CHECK-ARC: define internal void @__Block_byref_object_copy_

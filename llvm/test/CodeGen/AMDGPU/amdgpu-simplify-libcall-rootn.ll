@@ -362,7 +362,7 @@ define <2 x half> @test_rootn_v2f16_2(<2 x half> %x) {
 define <2 x half> @test_rootn_v2f16_neg1(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_rootn_v2f16_neg1(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <2 x half> <half 0xH3C00, half 0xH3C00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <2 x half> splat (half 0xH3C00), [[X]]
 ; CHECK-NEXT:    ret <2 x half> [[__ROOTN2DIV]]
 ;
   %call = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> %x, <2 x i32> <i32 -1, i32 -1>)
@@ -373,7 +373,7 @@ define <2 x half> @test_rootn_v2f16_neg2(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_rootn_v2f16_neg2(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x half> @llvm.sqrt.v2f16(<2 x half> [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x half> <half 0xH3C00, half 0xH3C00>, [[TMP1]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x half> splat (half 0xH3C00), [[TMP1]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret <2 x half> [[__ROOTN2RSQRT]]
 ;
   %call = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> %x, <2 x i32> <i32 -2, i32 -2>)
@@ -383,7 +383,7 @@ define <2 x half> @test_rootn_v2f16_neg2(<2 x half> %x) {
 define <2 x half> @test_rootn_v2f16_neg3(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_rootn_v2f16_neg3(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> [[X]], <2 x i32> <i32 -3, i32 -3>)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> [[X]], <2 x i32> splat (i32 -3))
 ; CHECK-NEXT:    ret <2 x half> [[CALL]]
 ;
   %call = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> %x, <2 x i32> <i32 -3, i32 -3>)
@@ -536,7 +536,7 @@ define <2 x float> @test_rootn_v2f32__y_1__strictfp(<2 x float> %x) #1 {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_1__strictfp(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 1, i32 1>) #[[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 1)) #[[ATTR0]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -795,7 +795,7 @@ define <2 x float> @test_rootn_v2f32__y_neg1(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_neg1(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <2 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <2 x float> [[__ROOTN2DIV]]
 ;
 entry:
@@ -807,7 +807,7 @@ define <3 x float> @test_rootn_v3f32__y_neg1(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_rootn_v3f32__y_neg1(
 ; CHECK-SAME: <3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <3 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <3 x float> [[__ROOTN2DIV]]
 ;
 entry:
@@ -819,7 +819,7 @@ define <3 x float> @test_rootn_v3f32__y_neg1_undef(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_rootn_v3f32__y_neg1_undef(
 ; CHECK-SAME: <3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <3 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <3 x float> [[__ROOTN2DIV]]
 ;
 entry:
@@ -831,7 +831,7 @@ define <4 x float> @test_rootn_v4f32__y_neg1(<4 x float> %x) {
 ; CHECK-LABEL: define <4 x float> @test_rootn_v4f32__y_neg1(
 ; CHECK-SAME: <4 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <4 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <4 x float> [[__ROOTN2DIV]]
 ;
 entry:
@@ -843,7 +843,7 @@ define <8 x float> @test_rootn_v8f32__y_neg1(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @test_rootn_v8f32__y_neg1(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <8 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <8 x float> [[__ROOTN2DIV]]
 ;
 entry:
@@ -855,7 +855,7 @@ define <16 x float> @test_rootn_v16f32__y_neg1(<16 x float> %x) {
 ; CHECK-LABEL: define <16 x float> @test_rootn_v16f32__y_neg1(
 ; CHECK-SAME: <16 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[X]]
+; CHECK-NEXT:    [[__ROOTN2DIV:%.*]] = fdiv <16 x float> splat (float 1.000000e+00), [[X]]
 ; CHECK-NEXT:    ret <16 x float> [[__ROOTN2DIV]]
 ;
 entry:
@@ -930,7 +930,7 @@ define <2 x float> @test_rootn_v2f32__y_neg2(<2 x float> %x) {
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret <2 x float> [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -943,7 +943,7 @@ define <2 x float> @test_rootn_v2f32__y_neg2__flags(<2 x float> %x) {
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call nnan nsz contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv nnan nsz contract <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv nnan nsz contract <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret <2 x float> [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -955,7 +955,7 @@ define <2 x float> @test_rootn_v2f32__y_neg2__strictfp(<2 x float> %x) #1 {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_neg2__strictfp(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 -2, i32 -2>) #[[ATTR0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 -2)) #[[ATTR0]]
 ; CHECK-NEXT:    ret <2 x float> [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -1277,7 +1277,7 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_4(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_4(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 4, i32 4>)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 4))
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -1289,7 +1289,7 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg3(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg3(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 -3, i32 -3>)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 -3))
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -1301,7 +1301,7 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg4(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg4(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 -4, i32 -4>)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 -4))
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -1313,7 +1313,7 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_5(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_5(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 5, i32 5>)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> splat (i32 5))
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:

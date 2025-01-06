@@ -54,7 +54,7 @@ foo:
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Name:            ret32
-# CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:         Function:        1
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Kind:            DATA

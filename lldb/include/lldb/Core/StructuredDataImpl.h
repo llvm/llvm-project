@@ -50,38 +50,28 @@ public:
   }
 
   Status GetAsJSON(Stream &stream) const {
-    Status error;
-
-    if (!m_data_sp) {
-      error.SetErrorString("No structured data.");
-      return error;
-    }
+    if (!m_data_sp)
+      return Status::FromErrorString("No structured data.");
 
     llvm::json::OStream s(stream.AsRawOstream());
     m_data_sp->Serialize(s);
-    return error;
+    return Status();
   }
 
   Status GetDescription(Stream &stream) const {
-    Status error;
-
-    if (!m_data_sp) {
-      error.SetErrorString("Cannot pretty print structured data: "
-                           "no data to print.");
-      return error;
-    }
+    if (!m_data_sp)
+      return Status::FromErrorString("Cannot pretty print structured data: "
+                                     "no data to print.");
 
     // Grab the plugin
     lldb::StructuredDataPluginSP plugin_sp = m_plugin_wp.lock();
 
     // If there's no plugin, call underlying data's dump method:
     if (!plugin_sp) {
-      if (!m_data_sp) {
-        error.SetErrorString("No data to describe.");
-        return error;
-      }
+      if (!m_data_sp)
+        return Status::FromErrorString("No data to describe.");
       m_data_sp->GetDescription(stream);
-      return error;
+      return Status();
     }
     // Get the data's description.
     return plugin_sp->GetDescription(m_data_sp, stream);

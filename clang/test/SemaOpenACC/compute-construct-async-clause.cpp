@@ -46,7 +46,7 @@ void Test() {
 #pragma acc parallel async(Convert)
   while(1);
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc kernels async(Explicit)
   while(1);
@@ -92,12 +92,12 @@ void TestInst() {
 #pragma acc kernels async(T::ACValue)
   while (1);
 
-  // expected-error@+2{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc parallel async(HasInt::EXValue)
   while (1);
 
-  // expected-error@+2{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc kernels async(T::EXValue)
   while (1);

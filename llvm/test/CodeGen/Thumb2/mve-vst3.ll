@@ -535,22 +535,20 @@ define void @vst3_v2i8(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    ldrb r2, [r0]
-; CHECK-NEXT:    mov r4, sp
-; CHECK-NEXT:    ldrb r3, [r0, #1]
-; CHECK-NEXT:    ldrb.w r12, [r0, #2]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r3
-; CHECK-NEXT:    ldrb.w lr, [r0, #3]
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    ldrb r5, [r0, #5]
+; CHECK-NEXT:    mov r5, sp
+; CHECK-NEXT:    ldrb r3, [r0, #2]
 ; CHECK-NEXT:    vmov.16 q0[0], r2
+; CHECK-NEXT:    ldrb.w r12, [r0, #1]
+; CHECK-NEXT:    ldrb.w lr, [r0, #3]
+; CHECK-NEXT:    vmov.16 q0[1], r3
+; CHECK-NEXT:    ldrb r4, [r0, #5]
 ; CHECK-NEXT:    ldrb r0, [r0, #4]
-; CHECK-NEXT:    vmov.16 q0[1], r12
 ; CHECK-NEXT:    vmov.16 q0[2], r0
 ; CHECK-NEXT:    add r0, sp, #8
-; CHECK-NEXT:    vmov.16 q0[3], r3
+; CHECK-NEXT:    vmov.16 q0[3], r12
 ; CHECK-NEXT:    vmov.16 q0[4], lr
-; CHECK-NEXT:    vmov.16 q0[5], r5
-; CHECK-NEXT:    vstrb.16 q0, [r4]
+; CHECK-NEXT:    vmov.16 q0[5], r4
+; CHECK-NEXT:    vstrb.16 q0, [r5]
 ; CHECK-NEXT:    vstrb.16 q0, [r0]
 ; CHECK-NEXT:    vldrh.u32 q0, [r0]
 ; CHECK-NEXT:    ldr r2, [sp]

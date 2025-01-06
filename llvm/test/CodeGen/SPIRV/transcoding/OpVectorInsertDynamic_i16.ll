@@ -1,23 +1,23 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV:     OpName %[[#v:]] "v"
-; CHECK-SPIRV:     OpName %[[#index:]] "index"
-; CHECK-SPIRV:     OpName %[[#res:]] "res"
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV-DAG: %[[#int16:]] = OpTypeInt 16
-; CHECK-SPIRV-DAG: %[[#int32:]] = OpTypeInt 32
-; CHECK-SPIRV-DAG: %[[#int16_2:]] = OpTypeVector %[[#int16]] 2
-
-; CHECK-SPIRV:     %[[#undef:]] = OpUndef %[[#int16_2]]
-
-; CHECK-SPIRV-DAG: %[[#const1:]] = OpConstant %[[#int16]] 4
-; CHECK-SPIRV-DAG: %[[#const2:]] = OpConstant %[[#int16]] 8
-; CHECK-SPIRV-NOT: %[[#idx1:]] = OpConstant %[[#int32]] 0
-; CHECK-SPIRV-NOT: %[[#idx2:]] = OpConstant %[[#int32]] 1
-
-; CHECK-SPIRV:     %[[#vec1:]] = OpCompositeInsert %[[#int16_2]] %[[#const1]] %[[#undef]] 0
-; CHECK-SPIRV:     %[[#vec2:]] = OpCompositeInsert %[[#int16_2]] %[[#const2]] %[[#vec1]] 1
-; CHECK-SPIRV:     %[[#res]] = OpVectorInsertDynamic %[[#int16_2]] %[[#vec2]] %[[#v]] %[[#index]]
+; CHECK:     OpName %[[#v:]] "v"
+; CHECK:     OpName %[[#index:]] "index"
+; CHECK:     OpName %[[#res:]] "res"
+; CHECK-DAG: %[[#int16:]] = OpTypeInt 16
+; CHECK-DAG: %[[#int32:]] = OpTypeInt 32
+; CHECK-DAG: %[[#int16_2:]] = OpTypeVector %[[#int16]] 2
+; CHECK-DAG: %[[#undef:]] = OpUndef %[[#int16_2]]
+; CHECK-DAG: %[[#const1:]] = OpConstant %[[#int16]] 4
+; CHECK-DAG: %[[#const2:]] = OpConstant %[[#int16]] 8
+; CHECK-NOT: %[[#idx1:]] = OpConstant %[[#int32]] 0
+; CHECK-NOT: %[[#idx2:]] = OpConstant %[[#int32]] 1
+; CHECK:     %[[#vec1:]] = OpCompositeInsert %[[#int16_2]] %[[#const1]] %[[#undef]] 0
+; CHECK:     %[[#vec2:]] = OpCompositeInsert %[[#int16_2]] %[[#const2]] %[[#vec1]] 1
+; CHECK:     %[[#res]] = OpVectorInsertDynamic %[[#int16_2]] %[[#vec2]] %[[#v]] %[[#index]]
 
 define spir_kernel void @test(<2 x i16>* nocapture %out, i16 %v, i32 %index) {
 entry:

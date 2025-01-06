@@ -977,7 +977,7 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-ARM64_32-NEXT:    add x9, x29, #16
 ; CHECK-APPLE-ARM64_32-NEXT:    strb w8, [x0, #8]
 ; CHECK-APPLE-ARM64_32-NEXT:    orr w8, w9, #0x4
-; CHECK-APPLE-ARM64_32-NEXT:    and x10, x9, #0xfffffff0
+; CHECK-APPLE-ARM64_32-NEXT:    mov w10, w9
 ; CHECK-APPLE-ARM64_32-NEXT:    stur w8, [x29, #-8]
 ; CHECK-APPLE-ARM64_32-NEXT:    ldr w11, [x10]
 ; CHECK-APPLE-ARM64_32-NEXT:    orr w10, w9, #0x8

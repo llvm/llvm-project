@@ -31,59 +31,59 @@ void test_nest_captured_stmt(int param, int size, int param_arr[size]) {
         arr[10][z.a] = 12;
 
         // CHECK1: define internal {{.*}}void @__captured_stmt.2(ptr
-        // CHECK1: [[PARAM_ARR_SIZE_REF:%.+]] = getelementptr inbounds [[T]], ptr {{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 5
+        // CHECK1: [[PARAM_ARR_SIZE_REF:%.+]] = getelementptr inbounds nuw [[T]], ptr {{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 5
         // CHECK1: [[PARAM_ARR_SIZE:%.+]] = load [[SIZE_TYPE]], ptr [[PARAM_ARR_SIZE_REF]]
-        // CHECK1: [[ARR_SIZE1_REF:%.+]] = getelementptr inbounds [[T]], ptr {{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 8
+        // CHECK1: [[ARR_SIZE1_REF:%.+]] = getelementptr inbounds nuw [[T]], ptr {{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 8
         // CHECK1: [[ARR_SIZE1:%.+]] = load [[SIZE_TYPE]], ptr [[ARR_SIZE1_REF]]
-        // CHECK1: [[ARR_SIZE2_REF:%.+]] = getelementptr inbounds [[T]], ptr {{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 9
+        // CHECK1: [[ARR_SIZE2_REF:%.+]] = getelementptr inbounds nuw [[T]], ptr {{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 9
         // CHECK1: [[ARR_SIZE2:%.+]] = load [[SIZE_TYPE]], ptr [[ARR_SIZE2_REF]]
         //
-        // CHECK1: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
+        // CHECK1: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
         // CHECK1-NEXT: load ptr, ptr
-        // CHECK1-NEXT: getelementptr inbounds %struct.A, ptr
+        // CHECK1-NEXT: getelementptr inbounds nuw %struct.A, ptr
         // CHECK1-NEXT: store i{{.+}} 1
         //
-        // CHECK1: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 1
+        // CHECK1: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 1
         // CHECK1-NEXT: load ptr, ptr
         // CHECK1-NEXT: store i{{[0-9]+}} 1
         //
-        // CHECK1: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+        // CHECK1: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
         // CHECK1-NEXT: load ptr, ptr
         // CHECK1-NEXT: store i{{[0-9]+}} 1
         //
-        // CHECK1: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 4
+        // CHECK1: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 4
         // CHECK1-NEXT: load ptr, ptr
         // CHECK1-NEXT: load i{{[0-9]+}}, ptr
-        // CHECK1-NEXT: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 3
+        // CHECK1-NEXT: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 3
         // CHECK1-NEXT: load ptr, ptr
         // CHECK1-NEXT: load ptr, ptr
         // CHECK1-NEXT: store i{{[0-9]+}}
         //
-        // CHECK1: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
+        // CHECK1: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
         // CHECK1-NEXT: load ptr, ptr
-        // CHECK1-NEXT: getelementptr inbounds %struct.A, ptr
+        // CHECK1-NEXT: getelementptr inbounds nuw %struct.A, ptr
         // CHECK1-NEXT: store float
         //
-        // CHECK1: getelementptr inbounds [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
+        // CHECK1: getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
         // CHECK1-NEXT: load ptr, ptr
-        // CHECK1-NEXT: getelementptr inbounds %struct.A, ptr
+        // CHECK1-NEXT: getelementptr inbounds nuw %struct.A, ptr
         // CHECK1-NEXT: store i8 99
         //
-        // CHECK1-DAG: [[SIZE_ADDR_REF:%.*]] = getelementptr inbounds [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 7
+        // CHECK1-DAG: [[SIZE_ADDR_REF:%.*]] = getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 7
         // CHECK1-DAG: [[SIZE_ADDR:%.*]] = load ptr, ptr [[SIZE_ADDR_REF]]
         // CHECK1-DAG: [[SIZE:%.*]] = load i{{.+}}, ptr [[SIZE_ADDR]]
         // CHECK1-DAG: [[PARAM_ARR_IDX:%.*]] = sub nsw i{{.+}} [[SIZE]], 1
-        // CHECK1-DAG: [[PARAM_ARR_ADDR_REF:%.*]] = getelementptr inbounds [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 6
+        // CHECK1-DAG: [[PARAM_ARR_ADDR_REF:%.*]] = getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 6
         // CHECK1-DAG: [[PARAM_ARR_ADDR:%.*]] = load ptr, ptr [[PARAM_ARR_ADDR_REF]]
         // CHECK1-DAG: [[PARAM_ARR:%.*]] = load ptr, ptr [[PARAM_ARR_ADDR]]
         // CHECK1-DAG: [[PARAM_ARR_SIZE_MINUS_1_ADDR:%.*]] = getelementptr inbounds i{{.+}}, ptr [[PARAM_ARR]], i{{.*}}
         // CHECK1: store i{{.+}} 2, ptr [[PARAM_ARR_SIZE_MINUS_1_ADDR]]
         //
-        // CHECK1-DAG: [[Z_ADDR_REF:%.*]] = getelementptr inbounds [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 2
+        // CHECK1-DAG: [[Z_ADDR_REF:%.*]] = getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 2
         // CHECK1-DAG: [[Z_ADDR:%.*]] = load ptr, ptr [[Z_ADDR_REF]]
-        // CHECK1-DAG: [[Z_A_ADDR:%.*]] = getelementptr inbounds %struct.A, ptr [[Z_ADDR]], i{{.+}} 0, i{{.+}} 0
+        // CHECK1-DAG: [[Z_A_ADDR:%.*]] = getelementptr inbounds nuw %struct.A, ptr [[Z_ADDR]], i{{.+}} 0, i{{.+}} 0
         // CHECK1-DAG: [[ARR_IDX_2:%.*]] = load i{{.+}}, ptr [[Z_A_ADDR]]
-        // CHECK1-DAG: [[ARR_ADDR_REF:%.*]] = getelementptr inbounds [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 10
+        // CHECK1-DAG: [[ARR_ADDR_REF:%.*]] = getelementptr inbounds nuw [[T]], ptr {{.*}}, i{{.+}} 0, i{{.+}} 10
         // CHECK1-DAG: [[ARR_ADDR:%.*]] = load ptr, ptr [[ARR_ADDR_REF]]
         // CHECK1-DAG: [[ARR_IDX_1:%.*]] = mul {{.*}} 10
         // CHECK1-DAG: [[ARR_10_ADDR:%.*]] = getelementptr inbounds i{{.+}}, ptr [[ARR_ADDR]], i{{.*}} [[ARR_IDX_1]]
@@ -114,7 +114,7 @@ void test_nest_block(void) {
   // CHECK2: store i{{[0-9]+}}
   // CHECK2: store ptr [[Z]]
   //
-  // CHECK2: getelementptr inbounds %struct.anon
+  // CHECK2: getelementptr inbounds nuw %struct.anon
   // CHECK2-NEXT: getelementptr inbounds
   // CHECK2-NEXT: store ptr
   //
@@ -141,7 +141,7 @@ void test_nest_block(void) {
   //
   // CHECK2: [[CapA:%[0-9a-z_.]*]] = getelementptr inbounds {{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 7
   //
-  // CHECK2: getelementptr inbounds %struct.anon{{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+  // CHECK2: getelementptr inbounds nuw %struct.anon{{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK2: load ptr, ptr
   // CHECK2: load i{{[0-9]+}}, ptr
   // CHECK2: store i{{[0-9]+}} {{.*}}, ptr [[CapA]]

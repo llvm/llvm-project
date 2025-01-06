@@ -129,12 +129,11 @@ entry:
 define i1 @test_ssubo_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_ssubo_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sub 5, 3, 4
-; CHECK-NEXT:    cmpwi 1, 4, 0
-; CHECK-NEXT:    cmpw 5, 3
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    creqv 20, 5, 0
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    xor 5, 4, 3
+; CHECK-NEXT:    sub 4, 3, 4
+; CHECK-NEXT:    xor 3, 4, 3
+; CHECK-NEXT:    and 3, 5, 3
+; CHECK-NEXT:    srwi 3, 3, 31
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 %b) nounwind
@@ -145,12 +144,11 @@ entry:
 define i1 @test_ssubo_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_ssubo_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sub 5, 3, 4
-; CHECK-NEXT:    cmpdi 1, 4, 0
-; CHECK-NEXT:    cmpd 5, 3
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    creqv 20, 5, 0
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    xor 5, 4, 3
+; CHECK-NEXT:    sub 4, 3, 4
+; CHECK-NEXT:    xor 3, 4, 3
+; CHECK-NEXT:    and 3, 5, 3
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %a, i64 %b) nounwind

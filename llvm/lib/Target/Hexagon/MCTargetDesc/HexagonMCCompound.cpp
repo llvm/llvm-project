@@ -78,7 +78,7 @@ static const unsigned cmpgtn1BitOpcode[8] = {
 
 // enum HexagonII::CompoundGroup
 static unsigned getCompoundCandidateGroup(MCInst const &MI, bool IsExtended) {
-  unsigned DstReg, SrcReg, Src1Reg, Src2Reg;
+  MCRegister DstReg, SrcReg, Src1Reg, Src2Reg;
 
   switch (MI.getOpcode()) {
   default:
@@ -174,7 +174,7 @@ static unsigned getCompoundCandidateGroup(MCInst const &MI, bool IsExtended) {
 /// getCompoundOp - Return the index from 0-7 into the above opcode lists.
 static unsigned getCompoundOp(MCInst const &HMCI) {
   const MCOperand &Predicate = HMCI.getOperand(0);
-  unsigned PredReg = Predicate.getReg();
+  MCRegister PredReg = Predicate.getReg();
 
   assert((PredReg == Hexagon::P0) || (PredReg == Hexagon::P1) ||
          (PredReg == Hexagon::P2) || (PredReg == Hexagon::P3));

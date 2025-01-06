@@ -6,7 +6,6 @@ reasons which can make it seem like the operation as a whole works but at the
 API level it won't if we don't remove them there also.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -199,7 +198,13 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
     def test_non_address_bit_memory_corefile(self):
         self.runCmd("target create --core corefile")
 
-        self.expect("thread list", substrs=["stopped", "stop reason = signal SIGSEGV"])
+        self.expect(
+            "thread list",
+            substrs=[
+                "stopped",
+                "stop reason = SIGSEGV: address not mapped to object (fault address: 0x0)",
+            ],
+        )
 
         # No caching (the program/corefile are the cache) and no writing
         # to memory. So just check that tagged/untagged addresses read

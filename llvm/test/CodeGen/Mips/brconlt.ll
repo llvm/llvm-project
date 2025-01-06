@@ -1,5 +1,5 @@
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
-; RUN: llc  -march=mips -mattr=micromips -mcpu=mips32r6 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=MM32R6
+; RUN: llc  -mtriple=mipsel-elf -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16
+; RUN: llc  -mtriple=mips-elf -mattr=micromips -mcpu=mips32r6 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=MM32R6
 
 @i = global i32 5, align 4
 @j = global i32 10, align 4

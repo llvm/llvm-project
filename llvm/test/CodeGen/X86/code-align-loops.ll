@@ -20,19 +20,19 @@
 ; The difference between test1 and test2 is test2 only set one loop metadata node for the second loop.
 
 ; CHECK-LABEL: test1:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB0_2: # %for.body
-; ALIGN: .p2align 9, 0x90
+; ALIGN: .p2align 9
 ; ALIGN-NEXT: .LBB0_3: # %for.body
 
-; ALIGN32: .p2align 6, 0x90
+; ALIGN32: .p2align 6
 ; ALIGN32-NEXT: .LBB0_2: # %for.body
-; ALIGN32: .p2align 9, 0x90
+; ALIGN32: .p2align 9
 ; ALIGN32-NEXT: .LBB0_3: # %for.body
 
-; ALIGN256: .p2align 8, 0x90
+; ALIGN256: .p2align 8
 ; ALIGN256-NEXT: .LBB0_2: # %for.body
-; ALIGN256: .p2align 9, 0x90
+; ALIGN256: .p2align 9
 ; ALIGN256-NEXT: .LBB0_3: # %for.body
 
 define void @test1(i32 %a) nounwind {
@@ -59,19 +59,19 @@ for.body5:                                        ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: test2:
-; ALIGN: .p2align 4, 0x90
+; ALIGN: .p2align 4
 ; ALIGN-NEXT: .LBB1_2: # %for.body
-; ALIGN: .p2align 9, 0x90
+; ALIGN: .p2align 9
 ; ALIGN-NEXT: .LBB1_3: # %for.body
 
-; ALIGN32: .p2align 5, 0x90
+; ALIGN32: .p2align 5
 ; ALIGN32-NEXT: .LBB1_2: # %for.body
-; ALIGN32: .p2align 9, 0x90
+; ALIGN32: .p2align 9
 ; ALIGN32-NEXT: .LBB1_3: # %for.body
 
-; ALIGN256: .p2align 8, 0x90
+; ALIGN256: .p2align 8
 ; ALIGN256-NEXT: .LBB1_2: # %for.body
-; ALIGN256: .p2align 9, 0x90
+; ALIGN256: .p2align 9
 ; ALIGN256-NEXT: .LBB1_3: # %for.body
 define void @test2(i32 %a) nounwind {
 entry:
@@ -94,6 +94,87 @@ for.body5:                                        ; preds = %for.body, %for.body
   %inc7 = add nuw nsw i32 %i1.015, 1
   %exitcond16.not = icmp eq i32 %inc7, %a
   br i1 %exitcond16.not, label %for.cond.cleanup4, label %for.body5, !llvm.loop !2
+}
+
+; test3 and test4 is to check if .p2align can be correctly set on loops with
+; multi latches. The IR is generated from below simple C file:
+; $ clang -O0 -S -emit-llvm loop.c
+; $ cat loop.c
+; int test3() {
+;     int i = 0;
+;     [[clang::code_align(32)]]
+;     while (i < 10) {
+;         if (i % 2) {
+;             continue;
+;         }
+;         i++;
+;     }
+; }
+; CHECK-LABEL: test3_multilatch:
+; ALIGN: .p2align 6
+; ALIGN-NEXT: .LBB2_1: # %while.cond
+define dso_local i32 @test3_multilatch() #0 {
+entry:
+  %retval = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 0, ptr %retval, align 4
+  store i32 0, ptr %i, align 4
+  br label %while.cond
+
+while.cond:                                       ; preds = %if.end, %if.then, %entry
+  %0 = load i32, ptr %i, align 4
+  %cmp = icmp slt i32 %0, 10
+  br i1 %cmp, label %while.body, label %while.end
+
+while.body:                                       ; preds = %while.cond
+  %1 = load i32, ptr %i, align 4
+  %rem = srem i32 %1, 2
+  %tobool = icmp ne i32 %rem, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:                                          ; preds = %while.body
+  br label %while.cond, !llvm.loop !0
+
+if.end:                                           ; preds = %while.body
+  %2 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %2, 1
+  store i32 %inc, ptr %i, align 4
+  br label %while.cond, !llvm.loop !0
+
+while.end:                                        ; preds = %while.cond
+  %3 = load i32, ptr %retval, align 4
+  ret i32 %3
+}
+
+; CHECK-LABEL: test4_multilatch:
+; ALIGN: .p2align 6
+; ALIGN-NEXT: .LBB3_4: # %bb4
+define void @test4_multilatch(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+entry:
+  br label %bb1
+
+bb1:                               ; preds = %bb2, %bb4, %entry
+  call void @bar()
+  %cmp3 = icmp sgt i32 %c, 10
+  br i1 %cmp3, label %bb3, label %bb4
+
+bb2:                                ; preds = %bb3
+  call void @bar()
+  %cmp1 = icmp sgt i32 %a, 11
+  br i1 %cmp1, label %bb1, label %exit, !llvm.loop !0
+
+bb3:                                ; preds = %bb1
+  call void @bar()
+  %cmp2 = icmp sgt i32 %b, 12
+  br i1 %cmp2, label %bb2, label %exit
+
+bb4:                                ; preds = %bb1
+  call void @bar()
+  %cmp4 = icmp sgt i32 %d, 14
+  br i1 %cmp4, label %bb1, label %exit
+
+exit:                               ; preds = %bb2, %bb3, %bb4
+  ret void
 }
 
 declare void @bar()

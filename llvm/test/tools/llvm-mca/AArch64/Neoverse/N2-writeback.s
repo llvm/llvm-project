@@ -3298,28 +3298,28 @@ add x0, x27, 1
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1000
-# CHECK-NEXT: Total Cycles:      3004
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: uOps Per Cycle:    3.94
+# CHECK-NEXT: IPC:               1.97
 # CHECK-NEXT: Block RThroughput: 3.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    .  .   ldr	b1, [x27], #254
-# CHECK-NEXT: [0,1]     D======eER.    .    .    .    .  .   add	x0, x27, #1
-# CHECK-NEXT: [0,2]     D======eeeeeeER.    .    .    .  .   ldr	h1, [x27], #254
-# CHECK-NEXT: [0,3]     D============eER    .    .    .  .   add	x0, x27, #1
-# CHECK-NEXT: [0,4]     .D===========eeeeeeER    .    .  .   ldr	s1, [x27], #254
-# CHECK-NEXT: [0,5]     .D=================eER   .    .  .   add	x0, x27, #1
-# CHECK-NEXT: [0,6]     .D=================eeeeeeER   .  .   ldr	d1, [x27], #254
-# CHECK-NEXT: [0,7]     .D=======================eER  .  .   add	x0, x27, #1
-# CHECK-NEXT: [0,8]     . D======================eeeeeeER.   ldr	q1, [x27], #254
-# CHECK-NEXT: [0,9]     . D============================eER   add	x0, x27, #1
+# CHECK:      [0,0]     DeeeeeeER . .   ldr	b1, [x27], #254
+# CHECK-NEXT: [0,1]     D=eE----R . .   add	x0, x27, #1
+# CHECK-NEXT: [0,2]     D=eeeeeeER. .   ldr	h1, [x27], #254
+# CHECK-NEXT: [0,3]     D==eE----R. .   add	x0, x27, #1
+# CHECK-NEXT: [0,4]     .D=eeeeeeER .   ldr	s1, [x27], #254
+# CHECK-NEXT: [0,5]     .D==eE----R .   add	x0, x27, #1
+# CHECK-NEXT: [0,6]     .D==eeeeeeER.   ldr	d1, [x27], #254
+# CHECK-NEXT: [0,7]     .D===eE----R.   add	x0, x27, #1
+# CHECK-NEXT: [0,8]     . D==eeeeeeER   ldr	q1, [x27], #254
+# CHECK-NEXT: [0,9]     . D===eE----R   add	x0, x27, #1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3329,16 +3329,16 @@ add x0, x27, 1
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldr	b1, [x27], #254
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       add	x0, x27, #1
-# CHECK-NEXT: 2.     1     7.0    0.0    0.0       ldr	h1, [x27], #254
-# CHECK-NEXT: 3.     1     13.0   0.0    0.0       add	x0, x27, #1
-# CHECK-NEXT: 4.     1     12.0   0.0    0.0       ldr	s1, [x27], #254
-# CHECK-NEXT: 5.     1     18.0   0.0    0.0       add	x0, x27, #1
-# CHECK-NEXT: 6.     1     18.0   0.0    0.0       ldr	d1, [x27], #254
-# CHECK-NEXT: 7.     1     24.0   0.0    0.0       add	x0, x27, #1
-# CHECK-NEXT: 8.     1     23.0   0.0    0.0       ldr	q1, [x27], #254
-# CHECK-NEXT: 9.     1     29.0   0.0    0.0       add	x0, x27, #1
-# CHECK-NEXT:        1     15.2   0.1    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    4.0       add	x0, x27, #1
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	h1, [x27], #254
+# CHECK-NEXT: 3.     1     3.0    0.0    4.0       add	x0, x27, #1
+# CHECK-NEXT: 4.     1     2.0    0.0    0.0       ldr	s1, [x27], #254
+# CHECK-NEXT: 5.     1     3.0    0.0    4.0       add	x0, x27, #1
+# CHECK-NEXT: 6.     1     3.0    0.0    0.0       ldr	d1, [x27], #254
+# CHECK-NEXT: 7.     1     4.0    0.0    4.0       add	x0, x27, #1
+# CHECK-NEXT: 8.     1     3.0    0.0    0.0       ldr	q1, [x27], #254
+# CHECK-NEXT: 9.     1     4.0    0.0    4.0       add	x0, x27, #1
+# CHECK-NEXT:        1     2.7    0.1    2.0       <total>
 
 # CHECK:      [47] Code Region - G48
 

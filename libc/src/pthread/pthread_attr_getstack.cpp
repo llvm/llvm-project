@@ -10,11 +10,12 @@
 #include "pthread_attr_getstacksize.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_getstack,
                    (const pthread_attr_t *__restrict attr,
@@ -27,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_getstack,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

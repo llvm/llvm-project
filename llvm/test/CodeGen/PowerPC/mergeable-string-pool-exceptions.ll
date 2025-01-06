@@ -4,7 +4,7 @@
 @id = private unnamed_addr constant [4 x i8] c"@id\00", align 1
 @id2 = private unnamed_addr constant [5 x i8] c"@id2\00", align 1
 
-; Higher-aligned dummy to make sure it is first in the string pool.
+; Higher-aligned dummy to make sure it is first in the global merge pool.
 @dummy = private unnamed_addr constant [1 x i32] [i32 42], align 4
 
 define ptr @test1() personality ptr @__gnu_objc_personality_v0 {

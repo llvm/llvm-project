@@ -259,7 +259,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
   for (const auto &Use : VRegUpwardsUse) {
     const MachineBasicBlock *UseBB = Use.first.first;
     Register VReg = Use.second;
-    if (!MRI.def_begin(VReg).atEnd())
+    if (!MRI.def_empty(VReg))
       continue;
 
 #ifdef EXPENSIVE_CHECKS

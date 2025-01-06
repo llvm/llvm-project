@@ -13,8 +13,12 @@
 # PREAGGWARM: B X:0 #chain.warm# 1 0
 # RUN: perf2bolt %t.warm.bolt -p %t.preagg.warm --pa -o %t.warm.fdata -w %t.warm.yaml \
 # RUN:   -v=1 | FileCheck %s --check-prefix=CHECK-BOLT-WARM
+# RUN: FileCheck %s --input-file %t.warm.fdata --check-prefix=CHECK-FDATA-WARM
+# RUN: FileCheck %s --input-file %t.warm.yaml --check-prefix=CHECK-YAML-WARM
 
 # CHECK-BOLT-WARM: marking chain.warm/1(*2) as a fragment of chain
+# CHECK-FDATA-WARM: chain
+# CHECK-YAML-WARM: chain
 
 # RUN: sed -i 's|chain|chain/2|g' %t.fdata
 # RUN: llvm-objcopy --localize-symbol=chain %t.main.o

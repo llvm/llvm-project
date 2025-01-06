@@ -12,168 +12,163 @@
 #include <stddef.h>
 
 #include "block.h"
-#include "freelist.h"
+#include "freestore.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+extern "C" cpp::byte _end;
+extern "C" cpp::byte __llvm_libc_heap_limit;
 
 using cpp::optional;
 using cpp::span;
 
-static constexpr cpp::array<size_t, 6> DEFAULT_BUCKETS{16,  32,  64,
-                                                       128, 256, 512};
+LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
-template <size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()> class FreeListHeap {
+class FreeListHeap {
 public:
-  using BlockType = Block<>;
-  using FreeListType = FreeList<NUM_BUCKETS>;
+  constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
 
-  struct HeapStats {
-    size_t total_bytes;
-    size_t bytes_allocated;
-    size_t cumulative_allocated;
-    size_t cumulative_freed;
-    size_t total_allocate_calls;
-    size_t total_free_calls;
-  };
-
-  FreeListHeap(span<cpp::byte> region)
-      : FreeListHeap(&*region.begin(), &*region.end(), region.size()) {
-    auto result = BlockType::init(region);
-    BlockType *block = *result;
-    freelist_.add_chunk(block_to_span(block));
-  }
-
-  constexpr FreeListHeap(void *start, cpp::byte *end, size_t total_bytes)
-      : block_region_start_(start), block_region_end_(end),
-        freelist_(DEFAULT_BUCKETS), heap_stats_{} {
-    heap_stats_.total_bytes = total_bytes;
-  }
+  constexpr FreeListHeap(span<cpp::byte> region)
+      : begin(region.begin()), end(region.end()) {}
 
   void *allocate(size_t size);
+  void *aligned_allocate(size_t alignment, size_t size);
+  // NOTE: All pointers passed to free must come from one of the other
+  // allocation functions: `allocate`, `aligned_allocate`, `realloc`, `calloc`.
   void free(void *ptr);
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
 
-  const HeapStats &heap_stats() const { return heap_stats_; }
-  void reset_heap_stats() { heap_stats_ = {}; }
-
-  void *region_start() const { return block_region_start_; }
-  size_t region_size() const {
-    return reinterpret_cast<uintptr_t>(block_region_end_) -
-           reinterpret_cast<uintptr_t>(block_region_start_);
-  }
-
-protected:
-  constexpr void set_freelist_node(typename FreeListType::FreeListNode &node,
-                                   cpp::span<cpp::byte> chunk) {
-    freelist_.set_freelist_node(node, chunk);
-  }
+  cpp::span<cpp::byte> region() const { return {begin, end}; }
 
 private:
-  span<cpp::byte> block_to_span(BlockType *block) {
+  void init();
+
+  void *allocate_impl(size_t alignment, size_t size);
+
+  span<cpp::byte> block_to_span(Block *block) {
     return span<cpp::byte>(block->usable_space(), block->inner_size());
   }
 
-  bool is_valid_ptr(void *ptr) {
-    return ptr >= block_region_start_ && ptr < block_region_end_;
-  }
+  bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
 
-  void *block_region_start_;
-  void *block_region_end_;
-  FreeListType freelist_;
-  HeapStats heap_stats_;
+  cpp::byte *begin;
+  cpp::byte *end;
+  bool is_initialized = false;
+  FreeStore free_store;
 };
 
-template <size_t BUFF_SIZE, size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()>
-struct FreeListHeapBuffer : public FreeListHeap<NUM_BUCKETS> {
-  using parent = FreeListHeap<NUM_BUCKETS>;
-  using FreeListNode = typename parent::FreeListType::FreeListNode;
+template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
+public:
+  constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
 
-  constexpr FreeListHeapBuffer()
-      : FreeListHeap<NUM_BUCKETS>(&block, buffer + sizeof(buffer), BUFF_SIZE),
-        block(0, BUFF_SIZE), node{}, buffer{} {
-    block.mark_last();
-
-    cpp::span<cpp::byte> chunk(buffer, sizeof(buffer));
-    parent::set_freelist_node(node, chunk);
-  }
-
-  typename parent::BlockType block;
-  FreeListNode node;
-  cpp::byte buffer[BUFF_SIZE - sizeof(block) - sizeof(node)];
+private:
+  cpp::byte buffer[BUFF_SIZE];
 };
 
-template <size_t NUM_BUCKETS>
-void *FreeListHeap<NUM_BUCKETS>::allocate(size_t size) {
-  // Find a chunk in the freelist. Split it if needed, then return
-  auto chunk = freelist_.find_chunk(size);
-
-  if (chunk.data() == nullptr)
-    return nullptr;
-  freelist_.remove_chunk(chunk);
-
-  BlockType *chunk_block = BlockType::from_usable_space(chunk.data());
-
-  // Split that chunk. If there's a leftover chunk, add it to the freelist
-  optional<BlockType *> result = BlockType::split(chunk_block, size);
-  if (result)
-    freelist_.add_chunk(block_to_span(*result));
-
-  chunk_block->mark_used();
-
-  heap_stats_.bytes_allocated += size;
-  heap_stats_.cumulative_allocated += size;
-  heap_stats_.total_allocate_calls += 1;
-
-  return chunk_block->usable_space();
+LIBC_INLINE void FreeListHeap::init() {
+  LIBC_ASSERT(!is_initialized && "duplicate initialization");
+  auto result = Block::init(region());
+  Block *block = *result;
+  free_store.set_range({0, cpp::bit_ceil(block->inner_size())});
+  free_store.insert(block);
+  is_initialized = true;
 }
 
-template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
+LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
+  if (size == 0)
+    return nullptr;
+
+  if (!is_initialized)
+    init();
+
+  size_t request_size = size;
+
+  // TODO: usable_space should always be aligned to max_align_t.
+  if (alignment > alignof(max_align_t) ||
+      (Block::BLOCK_OVERHEAD % alignof(max_align_t) != 0)) {
+    // TODO: This bound isn't precisely calculated yet. It assumes one extra
+    // Block::ALIGNMENT to accomodate the possibility for padding block
+    // overhead. (alignment - 1) ensures that there is an aligned point
+    // somewhere in usable_space, but this isn't tight either, since
+    // usable_space is also already somewhat aligned.
+    if (add_overflow(size, (alignment - 1) + Block::ALIGNMENT, request_size))
+      return nullptr;
+  }
+
+  Block *block = free_store.remove_best_fit(request_size);
+  if (!block)
+    return nullptr;
+
+  LIBC_ASSERT(block->can_allocate(alignment, size) &&
+              "block should always be large enough to allocate at the correct "
+              "alignment");
+
+  auto block_info = Block::allocate(block, alignment, size);
+  if (block_info.next)
+    free_store.insert(block_info.next);
+  if (block_info.prev)
+    free_store.insert(block_info.prev);
+
+  block_info.block->mark_used();
+  return block_info.block->usable_space();
+}
+
+LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
+  return allocate_impl(alignof(max_align_t), size);
+}
+
+LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
+                                                 size_t size) {
+  // The alignment must be an integral power of two.
+  if (!IsPow2(alignment))
+    return nullptr;
+
+  // The size parameter must be an integral multiple of alignment.
+  if (size % alignment != 0)
+    return nullptr;
+
+  return allocate_impl(alignment, size);
+}
+
+LIBC_INLINE void FreeListHeap::free(void *ptr) {
   cpp::byte *bytes = static_cast<cpp::byte *>(ptr);
 
   LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");
 
-  BlockType *chunk_block = BlockType::from_usable_space(bytes);
-
-  size_t size_freed = chunk_block->inner_size();
-  LIBC_ASSERT(chunk_block->used() && "The block is not in-use");
-  chunk_block->mark_free();
+  Block *block = Block::from_usable_space(bytes);
+  LIBC_ASSERT(block->next() && "sentinel last block cannot be freed");
+  LIBC_ASSERT(block->used() && "double free");
+  block->mark_free();
 
   // Can we combine with the left or right blocks?
-  BlockType *prev = chunk_block->prev();
-  BlockType *next = nullptr;
+  Block *prev_free = block->prev_free();
+  Block *next = block->next();
 
-  if (!chunk_block->last())
-    next = chunk_block->next();
-
-  if (prev != nullptr && !prev->used()) {
-    // Remove from freelist and merge
-    freelist_.remove_chunk(block_to_span(prev));
-    chunk_block = chunk_block->prev();
-    BlockType::merge_next(chunk_block);
+  if (prev_free != nullptr) {
+    // Remove from free store and merge.
+    free_store.remove(prev_free);
+    block = prev_free;
+    block->merge_next();
   }
-
-  if (next != nullptr && !next->used()) {
-    freelist_.remove_chunk(block_to_span(next));
-    BlockType::merge_next(chunk_block);
+  if (!next->used()) {
+    free_store.remove(next);
+    block->merge_next();
   }
   // Add back to the freelist
-  freelist_.add_chunk(block_to_span(chunk_block));
-
-  heap_stats_.bytes_allocated -= size_freed;
-  heap_stats_.cumulative_freed += size_freed;
-  heap_stats_.total_free_calls += 1;
+  free_store.insert(block);
 }
 
 // Follows constract of the C standard realloc() function
 // If ptr is free'd, will return nullptr.
-template <size_t NUM_BUCKETS>
-void *FreeListHeap<NUM_BUCKETS>::realloc(void *ptr, size_t size) {
+LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
   if (size == 0) {
     free(ptr);
     return nullptr;
@@ -188,10 +183,10 @@ void *FreeListHeap<NUM_BUCKETS>::realloc(void *ptr, size_t size) {
   if (!is_valid_ptr(bytes))
     return nullptr;
 
-  BlockType *chunk_block = BlockType::from_usable_space(bytes);
-  if (!chunk_block->used())
+  Block *block = Block::from_usable_space(bytes);
+  if (!block->used())
     return nullptr;
-  size_t old_size = chunk_block->inner_size();
+  size_t old_size = block->inner_size();
 
   // Do nothing and return ptr if the required memory size is smaller than
   // the current size.
@@ -208,16 +203,18 @@ void *FreeListHeap<NUM_BUCKETS>::realloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-template <size_t NUM_BUCKETS>
-void *FreeListHeap<NUM_BUCKETS>::calloc(size_t num, size_t size) {
-  void *ptr = allocate(num * size);
+LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
+  size_t bytes;
+  if (__builtin_mul_overflow(num, size, &bytes))
+    return nullptr;
+  void *ptr = allocate(bytes);
   if (ptr != nullptr)
-    LIBC_NAMESPACE::inline_memset(ptr, 0, num * size);
+    LIBC_NAMESPACE::inline_memset(ptr, 0, bytes);
   return ptr;
 }
 
-extern FreeListHeap<> *freelist_heap;
+extern FreeListHeap *freelist_heap;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H

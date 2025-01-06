@@ -13,14 +13,17 @@ define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%length> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%3>
-; CHECK-NEXT:     EMIT vp<%3> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%3>, vp<%1>
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 entry:

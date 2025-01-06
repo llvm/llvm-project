@@ -209,7 +209,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredBodyOp::matchOperation(
         os);
     if (result)
       return DiagnosedSilenceableFailure::success();
-    return emitSilenceableError() << "contraction: " << os.str();
+    return emitSilenceableError() << "contraction: " << message;
   }
   return emitDefiniteFailure() << "unknown body condition";
 }
@@ -226,7 +226,7 @@ LogicalResult transform::MatchStructuredBodyOp::verify() {
                                                getElementwiseAttrName(),
                                                getContractionAttrName()},
                           os);
-    return emitOpError() << "only one of {" << os.str() << "} is allowed";
+    return emitOpError() << "only one of {" << attributeNames << "} is allowed";
   }
 
   if (std::optional<ArrayAttr> contractionAttr = getContraction()) {

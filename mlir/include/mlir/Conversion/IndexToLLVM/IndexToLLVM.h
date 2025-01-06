@@ -21,7 +21,7 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace index {
-void populateIndexToLLVMConversionPatterns(LLVMTypeConverter &converter,
+void populateIndexToLLVMConversionPatterns(const LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
 
 void registerConvertIndexToLLVMInterface(DialectRegistry &registry);

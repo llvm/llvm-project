@@ -36,7 +36,7 @@ SBFormat::SBFormat(const char *format, lldb::SBError &error) {
   FormatEntrySP format_entry_sp = std::make_shared<FormatEntity::Entry>();
   Status status = FormatEntity::Parse(format, *format_entry_sp);
 
-  error.SetError(status);
+  error.SetError(std::move(status));
   if (error.Success())
     m_opaque_sp = format_entry_sp;
 }

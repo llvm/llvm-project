@@ -1,6 +1,3 @@
-# See https://libcxx.llvm.org/docs/BuildingLibcxx.html for instructions on how
-# to build libcxx with CMake.
-
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -22,7 +19,6 @@ set(CMAKE_FOLDER "libc++")
 
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
-set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
 include(GNUInstallDirs)
 include(WarningFlags)
@@ -49,12 +45,12 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Basic options ---------------------------------------------------------------
-option(LIBCXX_ENABLE_ASSERTIONS
-  "Enable assertions inside the compiled library, and at the same time make it the
-   default when compiling user code. Note that assertions can be enabled or disabled
-   by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
+option(LIBCXX_ENABLE_EXCEPTIONS "Enable exceptions in the built library." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
   "Whether to include support for parts of the library that rely on a filesystem being
    available on the platform. This includes things like most parts of <filesystem> and
@@ -71,12 +67,16 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
-  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
   "Specify the path to a header that contains a custom implementation of the
    assertion handler that gets invoked when a hardening assertion fails. If
    provided, this header will be included by the library, replacing the
-   default assertion handler.")
+   default assertion handler. If this is specified as a relative path, it
+   is assumed to be relative to '<monorepo>/libcxx'.")
+if (NOT IS_ABSOLUTE "${LIBCXX_ASSERTION_HANDLER_FILE}")
+  set(LIBCXX_ASSERTION_HANDLER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${LIBCXX_ASSERTION_HANDLER_FILE}")
+endif()
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -93,12 +93,18 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
+option(LIBCXX_HAS_TERMINAL_AVAILABLE
+  "Build libc++ with support for checking whether a stream is a terminal." ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
+option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
+option(LIBCXX_ENABLE_MONOTONIC_CLOCK
+  "Build libc++ with support for a monotonic clock.
+  This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 
 # To use time zone support in libc++ the platform needs to have the IANA
 # database installed. Libc++ will fail to build if this is enabled on a
@@ -152,26 +158,19 @@ message(STATUS "Using libc++ testing configuration: ${LIBCXX_TEST_CONFIG}")
 set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
-# Benchmark options -----------------------------------------------------------
-option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
-
-set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
-set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
-    "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
-
-set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
-        "Build the benchmarks against the specified native STL.
-         The value must be one of libc++/libstdc++")
-set(LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN "" CACHE STRING
-    "Use alternate GCC toolchain when building the native benchmarks")
-
-if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
-  if (NOT (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++"
-        OR LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++"))
-    message(FATAL_ERROR "Invalid value for LIBCXX_BENCHMARK_NATIVE_STDLIB: "
-            "'${LIBCXX_BENCHMARK_NATIVE_STDLIB}'")
-  endif()
+# TODO: Figure out how to build GoogleBenchmark on those platforms, and how to build when exceptions or RTTI is disabled
+if (WIN32 OR MINGW OR ANDROID OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"
+    OR NOT LIBCXX_ENABLE_LOCALIZATION
+    OR NOT LIBCXX_ENABLE_THREADS
+    OR NOT LIBCXX_ENABLE_FILESYSTEM
+    OR NOT LIBCXX_ENABLE_RANDOM_DEVICE
+    OR NOT LIBCXX_ENABLE_EXCEPTIONS
+    OR NOT LIBCXX_ENABLE_RTTI)
+  set(_include_benchmarks OFF)
+else()
+  set(_include_benchmarks ON)
 endif()
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ${_include_benchmarks})
 
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -225,6 +224,14 @@ endif()
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+
+# C Library options -----------------------------------------------------------
+
+set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+endif()
 
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
@@ -285,14 +292,6 @@ if (LIBCXX_BUILD_32_BITS)
 endif()
 
 # Feature options -------------------------------------------------------------
-option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI
-  "Use runtime type information.
-   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
-option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
-option(LIBCXX_ENABLE_MONOTONIC_CLOCK
-  "Build libc++ with support for a monotonic clock.
-   This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
@@ -311,17 +310,6 @@ endif()
 # about #include_next which is used everywhere.
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
-
-option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
-set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
-    "The Profile-rt library used to build with code coverage")
-
-set(LIBCXX_CONFIGURE_IDE_DEFAULT OFF)
-if (XCODE OR MSVC_IDE)
-  set(LIBCXX_CONFIGURE_IDE_DEFAULT ON)
-endif()
-option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
-      ${LIBCXX_CONFIGURE_IDE_DEFAULT})
 
 set(LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
@@ -383,12 +371,6 @@ if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
                       " disabled, since that configuration is broken. See"
                       " https://github.com/llvm/llvm-project/issues/66117"
                       " for details.")
-endif()
-
-# Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
-# is ON.
-if (LLVM_USE_SANITIZER AND LIBCXX_GENERATE_COVERAGE)
-  message(FATAL_ERROR "LLVM_USE_SANITIZER cannot be used with LIBCXX_GENERATE_COVERAGE")
 endif()
 
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
@@ -463,8 +445,6 @@ else()
       "Path where target-specific libc++ headers should be installed.")
 endif()
 
-file(MAKE_DIRECTORY "${LIBCXX_BINARY_INCLUDE_DIR}")
-
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
@@ -479,7 +459,9 @@ set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+    "Additional compile flags to use when building libc++. This should be a CMake ;-delimited list of individual
+     compiler options to use. For options that must be passed as-is to the compiler without deduplication (e.g.
+     `-Xclang -foo` option groups), consider using `SHELL:` (https://cmake.org/cmake/help/latest/command/add_compile_options.html#option-de-duplication).")
 set(LIBCXX_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++ is linked to which can be provided in cache")
 
@@ -499,16 +481,11 @@ endif()
 # Configure compiler.
 include(config-ix)
 
-# Configure coverage options.
-if (LIBCXX_GENERATE_COVERAGE)
-  include(CodeCoverage)
-  set(CMAKE_BUILD_TYPE "COVERAGE" CACHE STRING "" FORCE)
-endif()
-
 #===============================================================================
 # Setup Compiler Flags
 #===============================================================================
 
+include(HandleLibC) # Setup the C library flags
 include(HandleLibCXXABI) # Setup the ABI library flags
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
@@ -671,6 +648,8 @@ target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
 if (NOT "${building_with_asan}" STREQUAL "-1")
   config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
+else()
+  config_define(OFF _LIBCPP_INSTRUMENTED_WITH_ASAN)
 endif()
 
 # Link system libraries =======================================================
@@ -764,29 +743,30 @@ endfunction()
 # Configuration file flags =====================================================
 config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
-config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
-config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
-config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
-config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+config_define(${LIBCXX_ABI_FORCE_ITANIUM} _LIBCPP_ABI_FORCE_ITANIUM)
+config_define(${LIBCXX_ABI_FORCE_MICROSOFT} _LIBCPP_ABI_FORCE_MICROSOFT)
+config_define(${LIBCXX_ENABLE_THREADS} _LIBCPP_HAS_THREADS)
+config_define(${LIBCXX_ENABLE_MONOTONIC_CLOCK} _LIBCPP_HAS_MONOTONIC_CLOCK)
+config_define(${LIBCXX_HAS_TERMINAL_AVAILABLE} _LIBCPP_HAS_TERMINAL)
 if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
   config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()
-config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
-config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
-config_define_if(LIBCXX_HAS_WIN32_THREAD_API _LIBCPP_HAS_THREAD_API_WIN32)
-config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
+config_define(${LIBCXX_HAS_PTHREAD_API} _LIBCPP_HAS_THREAD_API_PTHREAD)
+config_define(${LIBCXX_HAS_EXTERNAL_THREAD_API} _LIBCPP_HAS_THREAD_API_EXTERNAL)
+config_define(${LIBCXX_HAS_WIN32_THREAD_API} _LIBCPP_HAS_THREAD_API_WIN32)
+config_define(${LIBCXX_HAS_MUSL_LIBC} _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
-config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM)
-config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
-config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
-config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
-config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
-config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
-config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+config_define(${LIBCXX_ENABLE_FILESYSTEM} _LIBCPP_HAS_FILESYSTEM)
+config_define(${LIBCXX_ENABLE_RANDOM_DEVICE} _LIBCPP_HAS_RANDOM_DEVICE)
+config_define(${LIBCXX_ENABLE_LOCALIZATION} _LIBCPP_HAS_LOCALIZATION)
+config_define(${LIBCXX_ENABLE_UNICODE} _LIBCPP_HAS_UNICODE)
+config_define(${LIBCXX_ENABLE_WIDE_CHARACTERS} _LIBCPP_HAS_WIDE_CHARACTERS)
+config_define(${LIBCXX_ENABLE_TIME_ZONE_DATABASE} _LIBCPP_HAS_TIME_ZONE_DATABASE)
+config_define(${LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS} _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-# TODO(LLVM 19): Produce a deprecation warning.
+# TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
 if (LIBCXX_ENABLE_ASSERTIONS)
-  set(LIBCXX_HARDENING_MODE "extensive")
+  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been removed. Please use LIBCXX_HARDENING_MODE instead.")
 endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
   config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
@@ -868,10 +848,6 @@ add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
-
-if (LIBCXX_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
 
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(test)

@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 \
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 \
 ; RUN:     -mattr=+soft-float -mips16-hard-float -relocation-model=pic \
 ; RUN:     -mips16-constant-islands -verify-machineinstrs  < %s | \
 ; RUN:     FileCheck %s -check-prefix=b-no-short
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 \
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 \
 ; RUN:     -mattr=+soft-float -mips16-hard-float -relocation-model=pic \
 ; RUN:     -mips16-constant-islands -verify-machineinstrs < %s | \
 ; RUN:     FileCheck %s -check-prefix=b-long

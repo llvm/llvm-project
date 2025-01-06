@@ -1,6 +1,7 @@
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+amvs -o - %s  | FileCheck %s
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+v8.6a -o - %s | FileCheck %s
 // RUN: not llvm-mc -triple aarch64 -show-encoding -o - %s 2>&1  | FileCheck %s --check-prefix=CHECK-ERROR
+.text
 mrs x0, AMCG1IDR_EL0
 msr AMEVCNTVOFF00_EL2, x0
 msr AMEVCNTVOFF01_EL2, x0

@@ -19,7 +19,7 @@ define i64 @match_unsigned(i64 %x) {
 define <2 x i64> @match_unsigned_vector(<2 x i64> %x) {
 ; CHECK-LABEL: @match_unsigned_vector(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[UREM:%.*]] = urem <2 x i64> [[X:%.*]], <i64 19136, i64 19136>
+; CHECK-NEXT:    [[UREM:%.*]] = urem <2 x i64> [[X:%.*]], splat (i64 19136)
 ; CHECK-NEXT:    ret <2 x i64> [[UREM]]
 ;
 bb:
@@ -63,7 +63,7 @@ define i64 @match_signed(i64 %x) {
 define <2 x i64> @match_signed_vector(<2 x i64> %x) {
 ; CHECK-LABEL: @match_signed_vector(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SREM1:%.*]] = srem <2 x i64> [[X:%.*]], <i64 172224, i64 172224>
+; CHECK-NEXT:    [[SREM1:%.*]] = srem <2 x i64> [[X:%.*]], splat (i64 172224)
 ; CHECK-NEXT:    ret <2 x i64> [[SREM1]]
 ;
 bb:

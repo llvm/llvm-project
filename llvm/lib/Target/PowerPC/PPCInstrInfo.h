@@ -17,6 +17,7 @@
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -285,6 +286,9 @@ public:
   bool isZExt32To64(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::ZExt32To64;
   }
+  bool isMemriOp(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::MemriOp;
+  }
 
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,
@@ -454,7 +458,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -624,6 +629,10 @@ public:
                       const MachineRegisterInfo *MRI) const {
     return isSignOrZeroExtended(Reg, 0, MRI).second;
   }
+  void promoteInstr32To64ForElimEXTSW(const Register &Reg,
+                                      MachineRegisterInfo *MRI,
+                                      unsigned BinOpDepth,
+                                      LiveVariables *LV) const;
 
   bool convertToImmediateForm(MachineInstr &MI,
                               SmallSet<Register, 4> &RegsToUpdate,

@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -27,7 +28,7 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
   }
 
   Function *F = I.getParent()->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // Create a stack slot to hold the value.
   AllocaInst *Slot;
@@ -54,8 +55,8 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
     for (unsigned i = 0; i < CBI->getNumSuccessors(); i++) {
       auto *Succ = CBI->getSuccessor(i);
       if (!Succ->getSinglePredecessor()) {
-        assert(isCriticalEdge(II, i) && "Expected a critical edge!");
-        [[maybe_unused]] BasicBlock *BB = SplitCriticalEdge(II, i);
+        assert(isCriticalEdge(CBI, i) && "Expected a critical edge!");
+        [[maybe_unused]] BasicBlock *BB = SplitCriticalEdge(CBI, i);
         assert(BB && "Unable to split critical edge.");
       }
     }
@@ -134,7 +135,7 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterato
     return nullptr;
   }
 
-  const DataLayout &DL = P->getModule()->getDataLayout();
+  const DataLayout &DL = P->getDataLayout();
 
   // Create a stack slot to hold the value.
   AllocaInst *Slot;

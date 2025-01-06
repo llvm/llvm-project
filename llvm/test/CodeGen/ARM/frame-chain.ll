@@ -10,11 +10,14 @@
 define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-FP-LABEL: leaf:
 ; LEAF-FP:       @ %bb.0:
-; LEAF-FP-NEXT:    .pad #4
-; LEAF-FP-NEXT:    sub sp, sp, #4
-; LEAF-FP-NEXT:    str r0, [sp]
+; LEAF-FP-NEXT:    .save {r11, lr}
+; LEAF-FP-NEXT:    push {r11, lr}
+; LEAF-FP-NEXT:    .setfp r11, sp
+; LEAF-FP-NEXT:    mov r11, sp
+; LEAF-FP-NEXT:    push {r0}
 ; LEAF-FP-NEXT:    add r0, r0, #4
-; LEAF-FP-NEXT:    add sp, sp, #4
+; LEAF-FP-NEXT:    mov sp, r11
+; LEAF-FP-NEXT:    pop {r11, lr}
 ; LEAF-FP-NEXT:    mov pc, lr
 ;
 ; LEAF-FP-AAPCS-LABEL: leaf:

@@ -17,7 +17,7 @@
 #include "error.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 namespace {
 

@@ -3697,7 +3697,7 @@ define amdgpu_ps float @atomic_global_load_saddr_i32(ptr addrspace(1) inreg %sba
 ;
 ; GFX12-LABEL: atomic_global_load_saddr_i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] th:TH_LOAD_NT
+; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -3734,7 +3734,7 @@ define amdgpu_ps float @atomic_global_load_saddr_i32_immneg128(ptr addrspace(1) 
 ;
 ; GFX12-LABEL: atomic_global_load_saddr_i32_immneg128:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] offset:-128 th:TH_LOAD_NT
+; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -3772,7 +3772,7 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64(ptr addrspace(1) inre
 ;
 ; GFX12-LABEL: atomic_global_load_saddr_i64:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] th:TH_LOAD_NT
+; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -3809,7 +3809,7 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64_immneg128(ptr addrspa
 ;
 ; GFX12-LABEL: atomic_global_load_saddr_i64_immneg128:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:-128 th:TH_LOAD_NT
+; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog

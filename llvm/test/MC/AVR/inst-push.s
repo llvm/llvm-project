@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=sram -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s | llvm-objdump -d --mattr=sram - | FileCheck -check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s | llvm-objdump -dr --mattr=sram - | FileCheck -check-prefix=CHECK-INST %s
 
 foo:
-
   push r31
   push r25
   push r5

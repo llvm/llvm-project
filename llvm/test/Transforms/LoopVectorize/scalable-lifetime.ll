@@ -29,7 +29,7 @@ define void @test(ptr %d) {
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 100, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP8]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i32> splat (i32 100), ptr [[TMP8]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -101,7 +101,7 @@ define void @testloopvariant(ptr %d) {
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 100, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP8]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i32> splat (i32 100), ptr [[TMP8]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

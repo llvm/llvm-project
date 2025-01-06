@@ -60,6 +60,18 @@ def FeatureSmallStack
                        "The device has an 8-bit "
                        "stack pointer">;
 
+// The device potentially requires emitting rjmp that wraps across the flash
+// boundary.
+//
+// We enable this for devices that have exactly 8 kB of flash memory and don't
+// support the `jmp` instruction - with this feature enabled, we try to convert
+// out-of-bounds relative jumps into in-bounds by wrapping the offset, e.g.
+// `rjmp +5000` becomes `rjmp -3192`.
+def FeatureWrappingRjmp
+    : SubtargetFeature<"wrappingrjmp", "HasWrappingRjmp", "true",
+                       "The device potentially requires emitting rjmp that "
+                       "wraps across the flash boundary">;
+
 // The device supports the 16-bit GPR pair MOVW instruction.
 def FeatureMOVW : SubtargetFeature<"movw", "HasMOVW", "true",
                                    "The device supports the 16-bit MOVW "
@@ -274,11 +286,11 @@ def : Device<"at86rf401", FamilyAVR2, ELFArchAVR25, [FeatureMOVW, FeatureLPMX]>;
 def : Device<"at90s4414", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
 def : Device<"at90s4433", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
 def : Device<"at90s4434", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
-def : Device<"at90s8515", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90c8534", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90s8535", FamilyAVR2, ELFArchAVR2>;
-def : Device<"ata5272", FamilyAVR25, ELFArchAVR25>;
-def : Device<"ata6616c", FamilyAVR25, ELFArchAVR25>;
+def : Device<"at90s8515", FamilyAVR2, ELFArchAVR2, [FeatureWrappingRjmp]>;
+def : Device<"at90c8534", FamilyAVR2, ELFArchAVR2, [FeatureWrappingRjmp]>;
+def : Device<"at90s8535", FamilyAVR2, ELFArchAVR2, [FeatureWrappingRjmp]>;
+def : Device<"ata5272", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"ata6616c", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
 def : Device<"attiny13", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny13a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny2313", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
@@ -288,24 +300,24 @@ def : Device<"attiny24a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny4313", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny44", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny44a", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny84", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny84a", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny84", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"attiny84a", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
 def : Device<"attiny25", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny45", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny85", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny85", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
 def : Device<"attiny261", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny261a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny441", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny461", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny461a", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny841", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny861", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny861a", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny87", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny841", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"attiny861", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"attiny861a", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"attiny87", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
 def : Device<"attiny43u", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny48", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny88", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny828", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny88", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"attiny828", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
 def : Device<"at43usb355", FamilyAVR3, ELFArchAVR3>;
 def : Device<"at76c711", FamilyAVR3, ELFArchAVR3>;
 def : Device<"atmega103", FamilyAVR31, ELFArchAVR31>;
@@ -321,11 +333,11 @@ def : Device<"atmega16u2", FamilyAVR35, ELFArchAVR35>;
 def : Device<"atmega32u2", FamilyAVR35, ELFArchAVR35>;
 def : Device<"attiny1634", FamilyAVR35, ELFArchAVR35>;
 def : Device<"atmega8", FamilyAVR2, ELFArchAVR4,
-             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM]>;
+             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM, FeatureWrappingRjmp]>;
 def : Device<"ata6289", FamilyAVR4, ELFArchAVR4>;
 def : Device<"atmega8a", FamilyAVR2, ELFArchAVR4,
-             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM]>;
-def : Device<"ata6285", FamilyAVR4, ELFArchAVR4>;
+             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM, FeatureWrappingRjmp]>;
+def : Device<"ata6285", FamilyAVR4, ELFArchAVR4, [FeatureWrappingRjmp]>;
 def : Device<"ata6286", FamilyAVR4, ELFArchAVR4>;
 def : Device<"ata6612c", FamilyAVR4, ELFArchAVR4>;
 def : Device<"atmega48", FamilyAVR4, ELFArchAVR4>;
@@ -339,9 +351,9 @@ def : Device<"atmega88p", FamilyAVR4, ELFArchAVR4>;
 def : Device<"atmega88pa", FamilyAVR4, ELFArchAVR4>;
 def : Device<"atmega88pb", FamilyAVR4, ELFArchAVR4>;
 def : Device<"atmega8515", FamilyAVR2, ELFArchAVR4,
-             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM]>;
+             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM, FeatureWrappingRjmp]>;
 def : Device<"atmega8535", FamilyAVR2, ELFArchAVR4,
-             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM]>;
+             [FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM, FeatureWrappingRjmp]>;
 def : Device<"atmega8hva", FamilyAVR4, ELFArchAVR4>;
 def : Device<"at90pwm1", FamilyAVR4, ELFArchAVR4>;
 def : Device<"at90pwm2", FamilyAVR4, ELFArchAVR4>;

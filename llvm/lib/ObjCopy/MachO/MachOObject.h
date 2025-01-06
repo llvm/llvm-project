@@ -142,6 +142,7 @@ struct SymbolTable {
 
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
   SymbolEntry *getSymbolByIndex(uint32_t Index);
+  void updateSymbols(function_ref<void(SymbolEntry &)> Callable);
   void removeSymbols(
       function_ref<bool(const std::unique_ptr<SymbolEntry> &)> ToRemove);
 };

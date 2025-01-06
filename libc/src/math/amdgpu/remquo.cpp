@@ -10,8 +10,9 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, remquo, (double x, double y, int *quo)) {
   int tmp;
@@ -20,4 +21,4 @@ LLVM_LIBC_FUNCTION(double, remquo, (double x, double y, int *quo)) {
   return r;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

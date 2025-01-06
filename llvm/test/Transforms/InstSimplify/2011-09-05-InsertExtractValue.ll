@@ -7,12 +7,12 @@ define void @test1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @bar()
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EX:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    resume { ptr, i32 } [[EX]]
 ;
 entry:
@@ -53,7 +53,7 @@ define i32 @test3(i32 %a, float %b) {
 
 define i8 @test4(<8 x i8> %V) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[V:%.*]], bitcast (<1 x double> <double 0x319BEB8FD172E36> to <8 x i8>)
+; CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[V:%.*]], bitcast (<1 x double> splat (double 0x319BEB8FD172E36) to <8 x i8>)
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x i8> [[ADD]], i32 6
 ; CHECK-NEXT:    ret i8 [[EXTRACT]]
 ;

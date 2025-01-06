@@ -12,9 +12,10 @@
 //                     charT zero = charT('0'), charT one = charT('1')); // constexpr since C++23
 
 #include <bitset>
-#include <cassert>
 #include <algorithm> // for 'min' and 'max'
+#include <cassert>
 #include <stdexcept> // for 'invalid_argument'
+#include <type_traits>
 
 #include "test_macros.h"
 

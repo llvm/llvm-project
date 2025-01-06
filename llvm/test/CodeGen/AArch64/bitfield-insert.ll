@@ -735,3 +735,21 @@ define i32 @orr_not_bfxil_test2_i32(i32 %0) {
   %4 = or i32 %2, %3
   ret i32 %4
 }
+
+define i16 @implicit_trunc_of_imm(ptr %p, i16 %a, i16 %b) {
+; CHECK-LABEL: implicit_trunc_of_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w1, #0xffffe000
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    mov w10, w8
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    bfxil w10, w2, #0, #1
+; CHECK-NEXT:    strh w10, [x9]
+; CHECK-NEXT:    ret
+entry:
+  %and1 = and i16 %a, -8192
+  %and2 = and i16 %b, 1
+  %or = or i16 %and2, %and1
+  store i16 %or, ptr %p
+  ret i16 %and1
+}

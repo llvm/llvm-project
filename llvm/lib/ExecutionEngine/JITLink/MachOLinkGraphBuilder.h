@@ -83,10 +83,10 @@ protected:
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
 
-  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj, Triple TT,
+  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj,
+                        std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                         SubtargetFeatures Features,
                         LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
-
   LinkGraph &getGraph() const { return *G; }
 
   const object::MachOObjectFile &getObject() const { return Obj; }

@@ -46,6 +46,7 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  #define LLVM_Tdl_INC
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
+// CHECK-NEXT:  #include "llvm/Support/Compiler.h"
 // CHECK-NEXT:  #include <cstddef>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
@@ -90,20 +91,20 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 4;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
-// CHECK-NEXT:  Directive getTdlDirectiveKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_ABI Directive getTdlDirectiveKind(llvm::StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::StringRef getTdlDirectiveName(Directive D);
+// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlDirectiveName(Directive D);
 // CHECK-EMPTY:
-// CHECK-NEXT:  Clause getTdlClauseKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_ABI Clause getTdlClauseKind(llvm::StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::StringRef getTdlClauseName(Clause C);
+// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlClauseName(Clause C);
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
-// CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+// CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
-// CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
-// CHECK-NEXT:  Category getDirectiveCategory(Directive D);
+// CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
+// CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC

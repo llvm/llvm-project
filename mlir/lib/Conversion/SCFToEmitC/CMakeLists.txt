@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRSCFToEmitC
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIREmitCDialect
+  MLIREmitCTransforms
   MLIRSCFDialect
   MLIRTransforms
   )

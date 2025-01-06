@@ -1,0 +1,101 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+
+# RUN: llvm-mc --triple=x86_64 -filetype=obj a.s -o a.o
+# RUN: llvm-mc --triple=x86_64 -filetype=obj -crel a.s -o ac.o
+# RUN: llvm-mc --triple=x86_64 -filetype=obj data.s -o data.o
+# RUN: ld.lld a.o data.o -T 0.t 2>&1 | FileCheck %s --check-prefix=CHECK0 --implicit-check-not=warning:
+
+# CHECK0:      warning: 0.t:3: ignored with fewer than 2 output sections
+# CHECK0-NEXT: warning: 0.t:4: ignored with fewer than 2 output sections
+
+# RUN: not ld.lld a.o data.o -T 1.t 2>&1 | FileCheck %s --check-prefix=CHECK1 --implicit-check-not=error:
+# RUN: not ld.lld ac.o data.o -T 1.t 2>&1 | FileCheck %s --check-prefix=CHECK1 --implicit-check-not=error:
+# CHECK1:      error: a{{.?}}.o:(.text.start+0x11): prohibited cross reference from '.text' to 'data' in '.data'
+
+## .text and .text1 are in two NOCROSSREFS commands. Violations are reported twice.
+# RUN: not ld.lld --threads=1 a.o data.o -T 2.t 2>&1 | FileCheck %s --check-prefix=CHECK2 --implicit-check-not=error:
+# CHECK2:      error: a.o:(.text.start+0x6): prohibited cross reference from '.text' to '.text1' in '.text1'
+# CHECK2-NEXT: error: a.o:(.text.start+0x6): prohibited cross reference from '.text' to '.text1' in '.text1'
+# CHECK2-NEXT: error: a.o:(.text.start+0xb): prohibited cross reference from '.text' to 'foo2' in '.text2'
+# CHECK2-NEXT: error: a.o:(.text.start+0x11): prohibited cross reference from '.text' to 'data' in '.data'
+# CHECK2-NEXT: error: a.o:(.text.start+0x17): prohibited cross reference from '.text' to 'str1' in '.rodata'
+## .data occurs twice in the command, but the violation is only reported once.
+# CHECK2-NEXT: error: a.o:(.text1+0x1): prohibited cross reference from '.text1' to '_edata' in '.data'
+# CHECK2-NEXT: error: a.o:(.nonalloc+0x0): prohibited cross reference from '.nonalloc' to '.text' in '.text'
+# CHECK2-NEXT: error: a.o:(.nonalloc+0x10): prohibited cross reference from '.nonalloc' to 'data' in '.data'
+
+# RUN: not ld.lld a.o data.o -T 3.t 2>&1 | FileCheck %s --check-prefix=CHECK3 --implicit-check-not=error:
+# CHECK3:      error: a.o:(.nonalloc+0x0): prohibited cross reference from '.nonalloc' to '.text' in '.text'
+
+#--- 0.t
+## Some cases that do not cause errors.
+abs = 42;
+NOCROSSREFS()
+NOCROSSREFS (.text)
+NOCROSSREFS( .text .text3 );  ## ; is ignored
+NOCROSSREFS_TO(.text .text2 .text3 .data );
+NOCROSSREFS_TO (.data .text2 .text3)
+
+#--- 1.t
+abs = 42;
+NOCROSSREFS(.text ".data")
+
+#--- 2.t
+abs = 42;
+NOCROSSREFS(.text ".text1" .text ".text1" )
+NOCROSSREFS(.text .text1 .text2 .data .rodata .data .nonalloc)
+
+#--- 3.t
+abs = 42;
+NOCROSSREFS_TO(.text .text .text1 .text2 .data .nonalloc)
+
+#--- err1.t
+NOCROSSREFS )
+
+# RUN: not ld.lld a.o data.o -T err1.t 2>&1 | FileCheck %s --check-prefix=ERR1 --implicit-check-not=error:
+# ERR1: error: err1.t:1: ( expected, but got )
+
+#--- err2.t
+NOCROSSREFS(.text
+
+# RUN: not ld.lld a.o data.o -T err2.t 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
+# ERR2: error: err2.t:1: unexpected EOF
+
+#--- a.s
+.global _start, foo1, foo2, foo3
+.section .text.start,"ax"
+_start:
+  call _start
+  call .text1
+  call foo2
+  movl data(%rip), %eax
+  movl str1(%rip), %eax
+
+.section .text1,"ax"
+foo1:
+  call _edata
+
+.section .text2,"ax"
+foo2:
+  call foo3
+
+.section .text3,"ax"
+foo3:
+  call foo2
+
+.section .rodata.str1.1,"aMS",@progbits,1
+str1:
+  .asciz "abc"
+
+.section .nonalloc,""
+  .quad .text
+  .quad .text3
+  .quad data
+
+#--- data.s
+.section .data,"aw"
+.globl data
+data:
+  .byte 0
+  .quad abs

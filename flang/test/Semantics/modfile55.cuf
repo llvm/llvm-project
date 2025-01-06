@@ -14,6 +14,10 @@ module m
   attributes(host,device) real function foo(x)
     foo = x + 1.
   end function
+  attributes(host) subroutine hostsub(a)
+    integer, intent(out) :: a(14)
+    a = 99
+  end subroutine
 end
 
 !Expect: m.mod
@@ -38,4 +42,7 @@ end
 !real(4)::x
 !real(4)::foo
 !end
+attributes(host)subroutinehostsub(a)
+integer(4),intent(out)::a(1_8:14_8)
+end
 !end

@@ -130,12 +130,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Memory allocated by malloc() should be deallocated by free(), not &apos;delete&apos;</string>
+     <string>Memory allocated by &apos;malloc()&apos; should be deallocated by &apos;free()&apos;, not &apos;delete&apos;</string>
      <key>message</key>
-     <string>Memory allocated by malloc() should be deallocated by free(), not &apos;delete&apos;</string>
+     <string>Memory allocated by &apos;malloc()&apos; should be deallocated by &apos;free()&apos;, not &apos;delete&apos;</string>
     </dict>
    </array>
-   <key>description</key><string>Memory allocated by malloc() should be deallocated by free(), not &apos;delete&apos;</string>
+   <key>description</key><string>Memory allocated by &apos;malloc()&apos; should be deallocated by &apos;free()&apos;, not &apos;delete&apos;</string>
    <key>category</key><string>Memory error</string>
    <key>type</key><string>Bad deallocator</string>
    <key>check_name</key><string>unix.MismatchedDeallocator</string>

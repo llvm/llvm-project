@@ -10,7 +10,6 @@ subroutine wsloop_ordered_no_para()
 ! CHECK-NEXT: omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 
   !$omp do ordered
@@ -32,7 +31,6 @@ subroutine wsloop_ordered_with_para()
 ! CHECK-NEXT: omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:        omp.yield
 ! CHECK:      }
-! CHECK:      omp.terminator
 ! CHECK:    }
 
   !$omp do ordered(1)

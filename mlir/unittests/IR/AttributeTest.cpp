@@ -351,6 +351,21 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   EXPECT_FALSE(isa<DenseBoolResourceElementsAttr>(i32ResourceAttr));
 }
 
+TEST(DenseResourceElementsAttrTest, CheckNotMutableAllocateAndCopy) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Create a i32 attribute.
+  std::vector<int32_t> data = {10, 20, 30};
+  auto type = RankedTensorType::get(data.size(), builder.getI32Type());
+  Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
+      type, "resource",
+      HeapAsmResourceBlob::allocateAndCopyInferAlign<int32_t>(
+          data, /*is_mutable=*/false));
+
+  EXPECT_TRUE(isa<DenseI32ResourceElementsAttr>(i32ResourceAttr));
+}
+
 TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
   MLIRContext context;
   Builder builder(&context);
@@ -498,7 +513,7 @@ TEST(CopyCountAttr, PrintStripped) {
   os << "|" << res << "|";
   res.printStripped(os << "[");
   os << "]";
-  EXPECT_EQ(os.str(), "|#test.copy_count<hello>|[copy_count<hello>]");
+  EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
 
 } // namespace

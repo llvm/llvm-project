@@ -9,8 +9,8 @@ define void @select_umin_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_umin_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -68,8 +68,8 @@ define void @select_umin_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_umin_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -104,10 +104,10 @@ define void @select_ule_ugt_mix_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_ule_ugt_mix_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i32> [[TMP1]], splat (i32 16383)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -144,8 +144,8 @@ define void @select_umin_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umin_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -169,8 +169,8 @@ define void @select_umin_ule_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_umin_ule_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -228,8 +228,8 @@ define void @select_umin_ule_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_umin_ule_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -266,8 +266,8 @@ define void @select_umin_ule_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umin_ule_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -290,8 +290,8 @@ define void @select_smin_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_smin_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -349,8 +349,8 @@ define void @select_smin_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_smin_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -387,8 +387,8 @@ define void @select_smin_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smin_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -411,8 +411,8 @@ define void @select_smin_sle_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_smin_sle_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -470,8 +470,8 @@ define void @select_smin_sle_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_smin_sle_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -508,8 +508,8 @@ define void @select_smin_sle_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smin_sle_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -531,8 +531,8 @@ define void @select_umax_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_umax_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -590,8 +590,8 @@ define void @select_umax_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_umax_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -628,8 +628,8 @@ define void @select_umax_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umax_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -652,8 +652,8 @@ define void @select_umax_uge_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_umax_uge_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -711,8 +711,8 @@ define void @select_umax_uge_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_umax_uge_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -749,8 +749,8 @@ define void @select_umax_uge_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umax_uge_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -773,8 +773,8 @@ define void @select_smax_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_smax_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -832,8 +832,8 @@ define void @select_smax_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_smax_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -870,8 +870,8 @@ define void @select_smax_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smax_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -895,8 +895,8 @@ define void @select_smax_sge_8xi16(ptr %ptr, i16 %x) {
 ; CHECK-LABEL: @select_smax_sge_8xi16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <8 x i16> [[TMP1]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP1]], <8 x i16> splat (i16 16383)
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -954,8 +954,8 @@ define void @select_smax_sge_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_smax_sge_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 16383, i32 16383, i32 16383, i32 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <4 x i32> [[TMP1]], splat (i32 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -992,8 +992,8 @@ define void @select_smax_sge_2xi64(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smax_sge_2xi64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <2 x i64> [[TMP1]], <i64 16383, i64 16383>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <2 x i64> [[TMP1]], splat (i64 16383)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> splat (i64 16383)
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;

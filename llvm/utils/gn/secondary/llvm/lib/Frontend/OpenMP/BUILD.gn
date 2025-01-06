@@ -2,6 +2,7 @@ static_library("OpenMP") {
   output_name = "LLVMFrontendOpenMP"
   deps = [
     "//llvm/lib/Analysis",
+    "//llvm/lib/Frontend/Atomic",
     "//llvm/lib/Frontend/Offloading",
     "//llvm/lib/IR",
     "//llvm/lib/MC",

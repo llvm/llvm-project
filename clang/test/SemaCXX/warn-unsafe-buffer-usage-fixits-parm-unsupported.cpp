@@ -118,7 +118,7 @@ void isArrayDecayToPointerUPC(int a[][10], int (*b)[10]) {
 // expected-warning@-2{{'b' is an unsafe pointer used for buffer access}}
   int tmp;
 
-  tmp = a[5][5] + b[5][5];  // expected-warning2{{unsafe buffer access}}  expected-note2{{used in buffer access here}}
+  tmp = a[5][5] + b[5][5];  // expected-note2{{used in buffer access here}}
 }
 
 // parameter having default values:

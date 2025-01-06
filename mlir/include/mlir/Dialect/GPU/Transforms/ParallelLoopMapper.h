@@ -21,7 +21,6 @@
 namespace mlir {
 
 class AffineMap;
-struct LogicalResult;
 class Operation;
 class Region;
 

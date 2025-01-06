@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __clang__ // 16.0.3 lacks <charconv>
-
 #include "gtest/gtest.h"
 #include "flang/Runtime/time-intrinsic.h"
 #include <algorithm>
@@ -89,6 +87,7 @@ TEST(TimeIntrinsics, SystemClock) {
 }
 
 TEST(TimeIntrinsics, DateAndTime) {
+  errno = 0;
   constexpr std::size_t bufferSize{16};
   std::string date(bufferSize, 'Z'), time(bufferSize, 'Z'),
       zone(bufferSize, 'Z');
@@ -163,4 +162,3 @@ TEST(TimeIntrinsics, DateAndTime) {
     EXPECT_LE(minutes, 59);
   }
 }
-#endif // __clang__

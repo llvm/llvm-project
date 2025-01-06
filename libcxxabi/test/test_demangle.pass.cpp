@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The demangler does not pass all these tests with the system dylibs on macOS.
-// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-
 // This test is too big for most embedded devices.
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
-// https://llvm.org/PR51407 was not fixed in some previously-released
-// demanglers, which causes them to run into the infinite loop.
-// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx11.0
+// This test exercises support for char array initializer lists added in
+// dd8b266ef.
+// UNSUPPORTED: using-built-library-before-llvm-20
 
 // Android's long double on x86[-64] is (64/128)-bits instead of Linux's usual
 // 80-bit format, and this demangling test is failing on it.
 // XFAIL: LIBCXX-ANDROID-FIXME && target={{i686|x86_64}}-{{.+}}-android{{.*}}
+
+// XFAIL: win32-broken-printf-a-precision
 
 #include "support/timer.h"
 #include <algorithm>
@@ -35,9 +33,8 @@
 // Is long double fp128?
 #define LDBL_FP128 (__LDBL_MANT_DIG__ == 113)
 
-// clang-format off
-const char* cases[][2] =
-{
+const char *cases[][2] = {
+    // clang-format off
     {"_Z1A", "A"},
     {"_Z1Av", "A()"},
     {"_Z1A1B1C", "A(B, C)"},
@@ -29837,6 +29834,7 @@ const char* cases[][2] =
     {"_ZN5Casts5auto_IiEEvDTnw_DapicvT__EEE", "void Casts::auto_<int>(decltype(new auto((int)())))"},
     {"_ZN5Casts7scalar_IiEEvDTcmcvT__Ecvi_EE", "void Casts::scalar_<int>(decltype((int)(), (int)()))"},
     {"_ZN5test11aIsEEDTcl3foocvT__EEES1_", "decltype(foo((short)())) test1::a<short>(short)"},
+    {"_ZN5test11bIsEEDTcp3foocvT__EEES1_", "decltype((foo)((short)())) test1::b<short>(short)"},
     {"_ZN5test21aIPFfvEEEvT_DTclfL0p_EE", "void test2::a<float (*)()>(float (*)(), decltype(fp()))"},
     {"_ZN5test21bIPFfvEEEDTclfp_EET_", "decltype(fp()) test2::b<float (*)()>(float (*)())"},
     {"_ZN5test21cIPFfvEEEvT_PFvDTclfL1p_EEE", "void test2::c<float (*)()>(float (*)(), void (*)(decltype(fp())))"},
@@ -30026,6 +30024,9 @@ const char* cases[][2] =
     // See https://github.com/itanium-cxx-abi/cxx-abi/issues/165.
     {"_ZN1C1fIiEEvDTtlNS_UlT_TL0__E_EEE", "void C::f<int>(decltype(C::'lambda'(int, auto){}))"},
 
+    // See https://github.com/llvm/llvm-project/issues/108009.
+    {"_ZN3FooIiE6methodIb3BarEEvT0_IT_ES3_IiE", "void Foo<int>::method<bool, Bar>(Bar<bool>, Bar<int>)"},
+
     // C++20 class type non-type template parameters:
     {"_Z1fIXtl1BLPi0ELi1EEEEvv", "void f<B{(int*)0, 1}>()"},
     {"_Z1fIXtl1BLPi32EEEEvv", "void f<B{(int*)32}>()"},
@@ -30039,7 +30040,32 @@ const char* cases[][2] =
     // FIXME: This is not valid pointer-to-member syntax.
     {"_Z1fIXtl1DmcM7DerivedKiadL_ZN11MoreDerived1zEEn8EEEEvv", "void f<D{(int const Derived::*)(&MoreDerived::z)}>()"},
     {"_Z1fIXtl1Edi1nLi42EEEEvv", "void f<E{.n = 42}>()"},
-    {"_ZTAXtl1StlA32_cLc104ELc101ELc108ELc108ELc111ELc32ELc119ELc111ELc114ELc108ELc100EEEE", "template parameter object for S{char [32]{(char)104, (char)101, (char)108, (char)108, (char)111, (char)32, (char)119, (char)111, (char)114, (char)108, (char)100}}"},
+    // Arrays of char are formatted as string literals. Escape sequences are
+    // used for non-printable ASCII characters.
+    // FIXME: We should do the same for arrays of charN_t and wchar_t.
+    {"_ZTAXtl1StlA32_cLc104ELc101ELc108ELc108ELc111ELc32ELc119ELc111ELc114ELc108ELc100EEEE", "template parameter object for S{\"hello world\"}"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc108ELc108ELc111EEEEEvv", "void f<Hello{\"Hello\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc108ELc111EEEEEvv", "void f<Hello{\"Helo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc0ELc108ELc111EEEEEvv", "void f<Hello{\"He\\0lo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc1ELc108ELc111EEEEEvv", "void f<Hello{\"He\\1lo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc6ELc108ELc111EEEEEvv", "void f<Hello{\"He\\6lo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc7ELc108ELc111EEEEEvv", "void f<Hello{\"He\\alo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc8ELc108ELc111EEEEEvv", "void f<Hello{\"He\\blo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc9ELc108ELc111EEEEEvv", "void f<Hello{\"He\\tlo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc10ELc108ELc111EEEEEvv", "void f<Hello{\"He\\nlo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc11ELc108ELc111EEEEEvv", "void f<Hello{\"He\\vlo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc12ELc108ELc111EEEEEvv", "void f<Hello{\"He\\flo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc13ELc108ELc111EEEEEvv", "void f<Hello{\"He\\rlo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc14ELc108ELc111EEEEEvv", "void f<Hello{\"He\\xElo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc15ELc108ELc111EEEEEvv", "void f<Hello{\"He\\xFlo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc16ELc108ELc111EEEEEvv", "void f<Hello{\"He\\x10lo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc34ELc108ELc111EEEEEvv", "void f<Hello{\"He\\\"lo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc72ELc101ELc92ELc108ELc111EEEEEvv", "void f<Hello{\"He\\\\lo\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc15ELc101ELc108ELc108ELc111EEEEEvv", "void f<Hello{\"\\xF\"\"ello\"}>()"},
+    {"_Z1fIXtl5HellotlA6_cLc240ELc159ELc152ELc138ELc33EEEEEvv", "void f<Hello{\"😊!\"}>()"},
+    // Even non-null-terminated strings get this treatment, even though this
+    // isn't valid C++ syntax to initialize an array of char.
+    {"_Z1fIXtl5HellotlA5_cLc72ELc101ELc108ELc108ELc111EEEEEvv", "void f<Hello{\"Hello\"}>()"},
 
     // FIXME: This is wrong; the S2_ backref should expand to OT_ and then to
     // "double&&". But we can't cope with a substitution that represents a
@@ -30102,11 +30128,15 @@ const char* cases[][2] =
     // C++20 concepts, see https://github.com/itanium-cxx-abi/cxx-abi/issues/24.
     {"_Z2f0IiE1SIX1CIT_EEEv", "S<C<int>> f0<int>()"},
     {"_ZN5test21AIiEF1fEzQ4TrueIT_E", "test2::A<int>::friend f(...) requires True<T>"},
-    {"_ZN5test2F1gIvEEvzQaa4TrueIT_E4TrueITL0__E", "void test2::friend g<void>(...) requires True<T> && True<TL0_>"},
+    {"_ZN5test21AIbEF1fEzQ4TrueIT_E", "test2::A<bool>::friend f(...) requires True<T>"},
+    {"_ZN5test21AIiEF1gIvEEvzQaa4TrueIT_E4TrueITL0__E", "void test2::A<int>::friend g<void>(...) requires True<T> && True<TL0_>"},
+    {"_ZN5test21AIbEF1gIvEEvzQaa4TrueIT_E4TrueITL0__E", "void test2::A<bool>::friend g<void>(...) requires True<T> && True<TL0_>"},
     {"_ZN5test21hIvEEvzQ4TrueITL0__E", "void test2::h<void>(...) requires True<TL0_>"},
-    {"_ZN5test2F1iIvQaa4TrueIT_E4TrueITL0__EEEvz", "void test2::friend i<void>(...)"},
+    {"_ZN5test21AIiEF1iIvQaa4TrueIT_E4TrueITL0__EEEvz", "void test2::A<int>::friend i<void>(...)"},
+    {"_ZN5test21AIbEF1iIvQaa4TrueIT_E4TrueITL0__EEEvz", "void test2::A<bool>::friend i<void>(...)"},
     {"_ZN5test21jIvQ4TrueITL0__EEEvz", "void test2::j<void>(...)"},
-    {"_ZN5test2F1kITk4TruevQ4TrueIT_EEEvz", "void test2::friend k<void>(...)"},
+    {"_ZN5test21AIiEF1kITk4TruevQ4TrueIT_EEEvz", "void test2::A<int>::friend k<void>(...)"},
+    {"_ZN5test21AIbEF1kITk4TruevQ4TrueIT_EEEvz", "void test2::A<bool>::friend k<void>(...)"},
     {"_ZN5test21lITk4TruevEEvz", "void test2::l<void>(...)"},
     {"_ZN5test31dITnDaLi0EEEvv", "void test3::d<0>()"},
     {"_ZN5test31eITnDcLi0EEEvv", "void test3::e<0>()"},
@@ -30139,6 +30169,7 @@ const char* cases[][2] =
     {"_ZZN5test71fIiEEvvENKUlTyQaa1CIT_E1CITL0__ET0_E0_clIiiEEDaS3_Qaa1CIDtfp_EELb1E", "auto void test7::f<int>()::'lambda0'<typename $T> requires C<T> && C<TL0_> (auto)::operator()<int, int>(auto) const requires C<decltype(fp)> && true"},
     {"_ZZN5test71fIiEEvvENKUlTyQaa1CIT_E1CITL0__ET0_E1_clIiiEEDaS3_Q1CIDtfp_EE", "auto void test7::f<int>()::'lambda1'<typename $T> requires C<T> && C<TL0_> (auto)::operator()<int, int>(auto) const requires C<decltype(fp)>"},
     {"_ZZN5test71fIiEEvvENKUlTyT0_E_clIiiEEDaS1_", "auto void test7::f<int>()::'lambda'<typename $T>(auto)::operator()<int, int>(auto) const"},
+    {"_ZN3FooIiE6methodITk4TrueIT_EiEEvS3_", "void Foo<int>::method<int>(T)"},
 
     // C++20 requires expressions, see https://github.com/itanium-cxx-abi/cxx-abi/issues/24.
     {"_Z1fIiEviQrqXcvT__EXfp_Xeqfp_cvS0__EXplcvS0__ELi1ER5SmallXmicvS0__ELi1ENXmlcvS0__ELi2ENR11SmallerThanILi1234EETS0_T1XIS0_ETNS3_4typeETS2_IiEQ11SmallerThanIS0_Li256EEE", "void f<int>(int) requires requires { (T)(); fp; fp == (T)(); {(T)() + 1} -> Small; {(T)() - 1} noexcept; {(T)() * 2} noexcept -> SmallerThan<1234>; typename T; typename X<T>; typename X<T>::type; typename X<int>; requires SmallerThan<T, 256>; }"},
@@ -30188,16 +30219,43 @@ const char* cases[][2] =
     {"_ZZN3Foo3fooEiENH4Foo24foo2EOKS0_", "Foo::foo(int)::Foo2::foo2(this Foo2 const&&)"},
     {"_ZZNH3Foo3fooES_iENK4Foo24foo2Ev", "Foo::foo(this Foo, int)::Foo2::foo2() const" },
     {"_ZNH3FooclERKS_", "Foo::operator()(this Foo const&)"},
+
+    // fixed-point types as defined in the N1169 draft of ISO/IEC DTR 18037
+    {"_Z1fDAs", "f(short _Accum)"},
+    {"_Z1fDAt", "f(unsigned short _Accum)"},
+    {"_Z1fDAi", "f(_Accum)"},
+    {"_Z1fDAj", "f(unsigned _Accum)"},
+    {"_Z1fDAl", "f(long _Accum)"},
+    {"_Z1fDAm", "f(unsigned long _Accum)"},
+    {"_Z1fDRs", "f(short _Fract)"},
+    {"_Z1fDRt", "f(unsigned short _Fract)"},
+    {"_Z1fDRi", "f(_Fract)"},
+    {"_Z1fDRj", "f(unsigned _Fract)"},
+    {"_Z1fDRl", "f(long _Fract)"},
+    {"_Z1fDRm", "f(unsigned long _Fract)"},
+    {"_Z1fDSDAs", "f(_Sat short _Accum)"},
+    {"_Z1fDSDAt", "f(_Sat unsigned short _Accum)"},
+    {"_Z1fDSDAi", "f(_Sat _Accum)"},
+    {"_Z1fDSDAj", "f(_Sat unsigned _Accum)"},
+    {"_Z1fDSDAl", "f(_Sat long _Accum)"},
+    {"_Z1fDSDAm", "f(_Sat unsigned long _Accum)"},
+    {"_Z1fDSDRs", "f(_Sat short _Fract)"},
+    {"_Z1fDSDRt", "f(_Sat unsigned short _Fract)"},
+    {"_Z1fDSDRi", "f(_Sat _Fract)"},
+    {"_Z1fDSDRj", "f(_Sat unsigned _Fract)"},
+    {"_Z1fDSDRl", "f(_Sat long _Fract)"},
+    {"_Z1fDSDRm", "f(_Sat unsigned long _Fract)"},
+    // clang-format on
 };
-// clang-format on
 
 const unsigned N = sizeof(cases) / sizeof(cases[0]);
 
 struct FPLiteralCase {
-  const char* mangled;
+  const char *mangled;
   // There are four possible demanglings of a given float.
   std::string expecting[4];
 } fp_literal_cases[] = {
+    // clang-format off
     {"_ZN5test01gIfEEvRAszplcvT__ELf40a00000E_c",
      {
          "void test0::g<float>(char (&) [sizeof ((float)() + 0x1.4p+2f)])",
@@ -30223,15 +30281,17 @@ struct FPLiteralCase {
 #endif
 #if LDBL_FP128
     // A 32-character FP literal of long double type
-    {"3FooILeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeEE", {"Foo<-0x1.eeeeeeeeeeeeeeeeeeeeeeeeeeeep+12015L>"}},
+    {"3FooILeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeEE",
+     {"Foo<-0x1.eeeeeeeeeeeeeeeeeeeeeeeeeeeep+12015L>"}},
 #endif
+    // clang-format on
 };
 const unsigned NF = sizeof(fp_literal_cases) / sizeof(fp_literal_cases[0]);
-const unsigned NEF = sizeof(fp_literal_cases[0].expecting) / sizeof(fp_literal_cases[0].expecting[0]);
+const unsigned NEF = sizeof(fp_literal_cases[0].expecting) /
+                     sizeof(fp_literal_cases[0].expecting[0]);
 
-
-const char* invalid_cases[] =
-{
+const char *invalid_cases[] = {
+    // clang-format off
     "_ZIPPreEncode",
     "Agentt",
     "NSoERj5E=Y1[uM:ga",
@@ -30242,7 +30302,7 @@ const char* invalid_cases[] =
 #if !LDBL_FP80
     "_ZN5test01hIfEEvRAcvjplstT_Le4001a000000000000000E_c",
 #endif
-	// The following test cases were found by libFuzzer+ASAN
+    // The following test cases were found by libFuzzer+ASAN
     "\x44\x74\x70\x74\x71\x75\x34\x43\x41\x72\x4D\x6E\x65\x34\x9F\xC1\x43\x41\x72\x4D\x6E\x77\x38\x9A\x8E\x44\x6F\x64\x6C\x53\xF9\x5F\x70\x74\x70\x69\x45\x34\xD3\x73\x9E\x2A\x37",
     "\x4D\x41\x72\x63\x4E\x39\x44\x76\x72\x4D\x34\x44\x53\x4B\x6F\x44\x54\x6E\x61\x37\x47\x77\x78\x38\x43\x27\x41\x5F\x73\x70\x69\x45*",
     "\x41\x64\x6E\x32*",
@@ -30288,128 +30348,114 @@ const char* invalid_cases[] =
     "_ZGI3Foo",
     "_ZGIW3Foov",
     "W1x",
+    // clang-format on
 };
 
 const unsigned NI = sizeof(invalid_cases) / sizeof(invalid_cases[0]);
 
-void test()
-{
-    std::size_t len = 0;
-    char* buf = nullptr;
-    bool failed = false;
-    for (unsigned i = 0; i < N; ++i)
-    {
-        int status;
-        char* demang =
-            __cxxabiv1::__cxa_demangle(cases[i][0], buf, &len, &status);
-        if (!demang || std::strcmp(demang, cases[i][1]) != 0)
-        {
-          std::fprintf(stderr, "ERROR demangling %s\n"
-                       "expected: %s\n"
-                       "got: %d,   %s\n",
-                       cases[i][0], cases[i][1], status,
-                       demang ? demang : "(null)");
-          failed = true;
-        }
-        if (demang)
-          buf = demang;
+void test() {
+  std::size_t len = 0;
+  char *buf = nullptr;
+  bool failed = false;
+  for (unsigned i = 0; i < N; ++i) {
+    int status;
+    char *demang = __cxxabiv1::__cxa_demangle(cases[i][0], buf, &len, &status);
+    if (!demang || std::strcmp(demang, cases[i][1]) != 0) {
+      std::fprintf(stderr,
+                   "ERROR demangling %s\n"
+                   "expected: %s\n"
+                   "got: %d,   %s\n",
+                   cases[i][0], cases[i][1], status,
+                   demang ? demang : "(null)");
+      failed = true;
     }
-    free(buf);
-    assert(!failed && "demangle failed");
+    if (demang)
+      buf = demang;
+  }
+  free(buf);
+  assert(!failed && "demangle failed");
 }
 
-void test_invalid_cases()
-{
-    std::size_t len = 0;
-    char* buf = nullptr;
-    bool passed = false;
-    for (unsigned i = 0; i < NI; ++i)
-    {
-        int status;
-        char* demang =
-            __cxxabiv1::__cxa_demangle(invalid_cases[i], buf, &len, &status);
-        if (status != -2)
-        {
-            std::printf("%s should be invalid but is not\n", invalid_cases[i]);
-            std::printf("Got: %d, %s\n", status, demang ? demang : "(null)");
-            passed = true;
-        }
-        if (demang)
-          buf = demang;
+void test_invalid_cases() {
+  std::size_t len = 0;
+  char *buf = nullptr;
+  bool passed = false;
+  for (unsigned i = 0; i < NI; ++i) {
+    int status;
+    char *demang =
+        __cxxabiv1::__cxa_demangle(invalid_cases[i], buf, &len, &status);
+    if (status != -2) {
+      std::printf("%s should be invalid but is not\n", invalid_cases[i]);
+      std::printf("Got: %d, %s\n", status, demang ? demang : "(null)");
+      passed = true;
     }
-    free(buf);
-    assert(!passed && "demangle did not fail");
+    if (demang)
+      buf = demang;
+  }
+  free(buf);
+  assert(!passed && "demangle did not fail");
 }
 
-const char *xfail_cases[] = {
-    // FIXME: Why does clang generate the "cp" expr?
-    "_ZN5test11bIsEEDTcp3foocvT__EEES1_",
+const char *const xfail_cases[] = {
+    // Sentinel value
+    nullptr,
 };
 
-const size_t num_xfails = sizeof(xfail_cases) / sizeof(xfail_cases[0]);
-
-void test_xfail_cases()
-{
-    std::size_t len = 0;
-    char* buf = nullptr;
-    for (std::size_t i = 0; i < num_xfails; ++i)
-    {
-        int status;
-        char* demang = __cxxabiv1::__cxa_demangle(xfail_cases[i], buf, &len, &status);
-        if (status != -2)
-        {
-            std::printf("%s was documented as xfail but passed\n", xfail_cases[i]);
-            std::printf("Got status = %d\n", status);
-            assert(status == -2);
-        }
-        else
-        {
-            buf = demang;
-        }
+void test_xfail_cases() {
+  std::size_t len = 0;
+  char *buf = nullptr;
+  for (const char *c_str : xfail_cases) {
+    if (!c_str)
+      break;
+    int status;
+    char *demang = __cxxabiv1::__cxa_demangle(c_str, buf, &len, &status);
+    if (status != -2) {
+      std::printf("%s was documented as xfail but passed\n", c_str);
+      std::printf("Got status = %d\n", status);
+      assert(status == -2);
+    } else {
+      buf = demang;
     }
-    free(buf);
+  }
+  free(buf);
 }
 
-void testFPLiterals()
-{
-    std::size_t len = 0;
-    char* buf = nullptr;
-    for (unsigned i = 0; i < NF; ++i)
-    {
-        FPLiteralCase *fpCase = fp_literal_cases+i;
-        int status;
-        char* demang = __cxxabiv1::__cxa_demangle(fpCase->mangled, buf, &len, &status);
-        if (demang == 0)
-        {
-            std::printf("%s -> %s\n", fpCase->mangled, fpCase->expecting[0].c_str());
-            std::printf("Got instead: NULL, %d\n", status);
-            assert(false);
-            continue;
-        }
-        std::string *e_beg = fpCase->expecting;
-        std::string *e_end = fpCase->expecting + NEF;
-        if (std::find(e_beg, e_end, demang) == e_end)
-        {
-            std::printf("%s -> %s\n", fpCase->mangled, fpCase->expecting[0].c_str());
-            std::printf("Got instead: %s\n", demang);
-            assert(false);
-            continue;
-        }
-        buf = demang;
+void testFPLiterals() {
+  std::size_t len = 0;
+  char *buf = nullptr;
+  for (unsigned i = 0; i < NF; ++i) {
+    FPLiteralCase *fpCase = fp_literal_cases + i;
+    int status;
+    char *demang =
+        __cxxabiv1::__cxa_demangle(fpCase->mangled, buf, &len, &status);
+    if (demang == 0) {
+      std::printf("%s -> %s\n", fpCase->mangled, fpCase->expecting[0].c_str());
+      std::printf("Got instead: NULL, %d\n", status);
+      assert(false);
+      continue;
     }
-    free(buf);
+    std::string *e_beg = fpCase->expecting;
+    std::string *e_end = fpCase->expecting + NEF;
+    if (std::find(e_beg, e_end, demang) == e_end) {
+      std::printf("%s -> %s\n", fpCase->mangled, fpCase->expecting[0].c_str());
+      std::printf("Got instead: %s\n", demang);
+      assert(false);
+      continue;
+    }
+    buf = demang;
+  }
+  free(buf);
 }
 
-int main(int, char**)
-{
-    std::printf("Testing %d symbols.\n", N);
-    {
-        timer t;
-        test();
-        test_invalid_cases();
-        test_xfail_cases();
-        testFPLiterals();
-    }
+int main(int, char **) {
+  std::printf("Testing %d symbols.\n", N);
+  {
+    timer t;
+    test();
+    test_invalid_cases();
+    test_xfail_cases();
+    testFPLiterals();
+  }
 #if 0
     std::string input;
     while (std::cin)
@@ -30445,5 +30491,5 @@ int main(int, char**)
     }
 #endif
 
-    return 0;
+  return 0;
 }

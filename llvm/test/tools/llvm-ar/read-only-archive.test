@@ -11,12 +11,12 @@
 # RUN: chmod 444 %t/archive.a
 
 # RUN: not llvm-ar r %t/archive.a %t/3.txt \
-# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a
+# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a -DMSG=%errc_ENOENT
 
-# ERROR: error: [[FILE]]: no such file or directory
+# ERROR: error: [[FILE]]: [[MSG]]
 
 # RUN: not llvm-ar q %t/archive.a %t/3.txt \
-# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a
+# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a -DMSG=%errc_ENOENT
 
 # RUN: not llvm-ar m %t/archive.a t/1.txt \
 # RUN:   FileCheck %s --check-prefix=ERROR-2 -DFILE=%t/archive.a

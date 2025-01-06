@@ -1,4 +1,4 @@
-; RUN: llc -O0 < %s -march=avr | FileCheck %s
+; RUN: llc -O0 < %s -mtriple=avr | FileCheck %s
 
 ; CHECK-LABEL: read_sp:
 ; CHECK: in r24, 61

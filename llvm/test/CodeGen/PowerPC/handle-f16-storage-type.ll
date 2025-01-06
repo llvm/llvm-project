@@ -666,7 +666,6 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 80
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs0, vs61, vs1
 ; P8-NEXT:    xxmrghd vs1, vs63, vs62
 ; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
@@ -776,7 +775,6 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 80
 ; P8-NEXT:    xxmrghd vs35, vs63, vs62
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs34, vs61, vs1
 ; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
 ; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
@@ -1005,11 +1003,10 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; P8-NEXT:    stdu r1, -128(r1)
 ; P8-NEXT:    li r3, 48
 ; P8-NEXT:    std r0, 144(r1)
-; P8-NEXT:    std r27, 88(r1) # 8-byte Folded Spill
 ; P8-NEXT:    xxswapd vs1, vs34
+; P8-NEXT:    std r27, 88(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r28, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r29, 104(r1) # 8-byte Folded Spill
-; P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r7
 ; P8-NEXT:    stxvd2x vs62, r1, r3 # 16-byte Folded Spill
@@ -1019,9 +1016,8 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; P8-NEXT:    vmr v31, v3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r29, r3
 ; P8-NEXT:    xxswapd vs1, vs63
-; P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; P8-NEXT:    mr r29, r3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlor f1, vs62, vs62
@@ -1238,7 +1234,6 @@ define half @PR40273(half) #0 {
 ; P8-NEXT:    vspltisw v2, 1
 ; P8-NEXT:    xvcvsxwdp vs1, vs34
 ; P8-NEXT:  .LBB20_2:
-; P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P8-NEXT:    addi r1, r1, 32
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1253,12 +1248,10 @@ define half @PR40273(half) #0 {
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f0, f0
 ; CHECK-NEXT:    fcmpu cr0, f0, f1
-; CHECK-NEXT:    beq cr0, .LBB20_2
+; CHECK-NEXT:    beqlr cr0
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    vspltisw v2, 1
 ; CHECK-NEXT:    xvcvsxwdp vs1, vs34
-; CHECK-NEXT:  .LBB20_2:
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; SOFT-LABEL: PR40273:

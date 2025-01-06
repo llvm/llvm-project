@@ -1,8 +1,11 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
-// RUN:   --product-name=TypedefChain -triple arm64-apple-macosx -x c-header %s -o %t/typedefchain.symbols.json -verify
+// RUN:   --product-name=TypedefChain -triple arm64-apple-macosx -x c-header %s -o %t/typedefchain-c.symbols.json -verify
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   --product-name=TypedefChain -triple arm64-apple-macosx -x c++-header %s -o %t/typedefchain-cxx.symbols.json -verify
 
-// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYSTRUCT
 typedef struct { } MyStruct;
 // MYSTRUCT-LABEL: "!testLabel": "c:@SA@MyStruct"
 // MYSTRUCT:      "accessLevel": "public",
@@ -34,13 +37,28 @@ typedef struct { } MyStruct;
 // MYSTRUCT-NEXT: ]
 // MYSTRUCT:      "kind": {
 // MYSTRUCT-NEXT:   "displayName": "Structure",
-// MYSTRUCT-NEXT:   "identifier": "c.struct"
-// MYSTRUCT: "title": "MyStruct"
+// MYSTRUCT-NEXT:   "identifier": "c{{(\+\+)?}}.struct"
+// MYSTRUCT:           "names": {
+// MYSTRUCT-NEXT:        "navigator": [
+// MYSTRUCT-NEXT:          {
+// MYSTRUCT-NEXT:            "kind": "identifier",
+// MYSTRUCT-NEXT:            "spelling": "MyStruct"
+// MYSTRUCT-NEXT:          }
+// MYSTRUCT-NEXT:        ],
+// MYSTRUCT-NEXT:        "subHeading": [
+// MYSTRUCT-NEXT:          {
+// MYSTRUCT-NEXT:            "kind": "identifier",
+// MYSTRUCT-NEXT:            "spelling": "MyStruct"
+// MYSTRUCT-NEXT:          }
+// MYSTRUCT-NEXT:        ],
+// MYSTRUCT-NEXT:        "title": "MyStruct"
+// MYSTRUCT-NEXT:      },
 // MYSTRUCT:      "pathComponents": [
 // MYSTRUCT-NEXT:    "MyStruct"
 // MYSTRUCT-NEXT:  ]
 
-// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYSTRUCTSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYSTRUCTSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYSTRUCTSTRUCT
 typedef MyStruct MyStructStruct;
 // MYSTRUCTSTRUCT-LABEL: "!testLabel": "c:typedef_anonymous_record.c@T@MyStructStruct"
 // MYSTRUCTSTRUCT: "accessLevel": "public",
@@ -73,10 +91,12 @@ typedef MyStruct MyStructStruct;
 // MYSTRUCTSTRUCT-NEXT:],
 // MYSTRUCTSTRUCT:     "kind": {
 // MYSTRUCTSTRUCT-NEXT:  "displayName": "Type Alias",
-// MYSTRUCTSTRUCT-NEXT:  "identifier": "c.typealias"
+// MYSTRUCTSTRUCT-NEXT:  "identifier": "c{{(\+\+)?}}.typealias"
 
-// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYENUM
-// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix CASE
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix CASE
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix CASE
 typedef enum { Case } MyEnum;
 // MYENUM: "source": "c:@EA@MyEnum@Case",
 // MYENUM-NEXT: "target": "c:@EA@MyEnum",
@@ -110,8 +130,22 @@ typedef enum { Case } MyEnum;
 // MYENUM-NEXT:],
 // MYENUM:     "kind": {
 // MYENUM-NEXT:  "displayName": "Enumeration",
-// MYENUM-NEXT:  "identifier": "c.enum"
-// MYENUM: "title": "MyEnum"
+// MYENUM-NEXT:  "identifier": "c{{(\+\+)?}}.enum"
+// MYENUM:           "names": {
+// MYENUM-NEXT:        "navigator": [
+// MYENUM-NEXT:          {
+// MYENUM-NEXT:            "kind": "identifier",
+// MYENUM-NEXT:            "spelling": "MyEnum"
+// MYENUM-NEXT:          }
+// MYENUM-NEXT:        ],
+// MYENUM-NEXT:        "subHeading": [
+// MYENUM-NEXT:          {
+// MYENUM-NEXT:            "kind": "identifier",
+// MYENUM-NEXT:            "spelling": "MyEnum"
+// MYENUM-NEXT:          }
+// MYENUM-NEXT:        ],
+// MYENUM-NEXT:        "title": "MyEnum"
+// MYENUM-NEXT:      },
 
 // CASE-LABEL: "!testLabel": "c:@EA@MyEnum@Case"
 // CASE:      "pathComponents": [
@@ -119,7 +153,8 @@ typedef enum { Case } MyEnum;
 // CASE-NEXT:   "Case"
 // CASE-NEXT: ]
 
-// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYENUMENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYENUMENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYENUMENUM
 typedef MyEnum MyEnumEnum;
 // MYENUMENUM-LABEL: "!testLabel": "c:typedef_anonymous_record.c@T@MyEnumEnum"
 // MYENUMENUM:      "declarationFragments": [
@@ -151,7 +186,7 @@ typedef MyEnum MyEnumEnum;
 // MYENUMENUM-NEXT: ],
 // MYENUMENUM:      "kind": {
 // MYENUMENUM-NEXT:   "displayName": "Type Alias",
-// MYENUMENUM-NEXT:   "identifier": "c.typealias"
+// MYENUMENUM-NEXT:   "identifier": "c{{(\+\+)?}}.typealias"
 // MYENUMENUM-NEXT: },
 // MYENUMENUM: "title": "MyEnumEnum"
 

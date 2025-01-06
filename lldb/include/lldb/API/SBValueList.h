@@ -96,7 +96,7 @@ private:
 
   std::unique_ptr<ValueListImpl> m_opaque_up;
 
-  void SetError(const lldb_private::Status &status);
+  void SetError(lldb_private::Status &&status);
 };
 
 } // namespace lldb

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass prologepilog %s -o - | FileCheck %s
 
 # Check that the spill of $q0 no longer uses unaligned store instruction.
 # CHECK: V6_vS32b_ai $r16, -256, killed $v0

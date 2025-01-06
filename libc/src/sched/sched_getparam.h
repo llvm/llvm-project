@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_GETPARAM_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_GETPARAM_H
 
+#include "src/__support/macros/config.h"
 #include <sched.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int sched_getparam(pid_t tid, struct sched_param *param);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_GETPARAM_H

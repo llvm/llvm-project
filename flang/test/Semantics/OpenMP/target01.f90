@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=51
 
 subroutine foo(b)
 use iso_c_binding

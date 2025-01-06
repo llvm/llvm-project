@@ -32,6 +32,7 @@ namespace llvm {
 
 class AssemblyAnnotationWriter;
 class CallInst;
+class DataLayout;
 class Function;
 class LandingPadInst;
 class LLVMContext;
@@ -66,6 +67,11 @@ public:
   bool IsNewDbgInfoFormat;
 
 private:
+  // Allow Function to renumber blocks.
+  friend class Function;
+  /// Per-function unique number.
+  unsigned Number = -1u;
+
   friend class BlockAddress;
   friend class SymbolTableListTraits<BasicBlock>;
 
@@ -94,6 +100,11 @@ public:
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
   void setNewDbgInfoFormatFlag(bool NewFlag);
+
+  unsigned getNumber() const {
+    assert(getParent() && "only basic blocks in functions have valid numbers");
+    return Number;
+  }
 
   /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
@@ -217,6 +228,11 @@ public:
     return const_cast<Module *>(
                             static_cast<const BasicBlock *>(this)->getModule());
   }
+
+  /// Get the data layout of the module this basic block belongs to.
+  ///
+  /// Requires the basic block to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// Returns the terminator instruction if the block is well formed or null
   /// if the block is not well formed.

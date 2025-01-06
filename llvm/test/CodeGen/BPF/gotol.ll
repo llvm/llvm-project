@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mcpu=v4 -gotol-abs-low-bound 0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 -gotol-abs-low-bound 0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
 ; Source:
 ;   // This test covers all three cases:
 ;   //   (1). jmp to another basic block (not the follow-through one)

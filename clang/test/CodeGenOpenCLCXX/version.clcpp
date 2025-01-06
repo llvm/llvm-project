@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=CL2.0 | FileCheck %s --check-prefix=CHECK-NO-CXX
+
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=clc++1.0 | FileCheck %s --check-prefix=CHECK-CXX100
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=clc++2021 | FileCheck %s --check-prefix=CHECK-CXX2021
+
+// This test checks that opencl.cxx.version metadata is emitted accordingly.
+// It avoids any C++ features to enable checking that the metadata is not emitted in non-C++ mode.
+
+kernel void foo() {}
+
+// CHECK-NO-CXX-NOT: opencl.cxx.version
+
+// CHECK-CXX100-DAG: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
+// CHECK-CXX100-DAG: !opencl.cxx.version = !{[[CXX:![0-9]+]]}
+// CHECK-CXX100-DAG: [[OCL]] = !{i32 2, i32 0}
+// CHECK-CXX100-DAG: [[CXX]] = !{i32 1, i32 0}
+
+// CHECK-CXX2021-DAG: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
+// CHECK-CXX2021-DAG: !opencl.cxx.version = !{[[CXX:![0-9]+]]}
+// CHECK-CXX2021-DAG: [[OCL]] = !{i32 3, i32 0}
+// CHECK-CXX2021-DAG: [[CXX]] = !{i32 2021, i32 0}

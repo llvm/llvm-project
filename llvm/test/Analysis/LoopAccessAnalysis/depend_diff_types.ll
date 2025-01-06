@@ -30,7 +30,6 @@ define void @backdep_type_size_equivalence(ptr nocapture %vec, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {(4 + (8 * %n) + %vec),+,8}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -157,7 +156,6 @@ define void @neg_dist_dep_type_size_equivalence(ptr nocapture %vec, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {((8 * %n) + %vec),+,8}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

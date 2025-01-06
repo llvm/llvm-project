@@ -59,17 +59,29 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
         Returns the operands within this call that are used as arguments to the
         callee as a mutable range.
       }],
-      "::mlir::MutableOperandRange", "getArgOperandsMutable">,
+      "::mlir::MutableOperandRange", "getArgOperandsMutable"
+    >,
+    InterfaceMethod<[{
+        Resolve the callable operation for given callee to a
+        CallableOpInterface, or nullptr if a valid callable was not resolved.
+        `symbolTable` parameter allow for using a cached symbol table for symbol
+        lookups instead of performing an O(N) scan.
+      }],
+      "::mlir::Operation *", "resolveCallableInTable", (ins "::mlir::SymbolTableCollection *":$symbolTable),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{
+        return ::mlir::call_interface_impl::resolveCallable($_op, symbolTable);
+      }]
+    >,
+    InterfaceMethod<[{
+        Resolve the callable operation for given callee to a
+        CallableOpInterface, or nullptr if a valid callable was not resolved.
+    }],
+      "::mlir::Operation *", "resolveCallable", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{
+        return ::mlir::call_interface_impl::resolveCallable($_op);
+      }]
+    >
   ];
-
-  let extraClassDeclaration = [{
-    /// Resolve the callable operation for given callee to a
-    /// CallableOpInterface, or nullptr if a valid callable was not resolved.
-    /// `symbolTable` is an optional parameter that will allow for using a
-    /// cached symbol table for symbol lookups instead of performing an O(N)
-    /// scan.
-    ::mlir::Operation *resolveCallable(::mlir::SymbolTableCollection *symbolTable = nullptr);
-  }];
 }
 
 /// Interface for callable operations.

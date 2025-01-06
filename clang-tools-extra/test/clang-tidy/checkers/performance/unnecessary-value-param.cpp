@@ -2,6 +2,31 @@
 
 // CHECK-FIXES: #include <utility>
 
+namespace std {
+template <typename>
+struct remove_reference;
+
+template <typename _Tp>
+struct remove_reference {
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+struct remove_reference<_Tp &> {
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+struct remove_reference<_Tp &&> {
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
+  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
+}
+} // namespace std
+
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
     return *this;
@@ -106,19 +131,6 @@ struct PositiveConstValueConstructor {
   // CHECK-MESSAGES: [[@LINE-1]]:59: warning: the const qualified parameter 'ConstCopy'
   // CHECK-FIXES: PositiveConstValueConstructor(const ExpensiveToCopyType& ConstCopy) {}
 };
-
-template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType S, T V) {
-  // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'S'
-  // CHECK-FIXES-NOT: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, T V) {
-}
-
-void instantiated() {
-  templateWithNonTemplatizedParameter(ExpensiveToCopyType(), ExpensiveToCopyType());
-  templateWithNonTemplatizedParameter(ExpensiveToCopyType(), 5);
-}
-
-template <typename T> void negativeTemplateType(const T V) {
-}
 
 void negativeArray(const ExpensiveToCopyType[]) {
 }
@@ -371,34 +383,11 @@ void fun() {
   NegativeUsingConstructor S(E);
 }
 
-template<typename T>
-void templateFunction(T) {
-}
+struct B {
+  static void bar(ExpensiveMovableType a, ExpensiveMovableType b);
+};
 
-template<>
-void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:64: warning: the parameter 'E' is copied
-  // CHECK-FIXES: void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
-  E.constReference();
-}
-
-template <class T>
-T templateSpecializationFunction(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:54: warning: the parameter 'E' is copied
-  // CHECK-FIXES-NOT: T templateSpecializationFunction(const ExpensiveToCopyType& E) {
-  return T();
-}
-
-template <>
-bool templateSpecializationFunction(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:57: warning: the parameter 'E' is copied
-  // CHECK-FIXES-NOT: bool templateSpecializationFunction(const ExpensiveToCopyType& E) {
-  return true;
-}
-
-template <>
-int templateSpecializationFunction(ExpensiveToCopyType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:56: warning: the parameter 'E' is copied
-  // CHECK-FIXES-NOT: int templateSpecializationFunction(const ExpensiveToCopyType& E) {
-  return 0;
+template <typename T>
+void NegativeCallWithDependentAndNondependentArgs(ExpensiveMovableType a, T b) {
+    B::bar(std::move(a), b);
 }

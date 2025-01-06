@@ -26,8 +26,6 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->hasExpAutoVec())
-      return DefSize;
     if (ST->hasExtLASX())
       return TypeSize::getFixed(256);
     if (ST->hasExtLSX())
@@ -83,6 +81,12 @@ const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
     return "LoongArch::VRRC";
   }
   llvm_unreachable("unknown register class");
+}
+
+TargetTransformInfo::PopcntSupportKind
+LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) {
+  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
+  return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.

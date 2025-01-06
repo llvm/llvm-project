@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj -o /dev/null < %s
+; RUN: llc -mtriple=hexagon -filetype=obj -o /dev/null < %s
 ; REQUIRES: asserts
 
 ; This crashed in the MC code emitter, because a new-value branch was created

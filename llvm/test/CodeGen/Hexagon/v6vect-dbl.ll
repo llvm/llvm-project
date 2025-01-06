@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck --check-prefix=CHECKO0 %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck --check-prefix=CHECKO0 %s
 ; KP: Removed -O2 check. The code has become more aggressively optimized
 ; (some loads were found to be redundant and have been removed completely),
 ; and verifying correct code generation has become more difficult than

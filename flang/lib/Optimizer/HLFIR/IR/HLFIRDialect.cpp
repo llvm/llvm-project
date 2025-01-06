@@ -215,3 +215,25 @@ bool hlfir::mayHaveAllocatableComponent(mlir::Type ty) {
   return fir::isPolymorphicType(ty) || fir::isUnlimitedPolymorphicType(ty) ||
          fir::isRecordWithAllocatableMember(hlfir::getFortranElementType(ty));
 }
+
+mlir::Type hlfir::getExprType(mlir::Type variableType) {
+  hlfir::ExprType::Shape typeShape;
+  bool isPolymorphic = fir::isPolymorphicType(variableType);
+  mlir::Type type = getFortranElementOrSequenceType(variableType);
+  if (auto seqType = mlir::dyn_cast<fir::SequenceType>(type)) {
+    assert(!seqType.hasUnknownShape() && "assumed-rank cannot be expressions");
+    typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
+    type = seqType.getEleTy();
+  }
+  return hlfir::ExprType::get(variableType.getContext(), typeShape, type,
+                              isPolymorphic);
+}
+
+bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+
+  mlir::Type unwrappedType = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  mlir::Type elementType = getFortranElementType(unwrappedType);
+  return mlir::isa<mlir::IntegerType>(elementType);
+}

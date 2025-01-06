@@ -32,7 +32,7 @@ LLVM_DUMP_METHOD void CommonTypeInfo::dump(llvm::raw_ostream &OS) const {
   OS << '\n';
 }
 
-LLVM_DUMP_METHOD void ObjCContextInfo::dump(llvm::raw_ostream &OS) {
+LLVM_DUMP_METHOD void ContextInfo::dump(llvm::raw_ostream &OS) {
   static_cast<CommonTypeInfo &>(*this).dump(OS);
   if (HasDefaultNullability)
     OS << "DefaultNullability: " << DefaultNullability << ' ';
@@ -65,6 +65,8 @@ LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const VariableInfo &>(*this).dump(OS);
   if (NoEscapeSpecified)
     OS << (NoEscape ? "[NoEscape] " : "");
+  if (LifetimeboundSpecified)
+    OS << (Lifetimebound ? "[Lifetimebound] " : "");
   OS << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   OS << '\n';
 }
@@ -75,6 +77,8 @@ LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
      << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   if (!ResultType.empty())
     OS << "Result Type: " << ResultType << ' ';
+  if (!SwiftReturnOwnership.empty())
+    OS << "SwiftReturnOwnership: " << SwiftReturnOwnership << ' ';
   if (!Params.empty())
     OS << '\n';
   for (auto &PI : Params)
@@ -83,8 +87,16 @@ LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void ObjCMethodInfo::dump(llvm::raw_ostream &OS) {
   static_cast<FunctionInfo &>(*this).dump(OS);
+  if (Self)
+    Self->dump(OS);
   OS << (DesignatedInit ? "[DesignatedInit] " : "")
      << (RequiredInit ? "[RequiredInit] " : "") << '\n';
+}
+
+LLVM_DUMP_METHOD void CXXMethodInfo::dump(llvm::raw_ostream &OS) {
+  static_cast<FunctionInfo &>(*this).dump(OS);
+  if (This)
+    This->dump(OS);
 }
 
 LLVM_DUMP_METHOD void TagInfo::dump(llvm::raw_ostream &OS) {
@@ -94,6 +106,10 @@ LLVM_DUMP_METHOD void TagInfo::dump(llvm::raw_ostream &OS) {
   if (EnumExtensibility)
     OS << "Enum Extensibility: " << static_cast<long>(*EnumExtensibility)
        << ' ';
+  if (SwiftCopyableSpecified)
+    OS << (SwiftCopyable ? "[SwiftCopyable] " : "[~SwiftCopyable]");
+  if (SwiftEscapableSpecified)
+    OS << (SwiftEscapable ? "[SwiftEscapable] " : "[~SwiftEscapable]");
   OS << '\n';
 }
 

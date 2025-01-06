@@ -9,8 +9,8 @@
 //        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
 //        CHECK-LIVE-RANGE: ^bb0:
 //        CHECK-LIVE-RANGE: S  arm_sme.zero
-//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.move_vector_to_tile_slice
-//   CHECK-LIVE-RANGE-NEXT: || arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.insert_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: || arm_sme.insert_tile_slice
 //   CHECK-LIVE-RANGE-NEXT: |E test.some_use
 //   CHECK-LIVE-RANGE-NEXT: E  test.some_use
 
@@ -19,11 +19,11 @@
 func.func @constant_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %index: index) {
   // CHECK-NEXT: %[[ZERO_TILE_0:.*]] = arm_sme.zero {tile_id = 0 : i32} : vector<[4]x[4]xf32>
   // CHECK-NEXT: %[[ZERO_TILE_1:.*]] = arm_sme.zero {tile_id = 1 : i32} : vector<[4]x[4]xf32>
-  // CHECK-NEXT: %[[INSERT_TILE_1:.*]] = arm_sme.move_vector_to_tile_slice %[[VECTOR_A]], %[[ZERO_TILE_1]], %{{.*}} {tile_id = 1 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-  // CHECK-NEXT: %[[INSERT_TILE_0:.*]] = arm_sme.move_vector_to_tile_slice %[[VECTOR_B]], %[[ZERO_TILE_0]], %{{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+  // CHECK-NEXT: %[[INSERT_TILE_1:.*]] = arm_sme.insert_tile_slice %[[VECTOR_A]], %[[ZERO_TILE_1]][%{{.*}}] {tile_id = 1 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+  // CHECK-NEXT: %[[INSERT_TILE_0:.*]] = arm_sme.insert_tile_slice %[[VECTOR_B]], %[[ZERO_TILE_0]][%{{.*}}] {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
   %zero = arm_sme.zero : vector<[4]x[4]xf32>
-  %tile_a = arm_sme.move_vector_to_tile_slice %a, %zero, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
-  %tile_b = arm_sme.move_vector_to_tile_slice %b, %zero, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %tile_a = arm_sme.insert_tile_slice %a, %zero[%index] : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %tile_b = arm_sme.insert_tile_slice %b, %zero[%index] : vector<[4]xf32> into vector<[4]x[4]xf32>
   "test.some_use"(%tile_a) : (vector<[4]x[4]xf32>) -> ()
   "test.some_use"(%tile_b) : (vector<[4]x[4]xf32>) -> ()
   return
@@ -34,16 +34,16 @@ func.func @constant_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>
 //  CHECK-LIVE-RANGE-LABEL: @value_with_multiple_users
 //        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
 //        CHECK-LIVE-RANGE: ^bb0:
-//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.move_vector_to_tile_slice
-//   CHECK-LIVE-RANGE-NEXT: || arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.insert_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: || arm_sme.insert_tile_slice
 //   CHECK-LIVE-RANGE-NEXT: |E test.some_use
 //   CHECK-LIVE-RANGE-NEXT: E  test.some_use
 
 // expected-note@below {{tile operand is: <block argument> of type 'vector<[4]x[4]xf32>'}}
 func.func @value_with_multiple_users(%tile: vector<[4]x[4]xf32>, %a: vector<[4]xf32>, %b: vector<[4]xf32>, %index: index) {
   // expected-error@below {{op tile operand allocated to different SME virtial tile (move required)}}
-  %tile_a = arm_sme.move_vector_to_tile_slice %a, %tile, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
-  %tile_b = arm_sme.move_vector_to_tile_slice %b, %tile, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %tile_a = arm_sme.insert_tile_slice %a, %tile[%index] : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %tile_b = arm_sme.insert_tile_slice %b, %tile[%index] : vector<[4]xf32> into vector<[4]x[4]xf32>
   "test.some_use"(%tile_a) : (vector<[4]x[4]xf32>) -> ()
   "test.some_use"(%tile_b) : (vector<[4]x[4]xf32>) -> ()
   return
@@ -286,14 +286,14 @@ func.func @run_out_of_tiles_but_avoid_spill(%a: vector<[4]xf32>, %b: vector<[4]x
       iter_args(%iter_a = %init, %iter_b = %init, %iter_c = %init, %iter_d = %init)
         -> (vector<[4]x[4]xf32>, vector<[4]x[4]xf32> , vector<[4]x[4]xf32> , vector<[4]x[4]xf32>) {
         // ^bb2:
-        // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 1 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-        // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 2 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-        // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 3 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-        // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-        %new_a = arm_sme.move_vector_to_tile_slice %a, %iter_a, %i : vector<[4]xf32> into vector<[4]x[4]xf32>
-        %new_b = arm_sme.move_vector_to_tile_slice %b, %iter_b, %i : vector<[4]xf32> into vector<[4]x[4]xf32>
-        %new_c = arm_sme.move_vector_to_tile_slice %c, %iter_c, %i : vector<[4]xf32> into vector<[4]x[4]xf32>
-        %new_d = arm_sme.move_vector_to_tile_slice %d, %iter_d, %i : vector<[4]xf32> into vector<[4]x[4]xf32>
+        // CHECK: arm_sme.insert_tile_slice {{.*}} {tile_id = 1 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+        // CHECK: arm_sme.insert_tile_slice {{.*}} {tile_id = 2 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+        // CHECK: arm_sme.insert_tile_slice {{.*}} {tile_id = 3 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+        // CHECK: arm_sme.insert_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+        %new_a = arm_sme.insert_tile_slice %a, %iter_a[%i] : vector<[4]xf32> into vector<[4]x[4]xf32>
+        %new_b = arm_sme.insert_tile_slice %b, %iter_b[%i] : vector<[4]xf32> into vector<[4]x[4]xf32>
+        %new_c = arm_sme.insert_tile_slice %c, %iter_c[%i] : vector<[4]xf32> into vector<[4]x[4]xf32>
+        %new_d = arm_sme.insert_tile_slice %d, %iter_d[%i] : vector<[4]xf32> into vector<[4]x[4]xf32>
         scf.yield %new_a, %new_b, %new_c, %new_d : vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>
     }
     // Live = %init, %tile_a, %tile_b, %tile_c, %tile_d (out of tiles!)
@@ -316,10 +316,10 @@ func.func @run_out_of_tiles_but_avoid_spill(%a: vector<[4]xf32>, %b: vector<[4]x
 //        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
 //        CHECK-LIVE-RANGE: ^bb2:
 //   CHECK-LIVE-RANGE-NEXT: ||     test.some_use
-//   CHECK-LIVE-RANGE-NEXT: ||S    arm_sme.move_vector_to_tile_slice
-//   CHECK-LIVE-RANGE-NEXT: |||S   arm_sme.move_vector_to_tile_slice
-//   CHECK-LIVE-RANGE-NEXT: ||||S  arm_sme.move_vector_to_tile_slice
-//   CHECK-LIVE-RANGE-NEXT: |||||S arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: ||S    arm_sme.insert_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |||S   arm_sme.insert_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: ||||S  arm_sme.insert_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |||||S arm_sme.insert_tile_slice
 //   CHECK-LIVE-RANGE-NEXT: ||E||| test.some_use
 //   CHECK-LIVE-RANGE-NEXT: || E|| test.some_use
 //   CHECK-LIVE-RANGE-NEXT: ||  E| test.some_use
@@ -346,10 +346,10 @@ func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<
     // So spilled here (unnecessarily).
     // The arm_sme.zero op could be moved into the loop to avoid this.
     "test.some_use"(%zero) : (vector<[4]x[4]xf32>) -> ()
-    %tile_a = arm_sme.move_vector_to_tile_slice %a, %tile, %c0 : vector<[4]xf32> into vector<[4]x[4]xf32>
-    %tile_b = arm_sme.move_vector_to_tile_slice %b, %tile, %c0 : vector<[4]xf32> into vector<[4]x[4]xf32>
-    %tile_c = arm_sme.move_vector_to_tile_slice %c, %tile, %c0 : vector<[4]xf32> into vector<[4]x[4]xf32>
-    %tile_d = arm_sme.move_vector_to_tile_slice %d, %tile, %c0 : vector<[4]xf32> into vector<[4]x[4]xf32>
+    %tile_a = arm_sme.insert_tile_slice %a, %tile[%c0] : vector<[4]xf32> into vector<[4]x[4]xf32>
+    %tile_b = arm_sme.insert_tile_slice %b, %tile[%c0] : vector<[4]xf32> into vector<[4]x[4]xf32>
+    %tile_c = arm_sme.insert_tile_slice %c, %tile[%c0] : vector<[4]xf32> into vector<[4]x[4]xf32>
+    %tile_d = arm_sme.insert_tile_slice %d, %tile[%c0] : vector<[4]xf32> into vector<[4]x[4]xf32>
     // %zero is still live here (due the the backedge)
     "test.some_use"(%tile_a) : (vector<[4]x[4]xf32>) -> ()
     "test.some_use"(%tile_b) : (vector<[4]x[4]xf32>) -> ()
@@ -405,7 +405,7 @@ func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<
 // CHECK: arm_sme.get_tile {tile_id = 1 : i32} : vector<[4]x[4]xf32>
 // CHECK: arm_sme.get_tile {tile_id = 2 : i32} : vector<[4]x[4]xf32>
 // CHECK: arm_sme.get_tile {tile_id = 3 : i32} : vector<[4]x[4]xf32>
-// CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+// CHECK: arm_sme.insert_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
 // CHECK-NOT: tile_id = 16
 func.func @cond_branch_with_backedge(%slice: vector<[4]xf32>) {
   %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
@@ -423,10 +423,188 @@ func.func @cond_branch_with_backedge(%slice: vector<[4]xf32>) {
   cf.cond_br %continueLoop, ^bb2, ^bb3(%iterTile, %tileB, %tileC, %tileD : vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>)
 ^bb2:
   // Live here: %iterTile, %tileB, %tileC, %tileD
-  %nextTile = arm_sme.move_vector_to_tile_slice %slice, %iterTile, %currentIndex : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %nextTile = arm_sme.insert_tile_slice %slice, %iterTile[%currentIndex] : vector<[4]xf32> into vector<[4]x[4]xf32>
   %nextIndex = arith.addi %currentIndex, %c1 : index
   cf.br ^bb1(%nextIndex, %nextTile : index, vector<[4]x[4]xf32>)
 ^bb3(%finalTileA: vector<[4]x[4]xf32>, %finalTileB: vector<[4]x[4]xf32>, %finalTileC: vector<[4]x[4]xf32>, %finalTileD: vector<[4]x[4]xf32>):
   // Live here: %finalTileA, %finalTileB, %finalTileC, %finalTileD
+  return
+}
+
+// -----
+
+//  CHECK-LIVE-RANGE-LABEL: @fill_holes_in_tile_liveness
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E  cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT:  S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT:  | test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  E test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: E  test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    cf.br
+
+// Here there's a 'hole' in the liveness of %tileA (in bb1) where another value
+// can reuse the tile ID assigned to %tileA. The liveness for %tileB is
+// entirely within the 'hole' in %tileA's live range, so %tileB should get the
+// same tile ID as %tileA.
+
+// CHECK-LABEL: @fill_holes_in_tile_liveness
+func.func @fill_holes_in_tile_liveness(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = [[TILE_ID_A:.*]] : i32}
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = [[TILE_ID_A]] : i32}
+  %tileB = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3
+^bb3:
+  return
+}
+
+// -----
+
+//  CHECK-LIVE-RANGE-LABEL: @holes_in_tile_liveness_inactive_overlaps
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E  cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT:  S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT:  | test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  | test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  | arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:  E cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  | arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:  E cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb3:
+//   CHECK-LIVE-RANGE-NEXT:  E test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    func.return
+
+// This tests an edge case in inactive live ranges. The first live range is
+// inactive at the start of ^bb1. If the tile allocator did not check if the
+// second live range overlapped the first it would wrongly re-use tile ID 0
+// (as the first live range is inactive so tile ID 0 is free). This would mean
+// in ^bb2 two overlapping live ranges would have the same tile ID (bad!).
+
+// CHECK-LABEL: @holes_in_tile_liveness_inactive_overlaps
+func.func @holes_in_tile_liveness_inactive_overlaps(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = 1 : i32}
+  %tileB = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3(%tileB: vector<[4]x[4]xf32>)
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  // CHECK: arm_sme.get_tile {tile_id = 1 : i32}
+  %tileC = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3(%tileC: vector<[4]x[4]xf32>)
+^bb3(%tile: vector<[4]x[4]xf32>):
+  "test.some_use"(%tile) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+// -----
+
+// This is the same as the previous example, but changes the tile types to
+// vector<[16]x[16]xi8>. This means in bb1 the allocator will need to spill the
+// first live range (which is inactive).
+
+// Note: The live ranges are the same as the previous example (so are not checked).
+
+// CHECK-LABEL: @spill_inactive_live_range
+func.func @spill_inactive_live_range(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 16 : i32}
+  %tileA = arm_sme.get_tile : vector<[16]x[16]xi8>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileB = arm_sme.get_tile : vector<[16]x[16]xi8>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[16]x[16]xi8>) -> ()
+  cf.br ^bb3(%tileB: vector<[16]x[16]xi8>)
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileC = arm_sme.get_tile : vector<[16]x[16]xi8>
+  "test.some_use"(%tileA) : (vector<[16]x[16]xi8>) -> ()
+  cf.br ^bb3(%tileC: vector<[16]x[16]xi8>)
+^bb3(%tile: vector<[16]x[16]xi8>):
+  "test.some_use"(%tile) : (vector<[16]x[16]xi8>) -> ()
+  return
+}
+
+// -----
+
+//  CHECK-LIVE-RANGE-LABEL: @reactivate_inactive_live_range
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S   arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: E   cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT:  S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT:  |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  E  test.some_use
+//   CHECK-LIVE-RANGE-NEXT:     cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: | S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: | | test.dummy
+//   CHECK-LIVE-RANGE-NEXT: | | test.dummy
+//   CHECK-LIVE-RANGE-NEXT: | E test.some_use
+//   CHECK-LIVE-RANGE-NEXT: E   test.some_use
+//   CHECK-LIVE-RANGE-NEXT:     cf.br
+
+// Here the live range for %tileA becomes inactive in bb1 (so %tileB gets tile
+// ID 0 too). Then in bb2 the live range for tileA is reactivated as it overlaps
+// with the start of %tileC's live range (which means %tileC gets tile ID 1).
+
+func.func @reactivate_inactive_live_range(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.cond_br %cond, ^bb2, ^bb1
+^bb1:
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32}
+  %tileB = arm_sme.get_tile : vector<[16]x[16]xi8>
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileB) : (vector<[16]x[16]xi8>) -> ()
+  cf.br ^bb3
+^bb2:
+  // CHECK: arm_sme.get_tile {tile_id = 1 : i32}
+  %tileC = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tileC) : (vector<[4]x[4]xf32>) -> ()
+  "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
+  cf.br ^bb3
+^bb3:
   return
 }

@@ -958,7 +958,7 @@ entry:
 define <4 x i32> @ternlog_and_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_and_andn:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $8, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm2 & xmm1 & ~xmm0
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <4 x i32> %y, %a
@@ -969,7 +969,7 @@ define <4 x i32> @ternlog_and_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_or_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_or_andn:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $206, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = (xmm1 & ~xmm0) | xmm2
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <4 x i32> %y, %a
@@ -980,7 +980,7 @@ define <4 x i32> @ternlog_or_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_and_orn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_and_orn:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $176, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 | ~xmm2)
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = or <4 x i32> %a, %y
@@ -991,7 +991,7 @@ define <4 x i32> @ternlog_and_orn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_and_orn_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_and_orn_2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $208, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 | ~xmm2)
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = or <4 x i32> %y, %a
@@ -1006,7 +1006,7 @@ define <4 x i32> @ternlog_orn_and(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpternlogd $222, %xmm3, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 | (xmm0 ^ xmm3)
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <4 x i32> %y, %z
@@ -1017,7 +1017,7 @@ define <4 x i32> @ternlog_orn_and(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_orn_and_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_orn_and_2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $143, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = (xmm1 & xmm2) | ~xmm0
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <4 x i32> %y, %z
@@ -1028,7 +1028,7 @@ define <4 x i32> @ternlog_orn_and_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_xor_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_xor_andn:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $198, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm2 ^ (xmm1 & ~xmm0)
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <4 x i32> %y, %a
@@ -1039,7 +1039,7 @@ define <4 x i32> @ternlog_xor_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_or_and_mask(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: ternlog_or_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = (xmm0 & mem) | xmm1
 ; CHECK-NEXT:    retq
   %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %b = or <4 x i32> %a, %y
@@ -1049,7 +1049,7 @@ define <4 x i32> @ternlog_or_and_mask(<4 x i32> %x, <4 x i32> %y) {
 define <8 x i32> @ternlog_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: ternlog_or_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} ymm0 = (ymm0 & mem) | ymm1
 ; CHECK-NEXT:    retq
   %a = and <8 x i32> %x, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
   %b = or <8 x i32> %a, %y
@@ -1059,7 +1059,7 @@ define <8 x i32> @ternlog_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y) {
 define <2 x i64> @ternlog_xor_and_mask(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: ternlog_xor_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; CHECK-NEXT:    retq
   %a = and <2 x i64> %x, <i64 1099511627775, i64 1099511627775>
   %b = xor <2 x i64> %a, %y
@@ -1069,7 +1069,7 @@ define <2 x i64> @ternlog_xor_and_mask(<2 x i64> %x, <2 x i64> %y) {
 define <4 x i64> @ternlog_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y) {
 ; CHECK-LABEL: ternlog_xor_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (ymm0 & mem)
 ; CHECK-NEXT:    retq
   %a = and <4 x i64> %x, <i64 72057594037927935, i64 72057594037927935, i64 72057594037927935, i64 72057594037927935>
   %b = xor <4 x i64> %a, %y
@@ -1081,7 +1081,7 @@ define <4 x i32> @ternlog_maskz_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsrad $31, %xmm3, %xmm0
-; CHECK-NEXT:    vpternlogd $224, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm2 | xmm1)
 ; CHECK-NEXT:    retq
   %m = icmp slt <4 x i32> %mask, zeroinitializer
   %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
@@ -1095,7 +1095,7 @@ define <8 x i32> @ternlog_maskz_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm3
 ; CHECK-NEXT:    vpsrad $31, %ymm2, %ymm0
-; CHECK-NEXT:    vpternlogd $224, %ymm1, %ymm3, %ymm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 & (ymm3 | ymm1)
 ; CHECK-NEXT:    retq
   %m = icmp slt <8 x i32> %mask, zeroinitializer
   %a = and <8 x i32> %x, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
@@ -1109,7 +1109,7 @@ define <2 x i64> @ternlog_maskz_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm3
 ; CHECK-NEXT:    vpsraq $63, %xmm2, %xmm0
-; CHECK-NEXT:    vpternlogq $96, %xmm1, %xmm3, %xmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & (xmm3 ^ xmm1)
 ; CHECK-NEXT:    retq
   %m = icmp slt <2 x i64> %mask, zeroinitializer
   %a = and <2 x i64> %x, <i64 1099511627775, i64 1099511627775>
@@ -1123,7 +1123,7 @@ define <4 x i64> @ternlog_maskz_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm3
 ; CHECK-NEXT:    vpsraq $63, %ymm2, %ymm0
-; CHECK-NEXT:    vpternlogq $96, %ymm1, %ymm3, %ymm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 & (ymm3 ^ ymm1)
 ; CHECK-NEXT:    retq
   %m = icmp slt <4 x i64> %mask, zeroinitializer
   %a = and <4 x i64> %x, <i64 72057594037927935, i64 72057594037927935, i64 72057594037927935, i64 72057594037927935>
@@ -1317,7 +1317,7 @@ define <4 x i64> @ternlog_masky_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
 define <4 x i32> @ternlog_andn_or(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_andn_or:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $14, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = ~xmm0 & (xmm1 | xmm2)
 ; CHECK-NEXT:    retq
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = or <4 x i32> %y, %z
@@ -1328,7 +1328,7 @@ define <4 x i32> @ternlog_andn_or(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_andn_or_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_andn_or_2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $16, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & ~(xmm1 | xmm2)
 ; CHECK-NEXT:    retq
   %a = or <4 x i32> %y, %z
   %b = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>

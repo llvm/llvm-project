@@ -127,7 +127,7 @@ define i32 @unsupportedMultiUses(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = udiv i32 [[EXTRACT]], 7
 ; Vector version:
-; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = udiv <2 x i32> [[LOAD]], <i32 7, i32 7>
+; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = udiv <2 x i32> [[LOAD]], splat (i32 7)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
@@ -146,7 +146,7 @@ define void @udivCase(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = urem i32 [[EXTRACT]], 7
 ; Vector version:
-; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = urem <2 x i32> [[LOAD]], <i32 7, i32 7>
+; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = urem <2 x i32> [[LOAD]], splat (i32 7)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
@@ -165,7 +165,7 @@ define void @uremCase(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = sdiv i32 [[EXTRACT]], 7
 ; Vector version:
-; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = sdiv <2 x i32> [[LOAD]], <i32 7, i32 7>
+; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = sdiv <2 x i32> [[LOAD]], splat (i32 7)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
@@ -184,7 +184,7 @@ define void @sdivCase(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = srem i32 [[EXTRACT]], 7
 ; Vector version:
-; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = srem <2 x i32> [[LOAD]], <i32 7, i32 7>
+; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = srem <2 x i32> [[LOAD]], splat (i32 7)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
@@ -203,7 +203,7 @@ define void @sremCase(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fdiv float [[EXTRACT]], 7.0
 ; Vector version:
-; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = fdiv <2 x float> [[LOAD]], <float 7.000000e+00, float 7.000000e+00>
+; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = fdiv <2 x float> [[LOAD]], splat (float 7.000000e+00)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store float [[RES]], ptr %dest
@@ -222,7 +222,7 @@ define void @fdivCase(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem float [[EXTRACT]], 7.0
 ; Vector version:
-; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = frem <2 x float> [[LOAD]], <float 7.000000e+00, float 7.000000e+00>
+; IR-STRESS-NEXT: [[DIV:%[a-zA-Z_0-9-]+]] = frem <2 x float> [[LOAD]], splat (float 7.000000e+00)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store float [[RES]], ptr %dest
@@ -342,7 +342,7 @@ define void @simpleOneInstructionPromotionFloat(ptr %addr1, ptr %dest) {
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 %idx
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = or i32 [[EXTRACT]], 1
 ; Vector version:
-; IR-STRESS-NEXT: [[OR:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], <i32 1, i32 1>
+; IR-STRESS-NEXT: [[OR:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], splat (i32 1)
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[OR]], i32 %idx
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest

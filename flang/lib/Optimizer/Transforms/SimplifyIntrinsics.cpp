@@ -24,6 +24,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -1276,6 +1277,8 @@ void SimplifyIntrinsicsPass::runOnOperation() {
   fir::KindMapping kindMap = fir::getKindMapping(module);
   module.walk([&](mlir::Operation *op) {
     if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
+      if (cuf::isInCUDADeviceContext(op))
+        return;
       if (mlir::SymbolRefAttr callee = call.getCalleeAttr()) {
         mlir::StringRef funcName = callee.getLeafReference().getValue();
         // Replace call to runtime function for SUM when it has single

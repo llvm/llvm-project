@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=mipsel -mcpu=mips32 -O0 -relocation-model=pic
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32 -O0 -relocation-model=pic
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic
 
 ; The test is just to make sure it is able to allocate
 ; registers for this example. There was an issue with allocating AC0

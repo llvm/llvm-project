@@ -1,4 +1,4 @@
-REQUIRES: system-windows, msvc
+REQUIRES: target-windows, msvc
 RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/TypeQualsTest.cpp.obj %S/Inputs/TypeQualsTest.cpp
 RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/TypeQualsTest.cpp.exe %T/TypeQualsTest.cpp.obj
 RUN: lldb-test symbols %T/TypeQualsTest.cpp.exe | FileCheck %s

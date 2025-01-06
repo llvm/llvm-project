@@ -7,7 +7,7 @@ char const *p;
 void f0(void) {
   char const str[] = "This will change";
   p = str;
-}  // expected-warning{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
+} // expected-warning@-1{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
 
 void f1(void) {
   char const str[] = "This will change";
@@ -17,7 +17,7 @@ void f1(void) {
 
 void f2(void) {
   p = (const char *) __builtin_alloca(12);
-} // expected-warning{{Address of stack memory allocated by call to alloca() on line 19 is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
+} // expected-warning@-1{{Address of stack memory allocated by call to alloca() on line 19 is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
 
 // PR 7383 - previously the stack address checker would crash on this example
 //  because it would attempt to do a direct load from 'pr7383_list'. 
@@ -33,7 +33,7 @@ void test_multi_return(void) {
   int x;
   a = &x;
   b = &x;
-} // expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'a' upon returning}} expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'b' upon returning}}
+} // expected-warning@-1{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'a' upon returning}} expected-warning@-1{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'b' upon returning}}
 
 intptr_t returnAsNonLoc(void) {
   int x;
@@ -49,7 +49,7 @@ void assignAsNonLoc(void) {
   extern intptr_t ip;
   int x;
   ip = (intptr_t)&x;
-} // expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the global variable 'ip' upon returning}}
+} // expected-warning@-1{{Address of stack memory associated with local variable 'x' is still referred to by the global variable 'ip' upon returning}}
 
 void assignAsBool(void) {
   extern bool b;

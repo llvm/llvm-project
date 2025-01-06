@@ -33,14 +33,18 @@ enum LineType {
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
   LT_CommentAbovePPDirective,
+  LT_RequiresExpression,
+  LT_SimpleRequirement,
 };
 
 enum ScopeType {
+  // Contained in child block.
+  ST_ChildBlock,
   // Contained in class declaration/definition.
   ST_Class,
-  // Contained within function definition.
-  ST_Function,
-  // Contained within other scope block (loop, if/else, etc).
+  // Contained in compound requirement.
+  ST_CompoundRequirement,
+  // Contained within other scope block (function, loop, if/else, etc).
   ST_Other,
 };
 
@@ -182,6 +186,9 @@ public:
   /// \c True if this line contains a macro call for which an expansion exists.
   bool ContainsMacroCall = false;
 
+  /// \c True if calculateFormattingInformation() has been called on this line.
+  bool Computed = false;
+
   /// \c True if this line should be formatted, i.e. intersects directly or
   /// indirectly with one of the input ranges.
   bool Affected;
@@ -269,7 +276,7 @@ private:
 
   const AdditionalKeywords &Keywords;
 
-  SmallVector<ScopeType> Scopes;
+  SmallVector<ScopeType> Scopes, MacroBodyScopes;
 };
 
 } // end namespace format

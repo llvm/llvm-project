@@ -3,6 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=indirect %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=IND
 # RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=call %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=CAL
 # RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=ret %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=RET
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 --x86-align-branch-boundary=32 --x86-align-branch=ret %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefixes=RET
 
   # Exercise cases where only one kind of instruction is asked to be aligned.
   # Fused instruction cases are excluded.

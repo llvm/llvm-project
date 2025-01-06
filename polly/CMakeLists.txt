@@ -29,11 +29,7 @@ if(POLLY_STANDALONE_BUILD)
 
   # Enable unit tests if available.
   set(POLLY_GTEST_AVAIL 0)
-  set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
-    if (NOT TARGET gtest)
-      add_subdirectory(${UNITTEST_DIR} third-party/unittest)
-    endif()
+  if(TARGET llvm_gtest)
     set(POLLY_GTEST_AVAIL 1)
   endif()
 

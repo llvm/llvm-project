@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-bit-simplify -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-bit-simplify -o - %s | FileCheck %s
 
 --- |
   @g0 = global i32 0, align 4

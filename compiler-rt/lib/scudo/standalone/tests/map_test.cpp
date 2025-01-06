@@ -46,7 +46,7 @@ TEST(ScudoMapDeathTest, MapUnmap) {
           scudo::uptr P = MemMap.getBase();
           if (P == 0U)
             continue;
-          MemMap.unmap(MemMap.getBase(), Size);
+          MemMap.unmap();
           memset(reinterpret_cast<void *>(P), 0xbb, Size);
         }
       },
@@ -68,7 +68,7 @@ TEST(ScudoMapDeathTest, MapWithGuardUnmap) {
   ASSERT_TRUE(MemMap.remap(Q, Size, MappingName));
   memset(reinterpret_cast<void *>(Q), 0xaa, Size);
   EXPECT_DEATH(memset(reinterpret_cast<void *>(Q), 0xaa, Size + 1), "");
-  MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+  MemMap.unmap();
 }
 
 TEST(ScudoMapTest, MapGrowUnmap) {
@@ -87,5 +87,5 @@ TEST(ScudoMapTest, MapGrowUnmap) {
   Q += PageSize;
   ASSERT_TRUE(MemMap.remap(Q, PageSize, MappingName));
   memset(reinterpret_cast<void *>(Q), 0xbb, PageSize);
-  MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+  MemMap.unmap();
 }

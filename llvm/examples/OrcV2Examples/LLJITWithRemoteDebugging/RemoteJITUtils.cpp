@@ -29,7 +29,8 @@ using namespace llvm::orc;
 
 Expected<std::unique_ptr<DefinitionGenerator>>
 loadDylib(ExecutionSession &ES, StringRef RemotePath) {
-  if (auto Handle = ES.getExecutorProcessControl().loadDylib(RemotePath.data()))
+  if (auto Handle = ES.getExecutorProcessControl().getDylibMgr().loadDylib(
+          RemotePath.data()))
     return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, *Handle);
   else
     return Handle.takeError();

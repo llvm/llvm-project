@@ -2,6 +2,7 @@ set(UNITTEST_SOURCES
   adt_test.cpp
   bitmask_enum_test.cpp
   c_api_test.cpp
+  common.cpp
   endian_test.cpp
   error_test.cpp
   executor_address_test.cpp

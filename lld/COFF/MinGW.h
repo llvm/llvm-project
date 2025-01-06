@@ -45,7 +45,8 @@ private:
   COFFLinkerContext &ctx;
 };
 
-void writeDefFile(StringRef name, const std::vector<Export> &exports);
+void writeDefFile(COFFLinkerContext &, StringRef name,
+                  const std::vector<Export> &exports);
 
 // The -wrap option is a feature to rename symbols so that you can write
 // wrappers for existing functions. If you pass `-wrap:foo`, all

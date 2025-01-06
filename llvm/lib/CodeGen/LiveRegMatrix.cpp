@@ -35,37 +35,44 @@ using namespace llvm;
 STATISTIC(NumAssigned   , "Number of registers assigned");
 STATISTIC(NumUnassigned , "Number of registers unassigned");
 
-char LiveRegMatrix::ID = 0;
-INITIALIZE_PASS_BEGIN(LiveRegMatrix, "liveregmatrix",
+char LiveRegMatrixWrapperLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",
                       "Live Register Matrix", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
-INITIALIZE_PASS_END(LiveRegMatrix, "liveregmatrix",
-                    "Live Register Matrix", false, false)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_END(LiveRegMatrixWrapperLegacy, "liveregmatrix",
+                    "Live Register Matrix", false, true)
 
-LiveRegMatrix::LiveRegMatrix() : MachineFunctionPass(ID) {}
-
-void LiveRegMatrix::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveRegMatrixWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequiredTransitive<LiveIntervals>();
-  AU.addRequiredTransitive<VirtRegMap>();
+  AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
+  AU.addRequiredTransitive<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool LiveRegMatrix::runOnMachineFunction(MachineFunction &MF) {
+bool LiveRegMatrixWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LRM.init(MF, LIS, VRM);
+  return false;
+}
+
+void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
+                         VirtRegMap &pVRM) {
   TRI = MF.getSubtarget().getRegisterInfo();
-  LIS = &getAnalysis<LiveIntervals>();
-  VRM = &getAnalysis<VirtRegMap>();
+  LIS = &pLIS;
+  VRM = &pVRM;
 
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
     Queries.reset(new LiveIntervalUnion::Query[NumRegUnits]);
-  Matrix.init(LIUAlloc, NumRegUnits);
+  Matrix.init(*LIUAlloc, NumRegUnits);
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();
-  return false;
 }
+
+void LiveRegMatrixWrapperLegacy::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
   for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
@@ -237,6 +244,41 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
   return false;
 }
 
+LaneBitmask LiveRegMatrix::checkInterferenceLanes(SlotIndex Start,
+                                                  SlotIndex End,
+                                                  MCRegister PhysReg) {
+  // Construct artificial live range containing only one segment [Start, End).
+  VNInfo valno(0, Start);
+  LiveRange::Segment Seg(Start, End, &valno);
+  LiveRange LR;
+  LR.addSegment(Seg);
+
+  LaneBitmask InterferingLanes;
+
+  // Check for interference with that segment
+  for (MCRegUnitMaskIterator MCRU(PhysReg, TRI); MCRU.isValid(); ++MCRU) {
+    auto [Unit, Lanes] = *MCRU;
+    // LR is stack-allocated. LiveRegMatrix caches queries by a key that
+    // includes the address of the live range. If (for the same reg unit) this
+    // checkInterference overload is called twice, without any other query()
+    // calls in between (on heap-allocated LiveRanges)  - which would invalidate
+    // the cached query - the LR address seen the second time may well be the
+    // same as that seen the first time, while the Start/End/valno may not - yet
+    // the same cached result would be fetched. To avoid that, we don't cache
+    // this query.
+    //
+    // FIXME: the usability of the Query API needs to be improved to avoid
+    // subtle bugs due to query identity. Avoiding caching, for example, would
+    // greatly simplify things.
+    LiveIntervalUnion::Query Q;
+    Q.reset(UserTag, LR, Matrix[Unit]);
+    if (Q.checkInterference())
+      InterferingLanes |= Lanes;
+  }
+
+  return InterferingLanes;
+}
+
 Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
   const LiveInterval *VRegInterval = nullptr;
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
@@ -245,4 +287,15 @@ Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
   }
 
   return MCRegister::NoRegister;
+}
+
+AnalysisKey LiveRegMatrixAnalysis::Key;
+
+LiveRegMatrix LiveRegMatrixAnalysis::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
+  LiveRegMatrix LRM;
+  LRM.init(MF, LIS, VRM);
+  return LRM;
 }

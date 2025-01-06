@@ -394,7 +394,7 @@ define void @test_int_div(ptr %dest, ptr %old, i32 %n) {
 ; CHECK-NEXT:  # %bb.1: # %bb.nph
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    xorl %r10d, %r10d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%rdi,%r10), %r8d

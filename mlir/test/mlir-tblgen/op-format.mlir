@@ -195,6 +195,16 @@ test.format_optional_unit_attribute
 // CHECK: test.format_optional_unit_attribute_no_elide unit
 test.format_optional_unit_attribute_no_elide unit
 
+// CHECK: test.format_optional_unit_property is_optional
+test.format_optional_unit_property is_optional
+
+// CHECK: test.format_optional_unit_property
+// CHECK-NOT: is_optional
+test.format_optional_unit_property
+
+// CHECK: test.format_optional_unit_property_no_elide unit
+test.format_optional_unit_property_no_elide unit
+
 // CHECK: test.format_optional_enum_attr case5
 test.format_optional_enum_attr case5
 
@@ -265,6 +275,29 @@ test.format_optional_else then
 
 // CHECK: test.format_optional_else else
 test.format_optional_else else
+
+//===----------------------------------------------------------------------===//
+// Default-valued properties (ex. optional) elided in property dictionary
+// TODO: elisions generate extra spaces
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_optional_prop_dict {{$}}
+test.format_optional_prop_dict
+
+// CHECK: test.format_optional_prop_dict {{$}}
+test.format_optional_prop_dict <{a = [], b = 1 : i32}>
+
+// CHECK: test.format_optional_prop_dict {{$}}
+test.format_optional_prop_dict <{}>
+
+// CHECK: test.format_optional_prop_dict < {a = ["foo"]}>
+test.format_optional_prop_dict <{a = ["foo"]}>
+
+// CHECK: test.format_optional_prop_dict < {b = 2 : i32}>
+test.format_optional_prop_dict <{b = 2 : i32}>
+
+// CHECK: test.format_optional_prop_dict <{a = ["foo"], b = 2 : i32}>
+test.format_optional_prop_dict <{a = ["foo"], b = 2 : i32}>
 
 //===----------------------------------------------------------------------===//
 // Format a custom attribute

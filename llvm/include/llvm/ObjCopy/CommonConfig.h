@@ -151,6 +151,18 @@ public:
   }
 };
 
+enum class AdjustKind { Set, Add, Subtract };
+
+struct AddressUpdate {
+  uint64_t Value = 0;
+  AdjustKind Kind = AdjustKind::Add;
+};
+
+struct SectionPatternAddressUpdate {
+  NameMatcher SectionPattern;
+  AddressUpdate Update;
+};
+
 enum class SymbolFlag {
   Global,
   Local,
@@ -219,6 +231,7 @@ struct CommonConfig {
   SmallVector<NewSectionInfo, 0> AddSection;
   SmallVector<StringRef, 0> DumpSection;
   SmallVector<NewSectionInfo, 0> UpdateSection;
+  SmallVector<SectionPatternAddressUpdate, 0> ChangeSectionAddress;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -244,6 +257,9 @@ struct CommonConfig {
 
   // Symbol info specified by --add-symbol option.
   SmallVector<NewSymbolInfo, 0> SymbolsToAdd;
+
+  // Integer options
+  int64_t ChangeSectionLMAValAll = 0;
 
   // Boolean options
   bool DeterministicArchives = true;

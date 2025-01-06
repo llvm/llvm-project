@@ -11,7 +11,6 @@
 
 ; RUN: obj2yaml %t.o -o %t.yaml
 ; RUN: FileCheck %s --input-file=%t.yaml --check-prefix=CHECK-YAML
-; RUN: yaml2obj %t.yaml -o %t.o
 ; RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=CHECK-RELOCS
 
 ;; Check we don't create relocations referencing a section symbol for sanitize_memtag globals.
@@ -43,9 +42,17 @@
 ; CHECK-YAML-NEXT: -
 
 ; CHECK-ASM: .memtag internal_four
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   internal_four, 16
 ; CHECK-ASM: .memtag four
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   four, 16
 ; CHECK-ASM: .memtag sixteen
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   sixteen, 16
 ; CHECK-ASM: .memtag huge
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   huge, 16777232
 ; CHECK-ASM-NOT: .memtag specialcaselisted
 
 @internal_four = internal global i32 1, sanitize_memtag

@@ -120,18 +120,18 @@ subroutine complex_imag_ref(x)
   print *, x%im
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_imag_ref(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_imag_refEx"} : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_imag_refEx"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_4:.*]]#1 : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_5:.*]] = hlfir.designate %[[VAL_2]]#0  imag shape %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  %[[VAL_5:.*]] = hlfir.designate %[[VAL_2]]#0  imag shape %[[VAL_3]] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 
 subroutine complex_real_ref(x)
   complex :: x(:)
   print *, x%re
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_real_ref(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_real_refEx"} : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_real_refEx"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_4:.*]]#1 : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_5:.*]] = hlfir.designate %[[VAL_2]]#0  real shape %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  %[[VAL_5:.*]] = hlfir.designate %[[VAL_2]]#0  real shape %[[VAL_3]] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 
 subroutine complex_individual_ref(x, n)
   complex :: x(:)
@@ -140,10 +140,10 @@ subroutine complex_individual_ref(x, n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_individual_ref(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_individual_refEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_individual_refEx"} : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_individual_refEx"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
-! CHECK:  %[[VAL_6:.*]] = hlfir.designate %{{[0-9]+}}#0 (%[[VAL_5]]) imag : (!fir.box<!fir.array<?x!fir.complex<4>>>, i64) -> !fir.ref<f32>
+! CHECK:  %[[VAL_6:.*]] = hlfir.designate %{{[0-9]+}}#0 (%[[VAL_5]]) imag : (!fir.box<!fir.array<?xcomplex<f32>>>, i64) -> !fir.ref<f32>
 
 subroutine complex_slice_ref(x, start, end)
   complex :: x(:)
@@ -153,7 +153,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcomplex_slice_ref(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_slice_refEend"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_slice_refEstart"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_slice_refEx"} : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcomplex_slice_refEx"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> i64
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
@@ -166,4 +166,4 @@ end subroutine
 ! CHECK:  %[[VAL_14:.*]] = arith.cmpi sgt, %[[VAL_13]], %{{.*}} : index
 ! CHECK:  %[[VAL_15:.*]] = arith.select %[[VAL_14]], %[[VAL_13]], %{{.*}} : index
 ! CHECK:  %[[VAL_16:.*]] = fir.shape %[[VAL_15]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_17:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_9]]:%[[VAL_10]]:%{{.*}}) real shape %[[VAL_16]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  %[[VAL_17:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_9]]:%[[VAL_10]]:%{{.*}}) real shape %[[VAL_16]] : (!fir.box<!fir.array<?xcomplex<f32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>

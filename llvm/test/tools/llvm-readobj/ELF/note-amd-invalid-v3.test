@@ -5,12 +5,13 @@
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --match-full-lines --check-prefix=LLVM
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --match-full-lines --check-prefix=GNU
 
-# LLVM:       Notes [
+# LLVM:       NoteSections [
 # LLVM-NEXT:    NoteSection {
 # LLVM-NEXT:      Name: .note.nt_amdgpu_metadata
 # LLVM-NEXT:      Offset: 0x40
 # LLVM-NEXT:      Size: 0x38
-# LLVM-NEXT:      Note {
+# LLVM-NEXT:      Notes [
+# LLVM-NEXT:      {
 # LLVM-NEXT:        Owner: AMDGPU
 # LLVM-NEXT:        Data size: 0x24
 # LLVM-NEXT:        Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
@@ -21,6 +22,7 @@
 # LLVM-NEXT:  ...
 # LLVM-EMPTY:
 # LLVM-NEXT:      }
+# LLVM-NEXT:     ]
 # LLVM-NEXT:    }
 # LLVM-NEXT:  ]
 

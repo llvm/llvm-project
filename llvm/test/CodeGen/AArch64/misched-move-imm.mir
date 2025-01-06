@@ -1,0 +1,52 @@
+# RUN: llc -run-pass=machine-scheduler -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 %s -o /dev/null 2>&1
+# Just ensure this doesn't crash. Ensures in the neoverse-v2
+# scheduling model we don't attempt to treat the first input
+# operand of MOVZXi as an immediate operand.
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  
+  declare void @foo2(<2 x float>) #0
+  
+  define void @foo1() #0 {
+    call void @foo2(<2 x float> <float 2.500000e-01, float 7.500000e-01>)
+    ret void
+  }
+  
+  attributes #0 = { "target-cpu"="neoverse-v2" }
+
+...
+---
+name:            foo1
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: fpr64 }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+constants:
+  - id:              0
+    value:           '<2 x i32> <i32 1048576000, i32 1061158912>'
+    alignment:       8
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %2:gpr64common = MOVZXi target-flags(aarch64-g0, aarch64-nc) %const.0, 0
+    %2:gpr64common = MOVKXi %2, target-flags(aarch64-g1, aarch64-nc) %const.0, 16
+    %2:gpr64common = MOVKXi %2, target-flags(aarch64-g2, aarch64-nc) %const.0, 32
+    %2:gpr64common = MOVKXi %2, target-flags(aarch64-g3) %const.0, 48
+    %4:fpr64 = LDRDui %2, 0 :: (load (s64) from constant-pool)
+    $d0 = COPY %4
+    BL @foo2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $d0, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    RET_ReallyLR
+
+...

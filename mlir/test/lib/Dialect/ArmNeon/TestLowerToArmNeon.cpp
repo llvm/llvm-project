@@ -17,7 +17,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #define PASS_NAME "test-lower-to-arm-neon"
@@ -48,7 +47,7 @@ void TestLowerToArmNeon::runOnOperation() {
   MLIRContext *context = &getContext();
   RewritePatternSet patterns(context);
   populateLowerContractionToSMMLAPatternPatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
 }
 

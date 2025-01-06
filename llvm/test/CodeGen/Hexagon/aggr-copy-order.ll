@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mattr=-packets -hexagon-check-bank-conflict=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mattr=-packets -hexagon-check-bank-conflict=0 < %s | FileCheck %s
 ; Do not check stores. They undergo some optimizations in the DAG combiner
 ; resulting in getting out of order. There is likely little that can be
 ; done to keep the original order.

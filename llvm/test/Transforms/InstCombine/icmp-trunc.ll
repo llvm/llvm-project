@@ -17,7 +17,7 @@ define i1 @ult_2(i32 %x) {
 
 define <2 x i1> @ult_16_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @ult_16_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 2032, i16 2032>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 2032)
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -83,8 +83,8 @@ define i1 @ult_192(i32 %x) {
 
 define <2 x i1> @ult_2044_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @ult_2044_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 2044, i16 2044>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i16> [[TMP1]], <i16 2044, i16 2044>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 2044)
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i16> [[TMP1]], splat (i16 2044)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = trunc <2 x i16> %x to <2 x i11>
@@ -133,7 +133,7 @@ define i1 @ugt_3(i32 %x) {
 
 define <2 x i1> @ugt_7_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @ugt_7_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 2040, i16 2040>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 2040)
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -183,8 +183,8 @@ define i1 @ugt_253(i32 %x) {
 
 define <2 x i1> @ugt_2043_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @ugt_2043_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 2044, i16 2044>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[TMP1]], <i16 2044, i16 2044>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 2044)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[TMP1]], splat (i16 2044)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = trunc <2 x i16> %x to <2 x i11>
@@ -233,7 +233,7 @@ define i1 @slt_0(i32 %x) {
 
 define <2 x i1> @slt_0_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @slt_0_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 1024, i16 1024>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 1024)
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -279,7 +279,7 @@ define i1 @sgt_n1(i32 %x) {
 
 define <2 x i1> @sgt_n1_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @sgt_n1_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 1024, i16 1024>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 1024)
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -331,7 +331,7 @@ define i1 @trunc_eq_i32_i8(i32 %x) {
 define <2 x i1> @trunc_eq_v2i32_v2i8(<2 x i32> %x) {
 ; CHECK-LABEL: @trunc_eq_v2i32_v2i8(
 ; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[T]], <i8 42, i8 42>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[T]], splat (i8 42)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = trunc <2 x i32> %x to <2 x i8>
@@ -368,7 +368,7 @@ define i1 @shl1_trunc_eq0(i32 %a) {
 
 define <2 x i1> @shl1_trunc_ne0(<2 x i8> %a) {
 ; CHECK-LABEL: @shl1_trunc_ne0(
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[A:%.*]], <i8 5, i8 5>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[A:%.*]], splat (i8 5)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %shl = shl <2 x i8> <i8 1, i8 poison>, %a
@@ -765,7 +765,7 @@ define i1 @sge_nsw_i48(i48 %x) {
 define <2 x i1> @uge_nsw(<2 x i32> %x) {
 ; CHECK-LABEL: @uge_nsw(
 ; CHECK-NEXT:    [[T:%.*]] = trunc nsw <2 x i32> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i8> [[T]], <i8 -46, i8 -46>
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i8> [[T]], splat (i8 -46)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = trunc nsw <2 x i32> %x to <2 x i8>

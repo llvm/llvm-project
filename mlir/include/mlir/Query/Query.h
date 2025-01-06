@@ -10,7 +10,6 @@
 #define MLIR_TOOLS_MLIRQUERY_QUERY_H
 
 #include "Matcher/VariantValue.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -27,7 +26,7 @@ struct Query : llvm::RefCountedBase<Query> {
   virtual ~Query();
 
   // Perform the query on qs and print output to os.
-  virtual mlir::LogicalResult run(llvm::raw_ostream &os,
+  virtual llvm::LogicalResult run(llvm::raw_ostream &os,
                                   QuerySession &qs) const = 0;
 
   llvm::StringRef remainingContent;
@@ -45,7 +44,7 @@ complete(llvm::StringRef line, size_t pos, const QuerySession &qs);
 struct InvalidQuery : Query {
   InvalidQuery(const llvm::Twine &errStr)
       : Query(QueryKind::Invalid), errStr(errStr.str()) {}
-  mlir::LogicalResult run(llvm::raw_ostream &os,
+  llvm::LogicalResult run(llvm::raw_ostream &os,
                           QuerySession &qs) const override;
 
   std::string errStr;
@@ -58,7 +57,7 @@ struct InvalidQuery : Query {
 // No-op query (i.e. a blank line).
 struct NoOpQuery : Query {
   NoOpQuery() : Query(QueryKind::NoOp) {}
-  mlir::LogicalResult run(llvm::raw_ostream &os,
+  llvm::LogicalResult run(llvm::raw_ostream &os,
                           QuerySession &qs) const override;
 
   static bool classof(const Query *query) {
@@ -69,7 +68,7 @@ struct NoOpQuery : Query {
 // Query for "help".
 struct HelpQuery : Query {
   HelpQuery() : Query(QueryKind::Help) {}
-  mlir::LogicalResult run(llvm::raw_ostream &os,
+  llvm::LogicalResult run(llvm::raw_ostream &os,
                           QuerySession &qs) const override;
 
   static bool classof(const Query *query) {
@@ -80,7 +79,7 @@ struct HelpQuery : Query {
 // Query for "quit".
 struct QuitQuery : Query {
   QuitQuery() : Query(QueryKind::Quit) {}
-  mlir::LogicalResult run(llvm::raw_ostream &os,
+  llvm::LogicalResult run(llvm::raw_ostream &os,
                           QuerySession &qs) const override;
 
   static bool classof(const Query *query) {
@@ -92,7 +91,7 @@ struct QuitQuery : Query {
 struct MatchQuery : Query {
   MatchQuery(llvm::StringRef source, const matcher::DynMatcher &matcher)
       : Query(QueryKind::Match), matcher(matcher), source(source) {}
-  mlir::LogicalResult run(llvm::raw_ostream &os,
+  llvm::LogicalResult run(llvm::raw_ostream &os,
                           QuerySession &qs) const override;
 
   const matcher::DynMatcher matcher;

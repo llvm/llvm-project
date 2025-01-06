@@ -35,9 +35,6 @@ struct PassTiming : public PassInstrumentation {
   /// parent thread into which the new thread should be nested.
   DenseMap<PipelineParentInfo, unsigned> parentTimerIndices;
 
-  /// A stack of the currently active timing scopes per thread.
-  DenseMap<uint64_t, SmallVector<TimingScope, 4>> activeThreadTimers;
-
   /// The timing manager owned by this instrumentation (in case timing was
   /// enabled by the user on the pass manager without providing an external
   /// timing manager). This *must* appear before the `ownedTimingScope` to
@@ -45,6 +42,9 @@ struct PassTiming : public PassInstrumentation {
   /// may hold a timer that points into the former.
   std::unique_ptr<TimingManager> ownedTimingManager;
   TimingScope ownedTimingScope;
+
+  /// A stack of the currently active timing scopes per thread.
+  DenseMap<uint64_t, SmallVector<TimingScope, 4>> activeThreadTimers;
 
   /// The root timing scope into which timing is reported.
   TimingScope &rootScope;

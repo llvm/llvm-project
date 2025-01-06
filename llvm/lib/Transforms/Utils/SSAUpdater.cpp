@@ -23,7 +23,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -136,9 +135,9 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
     }
   }
 
-  // If there are no predecessors, just return undef.
+  // If there are no predecessors, just return poison.
   if (PredValues.empty())
-    return UndefValue::get(ProtoType);
+    return PoisonValue::get(ProtoType);
 
   // Otherwise, if all the merged values are the same, just use it.
   if (SingularValue)
@@ -167,7 +166,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
@@ -307,10 +306,10 @@ public:
       append_range(*Preds, predecessors(BB));
   }
 
-  /// GetUndefVal - Get an undefined value of the same type as the value
+  /// GetPoisonVal - Get a poison value of the same type as the value
   /// being handled.
-  static Value *GetUndefVal(BasicBlock *BB, SSAUpdater *Updater) {
-    return UndefValue::get(Updater->ProtoType);
+  static Value *GetPoisonVal(BasicBlock *BB, SSAUpdater *Updater) {
+    return PoisonValue::get(Updater->ProtoType);
   }
 
   /// CreateEmptyPHI - Create a new PHI instruction in the specified block.
@@ -413,9 +412,13 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         updateDebugInfo(SI);
         SSA.AddAvailableValue(BB, SI->getOperand(0));
-      } else
+      } else if (auto *AI = dyn_cast<AllocaInst>(User)) {
+        // We treat AllocaInst as a store of an getValueToUseForAlloca value.
+        SSA.AddAvailableValue(BB, getValueToUseForAlloca(AI));
+      } else {
         // Otherwise it is a load, queue it to rewrite as a live-in load.
         LiveInLoads.push_back(cast<LoadInst>(User));
+      }
       BlockUses.clear();
       continue;
     }
@@ -423,7 +426,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     // Otherwise, check to see if this block is all loads.
     bool HasStore = false;
     for (Instruction *I : BlockUses) {
-      if (isa<StoreInst>(I)) {
+      if (isa<StoreInst>(I) || isa<AllocaInst>(I)) {
         HasStore = true;
         break;
       }
@@ -469,6 +472,12 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
 
         // Remember that this is the active value in the block.
         StoredValue = SI->getOperand(0);
+      } else if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        // Check if this an alloca, in which case we treat it as a store of
+        // getValueToUseForAlloca.
+        if (!isInstInList(AI, Insts))
+          continue;
+        StoredValue = getValueToUseForAlloca(AI);
       }
     }
 

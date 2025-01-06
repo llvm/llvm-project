@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 ; CHECK: vsplatb
 
 declare i32 @llvm.hexagon.S2.vsplatrb(i32) #0

@@ -93,7 +93,7 @@ def AnyFortranVariable : Type<IsFortranVariablePred, "any HLFIR variable type">;
 
 def AnyFortranValue : TypeConstraint<Or<[AnyLogicalLike.predicate,
     AnyIntegerLike.predicate, AnyRealLike.predicate,
-    fir_ComplexType.predicate, AnyComplex.predicate,
+    AnyFirComplexLike.predicate,
     hlfir_ExprType.predicate]>, "any Fortran value type">;
 
 
@@ -154,6 +154,12 @@ def IsPolymorphicObjectPred
         : CPred<"::hlfir::isPolymorphicObject($_self)">;
 def AnyPolymorphicObject : Type<IsPolymorphicObjectPred,
     "any polymorphic object">;
+
+def IsFortranIntegerScalarOrArrayPred
+    : CPred<"::hlfir::isFortranIntegerScalarOrArrayObject($_self)">;
+def AnyFortranIntegerScalarOrArrayObject
+    : Type<IsFortranIntegerScalarOrArrayPred,
+           "A scalar or array object containing integers">;
 
 def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
     "CharExtremumPredicate", "",

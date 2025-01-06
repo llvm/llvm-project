@@ -89,8 +89,8 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: store ptr addrspace(4) addrspacecast (ptr [[INVL1:@__device_side_enqueue_block_invoke[^ ]*]] to ptr addrspace(4)), ptr %block.invoke
   // COMMON: [[BL_I8:%[0-9]+]] ={{.*}} addrspacecast ptr %block to ptr addrspace(4)
   // COMMON-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_basic(
-  // SPIR-SAME: target("spirv.Queue") [[DEF_Q]], i32 [[FLAGS]], ptr byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
-  // X86-SAME: ptr [[DEF_Q]], i32 [[FLAGS]], ptr byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
+  // SPIR-SAME: target("spirv.Queue") [[DEF_Q]], i32 [[FLAGS]], ptr [[NDR]]{{([0-9]+)?}},
+  // X86-SAME: ptr [[DEF_Q]], i32 [[FLAGS]], ptr [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: ptr addrspace(4) addrspacecast (ptr [[INVLK1:[^ ]+_kernel]] to ptr addrspace(4)),
   // COMMON-SAME: ptr addrspace(4) [[BL_I8]])
   enqueue_kernel(default_queue, flags, ndrange,
@@ -333,8 +333,8 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
   // COMMON-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_basic(
-  // SPIR-SAME: target("spirv.Queue") [[DEF_Q]], i32 [[FLAGS]], ptr byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
-  // X86-SAME: ptr [[DEF_Q]], i32 [[FLAGS]], ptr byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
+  // SPIR-SAME: target("spirv.Queue") [[DEF_Q]], i32 [[FLAGS]], ptr [[NDR]]{{([0-9]+)?}},
+  // X86-SAME: ptr [[DEF_Q]], i32 [[FLAGS]], ptr [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: ptr addrspace(4) addrspacecast (ptr [[INVGK8:[^ ]+_kernel]] to ptr addrspace(4)),
   // COMMON-SAME: ptr addrspace(4) addrspacecast (ptr addrspace(1) [[BLG8]] to ptr addrspace(4)))
   enqueue_kernel(default_queue, flags, ndrange, block_A);
@@ -382,8 +382,8 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
   // COMMON: [[BL_I8:%[0-9]+]] ={{.*}} addrspacecast ptr {{.*}} to ptr addrspace(4)
   // COMMON-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_basic(
-  // SPIR-SAME: target("spirv.Queue") [[DEF_Q]], i32 [[FLAGS]], ptr byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
-  // X86-SAME: ptr [[DEF_Q]], i32 [[FLAGS]], ptr byval(%struct.ndrange_t) [[NDR]]{{([0-9]+)?}},
+  // SPIR-SAME: target("spirv.Queue") [[DEF_Q]], i32 [[FLAGS]], ptr [[NDR]]{{([0-9]+)?}},
+  // X86-SAME: ptr [[DEF_Q]], i32 [[FLAGS]], ptr [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: ptr addrspace(4) addrspacecast (ptr [[INVLK3:[^ ]+_kernel]] to ptr addrspace(4)),
   // COMMON-SAME: ptr addrspace(4) [[BL_I8]])
   enqueue_kernel(default_queue, flags, ndrange, block_C);

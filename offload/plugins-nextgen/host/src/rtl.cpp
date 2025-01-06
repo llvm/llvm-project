@@ -89,8 +89,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
   /// Launch the kernel using the libffi.
-  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
+                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
     // Create a vector of ffi_types, one per argument.
@@ -440,6 +440,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #else
     return llvm::Triple::ppc64;
 #endif
+#elif defined(__riscv) && (__riscv_xlen == 64)
+    return llvm::Triple::riscv64;
+#elif defined(__loongarch__) && (__loongarch_grlen == 64)
+    return llvm::Triple::loongarch64;
 #else
     return llvm::Triple::UnknownArch;
 #endif

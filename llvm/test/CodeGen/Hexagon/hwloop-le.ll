@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK: loop0

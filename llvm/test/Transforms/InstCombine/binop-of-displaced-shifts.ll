@@ -179,7 +179,7 @@ define i8 @shl_or_commuted(i8 %x) {
 define <2 x i8> @shl_or_splat(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @shl_or_splat
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 22>, [[X]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> splat (i8 22), [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 16>, %x

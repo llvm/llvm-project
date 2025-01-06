@@ -812,7 +812,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         std::string errorstr = command;
         errorstr += ":\n";
         errorstr += str;
-        error.SetErrorString(errorstr);
+        error = Status(errorstr);
       }
     }
 

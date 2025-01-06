@@ -11,7 +11,7 @@ add_entrypoint_object(
     libc.src.__support.threads.callonce
     libc.src.__support.common
     libc.src.errno.errno
-    libc.config.linux.app_h
+    libc.config.app_h
     libc.src.fcntl.open
     libc.src.unistd.read
     libc.src.unistd.close

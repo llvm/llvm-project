@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hexagon-shuffle=1 -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hexagon-shuffle=1 -O2 < %s | FileCheck %s
 ; Generate vshuff with 3rd param as an Rt8.
 ; v1:0=vshuff(v0,v1,r7)
 ; CHECK: vshuff(v{{[0-9]+}},v{{[0-9]+}},r{{[0-7]}})

@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
 #include <cassert>

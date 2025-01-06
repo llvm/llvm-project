@@ -40,12 +40,12 @@ define void @shl_base_global_ptr_global_atomic_fadd(ptr addrspace(1) %out, ptr a
   %cast = ptrtoint ptr addrspace(1) %arrayidx0 to i64
   %shl = shl i64 %cast, 2
   %castback = inttoptr i64 %shl to ptr addrspace(1)
-  call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %castback, float 100.0)
+  %unused = atomicrmw fadd ptr addrspace(1) %castback, float 100.0 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   store volatile i64 %cast, ptr addrspace(1) %extra.use, align 4
   ret void
 }
 
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind willreturn }
+
+!0 = !{}

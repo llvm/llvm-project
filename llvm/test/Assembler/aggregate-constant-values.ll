@@ -26,7 +26,7 @@ define void @bar(ptr %x) nounwind {
 }
 
 ; CHECK: @bar_empty
-; CHECK: store [0 x i32] undef, ptr %x
+; CHECK: store [0 x i32] poison, ptr %x
 ; CHECK: ret
 define void @bar_empty(ptr %x) nounwind {
   store [0 x i32][], ptr %x

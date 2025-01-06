@@ -1,0 +1,7 @@
+# REQUIRES: amdgpu-registered-target
+## Check that sort is working
+
+# RUN: cp -f %S/Inputs/amdgpu_asm_sort.s %t.s && %update_mc_test_checks --sort %t.s
+# RUN: diff -u %S/Inputs/amdgpu_asm_sort.s.expected %t.s
+# RUN: cp -f %S/Inputs/amdgpu_asm_sort_with_comment.s %t.s && %update_mc_test_checks --sort %t.s
+# RUN: diff -u %S/Inputs/amdgpu_asm_sort_with_comment.s.expected %t.s

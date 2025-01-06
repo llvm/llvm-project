@@ -21,10 +21,10 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
 #include "tables.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF float log1p(float x)
 {
@@ -175,3 +175,5 @@ _CLC_OVERLOAD _CLC_DEF double log1p(double x)
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, log1p, double);
 
 #endif // cl_khr_fp64
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(log1p)

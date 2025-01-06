@@ -162,6 +162,12 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
+.. option:: --split-layout=[true|false]
+
+ Split the profile data section to two with one containing sample profiles with
+ inlined functions and the other not. This option can only be used with
+ sample-based profile in extbinary format.
+
 .. option:: --convert-sample-profile-layout=[nest|flat]
 
  Convert the merged profile into a profile with a new layout. Supported
@@ -203,6 +209,25 @@ OPTIONS
  Specify the executable that contains profile data and profile name sections for
  the raw profile. When ``-profile-correlate=binary`` was used for
  instrumentation, use this option to correlate the raw profile.
+
+.. option:: --debuginfod
+
+ Use debuginfod to find the associated executables that contain profile data and
+ name sections for the raw profiles to correlate them.
+ When -profile-correlate=binary was used for instrumentation, this option can be
+ used for correlation.
+
+.. option:: --debug-file-directory=<dir>
+
+ Use provided local directories to search for executables that contain profile
+ data and name sections for the raw profiles to correlate them.
+ When -profile-correlate=binary was used for instrumentation, this option can be
+ used for correlation.
+
+.. option:: --correlate=<kind>
+
+ Specify the correlation kind (debug_info or binary) to use when -debuginfod or
+ -debug-file-directory=<dir> option is provided.
 
 .. option:: --temporal-profile-trace-reservoir-size
 

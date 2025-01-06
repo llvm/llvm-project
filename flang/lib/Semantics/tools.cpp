@@ -143,7 +143,9 @@ Tristate IsDefinedAssignment(
     return Tristate::Yes;
   } else if (lhsCat != TypeCategory::Derived) {
     return ToTristate(lhsCat != rhsCat &&
-        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat)));
+        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat) ||
+            lhsCat == TypeCategory::Unsigned ||
+            rhsCat == TypeCategory::Unsigned));
   } else if (MightBeSameDerivedType(lhsType, rhsType)) {
     return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or intrinsic
   } else {
@@ -159,7 +161,9 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
   } else {
     auto cat0{type0.category()};
     auto cat1{type1.category()};
-    if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
+    if (cat0 == TypeCategory::Unsigned || cat1 == TypeCategory::Unsigned) {
+      return cat0 == cat1;
+    } else if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
       // numeric types: EQ/NE always ok, others ok for non-complex
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
@@ -440,7 +444,7 @@ static void CheckMissingAnalysis(
     llvm::raw_string_ostream ss{buf};
     ss << "node has not been analyzed:\n";
     parser::DumpTree(ss, x);
-    common::die(ss.str().c_str());
+    common::die(buf.c_str());
   }
 }
 
@@ -685,10 +689,10 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
     return true;
   } else if (IsPointer(symbol)) {
     return !ignorePointer;
-  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol)) {
+  } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return derived->HasDefaultInitialization(
             ignoreAllocatable, ignorePointer);
@@ -705,7 +709,7 @@ bool IsDestructible(const Symbol &symbol, const Symbol *derivedTypeSymbol) {
       IsPointer(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return &derived->typeSymbol() != derivedTypeSymbol &&
             derived->HasDestruction();
@@ -866,7 +870,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
 
 bool MayRequireFinalization(const DerivedTypeSpec &derived) {
   return IsFinalizable(derived) ||
-      FindPolymorphicAllocatableUltimateComponent(derived);
+      FindPolymorphicAllocatablePotentialComponent(derived);
 }
 
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
@@ -1135,12 +1139,12 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
   return std::nullopt;
 }
 
-std::list<SourceName> OrderParameterNames(const Symbol &typeSymbol) {
-  std::list<SourceName> result;
+SymbolVector OrderParameterNames(const Symbol &typeSymbol) {
+  SymbolVector result;
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterNames(spec->typeSymbol());
   }
-  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNames()};
+  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNameOrder()};
   result.insert(result.end(), paramNames.begin(), paramNames.end());
   return result;
 }
@@ -1150,7 +1154,7 @@ SymbolVector OrderParameterDeclarations(const Symbol &typeSymbol) {
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterDeclarations(spec->typeSymbol());
   }
-  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDecls()};
+  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDeclOrder()};
   result.insert(result.end(), paramDecls.begin(), paramDecls.end());
   return result;
 }
@@ -1354,7 +1358,7 @@ ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
   for (const auto &node : componentPath_) {
-    designator += "%" + DEREF(node.component()).name().ToString();
+    designator += "%"s + DEREF(node.component()).name().ToString();
   }
   return designator;
 }
@@ -1404,11 +1408,11 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
   return std::find_if(directs.begin(), directs.end(), IsAllocatableOrPointer);
 }
 
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
-  UltimateComponentIterator ultimates{derived};
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
   return std::find_if(
-      ultimates.begin(), ultimates.end(), IsPolymorphicAllocatable);
+      potentials.begin(), potentials.end(), IsPolymorphicAllocatable);
 }
 
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &derived,
@@ -1558,8 +1562,9 @@ bool IsAutomaticallyDestroyed(const Symbol &symbol) {
   return symbol.has<ObjectEntityDetails>() &&
       (symbol.owner().kind() == Scope::Kind::Subprogram ||
           symbol.owner().kind() == Scope::Kind::BlockConstruct) &&
-      (!IsDummy(symbol) || IsIntentOut(symbol)) && !IsPointer(symbol) &&
-      !IsSaved(symbol) && !FindCommonBlockContaining(symbol);
+      !IsNamedConstant(symbol) && (!IsDummy(symbol) || IsIntentOut(symbol)) &&
+      !IsPointer(symbol) && !IsSaved(symbol) &&
+      !FindCommonBlockContaining(symbol);
 }
 
 const std::optional<parser::Name> &MaybeGetNodeName(
@@ -1648,7 +1653,40 @@ bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
       }
     }
   }
-  return false;
+  // Check for inherited defined I/O
+  const auto *parentType{derived.typeSymbol().GetParentTypeSpec()};
+  return parentType && HasDefinedIo(which, *parentType, scope);
+}
+
+template <typename E>
+std::forward_list<std::string> GetOperatorNames(
+    const SemanticsContext &context, E opr) {
+  std::forward_list<std::string> result;
+  for (const char *name : context.languageFeatures().GetNames(opr)) {
+    result.emplace_front("operator("s + name + ')');
+  }
+  return result;
+}
+
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &context, const SourceName &name) {
+  std::string str{name.ToString()};
+  if (!name.empty() && name.end()[-1] == ')' &&
+      name.ToString().rfind("operator(", 0) == 0) {
+    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, common::LogicalOperator{i})};
+      if (llvm::is_contained(names, str)) {
+        return names;
+      }
+    }
+    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, common::RelationalOperator{i})};
+      if (llvm::is_contained(names, str)) {
+        return names;
+      }
+    }
+  }
+  return {str};
 }
 
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,

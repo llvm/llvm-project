@@ -86,6 +86,9 @@
 #ifndef OPENMP_DOACROSS_MODIFIER
 #define OPENMP_DOACROSS_MODIFIER(Name)
 #endif
+#ifndef OPENMP_ALLOCATE_MODIFIER
+#define OPENMP_ALLOCATE_MODIFIER(Name)
+#endif
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -107,6 +110,7 @@ OPENMP_DEVICE_MODIFIER(device_num)
 OPENMP_DEFAULTMAP_KIND(scalar)
 OPENMP_DEFAULTMAP_KIND(aggregate)
 OPENMP_DEFAULTMAP_KIND(pointer)
+OPENMP_DEFAULTMAP_KIND(all)
 
 // Modifiers for 'defaultmap' clause.
 OPENMP_DEFAULTMAP_MODIFIER(alloc)
@@ -213,6 +217,9 @@ OPENMP_GRAINSIZE_MODIFIER(strict)
 // Modifiers for the 'num_tasks' clause.
 OPENMP_NUMTASKS_MODIFIER(strict)
 
+// Modifiers for 'allocate' clause.
+OPENMP_ALLOCATE_MODIFIER(allocator)
+
 // Modifiers for the 'doacross' clause.
 OPENMP_DOACROSS_MODIFIER(source)
 OPENMP_DOACROSS_MODIFIER(sink)
@@ -244,4 +251,5 @@ OPENMP_DOACROSS_MODIFIER(source_omp_cur_iteration)
 #undef OPENMP_DEFAULTMAP_KIND
 #undef OPENMP_DEFAULTMAP_MODIFIER
 #undef OPENMP_DOACROSS_MODIFIER
+#undef OPENMP_ALLOCATE_MODIFIER
 

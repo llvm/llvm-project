@@ -48,13 +48,14 @@ define i8 @test_pr52023(i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:    br label [[LOOP_1:%.*]]
 ; CHECK:       loop.1:
 ; CHECK-NEXT:    [[INC79:%.*]] = phi i8 [ [[TMP0:%.*]], [[LOOP_1_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0]] = add i8 [[INC79]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[INC79]], 1
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP_2_LATCH:%.*]], label [[LOOP_1_LATCH]]
 ; CHECK:       loop.2.latch:
 ; CHECK-NEXT:    br label [[LOOP_1_LATCH]]
 ; CHECK:       loop.1.latch:
+; CHECK-NEXT:    [[TMP0]] = phi i8 [ [[TMP1]], [[LOOP_2_LATCH]] ], [ undef, [[LOOP_2]] ]
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[EXIT:%.*]], label [[LOOP_1]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i8 [ [[TMP0]], [[LOOP_1_LATCH]] ]

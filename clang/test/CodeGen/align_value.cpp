@@ -25,7 +25,7 @@ struct ad_struct {
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X:%.*]], ptr [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AD_STRUCT:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_AD_STRUCT:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 8
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret ptr [[TMP1]]
@@ -40,7 +40,7 @@ double *foo(ad_struct& x) {
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X:%.*]], ptr [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AD_STRUCT:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_AD_STRUCT:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 8
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret ptr [[TMP1]]

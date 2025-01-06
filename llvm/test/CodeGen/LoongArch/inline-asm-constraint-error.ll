@@ -1,4 +1,4 @@
-; RUN: not llc --mtriple=loongarch32 < %s 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=loongarch32 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LA32
 ; RUN: not llc --mtriple=loongarch64 < %s 2>&1 | FileCheck %s
 
 define void @constraint_l() {
@@ -32,9 +32,9 @@ define void @constraint_K() {
 }
 
 define void @constraint_f() nounwind {
-; CHECK: error: couldn't allocate input reg for constraint 'f'
+; LA32: error: couldn't allocate input reg for constraint 'f'
   tail call void asm "fadd.s $$fa0, $$fa0, $0", "f"(float 0.0)
-; CHECK: error: couldn't allocate input reg for constraint 'f'
+; LA32: error: couldn't allocate input reg for constraint 'f'
   tail call void asm "fadd.s $$fa0, $$fa0, $0", "f"(double 0.0)
   ret void
 }

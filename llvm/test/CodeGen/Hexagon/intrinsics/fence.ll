@@ -1,11 +1,11 @@
-; RUN: sed -e "s/ORDER/acquire/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/release/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acq_rel/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e 's/ORDER/syncscope("singlethread") acquire/' %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e 's/ORDER/syncscope("singlethread") release/' %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e 's/ORDER/syncscope("singlethread") acq_rel/' %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e 's/ORDER/syncscope("singlethread") seq_cst/' %s | llc -march=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acquire/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/release/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acq_rel/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e 's/ORDER/syncscope("singlethread") acquire/' %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e 's/ORDER/syncscope("singlethread") release/' %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e 's/ORDER/syncscope("singlethread") acq_rel/' %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e 's/ORDER/syncscope("singlethread") seq_cst/' %s | llc -mtriple=hexagon | FileCheck %s
 
 define void @fence_func() #0 {
 entry:

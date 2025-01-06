@@ -70,7 +70,7 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-NO-MATH-ERRNO
 // CHECK-NO-MATH-ERRNO: #define __NO_MATH_ERRNO__ 1
 //
-// RUN: %clang_cc1 %s -E -dM -ffinite-math-only -o - \
+// RUN: %clang_cc1 %s -E -dM -menable-no-nans -menable-no-infs -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FINITE-MATH-ONLY
 // CHECK-FINITE-MATH-ONLY: #define __FINITE_MATH_ONLY__ 1
 //

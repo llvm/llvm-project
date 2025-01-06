@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r[[REG0:[0-9]+]] = usr
 ; CHECK: [[REG0]] = insert(r{{[0-9]+}},#1,#16)
 

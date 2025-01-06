@@ -13,13 +13,13 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_UTILS_H
 #define MLIR_ANALYSIS_PRESBURGER_UTILS_H
 
-#include "mlir/Support/LLVM.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-
-#include "mlir/Analysis/Presburger/Matrix.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 
 namespace mlir {
 namespace presburger {
@@ -294,6 +294,54 @@ std::vector<Fraction> multiplyPolynomials(ArrayRef<Fraction> a,
 
 bool isRangeZero(ArrayRef<Fraction> arr);
 
+/// Example usage:
+/// Print .12, 3.4, 56.7
+/// preAlign = ".", minSpacing = 1,
+///    .12   .12
+///   3.4   3.4
+///  56.7  56.7
+struct PrintTableMetrics {
+  // If unknown, set to 0 and pass the struct into updatePrintMetrics.
+  unsigned maxPreIndent;
+  unsigned maxPostIndent;
+  std::string preAlign;
+};
+
+/// Iterate over each val in the table and update 'm' where
+/// .maxPreIndent and .maxPostIndent are initialized to 0.
+/// class T is any type that can be handled by llvm::raw_string_ostream.
+template <class T>
+void updatePrintMetrics(T val, PrintTableMetrics &m) {
+  std::string str;
+  llvm::raw_string_ostream(str) << val;
+  if (str.empty())
+    return;
+  unsigned preIndent = str.find(m.preAlign);
+  preIndent = (preIndent != (unsigned)std::string::npos) ? preIndent + 1 : 0;
+  m.maxPreIndent = std::max(m.maxPreIndent, preIndent);
+  m.maxPostIndent =
+      std::max(m.maxPostIndent, (unsigned int)(str.length() - preIndent));
+}
+
+/// Print val in the table with metrics specified in 'm'.
+template <class T>
+void printWithPrintMetrics(raw_ostream &os, T val, unsigned minSpacing,
+                           const PrintTableMetrics &m) {
+  std::string str;
+  llvm::raw_string_ostream(str) << val;
+  unsigned preIndent;
+  if (!str.empty()) {
+    preIndent = str.find(m.preAlign);
+    preIndent = (preIndent != (unsigned)std::string::npos) ? preIndent + 1 : 0;
+  } else {
+    preIndent = 0;
+  }
+  for (unsigned i = 0; i < (minSpacing + m.maxPreIndent - preIndent); ++i)
+    os << " ";
+  os << str;
+  for (unsigned i = 0; i < m.maxPostIndent - (str.length() - preIndent); ++i)
+    os << " ";
+}
 } // namespace presburger
 } // namespace mlir
 

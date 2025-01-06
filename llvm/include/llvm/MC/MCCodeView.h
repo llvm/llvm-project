@@ -22,7 +22,7 @@
 #include <vector>
 
 namespace llvm {
-class MCAsmLayout;
+class MCAssembler;
 class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
 class MCDataFragment;
@@ -144,10 +144,11 @@ struct MCCVFunctionInfo {
 class CodeViewContext {
 public:
   CodeViewContext(MCContext *MCCtx) : MCCtx(MCCtx) {}
-  ~CodeViewContext();
 
   CodeViewContext &operator=(const CodeViewContext &other) = delete;
   CodeViewContext(const CodeViewContext &other) = delete;
+
+  void finish();
 
   bool isValidFileNumber(unsigned FileNumber) const;
   bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
@@ -199,7 +200,7 @@ public:
                                       const MCSymbol *FnEndSym);
 
   /// Encodes the binary annotations once we have a layout.
-  void encodeInlineLineTable(MCAsmLayout &Layout,
+  void encodeInlineLineTable(const MCAssembler &Asm,
                              MCCVInlineLineTableFragment &F);
 
   MCFragment *
@@ -207,7 +208,7 @@ public:
                ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
                StringRef FixedSizePortion);
 
-  void encodeDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &F);
+  void encodeDefRange(const MCAssembler &Asm, MCCVDefRangeFragment &F);
 
   /// Emits the string table substream.
   void emitStringTable(MCObjectStreamer &OS);
@@ -230,9 +231,7 @@ private:
 
   /// The fragment that ultimately holds our strings.
   MCDataFragment *StrTabFragment = nullptr;
-  bool InsertedStrTabFragment = false;
-
-  MCDataFragment *getStringTableFragment();
+  SmallVector<char, 0> StrTab = {'\0'};
 
   /// Get a string table offset.
   unsigned getStringTableOffset(StringRef S);

@@ -44,13 +44,14 @@ private:
   llvm::SmallVector<Decl *, 8> TraversalStack;
 };
 
-class DummyMatchVisitor : public ExpectedLocationVisitor<DummyMatchVisitor> {
+class DummyMatchVisitor : public ExpectedLocationVisitor {
   bool EmitDeclIndices, EmitStmtIndices;
 
 public:
   DummyMatchVisitor(bool EmitDeclIndices = false, bool EmitStmtIndices = false)
       : EmitDeclIndices(EmitDeclIndices), EmitStmtIndices(EmitStmtIndices) {}
-  bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) {
+
+  bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) override {
     const ASTContext &Context = TU->getASTContext();
     const SourceManager &SM = Context.getSourceManager();
     LexicallyOrderedDeclVisitor SubVisitor(*this, SM, EmitDeclIndices,
@@ -87,7 +88,7 @@ bool LexicallyOrderedDeclVisitor::VisitNamedDecl(const NamedDecl *D) {
   }
   if (EmitDeclIndices)
     OS << "@" << Index++;
-  Matcher.match(OS.str(), D);
+  Matcher.match(Path, D);
   return true;
 }
 
@@ -96,7 +97,7 @@ bool LexicallyOrderedDeclVisitor::VisitDeclRefExpr(const DeclRefExpr *D) {
   llvm::raw_string_ostream OS(Name);
   if (EmitStmtIndices)
     OS << "@" << Index++;
-  Matcher.match(OS.str(), D);
+  Matcher.match(Name, D);
   return true;
 }
 

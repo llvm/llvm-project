@@ -12,10 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -89,10 +87,6 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
 
   int64_t Val = MBBI->getOperand(1).getImm();
 
-  RISCVMatInt::InstSeq Seq =
-      RISCVMatInt::generateInstSeq(Val, MBB.getParent()->getSubtarget());
-  assert(!Seq.empty());
-
   Register DstReg = MBBI->getOperand(0).getReg();
   bool DstIsDead = MBBI->getOperand(0).isDead();
   bool Renamable = MBBI->getOperand(0).isRenamable();
@@ -126,7 +120,7 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-expand-pseudolisimm32",
+INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-post-ra-expand-pseudo",
                 RISCV_POST_RA_EXPAND_PSEUDO_NAME, false, false)
 namespace llvm {
 

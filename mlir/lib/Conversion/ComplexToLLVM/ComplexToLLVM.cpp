@@ -323,7 +323,7 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
 } // namespace
 
 void mlir::populateComplexToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
       AbsOpConversion,

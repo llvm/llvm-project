@@ -244,7 +244,7 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $32, %r14d
 ; CHECK-NEXT:    xorl %r15d, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r14)
@@ -299,7 +299,7 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; EGPR-NEXT:    movq %rdi, %rbx # encoding: [0x48,0x89,0xfb]
 ; EGPR-NEXT:    movl $32, %r14d # encoding: [0x41,0xbe,0x20,0x00,0x00,0x00]
 ; EGPR-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
-; EGPR-NEXT:    .p2align 4, 0x90
+; EGPR-NEXT:    .p2align 4
 ; EGPR-NEXT:  .LBB1_2: # %loop.header
 ; EGPR-NEXT:    # =>This Inner Loop Header: Depth=1
 ; EGPR-NEXT:    tilestored %tmm0, (%rbx,%r14) # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7a,0x4b,0x04,0x33]

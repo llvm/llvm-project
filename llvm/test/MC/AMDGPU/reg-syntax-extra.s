@@ -38,9 +38,9 @@ s_mov_b64 [exec_lo,exec_hi], s[2:3]
 // GFX10: s_mov_b64 exec, s[2:3]         ; encoding: [0x02,0x04,0xfe,0xbe]
 
 s_mov_b64 [flat_scratch_lo,flat_scratch_hi], s[2:3]
-// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: flat_scratch_lo register not available on this GPU
 // VI:   s_mov_b64 flat_scratch, s[2:3]  ; encoding: [0x02,0x01,0xe6,0xbe]
-// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: flat_scratch_lo register not available on this GPU
 
 s_mov_b64 [vcc_lo,vcc_hi], s[2:3]
 // SICI: s_mov_b64 vcc, s[2:3]           ; encoding: [0x02,0x04,0xea,0xbe]
@@ -50,12 +50,12 @@ s_mov_b64 [vcc_lo,vcc_hi], s[2:3]
 s_mov_b64 [tba_lo,tba_hi], s[2:3]
 // SICI:  s_mov_b64 tba, s[2:3]           ; encoding: [0x02,0x04,0xec,0xbe]
 // VI:    s_mov_b64 tba, s[2:3]           ; encoding: [0x02,0x01,0xec,0xbe]
-// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tba_lo register not available on this GPU
 
 s_mov_b64 [tma_lo,tma_hi], s[2:3]
 // SICI:  s_mov_b64 tma, s[2:3]           ; encoding: [0x02,0x04,0xee,0xbe]
 // VI:    s_mov_b64 tma, s[2:3]           ; encoding: [0x02,0x01,0xee,0xbe]
-// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX10: :[[@LINE-3]]:{{[0-9]+}}: error: tma_lo register not available on this GPU
 
 v_mov_b32_e32 [v1], [v2]
 // GCN:  v_mov_b32_e32 v1, v2 ; encoding: [0x02,0x03,0x02,0x7e]

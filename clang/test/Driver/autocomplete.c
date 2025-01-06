@@ -114,6 +114,7 @@
 // WARNING-NEXT: -Wmain-return-type
 // WARNING-NEXT: -Wmalformed-warning-check
 // WARNING-NEXT: -Wmany-braces-around-scalar-init
+// WARNING-NEXT: -Wmath-errno-enabled-with-veclib
 // WARNING-NEXT: -Wmathematical-notation-identifier-extension
 // WARNING-NEXT: -Wmax-tokens
 // WARNING-NEXT: -Wmax-unsigned-zero

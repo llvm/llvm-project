@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <vector>
 
 #include "lldb/Target/StackFrame.h"
@@ -91,27 +92,39 @@ public:
 
   size_t GetStatus(Stream &strm, uint32_t first_frame, uint32_t num_frames,
                    bool show_frame_info, uint32_t num_frames_with_source,
-                   bool show_unique = false,
+                   bool show_unique = false, bool show_hidden = false,
                    const char *frame_marker = nullptr);
+
+  /// Returns whether we have currently fetched all the frames of a stack.
+  bool WereAllFramesFetched() const;
 
 protected:
   friend class Thread;
   friend class ScriptedThread;
 
+  /// Use this API to build a stack frame list (used for scripted threads, for
+  /// instance.)  This API is not meant for StackFrameLists that have unwinders
+  /// and partake in lazy stack filling (using GetFramesUpTo).  Rather if you
+  /// are building StackFrameLists with this API, you should build the entire
+  /// list before making it available for use.
   bool SetFrameAtIndex(uint32_t idx, lldb::StackFrameSP &frame_sp);
 
-  /// Realizes frames up to (and including) end_idx (which can be greater than  
-  /// the actual number of frames.)  
+  /// Ensures that frames up to (and including) `end_idx` are realized in the
+  /// StackFrameList.  `end_idx` can be larger than the actual number of frames,
+  /// in which case all the frames will be fetched.  Acquires the writer end of
+  /// the list mutex.
   /// Returns true if the function was interrupted, false otherwise.
-  bool GetFramesUpTo(uint32_t end_idx, 
-      InterruptionControl allow_interrupt = AllowInterruption);
+  /// Callers should first check (under the shared mutex) whether we need to
+  /// fetch frames or not.
+  bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
 
-  void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder);
+  // This should be called with either the reader or writer end of the list
+  // mutex held:
+  bool GetAllFramesFetched() const {
+    return m_concrete_frames_fetched == UINT32_MAX;
+  }
 
-  void SynthesizeTailCallFrames(StackFrame &next_frame);
-
-  bool GetAllFramesFetched() { return m_concrete_frames_fetched == UINT32_MAX; }
-
+  // This should be called with the writer end of the list mutex held.
   void SetAllFramesFetched() { m_concrete_frames_fetched = UINT32_MAX; }
 
   bool DecrementCurrentInlinedDepth();
@@ -122,6 +135,9 @@ protected:
 
   void SetCurrentInlinedDepth(uint32_t new_depth);
 
+  /// Calls into the stack frame recognizers and stop info to set the most
+  /// relevant frame.  This can call out to arbitrary user code so it can't
+  /// hold the StackFrameList mutex.
   void SelectMostRelevantFrame();
 
   typedef std::vector<lldb::StackFrameSP> collection;
@@ -138,11 +154,16 @@ protected:
   // source of information.
   lldb::StackFrameListSP m_prev_frames_sp;
 
-  /// A mutex for this frame list.
-  // TODO: This mutex may not always be held when required. In particular, uses
-  // of the StackFrameList APIs in lldb_private::Thread look suspect. Consider
-  // passing around a lock_guard reference to enforce proper locking.
-  mutable std::recursive_mutex m_mutex;
+  /// A mutex for this frame list.  The only public API that requires the
+  /// unique lock is Clear.  All other clients take the shared lock, though
+  /// if we need more frames we may swap shared for unique to fulfill that
+  /// requirement.
+  mutable std::shared_mutex m_list_mutex;
+
+  // Setting the inlined depth should be protected against other attempts to
+  // change it, but since it doesn't mutate the list itself, we can limit the
+  // critical regions it produces by having a separate mutex.
+  mutable std::mutex m_inlined_depth_mutex;
 
   /// A cache of frames. This may need to be updated when the program counter
   /// changes.
@@ -171,6 +192,21 @@ protected:
   const bool m_show_inlined_frames;
 
 private:
+  uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
+  lldb::StackFrameSP
+  GetFrameAtIndexNoLock(uint32_t idx,
+                        std::shared_lock<std::shared_mutex> &guard);
+
+  /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in
+  /// GetFramesUpTo, they are the ones that actually add frames.  They must be
+  /// called with the writer end of the list mutex held.
+
+  /// Returns true if fetching frames was interrupted, false otherwise.
+  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
+  /// Not currently interruptible so returns void.
+  void FetchOnlyConcreteFramesUpTo(uint32_t end_idx);
+  void SynthesizeTailCallFrames(StackFrame &next_frame);
+
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
 };

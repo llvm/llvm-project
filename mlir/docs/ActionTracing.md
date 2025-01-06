@@ -86,7 +86,7 @@ An action can also carry arbitrary payload, for example we can extend the
 
 ```c++
 /// A custom Action can be defined minimally by deriving from
-/// `tracing::ActionImpl`. It can has any members!
+/// `tracing::ActionImpl`. It can have any members!
 class MyCustomAction : public tracing::ActionImpl<MyCustomAction> {
 public:
   using Base = tracing::ActionImpl<MyCustomAction>;

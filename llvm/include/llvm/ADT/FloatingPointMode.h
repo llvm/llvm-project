@@ -176,7 +176,7 @@ struct DenormalMode {
     std::string storage;
     raw_string_ostream OS(storage);
     print(OS);
-    return OS.str();
+    return storage;
   }
 };
 

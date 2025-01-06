@@ -1,0 +1,8 @@
+# RUN: %lldb -s %s  | FileCheck %s
+log enable lldb event
+expr 1
+expr 1 // And a very long comment.
+quit
+
+# CHECK: {{title = "Running expression", details = "1"}}
+# CHECK: {{title = "Running expression", details = "1 // And a ver…"}}

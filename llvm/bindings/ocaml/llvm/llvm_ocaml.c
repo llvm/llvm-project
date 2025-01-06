@@ -687,8 +687,18 @@ value llvm_label_type(value Context) {
 }
 
 /* llcontext -> lltype */
-value llvm_x86_mmx_type(value Context) {
-  return to_val(LLVMX86MMXTypeInContext(Context_val(Context)));
+value llvm_x86_amx_type(value Context) {
+  return to_val(LLVMX86AMXTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_token_type(value Context) {
+  return to_val(LLVMTokenTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_metadata_type(value Context) {
+  return to_val(LLVMMetadataTypeInContext(Context_val(Context)));
 }
 
 /* llmodule -> string -> lltype option */

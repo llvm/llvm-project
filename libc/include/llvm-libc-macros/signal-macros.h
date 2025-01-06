@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_MACROS_SIGNAL_MACROS_H
 #define LLVM_LIBC_MACROS_SIGNAL_MACROS_H
 
-#ifdef __linux__
+#if defined(__linux__)
 #include "linux/signal-macros.h"
+#elif defined(__NVPTX__) || defined(__AMDGPU__)
+#include "gpu/signal-macros.h"
 #endif
 
 #endif // LLVM_LIBC_MACROS_SIGNAL_MACROS_H

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -mattr=-relax -riscv-no-aliases < %s \
+# RUN: llvm-mc -triple riscv32 -mattr=-relax -M no-aliases < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
@@ -6,7 +6,7 @@
 # RUN:     | llvm-objdump --no-print-imm-hex --triple=riscv32 --mattr=+c -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s
 
-# RUN: llvm-mc -triple riscv64 -mattr=-relax -riscv-no-aliases < %s \
+# RUN: llvm-mc -triple riscv64 -mattr=-relax -M no-aliases < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s

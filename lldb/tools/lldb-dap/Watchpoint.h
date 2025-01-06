@@ -10,9 +10,12 @@
 #define LLDB_TOOLS_LLDB_DAP_WATCHPOINT_H
 
 #include "BreakpointBase.h"
+#include "DAPForward.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBWatchpoint.h"
 #include "lldb/API/SBWatchpointOptions.h"
+#include "lldb/lldb-types.h"
+#include <cstddef>
 
 namespace lldb_dap {
 
@@ -24,9 +27,8 @@ struct Watchpoint : public BreakpointBase {
   lldb::SBWatchpoint wp;
   lldb::SBError error;
 
-  Watchpoint() = default;
-  Watchpoint(const llvm::json::Object &obj);
-  Watchpoint(lldb::SBWatchpoint wp) : wp(wp) {}
+  Watchpoint(DAP &d, const llvm::json::Object &obj);
+  Watchpoint(DAP &d, lldb::SBWatchpoint wp) : BreakpointBase(d), wp(wp) {}
 
   void SetCondition() override;
   void SetHitCondition() override;

@@ -285,7 +285,7 @@ define i32 @rem_euclid_wrong_operands_select(i32 %0) {
 
 define <2 x i32> @rem_euclid_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @rem_euclid_vec(
-; CHECK-NEXT:    [[SEL:%.*]] = and <2 x i32> [[TMP0:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[SEL:%.*]] = and <2 x i32> [[TMP0:%.*]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %rem = srem <2 x i32> %0, <i32 8, i32 8>
@@ -311,7 +311,7 @@ define i8 @rem_euclid_non_const_pow2(i8 %0, i8 %1) {
 ; CHECK-LABEL: @rem_euclid_non_const_pow2(
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NOTMASK]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP3]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP1:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %pow2 = shl i8 1, %0

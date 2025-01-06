@@ -363,13 +363,6 @@ static uint32_t g_q15_contained[] = {fpu_q15, LLDB_INVALID_REGNUM};
   }
 
 static RegisterInfo g_register_infos_arm[] = {
-    //  NAME         ALT     SZ   OFFSET          ENCODING          FORMAT
-    //  EH_FRAME             DWARF                GENERIC
-    //  PROCESS PLUGIN       LLDB NATIVE      VALUE REGS      INVALIDATE REGS
-    //  ===========  ======= ==   ==============  ================
-    //  ====================    ===================  ===================
-    //  ==========================  ===================  =============
-    //  ==============  =================
     {
         "r0",
         nullptr,

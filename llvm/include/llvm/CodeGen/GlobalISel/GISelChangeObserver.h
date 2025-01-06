@@ -69,8 +69,7 @@ class GISelObserverWrapper : public MachineFunction::Delegate,
 
 public:
   GISelObserverWrapper() = default;
-  GISelObserverWrapper(ArrayRef<GISelChangeObserver *> Obs)
-      : Observers(Obs.begin(), Obs.end()) {}
+  GISelObserverWrapper(ArrayRef<GISelChangeObserver *> Obs) : Observers(Obs) {}
   // Adds an observer.
   void addObserver(GISelChangeObserver *O) { Observers.push_back(O); }
   // Removes an observer from the list and does nothing if observer is not
@@ -80,6 +79,9 @@ public:
     if (It != Observers.end())
       Observers.erase(It);
   }
+  // Removes all observers
+  void clearObservers() { Observers.clear(); }
+
   // API for Observer.
   void erasingInstr(MachineInstr &MI) override {
     for (auto &O : Observers)
@@ -134,6 +136,20 @@ public:
   RAIIMFObsDelInstaller(MachineFunction &MF, GISelObserverWrapper &Wrapper)
       : DelI(MF, &Wrapper), ObsI(MF, Wrapper) {}
   ~RAIIMFObsDelInstaller() = default;
+};
+
+/// A simple RAII based Observer installer.
+/// Use this in a scope to install the Observer to the MachineFunction and reset
+/// it at the end of the scope.
+class RAIITemporaryObserverInstaller {
+public:
+  RAIITemporaryObserverInstaller(GISelObserverWrapper &Observers,
+                                 GISelChangeObserver &TemporaryObserver);
+  ~RAIITemporaryObserverInstaller();
+
+private:
+  GISelObserverWrapper &Observers;
+  GISelChangeObserver &TemporaryObserver;
 };
 
 } // namespace llvm

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hwloops %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hwloops %s -o - | FileCheck %s
 
 # Normally, if the registers holding the induction variable's bounds
 # are redefined inside of the loop's body, the loop cannot be converted

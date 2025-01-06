@@ -12,7 +12,7 @@ define i32 @a() nounwind {
 ; CHECK-NEXT:    calll d@PLT
 ; CHECK-NEXT:    cmpl $a, %esi
 ; CHECK-NEXT:    jbe .LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1

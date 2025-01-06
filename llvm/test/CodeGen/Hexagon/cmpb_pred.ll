@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-gen-mux-threshold=4 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-gen-mux-threshold=4 < %s | FileCheck %s
 ; Generate various cmpb instruction followed by if (p0) .. if (!p0)...
 target triple = "hexagon"
 

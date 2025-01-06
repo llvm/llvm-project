@@ -170,6 +170,9 @@ public:
   /// Returns whether the quantity is scaled by a runtime quantity (vscale).
   constexpr bool isScalable() const { return Scalable; }
 
+  /// Returns true if the quantity is not scaled by vscale.
+  constexpr bool isFixed() const { return !Scalable; }
+
   /// A return value of true indicates we know at compile time that the number
   /// of elements (vscale * Min) is definitely even. However, returning false
   /// does not guarantee that the total number of elements is odd.

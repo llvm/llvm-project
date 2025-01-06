@@ -796,7 +796,7 @@ class ArrayLoadConversion : public mlir::OpRewritePattern<ArrayLoadOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayLoadOp load,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "replace load " << load << " with undef.\n");
@@ -810,7 +810,7 @@ class ArrayMergeStoreConversion
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayMergeStoreOp store,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "marking store " << store << " as dead.\n");
@@ -1248,7 +1248,7 @@ public:
                                  const OperationUseMapT &m)
       : ArrayUpdateConversionBase{ctx, a, m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayUpdateOp update,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = update.getLoc();
@@ -1276,7 +1276,7 @@ public:
                                  const OperationUseMapT &m)
       : ArrayUpdateConversionBase{ctx, a, m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayModifyOp modify,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = modify.getLoc();
@@ -1298,7 +1298,7 @@ public:
                                 const OperationUseMapT &m)
       : OpRewritePattern{ctx}, useMap{m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayFetchOp fetch,
                   mlir::PatternRewriter &rewriter) const override {
     auto *op = fetch.getOperation();
@@ -1329,7 +1329,7 @@ public:
                                  const OperationUseMapT &m)
       : ArrayUpdateConversionBase{ctx, a, m} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayAccessOp access,
                   mlir::PatternRewriter &rewriter) const override {
     auto *op = access.getOperation();
@@ -1362,7 +1362,7 @@ public:
   explicit ArrayAmendConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(ArrayAmendOp amend,
                   mlir::PatternRewriter &rewriter) const override {
     auto *op = amend.getOperation();

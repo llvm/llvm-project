@@ -64,7 +64,7 @@ define i16 @or16(ptr %p) {
 ; X86-SLM:       # %bb.0:
 ; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SLM-NEXT:    movzwl (%ecx), %eax
-; X86-SLM-NEXT:    .p2align 4, 0x90
+; X86-SLM-NEXT:    .p2align 4
 ; X86-SLM-NEXT:  .LBB1_1: # %atomicrmw.start
 ; X86-SLM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-SLM-NEXT:    lock cmpxchgw %ax, (%ecx)
@@ -76,7 +76,7 @@ define i16 @or16(ptr %p) {
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-ATOM-NEXT:    movzwl (%ecx), %eax
-; X86-ATOM-NEXT:    .p2align 4, 0x90
+; X86-ATOM-NEXT:    .p2align 4
 ; X86-ATOM-NEXT:  .LBB1_1: # %atomicrmw.start
 ; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-ATOM-NEXT:    lock cmpxchgw %ax, (%ecx)
@@ -105,7 +105,7 @@ define i32 @xor32(ptr %p) {
 ; X86-SLM:       # %bb.0:
 ; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SLM-NEXT:    movl (%ecx), %eax
-; X86-SLM-NEXT:    .p2align 4, 0x90
+; X86-SLM-NEXT:    .p2align 4
 ; X86-SLM-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X86-SLM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-SLM-NEXT:    lock cmpxchgl %eax, (%ecx)
@@ -117,7 +117,7 @@ define i32 @xor32(ptr %p) {
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-ATOM-NEXT:    movl (%ecx), %eax
-; X86-ATOM-NEXT:    .p2align 4, 0x90
+; X86-ATOM-NEXT:    .p2align 4
 ; X86-ATOM-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-ATOM-NEXT:    lock cmpxchgl %eax, (%ecx)
@@ -146,7 +146,7 @@ define i64 @sub64(ptr %p) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %edx, %ecx
@@ -196,7 +196,7 @@ define i128 @or128(ptr %p) {
 ; X86-GENERIC-NEXT:    movl 8(%edi), %edx
 ; X86-GENERIC-NEXT:    movl (%edi), %ebx
 ; X86-GENERIC-NEXT:    movl 4(%edi), %esi
-; X86-GENERIC-NEXT:    .p2align 4, 0x90
+; X86-GENERIC-NEXT:    .p2align 4
 ; X86-GENERIC-NEXT:  .LBB4_1: # %atomicrmw.start
 ; X86-GENERIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-GENERIC-NEXT:    movl %ebx, (%esp)
@@ -257,7 +257,7 @@ define i128 @or128(ptr %p) {
 ; X86-ATOM-NEXT:    movl 8(%edi), %edx
 ; X86-ATOM-NEXT:    movl (%edi), %esi
 ; X86-ATOM-NEXT:    movl 4(%edi), %ebx
-; X86-ATOM-NEXT:    .p2align 4, 0x90
+; X86-ATOM-NEXT:    .p2align 4
 ; X86-ATOM-NEXT:  .LBB4_1: # %atomicrmw.start
 ; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-ATOM-NEXT:    movl %esi, (%esp)
@@ -320,7 +320,7 @@ define i32 @and32 (ptr %p) {
 ; X86-SLM:       # %bb.0:
 ; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SLM-NEXT:    movl (%ecx), %eax
-; X86-SLM-NEXT:    .p2align 4, 0x90
+; X86-SLM-NEXT:    .p2align 4
 ; X86-SLM-NEXT:  .LBB5_1: # %atomicrmw.start
 ; X86-SLM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-SLM-NEXT:    lock cmpxchgl %eax, (%ecx)
@@ -332,7 +332,7 @@ define i32 @and32 (ptr %p) {
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-ATOM-NEXT:    movl (%ecx), %eax
-; X86-ATOM-NEXT:    .p2align 4, 0x90
+; X86-ATOM-NEXT:    .p2align 4
 ; X86-ATOM-NEXT:  .LBB5_1: # %atomicrmw.start
 ; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-ATOM-NEXT:    lock cmpxchgl %eax, (%ecx)
@@ -495,7 +495,7 @@ define void @or64_nouse_seq_cst(ptr %p) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl (%esi), %eax
 ; X86-NEXT:    movl 4(%esi), %edx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB11_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %edx, %ecx
@@ -546,7 +546,7 @@ define void @or128_nouse_seq_cst(ptr %p) {
 ; X86-GENERIC-NEXT:    movl 8(%esi), %edi
 ; X86-GENERIC-NEXT:    movl (%esi), %edx
 ; X86-GENERIC-NEXT:    movl 4(%esi), %ebx
-; X86-GENERIC-NEXT:    .p2align 4, 0x90
+; X86-GENERIC-NEXT:    .p2align 4
 ; X86-GENERIC-NEXT:  .LBB12_1: # %atomicrmw.start
 ; X86-GENERIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-GENERIC-NEXT:    movl %edx, (%esp)
@@ -603,7 +603,7 @@ define void @or128_nouse_seq_cst(ptr %p) {
 ; X86-ATOM-NEXT:    movl 8(%esi), %edx
 ; X86-ATOM-NEXT:    movl (%esi), %eax
 ; X86-ATOM-NEXT:    movl 4(%esi), %edi
-; X86-ATOM-NEXT:    .p2align 4, 0x90
+; X86-ATOM-NEXT:    .p2align 4
 ; X86-ATOM-NEXT:  .LBB12_1: # %atomicrmw.start
 ; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-ATOM-NEXT:    movl %eax, (%esp)

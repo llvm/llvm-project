@@ -197,10 +197,25 @@ namespace GLSLExtInst {
 #include "SPIRVGenTables.inc"
 } // namespace GLSLExtInst
 
+namespace NonSemanticExtInst {
+#define GET_NonSemanticExtInst_DECL
+#include "SPIRVGenTables.inc"
+} // namespace NonSemanticExtInst
+
 namespace Opcode {
 #define GET_Opcode_DECL
 #include "SPIRVGenTables.inc"
 } // namespace Opcode
+
+namespace CooperativeMatrixLayout {
+#define GET_CooperativeMatrixLayout_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixLayout
+
+namespace CooperativeMatrixOperands {
+#define GET_CooperativeMatrixOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixOperands
 
 struct ExtendedBuiltin {
   StringRef Name;

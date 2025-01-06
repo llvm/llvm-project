@@ -153,7 +153,8 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array"> {
+def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array", 
+    [BlobAttrInterface]> {
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
@@ -211,6 +212,10 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array"> {
     int64_t size() const { return getSize(); }
     /// Return true if there are no elements in the dense array.
     bool empty() const { return !size(); }
+    /// BlobAttrInterface method.
+    ArrayRef<char> getData() {
+      return getRawData();
+    }
   }];
 }
 
@@ -431,7 +436,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
-    "dense_resource_elements", [ElementsAttrInterface]> {
+    "dense_resource_elements", [ElementsAttrInterface, BlobAttrInterface]> {
   let summary = "An Attribute containing a dense multi-dimensional array "
                 "backed by a resource";
   let description = [{
@@ -485,6 +490,10 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
       "ShapedType":$type, "StringRef":$blobName, "AsmResourceBlob":$blob
     )>
   ];
+  let extraClassDeclaration = [{
+    /// BlobAttrInterface method.
+    ArrayRef<char> getData();
+  }];
 
   let skipDefaultBuilders = 1;
 }
@@ -701,8 +710,11 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
         return $_get(type.getContext(), type, apValue);
       }
 
+      // TODO: Avoid implicit trunc?
+      // See https://github.com/llvm/llvm-project/issues/112510.
       IntegerType intTy = ::llvm::cast<IntegerType>(type);
-      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger());
+      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger(),
+                    /*implicitTrunc=*/true);
       return $_get(type.getContext(), type, apValue);
     }]>
   ];
@@ -1012,6 +1024,10 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
   let extraClassDeclaration = [{
     /// Print the attribute to the given output stream.
     void print(raw_ostream &os) const;
+
+    /// Returns true if this layout is static, i.e. the strides and offset all
+    /// have a known value > 0.
+    bool hasStaticLayout() const;
   }];
 }
 

@@ -53,10 +53,10 @@ public:
   ///
   /// \returns the ID of the class, protocol, or namespace, which can be used to
   /// add properties and methods to the class/protocol/namespace.
-  ContextID addObjCContext(std::optional<ContextID> ParentCtxID,
-                           llvm::StringRef Name, ContextKind Kind,
-                           const ObjCContextInfo &Info,
-                           llvm::VersionTuple SwiftVersion);
+  ContextID addContext(std::optional<ContextID> ParentCtxID,
+                       llvm::StringRef Name, ContextKind Kind,
+                       const ContextInfo &Info,
+                       llvm::VersionTuple SwiftVersion);
 
   /// Add information about a specific Objective-C property.
   ///
@@ -77,6 +77,22 @@ public:
   void addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
                      bool IsInstanceMethod, const ObjCMethodInfo &Info,
                      llvm::VersionTuple SwiftVersion);
+
+  /// Add information about a specific C++ method.
+  ///
+  /// \param CtxID The context in which this method resides, i.e. a C++ tag.
+  /// \param Name The name of the method.
+  /// \param Info Information about this method.
+  void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                    const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
+
+  /// Add information about a specific C record field.
+  ///
+  /// \param CtxID The context in which this field resides, i.e. a C/C++ tag.
+  /// \param Name The name of the field.
+  /// \param Info Information about this field.
+  void addField(ContextID CtxID, llvm::StringRef Name, const FieldInfo &Info,
+                llvm::VersionTuple SwiftVersion);
 
   /// Add information about a global variable.
   ///

@@ -66,9 +66,9 @@ int main() {
 // CHECK1-NEXT:    store i32 9, ptr [[DOTOMP_UB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_LASPRIVATE_CONDITIONAL]], ptr [[A1]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_LASPRIVATE_CONDITIONAL]], ptr [[A1]], i32 0, i32 1
 // CHECK1-NEXT:    store i8 0, ptr [[TMP1]], align 4
-// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_LASPRIVATE_CONDITIONAL]], ptr [[A1]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT_LASPRIVATE_CONDITIONAL]], ptr [[A1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK1-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP4]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -143,7 +143,7 @@ int main() {
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB2]], i32 [[TMP4]], ptr @.gomp_critical_user_{{pl_cond[.].+[.|,]}}var)
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB2]], i32 [[TMP4]], i32 10)
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @main.omp_outlined.omp_outlined.1, ptr [[TMP2]], ptr [[I]])
-// CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_LASPRIVATE_CONDITIONAL]], ptr [[A1]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT_LASPRIVATE_CONDITIONAL]], ptr [[A1]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i8, ptr [[TMP26]], align 4
 // CHECK1-NEXT:    [[TMP28:%.*]] = icmp ne i8 [[TMP27]], 0
 // CHECK1-NEXT:    br i1 [[TMP28]], label [[LPC_THEN:%.*]], label [[LPC_DONE:%.*]]
@@ -216,8 +216,8 @@ int main() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 // CHECK1-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP6]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @main.omp_outlined.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP7]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -269,7 +269,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[I_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP2]] monotonic, align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_LASPRIVATE_CONDITIONAL:%.*]], ptr [[TMP0]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_LASPRIVATE_CONDITIONAL:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CHECK1-NEXT:    store atomic volatile i8 1, ptr [[TMP4]] unordered, align 1
 // CHECK1-NEXT:    ret void
 //

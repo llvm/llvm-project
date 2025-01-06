@@ -38,7 +38,6 @@ class DynamicType;
 class ExtensibleDialect;
 class MLIRContext;
 class OptionalParseResult;
-class ParseResult;
 
 namespace detail {
 struct DynamicAttrStorage;

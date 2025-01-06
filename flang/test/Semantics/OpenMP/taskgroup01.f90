@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags -fopenmp-version=50
 
 use omp_lib
   implicit none
@@ -41,6 +41,8 @@ use omp_lib
     !$omp task
       !$omp taskgroup task_reduction(+ : reduction_var)
           print *, "The "
+  !ERROR: The type of 'reduction_var' is incompatible with the reduction operator.
+  !ERROR: The type of 'reduction_var' is incompatible with the reduction operator.
         !$omp taskgroup task_reduction(.or. : reduction_var) task_reduction(.and. : reduction_var)
           print *, "almighty sun"
         !$omp end taskgroup

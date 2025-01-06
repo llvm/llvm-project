@@ -27,7 +27,7 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "VEGenAsmWriter.inc"
 
-void VEInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void VEInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   // Generic registers have identical register name among register classes.
   unsigned AltIdx = VE::AsmName;
   // Misc registers have each own name, so no use alt-names.

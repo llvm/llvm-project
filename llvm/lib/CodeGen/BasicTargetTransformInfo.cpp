@@ -30,5 +30,5 @@ llvm::PartialUnrollingThreshold("partial-unrolling-threshold", cl::init(0),
                                 cl::Hidden);
 
 BasicTTIImpl::BasicTTIImpl(const TargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+    : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
       TLI(ST->getTargetLowering()) {}

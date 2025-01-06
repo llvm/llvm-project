@@ -53,12 +53,10 @@
 
 #include "ARM.h"
 #include "ARMBaseInstrInfo.h"
-#include "ARMBaseRegisterInfo.h"
 #include "ARMBasicBlockInfo.h"
 #include "ARMSubtarget.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -142,12 +140,11 @@ namespace {
     // Visit all the blocks within the loop, as well as exit blocks and any
     // blocks properly dominating the header.
     void ProcessLoop() {
-      std::function<void(MachineBasicBlock*)> Search = [this, &Search]
-        (MachineBasicBlock *MBB) -> void {
-        if (Visited.count(MBB))
+      std::function<void(MachineBasicBlock *)> Search =
+          [this, &Search](MachineBasicBlock *MBB) -> void {
+        if (!Visited.insert(MBB).second)
           return;
 
-        Visited.insert(MBB);
         for (auto *Succ : MBB->successors()) {
           if (!ML.contains(Succ))
             continue;
@@ -484,7 +481,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       AU.addRequired<ReachingDefAnalysis>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -1295,13 +1292,13 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   LLVM_DEBUG(dbgs() << "ARM Loops on " << MF->getName() << " ------------- \n");
 
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDA = &getAnalysis<ReachingDefAnalysis>();
   MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MRI = &MF->getRegInfo();
   TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(*MF));
+  BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);
   BBUtils->computeAllBlockSizes();
   BBUtils->adjustBBOffsetsAfter(&MF->front());
 

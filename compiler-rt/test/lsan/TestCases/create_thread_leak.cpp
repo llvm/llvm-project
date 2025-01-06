@@ -1,9 +1,9 @@
 // Test handling of arg and retval of child thread.
 
 // RUN: %clangxx_lsan -pthread %s -o %t
-// RUN: %run not %t 10 1 0 0 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK123
-// RUN: %run not %t 10 0 1 0 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK234
-// RUN: %run not %t 10 0 0 1 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK234
+// RUN: not %run %t 10 1 0 0 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK123
+// RUN: not %run %t 10 0 1 0 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK234
+// RUN: not %run %t 10 0 0 1 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK234
 // RUN: %run %t 10 0 0 0
 
 // This test appears to be flaky on x86_64-darwin buildbots.

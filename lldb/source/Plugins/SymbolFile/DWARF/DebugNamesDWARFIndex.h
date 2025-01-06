@@ -52,6 +52,12 @@ public:
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetNamespaces(ConstString name,
                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetTypesWithQuery(TypeQuery &query,
+                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetNamespacesWithParents(
+      ConstString name, const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetFunctions(const Module::LookupInfo &lookup_info,
                     SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
@@ -117,6 +123,36 @@ private:
   /// Returns true if `parent_entries` have identical names to `parent_names`.
   bool SameParentChain(llvm::ArrayRef<llvm::StringRef> parent_names,
                        llvm::ArrayRef<DebugNames::Entry> parent_entries) const;
+
+  bool SameParentChain(llvm::ArrayRef<CompilerContext> parent_contexts,
+                       llvm::ArrayRef<DebugNames::Entry> parent_entries) const;
+
+  /// Returns true if \a parent_contexts entries are within \a parent_chain.
+  /// This is diffferent from SameParentChain() which checks for exact match.
+  /// This function is required because \a parent_chain can contain inline
+  /// namespace entries which may not be specified in \a parent_contexts by
+  /// client.
+  ///
+  /// \param[in] parent_contexts
+  ///   The list of parent contexts to check for.
+  ///
+  /// \param[in] parent_chain
+  ///   The fully qualified parent chain entries from .debug_names index table
+  ///   to check against.
+  ///
+  /// \returns
+  ///   True if all \a parent_contexts entries are can be sequentially found
+  ///   inside
+  ///   \a parent_chain, otherwise False.
+  bool WithinParentChain(llvm::ArrayRef<CompilerContext> parent_contexts,
+                         llvm::ArrayRef<DebugNames::Entry> parent_chain) const;
+
+  /// Returns true if .debug_names pool entry \p entry matches \p query_context.
+  bool SameAsEntryContext(const CompilerContext &query_context,
+                          const DebugNames::Entry &entry) const;
+
+  llvm::SmallVector<CompilerContext>
+  GetTypeQueryParentContexts(TypeQuery &query);
 
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,

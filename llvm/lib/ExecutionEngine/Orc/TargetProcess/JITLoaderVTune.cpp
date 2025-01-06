@@ -11,7 +11,6 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/Shared/VTuneSharedStructs.h"
-#include <map>
 
 #if LLVM_USE_INTEL_JITEVENTS
 #include "IntelJITEventsWrapper.h"

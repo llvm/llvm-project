@@ -28,7 +28,7 @@ public:
   UUID() = default;
   
   /// Creates a uuid from the data pointed to by the bytes argument.
-  UUID(llvm::ArrayRef<uint8_t> bytes) : m_bytes(bytes.begin(), bytes.end()) {
+  UUID(llvm::ArrayRef<uint8_t> bytes) : m_bytes(bytes) {
     if (llvm::all_of(m_bytes, [](uint8_t b) { return b == 0; })) {
       Clear();
    }

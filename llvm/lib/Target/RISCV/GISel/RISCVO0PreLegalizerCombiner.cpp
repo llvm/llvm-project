@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 
 #define GET_GICOMBINER_DEPS
@@ -39,8 +38,7 @@ namespace {
 
 class RISCVO0PreLegalizerCombinerImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const RISCVO0PreLegalizerCombinerImplRuleConfig &RuleConfig;
   const RISCVSubtarget &STI;
 
@@ -132,6 +130,10 @@ bool RISCVO0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*EnableOpt*/ false,
                      F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration in the Combiner. This improves compile-time
+  // at the cost of possibly missing optimizations. See PR#94291 for details.
+  CInfo.MaxIterations = 1;
+
   RISCVO0PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB,
                                        /*CSEInfo*/ nullptr, RuleConfig, ST);
   return Impl.combineMachineInstrs();
@@ -139,8 +141,8 @@ bool RISCVO0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
 char RISCVO0PreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVO0PreLegalizerCombiner, DEBUG_TYPE,
-                      "Combine RISC-V machine instrs before legalization", false,
-                      false)
+                      "Combine RISC-V machine instrs before legalization",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)

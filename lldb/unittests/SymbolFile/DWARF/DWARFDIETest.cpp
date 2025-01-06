@@ -222,6 +222,9 @@ DWARF:
           Attributes:
             - Attribute:       DW_AT_name
               Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -235,6 +238,11 @@ DWARF:
         - AbbrCode:        0x3
           Values:
             - CStr:            STRUCT
+        - AbbrCode:        0x4
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            STRUCT
+        - AbbrCode:        0x0
         - AbbrCode:        0x0
         - AbbrCode:        0x0
 )";
@@ -245,15 +253,17 @@ DWARF:
   DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
   ASSERT_TRUE(unit);
 
-  auto make_namespace = [](llvm::StringRef name) {
+  auto make_namespace = [](const char *name) {
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
-  auto make_struct = [](llvm::StringRef name) {
+  auto make_struct = [](const char *name) {
     return CompilerContext(CompilerContextKind::ClassOrStruct,
                            ConstString(name));
   };
   DWARFDIE struct_die = unit->DIE().GetFirstChild().GetFirstChild();
   ASSERT_TRUE(struct_die);
+  DWARFDIE anon_struct_die = struct_die.GetSibling().GetFirstChild();
+  ASSERT_TRUE(anon_struct_die);
   EXPECT_THAT(
       struct_die.GetDeclContext(),
       testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
@@ -262,6 +272,18 @@ DWARF:
       testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
   EXPECT_THAT(struct_die.GetDWARFDeclContext(),
               DWARFDeclContext({{DW_TAG_structure_type, "STRUCT"},
+                                {DW_TAG_namespace, "NAMESPACE"}}));
+  EXPECT_THAT(anon_struct_die.GetDeclContext(),
+              testing::ElementsAre(make_namespace("NAMESPACE"),
+                                   make_namespace(nullptr),
+                                   make_struct("STRUCT")));
+  EXPECT_THAT(anon_struct_die.GetTypeLookupContext(),
+              testing::ElementsAre(make_namespace("NAMESPACE"),
+                                   make_namespace(nullptr),
+                                   make_struct("STRUCT")));
+  EXPECT_THAT(anon_struct_die.GetDWARFDeclContext(),
+              DWARFDeclContext({{DW_TAG_structure_type, "STRUCT"},
+                                {DW_TAG_namespace, nullptr},
                                 {DW_TAG_namespace, "NAMESPACE"}}));
 }
 

@@ -13,6 +13,10 @@
 #error "This file is for HIP and OpenMP AMDGCN device compilation only."
 #endif
 
+// The __CLANG_GPU_DISABLE_MATH_WRAPPERS macro provides a way to let standard
+// libcalls reach the link step instead of being eagerly replaced.
+#ifndef __CLANG_GPU_DISABLE_MATH_WRAPPERS
+
 #if !defined(__HIPCC_RTC__)
 #include <limits.h>
 #include <stdint.h>
@@ -1321,4 +1325,5 @@ __host__ inline static int max(int __arg1, int __arg2) {
 #pragma pop_macro("__RETURN_TYPE")
 #pragma pop_macro("__FAST_OR_SLOW")
 
+#endif // __CLANG_GPU_DISABLE_MATH_WRAPPERS
 #endif // __CLANG_HIP_MATH_H__

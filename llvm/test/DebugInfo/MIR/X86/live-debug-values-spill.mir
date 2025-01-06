@@ -1,5 +1,5 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck -check-prefix=GENERATE %s
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck -check-prefix=TERMINATE %s
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck -check-prefix=GENERATE %s
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck -check-prefix=TERMINATE %s
 # 
 # Check that spills are recognized in the Live Debug Values pass and that
 # DBG_VALUE instructions are generated to keep track of spilled user

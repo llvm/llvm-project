@@ -14,9 +14,11 @@
 #ifndef LLVM_MC_MCSCHEDULE_H
 #define LLVM_MC_MCSCHEDULE_H
 
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <optional>
 
 namespace llvm {
 
@@ -25,6 +27,7 @@ struct InstrItinerary;
 class MCSubtargetInfo;
 class MCInstrInfo;
 class MCInst;
+class MCInstrDesc;
 class InstrItineraryData;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
@@ -369,8 +372,18 @@ struct MCSchedModel {
                                  const MCSchedClassDesc &SCDesc);
 
   int computeInstrLatency(const MCSubtargetInfo &STI, unsigned SClass) const;
+
   int computeInstrLatency(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                           const MCInst &Inst) const;
+
+  template <typename MCSubtargetInfo, typename MCInstrInfo,
+            typename InstrItineraryData, typename MCInstOrMachineInstr>
+  int computeInstrLatency(
+      const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+      const MCInstOrMachineInstr &Inst,
+      llvm::function_ref<const MCSchedClassDesc *(const MCSchedClassDesc *)>
+          ResolveVariantSchedClass =
+              [](const MCSchedClassDesc *SCDesc) { return SCDesc; }) const;
 
   // Returns the reciprocal throughput information from a MCSchedClassDesc.
   static double
@@ -392,6 +405,54 @@ struct MCSchedModel {
   /// Returns the default initialized model.
   static const MCSchedModel Default;
 };
+
+// The first three are only template'd arguments so we can get away with leaving
+// them as incomplete types below. The third is a template over
+// MCInst/MachineInstr so as to avoid a layering violation here that would make
+// the MC layer depend on CodeGen.
+template <typename MCSubtargetInfo, typename MCInstrInfo,
+          typename InstrItineraryData, typename MCInstOrMachineInstr>
+int MCSchedModel::computeInstrLatency(
+    const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+    const MCInstOrMachineInstr &Inst,
+    llvm::function_ref<const MCSchedClassDesc *(const MCSchedClassDesc *)>
+        ResolveVariantSchedClass) const {
+  static const int NoInformationAvailable = -1;
+  // Check if we have a scheduling model for instructions.
+  if (!hasInstrSchedModel()) {
+    // Try to fall back to the itinerary model if the scheduling model doesn't
+    // have a scheduling table.  Note the default does not have a table.
+
+    llvm::StringRef CPU = STI.getCPU();
+
+    // Check if we have a CPU to get the itinerary information.
+    if (CPU.empty())
+      return NoInformationAvailable;
+
+    // Get itinerary information.
+    InstrItineraryData IID = STI.getInstrItineraryForCPU(CPU);
+    // Get the scheduling class of the requested instruction.
+    const MCInstrDesc &Desc = MCII.get(Inst.getOpcode());
+    unsigned SCClass = Desc.getSchedClass();
+
+    unsigned Latency = 0;
+
+    for (unsigned Idx = 0, IdxEnd = Inst.getNumOperands(); Idx != IdxEnd; ++Idx)
+      if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
+        Latency = std::max(Latency, *OperCycle);
+
+    return int(Latency);
+  }
+
+  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
+  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
+  SCDesc = ResolveVariantSchedClass(SCDesc);
+
+  if (!SCDesc || !SCDesc->isValid())
+    return NoInformationAvailable;
+
+  return MCSchedModel::computeInstrLatency(STI, *SCDesc);
+}
 
 } // namespace llvm
 

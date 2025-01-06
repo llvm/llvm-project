@@ -110,13 +110,13 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    lhu a1, 0(a1)
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    lhu a0, 0(a0)
-; RV64-NEXT:    slli a1, a1, 16
-; RV64-NEXT:    fmv.w.x fa5, a1
+; RV64-NEXT:    lhu a0, 0(a1)
+; RV64-NEXT:    lhu a1, 0(s0)
 ; RV64-NEXT:    slli a0, a0, 16
-; RV64-NEXT:    fmv.w.x fa4, a0
+; RV64-NEXT:    slli a1, a1, 16
+; RV64-NEXT:    fmv.w.x fa5, a0
+; RV64-NEXT:    fmv.w.x fa4, a1
 ; RV64-NEXT:    fadd.s fa0, fa4, fa5
 ; RV64-NEXT:    call __truncsfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
@@ -131,13 +131,13 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    lhu a1, 0(a1)
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    lhu a0, 0(a0)
-; RV32-NEXT:    slli a1, a1, 16
-; RV32-NEXT:    fmv.w.x fa5, a1
+; RV32-NEXT:    lhu a0, 0(a1)
+; RV32-NEXT:    lhu a1, 0(s0)
 ; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    fmv.w.x fa4, a0
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    fmv.w.x fa5, a0
+; RV32-NEXT:    fmv.w.x fa4, a1
 ; RV32-NEXT:    fadd.s fa0, fa4, fa5
 ; RV32-NEXT:    call __truncsfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0

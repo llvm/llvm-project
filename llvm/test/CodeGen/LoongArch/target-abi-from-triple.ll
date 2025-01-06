@@ -18,9 +18,7 @@ define float @f(float %a) {
 ;
 ; LP64D-LABEL: f:
 ; LP64D:       # %bb.0:
-; LP64D-NEXT:    addi.w $a0, $zero, 1
-; LP64D-NEXT:    movgr2fr.w $fa1, $a0
-; LP64D-NEXT:    ffint.s.w $fa1, $fa1
+; LP64D-NEXT:    vldi $vr1, -1168
 ; LP64D-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; LP64D-NEXT:    ret
   %1 = fadd float %a, 1.0
@@ -39,9 +37,7 @@ define double @g(double %a) {
 ;
 ; LP64D-LABEL: g:
 ; LP64D:       # %bb.0:
-; LP64D-NEXT:    addi.d $a0, $zero, 1
-; LP64D-NEXT:    movgr2fr.d $fa1, $a0
-; LP64D-NEXT:    ffint.d.l $fa1, $fa1
+; LP64D-NEXT:    vldi $vr1, -912
 ; LP64D-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LP64D-NEXT:    ret
   %1 = fadd double %a, 1.0

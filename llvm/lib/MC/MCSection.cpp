@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSection.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
@@ -21,10 +20,10 @@
 using namespace llvm;
 
 MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
-                     MCSymbol *Begin)
+                     bool IsVirtual, MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      HasLayout(false), IsRegistered(false), IsText(IsText), Name(Name),
-      Variant(V) {
+      HasLayout(false), IsRegistered(false), IsText(IsText),
+      IsVirtual(IsVirtual), Name(Name), Variant(V) {
   DummyFragment.setParent(this);
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
@@ -64,17 +63,6 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
     BundleLockState = NewState;
   }
   ++BundleLockNestingDepth;
-}
-
-void MCSection::switchSubsection(unsigned Subsection) {
-  size_t I = 0, E = Subsections.size();
-  while (I != E && Subsections[I].first < Subsection)
-    ++I;
-  // If the subsection number is not in the sorted Subsections list, create a
-  // new fragment list.
-  if (I == E || Subsections[I].first != Subsection)
-    Subsections.insert(Subsections.begin() + I, {Subsection, FragList{}});
-  CurFragList = &Subsections[I].second;
 }
 
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }

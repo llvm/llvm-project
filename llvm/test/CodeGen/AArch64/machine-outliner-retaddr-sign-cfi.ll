@@ -1,18 +1,17 @@
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN: aarch64 %s -o - | FileCheck %s --check-prefixes CHECK,V8A
-; RUN-V83A: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN-V83A: aarch64 -mattr=+v8.3a %s -o - > %t
-; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple aarch64 %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V8A
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple aarch64 -mattr=+v8.3a %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V83A
 
-; Function a's outlining candidate contains a sp modifying add without a
-; corresponsing sub, so we shouldn't outline it.
+;; Function a's outlining candidate contains a sp modifying add without a
+;; corresponsing sub, so we shouldn't outline it.
 define void @a() "sign-return-address"="all" "sign-return-address-key"="b_key" {
 ; CHECK-LABEL:         a:                     // @a
 ; CHECK:               // %bb.0:
 ; CHECK-NEXT:          .cfi_b_key_frame
+; CHECK-NEXT:          .cfi_negate_ra_state
 ; V8A-NEXT:            hint #27
 ; V83A-NEXT:           pacibsp
-; V8A-NEXT, V83A-NEXT: .cfi_negate_ra_state
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -27,9 +26,8 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="b_key" {
   store i32 6, ptr %6, align 4
 ; CHECK-NOT:          bl OUTLINED_FUNCTION_{{[0-9]+}}
 ; V8A:                hint #31
-; V83A:               autibsp
-; V8A-NEXT, V83A-NEXT: .cfi_negate_ra_state
-; V8A-NEXT, V83A-NEXT: ret
+; V8A-NEXT:           ret
+; V83A:               retab
   ret void
 }
 
@@ -52,8 +50,8 @@ define void @b() "sign-return-address"="all" "sign-return-address-key"="b_key" n
   store i32 6, ptr %6, align 4
 ; CHECK:                bl [[OUTLINED_FUNC:OUTLINED_FUNCTION_[0-9]+]]
 ; V8A:                  hint #31
-; V83A:                 autibsp
-; V8A-NEXT, V83A-NEXT:  ret
+; V8A-NEXT:             ret
+; V83A:                 retab
   ret void
 }
 
@@ -76,8 +74,8 @@ define void @c() "sign-return-address"="all" "sign-return-address-key"="b_key" n
   store i32 6, ptr %6, align 4
 ; CHECK:                bl [[OUTLINED_FUNC]]
 ; V8A:                  hint #31
-; V83A:                 autibsp
-; V8A-NEXT, V83A-NEXT:  ret
+; V8A-NEXT:             ret
+; V83A:                 retab
   ret void
 }
 
@@ -86,5 +84,5 @@ define void @c() "sign-return-address"="all" "sign-return-address-key"="b_key" n
 ; V8A-NEXT:             hint #27
 ; V83A-NEXT:            pacibsp
 ; V8A:                  hint #31
-; V83A:                 autibsp
-; V8A-NEXT, V83A-NEXT:  ret
+; V8A-NEXT:             ret
+; V83A:                 retab

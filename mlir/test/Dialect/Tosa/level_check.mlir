@@ -1,4 +1,8 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate
+//--------------------------------------------------------------------------------------------------
+// Enable all supported profiles to focus the verification of expected level errors.
+//--------------------------------------------------------------------------------------------------
+
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt"
 
 
 func.func @test_argmax(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
@@ -134,6 +138,14 @@ func.func @test_const_ui32(%arg0 : tensor<1xui32>) {
 func.func @test_const_f64(%arg0 : tensor<1xf64>) {
   // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'f64' is not legal}}
   %0 = "tosa.const"() {value = dense<0.0> : tensor<1xf64>} : () -> tensor<1xf64>
+  return
+}
+
+// -----
+
+func.func @test_const_ui8(%arg0 : tensor<1xui8>) {
+  // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'ui8' is not legal}}
+  %0 = "tosa.const"() {value = dense<0> : tensor<1xui8>} : () -> tensor<1xui8>
   return
 }
 

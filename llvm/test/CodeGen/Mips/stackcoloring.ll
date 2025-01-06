@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -relocation-model=pic < %s | FileCheck %s
 
 @g1 = external global ptr
 

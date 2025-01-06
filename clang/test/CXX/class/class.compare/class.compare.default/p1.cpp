@@ -16,6 +16,8 @@ struct A {
   bool operator<(const A&) const;
   bool operator<=(const A&) const = default;
   bool operator==(const A&) const && = default; // expected-error {{ref-qualifier '&&' is not allowed on a defaulted comparison operator}}
+  bool operator<=(const A&&) const = default; // expected-error {{invalid parameter type for defaulted relational comparison operator; found 'const A &&', expected 'const A &'}}
+  bool operator<=(const int&) const = default; // expected-error {{invalid parameter type for defaulted relational comparison operator; found 'const int &', expected 'const A &'}}
   bool operator>=(const A&) const volatile = default; // expected-error {{defaulted comparison function must not be volatile}}
   bool operator<=>(const A&) = default; // expected-error {{defaulted member three-way comparison operator must be const-qualified}}
   bool operator>=(const B&) const = default; // expected-error-re {{invalid parameter type for defaulted relational comparison operator; found 'const B &', expected 'const A &'{{$}}}}
@@ -264,4 +266,22 @@ void f2() {
     bool c = (a == b); // no diagnostic nor crash during codegen attempting to
                        // access info for unnamed bit-field
 }
+}
+
+namespace GH96043 {
+template <typename> class a {};
+template <typename b> b c(a<b>);
+template <typename d> class e {
+public:
+  typedef a<d *> f;
+  f begin();
+};
+template <typename d, typename g> constexpr bool operator==(d h, g i) {
+  return *c(h.begin()) == *c(i.begin());
+}
+struct j {
+  e<j> bar;
+  bool operator==(const j &) const;
+};
+bool j::operator==(const j &) const = default;
 }

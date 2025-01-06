@@ -49,13 +49,13 @@ int main(int, char**) {
   // value out of range
   {
     std::array args{1000, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e1(std::span{args}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<signed char, D, 5> e1(std::span{args}); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // negative value
   {
     std::array args{-1, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e1(std::span{args}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<signed char, D, 5> e1(std::span{args}); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   return 0;

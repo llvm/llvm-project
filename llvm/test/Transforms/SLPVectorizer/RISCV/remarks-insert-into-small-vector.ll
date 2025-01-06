@@ -8,20 +8,17 @@
 ; YAML-NEXT:  Function:        test
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:  - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:  - Cost:            '3'
+; YAML-NEXT:  - Cost:            '-2'
 ; YAML-NEXT:  - String:          ' and with tree size '
-; YAML-NEXT:  - TreeSize:        '7'
+; YAML-NEXT:  - TreeSize:        '9'
 
 define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr null, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr null, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> zeroinitializer, i32 4, <2 x i1> splat (i1 true), <2 x float> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <2 x float> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 poison>

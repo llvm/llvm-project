@@ -27,11 +27,11 @@ define i32 @pr39771_fshr_multi_use_instr(i32 %a) {
 ; First fshr operand is dead (vector variant).
 define <2 x i32> @pr39771_fshr_multi_use_instr_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @pr39771_fshr_multi_use_instr_vec(
-; CHECK-NEXT:    [[X:%.*]] = or <2 x i32> [[A:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i32> @llvm.fshr.v2i32(<2 x i32> zeroinitializer, <2 x i32> [[X]], <2 x i32> <i32 1, i32 1>)
-; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 23, i32 23>
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i32> @llvm.fshr.v2i32(<2 x i32> zeroinitializer, <2 x i32> [[X]], <2 x i32> splat (i32 1))
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 23)
 ; CHECK-NEXT:    [[D:%.*]] = xor <2 x i32> [[C]], [[B]]
-; CHECK-NEXT:    [[E:%.*]] = and <2 x i32> [[D]], <i32 31, i32 31>
+; CHECK-NEXT:    [[E:%.*]] = and <2 x i32> [[D]], splat (i32 31)
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %x = or <2 x i32> %a, <i32 2, i32 2>

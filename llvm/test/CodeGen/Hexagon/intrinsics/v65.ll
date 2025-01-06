@@ -1,5 +1,5 @@
-; RUN: llc -mv65 -mattr=+hvxv65,hvx-length64b -march=hexagon -O0 < %s | FileCheck %s
-; RUN: llc -mv65 -mattr=+hvxv65,hvx-length64b -march=hexagon -O0 < %s | FileCheck -check-prefix=CHECK-CALL %s
+; RUN: llc -mv65 -mattr=+hvxv65,hvx-length64b -mtriple=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mv65 -mattr=+hvxv65,hvx-length64b -mtriple=hexagon -O0 < %s | FileCheck -check-prefix=CHECK-CALL %s
 
 ; CHECK-CALL-NOT: call
 

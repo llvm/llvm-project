@@ -22,7 +22,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -269,12 +268,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     if (MOI->isImplicit())
       return ++MOI;
 
-    if (MOI->isUndef()) {
-      // Record `undef` register as constant. Use same value as ISel uses.
-      Locs.emplace_back(Location::Constant, sizeof(int64_t), 0, 0xFEFEFEFE);
-      return ++MOI;
-    }
-
     assert(MOI->getReg().isPhysical() &&
            "Virtreg operands should have been rewritten before now.");
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(MOI->getReg());
@@ -282,7 +275,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
 
     unsigned Offset = 0;
     unsigned DwarfRegNum = getDwarfRegNum(MOI->getReg(), TRI);
-    unsigned LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
+    MCRegister LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
     unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, MOI->getReg());
     if (SubRegIdx)
       Offset = TRI->getSubRegIdxOffset(SubRegIdx);

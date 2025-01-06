@@ -12,11 +12,12 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 namespace internal {
@@ -182,6 +183,6 @@ static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
 } // namespace ErrnoSetterMatcher
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H

@@ -15,7 +15,7 @@ let Predicates = [HasShortForwardBranchOpt], isSelect = 1,
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
 def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
-                            (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                            (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                              GPR:$falsev, GPR:$truev),
                             [(set GPR:$dst,
                               (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
@@ -34,7 +34,7 @@ let Predicates = [HasConditionalMoveFusion, NoShortForwardBranchOpt],
 // be expanded to control flow in RISCVExpandPseudoInsts.
 // We use GPRNoX0 because c.mv cannot encode X0.
 def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                                  GPRNoX0:$falsev, GPRNoX0:$truev),
                                 [(set GPRNoX0:$dst,
                                   (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
@@ -51,143 +51,143 @@ def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
 let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
 def PseudoCCADD : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSUB : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSLL : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                          ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSRL : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                          ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSRA : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                          ReadSFBALU, ReadSFBALU]>;
 def PseudoCCAND : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCOR  : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCXOR : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 
 def PseudoCCADDI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 def PseudoCCSLLI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 def PseudoCCSRLI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 def PseudoCCSRAI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 def PseudoCCANDI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 def PseudoCCORI  : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 def PseudoCCXORI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU]>;
 
 // RV64I instructions
 def PseudoCCADDW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                           ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                           ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSLLW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSRLW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSRAW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                           ReadSFBALU, ReadSFBALU]>;
 
 def PseudoCCADDIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                             GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                            ReadSFBALU]>;
 def PseudoCCSLLIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                             GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                            ReadSFBALU]>;
 def PseudoCCSRLIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                             GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                            ReadSFBALU]>;
 def PseudoCCSRAIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                             GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                            ReadSFBALU]>;
 
 // Zbb/Zbkb instructions
 def PseudoCCANDN : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                           ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCORN : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCXNOR : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                           ReadSFBALU, ReadSFBALU, ReadSFBALU]>;

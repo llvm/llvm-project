@@ -6,6 +6,13 @@
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -disable-auto-paired-vec-st=false \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
 
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr11 -ppc-asm-full-reg-names -disable-auto-paired-vec-st=false \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr11 -ppc-asm-full-reg-names -disable-auto-paired-vec-st=false \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
+
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
 declare void @foo()

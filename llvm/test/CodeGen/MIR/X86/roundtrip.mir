@@ -2,8 +2,8 @@
 ---
 # CHECK-LABEL: name: func0
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gr32, preferred-register: '' }
-# CHECK:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK:   - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
 # CHECK: body: |
 # CHECK:   bb.0:
 # CHECK:     %0:gr32 = MOV32r0 implicit-def $eflags

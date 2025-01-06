@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"
@@ -17,9 +18,21 @@
 #include "x86_64/nearest_integer.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/nearest_integer.h"
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+
+LIBC_INLINE float nearest_integer(float x) { return __builtin_rintf(x); }
+
+LIBC_INLINE double nearest_integer(double x) { return __builtin_rint(x); }
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
+
 #else
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // This is a fast implementation for rounding to a nearest integer that.
@@ -60,7 +73,7 @@ LIBC_INLINE double nearest_integer(double x) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H

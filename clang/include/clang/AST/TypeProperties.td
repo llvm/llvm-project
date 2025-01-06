@@ -473,9 +473,12 @@ let Class = PackIndexingType in {
   def : Property<"indexExpression", ExprRef> {
     let Read = [{ node->getIndexExpr() }];
   }
+  def : Property<"isFullySubstituted", Bool> {
+    let Read = [{ node->isFullySubstituted() }];
+  }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression);
+    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted);
   }]>;
 }
 
@@ -665,12 +668,16 @@ let Class = AttributedType in {
   def : Property<"equivalentType", QualType> {
     let Read = [{ node->getEquivalentType() }];
   }
-  def : Property<"attribute", AttrKind> {
+  def : Property<"attrKind", AttrKind> {
     let Read = [{ node->getAttrKind() }];
+  }
+  def : Property<"attribute", Attr> {
+    let Read = [{ node->getAttr() }];
   }
 
   def : Creator<[{
-    return ctx.getAttributedType(attribute, modifiedType, equivalentType);
+    return ctx.getAttributedType(attrKind, modifiedType,
+                                 equivalentType, attribute);
   }]>;
 }
 
@@ -684,6 +691,28 @@ let Class = BTFTagAttributedType in {
 
   def : Creator<[{
     return ctx.getBTFTagAttributedType(attr, wrappedType);
+  }]>;
+}
+
+let Class = HLSLAttributedResourceType in {
+  def : Property<"resClass", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceClass) }];
+  }
+  def : Property<"isROV", Bool> {
+    let Read = [{ node->getAttrs().IsROV }];
+  }
+  def : Property<"rawBuffer", Bool> {
+    let Read = [{ node->getAttrs().RawBuffer }];
+  }
+  def : Property<"wrappedTy", QualType> {
+    let Read = [{ node->getWrappedType() }];
+  }
+  def : Property<"containedTy", QualType> {
+    let Read = [{ node->getContainedType() }];
+  }
+  def : Creator<[{
+    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer);
+    return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }
 
@@ -795,11 +824,14 @@ let Class = SubstTemplateTypeParmType in {
   def : Property<"PackIndex", Optional<UInt32>> {
     let Read = [{ node->getPackIndex() }];
   }
+  def : Property<"SubstitutionFlag", SubstTemplateTypeParmTypeFlag> {
+    let Read = [{ node->getSubstitutionFlag() }];
+  }
 
   // The call to getCanonicalType here existed in ASTReader.cpp, too.
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmType(
-        replacementType, associatedDecl, Index, PackIndex);
+        replacementType, associatedDecl, Index, PackIndex, SubstitutionFlag);
   }]>;
 }
 
@@ -868,9 +900,13 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 
-#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID) \
+#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID, WIDTH, ALIGN) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AMDGPUTypes.def"
+
+#define HLSL_INTANGIBLE_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;

@@ -9,11 +9,12 @@
 #include "src/math/fmaxf128.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, fmaxf128, (float128 x, float128 y)) {
   return fputil::fmax(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

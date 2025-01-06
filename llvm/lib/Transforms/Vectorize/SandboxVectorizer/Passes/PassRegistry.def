@@ -1,0 +1,32 @@
+//===- PassRegistry.def - Registry of passes --------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of sub-passes that are part of the
+// SandboxVectorizer pass.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef REGION_PASS
+#define REGION_PASS(NAME, CLASS_NAME)
+#endif
+
+REGION_PASS("null", ::llvm::sandboxir::NullPass)
+REGION_PASS("print-instruction-count", ::llvm::sandboxir::PrintInstructionCount)
+
+#undef REGION_PASS
+
+#ifndef FUNCTION_PASS_WITH_PARAMS
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS_NAME)
+#endif
+
+FUNCTION_PASS_WITH_PARAMS("bottom-up-vec", ::llvm::sandboxir::BottomUpVec)
+FUNCTION_PASS_WITH_PARAMS("regions-from-metadata", ::llvm::sandboxir::RegionsFromMetadata)
+
+#undef FUNCTION_PASS_WITH_PARAMS

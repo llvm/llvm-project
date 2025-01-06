@@ -440,6 +440,10 @@ private:
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
 
+  lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo,
+                             const std::string &description) override;
+
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
   using ModuleCacheKey = std::pair<std::string, std::string>;
   // KeyInfo for the cached module spec DenseMap.
@@ -484,6 +488,11 @@ private:
   // entries are added. Which would invalidate any pointers set in the register
   // info up to that point.
   llvm::StringMap<std::unique_ptr<RegisterFlags>> m_registers_flags_types;
+
+  // Enum types are referenced by register fields. This does not store the data
+  // directly because the map may reallocate. Pointers to these are contained
+  // within instances of RegisterFlags.
+  llvm::StringMap<std::unique_ptr<FieldEnum>> m_registers_enum_types;
 };
 
 } // namespace process_gdb_remote

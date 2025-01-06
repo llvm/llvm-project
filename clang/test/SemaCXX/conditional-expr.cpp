@@ -429,3 +429,10 @@ void g() {
   long e = a = b ? throw 0 : throw 1;
 }
 } // namespace PR46484
+
+namespace GH111854 {
+void f() {
+  (true ? throw 0 : 0) <= 0;  // expected-warning {{relational comparison result unused}}
+  (false ? 0 : throw 0) <= 0; // expected-warning {{relational comparison result unused}}
+}
+}

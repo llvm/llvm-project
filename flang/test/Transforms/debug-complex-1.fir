@@ -4,20 +4,20 @@
 // variants are checked.
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
-  func.func @test1(%x : !fir.complex<4>) -> !fir.complex<8> {
-  %1 = fir.convert %x : (!fir.complex<4>) -> !fir.complex<8>
-  return %1 : !fir.complex<8>
+  func.func @test1(%x : complex<f32>) -> complex<f64> {
+  %1 = fir.convert %x : (complex<f32>) -> complex<f64>
+  return %1 : complex<f64>
   }loc(#loc1)
-  func.func @test2(%x : !fir.complex<4>) -> complex<f64> {
-  %1 = fir.convert %x : (!fir.complex<4>) -> complex<f64>
+  func.func @test2(%x : complex<f32>) -> complex<f64> {
+  %1 = fir.convert %x : (complex<f32>) -> complex<f64>
   return %1 : complex<f64>
   }loc(#loc2)
-  func.func @test3(%x : !fir.complex<4>) -> !fir.complex<16> {
-  %1 = fir.convert %x : (!fir.complex<4>) -> !fir.complex<16>
-  return %1 : !fir.complex<16>
+  func.func @test3(%x : complex<f32>) -> complex<f128> {
+  %1 = fir.convert %x : (complex<f32>) -> complex<f128>
+  return %1 : complex<f128>
   }loc(#loc3)
-  func.func @test4(%x : !fir.complex<4>) -> complex<f128> {
-  %1 = fir.convert %x : (!fir.complex<4>) -> complex<f128>
+  func.func @test4(%x : complex<f32>) -> complex<f128> {
+  %1 = fir.convert %x : (complex<f32>) -> complex<f128>
   return %1 : complex<f128>
   }loc(#loc4)
 }

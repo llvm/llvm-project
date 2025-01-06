@@ -185,7 +185,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: store ptr @c, ptr [[BP0]]
-// CK22-DAG: store ptr getelementptr inbounds ([100 x i32], ptr @c, i{{.+}} 0, i{{.+}} 1), ptr [[P0]]
+// CK22-DAG: store ptr getelementptr inbounds nuw ([100 x i32], ptr @c, i{{.+}} 0, i{{.+}} 1), ptr [[P0]]
 
 // CK22: call void [[CALL03:@.+]](ptr {{[^,]+}})
 #pragma omp target map(c [1:4])
@@ -277,7 +277,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: store ptr @sc, ptr [[BP0]]
-// CK22-DAG: store ptr getelementptr inbounds ([100 x [[ST]]], ptr @sc, i{{.+}} 0, i{{.+}} 1), ptr [[P0]]
+// CK22-DAG: store ptr getelementptr inbounds nuw ([100 x [[ST]]], ptr @sc, i{{.+}} 0, i{{.+}} 1), ptr [[P0]]
 
 // CK22: call void [[CALL08:@.+]](ptr {{[^,]+}})
 #pragma omp target map(sc [1:4])
@@ -369,7 +369,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: store ptr @stc, ptr [[BP0]]
-// CK22-DAG: store ptr getelementptr inbounds ([100 x [[STT]]], ptr @stc, i{{.+}} 0, i{{.+}} 1),  ptr [[P0]]
+// CK22-DAG: store ptr getelementptr inbounds nuw ([100 x [[STT]]], ptr @stc, i{{.+}} 0, i{{.+}} 1),  ptr [[P0]]
 
 // CK22: call void [[CALL13:@.+]](ptr {{[^,]+}})
 #pragma omp target map(stc [1:4])

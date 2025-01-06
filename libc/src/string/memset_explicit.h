@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMSET_EXPLICIT_H
 #define LLVM_LIBC_SRC_STRING_MEMSET_EXPLICIT_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[gnu::noinline]] void *memset_explicit(void *ptr, int value, size_t count);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMSET_EXPLICIT_H

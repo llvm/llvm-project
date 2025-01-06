@@ -216,7 +216,7 @@ void CodeGen::generateConstraintOrRewrite(const ast::CallableDecl *decl,
   // TODO: This will need to change if we allow Constraints to return values as
   // well.
   if (isConstraint) {
-    os << "::mlir::LogicalResult";
+    os << "::llvm::LogicalResult";
   } else {
     // Otherwise, generate a type based on the results of the callable.
     // If the callable has explicit results, use those to build the result.

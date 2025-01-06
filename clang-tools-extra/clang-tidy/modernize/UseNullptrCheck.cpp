@@ -35,10 +35,20 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// to null within.
 /// Finding sequences of explicit casts is necessary so that an entire sequence
 /// can be replaced instead of just the inner-most implicit cast.
+///
+/// TODO/NOTE: The second "anyOf" below discards matches on a substituted type,
+/// since we don't know if that would _always_ be a pointer type for all other
+/// specializations, unless the expression was "__null", in which case we assume
+/// that all specializations are expected to be for pointer types. Ideally this
+/// would check for the "NULL" macro instead, but that'd be harder to express.
+/// In practice, "NULL" is often defined as "__null", and this is a useful
+/// condition.
 StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
   auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
-      unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
+      anyOf(hasSourceExpression(gnuNullExpr()),
+            unless(hasImplicitDestinationType(
+                qualType(substTemplateTypeParmType())))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))),
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(NameList)))));

@@ -47,8 +47,8 @@ Status OptionValueChar::SetValueFromString(llvm::StringRef value,
       m_current_value = char_value;
       m_value_was_set = true;
     } else
-      error.SetErrorStringWithFormat("'%s' cannot be longer than 1 character",
-                                     value.str().c_str());
+      return Status::FromErrorStringWithFormatv(
+          "'{0}' cannot be longer than 1 character", value);
   } break;
 
   default:

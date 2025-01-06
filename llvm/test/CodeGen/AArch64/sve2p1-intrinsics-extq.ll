@@ -4,16 +4,16 @@
 define <vscale x 16 x i8> @test_extq_i8 (<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) {
 ; CHECK-LABEL: test_extq_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #0
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #15
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.extq.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm, i32 0)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.extq.nxv16i8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm, i32 15)
   ret <vscale x 16 x i8> %res
 }
 
 define <vscale x 8 x i16> @test_extq_i16 (<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) {
 ; CHECK-LABEL: test_extq_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #1
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #2
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i16> @llvm.aarch64.sve.extq.nxv8i16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm, i32 1)
   ret <vscale x 8 x i16> %res
@@ -22,7 +22,7 @@ define <vscale x 8 x i16> @test_extq_i16 (<vscale x 8 x i16> %zn, <vscale x 8 x 
 define <vscale x 4 x i32> @test_extq_i32 (<vscale x 4 x i32> %zn, <vscale x 4 x i32> %zm) {
 ; CHECK-LABEL: test_extq_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #2
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.extq.nxv4i32(<vscale x 4 x i32> %zn, <vscale x 4 x i32> %zm, i32 2)
   ret <vscale x 4 x i32> %res
@@ -31,45 +31,45 @@ define <vscale x 4 x i32> @test_extq_i32 (<vscale x 4 x i32> %zn, <vscale x 4 x 
 define <vscale x 2 x i64> @test_extq_i64 (<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm) {
 ; CHECK-LABEL: test_extq_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #3
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.extq.nxv2i64(<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm, i32 3)
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.extq.nxv2i64(<vscale x 2 x i64> %zn, <vscale x 2 x i64> %zm, i32 1)
   ret <vscale x 2 x i64> %res
 }
 
 define <vscale x 8 x half> @test_extq_f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm) {
 ; CHECK-LABEL: test_extq_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #4
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #14
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.extq.nxv8f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm, i32 4)
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.extq.nxv8f16(<vscale x 8 x half> %zn, <vscale x 8 x half> %zm, i32 7)
   ret <vscale x 8 x half> %res
 }
 
 define <vscale x 4 x float> @test_extq_f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: test_extq_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #5
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #4
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.extq.nxv4f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm, i32 5)
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.extq.nxv4f32(<vscale x 4 x float> %zn, <vscale x 4 x float> %zm, i32 1)
   ret <vscale x 4 x float> %res
 }
 
 define <vscale x 2 x double> @test_extq_f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: test_extq_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #6
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #8
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.extq.nxv2f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm, i32 6)
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.extq.nxv2f64(<vscale x 2 x double> %zn, <vscale x 2 x double> %zm, i32 1)
   ret <vscale x 2 x double> %res
 }
 
 define <vscale x 8 x bfloat> @test_extq_bf16(<vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: test_extq_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #15
+; CHECK-NEXT:    extq z0.b, z0.b, z1.b, #6
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.extq.nxv8bf16(<vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm, i32 15)
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.extq.nxv8bf16(<vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm, i32 3)
   ret <vscale x 8 x bfloat> %res
 }
 

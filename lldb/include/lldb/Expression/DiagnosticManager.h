@@ -12,6 +12,10 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
+#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -19,6 +23,27 @@
 #include <vector>
 
 namespace lldb_private {
+
+/// An llvm::Error used to communicate diagnostics in Status. Multiple
+/// diagnostics may be chained in an llvm::ErrorList.
+class ExpressionError
+    : public llvm::ErrorInfo<ExpressionError, DiagnosticError> {
+  std::string m_message;
+  std::vector<DiagnosticDetail> m_details;
+
+public:
+  static char ID;
+  using llvm::ErrorInfo<ExpressionError, DiagnosticError>::ErrorInfo;
+  ExpressionError(lldb::ExpressionResults result, std::string msg,
+                  std::vector<DiagnosticDetail> details = {});
+  std::string message() const override;
+  llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
+    return m_details;
+  }
+  std::error_code convertToErrorCode() const override;
+  void log(llvm::raw_ostream &OS) const override;
+  std::unique_ptr<CloneableError> Clone() const override;
+};
 
 enum DiagnosticOrigin {
   eDiagnosticOriginUnknown = 0,
@@ -49,37 +74,28 @@ public:
     }
   }
 
-  Diagnostic(llvm::StringRef message, lldb::Severity severity,
-             DiagnosticOrigin origin, uint32_t compiler_id)
-      : m_message(message), m_severity(severity), m_origin(origin),
-        m_compiler_id(compiler_id) {}
-
-  Diagnostic(const Diagnostic &rhs)
-      : m_message(rhs.m_message), m_severity(rhs.m_severity),
-        m_origin(rhs.m_origin), m_compiler_id(rhs.m_compiler_id) {}
+  Diagnostic(DiagnosticOrigin origin, uint32_t compiler_id,
+             DiagnosticDetail detail)
+      : m_origin(origin), m_compiler_id(compiler_id), m_detail(detail) {}
 
   virtual ~Diagnostic() = default;
 
   virtual bool HasFixIts() const { return false; }
 
-  lldb::Severity GetSeverity() const { return m_severity; }
+  lldb::Severity GetSeverity() const { return m_detail.severity; }
 
   uint32_t GetCompilerID() const { return m_compiler_id; }
 
-  llvm::StringRef GetMessage() const { return m_message; }
+  llvm::StringRef GetMessage() const { return m_detail.message; }
+  const DiagnosticDetail &GetDetail() const { return m_detail; }
 
-  void AppendMessage(llvm::StringRef message,
-                     bool precede_with_newline = true) {
-    if (precede_with_newline)
-      m_message.push_back('\n');
-    m_message += message;
-  }
+  void AppendMessage(llvm::StringRef message, bool precede_with_newline = true);
 
 protected:
-  std::string m_message;
-  lldb::Severity m_severity;
   DiagnosticOrigin m_origin;
-  uint32_t m_compiler_id; // Compiler-specific diagnostic ID
+  /// Compiler-specific diagnostic ID.
+  uint32_t m_compiler_id;
+  DiagnosticDetail m_detail;
 };
 
 typedef std::vector<std::unique_ptr<Diagnostic>> DiagnosticList;
@@ -102,10 +118,7 @@ public:
 
   void AddDiagnostic(llvm::StringRef message, lldb::Severity severity,
                      DiagnosticOrigin origin,
-                     uint32_t compiler_id = LLDB_INVALID_COMPILER_ID) {
-    m_diagnostics.emplace_back(
-        std::make_unique<Diagnostic>(message, severity, origin, compiler_id));
-  }
+                     uint32_t compiler_id = LLDB_INVALID_COMPILER_ID);
 
   void AddDiagnostic(std::unique_ptr<Diagnostic> diagnostic) {
     if (diagnostic)
@@ -129,6 +142,10 @@ public:
     if (!m_diagnostics.empty())
       m_diagnostics.back()->AppendMessage(str);
   }
+
+  /// Returns an \ref ExpressionError with \c arg as error code.
+  llvm::Error GetAsError(lldb::ExpressionResults result,
+                         llvm::Twine message = {}) const;
 
   // Returns a string containing errors in this format:
   //

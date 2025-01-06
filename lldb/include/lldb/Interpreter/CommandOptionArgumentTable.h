@@ -312,6 +312,8 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeRemotePath, "remote-path", lldb::CompletionType::eRemoteDiskFileCompletion, {}, { nullptr, false }, "A path on the system managed by the current platform." },
     { lldb::eArgTypeRemoteFilename, "remote-filename", lldb::CompletionType::eRemoteDiskFileCompletion, {}, { nullptr, false }, "A file on the system managed by the current platform." },
     { lldb::eArgTypeModule, "module", lldb::CompletionType::eModuleCompletion, {}, { nullptr, false }, "The name of a module loaded into the current target." },
+    { lldb::eArgTypeCPUName, "cpu-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a CPU." },
+    { lldb::eArgTypeCPUFeatures, "cpu-features", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The CPU feature string." },
     // clang-format on
 };
 

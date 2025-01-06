@@ -75,7 +75,7 @@ def PromotableAllocationOpInterface
       "::std::optional<::mlir::PromotableAllocationOpInterface>",
         "handlePromotionComplete",
       (ins
-        "const ::mlir::MemorySlot &":$slot, 
+        "const ::mlir::MemorySlot &":$slot,
         "::mlir::Value":$defaultValue,
         "::mlir::OpBuilder &":$builder)
     >,
@@ -308,7 +308,7 @@ def DestructurableAllocationOpInterface
         This will only be called for slots declared by this operation.
 
         Must return a new destructurable allocation op if this hook creates
-        a new destructurable op, nullopt otherwise. 
+        a new destructurable op, nullopt otherwise.
       }],
       "::std::optional<::mlir::DestructurableAllocationOpInterface>",
       "handleDestructuringComplete",
@@ -338,7 +338,7 @@ def SafeMemorySlotAccessOpInterface
 
         No IR mutation is allowed in this method.
       }],
-      "::mlir::LogicalResult",
+      "::llvm::LogicalResult",
       "ensureOnlySafeAccesses",
       (ins "const ::mlir::MemorySlot &":$slot,
            "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed,

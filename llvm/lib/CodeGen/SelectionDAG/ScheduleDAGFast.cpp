@@ -622,11 +622,11 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
     }
 
     // Add the nodes that aren't ready back onto the available list.
-    for (unsigned i = 0, e = NotReady.size(); i != e; ++i) {
-      NotReady[i]->isPending = false;
+    for (SUnit *SU : NotReady) {
+      SU->isPending = false;
       // May no longer be available due to backtracking.
-      if (NotReady[i]->isAvailable)
-        AvailableQueue.push(NotReady[i]);
+      if (SU->isAvailable)
+        AvailableQueue.push(SU);
     }
     NotReady.clear();
 
@@ -748,8 +748,7 @@ void ScheduleDAGLinearize::Schedule() {
       ++DAGSize;
   }
 
-  for (unsigned i = 0, e = Glues.size(); i != e; ++i) {
-    SDNode *Glue = Glues[i];
+  for (SDNode *Glue : Glues) {
     SDNode *GUser = GluedMap[Glue];
     unsigned Degree = Glue->getNodeId();
     unsigned UDegree = GUser->getNodeId();
@@ -757,7 +756,7 @@ void ScheduleDAGLinearize::Schedule() {
     // Glue user must be scheduled together with the glue operand. So other
     // users of the glue operand must be treated as its users.
     SDNode *ImmGUser = Glue->getGluedUser();
-    for (const SDNode *U : Glue->uses())
+    for (const SDNode *U : Glue->users())
       if (U == ImmGUser)
         --Degree;
     GUser->setNodeId(UDegree + Degree);
@@ -771,7 +770,7 @@ void ScheduleDAGLinearize::Schedule() {
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  DenseMap<SDValue, Register> VRBaseMap;
+  InstrEmitter::VRBaseMapType VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });
 

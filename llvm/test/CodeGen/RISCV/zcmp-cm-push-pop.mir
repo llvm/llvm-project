@@ -207,7 +207,21 @@ body:                   |
     ; CHECK-NO-ZCMP32-NEXT: $x25 = LW $x2, 20 :: (load (s32) from %stack.10)
     ; CHECK-NO-ZCMP32-NEXT: $x26 = LW $x2, 16 :: (load (s32) from %stack.11)
     ; CHECK-NO-ZCMP32-NEXT: $x27 = LW $x2, 12 :: (load (s32) from %stack.12)
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-NO-ZCMP32-NEXT: $x2 = frame-destroy ADDI $x2, 64
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP32-NEXT: PseudoRET
     ;
     ; CHECK-NO-ZCMP64-LABEL: name: push_rvlist15
@@ -267,7 +281,21 @@ body:                   |
     ; CHECK-NO-ZCMP64-NEXT: $x25 = LD $x2, 24 :: (load (s64) from %stack.10)
     ; CHECK-NO-ZCMP64-NEXT: $x26 = LD $x2, 16 :: (load (s64) from %stack.11)
     ; CHECK-NO-ZCMP64-NEXT: $x27 = LD $x2, 8 :: (load (s64) from %stack.12)
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-NO-ZCMP64-NEXT: $x2 = frame-destroy ADDI $x2, 112
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP64-NEXT: PseudoRET
     $x1 = IMPLICIT_DEF
     $x8 = IMPLICIT_DEF

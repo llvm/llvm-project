@@ -15,24 +15,24 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/Function.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "livestacks"
 
-char LiveStacks::ID = 0;
-INITIALIZE_PASS_BEGIN(LiveStacks, DEBUG_TYPE,
-                "Live Stack Slot Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_END(LiveStacks, DEBUG_TYPE,
-                "Live Stack Slot Analysis", false, false)
+char LiveStacksWrapperLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(LiveStacksWrapperLegacy, DEBUG_TYPE,
+                      "Live Stack Slot Analysis", false, false)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_END(LiveStacksWrapperLegacy, DEBUG_TYPE,
+                    "Live Stack Slot Analysis", false, true)
 
-char &llvm::LiveStacksID = LiveStacks::ID;
+char &llvm::LiveStacksID = LiveStacksWrapperLegacy::ID;
 
-void LiveStacks::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveStacksWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequiredTransitive<SlotIndexes>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequiredTransitive<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -43,11 +43,10 @@ void LiveStacks::releaseMemory() {
   S2RCMap.clear();
 }
 
-bool LiveStacks::runOnMachineFunction(MachineFunction &MF) {
+void LiveStacks::init(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   // FIXME: No analysis is being done right now. We are relying on the
   // register allocators to provide the information.
-  return false;
 }
 
 LiveInterval &
@@ -67,6 +66,33 @@ LiveStacks::getOrCreateInterval(int Slot, const TargetRegisterClass *RC) {
     S2RCMap[Slot] = TRI->getCommonSubClass(OldRC, RC);
   }
   return I->second;
+}
+
+AnalysisKey LiveStacksAnalysis::Key;
+
+LiveStacks LiveStacksAnalysis::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &) {
+  LiveStacks Impl;
+  Impl.init(MF);
+  return Impl;
+}
+PreservedAnalyses
+LiveStacksPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &AM) {
+  AM.getResult<LiveStacksAnalysis>(MF).print(OS, MF.getFunction().getParent());
+  return PreservedAnalyses::all();
+}
+
+bool LiveStacksWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
+  Impl = LiveStacks();
+  Impl.init(MF);
+  return false;
+}
+
+void LiveStacksWrapperLegacy::releaseMemory() { Impl = LiveStacks(); }
+
+void LiveStacksWrapperLegacy::print(raw_ostream &OS, const Module *) const {
+  Impl.print(OS);
 }
 
 /// print - Implement the dump method.

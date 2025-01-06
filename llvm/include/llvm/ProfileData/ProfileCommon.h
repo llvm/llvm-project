@@ -79,12 +79,12 @@ public:
 class InstrProfSummaryBuilder final : public ProfileSummaryBuilder {
   uint64_t MaxInternalBlockCount = 0;
 
-  inline void addEntryCount(uint64_t Count);
-  inline void addInternalCount(uint64_t Count);
-
 public:
   InstrProfSummaryBuilder(std::vector<uint32_t> Cutoffs)
       : ProfileSummaryBuilder(std::move(Cutoffs)) {}
+
+  void addEntryCount(uint64_t Count);
+  void addInternalCount(uint64_t Count);
 
   void addRecord(const InstrProfRecord &);
   std::unique_ptr<ProfileSummary> getSummary();

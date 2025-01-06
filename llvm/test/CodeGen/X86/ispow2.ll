@@ -102,7 +102,7 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpopcntq %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; CHECK-AVX512-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -155,7 +155,7 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpopcntq %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpcmpneqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; CHECK-AVX512-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -219,4 +219,45 @@ define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
   %cnt = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %x)
   %r = icmp ne <4 x i64> %cnt, <i64 1, i64 1, i64 1, i64 1>
   ret <4 x i1> %r
+}
+
+
+define i1 @ctpop32_eq_one_nonzero(i32 %x) {
+; CHECK-NOBMI-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-NOBMI:       # %bb.0: # %entry
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
+; CHECK-NOBMI-NEXT:    testl %eax, %edi
+; CHECK-NOBMI-NEXT:    sete %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-BMI2:       # %bb.0: # %entry
+; CHECK-BMI2-NEXT:    blsrl %edi, %eax
+; CHECK-BMI2-NEXT:    sete %al
+; CHECK-BMI2-NEXT:    retq
+entry:
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_ne_one_nonzero(i32 %x) {
+; CHECK-NOBMI-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-NOBMI:       # %bb.0: # %entry
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
+; CHECK-NOBMI-NEXT:    testl %eax, %edi
+; CHECK-NOBMI-NEXT:    setne %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-BMI2:       # %bb.0: # %entry
+; CHECK-BMI2-NEXT:    blsrl %edi, %eax
+; CHECK-BMI2-NEXT:    setne %al
+; CHECK-BMI2-NEXT:    retq
+entry:
+  %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %popcnt, 1
+  ret i1 %cmp
 }

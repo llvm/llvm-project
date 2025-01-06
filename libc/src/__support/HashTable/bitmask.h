@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include <stddef.h> // size_t
 #include <stdint.h> // uint8_t, uint64_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // Implementations of the bitmask.
@@ -81,7 +82,7 @@ template <class BitMask> struct IteratableBitMaskAdaptor : public BitMask {
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #if defined(LIBC_TARGET_CPU_HAS_SSE2) && defined(__LIBC_EXPLICIT_SIMD_OPT)
 #include "sse2/bitmask_impl.inc"

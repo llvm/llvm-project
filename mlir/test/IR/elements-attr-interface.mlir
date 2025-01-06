@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-elements-attr-interface -verify-diagnostics
 
 // Parsing external resources does not work on big-endian platforms currently
-// XFAIL: target=s390x-{{.*}}
+// XFAIL: target={{(s390x|sparc.*)-.*}}
 
 // This test contains various `ElementsAttr` attributes, and tests the support
 // for iterating the values of these attributes using various native C++ types.

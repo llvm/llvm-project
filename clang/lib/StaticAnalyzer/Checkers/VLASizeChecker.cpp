@@ -96,7 +96,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
   SValBuilder &SVB = C.getSValBuilder();
   CanQualType SizeTy = Ctx.getSizeType();
   uint64_t SizeMax =
-      SVB.getBasicValueFactory().getMaxValue(SizeTy).getZExtValue();
+      SVB.getBasicValueFactory().getMaxValue(SizeTy)->getZExtValue();
 
   // Get the element size.
   CharUnits EleSize = Ctx.getTypeSizeInChars(VLALast->getElementType());
@@ -266,7 +266,6 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     return;
 
   ASTContext &Ctx = C.getASTContext();
-  SValBuilder &SVB = C.getSValBuilder();
   ProgramStateRef State = C.getState();
   QualType TypeToCheck;
 
@@ -301,7 +300,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   if (VD) {
     State =
         setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<NonLoc>(), SVB);
+                         ArraySize.castAs<NonLoc>());
   }
 
   // Remember our assumptions!

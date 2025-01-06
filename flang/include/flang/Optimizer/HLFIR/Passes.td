@@ -49,4 +49,8 @@ def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
 }
 
+def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
+  let summary = "Inline hlfir.assign operations";
+}
+
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

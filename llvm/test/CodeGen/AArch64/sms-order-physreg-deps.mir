@@ -1,0 +1,452 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -mcpu=a64fx -aarch64-enable-pipeliner -pipeliner-max-mii=100 -pipeliner-enable-copytophi=0 -debug-only=pipeliner -run-pass=pipeliner -treat-scalable-fixed-error-as-warning 2>&1 | FileCheck %s
+
+# REQUIRES: asserts
+
+# Verify that the order of the instructions is correct if they are scheduled in
+# the same cycle and they have physical register dependencies.
+
+# CHECK: Schedule Found? 1
+# CHECK: cycle {{[0-9]+}} (0) {{.*}} SUBS{{.*}} implicit-def $nzcv
+# CHECK-NOT: cycle {{[0-9]+}} (0) {{.*}} implicit-def {{.*}} $nzcv
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  
+  declare void @free(ptr allocptr nocapture noundef) local_unnamed_addr #0
+  
+  define dso_local noundef i32 @main(i32 noundef %argc, ptr nocapture noundef readnone %argv) local_unnamed_addr #1 {
+  entry:
+    %ret.i.i55 = alloca ptr, align 8
+    %ret.i.i = alloca ptr, align 8
+    %0 = load ptr, ptr %ret.i.i, align 8
+    br label %vector.ph
+  
+  vector.ph:                                        ; preds = %for.inc20.i, %entry
+    %lsr.iv1 = phi i64 [ %lsr.iv.next2, %for.inc20.i ], [ 0, %entry ]
+    %indvars.iv45.i = phi i64 [ 0, %entry ], [ %indvars.iv.next46.i, %for.inc20.i ]
+    %broadcast.splatinsert = insertelement <vscale x 4 x i64> poison, i64 %indvars.iv45.i, i64 0
+    %broadcast.splat = shufflevector <vscale x 4 x i64> %broadcast.splatinsert, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+    br label %vector.body
+  
+  vector.body:                                      ; preds = %vector.body, %vector.ph
+    %lsr.iv3 = phi i64 [ %lsr.iv.next4, %vector.body ], [ %lsr.iv1, %vector.ph ]
+    %lsr.iv = phi i64 [ %lsr.iv.next, %vector.body ], [ 2800, %vector.ph ]
+    %vec.ind = phi <vscale x 4 x i64> [ zeroinitializer, %vector.ph ], [ %vec.ind.next.6, %vector.body ]
+    %1 = mul nuw nsw <vscale x 4 x i64> %vec.ind, %broadcast.splat
+    %2 = trunc <vscale x 4 x i64> %1 to <vscale x 4 x i32>
+    %3 = urem <vscale x 4 x i32> %2, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %4 = add nuw nsw <vscale x 4 x i32> %3, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %5 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep16 = getelementptr i8, ptr %0, i64 %5
+    %6 = add nuw nsw <vscale x 4 x i64> %vec.ind, %broadcast.splat
+    %7 = trunc <vscale x 4 x i64> %6 to <vscale x 4 x i32>
+    %8 = urem <vscale x 4 x i32> %7, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %9 = icmp eq <vscale x 4 x i32> %8, zeroinitializer
+    %10 = urem <vscale x 4 x i32> %7, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %11 = icmp eq <vscale x 4 x i32> %10, zeroinitializer
+    %12 = or <vscale x 4 x i1> %9, %11
+    %13 = urem <vscale x 4 x i32> %7, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %14 = icmp eq <vscale x 4 x i32> %13, zeroinitializer
+    %15 = or <vscale x 4 x i1> %14, %12
+    %16 = select <vscale x 4 x i1> %15, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %4
+    store <vscale x 4 x i32> %16, ptr %scevgep16, align 4
+    %vec.ind.next = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 4, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %17 = mul nuw nsw <vscale x 4 x i64> %vec.ind.next, %broadcast.splat
+    %18 = trunc <vscale x 4 x i64> %17 to <vscale x 4 x i32>
+    %19 = urem <vscale x 4 x i32> %18, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %20 = add nuw nsw <vscale x 4 x i32> %19, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %21 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep14 = getelementptr i8, ptr %0, i64 %21
+    %scevgep15 = getelementptr i8, ptr %scevgep14, i64 16
+    %22 = add nuw nsw <vscale x 4 x i64> %vec.ind.next, %broadcast.splat
+    %23 = trunc <vscale x 4 x i64> %22 to <vscale x 4 x i32>
+    %24 = urem <vscale x 4 x i32> %23, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %25 = icmp eq <vscale x 4 x i32> %24, zeroinitializer
+    %26 = urem <vscale x 4 x i32> %23, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %27 = icmp eq <vscale x 4 x i32> %26, zeroinitializer
+    %28 = or <vscale x 4 x i1> %25, %27
+    %29 = urem <vscale x 4 x i32> %23, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %30 = icmp eq <vscale x 4 x i32> %29, zeroinitializer
+    %31 = or <vscale x 4 x i1> %30, %28
+    %32 = select <vscale x 4 x i1> %31, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %20
+    store <vscale x 4 x i32> %32, ptr %scevgep15, align 4
+    %vec.ind.next.1 = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 8, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %33 = mul nuw nsw <vscale x 4 x i64> %vec.ind.next.1, %broadcast.splat
+    %34 = trunc <vscale x 4 x i64> %33 to <vscale x 4 x i32>
+    %35 = urem <vscale x 4 x i32> %34, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %36 = add nuw nsw <vscale x 4 x i32> %35, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %37 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep12 = getelementptr i8, ptr %0, i64 %37
+    %scevgep13 = getelementptr i8, ptr %scevgep12, i64 32
+    %38 = add nuw nsw <vscale x 4 x i64> %vec.ind.next.1, %broadcast.splat
+    %39 = trunc <vscale x 4 x i64> %38 to <vscale x 4 x i32>
+    %40 = urem <vscale x 4 x i32> %39, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %41 = icmp eq <vscale x 4 x i32> %40, zeroinitializer
+    %42 = urem <vscale x 4 x i32> %39, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %43 = icmp eq <vscale x 4 x i32> %42, zeroinitializer
+    %44 = or <vscale x 4 x i1> %41, %43
+    %45 = urem <vscale x 4 x i32> %39, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %46 = icmp eq <vscale x 4 x i32> %45, zeroinitializer
+    %47 = or <vscale x 4 x i1> %46, %44
+    %48 = select <vscale x 4 x i1> %47, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %36
+    store <vscale x 4 x i32> %48, ptr %scevgep13, align 4
+    %vec.ind.next.2 = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 12, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %49 = mul nuw nsw <vscale x 4 x i64> %vec.ind.next.2, %broadcast.splat
+    %50 = trunc <vscale x 4 x i64> %49 to <vscale x 4 x i32>
+    %51 = urem <vscale x 4 x i32> %50, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %52 = add nuw nsw <vscale x 4 x i32> %51, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %53 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep10 = getelementptr i8, ptr %0, i64 %53
+    %scevgep11 = getelementptr i8, ptr %scevgep10, i64 48
+    %54 = add nuw nsw <vscale x 4 x i64> %vec.ind.next.2, %broadcast.splat
+    %55 = trunc <vscale x 4 x i64> %54 to <vscale x 4 x i32>
+    %56 = urem <vscale x 4 x i32> %55, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %57 = icmp eq <vscale x 4 x i32> %56, zeroinitializer
+    %58 = urem <vscale x 4 x i32> %55, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %59 = icmp eq <vscale x 4 x i32> %58, zeroinitializer
+    %60 = or <vscale x 4 x i1> %57, %59
+    %61 = urem <vscale x 4 x i32> %55, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %62 = icmp eq <vscale x 4 x i32> %61, zeroinitializer
+    %63 = or <vscale x 4 x i1> %62, %60
+    %64 = select <vscale x 4 x i1> %63, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %52
+    store <vscale x 4 x i32> %64, ptr %scevgep11, align 4
+    %vec.ind.next.3 = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 16, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %65 = mul nuw nsw <vscale x 4 x i64> %vec.ind.next.3, %broadcast.splat
+    %66 = trunc <vscale x 4 x i64> %65 to <vscale x 4 x i32>
+    %67 = urem <vscale x 4 x i32> %66, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %68 = add nuw nsw <vscale x 4 x i32> %67, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %69 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep8 = getelementptr i8, ptr %0, i64 %69
+    %scevgep9 = getelementptr i8, ptr %scevgep8, i64 64
+    %70 = add nuw nsw <vscale x 4 x i64> %vec.ind.next.3, %broadcast.splat
+    %71 = trunc <vscale x 4 x i64> %70 to <vscale x 4 x i32>
+    %72 = urem <vscale x 4 x i32> %71, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %73 = icmp eq <vscale x 4 x i32> %72, zeroinitializer
+    %74 = urem <vscale x 4 x i32> %71, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %75 = icmp eq <vscale x 4 x i32> %74, zeroinitializer
+    %76 = or <vscale x 4 x i1> %73, %75
+    %77 = urem <vscale x 4 x i32> %71, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %78 = icmp eq <vscale x 4 x i32> %77, zeroinitializer
+    %79 = or <vscale x 4 x i1> %78, %76
+    %80 = select <vscale x 4 x i1> %79, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %68
+    store <vscale x 4 x i32> %80, ptr %scevgep9, align 4
+    %vec.ind.next.4 = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 20, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %81 = mul nuw nsw <vscale x 4 x i64> %vec.ind.next.4, %broadcast.splat
+    %82 = trunc <vscale x 4 x i64> %81 to <vscale x 4 x i32>
+    %83 = urem <vscale x 4 x i32> %82, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %84 = add nuw nsw <vscale x 4 x i32> %83, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %85 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep6 = getelementptr i8, ptr %0, i64 %85
+    %scevgep7 = getelementptr i8, ptr %scevgep6, i64 80
+    %86 = add nuw nsw <vscale x 4 x i64> %vec.ind.next.4, %broadcast.splat
+    %87 = trunc <vscale x 4 x i64> %86 to <vscale x 4 x i32>
+    %88 = urem <vscale x 4 x i32> %87, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %89 = icmp eq <vscale x 4 x i32> %88, zeroinitializer
+    %90 = urem <vscale x 4 x i32> %87, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %91 = icmp eq <vscale x 4 x i32> %90, zeroinitializer
+    %92 = or <vscale x 4 x i1> %89, %91
+    %93 = urem <vscale x 4 x i32> %87, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %94 = icmp eq <vscale x 4 x i32> %93, zeroinitializer
+    %95 = or <vscale x 4 x i1> %94, %92
+    %96 = select <vscale x 4 x i1> %95, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %84
+    store <vscale x 4 x i32> %96, ptr %scevgep7, align 4
+    %vec.ind.next.5 = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 24, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %97 = mul nuw nsw <vscale x 4 x i64> %vec.ind.next.5, %broadcast.splat
+    %98 = trunc <vscale x 4 x i64> %97 to <vscale x 4 x i32>
+    %99 = urem <vscale x 4 x i32> %98, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %100 = add nuw nsw <vscale x 4 x i32> %99, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %101 = shl nuw nsw i64 %lsr.iv3, 2
+    %scevgep = getelementptr i8, ptr %0, i64 %101
+    %scevgep5 = getelementptr i8, ptr %scevgep, i64 96
+    %102 = add nuw nsw <vscale x 4 x i64> %vec.ind.next.5, %broadcast.splat
+    %103 = trunc <vscale x 4 x i64> %102 to <vscale x 4 x i32>
+    %104 = urem <vscale x 4 x i32> %103, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 13, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %105 = icmp eq <vscale x 4 x i32> %104, zeroinitializer
+    %106 = urem <vscale x 4 x i32> %103, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %107 = icmp eq <vscale x 4 x i32> %106, zeroinitializer
+    %108 = or <vscale x 4 x i1> %105, %107
+    %109 = urem <vscale x 4 x i32> %103, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 11, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %110 = icmp eq <vscale x 4 x i32> %109, zeroinitializer
+    %111 = or <vscale x 4 x i1> %110, %108
+    %112 = select <vscale x 4 x i1> %111, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 999, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> %100
+    store <vscale x 4 x i32> %112, ptr %scevgep5, align 4
+    %vec.ind.next.6 = add <vscale x 4 x i64> %vec.ind, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 28, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+    %lsr.iv.next = add nsw i64 %lsr.iv, -28
+    %lsr.iv.next4 = add nuw nsw i64 %lsr.iv3, 28
+    %113 = icmp eq i64 %lsr.iv.next, 0
+    br i1 %113, label %for.inc20.i, label %vector.body
+  
+  for.inc20.i:                                      ; preds = %vector.body
+    %indvars.iv.next46.i = add nuw nsw i64 %indvars.iv45.i, 1
+    %lsr.iv.next2 = add nuw nsw i64 %lsr.iv1, 2800
+    %exitcond48.not.i = icmp eq i64 %indvars.iv.next46.i, 2800
+    br i1 %exitcond48.not.i, label %init_array.exit, label %vector.ph
+  
+  init_array.exit:                                  ; preds = %for.inc20.i
+    call void @free(ptr noundef nonnull %0)
+    ret i32 0
+  }
+  
+  attributes #0 = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+complxnum,+crc,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+perfmon,+ras,+rdm,+sha2,+sve,+v8.1a,+v8.2a,+v8a,-fmv" }
+  attributes #1 = { nounwind uwtable vscale_range(1,1) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+complxnum,+crc,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+perfmon,+ras,+rdm,+sha2,+sve,+v8.1a,+v8.2a,+v8a,-fmv" }
+
+...
+---
+name:            main
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: ret.i.i55, size: 8, alignment: 8, local-offset: -8 }
+  - { id: 1, name: ret.i.i, size: 8, alignment: 8, local-offset: -16 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    %18:gpr64all = COPY $xzr
+    %17:gpr64all = COPY %18
+    %19:gpr64common = LDRXui %stack.1.ret.i.i, 0 :: (dereferenceable load (s64) from %ir.ret.i.i)
+    %0:gpr64common = COPY %19
+    %21:zpr = DUP_ZI_D 0, 0, implicit $vg
+    %23:gpr32 = MOVi32imm 2800
+    %24:ppr_3b = PTRUE_D 31, implicit $vg
+    %28:ppr_3b = PTRUE_S 31, implicit $vg
+    %29:gpr32common = MOVi32imm 613566757
+    %30:zpr = DUP_ZR_S %29
+    %36:zpr = DUP_ZI_S 7, 0, implicit $vg
+    %43:gpr32common = MOVi32imm -991146299
+    %44:zpr = DUP_ZR_S %43
+    %46:gpr32common = MOVi32imm 330382099
+    %47:zpr = DUP_ZR_S %46
+    %49:gpr32common = MOVi32imm -1227133513
+    %50:zpr = DUP_ZR_S %49
+    %52:gpr32common = MOVi32imm 613566756
+    %53:zpr = DUP_ZR_S %52
+    %56:gpr32common = MOVi32imm -1171354717
+    %57:zpr = DUP_ZR_S %56
+    %59:gpr32common = MOVi32imm 390451572
+    %60:zpr = DUP_ZR_S %59
+    %63:gpr32common = MOVi32imm 999
+    %64:zpr = DUP_ZR_S %63
+    %79:gpr64common = MOVi64imm 4
+    %104:gpr64common = MOVi64imm 8
+    %129:gpr64common = MOVi64imm 12
+    %154:gpr64common = MOVi64imm 16
+    %179:gpr64common = MOVi64imm 20
+    %204:gpr64common = MOVi64imm 24
+  
+  bb.1.vector.ph:
+    %1:gpr64sp = PHI %17, %bb.0, %14, %bb.3
+    %2:gpr64sp = PHI %17, %bb.0, %13, %bb.3
+    %4:zpr = DUP_ZR_D %2
+    %22:zpr = COPY %21
+    %20:gpr64all = SUBREG_TO_REG 0, %23, %subreg.sub_32
+  
+  bb.2.vector.body:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  
+    %5:gpr64common = PHI %1, %bb.1, %12, %bb.2
+    %6:gpr64sp = PHI %20, %bb.1, %11, %bb.2
+    %7:zpr = PHI %21, %bb.1, %9, %bb.2
+    %8:zpr = PHI %22, %bb.1, %10, %bb.2
+    %25:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %7, %4
+    %26:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %8, %4
+    %27:zpr = UZP1_ZZZ_S killed %25, killed %26
+    %31:zpr = UMULH_ZPZZ_S_UNDEF %28, %27, %30
+    %32:zpr = SUB_ZZZ_S %27, %31
+    %33:zpr = LSR_ZZI_S killed %32, 1
+    %34:zpr = ADD_ZZZ_S killed %33, %31
+    %35:zpr = LSR_ZZI_S killed %34, 2
+    %37:zpr = MLS_ZPZZZ_S_UNDEF %28, %27, killed %35, %36
+    %38:zpr = nuw nsw ADD_ZI_S %37, 1, 0
+    %39:gpr64common = ADDXrs %19, %5, 2
+    %40:zpr = nuw nsw ADD_ZZZ_D %7, %4
+    %41:zpr = nuw nsw ADD_ZZZ_D %8, %4
+    %42:zpr = UZP1_ZZZ_S killed %40, killed %41
+    %45:zpr = MUL_ZPZZ_S_UNDEF %28, %42, %44
+    %48:ppr = CMPHS_PPzZZ_S %28, %47, killed %45, implicit-def dead $nzcv
+    %51:zpr = MUL_ZPZZ_S_UNDEF %28, %42, %50
+    %54:ppr = CMPHS_PPzZZ_S %28, %53, killed %51, implicit-def dead $nzcv
+    %55:ppr = SEL_PPPP %48, %48, killed %54
+    %58:zpr = MUL_ZPZZ_S_UNDEF %28, %42, %57
+    %61:ppr = CMPHS_PPzZZ_S %28, %60, killed %58, implicit-def dead $nzcv
+    %62:ppr = SEL_PPPP %61, %61, killed %55
+    %65:zpr = SEL_ZPZZ_S killed %62, %64, killed %38
+    ST1W killed %65, %28, %0, %5 :: (store (<vscale x 1 x s128>) into %ir.scevgep16, align 4)
+    %67:zpr = ADD_ZI_D %8, 4, 0
+    %68:zpr = ADD_ZI_D %7, 4, 0
+    %69:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %68, %4
+    %70:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %67, %4
+    %71:zpr = UZP1_ZZZ_S killed %69, killed %70
+    %72:zpr = UMULH_ZPZZ_S_UNDEF %28, %71, %30
+    %73:zpr = SUB_ZZZ_S %71, %72
+    %74:zpr = LSR_ZZI_S killed %73, 1
+    %75:zpr = ADD_ZZZ_S killed %74, %72
+    %76:zpr = LSR_ZZI_S killed %75, 2
+    %77:zpr = MLS_ZPZZZ_S_UNDEF %28, %71, killed %76, %36
+    %78:zpr = nuw nsw ADD_ZI_S %77, 1, 0
+    %80:zpr = nuw nsw ADD_ZZZ_D %68, %4
+    %81:zpr = nuw nsw ADD_ZZZ_D %67, %4
+    %82:zpr = UZP1_ZZZ_S killed %80, killed %81
+    %83:zpr = MUL_ZPZZ_S_UNDEF %28, %82, %44
+    %84:ppr = CMPHS_PPzZZ_S %28, %47, killed %83, implicit-def dead $nzcv
+    %85:zpr = MUL_ZPZZ_S_UNDEF %28, %82, %50
+    %86:ppr = CMPHS_PPzZZ_S %28, %53, killed %85, implicit-def dead $nzcv
+    %87:ppr = SEL_PPPP %84, %84, killed %86
+    %88:zpr = MUL_ZPZZ_S_UNDEF %28, %82, %57
+    %89:ppr = CMPHS_PPzZZ_S %28, %60, killed %88, implicit-def dead $nzcv
+    %90:ppr = SEL_PPPP %89, %89, killed %87
+    %91:zpr = SEL_ZPZZ_S killed %90, %64, killed %78
+    ST1W killed %91, %28, %39, %79 :: (store (<vscale x 1 x s128>) into %ir.scevgep15, align 4)
+    %92:zpr = ADD_ZI_D %8, 8, 0
+    %93:zpr = ADD_ZI_D %7, 8, 0
+    %94:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %93, %4
+    %95:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %92, %4
+    %96:zpr = UZP1_ZZZ_S killed %94, killed %95
+    %97:zpr = UMULH_ZPZZ_S_UNDEF %28, %96, %30
+    %98:zpr = SUB_ZZZ_S %96, %97
+    %99:zpr = LSR_ZZI_S killed %98, 1
+    %100:zpr = ADD_ZZZ_S killed %99, %97
+    %101:zpr = LSR_ZZI_S killed %100, 2
+    %102:zpr = MLS_ZPZZZ_S_UNDEF %28, %96, killed %101, %36
+    %103:zpr = nuw nsw ADD_ZI_S %102, 1, 0
+    %105:zpr = nuw nsw ADD_ZZZ_D %93, %4
+    %106:zpr = nuw nsw ADD_ZZZ_D %92, %4
+    %107:zpr = UZP1_ZZZ_S killed %105, killed %106
+    %108:zpr = MUL_ZPZZ_S_UNDEF %28, %107, %44
+    %109:ppr = CMPHS_PPzZZ_S %28, %47, killed %108, implicit-def dead $nzcv
+    %110:zpr = MUL_ZPZZ_S_UNDEF %28, %107, %50
+    %111:ppr = CMPHS_PPzZZ_S %28, %53, killed %110, implicit-def dead $nzcv
+    %112:ppr = SEL_PPPP %109, %109, killed %111
+    %113:zpr = MUL_ZPZZ_S_UNDEF %28, %107, %57
+    %114:ppr = CMPHS_PPzZZ_S %28, %60, killed %113, implicit-def dead $nzcv
+    %115:ppr = SEL_PPPP %114, %114, killed %112
+    %116:zpr = SEL_ZPZZ_S killed %115, %64, killed %103
+    ST1W killed %116, %28, %39, %104 :: (store (<vscale x 1 x s128>) into %ir.scevgep13, align 4)
+    %117:zpr = ADD_ZI_D %8, 12, 0
+    %118:zpr = ADD_ZI_D %7, 12, 0
+    %119:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %118, %4
+    %120:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %117, %4
+    %121:zpr = UZP1_ZZZ_S killed %119, killed %120
+    %122:zpr = UMULH_ZPZZ_S_UNDEF %28, %121, %30
+    %123:zpr = SUB_ZZZ_S %121, %122
+    %124:zpr = LSR_ZZI_S killed %123, 1
+    %125:zpr = ADD_ZZZ_S killed %124, %122
+    %126:zpr = LSR_ZZI_S killed %125, 2
+    %127:zpr = MLS_ZPZZZ_S_UNDEF %28, %121, killed %126, %36
+    %128:zpr = nuw nsw ADD_ZI_S %127, 1, 0
+    %130:zpr = nuw nsw ADD_ZZZ_D %118, %4
+    %131:zpr = nuw nsw ADD_ZZZ_D %117, %4
+    %132:zpr = UZP1_ZZZ_S killed %130, killed %131
+    %133:zpr = MUL_ZPZZ_S_UNDEF %28, %132, %44
+    %134:ppr = CMPHS_PPzZZ_S %28, %47, killed %133, implicit-def dead $nzcv
+    %135:zpr = MUL_ZPZZ_S_UNDEF %28, %132, %50
+    %136:ppr = CMPHS_PPzZZ_S %28, %53, killed %135, implicit-def dead $nzcv
+    %137:ppr = SEL_PPPP %134, %134, killed %136
+    %138:zpr = MUL_ZPZZ_S_UNDEF %28, %132, %57
+    %139:ppr = CMPHS_PPzZZ_S %28, %60, killed %138, implicit-def dead $nzcv
+    %140:ppr = SEL_PPPP %139, %139, killed %137
+    %141:zpr = SEL_ZPZZ_S killed %140, %64, killed %128
+    ST1W killed %141, %28, %39, %129 :: (store (<vscale x 1 x s128>) into %ir.scevgep11, align 4)
+    %142:zpr = ADD_ZI_D %8, 16, 0
+    %143:zpr = ADD_ZI_D %7, 16, 0
+    %144:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %143, %4
+    %145:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %142, %4
+    %146:zpr = UZP1_ZZZ_S killed %144, killed %145
+    %147:zpr = UMULH_ZPZZ_S_UNDEF %28, %146, %30
+    %148:zpr = SUB_ZZZ_S %146, %147
+    %149:zpr = LSR_ZZI_S killed %148, 1
+    %150:zpr = ADD_ZZZ_S killed %149, %147
+    %151:zpr = LSR_ZZI_S killed %150, 2
+    %152:zpr = MLS_ZPZZZ_S_UNDEF %28, %146, killed %151, %36
+    %153:zpr = nuw nsw ADD_ZI_S %152, 1, 0
+    %155:zpr = nuw nsw ADD_ZZZ_D %143, %4
+    %156:zpr = nuw nsw ADD_ZZZ_D %142, %4
+    %157:zpr = UZP1_ZZZ_S killed %155, killed %156
+    %158:zpr = MUL_ZPZZ_S_UNDEF %28, %157, %44
+    %159:ppr = CMPHS_PPzZZ_S %28, %47, killed %158, implicit-def dead $nzcv
+    %160:zpr = MUL_ZPZZ_S_UNDEF %28, %157, %50
+    %161:ppr = CMPHS_PPzZZ_S %28, %53, killed %160, implicit-def dead $nzcv
+    %162:ppr = SEL_PPPP %159, %159, killed %161
+    %163:zpr = MUL_ZPZZ_S_UNDEF %28, %157, %57
+    %164:ppr = CMPHS_PPzZZ_S %28, %60, killed %163, implicit-def dead $nzcv
+    %165:ppr = SEL_PPPP %164, %164, killed %162
+    %166:zpr = SEL_ZPZZ_S killed %165, %64, killed %153
+    ST1W killed %166, %28, %39, %154 :: (store (<vscale x 1 x s128>) into %ir.scevgep9, align 4)
+    %167:zpr = ADD_ZI_D %8, 20, 0
+    %168:zpr = ADD_ZI_D %7, 20, 0
+    %169:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %168, %4
+    %170:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %167, %4
+    %171:zpr = UZP1_ZZZ_S killed %169, killed %170
+    %172:zpr = UMULH_ZPZZ_S_UNDEF %28, %171, %30
+    %173:zpr = SUB_ZZZ_S %171, %172
+    %174:zpr = LSR_ZZI_S killed %173, 1
+    %175:zpr = ADD_ZZZ_S killed %174, %172
+    %176:zpr = LSR_ZZI_S killed %175, 2
+    %177:zpr = MLS_ZPZZZ_S_UNDEF %28, %171, killed %176, %36
+    %178:zpr = nuw nsw ADD_ZI_S %177, 1, 0
+    %180:zpr = nuw nsw ADD_ZZZ_D %168, %4
+    %181:zpr = nuw nsw ADD_ZZZ_D %167, %4
+    %182:zpr = UZP1_ZZZ_S killed %180, killed %181
+    %183:zpr = MUL_ZPZZ_S_UNDEF %28, %182, %44
+    %184:ppr = CMPHS_PPzZZ_S %28, %47, killed %183, implicit-def dead $nzcv
+    %185:zpr = MUL_ZPZZ_S_UNDEF %28, %182, %50
+    %186:ppr = CMPHS_PPzZZ_S %28, %53, killed %185, implicit-def dead $nzcv
+    %187:ppr = SEL_PPPP %184, %184, killed %186
+    %188:zpr = MUL_ZPZZ_S_UNDEF %28, %182, %57
+    %189:ppr = CMPHS_PPzZZ_S %28, %60, killed %188, implicit-def dead $nzcv
+    %190:ppr = SEL_PPPP %189, %189, killed %187
+    %191:zpr = SEL_ZPZZ_S killed %190, %64, killed %178
+    ST1W killed %191, %28, %39, %179 :: (store (<vscale x 1 x s128>) into %ir.scevgep7, align 4)
+    %192:zpr = ADD_ZI_D %8, 24, 0
+    %193:zpr = ADD_ZI_D %7, 24, 0
+    %194:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %193, %4
+    %195:zpr = nuw nsw MUL_ZPZZ_D_UNDEF %24, %192, %4
+    %196:zpr = UZP1_ZZZ_S killed %194, killed %195
+    %197:zpr = UMULH_ZPZZ_S_UNDEF %28, %196, %30
+    %198:zpr = SUB_ZZZ_S %196, %197
+    %199:zpr = LSR_ZZI_S killed %198, 1
+    %200:zpr = ADD_ZZZ_S killed %199, %197
+    %201:zpr = LSR_ZZI_S killed %200, 2
+    %202:zpr = MLS_ZPZZZ_S_UNDEF %28, %196, killed %201, %36
+    %203:zpr = nuw nsw ADD_ZI_S %202, 1, 0
+    %205:zpr = nuw nsw ADD_ZZZ_D %193, %4
+    %206:zpr = nuw nsw ADD_ZZZ_D %192, %4
+    %207:zpr = UZP1_ZZZ_S killed %205, killed %206
+    %208:zpr = MUL_ZPZZ_S_UNDEF %28, %207, %44
+    %209:ppr = CMPHS_PPzZZ_S %28, %47, killed %208, implicit-def dead $nzcv
+    %210:zpr = MUL_ZPZZ_S_UNDEF %28, %207, %50
+    %211:ppr = CMPHS_PPzZZ_S %28, %53, killed %210, implicit-def dead $nzcv
+    %212:ppr = SEL_PPPP %209, %209, killed %211
+    %213:zpr = MUL_ZPZZ_S_UNDEF %28, %207, %57
+    %214:ppr = CMPHS_PPzZZ_S %28, %60, killed %213, implicit-def dead $nzcv
+    %215:ppr = SEL_PPPP %214, %214, killed %212
+    %216:zpr = SEL_ZPZZ_S killed %215, %64, killed %203
+    ST1W killed %216, %28, %39, %204 :: (store (<vscale x 1 x s128>) into %ir.scevgep5, align 4)
+    %9:zpr = ADD_ZI_D %7, 28, 0
+    %10:zpr = ADD_ZI_D %8, 28, 0
+    %217:gpr64 = nsw SUBSXri %6, 28, 0, implicit-def $nzcv
+    %11:gpr64all = COPY %217
+    %218:gpr64sp = nuw nsw ADDXri %5, 28, 0
+    %12:gpr64all = COPY %218
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.3
+  
+  bb.3.for.inc20.i:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+  
+    %219:gpr64sp = nuw nsw ADDXri %2, 1, 0
+    %13:gpr64all = COPY %219
+    %220:gpr64sp = nuw nsw ADDXri %1, 2800, 0
+    %14:gpr64all = COPY %220
+    dead $xzr = SUBSXri %219, 2800, 0, implicit-def $nzcv
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.4
+  
+  bb.4.init_array.exit:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %0
+    BL @free, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %222:gpr32all = COPY $wzr
+    $w0 = COPY %222
+    RET_ReallyLR implicit $w0
+
+...

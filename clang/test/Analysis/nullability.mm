@@ -438,7 +438,7 @@ int * _Nonnull InlinedPreconditionViolationInFunctionCallee(int * _Nonnull p2) {
 
 int * _Nonnull InlinedReturnNullOverSuppressionCallee(int * _Nonnull p2) {
   int *result = 0;
-  return result; // no-warning; but this is an over suppression
+  return result; // expected-warning{{Null returned from a function that is expected to return a non-null value}}
 }
 
 int *InlinedReturnNullOverSuppressionCaller(int * _Nonnull p1) {

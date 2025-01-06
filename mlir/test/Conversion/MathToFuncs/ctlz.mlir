@@ -91,3 +91,13 @@ func.func @main(%arg0: i8) {
   func.return
 }
 
+// -----
+
+// Check that index is not converted
+
+// CHECK-LABEL: func.func @ctlz_index
+// CHECK:         math.ctlz
+func.func @ctlz_index(%arg0: index) {
+  %0 = math.ctlz %arg0 : index
+  func.return
+}

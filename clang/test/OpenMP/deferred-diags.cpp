@@ -41,7 +41,7 @@ namespace TestDeleteIncompleteClassDefinition {
 struct a;
 struct b {
   b() {
-    delete c; // expected-warning {{deleting pointer to incomplete type 'a' may cause undefined behavior}}
+    delete c; // expected-warning {{deleting pointer to incomplete type 'a' is incompatible with C++2c and may cause undefined behavior}}
   }
   a *c;
 };

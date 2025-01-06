@@ -13,17 +13,16 @@ entry:
 
 for.cond2:                                        ; preds = %for.inc46, %lor.end, %entry
   %p_44.addr.1 = phi i8 [ %p_44.addr.1, %lor.end ], [ %p_44, %entry ], [ %p_44.addr.1, %for.inc46 ]
-  br i1 undef, label %for.inc46, label %for.body5
+  br i1 true, label %for.inc46, label %for.body5
 
 for.body5:                                        ; preds = %for.cond2
-  br i1 undef, label %lbl_465, label %if.then9
+  br i1 false, label %lbl_465, label %if.then9
 
 if.then9:                                         ; preds = %for.body5
   br label %return
 
 lbl_465:                                          ; preds = %lbl_465, %for.body5
-  %tobool19 = icmp eq i8 undef, 0
-  br i1 %tobool19, label %if.end21, label %lbl_465
+  br i1 true, label %if.end21, label %lbl_465
 
 if.end21:                                         ; preds = %lbl_465
   %conv23 = zext i8 %p_44.addr.1 to i64

@@ -161,8 +161,8 @@ struct TestPDLByteCodePass
     patternList.add(std::move(pdlPattern));
 
     // Invoke the pattern driver with the provided patterns.
-    (void)applyPatternsAndFoldGreedily(irModule.getBodyRegion(),
-                                       std::move(patternList));
+    (void)applyPatternsGreedily(irModule.getBodyRegion(),
+                                std::move(patternList));
   }
 };
 } // namespace

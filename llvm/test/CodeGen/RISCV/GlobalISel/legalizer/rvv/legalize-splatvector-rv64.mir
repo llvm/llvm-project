@@ -8,8 +8,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 1 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -25,8 +26,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 1 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -47,16 +49,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 1 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 1 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 1 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -73,8 +71,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 2 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -90,8 +89,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 2 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -112,16 +112,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 2 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 2 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 2 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -138,8 +134,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 4 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -155,8 +152,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 4 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -177,16 +175,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 4 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 4 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 4 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -203,8 +197,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 8 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -220,8 +215,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 8 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -242,16 +238,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 8 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 8 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 8 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -268,8 +260,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 16 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -285,8 +278,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 16 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -307,16 +301,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 16 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 16 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 16 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -333,8 +323,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv32i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 32 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -350,8 +341,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv32i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 32 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -372,16 +364,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 32 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 32 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 32 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 32 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 32 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 32 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 32 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -398,8 +386,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv64i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 64 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -415,8 +404,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv64i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 64 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -437,16 +427,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C1]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND1]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C]]
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[AND1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 64 x s1>) = G_ICMP intpred(ne), [[SPLAT_VECTOR]](<vscale x 64 x s8>), [[SPLAT_VECTOR1]]
     ; CHECK-NEXT: $v0 = COPY [[ICMP]](<vscale x 64 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
@@ -464,9 +450,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
@@ -484,9 +469,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
@@ -503,9 +487,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
@@ -522,9 +505,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
@@ -541,9 +523,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
@@ -560,9 +541,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
@@ -579,9 +559,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
@@ -598,9 +577,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
@@ -617,9 +595,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
@@ -636,9 +613,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %0:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
@@ -655,9 +631,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
@@ -674,9 +649,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
@@ -693,9 +667,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
@@ -712,9 +685,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %0:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
@@ -731,9 +703,8 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %0:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF

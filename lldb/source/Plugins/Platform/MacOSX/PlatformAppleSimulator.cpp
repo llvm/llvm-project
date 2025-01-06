@@ -79,7 +79,7 @@ lldb_private::Status PlatformAppleSimulator::LaunchProcess(
     return spawned.GetError();
 #else
   Status err;
-  err.SetErrorString(UNSUPPORTED_ERROR);
+  err = Status::FromErrorString(UNSUPPORTED_ERROR);
   return err;
 #endif
 }
@@ -157,17 +157,18 @@ Status PlatformAppleSimulator::ConnectRemote(Args &args) {
             }
           });
       if (!m_device)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "no device with UDID or name '%s' was found", arg_cstr);
     }
   } else {
-    error.SetErrorString("this command take a single UDID argument of the "
-                         "device you want to connect to.");
+    error = Status::FromErrorString(
+        "this command take a single UDID argument of the "
+        "device you want to connect to.");
   }
   return error;
 #else
   Status err;
-  err.SetErrorString(UNSUPPORTED_ERROR);
+  err = Status::FromErrorString(UNSUPPORTED_ERROR);
   return err;
 #endif
 }
@@ -178,7 +179,7 @@ Status PlatformAppleSimulator::DisconnectRemote() {
   return Status();
 #else
   Status err;
-  err.SetErrorString(UNSUPPORTED_ERROR);
+  err = Status::FromErrorString(UNSUPPORTED_ERROR);
   return err;
 #endif
 }
@@ -408,11 +409,11 @@ Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
       if (FileSystem::Instance().Exists(local_file))
         return error;
     }
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "unable to locate a platform file for '{0}' in platform '{1}'",
         platform_file_path, GetPluginName());
   } else {
-    error.SetErrorString("invalid platform file argument");
+    error = Status::FromErrorString("invalid platform file argument");
   }
   return error;
 }

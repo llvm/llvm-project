@@ -30,7 +30,7 @@ define void @foo_sext_nsw(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_1: # %.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
@@ -49,7 +49,7 @@ define void @foo_sext_nsw(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB0_1: # %.preheader
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    cltq
 ; X64-NEXT:    shlq $2, %rax
@@ -77,7 +77,7 @@ define void @foo_sext_nuw(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB1_1: # %.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
@@ -96,7 +96,7 @@ define void @foo_sext_nuw(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_1: # %.preheader
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    incl %eax
 ; X64-NEXT:    cltq
@@ -125,7 +125,7 @@ define void @foo_zext_nsw(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB2_1: # %.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
@@ -144,7 +144,7 @@ define void @foo_zext_nsw(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB2_1: # %.preheader
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    incl %eax
 ; X64-NEXT:    shlq $2, %rax
@@ -173,7 +173,7 @@ define void @foo_zext_nuw(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB3_1: # %.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
@@ -192,7 +192,7 @@ define void @foo_zext_nuw(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB3_1: # %.preheader
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_2: # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    shlq $2, %rax
@@ -220,7 +220,7 @@ define void @foo_sext(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB4_1: # %.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
@@ -239,7 +239,7 @@ define void @foo_sext(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_1: # %.preheader
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    incl %eax
 ; X64-NEXT:    cltq
@@ -268,7 +268,7 @@ define void @foo_zext(i1 zeroext, i32) nounwind {
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB5_1: # %.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB5_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal 20(,%eax,4), %eax
@@ -287,7 +287,7 @@ define void @foo_zext(i1 zeroext, i32) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB5_1: # %.preheader
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB5_2: # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    incl %eax
 ; X64-NEXT:    shlq $2, %rax

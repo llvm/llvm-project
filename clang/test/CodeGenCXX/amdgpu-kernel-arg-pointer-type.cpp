@@ -6,6 +6,10 @@
 // The original test passes the result through opt O2, but that seems to introduce invalid
 // addrspace casts which are not being fixed as part of the present change.
 
+// COMMON: define{{.*}} amdgpu_kernel void @_Z6kernelv() #[[ATTR:[0-9]+]]
+__attribute__((amdgpu_kernel, amdgpu_flat_work_group_size(1, 256))) void
+    kernel() {}
+
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel1Pi(ptr {{.*}} %x)
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to ptr
 __attribute__((amdgpu_kernel)) void kernel1(int *x) {
@@ -81,3 +85,4 @@ __attribute__((amdgpu_kernel)) void kernel8(struct SS a) {
   *a.x += 3.f;
 }
 
+// COMMON: attributes #[[ATTR]] = { {{.*}}"amdgpu-flat-work-group-size"="1,256"{{.*}} }

@@ -95,6 +95,47 @@ struct ForOpInterface
   }
 };
 
+struct ForallOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ForallOpInterface,
+                                                   ForallOp> {
+
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto forallOp = cast<ForallOp>(op);
+
+    // Index values should be induction variables, since the semantics of
+    // tensor::ParallelInsertSliceOp requires forall outputs to be ranked
+    // tensors.
+    auto blockArg = cast<BlockArgument>(value);
+    assert(blockArg.getArgNumber() < forallOp.getInductionVars().size() &&
+           "expected index value to be an induction var");
+    int64_t idx = blockArg.getArgNumber();
+    // TODO: Take into account step size.
+    AffineExpr lb = cstr.getExpr(forallOp.getMixedLowerBound()[idx]);
+    AffineExpr ub = cstr.getExpr(forallOp.getMixedUpperBound()[idx]);
+    cstr.bound(value) >= lb;
+    cstr.bound(value) < ub;
+  }
+
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto forallOp = cast<ForallOp>(op);
+
+    // `value` is an iter_arg or an OpResult.
+    int64_t iterArgIdx;
+    if (auto iterArg = llvm::dyn_cast<BlockArgument>(value)) {
+      iterArgIdx = iterArg.getArgNumber() - forallOp.getInductionVars().size();
+    } else {
+      iterArgIdx = llvm::cast<OpResult>(value).getResultNumber();
+    }
+
+    // The forall results and output arguments have the same sizes as the output
+    // operands.
+    Value outputOperand = forallOp.getOutputs()[iterArgIdx];
+    cstr.bound(value)[dim] == cstr.getExpr(outputOperand, dim);
+  }
+};
+
 struct IfOpInterface
     : public ValueBoundsOpInterface::ExternalModel<IfOpInterface, IfOp> {
 
@@ -161,6 +202,7 @@ void mlir::scf::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
     scf::ForOp::attachInterface<scf::ForOpInterface>(*ctx);
+    scf::ForallOp::attachInterface<scf::ForallOpInterface>(*ctx);
     scf::IfOp::attachInterface<scf::IfOpInterface>(*ctx);
   });
 }

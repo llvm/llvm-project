@@ -9,14 +9,15 @@
 #include "pthread_attr_destroy.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_destroy, (pthread_attr_t *)) {
   // There is nothing to cleanup.
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

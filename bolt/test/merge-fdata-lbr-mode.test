@@ -1,0 +1,15 @@
+## Check that merge-fdata tool doesn't falsely print no_lbr when not in no-lbr mode
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata
+# RUN: FileCheck %s --input-file %t/merged.fdata
+
+# CHECK-NOT: no_lbr
+# CHECK: 1 main 0 1 main 2 1 3
+
+#--- a.fdata
+1 main 0 1 main 2 0 1
+#--- b.fdata
+1 main 0 1 main 2 1 2

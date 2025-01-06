@@ -12,13 +12,11 @@
 // CHECK:         call void @_QPtest_proc_dummy_other(ptr %[[VAL_6]])
 
 // CHECK-LABEL: define void @_QFtest_proc_dummyPtest_proc_dummy_a(ptr
-// CHECK-SAME:              %[[VAL_0:.*]], ptr nest %[[VAL_1:.*]])
+// CHECK-SAME:              nocapture %[[VAL_0:.*]], ptr nest nocapture %[[VAL_1:.*]])
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_other(ptr
 // CHECK-SAME:              %[[VAL_0:.*]])
-// CHECK:         %[[VAL_1:.*]] = alloca i32, i64 1, align 4
-// CHECK:         store i32 4, ptr %[[VAL_1]], align 4
-// CHECK:         call void %[[VAL_0]](ptr %[[VAL_1]])
+// CHECK:         call void %[[VAL_0]](ptr %{{.*}})
 
 func.func @_QPtest_proc_dummy() {
   %c0_i32 = arith.constant 0 : i32
@@ -88,7 +86,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         call void @llvm.stackrestore.p0(ptr %[[VAL_27]])
 
 // CHECK-LABEL: define { ptr, i64 } @_QFtest_proc_dummy_charPgen_message(ptr
-// CHECK-SAME:                %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest %[[VAL_2:.*]])
+// CHECK-SAME:                nocapture %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest nocapture %[[VAL_2:.*]])
 // CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i32 0, i32 0
 // CHECK:         %[[VAL_4:.*]] = load { ptr, i64 }, ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_5:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 0

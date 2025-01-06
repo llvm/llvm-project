@@ -489,10 +489,10 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ Parent Loop BB1_10 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vqadd.u32 q2, q5, r1
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    vcmp.u32 hi, q7, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    add.w r1, r1, #4
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r9
 ; CHECK-NEXT:    vpst
@@ -508,10 +508,10 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ Parent Loop BB1_10 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vqadd.u32 q2, q5, r1
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    vcmp.u32 hi, q6, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    add.w r1, r1, #4
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r9
 ; CHECK-NEXT:    vpst

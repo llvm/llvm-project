@@ -20,6 +20,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/HeatUtils.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"

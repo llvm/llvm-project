@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: ={{.*}}add
 ; CHECK-NOT: mem{{[bdhwu]}}
 

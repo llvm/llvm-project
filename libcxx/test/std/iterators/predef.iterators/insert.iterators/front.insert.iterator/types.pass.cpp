@@ -28,6 +28,7 @@
 //   typedef output_iterator_tag         iterator_category;
 // };
 
+#include <cstddef>
 #include <iterator>
 #include <type_traits>
 #include <vector>

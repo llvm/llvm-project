@@ -855,9 +855,6 @@ static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
 } // namespace
 
 void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
-  const auto AnyLiteralExpr = ignoringParenImpCasts(
-      anyOf(cxxBoolLiteral(), characterLiteral(), integerLiteral()));
-
   const auto BannedIntegerLiteral =
       integerLiteral(expandedByMacro(KnownBannedMacroNames));
   const auto IsInUnevaluatedContext = expr(anyOf(
@@ -866,19 +863,16 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Binary with equivalent operands, like (X != 2 && X != 2).
   Finder->addMatcher(
       traverse(TK_AsIs,
-               binaryOperator(
-                   anyOf(isComparisonOperator(),
-                         hasAnyOperatorName("-", "/", "%", "|", "&", "^", "&&",
-                                            "||", "=")),
-                   operandsAreEquivalent(),
-                   // Filter noisy false positives.
-                   unless(isInTemplateInstantiation()),
-                   unless(binaryOperatorIsInMacro()),
-                   unless(hasType(realFloatingPointType())),
-                   unless(hasEitherOperand(hasType(realFloatingPointType()))),
-                   unless(hasLHS(AnyLiteralExpr)),
-                   unless(hasDescendant(BannedIntegerLiteral)),
-                   unless(IsInUnevaluatedContext))
+               binaryOperator(anyOf(isComparisonOperator(),
+                                    hasAnyOperatorName("-", "/", "%", "|", "&",
+                                                       "^", "&&", "||", "=")),
+                              operandsAreEquivalent(),
+                              // Filter noisy false positives.
+                              unless(isInTemplateInstantiation()),
+                              unless(binaryOperatorIsInMacro()),
+                              unless(hasAncestor(arraySubscriptExpr())),
+                              unless(hasDescendant(BannedIntegerLiteral)),
+                              unless(IsInUnevaluatedContext))
                    .bind("binary")),
       this);
 
@@ -1238,6 +1232,50 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binary")) {
     // If the expression's constants are macros, check whether they are
     // intentional.
+
+    //
+    // Special case for floating-point representation.
+    //
+    // If expressions on both sides of comparison operator are of type float,
+    // then for some comparison operators no warning shall be
+    // reported even if the expressions are identical from a symbolic point of
+    // view. Comparison between expressions, declared variables and literals
+    // are treated differently.
+    //
+    // != and == between float literals that have the same value should NOT
+    // warn. < > between float literals that have the same value SHOULD warn.
+    //
+    // != and == between the same float declaration should NOT warn.
+    // < > between the same float declaration SHOULD warn.
+    //
+    // != and == between eq. expressions that evaluates into float
+    //           should NOT warn.
+    // < >       between eq. expressions that evaluates into float
+    //           should NOT warn.
+    //
+    const Expr *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
+    const Expr *RHS = BinOp->getRHS()->IgnoreParenImpCasts();
+    const BinaryOperator::Opcode Op = BinOp->getOpcode();
+    const bool OpEqualEQorNE = ((Op == BO_EQ) || (Op == BO_NE));
+
+    const auto *DeclRef1 = dyn_cast<DeclRefExpr>(LHS);
+    const auto *DeclRef2 = dyn_cast<DeclRefExpr>(RHS);
+    const auto *FloatLit1 = dyn_cast<FloatingLiteral>(LHS);
+    const auto *FloatLit2 = dyn_cast<FloatingLiteral>(RHS);
+
+    if (DeclRef1 && DeclRef2 &&
+        DeclRef1->getType()->hasFloatingRepresentation() &&
+        DeclRef2->getType()->hasFloatingRepresentation() &&
+        (DeclRef1->getDecl() == DeclRef2->getDecl()) && OpEqualEQorNE) {
+      return;
+    }
+
+    if (FloatLit1 && FloatLit2 &&
+        FloatLit1->getValue().bitwiseIsEqual(FloatLit2->getValue()) &&
+        OpEqualEQorNE) {
+      return;
+    }
+
     if (areSidesBinaryConstExpressions(BinOp, Result.Context)) {
       const Expr *LhsConst = nullptr, *RhsConst = nullptr;
       BinaryOperatorKind MainOpcode{}, SideOpcode{};

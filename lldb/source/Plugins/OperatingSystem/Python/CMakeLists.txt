@@ -6,5 +6,6 @@ add_lldb_library(lldbPluginOperatingSystemPython PLUGIN
     lldbInterpreter
     lldbSymbol
     lldbTarget
+    lldbValueObject
     lldbPluginProcessUtility
   )

@@ -66,9 +66,11 @@ static size_t ArgvToArgc(const char **argv) {
 
 // Trims all whitespace that can separate command line arguments from the left
 // side of the string.
-static llvm::StringRef ltrimForArgs(llvm::StringRef str) {
+static llvm::StringRef ltrimForArgs(llvm::StringRef str, size_t &shift) {
   static const char *k_space_separators = " \t";
-  return str.ltrim(k_space_separators);
+  llvm::StringRef result = str.ltrim(k_space_separators);
+  shift = result.data() - str.data();
+  return result;
 }
 
 // A helper function for SetCommandString. Parses a single argument from the
@@ -156,7 +158,9 @@ ParseSingleArgument(llvm::StringRef command) {
   return std::make_tuple(arg, first_quote_char, command);
 }
 
-Args::ArgEntry::ArgEntry(llvm::StringRef str, char quote) : quote(quote) {
+Args::ArgEntry::ArgEntry(llvm::StringRef str, char quote,
+                         std::optional<uint16_t> column)
+    : quote(quote), column(column) {
   size_t size = str.size();
   ptr.reset(new char[size + 1]);
 
@@ -185,7 +189,7 @@ Args &Args::operator=(const Args &rhs) {
   m_argv.clear();
   m_entries.clear();
   for (auto &entry : rhs.m_entries) {
-    m_entries.emplace_back(entry.ref(), entry.quote);
+    m_entries.emplace_back(entry.ref(), entry.quote, entry.column);
     m_argv.push_back(m_entries.back().data());
   }
   m_argv.push_back(nullptr);
@@ -248,14 +252,20 @@ void Args::SetCommandString(llvm::StringRef command) {
   Clear();
   m_argv.clear();
 
-  command = ltrimForArgs(command);
+  uint16_t column = 1;
+  size_t shift = 0;
+  command = ltrimForArgs(command, shift);
+  column += shift;
   std::string arg;
   char quote;
   while (!command.empty()) {
+    const char *prev = command.data();
     std::tie(arg, quote, command) = ParseSingleArgument(command);
-    m_entries.emplace_back(arg, quote);
+    m_entries.emplace_back(arg, quote, column);
     m_argv.push_back(m_entries.back().data());
-    command = ltrimForArgs(command);
+    command = ltrimForArgs(command, shift);
+    column += shift;
+    column += command.data() - prev;
   }
   m_argv.push_back(nullptr);
 }
@@ -299,7 +309,7 @@ void Args::AppendArguments(const Args &rhs) {
   assert(m_argv.back() == nullptr);
   m_argv.pop_back();
   for (auto &entry : rhs.m_entries) {
-    m_entries.emplace_back(entry.ref(), entry.quote);
+    m_entries.emplace_back(entry.ref(), entry.quote, entry.column);
     m_argv.push_back(m_entries.back().data());
   }
   m_argv.push_back(nullptr);
@@ -312,7 +322,7 @@ void Args::AppendArguments(const char **argv) {
   assert(m_argv.back() == nullptr);
   m_argv.pop_back();
   for (auto arg : llvm::ArrayRef(argv, argc)) {
-    m_entries.emplace_back(arg, '\0');
+    m_entries.emplace_back(arg, '\0', std::nullopt);
     m_argv.push_back(m_entries.back().data());
   }
 
@@ -330,7 +340,7 @@ void Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
 
   if (idx > m_entries.size())
     return;
-  m_entries.emplace(m_entries.begin() + idx, arg_str, quote_char);
+  m_entries.emplace(m_entries.begin() + idx, arg_str, quote_char, std::nullopt);
   m_argv.insert(m_argv.begin() + idx, m_entries[idx].data());
 }
 
@@ -342,7 +352,7 @@ void Args::ReplaceArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
   if (idx >= m_entries.size())
     return;
 
-  m_entries[idx] = ArgEntry(arg_str, quote_char);
+  m_entries[idx] = ArgEntry(arg_str, quote_char, std::nullopt);
   m_argv[idx] = m_entries[idx].data();
 }
 
@@ -366,7 +376,7 @@ void Args::SetArguments(size_t argc, const char **argv) {
             ? args[i][0]
             : '\0';
 
-    m_entries[i] = ArgEntry(args[i], quote);
+    m_entries[i] = ArgEntry(args[i], quote, std::nullopt);
     m_argv[i] = m_entries[i].data();
   }
 }
@@ -635,7 +645,8 @@ OptionsWithRaw::OptionsWithRaw(llvm::StringRef arg_string) {
 void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
   const llvm::StringRef original_args = arg_string;
 
-  arg_string = ltrimForArgs(arg_string);
+  size_t shift;
+  arg_string = ltrimForArgs(arg_string, shift);
   std::string arg;
   char quote;
 
@@ -656,7 +667,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
 
     // If we get an unquoted '--' argument, then we reached the suffix part
     // of the command.
-    Args::ArgEntry entry(arg, quote);
+    Args::ArgEntry entry(arg, quote, std::nullopt);
     if (!entry.IsQuoted() && arg == "--") {
       // The remaining line is the raw suffix, and the line we parsed so far
       // needs to be interpreted as arguments.
@@ -681,7 +692,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
       break;
     }
 
-    arg_string = ltrimForArgs(arg_string);
+    arg_string = ltrimForArgs(arg_string, shift);
   }
 
   // If we didn't find a suffix delimiter, the whole string is the raw suffix.

@@ -81,16 +81,16 @@ private:
   }
 
 public:
-  static CCValAssign getReg(unsigned ValNo, MVT ValVT, unsigned RegNo,
+  static CCValAssign getReg(unsigned ValNo, MVT ValVT, MCRegister Reg,
                             MVT LocVT, LocInfo HTP, bool IsCustom = false) {
     CCValAssign Ret(HTP, ValNo, ValVT, LocVT, IsCustom);
-    Ret.Data = Register(RegNo);
+    Ret.Data = Register(Reg);
     return Ret;
   }
 
-  static CCValAssign getCustomReg(unsigned ValNo, MVT ValVT, unsigned RegNo,
+  static CCValAssign getCustomReg(unsigned ValNo, MVT ValVT, MCRegister Reg,
                                   MVT LocVT, LocInfo HTP) {
-    return getReg(ValNo, ValVT, RegNo, LocVT, HTP, /*IsCustom=*/true);
+    return getReg(ValNo, ValVT, Reg, LocVT, HTP, /*IsCustom=*/true);
   }
 
   static CCValAssign getMem(unsigned ValNo, MVT ValVT, int64_t Offset,
@@ -112,7 +112,7 @@ public:
     return Ret;
   }
 
-  void convertToReg(unsigned RegNo) { Data = Register(RegNo); }
+  void convertToReg(MCRegister Reg) { Data = Register(Reg); }
 
   void convertToMem(int64_t Offset) { Data = Offset; }
 
@@ -346,7 +346,7 @@ public:
   /// AllocateReg - Attempt to allocate one of the specified registers.  If none
   /// are available, return zero.  Otherwise, return the first one available,
   /// marking it and any aliases as allocated.
-  MCPhysReg AllocateReg(ArrayRef<MCPhysReg> Regs) {
+  MCRegister AllocateReg(ArrayRef<MCPhysReg> Regs) {
     unsigned FirstUnalloc = getFirstUnallocated(Regs);
     if (FirstUnalloc == Regs.size())
       return MCRegister();    // Didn't find the reg.

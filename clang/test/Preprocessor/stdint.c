@@ -1498,6 +1498,113 @@
 // XCORE:INTMAX_C_(0) 0LL
 // XCORE:UINTMAX_C_(0) 0ULL
 //
+// RUN: %clang_cc1 -E -ffreestanding -triple=xtensa %s | FileCheck -check-prefix XTENSA %s
+//
+// XTENSA:typedef long long int int64_t;
+// XTENSA:typedef long long unsigned int uint64_t;
+// XTENSA:typedef int64_t int_least64_t;
+// XTENSA:typedef uint64_t uint_least64_t;
+// XTENSA:typedef int64_t int_fast64_t;
+// XTENSA:typedef uint64_t uint_fast64_t;
+//
+// XTENSA:typedef int int32_t;
+// XTENSA:typedef unsigned int uint32_t;
+// XTENSA:typedef int32_t int_least32_t;
+// XTENSA:typedef uint32_t uint_least32_t;
+// XTENSA:typedef int32_t int_fast32_t;
+// XTENSA:typedef uint32_t uint_fast32_t;
+//
+// XTENSA:typedef short int16_t;
+// XTENSA:typedef unsigned short uint16_t;
+// XTENSA:typedef int16_t int_least16_t;
+// XTENSA:typedef uint16_t uint_least16_t;
+// XTENSA:typedef int16_t int_fast16_t;
+// XTENSA:typedef uint16_t uint_fast16_t;
+//
+// XTENSA:typedef signed char int8_t;
+// XTENSA:typedef unsigned char uint8_t;
+// XTENSA:typedef int8_t int_least8_t;
+// XTENSA:typedef uint8_t uint_least8_t;
+// XTENSA:typedef int8_t int_fast8_t;
+// XTENSA:typedef uint8_t uint_fast8_t;
+//
+// XTENSA:typedef int intptr_t;
+// XTENSA:typedef unsigned int uintptr_t;
+//
+// XTENSA:typedef long long int intmax_t;
+// XTENSA:typedef long long unsigned int uintmax_t;
+//
+// XTENSA:INT8_MAX_ 127
+// XTENSA:INT8_MIN_ (-127 -1)
+// XTENSA:UINT8_MAX_ 255
+// XTENSA:INT_LEAST8_MIN_ (-127 -1)
+// XTENSA:INT_LEAST8_MAX_ 127
+// XTENSA:UINT_LEAST8_MAX_ 255
+// XTENSA:INT_FAST8_MIN_ (-127 -1)
+// XTENSA:INT_FAST8_MAX_ 127
+// XTENSA:UINT_FAST8_MAX_ 255
+//
+// XTENSA:INT16_MAX_ 32767
+// XTENSA:INT16_MIN_ (-32767 -1)
+// XTENSA:UINT16_MAX_ 65535
+// XTENSA:INT_LEAST16_MIN_ (-32767 -1)
+// XTENSA:INT_LEAST16_MAX_ 32767
+// XTENSA:UINT_LEAST16_MAX_ 65535
+// XTENSA:INT_FAST16_MIN_ (-32767 -1)
+// XTENSA:INT_FAST16_MAX_ 32767
+// XTENSA:UINT_FAST16_MAX_ 65535
+//
+// XTENSA:INT32_MAX_ 2147483647
+// XTENSA:INT32_MIN_ (-2147483647 -1)
+// XTENSA:UINT32_MAX_ 4294967295U
+// XTENSA:INT_LEAST32_MIN_ (-2147483647 -1)
+// XTENSA:INT_LEAST32_MAX_ 2147483647
+// XTENSA:UINT_LEAST32_MAX_ 4294967295U
+// XTENSA:INT_FAST32_MIN_ (-2147483647 -1)
+// XTENSA:INT_FAST32_MAX_ 2147483647
+// XTENSA:UINT_FAST32_MAX_ 4294967295U
+//
+// XTENSA:INT64_MAX_ 9223372036854775807LL
+// XTENSA:INT64_MIN_ (-9223372036854775807LL -1)
+// XTENSA:UINT64_MAX_ 18446744073709551615ULL
+// XTENSA:INT_LEAST64_MIN_ (-9223372036854775807LL -1)
+// XTENSA:INT_LEAST64_MAX_ 9223372036854775807LL
+// XTENSA:UINT_LEAST64_MAX_ 18446744073709551615ULL
+// XTENSA:INT_FAST64_MIN_ (-9223372036854775807LL -1)
+// XTENSA:INT_FAST64_MAX_ 9223372036854775807LL
+// XTENSA:UINT_FAST64_MAX_ 18446744073709551615ULL
+//
+// XTENSA:INTPTR_MIN_ (-2147483647 -1)
+// XTENSA:INTPTR_MAX_ 2147483647
+// XTENSA:UINTPTR_MAX_ 4294967295U
+// XTENSA:PTRDIFF_MIN_ (-2147483647 -1)
+// XTENSA:PTRDIFF_MAX_ 2147483647
+// XTENSA:SIZE_MAX_ 4294967295U
+//
+// XTENSA:INTMAX_MIN_ (-9223372036854775807LL -1)
+// XTENSA:INTMAX_MAX_ 9223372036854775807LL
+// XTENSA:UINTMAX_MAX_ 18446744073709551615ULL
+//
+// XTENSA:SIG_ATOMIC_MIN_ (-2147483647 -1)
+// XTENSA:SIG_ATOMIC_MAX_ 2147483647
+// XTENSA:WINT_MIN_ 0U
+// XTENSA:WINT_MAX_ 4294967295U
+//
+// XTENSA:WCHAR_MAX_ 2147483647
+// XTENSA:WCHAR_MIN_ (-2147483647 -1)
+//
+// XTENSA:INT8_C_(0) 0
+// XTENSA:UINT8_C_(0) 0U
+// XTENSA:INT16_C_(0) 0
+// XTENSA:UINT16_C_(0) 0U
+// XTENSA:INT32_C_(0) 0
+// XTENSA:UINT32_C_(0) 0U
+// XTENSA:INT64_C_(0) 0LL
+// XTENSA:UINT64_C_(0) 0ULL
+//
+// XTENSA:INTMAX_C_(0) 0LL
+// XTENSA:UINTMAX_C_(0) 0ULL
+//
 //
 // stdint.h forms several macro definitions by pasting together identifiers
 // to form names (eg. int32_t is formed from int ## 32 ## _t). The following 

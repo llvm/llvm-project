@@ -82,10 +82,6 @@ private:
   char *OutBufStart, *OutBufEnd, *OutBufCur;
   bool ColorEnabled = false;
 
-  /// Optional stream this stream is tied to. If this stream is written to, the
-  /// tied-to stream will be flushed first.
-  raw_ostream *TiedStream = nullptr;
-
   enum class BufferKind {
     Unbuffered = 0,
     InternalBuffer,
@@ -161,7 +157,7 @@ public:
   /// So that the stream could keep at least tell() + ExtraSize bytes
   /// without re-allocations. reserveExtraSpace() does not change
   /// the size/data of the stream.
-  virtual void reserveExtraSpace(uint64_t ExtraSize) {}
+  virtual void reserveExtraSpace(uint64_t ExtraSize) { (void)ExtraSize; }
 
   /// Set the stream to be buffered, with an automatically determined buffer
   /// size.
@@ -360,10 +356,6 @@ public:
 
   bool colors_enabled() const { return ColorEnabled; }
 
-  /// Tie this stream to the specified stream. Replaces any existing tied-to
-  /// stream. Specifying a nullptr unties the stream.
-  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
-
   //===--------------------------------------------------------------------===//
   // Subclass Interface
   //===--------------------------------------------------------------------===//
@@ -422,9 +414,6 @@ private:
   /// flushing. The result is affected by calls to enable_color().
   bool prepare_colors();
 
-  /// Flush the tied-to stream (if present) and then write the required data.
-  void flush_tied_then_write(const char *Ptr, size_t Size);
-
   virtual void anchor();
 };
 
@@ -474,6 +463,10 @@ class raw_fd_ostream : public raw_pwrite_stream {
   bool SupportsSeeking = false;
   bool IsRegularFile = false;
   mutable std::optional<bool> HasColors;
+
+  /// Optional stream this stream is tied to. If this stream is written to, the
+  /// tied-to stream will be flushed first.
+  raw_ostream *TiedStream = nullptr;
 
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
@@ -552,6 +545,13 @@ public:
   bool is_displayed() const override;
 
   bool has_colors() const override;
+
+  /// Tie this stream to the specified stream. Replaces any existing tied-to
+  /// stream. Specifying a nullptr unties the stream. This is intended for to
+  /// tie errs() to outs(), so that outs() is flushed whenever something is
+  /// written to errs(), preventing weird and hard-to-test output when stderr
+  /// is redirected to stdout.
+  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
 
   std::error_code error() const { return EC; }
 
@@ -768,6 +768,64 @@ public:
   }
   ~buffer_unique_ostream() override { *OS << str(); }
 };
+
+// Helper struct to add indentation to raw_ostream. Instead of
+// OS.indent(6) << "more stuff";
+// you can use
+// OS << indent(6) << "more stuff";
+// which has better ergonomics (and clang-formats better as well).
+//
+// If indentation is always in increments of a fixed value, you can use Scale
+// to set that value once. So indent(1, 2) will add 2 spaces and
+// indent(1,2) + 1 will add 4 spaces.
+struct indent {
+  // Indentation is represented as `NumIndents` steps of size `Scale` each.
+  unsigned NumIndents;
+  unsigned Scale;
+
+  explicit indent(unsigned NumIndents, unsigned Scale = 1)
+      : NumIndents(NumIndents), Scale(Scale) {}
+
+  // These arithmeric operators preserve scale.
+  void operator+=(unsigned N) { NumIndents += N; }
+  void operator-=(unsigned N) {
+    assert(NumIndents >= N && "Indentation underflow");
+    NumIndents -= N;
+  }
+  indent operator+(unsigned N) const { return indent(NumIndents + N, Scale); }
+  indent operator-(unsigned N) const {
+    assert(NumIndents >= N && "Indentation undeflow");
+    return indent(NumIndents - N, Scale);
+  }
+  indent &operator++() { // Prefix ++.
+    ++NumIndents;
+    return *this;
+  }
+  indent operator++(int) { // Postfix ++.
+    indent Old = *this;
+    ++NumIndents;
+    return Old;
+  }
+  indent &operator--() { // Prefix --.
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return *this;
+  }
+  indent operator--(int) { // Postfix --.
+    indent Old = *this;
+    assert(NumIndents >= 1);
+    --NumIndents;
+    return Old;
+  }
+  indent &operator=(unsigned N) {
+    NumIndents = N;
+    return *this;
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const indent &Indent) {
+  return OS.indent(Indent.NumIndents * Indent.Scale);
+}
 
 class Error;
 

@@ -26,10 +26,11 @@ typedef enum memory_scope {
 #endif
 } memory_scope;
 
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at workgroup-one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at agent-one-as memory scope [-Rpass=atomic-expand]
-// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at one-as memory scope [-Rpass=atomic-expand]
 // REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at wavefront-one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at agent-one-as memory scope [-Rpass=atomic-expand]
+// REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at workgroup-one-as memory scope [-Rpass=atomic-expand]
+
 // GFX90A-CAS-LABEL: @atomic_cas
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("agent-one-as") monotonic

@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strfroml.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/str_from_util.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, strfroml,
                    (char *__restrict s, size_t n, const char *__restrict format,
@@ -41,4 +42,4 @@ LLVM_LIBC_FUNCTION(int, strfroml,
   return writer.get_chars_written();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

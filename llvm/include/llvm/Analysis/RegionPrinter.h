@@ -14,13 +14,13 @@
 #ifndef LLVM_ANALYSIS_REGIONPRINTER_H
 #define LLVM_ANALYSIS_REGIONPRINTER_H
 
-#include "llvm/Analysis/DOTGraphTraitsPass.h"
-#include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Support/DOTGraphTraits.h"
 
 namespace llvm {
   class FunctionPass;
   class Function;
   class RegionInfo;
+  class RegionNode;
 
   FunctionPass *createRegionViewerPass();
   FunctionPass *createRegionOnlyViewerPass();

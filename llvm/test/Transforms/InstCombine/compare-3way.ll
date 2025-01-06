@@ -15,8 +15,7 @@ define void @test_low_sgt(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp ne i64 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[EQ]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -62,10 +61,7 @@ define void @test_low_sge(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -114,8 +110,7 @@ define void @test_low_ne(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp ne i64 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[EQ]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -212,8 +207,7 @@ define void @test_mid_sge(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp ne i64 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[EQ]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -238,10 +232,7 @@ define void @test_mid_sle(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -266,9 +257,8 @@ define void @test_mid_ne(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    call void @use(i32 [[DOT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
   %eq = icmp eq i64 %a, %b
@@ -338,10 +328,7 @@ define void @test_high_slt(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -389,10 +376,7 @@ define void @test_high_sle(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -417,10 +401,7 @@ define void @test_high_ne(i64 %a, i64 %b) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreached:
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[SLT]], i32 -1, i32 1
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i32 0, i32 [[DOT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.scmp.i32.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;

@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding -mattr=+v \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding -mattr=+v \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding -mattr=+v --print-imm-hex \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding -mattr=+v --print-imm-hex \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-HEX %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+v < %s \
 # RUN:     | llvm-objdump -M no-aliases --mattr=+v --no-print-imm-hex -d -r - \

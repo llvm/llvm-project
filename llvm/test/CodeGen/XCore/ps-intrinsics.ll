@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 declare i32 @llvm.xcore.getps(i32)
 declare void @llvm.xcore.setps(i32, i32)
 

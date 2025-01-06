@@ -39,6 +39,30 @@ function(get_source_info path revision repository)
         OUTPUT_VARIABLE git_output
         ERROR_QUIET)
       if(git_result EQUAL 0)
+        # Passwords or tokens should not be stored in the remote URL at the
+        # risk of being leaked. In case we find one, error out and teach the
+        # user the best practices.
+        string(REGEX MATCH "https?://[^/]*:[^/]*@.*"
+          http_password "${git_output}")
+        if(http_password)
+          message(SEND_ERROR "The git remote repository URL has an embedded \
+password. Remove the password from the URL or use \
+`-DLLVM_FORCE_VC_REPOSITORY=<URL without password>` in order to avoid \
+leaking your password (see https://git-scm.com/docs/gitcredentials for \
+alternatives).")
+        endif()
+        # GitHub token formats are described at:
+        # https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats
+        string(REGEX MATCH
+          "https?://(gh[pousr]|github_pat)_[^/]+@github.com.*"
+          github_token "${git_output}")
+        if(github_token)
+          message(SEND_ERROR "The git remote repository URL has an embedded \
+GitHub Token. Remove the token from the URL or use \
+`-DLLVM_FORCE_VC_REPOSITORY=<URL without token>` in order to avoid leaking \
+your token (see https://git-scm.com/docs/gitcredentials for alternatives).")
+        endif()
+
         string(STRIP "${git_output}" git_output)
         set(${repository} ${git_output} PARENT_SCOPE)
       else()

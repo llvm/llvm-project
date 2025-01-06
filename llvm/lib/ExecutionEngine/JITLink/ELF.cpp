@@ -21,8 +21,6 @@
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <cstring>
 
 using namespace llvm;
@@ -71,7 +69,8 @@ Expected<uint16_t> readTargetMachineArch(StringRef Buffer) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
+                             std::shared_ptr<orc::SymbolStringPool> SSP) {
   StringRef Buffer = ObjectBuffer.getBuffer();
   if (Buffer.size() < ELF::EI_NIDENT)
     return make_error<JITLinkError>("Truncated ELF buffer");
@@ -86,23 +85,23 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
 
   switch (*TargetMachineArch) {
   case ELF::EM_AARCH64:
-    return createLinkGraphFromELFObject_aarch64(ObjectBuffer);
+    return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
   case ELF::EM_ARM:
-    return createLinkGraphFromELFObject_aarch32(ObjectBuffer);
-  case ELF::EM_LOONGARCH:
-    return createLinkGraphFromELFObject_loongarch(ObjectBuffer);
+    return createLinkGraphFromELFObject_aarch32(ObjectBuffer, std::move(SSP));
   case ELF::EM_PPC64: {
     if (DataEncoding == ELF::ELFDATA2LSB)
-      return createLinkGraphFromELFObject_ppc64le(ObjectBuffer);
+      return createLinkGraphFromELFObject_ppc64le(ObjectBuffer, std::move(SSP));
     else
-      return createLinkGraphFromELFObject_ppc64(ObjectBuffer);
+      return createLinkGraphFromELFObject_ppc64(ObjectBuffer, std::move(SSP));
   }
+  case ELF::EM_LOONGARCH:
+    return createLinkGraphFromELFObject_loongarch(ObjectBuffer, std::move(SSP));
   case ELF::EM_RISCV:
-    return createLinkGraphFromELFObject_riscv(ObjectBuffer);
+    return createLinkGraphFromELFObject_riscv(ObjectBuffer, std::move(SSP));
   case ELF::EM_X86_64:
-    return createLinkGraphFromELFObject_x86_64(ObjectBuffer);
+    return createLinkGraphFromELFObject_x86_64(ObjectBuffer, std::move(SSP));
   case ELF::EM_386:
-    return createLinkGraphFromELFObject_i386(ObjectBuffer);
+    return createLinkGraphFromELFObject_i386(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in ELF object " +

@@ -21,7 +21,6 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/STLForwardCompat.h"
 
 using namespace clang;
@@ -34,9 +33,6 @@ enum AccessResult {
   AR_dependent
 };
 
-/// SetMemberAccessSpecifier - Set the access specifier of a member.
-/// Returns true on error (when the previous member decl access specifier
-/// is different from the new member decl access specifier).
 bool Sema::SetMemberAccessSpecifier(NamedDecl *MemberDecl,
                                     NamedDecl *PrevMemberDecl,
                                     AccessSpecifier LexicalAS) {
@@ -1590,8 +1586,6 @@ Sema::AccessResult Sema::CheckUnresolvedLookupAccess(UnresolvedLookupExpr *E,
   return CheckAccess(*this, E->getNameLoc(), Entity);
 }
 
-/// Perform access-control checking on a previously-unresolved member
-/// access which has now been resolved to a member.
 Sema::AccessResult Sema::CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
                                                      DeclAccessPair Found) {
   if (!getLangOpts().AccessControl ||
@@ -1609,8 +1603,6 @@ Sema::AccessResult Sema::CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
   return CheckAccess(*this, E->getMemberLoc(), Entity);
 }
 
-/// Is the given member accessible for the purposes of deciding whether to
-/// define a special member function as deleted?
 bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
                                          DeclAccessPair Found,
                                          QualType ObjectType,
@@ -1658,7 +1650,6 @@ Sema::AccessResult Sema::CheckDestructorAccess(SourceLocation Loc,
   return CheckAccess(*this, Loc, Entity);
 }
 
-/// Checks access to a constructor.
 Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
                                                 CXXConstructorDecl *Constructor,
                                                 DeclAccessPair Found,
@@ -1705,7 +1696,6 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   return CheckConstructorAccess(UseLoc, Constructor, Found, Entity, PD);
 }
 
-/// Checks access to a constructor.
 Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
                                                 CXXConstructorDecl *Constructor,
                                                 DeclAccessPair Found,
@@ -1747,7 +1737,6 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   return CheckAccess(*this, UseLoc, AccessEntity);
 }
 
-/// Checks access to an overloaded operator new or delete.
 Sema::AccessResult Sema::CheckAllocationAccess(SourceLocation OpLoc,
                                                SourceRange PlacementRange,
                                                CXXRecordDecl *NamingClass,
@@ -1767,7 +1756,6 @@ Sema::AccessResult Sema::CheckAllocationAccess(SourceLocation OpLoc,
   return CheckAccess(*this, OpLoc, Entity);
 }
 
-/// Checks access to a member.
 Sema::AccessResult Sema::CheckMemberAccess(SourceLocation UseLoc,
                                            CXXRecordDecl *NamingClass,
                                            DeclAccessPair Found) {
@@ -1782,7 +1770,6 @@ Sema::AccessResult Sema::CheckMemberAccess(SourceLocation UseLoc,
   return CheckAccess(*this, UseLoc, Entity);
 }
 
-/// Checks implicit access to a member in a structured binding.
 Sema::AccessResult
 Sema::CheckStructuredBindingMemberAccess(SourceLocation UseLoc,
                                          CXXRecordDecl *DecomposedClass,
@@ -1815,8 +1802,6 @@ Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,
   return CheckAccess(*this, OpLoc, Entity);
 }
 
-/// Checks access to an overloaded member operator, including
-/// conversion operators.
 Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,
                                                    Expr *ObjectExpr,
                                                    Expr *ArgExpr,
@@ -1839,7 +1824,6 @@ Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,
   return CheckMemberOperatorAccess(OpLoc, ObjectExpr, R, FoundDecl);
 }
 
-/// Checks access to the target of a friend declaration.
 Sema::AccessResult Sema::CheckFriendAccess(NamedDecl *target) {
   assert(isa<CXXMethodDecl>(target->getAsFunction()));
 
@@ -1889,12 +1873,6 @@ Sema::AccessResult Sema::CheckAddressOfMemberAccess(Expr *OvlExpr,
   return CheckAccess(*this, Ovl->getNameLoc(), Entity);
 }
 
-/// Checks access for a hierarchy conversion.
-///
-/// \param ForceCheck true if this check should be performed even if access
-///     control is disabled;  some things rely on this for semantics
-/// \param ForceUnprivileged true if this check should proceed as if the
-///     context had no special privileges
 Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
                                               QualType Base,
                                               QualType Derived,
@@ -1929,7 +1907,6 @@ Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
   return CheckAccess(*this, AccessLoc, Entity);
 }
 
-/// Checks access to all the declarations in the given result set.
 void Sema::CheckLookupAccess(const LookupResult &R) {
   assert(getLangOpts().AccessControl
          && "performing access check without access control");
@@ -1946,23 +1923,6 @@ void Sema::CheckLookupAccess(const LookupResult &R) {
   }
 }
 
-/// Checks access to Target from the given class. The check will take access
-/// specifiers into account, but no member access expressions and such.
-///
-/// \param Target the declaration to check if it can be accessed
-/// \param NamingClass the class in which the lookup was started.
-/// \param BaseType type of the left side of member access expression.
-///        \p BaseType and \p NamingClass are used for C++ access control.
-///        Depending on the lookup case, they should be set to the following:
-///        - lhs.target (member access without a qualifier):
-///          \p BaseType and \p NamingClass are both the type of 'lhs'.
-///        - lhs.X::target (member access with a qualifier):
-///          BaseType is the type of 'lhs', NamingClass is 'X'
-///        - X::target (qualified lookup without member access):
-///          BaseType is null, NamingClass is 'X'.
-///        - target (unqualified lookup).
-///          BaseType is null, NamingClass is the parent class of 'target'.
-/// \return true if the Target is accessible from the Class, false otherwise.
 bool Sema::IsSimplyAccessible(NamedDecl *Target, CXXRecordDecl *NamingClass,
                               QualType BaseType) {
   // Perform the C++ accessibility checks first.

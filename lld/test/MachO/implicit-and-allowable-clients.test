@@ -1,0 +1,48 @@
+# REQUIRES: aarch64, shell
+# RUN: rm -rf %t; split-file %s %t
+# RUN: ln -s Versions/A/FrameworkPublic.tbd %t/System/Library/Frameworks/FrameworkPublic.framework/
+# RUN: ln -s Versions/A/FrameworkPrivate.tbd %t/System/Library/Frameworks/FrameworkPrivate.framework/
+# RUN: llvm-mc -filetype obj -triple arm64-apple-macos11.0 %t/test.s -o %t/test.o
+# RUN: %lld -arch arm64 -platform_version macos 11.0 11.0 -o %t/test -syslibroot %t -framework FrameworkPublic %t/test.o
+
+# RUN: llvm-objdump --bind --no-show-raw-insn -d %t/test | FileCheck %s
+# CHECK:     Bind table:
+# CHECK-DAG: __DATA __data {{.*}} pointer 0 FrameworkPublic   _funcPublic
+# CHECK-DAG: __DATA __data {{.*}} pointer 0 FrameworkPublic   _funcPrivate
+
+#--- System/Library/Frameworks/FrameworkPublic.framework/Versions/A/FrameworkPublic.tbd
+--- !tapi-tbd
+tbd-version: 4
+targets: [ arm64-macos ]
+install-name: '/System/Library/Frameworks/FrameworkPublic.framework/Versions/A/FrameworkPublic'
+current-version: 1.0.0
+reexported-libraries:
+  - targets: [ arm64-macos ]
+    libraries: [ '/System/Library/Frameworks/FrameworkPrivate.framework/Versions/A/FrameworkPrivate' ]
+exports:
+  - targets: [ arm64-macos ]
+    symbols: [ '_funcPublic' ]
+...
+#--- System/Library/Frameworks/FrameworkPrivate.framework/Versions/A/FrameworkPrivate.tbd
+--- !tapi-tbd
+tbd-version: 4
+targets: [ arm64-macos ]
+install-name: '/System/Library/Frameworks/FrameworkPrivate.framework/Versions/A/FrameworkPrivate'
+current-version: 1.0.0
+allowable-clients:
+  - targets: [ arm64-macos ]
+    clients: [ FrameworkPublic ]
+exports:
+  - targets: [ arm64-macos ]
+    symbols: [ '_funcPrivate' ]
+...
+#--- test.s
+.text
+.globl _main
+
+_main:
+  ret
+
+.data
+  .quad _funcPublic
+  .quad _funcPrivate

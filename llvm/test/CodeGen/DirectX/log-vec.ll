@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: log_float4
 ; CHECK: call <4 x float> @llvm.log2.v4f32(<4 x float>  %{{.*}})
-; CHECK: fmul <4 x float> <float 0x3FE62E4300000000, float 0x3FE62E4300000000, float 0x3FE62E4300000000, float 0x3FE62E4300000000>,  %{{.*}}
+; CHECK: fmul <4 x float> splat (float 0x3FE62E4300000000),  %{{.*}}
 define noundef <4 x float> @log_float4(<4 x float> noundef %p0) {
 entry:
   %p0.addr = alloca <4 x float>, align 16
@@ -16,7 +16,7 @@ entry:
 
 ; CHECK-LABEL: log10_float4
 ; CHECK: call <4 x float> @llvm.log2.v4f32(<4 x float>  %{{.*}})
-; CHECK: fmul <4 x float> <float 0x3FD3441340000000, float 0x3FD3441340000000, float 0x3FD3441340000000, float 0x3FD3441340000000>,  %{{.*}}
+; CHECK: fmul <4 x float> splat (float 0x3FD3441340000000),  %{{.*}}
 define noundef <4 x float> @log10_float4(<4 x float> noundef %p0) {
 entry:
   %p0.addr = alloca <4 x float>, align 16

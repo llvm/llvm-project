@@ -366,7 +366,7 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
         parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
-        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, &metadata);
+        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);

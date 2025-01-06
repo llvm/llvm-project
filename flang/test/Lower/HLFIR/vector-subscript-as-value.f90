@@ -112,7 +112,7 @@ end subroutine
 ! CHECK:  %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6:[a-z0-9]*]]  {{.*}}Estep
 ! CHECK:  %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]]  {{.*}}Evector
 ! CHECK:  %[[VAL_14:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i64>
-! CHECK:  %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  : (!fir.box<!fir.array<?x!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>}>>>, i64) -> !fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>}>>
+! CHECK:  %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  : (!fir.box<!fir.array<?x!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>}>>>, i64) -> !fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>}>>
 ! CHECK:  %[[VAL_16:.*]] = arith.constant 30 : index
 ! CHECK:  %[[VAL_17:.*]] = arith.constant 40 : index
 ! CHECK:  %[[VAL_18:.*]] = arith.constant 50 : index
@@ -144,8 +144,8 @@ end subroutine
 ! CHECK:    %[[VAL_45:.*]] = arith.addi %[[VAL_20]], %[[VAL_44]] : index
 ! CHECK:    %[[VAL_46:.*]] = hlfir.designate %[[VAL_13]]#0 (%[[VAL_41]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
 ! CHECK:    %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<i64>
-! CHECK:    %[[VAL_48:.*]] = hlfir.designate %[[VAL_15]]{"at0"} <%[[VAL_19]]> (%[[VAL_45]], %[[VAL_30]], %[[VAL_47]])  : (!fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>}>>, !fir.shape<3>, index, i64, i64) -> !fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>
-! CHECK:    %[[VAL_49:.*]] = hlfir.designate %[[VAL_48]]{"x"} <%[[VAL_36]]> (%[[VAL_37]], %[[VAL_38]]) imag : (!fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20x!fir.complex<4>>}>>, !fir.shape<2>, i64, i64) -> !fir.ref<f32>
+! CHECK:    %[[VAL_48:.*]] = hlfir.designate %[[VAL_15]]{"at0"} <%[[VAL_19]]> (%[[VAL_45]], %[[VAL_30]], %[[VAL_47]])  : (!fir.ref<!fir.type<_QFfoo4Tt1{at0:!fir.array<30x40x50x!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>}>>, !fir.shape<3>, index, i64, i64) -> !fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>
+! CHECK:    %[[VAL_49:.*]] = hlfir.designate %[[VAL_48]]{"x"} <%[[VAL_36]]> (%[[VAL_37]], %[[VAL_38]]) imag : (!fir.ref<!fir.type<_QFfoo4Tt0{x:!fir.array<10x20xcomplex<f32>>}>>, !fir.shape<2>, i64, i64) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_50:.*]] = fir.load %[[VAL_49]] : !fir.ref<f32>
 ! CHECK:    hlfir.yield_element %[[VAL_50]] : f32
 ! CHECK:  }

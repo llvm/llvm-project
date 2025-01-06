@@ -231,7 +231,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
       host_arch.GetMachine() == llvm::Triple::aarch64_32 ||
       host_arch.GetMachine() == llvm::Triple::aarch64_be ||
       host_arch.GetMachine() == llvm::Triple::arm ||
-      host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS())
+      host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS() ||
+      host_arch.GetTriple().isLoongArch())
     response.Printf("watchpoint_exceptions_received:before;");
   else
     response.Printf("watchpoint_exceptions_received:after;");
@@ -496,6 +497,17 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest(
   return SendErrorResponse(7);
 }
 
+static GDBErrno system_errno_to_gdb(int err) {
+  switch (err) {
+#define HANDLE_ERRNO(name, value)                                              \
+  case name:                                                                   \
+    return GDB_##name;
+#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
+  default:
+    return GDB_EUNKNOWN;
+  }
+}
+
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
     StringExtractorGDBRemote &packet) {
@@ -522,9 +534,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
         } else {
           response.PutCString("-1");
           std::error_code code = errorToErrorCode(file.takeError());
-          if (code.category() == std::system_category()) {
-            response.Printf(",%x", code.value());
-          }
+          response.Printf(",%x", system_errno_to_gdb(code.value()));
         }
 
         return SendPacketNoLock(response.GetString());
@@ -532,17 +542,6 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
     }
   }
   return SendErrorResponse(18);
-}
-
-static GDBErrno system_errno_to_gdb(int err) {
-  switch (err) {
-#define HANDLE_ERRNO(name, value)                                              \
-  case name:                                                                   \
-    return GDB_##name;
-#include "Plugins/Process/gdb-remote/GDBRemoteErrno.def"
-  default:
-    return GDB_EUNKNOWN;
-  }
 }
 
 GDBRemoteCommunication::PacketResult
@@ -727,7 +726,8 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink(
   packet.GetHexByteString(path);
   Status error(llvm::sys::fs::remove(path));
   StreamString response;
-  response.Printf("F%x,%x", error.GetError(), error.GetError());
+  response.Printf("F%x,%x", error.GetError(),
+                  system_errno_to_gdb(error.GetError()));
   return SendPacketNoLock(response.GetString());
 }
 

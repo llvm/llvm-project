@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_PERF(double, LIBC_NAMESPACE::fmod, ::fmod,
+BINARY_OP_SINGLE_OUTPUT_PERF(double, double, LIBC_NAMESPACE::fmod, ::fmod,
                              "fmod_perf.log")

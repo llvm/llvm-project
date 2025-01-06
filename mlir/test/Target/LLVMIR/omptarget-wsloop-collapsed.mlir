@@ -17,7 +17,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
         llvm.store %1, %4 : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     llvm.return
   }

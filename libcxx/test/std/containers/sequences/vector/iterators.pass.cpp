@@ -87,7 +87,27 @@ TEST_CONSTEXPR_CXX20 bool tests()
         C::iterator i = c.begin();
         C::iterator j = c.end();
         assert(std::distance(i, j) == 0);
+
         assert(i == j);
+        assert(!(i != j));
+
+        assert(!(i < j));
+        assert((i <= j));
+
+        assert(!(i > j));
+        assert((i >= j));
+
+#  if TEST_STD_VER >= 20
+        // P1614 + LWG3352
+        // When the allocator does not have operator<=> then the iterator uses a
+        // fallback to provide operator<=>.
+        // Make sure to test with an allocator that does not have operator<=>.
+        static_assert(!std::three_way_comparable<min_allocator<int>, std::strong_ordering>);
+        static_assert(std::three_way_comparable<typename C::iterator, std::strong_ordering>);
+
+        std::same_as<std::strong_ordering> decltype(auto) r1 = i <=> j;
+        assert(r1 == std::strong_ordering::equal);
+#  endif
     }
     {
         typedef int T;
@@ -96,7 +116,26 @@ TEST_CONSTEXPR_CXX20 bool tests()
         C::const_iterator i = c.begin();
         C::const_iterator j = c.end();
         assert(std::distance(i, j) == 0);
+
         assert(i == j);
+        assert(!(i != j));
+
+        assert(!(i < j));
+        assert((i <= j));
+
+        assert(!(i > j));
+        assert((i >= j));
+
+#  if TEST_STD_VER >= 20
+        // When the allocator does not have operator<=> then the iterator uses a
+        // fallback to provide operator<=>.
+        // Make sure to test with an allocator that does not have operator<=>.
+        static_assert(!std::three_way_comparable<min_allocator<int>, std::strong_ordering>);
+        static_assert(std::three_way_comparable<typename C::iterator, std::strong_ordering>);
+
+        std::same_as<std::strong_ordering> decltype(auto) r1 = i <=> j;
+        assert(r1 == std::strong_ordering::equal);
+#  endif
     }
     {
         typedef int T;
@@ -164,8 +203,16 @@ TEST_CONSTEXPR_CXX20 bool tests()
         assert ( (cii >= ii1 ));
         assert (cii - ii1 == 0);
         assert (ii1 - cii == 0);
+#  if TEST_STD_VER >= 20
+        // P1614 + LWG3352
+        std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
+        assert(r1 == std::strong_ordering::equal);
+
+        std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
+        assert(r2 == std::strong_ordering::equal);
+#  endif // TEST_STD_VER > 20
     }
-#endif
+#endif // TEST_STD_VER > 11
 
     return true;
 }

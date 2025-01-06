@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[TRUNC32_16:%.*]] "f32tof16"
 ; CHECK-DAG: OpName [[EXT16_32:%.*]] "f16tof32"

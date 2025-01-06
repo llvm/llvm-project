@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -fp-contract=fast -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -fp-contract=fast -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Pipelining can eliminate the need for a Phi if the loop carried use

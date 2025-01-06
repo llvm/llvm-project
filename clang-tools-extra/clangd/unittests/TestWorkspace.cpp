@@ -17,7 +17,7 @@ namespace clang {
 namespace clangd {
 
 std::unique_ptr<SymbolIndex> TestWorkspace::index() {
-  auto Index = std::make_unique<FileIndex>();
+  auto Index = std::make_unique<FileIndex>(/*SupportContainedRefs=*/true);
   for (const auto &Input : Inputs) {
     if (!Input.second.IsMainFile)
       continue;

@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj --symbols - | FileCheck %s
-; RUN: llc -filetype=obj %s -mattr=+reference-types -o - | llvm-readobj --symbols - | FileCheck --check-prefix=REF %s
+; RUN: llc -filetype=obj %s -mattr=-reference-types,-call-indirect-overlong -o - | llvm-readobj --symbols - | FileCheck %s
+; RUN: llc -filetype=obj %s -mattr=+reference-types,-call-indirect-overlong -o - | llvm-readobj --symbols - | FileCheck --check-prefix=REF %s
 
 target triple = "wasm32-unknown-unknown-wasm"
 

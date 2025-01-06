@@ -54,8 +54,8 @@ struct ST {
 // Make sure the struct picks up present even if another element of the
 // struct doesn't have present.
 // Region 00
-// CK31B: [[J:%.+]] = getelementptr inbounds [[ST]], ptr [[THIS:%.+]], i{{.+}} 0, i{{.+}} 1
-// CK31B: [[I:%.+]] = getelementptr inbounds [[ST]], ptr [[THIS]], i{{.+}} 0, i{{.+}} 0
+// CK31B: [[J:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[THIS:%.+]], i{{.+}} 0, i{{.+}} 1
+// CK31B: [[I:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[THIS]], i{{.+}} 0, i{{.+}} 0
 // CK31B-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK31B-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK31B-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]

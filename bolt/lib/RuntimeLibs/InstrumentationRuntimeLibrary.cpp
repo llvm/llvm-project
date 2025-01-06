@@ -26,7 +26,7 @@ namespace opts {
 
 cl::opt<std::string> RuntimeInstrumentationLib(
     "runtime-instrumentation-lib",
-    cl::desc("specify file name of the runtime instrumentation library"),
+    cl::desc("specify path of the runtime instrumentation library"),
     cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
 
 extern cl::opt<bool> InstrumentationFileAppendPID;
@@ -314,7 +314,6 @@ std::string InstrumentationRuntimeLibrary::buildTables(BinaryContext &BC) {
   }
   // Our string table lives immediately after descriptions vector
   OS << Summary->StringTable;
-  OS.flush();
 
   return TablesStr;
 }

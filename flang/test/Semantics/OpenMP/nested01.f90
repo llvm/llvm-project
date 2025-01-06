@@ -25,6 +25,13 @@
    !$omp end target
   enddo
   
+  !$omp do
+  do i = 1, N
+     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+     !$omp scope
+     !$omp end scope
+  end do
+  !$omp end do
 
   !$omp do
   do i = 1, N

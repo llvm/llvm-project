@@ -607,7 +607,7 @@ subroutine vec_splat_s32testi8()
   vector(integer(4)) :: y
   y = vec_splat_s32(7_1)
 
-! LLVMIR: store <4 x i32> <i32 7, i32 7, i32 7, i32 7>, ptr %{{[0-9]}}, align 16
+! LLVMIR: store <4 x i32> splat (i32 7), ptr %{{[0-9]}}, align 16
 end subroutine vec_splat_s32testi8
 
 ! CHECK-LABEL: vec_splat_s32testi16
@@ -615,7 +615,7 @@ subroutine vec_splat_s32testi16()
   vector(integer(4)) :: y
   y = vec_splat_s32(7_2)
 
-! LLVMIR: store <4 x i32> <i32 7, i32 7, i32 7, i32 7>, ptr %{{[0-9]}}, align 16
+! LLVMIR: store <4 x i32> splat (i32 7), ptr %{{[0-9]}}, align 16
 end subroutine vec_splat_s32testi16
 
 ! CHECK-LABEL: vec_splat_s32testi32
@@ -623,7 +623,7 @@ subroutine vec_splat_s32testi32()
   vector(integer(4)) :: y
   y = vec_splat_s32(7_4)
 
-! LLVMIR: store <4 x i32> <i32 7, i32 7, i32 7, i32 7>, ptr %{{[0-9]}}, align 16
+! LLVMIR: store <4 x i32> splat (i32 7), ptr %{{[0-9]}}, align 16
 end subroutine vec_splat_s32testi32
 
 ! CHECK-LABEL: vec_splat_s32testi64
@@ -631,5 +631,5 @@ subroutine vec_splat_s32testi64()
   vector(integer(4)) :: y
   y = vec_splat_s32(7_8)
 
-! LLVMIR: store <4 x i32> <i32 7, i32 7, i32 7, i32 7>, ptr %{{[0-9]}}, align 16
+! LLVMIR: store <4 x i32> splat (i32 7), ptr %{{[0-9]}}, align 16
 end subroutine vec_splat_s32testi64

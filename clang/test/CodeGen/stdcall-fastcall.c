@@ -151,3 +151,9 @@ void bar13(long long a, int b, int c) {
   // CHECK: call x86_fastcallcc void @foo13(i64 noundef %{{.*}}, i32 inreg noundef %{{.*}}, i32 inreg noundef %
   foo13(a, b, c);
 }
+
+struct S2 __attribute__((fastcall)) foo14(int a) {
+  // CHECK-LABEL: define dso_local x86_fastcallcc void @foo14(ptr dead_on_unwind noalias writable sret(%struct.S2) align 4 %agg.result, i32 inreg noundef %a)
+  struct S2 r = {a};
+  return r;
+}

@@ -264,8 +264,6 @@ define void @sb_memcpy(i64 noundef %n) "aarch64_pstate_sm_body" nounwind {
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldr x1, [x1, :got_lo12:src]
 ; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm
 ; CHECK-NO-SME-ROUTINES-NEXT:    bl memcpy
-; CHECK-NO-SME-ROUTINES-NEXT:    smstart sm
-; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload

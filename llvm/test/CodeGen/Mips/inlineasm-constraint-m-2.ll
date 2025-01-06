@@ -1,6 +1,6 @@
-; RUN: llc -march=mips -relocation-model=pic < %s \
+; RUN: llc -mtriple=mips -relocation-model=pic < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,EB %s
-; RUN: llc -march=mipsel -relocation-model=pic < %s \
+; RUN: llc -mtriple=mipsel -relocation-model=pic < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,EL %s
 
 ; Simple memory

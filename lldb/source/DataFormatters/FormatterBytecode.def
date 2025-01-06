@@ -1,0 +1,102 @@
+//===-- FormatterBytecode.def -----------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef DEFINE_OPCODE
+#define DEFINE_OPCODE(OP, MNEMONIC, NAME)
+#endif
+#ifndef DEFINE_SELECTOR
+#define DEFINE_SELECTOR(ID, NAME)
+#endif
+#ifndef DEFINE_SIGNATURE
+#define DEFINE_SIGNATURE(ID, NAME)
+#endif
+
+// Opcodes.
+DEFINE_OPCODE(0x01, "dup",  dup)
+DEFINE_OPCODE(0x02, "drop", drop)
+DEFINE_OPCODE(0x03, "pick", pick)
+DEFINE_OPCODE(0x04, "over", over)
+DEFINE_OPCODE(0x05, "swap", swap)
+DEFINE_OPCODE(0x06, "rot",  rot)
+
+DEFINE_OPCODE(0x10, "{", begin)
+DEFINE_OPCODE(0x11, "if", if)
+DEFINE_OPCODE(0x12, "ifelse", ifelse)
+DEFINE_OPCODE(0x13, "return", return)
+
+DEFINE_OPCODE(0x20, nullptr, lit_uint)
+DEFINE_OPCODE(0x21, nullptr, lit_int)
+DEFINE_OPCODE(0x22, nullptr, lit_string)
+DEFINE_OPCODE(0x23, nullptr, lit_selector)
+
+DEFINE_OPCODE(0x2a, "as_int", as_int)
+DEFINE_OPCODE(0x2b, "as_uint", as_uint)
+DEFINE_OPCODE(0x2c, "is_null", is_null)
+
+DEFINE_OPCODE(0x30, "+", plus)
+DEFINE_OPCODE(0x31, "-", minus)
+DEFINE_OPCODE(0x32, "*", mul)
+DEFINE_OPCODE(0x33, "/", div)
+DEFINE_OPCODE(0x34, "%", mod)
+DEFINE_OPCODE(0x35, "<<", shl)
+DEFINE_OPCODE(0x36, ">>", shr)
+
+DEFINE_OPCODE(0x40, "&", and)
+DEFINE_OPCODE(0x41, "|", or)
+DEFINE_OPCODE(0x42, "^", xor)
+DEFINE_OPCODE(0x43, "~", not)
+
+DEFINE_OPCODE(0x50, "=", eq)
+DEFINE_OPCODE(0x51, "!=", neq)
+DEFINE_OPCODE(0x52, "<", lt)
+DEFINE_OPCODE(0x53, ">", gt)
+DEFINE_OPCODE(0x54, "=<", le)
+DEFINE_OPCODE(0x55, ">=", ge)
+
+DEFINE_OPCODE(0x60, "call", call)
+
+// Selectors.
+DEFINE_SELECTOR(0x00, summary)
+DEFINE_SELECTOR(0x01, type_summary)
+
+DEFINE_SELECTOR(0x10, get_num_children)
+DEFINE_SELECTOR(0x11, get_child_at_index)
+DEFINE_SELECTOR(0x12, get_child_with_name)
+DEFINE_SELECTOR(0x13, get_child_index)
+DEFINE_SELECTOR(0x15, get_type)
+DEFINE_SELECTOR(0x16, get_template_argument_type)
+DEFINE_SELECTOR(0x17, cast)
+
+DEFINE_SELECTOR(0x20, get_value)
+DEFINE_SELECTOR(0x21, get_value_as_unsigned)
+DEFINE_SELECTOR(0x22, get_value_as_signed)
+DEFINE_SELECTOR(0x23, get_value_as_address)
+
+DEFINE_SELECTOR(0x40, read_memory_byte)
+DEFINE_SELECTOR(0x41, read_memory_uint32)
+DEFINE_SELECTOR(0x42, read_memory_int32)
+DEFINE_SELECTOR(0x43, read_memory_unsigned)
+DEFINE_SELECTOR(0x44, read_memory_signed)
+DEFINE_SELECTOR(0x45, read_memory_address)
+DEFINE_SELECTOR(0x46, read_memory)
+
+DEFINE_SELECTOR(0x50, fmt)
+DEFINE_SELECTOR(0x51, sprintf)
+DEFINE_SELECTOR(0x52, strlen)
+
+// Formatter signatures.
+DEFINE_SIGNATURE(0, summary)
+DEFINE_SIGNATURE(1, init)
+DEFINE_SIGNATURE(2, get_num_children)
+DEFINE_SIGNATURE(3, get_child_index)
+DEFINE_SIGNATURE(4, get_child_at_index)
+DEFINE_SIGNATURE(5, get_value)
+
+#undef DEFINE_OPCODE
+#undef DEFINE_SELECTOR
+#undef DEFINE_SIGNATURE

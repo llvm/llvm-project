@@ -13,7 +13,6 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Support/LogicalResult.h"
 #include <optional>
 
 namespace mlir {

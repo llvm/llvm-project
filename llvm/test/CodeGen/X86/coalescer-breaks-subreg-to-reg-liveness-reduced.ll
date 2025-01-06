@@ -46,7 +46,7 @@ define void @foo(ptr %arg3, i1 %icmp16) #0 {
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    # implicit-def: $r13
 ; CHECK-NEXT:    jmp .LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb5
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    orl $1, %r12d

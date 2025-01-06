@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm -O0 -triple x86_64-unknown-linux-gnu -DNOATTR  %s -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++2a -emit-llvm -O0 -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefix=CHECK-ATTR
-// RUN: %clang_cc1 -std=c++2a -emit-llvm -O0 -triple x86_64-unknown-linux-gnu -DNOATTR -fno-c++-static-destructors %s -o - | FileCheck %s --check-prefix=CHECK-FLAG
+// RUN: %clang_cc1 -std=c++2a -emit-llvm -O0 -triple x86_64-unknown-linux-gnu -DNOATTR -fc++-static-destructors=none %s -o - | FileCheck %s --check-prefix=CHECK-FLAG
+// RUN: %clang_cc1 -std=c++2a -emit-llvm -O0 -triple x86_64-unknown-linux-gnu -DNOATTR -fc++-static-destructors=thread-local %s -o - | FileCheck %s --check-prefix=CHECK-FLAG
 
 // Regression test for D54344. Class with no user-defined destructor
 // that has an inherited member that has a non-trivial destructor

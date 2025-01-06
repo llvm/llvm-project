@@ -11,7 +11,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 #include <sys/stat.h>    // For S_* flags.
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>

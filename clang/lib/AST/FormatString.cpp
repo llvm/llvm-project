@@ -520,33 +520,18 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return NoMatch;
     }
 
-    case CStrTy: {
-      const PointerType *PT = argTy->getAs<PointerType>();
-      if (!PT)
-        return NoMatch;
-      QualType pointeeTy = PT->getPointeeType();
-      if (const BuiltinType *BT = pointeeTy->getAs<BuiltinType>())
-        switch (BT->getKind()) {
-          case BuiltinType::Char_U:
-          case BuiltinType::UChar:
-          case BuiltinType::Char_S:
-          case BuiltinType::SChar:
-            return Match;
-          default:
-            break;
-        }
-
+    case CStrTy:
+      if (const auto *PT = argTy->getAs<PointerType>();
+          PT && PT->getPointeeType()->isCharType())
+        return Match;
       return NoMatch;
-    }
 
-    case WCStrTy: {
-      const PointerType *PT = argTy->getAs<PointerType>();
-      if (!PT)
-        return NoMatch;
-      QualType pointeeTy =
-        C.getCanonicalType(PT->getPointeeType()).getUnqualifiedType();
-      return pointeeTy == C.getWideCharType() ? Match : NoMatch;
-    }
+    case WCStrTy:
+      if (const auto *PT = argTy->getAs<PointerType>();
+          PT &&
+          C.hasSameUnqualifiedType(PT->getPointeeType(), C.getWideCharType()))
+        return Match;
+      return NoMatch;
 
     case WIntTy: {
       QualType WInt = C.getCanonicalType(C.getWIntType()).getUnqualifiedType();
@@ -569,14 +554,24 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     }
 
     case CPointerTy:
-      if (argTy->isVoidPointerType()) {
-        return Match;
-      } if (argTy->isPointerType() || argTy->isObjCObjectPointerType() ||
-            argTy->isBlockPointerType() || argTy->isNullPtrType()) {
+      if (const auto *PT = argTy->getAs<PointerType>()) {
+        QualType PointeeTy = PT->getPointeeType();
+        if (PointeeTy->isVoidType() || (!Ptr && PointeeTy->isCharType()))
+          return Match;
         return NoMatchPedantic;
-      } else {
-        return NoMatch;
       }
+
+      // nullptr_t* is not a double pointer, so reject when something like
+      // void** is expected.
+      // In C++, nullptr is promoted to void*. In C23, va_arg(ap, void*) is not
+      // undefined when the next argument is of type nullptr_t.
+      if (!Ptr && argTy->isNullPtrType())
+        return C.getLangOpts().CPlusPlus ? MatchPromotion : Match;
+
+      if (argTy->isObjCObjectPointerType() || argTy->isBlockPointerType())
+        return NoMatchPedantic;
+
+      return NoMatch;
 
     case ObjCPointerTy: {
       if (argTy->getAs<ObjCObjectPointerType>() ||

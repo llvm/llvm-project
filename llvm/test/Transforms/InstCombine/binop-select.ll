@@ -113,7 +113,7 @@ define i32 @test_sub_deduce_false(i32 %x, i32 %y) {
 define <2 x i8> @test_sub_dont_deduce_with_undef_cond_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @test_sub_dont_deduce_with_undef_cond_vec(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 9, i8 undef>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> splat (i8 7), <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
@@ -126,7 +126,7 @@ define <2 x i8> @test_sub_dont_deduce_with_undef_cond_vec(<2 x i8> %x, <2 x i8> 
 define <2 x i8> @test_sub_dont_deduce_with_poison_cond_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @test_sub_dont_deduce_with_poison_cond_vec(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 poison, i8 9>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> splat (i8 7), <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
@@ -369,7 +369,7 @@ define <2 x half> @fmul_sel_op1(i1 %b, <2 x half> %p) {
 define <2 x half> @fmul_sel_op1_use(i1 %b, <2 x half> %p) {
 ; CHECK-LABEL: @fmul_sel_op1_use(
 ; CHECK-NEXT:    [[X:%.*]] = fadd <2 x half> [[P:%.*]], <half 0xH3C00, half 0xH4000>
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x half> zeroinitializer, <2 x half> <half 0xHFFFF, half 0xHFFFF>
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x half> zeroinitializer, <2 x half> splat (half 0xHFFFF)
 ; CHECK-NEXT:    call void @use_v2f16(<2 x half> [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = fmul nnan nsz <2 x half> [[X]], [[S]]
 ; CHECK-NEXT:    ret <2 x half> [[R]]

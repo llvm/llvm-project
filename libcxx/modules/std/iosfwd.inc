@@ -9,12 +9,12 @@
 
 export namespace std {
   using std::streampos;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wstreampos;
 #endif
   using std::u16streampos;
   using std::u32streampos;
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
   using std::u8streampos;
 #endif
 
@@ -30,7 +30,7 @@ export namespace std {
   using std::osyncstream;
   using std::syncbuf;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wosyncstream;
   using std::wsyncbuf;
 #  endif

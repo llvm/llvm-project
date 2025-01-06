@@ -167,7 +167,7 @@ struct SCFForLoopCanonicalization
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(parentOp, std::move(patterns))))
+    if (failed(applyPatternsGreedily(parentOp, std::move(patterns))))
       signalPassFailure();
   }
 };

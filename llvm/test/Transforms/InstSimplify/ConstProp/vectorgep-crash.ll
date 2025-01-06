@@ -64,7 +64,7 @@ define <2 x ptr> @constant_undef_index() {
 
 define <2 x ptr> @constant_inbounds() {
 ; CHECK-LABEL: define <2 x ptr> @constant_inbounds() {
-; CHECK-NEXT:    ret <2 x ptr> getelementptr (i8, ptr @g, <2 x i64> <i64 1, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr (i8, ptr @g, <2 x i64> splat (i64 1))
 ;
   %gep = getelementptr i8, ptr @g, <2 x i64> <i64 1, i64 1>
   ret <2 x ptr> %gep

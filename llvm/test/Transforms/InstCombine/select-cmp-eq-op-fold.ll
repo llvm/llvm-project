@@ -96,7 +96,7 @@ define i8 @replace_with_x_for_new_oneuse2(i8 noundef %xx, i8 %yy, i8 %z, i8 %w, 
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], 13
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[YY:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[Y]], [[Q:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[Q:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[MUL]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; This version of the conv3x3 test has both loops. This test checks that the
 ; inner loop has 14 packets.

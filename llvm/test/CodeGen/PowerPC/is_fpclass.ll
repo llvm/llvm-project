@@ -29,10 +29,10 @@ define i1 @isnan_double(double %x) nounwind {
 define i1 @isnan_ppc_fp128(ppc_fp128 %x) nounwind {
 ; CHECK-LABEL: isnan_ppc_fp128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu 0, 1, 1
+; CHECK-NEXT:    xststdcdp 0, 1, 64
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    isel 3, 4, 3, 3
+; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
   %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 3)  ; nan
   ret i1 %1
@@ -77,14 +77,10 @@ define i1 @isnan_double_strictfp(double %x) strictfp nounwind {
 define i1 @isnan_ppc_fp128_strictfp(ppc_fp128 %x) strictfp nounwind {
 ; CHECK-LABEL: isnan_ppc_fp128_strictfp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mffprd 3, 1
-; CHECK-NEXT:    li 4, 2047
-; CHECK-NEXT:    clrldi 3, 3, 1
-; CHECK-NEXT:    rldic 4, 4, 52, 1
-; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    xststdcdp 0, 1, 64
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
   %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 3) strictfp ; nan
   ret i1 %1
@@ -279,15 +275,11 @@ define i1 @issnan_ppc_fp128(ppc_fp128 %x) nounwind {
 ; CHECK-LABEL: issnan_ppc_fp128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mffprd 3, 1
-; CHECK-NEXT:    li 4, 4095
-; CHECK-NEXT:    clrldi 3, 3, 1
-; CHECK-NEXT:    rldic 4, 4, 51, 1
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    li 4, 2047
-; CHECK-NEXT:    rldic 4, 4, 52, 1
-; CHECK-NEXT:    cmpd 1, 3, 4
+; CHECK-NEXT:    xststdcdp 1, 1, 64
+; CHECK-NEXT:    rldicl 3, 3, 32, 32
+; CHECK-NEXT:    andis. 3, 3, 8
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    crnand 20, 5, 0
+; CHECK-NEXT:    crnand 20, 6, 2
 ; CHECK-NEXT:    isel 3, 0, 3, 20
 ; CHECK-NEXT:    blr
   %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 1)
@@ -345,13 +337,12 @@ define i1 @isqnan_ppc_fp128(ppc_fp128 %x) nounwind {
 ; CHECK-LABEL: isqnan_ppc_fp128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mffprd 3, 1
-; CHECK-NEXT:    li 4, -17
-; CHECK-NEXT:    clrldi 3, 3, 1
-; CHECK-NEXT:    rldicl 4, 4, 47, 1
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    xststdcdp 1, 1, 64
+; CHECK-NEXT:    rldicl 3, 3, 13, 51
+; CHECK-NEXT:    andi. 3, 3, 1
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnand 20, 6, 1
+; CHECK-NEXT:    isel 3, 0, 3, 20
 ; CHECK-NEXT:    blr
   %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 2)
   ret i1 %1

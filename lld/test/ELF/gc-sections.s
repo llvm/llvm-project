@@ -8,6 +8,10 @@
 # RUN: ld.lld --export-dynamic --gc-sections %t -o %t2
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=GC2 %s
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --crel %s -o %t.o
+# RUN: ld.lld --gc-sections --print-gc-sections %t.o -o %t2 | FileCheck --check-prefix=GC1-DISCARD %s
+# RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=GC1 %s
+
 # NOGC: Name: .eh_frame
 # NOGC: Name: .text
 # NOGC: Name: .init

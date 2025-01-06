@@ -7,6 +7,9 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - -filetype=obj | spirv-val %}
 
+; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
+; XFAIL: expensive_checks
+
 ; CHECK-SPIRV: OpCapability BitInstructions
 ; CHECK-SPIRV: OpExtension "SPV_KHR_bit_instructions"
 ; CHECK-SPIRV: %[[#CharTy:]] = OpTypeInt 8 0

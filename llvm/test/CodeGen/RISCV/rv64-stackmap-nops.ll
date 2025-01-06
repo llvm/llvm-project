@@ -4,7 +4,6 @@
 define void @test_shadow_optimization() {
 ; CHECK-LABEL: test_shadow_optimization:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop

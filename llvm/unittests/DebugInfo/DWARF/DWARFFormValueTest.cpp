@@ -375,7 +375,6 @@ TEST_P(DumpValueFixture, Test) {
   Opts.ShowAddresses = true;
 
   Form.dump(OS, Opts);
-  OS.flush();
 
   EXPECT_EQ(Output, ExpectedResult);
 }

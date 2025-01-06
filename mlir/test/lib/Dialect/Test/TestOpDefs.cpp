@@ -127,6 +127,14 @@ RegionKind GraphRegionOp::getRegionKind(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
+// IsolatedGraphRegionOp
+//===----------------------------------------------------------------------===//
+
+RegionKind IsolatedGraphRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::Graph;
+}
+
+//===----------------------------------------------------------------------===//
 // AffineScopeOp
 //===----------------------------------------------------------------------===//
 
@@ -752,12 +760,13 @@ void TestReflectBoundsOp::inferResultRanges(
   Type sIntTy, uIntTy;
   // For plain `IntegerType`s, we can derive the appropriate signed and unsigned
   // Types for the Attributes.
-  if (auto intTy = llvm::dyn_cast<IntegerType>(getType())) {
+  Type type = getElementTypeOrSelf(getType());
+  if (auto intTy = llvm::dyn_cast<IntegerType>(type)) {
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
   } else
-    sIntTy = uIntTy = getType();
+    sIntTy = uIntTy = type;
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
@@ -1193,7 +1202,7 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
 // TestOpWithVersionedProperties
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
+llvm::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
     mlir::DialectBytecodeReader &reader, test::VersionedProperties &prop) {
   uint64_t value1, value2 = 0;
   if (failed(reader.readVarInt(value1)))
@@ -1321,7 +1330,7 @@ DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
   DenseMap<Attribute, MemorySlot> slotMap;
 
   for (Attribute usedIndex : usedIndices) {
-    Type elemType = slot.elementPtrs.lookup(usedIndex);
+    Type elemType = slot.subelementTypes.lookup(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
     auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);

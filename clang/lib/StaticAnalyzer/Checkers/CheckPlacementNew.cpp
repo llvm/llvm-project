@@ -124,14 +124,14 @@ bool PlacementNewChecker::checkPlaceCapacityIsSufficient(
             "requires {1} bytes. Current overhead requires the size of {2} "
             "bytes",
             SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue(),
-            SizeOfPlaceCI->getValue() - SizeOfTargetCI->getValue()));
+            *SizeOfPlaceCI->getValue().get() - SizeOfTargetCI->getValue()));
       else if (IsArrayTypeAllocated &&
                SizeOfPlaceCI->getValue() == SizeOfTargetCI->getValue())
         Msg = std::string(llvm::formatv(
             "Storage provided to placement new is only {0} bytes, "
             "whereas the allocated array type requires more space for "
             "internal needs",
-            SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue()));
+            SizeOfPlaceCI->getValue()));
       else
         Msg = std::string(llvm::formatv(
             "Storage provided to placement new is only {0} bytes, "

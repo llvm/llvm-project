@@ -10,10 +10,11 @@
 
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/vfscanf_internal.h"
 
+#include "hdr/types/FILE.h"
 #include <stdarg.h>
-#include <stdio.h>
 
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define SCANF_STDIN LIBC_NAMESPACE::stdin
@@ -21,7 +22,7 @@
 #define SCANF_STDIN ::stdin
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -37,4 +38,4 @@ LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

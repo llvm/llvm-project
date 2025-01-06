@@ -92,24 +92,26 @@ bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Status &error) {
   error.Clear();
   if (str.empty())
   {
-    error.SetErrorString("Empty breakpoint names are not allowed");
+    error = Status::FromErrorString("Empty breakpoint names are not allowed");
     return false;
   }
 
   // First character must be a letter or _
   if (!isalpha(str[0]) && str[0] != '_')
   {
-    error.SetErrorStringWithFormat("Breakpoint names must start with a "
-                                   "character or underscore: %s",
-                                   str.str().c_str());
+    error =
+        Status::FromErrorStringWithFormatv("Breakpoint names must start with a "
+                                           "character or underscore: {0}",
+                                           str);
     return false;
   }
 
   // Cannot contain ., -, or space.
   if (str.find_first_of(".- ") != llvm::StringRef::npos) {
-    error.SetErrorStringWithFormat("Breakpoint names cannot contain "
-                                   "'.' or '-' or spaces: \"%s\"",
-                                   str.str().c_str());
+    error =
+        Status::FromErrorStringWithFormatv("Breakpoint names cannot contain "
+                                           "'.' or '-' or spaces: \"{0}\"",
+                                           str);
     return false;
   }
 

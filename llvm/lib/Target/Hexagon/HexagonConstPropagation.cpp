@@ -2503,7 +2503,8 @@ APInt HexagonConstEvaluator::getCmpImm(unsigned Opc, unsigned OpX,
   }
 
   uint64_t Val = MO.getImm();
-  return APInt(32, Val, Signed);
+  // TODO: Is implicitTrunc correct here?
+  return APInt(32, Val, Signed, /*implicitTrunc=*/true);
 }
 
 void HexagonConstEvaluator::replaceWithNop(MachineInstr &MI) {

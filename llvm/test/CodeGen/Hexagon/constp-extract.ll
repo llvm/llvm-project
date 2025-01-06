@@ -1,5 +1,5 @@
 ; Expect the constant propagation to evaluate signed and unsigned bit extract.
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 target triple = "hexagon"
 

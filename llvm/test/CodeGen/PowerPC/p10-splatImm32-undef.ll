@@ -60,15 +60,13 @@ define hidden void @function1() {
 ; CHECK-LINUX-32:       # %bb.0: # %entry
 ; CHECK-LINUX-32-NEXT:    mflr r0
 ; CHECK-LINUX-32-NEXT:    stw r0, 4(r1)
-; CHECK-LINUX-32-NEXT:    stwu r1, -48(r1)
-; CHECK-LINUX-32-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-LINUX-32-NEXT:    stwu r1, -32(r1)
+; CHECK-LINUX-32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LINUX-32-NEXT:    .cfi_offset lr, 4
 ; CHECK-LINUX-32-NEXT:    bl call1
-; CHECK-LINUX-32-NEXT:    li r4, 0
 ; CHECK-LINUX-32-NEXT:    stw r3, 16(r1)
-; CHECK-LINUX-32-NEXT:    stw r4, 32(r1)
-; CHECK-LINUX-32-NEXT:    lwz r0, 52(r1)
-; CHECK-LINUX-32-NEXT:    addi r1, r1, 48
+; CHECK-LINUX-32-NEXT:    lwz r0, 36(r1)
+; CHECK-LINUX-32-NEXT:    addi r1, r1, 32
 ; CHECK-LINUX-32-NEXT:    mtlr r0
 ; CHECK-LINUX-32-NEXT:    blr
 ;
@@ -76,13 +74,11 @@ define hidden void @function1() {
 ; CHECK-AIX-32:       # %bb.0: # %entry
 ; CHECK-AIX-32-NEXT:    mflr r0
 ; CHECK-AIX-32-NEXT:    stw r0, 8(r1)
-; CHECK-AIX-32-NEXT:    stwu r1, -96(r1)
+; CHECK-AIX-32-NEXT:    stwu r1, -80(r1)
 ; CHECK-AIX-32-NEXT:    bl .call1[PR]
 ; CHECK-AIX-32-NEXT:    nop
-; CHECK-AIX-32-NEXT:    li r4, 0
 ; CHECK-AIX-32-NEXT:    stw r3, 64(r1)
-; CHECK-AIX-32-NEXT:    stw r4, 80(r1)
-; CHECK-AIX-32-NEXT:    addi r1, r1, 96
+; CHECK-AIX-32-NEXT:    addi r1, r1, 80
 ; CHECK-AIX-32-NEXT:    lwz r0, 8(r1)
 ; CHECK-AIX-32-NEXT:    mtlr r0
 ; CHECK-AIX-32-NEXT:    blr

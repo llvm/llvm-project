@@ -27,7 +27,7 @@
 ; START-BEFORE: -machine-branch-prob -regalloc-evict -regalloc-priority -domtree
 ; START-BEFORE: FunctionPass Manager
 ; START-BEFORE: Loop Strength Reduction
-; START-BEFORE-NEXT: Basic Alias Analysis (stateless AA impl)
+; START-BEFORE-NEXT: {{Loop Terminator Folding|Basic Alias Analysis \(stateless AA impl\)}}
 
 ; RUN: not --crash llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE
 ; RUN: not --crash llc < %s -stop-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-BEFORE

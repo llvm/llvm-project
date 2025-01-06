@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wswitch-enum -Wcovered-switch-default -triple x86_64-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wswitch-enum -Wcovered-switch-default -triple x86_64-linux-gnu %s -fexperimental-new-constant-interpreter
 void f (int z) { 
   while (z) { 
     default: z--;            // expected-error {{statement not in switch}}

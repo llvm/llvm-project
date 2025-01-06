@@ -61,7 +61,7 @@ protected:
   }
 
 private:
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+  std::unique_ptr<TargetMachine> createTargetMachine() {
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     EXPECT_TRUE(TheTarget) << Error << " " << TT;
@@ -69,8 +69,7 @@ private:
     TargetMachine *TM = TheTarget->createTargetMachine(TT, CpuName, "", Options,
                                                        Reloc::Model::Static);
     EXPECT_TRUE(TM) << TT << " " << CpuName;
-    return std::unique_ptr<LLVMTargetMachine>(
-        static_cast<LLVMTargetMachine *>(TM));
+    return std::unique_ptr<TargetMachine>(TM);
   }
 
   ExecutableFunction

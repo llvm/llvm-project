@@ -55,7 +55,7 @@ TEST_F(SizeOptsTest, Test) {
   Function *G = M->getFunction("g");
   Function *H = M->getFunction("h");
 
-  ProfileSummaryInfo PSI(*M.get());
+  ProfileSummaryInfo PSI(*M);
   BFIData BFID_F(*F);
   BFIData BFID_G(*G);
   BFIData BFID_H(*H);

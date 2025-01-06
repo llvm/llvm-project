@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mcpu=v4 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
 ; Source:
 ;  long foo(int a, int b, long c) {
 ;    a = __builtin_bswap16(a);

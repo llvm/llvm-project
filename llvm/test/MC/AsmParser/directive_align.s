@@ -1,6 +1,8 @@
 # RUN: not llvm-mc -triple i386-apple-darwin9 %s 2> %t.err | FileCheck %s
 # RUN: FileCheck < %t.err %s --check-prefix=CHECK-WARN
 
+        .data
+
 # CHECK: TEST0:
 # CHECK: .p2align 1
 TEST0:  

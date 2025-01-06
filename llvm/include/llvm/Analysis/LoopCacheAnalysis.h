@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/InstructionCost.h"
 #include <optional>
 
 namespace llvm {
@@ -31,7 +32,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetTransformInfo;
 
-using CacheCostTy = int64_t;
+using CacheCostTy = InstructionCost;
 using LoopVectorTy = SmallVector<Loop *, 8>;
 
 /// Represents a memory reference as a base pointer and a set of indexing
@@ -192,8 +193,6 @@ class CacheCost {
   using LoopCacheCostTy = std::pair<const Loop *, CacheCostTy>;
 
 public:
-  static CacheCostTy constexpr InvalidCost = -1;
-
   /// Construct a CacheCost object for the loop nest described by \p Loops.
   /// The optional parameter \p TRT can be used to specify the max. distance
   /// between array elements accessed in a loop so that the elements are

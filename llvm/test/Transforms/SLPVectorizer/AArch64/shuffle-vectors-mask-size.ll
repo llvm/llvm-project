@@ -13,8 +13,7 @@ define void @p(double %0) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, <4 x double> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, <2 x double> [[TMP7]], i64 2)
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd <4 x double> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi <4 x double> [[TMP12]] to <4 x i32>

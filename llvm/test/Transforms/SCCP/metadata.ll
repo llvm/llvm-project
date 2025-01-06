@@ -6,7 +6,7 @@ declare i32 @get_i32()
 
 define void @load_range(ptr %p) {
 ; CHECK-LABEL: @load_range(
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
@@ -37,7 +37,7 @@ define i32 @load_range_single(ptr %p) {
 
 define i32 @load_range_single_volatile(ptr %p) {
 ; CHECK-LABEL: @load_range_single_volatile(
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4, !range !1
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %v = load volatile i32, ptr %p, !range !{i32 0, i32 1}
@@ -46,8 +46,8 @@ define i32 @load_range_single_volatile(ptr %p) {
 
 define void @load_nonnull(ptr %p, ptr %p2) {
 ; CHECK-LABEL: @load_nonnull(
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !2
-; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P2:%.*]], align 8, !nonnull !2
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META2:![0-9]+]]
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P2:%.*]], align 8, !nonnull [[META2]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
@@ -78,7 +78,7 @@ define void @load_nonnull(ptr %p, ptr %p2) {
 
 define void @call_range(ptr %p) {
 ; CHECK-LABEL: @call_range(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @get_i32(), !range !0
+; CHECK-NEXT:    [[V:%.*]] = call i32 @get_i32(), !range [[RNG0]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
@@ -101,7 +101,7 @@ define void @call_range(ptr %p) {
 
 define internal i1 @ip_cmp_range(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -109,7 +109,7 @@ define internal i1 @ip_cmp_range(i32 %v) {
 
 define i1 @ip_load_range(ptr %p) {
 ; CHECK-LABEL: @ip_load_range(
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @ip_cmp_range(i32 [[V]])
 ; CHECK-NEXT:    ret i1 true
 ;

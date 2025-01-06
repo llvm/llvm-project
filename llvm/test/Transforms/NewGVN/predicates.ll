@@ -82,7 +82,7 @@ define fastcc void @barney() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB22:%.*]]
 ; CHECK:       bb22:
-; CHECK-NEXT:    br i1 undef, label [[BB29:%.*]], label [[BB35:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB29:%.*]], label [[BB35:%.*]]
 ; CHECK:       bb29:
 ; CHECK-NEXT:    br i1 true, label [[BB33:%.*]], label [[BB35]]
 ; CHECK:       bb33:
@@ -93,16 +93,15 @@ define fastcc void @barney() {
 bb:
   br label %bb22
 bb22:                                             ; preds = %bb21
-  %tmp23 = icmp eq i32 undef, 2
-  br i1 %tmp23, label %bb29, label %bb35
+  br i1 true, label %bb29, label %bb35
 
 
 bb29:                                             ; preds = %bb28
-  br i1 %tmp23, label %bb33, label %bb35
+  br i1 true, label %bb33, label %bb35
 
 
 bb33:                                             ; preds = %bb31
-  br i1 %tmp23, label %bb35, label %bb35
+  br i1 true, label %bb35, label %bb35
 
 
 bb35:                                             ; preds = %bb33, %bb29, %bb22

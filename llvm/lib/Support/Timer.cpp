@@ -93,7 +93,7 @@ void llvm::initTimerOptions() {
   *SortTimers;
 }
 
-std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
+std::unique_ptr<raw_ostream> llvm::CreateInfoOutputFile() {
   const std::string &OutputFilename = getLibSupportInfoOutputFilename();
   if (OutputFilename.empty())
     return std::make_unique<raw_fd_ostream>(2, false); // stderr.

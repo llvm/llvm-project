@@ -24,6 +24,7 @@ and corpus2 are combined into combinedcorpus.
 """
 
 import argparse
+import logging
 
 from mlgo.corpus import combine_training_corpus_lib
 
@@ -35,11 +36,22 @@ def parse_args_and_run():
     parser.add_argument(
         "--root_dir", type=str, help="The root dir of module paths to combine."
     )
+    # TODO(#107898): Refactor this into a common location.
+    parser.add_argument(
+        "--verbosity",
+        type=str,
+        help="The verbosity level to use for logging",
+        default="INFO",
+        nargs="?",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+    )
     args = parser.parse_args()
     main(args)
 
 
 def main(args):
+    logging.basicConfig(level=args.verbosity)
+
     combine_training_corpus_lib.combine_corpus(args.root_dir)
 
 

@@ -2,6 +2,7 @@
 # A tool to parse the output of `clang-format --help` and update the
 # documentation in ../ClangFormat.rst automatically.
 
+import argparse
 import os
 import re
 import subprocess
@@ -26,7 +27,7 @@ def indent(text, columns, indent_first_line=True):
 
 
 def get_help_output():
-    args = ["clang-format", "--help"]
+    args = [binary, "--help"]
     cmd = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     out, _ = cmd.communicate()
     out = out.decode(sys.stdout.encoding)
@@ -54,13 +55,24 @@ def validate(text, columns):
             print("warning: line too long:\n", line, file=sys.stderr)
 
 
+p = argparse.ArgumentParser()
+p.add_argument("-d", "--directory", help="directory of clang-format")
+p.add_argument("-o", "--output", help="path of output file")
+opts = p.parse_args()
+
+binary = "clang-format"
+if opts.directory:
+    binary = opts.directory + "/" + binary
+
 help_text = get_help_text()
 validate(help_text, 100)
 
-with open(DOC_FILE) as f:
+with open(DOC_FILE, encoding="utf-8") as f:
     contents = f.read()
 
 contents = substitute(contents, "FORMAT_HELP", help_text)
 
-with open(DOC_FILE, "wb") as output:
-    output.write(contents.encode())
+with open(
+    opts.output if opts.output else DOC_FILE, "w", newline="", encoding="utf-8"
+) as f:
+    f.write(contents)

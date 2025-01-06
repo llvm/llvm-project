@@ -28,9 +28,9 @@ TEST(BuildCompilerInvocationTest, RecoverMultipleJobs) {
   clang::IgnoringDiagConsumer D;
   CreateInvocationOptions Opts;
   Opts.RecoverOnError = true;
-  Opts.Diags = clang::CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                                          &D, false);
   Opts.VFS = new llvm::vfs::InMemoryFileSystem();
+  Opts.Diags = clang::CompilerInstance::createDiagnostics(
+      *Opts.VFS, new DiagnosticOptions, &D, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, Opts);
   ASSERT_TRUE(CI);
   EXPECT_THAT(CI->TargetOpts->Triple, testing::StartsWith("i386-"));
@@ -46,7 +46,7 @@ TEST(BuildCompilerInvocationTest, ProbePrecompiled) {
 
   clang::IgnoringDiagConsumer D;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
-      clang::CompilerInstance::createDiagnostics(new DiagnosticOptions, &D,
+      clang::CompilerInstance::createDiagnostics(*FS, new DiagnosticOptions, &D,
                                                  false);
   // Default: ProbePrecompiled=false
   CreateInvocationOptions CIOpts;

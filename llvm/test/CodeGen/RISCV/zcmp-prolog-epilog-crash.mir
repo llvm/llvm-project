@@ -99,6 +99,7 @@ body:             |
   ; CHECK-NEXT:   SB killed renamable $x12, $x2, 14 :: (store (s8) into %stack.0 + 14)
   ; CHECK-NEXT:   SB killed renamable $x13, $x2, 13 :: (store (s8) into %stack.0 + 13)
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 32
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
   ; CHECK-NEXT:   PseudoRET

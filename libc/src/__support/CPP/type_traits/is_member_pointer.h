@@ -12,8 +12,10 @@
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_member_pointer
 template <class T> struct is_member_pointer_helper : cpp::false_type {};
@@ -25,6 +27,7 @@ template <class T>
 LIBC_INLINE_VAR constexpr bool is_member_pointer_v =
     is_member_pointer<T>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_MEMBER_POINTER_H

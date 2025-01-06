@@ -9,6 +9,7 @@ static_library("Breakpoint") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
   ]
   sources = [

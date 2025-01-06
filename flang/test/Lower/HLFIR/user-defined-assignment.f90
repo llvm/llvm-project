@@ -51,17 +51,17 @@ subroutine test_user_defined_elemental_array_value(z, l)
    z = l
 end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_user_defined_elemental_array_value(
-! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.complex<4>>> {fir.bindc_name = "z"},
+! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xcomplex<f32>>> {fir.bindc_name = "z"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "l"}) {
 ! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEz"} : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEz"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      hlfir.yield %[[VAL_2]]#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:    } to {
-! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?x!fir.complex<4>>>
-! CHECK:    } user_defined_assign  (%[[VAL_4:.*]]: !fir.ref<!fir.logical<4>>) to (%[[VAL_5:.*]]: !fir.ref<!fir.complex<4>>) {
+! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?xcomplex<f32>>>
+! CHECK:    } user_defined_assign  (%[[VAL_4:.*]]: !fir.ref<!fir.logical<4>>) to (%[[VAL_5:.*]]: !fir.ref<complex<f32>>) {
 ! CHECK:      %[[VAL_6:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.logical<4>>
-! CHECK:      fir.call @_QPlogical_to_complex(%[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<!fir.complex<4>>, !fir.logical<4>) -> ()
+! CHECK:      fir.call @_QPlogical_to_complex(%[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<complex<f32>>, !fir.logical<4>) -> ()
 ! CHECK:    }
 
 subroutine test_user_defined_scalar(i, l)

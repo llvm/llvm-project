@@ -1,4 +1,4 @@
-; RUN: llc -mattr=+reserved-r19 -march=hexagon < %s | FileCheck %s
+; RUN: llc -mattr=+reserved-r19 -mtriple=hexagon < %s | FileCheck %s
 define dso_local i32 @r19f() #0 {
 entry:
   %0 = call i32 @llvm.read_register.i32(metadata !0)

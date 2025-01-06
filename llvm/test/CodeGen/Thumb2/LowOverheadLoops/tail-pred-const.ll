@@ -119,7 +119,7 @@ define dso_local void @foo3(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[INDUCTION]], <i32 32002, i32 32002, i32 32002, i32 32002>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[INDUCTION]], splat (i32 32002)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
@@ -226,13 +226,33 @@ for.cond.cleanup:
   ret void
 }
 
-; CHECK-LABEL: @inconsistent_tripcounts(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
 ;
 define dso_local void @inconsistent_tripcounts(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
+; CHECK-LABEL: @inconsistent_tripcounts(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi ptr [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi ptr [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 -1)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
+; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
+; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, ptr [[LSR_IV14]], i32 4
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
 entry:
   %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
@@ -261,13 +281,33 @@ for.cond.cleanup:
   ret void
 }
 
-; CHECK-LABEL: @overflow_in_sub(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
 ;
 define dso_local void @overflow_in_sub(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
+; CHECK-LABEL: @overflow_in_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 1073741824)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi ptr [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi ptr [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 32003)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
+; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
+; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, ptr [[LSR_IV14]], i32 4
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
 entry:
   %start = call i32 @llvm.start.loop.iterations.i32(i32 1073741824)
   br label %vector.body
@@ -296,13 +336,33 @@ for.cond.cleanup:
 }
 
 
-; CHECK-LABEL: @IV_not_an_induction(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
 ;
 define dso_local void @IV_not_an_induction(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
+; CHECK-LABEL: @IV_not_an_induction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi ptr [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi ptr [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[N:%.*]], i32 32003)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
+; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
+; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, ptr [[LSR_IV14]], i32 4
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
 entry:
   %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
@@ -331,13 +391,33 @@ for.cond.cleanup:
   ret void
 }
 
-; CHECK-LABEL: @IV_wrong_step(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
 ;
 define dso_local void @IV_wrong_step(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
+; CHECK-LABEL: @IV_wrong_step(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi ptr [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi ptr [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 32003)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 3
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
+; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
+; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, ptr [[LSR_IV14]], i32 4
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
 entry:
   %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
@@ -369,13 +449,33 @@ for.cond.cleanup:
   ret void
 }
 
-; CHECK-LABEL: @IV_step_not_constant(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
 ;
 define dso_local void @IV_step_not_constant(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
+; CHECK-LABEL: @IV_step_not_constant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi ptr [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi ptr [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 32003)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV11]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[LSR_IV14]], i32 4, <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[N:%.*]]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
+; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, ptr [[LSR_IV11]], i32 4
+; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, ptr [[LSR_IV14]], i32 4
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
 entry:
   %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
@@ -406,13 +506,49 @@ for.cond.cleanup:
   ret void
 }
 
-; CHECK-LABEL: @outerloop_phi(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
 ;
 define dso_local void @outerloop_phi(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
+; CHECK-LABEL: @outerloop_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP24:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_PH_PREHEADER:%.*]]
+; CHECK:       vector.ph.preheader:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[LSR_IV36:%.*]] = phi ptr [ [[B:%.*]], [[VECTOR_PH_PREHEADER]] ], [ [[SCEVGEP37:%.*]], [[FOR_COND_CLEANUP3:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV31:%.*]] = phi ptr [ [[C:%.*]], [[VECTOR_PH_PREHEADER]] ], [ [[SCEVGEP32:%.*]], [[FOR_COND_CLEANUP3]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[A:%.*]], [[VECTOR_PH_PREHEADER]] ], [ [[SCEVGEP:%.*]], [[FOR_COND_CLEANUP3]] ]
+; CHECK-NEXT:    [[J_025:%.*]] = phi i32 [ [[INC11:%.*]], [[FOR_COND_CLEANUP3]] ], [ 0, [[VECTOR_PH_PREHEADER]] ]
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 1025)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[LSR_IV38:%.*]] = phi ptr [ [[SCEVGEP39:%.*]], [[VECTOR_BODY]] ], [ [[LSR_IV36]], [[VECTOR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV33:%.*]] = phi ptr [ [[SCEVGEP34:%.*]], [[VECTOR_BODY]] ], [ [[LSR_IV31]], [[VECTOR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV28:%.*]] = phi ptr [ [[SCEVGEP29:%.*]], [[VECTOR_BODY]] ], [ [[LSR_IV]], [[VECTOR_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[J_025]], i32 4096)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV38]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD27:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV33]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD27]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP1]], ptr [[LSR_IV28]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[SCEVGEP29]] = getelementptr i32, ptr [[LSR_IV28]], i32 4
+; CHECK-NEXT:    [[SCEVGEP34]] = getelementptr i32, ptr [[LSR_IV33]], i32 4
+; CHECK-NEXT:    [[SCEVGEP39]] = getelementptr i32, ptr [[LSR_IV38]], i32 4
+; CHECK-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP3]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.cond.cleanup3:
+; CHECK-NEXT:    [[INC11]] = add nuw i32 [[J_025]], 1
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 1
+; CHECK-NEXT:    [[SCEVGEP32]] = getelementptr i32, ptr [[LSR_IV31]], i32 1
+; CHECK-NEXT:    [[SCEVGEP37]] = getelementptr i32, ptr [[LSR_IV36]], i32 1
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i32 [[INC11]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR_COND_CLEANUP]], label [[VECTOR_PH]]
+;
 entry:
   %cmp24 = icmp eq i32 %N, 0
   br i1 %cmp24, label %for.cond.cleanup, label %vector.ph.preheader

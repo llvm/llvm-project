@@ -75,6 +75,7 @@ define void @scalable() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr undef, i32 16, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
@@ -102,6 +103,9 @@ entry:
   %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
   %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
   %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+
+  ; Types that are legal, but for which we have no masked load/store lowering
+  %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr undef, i32 16, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
 
   ret void
 }
@@ -265,6 +269,7 @@ declare <32 x half> @llvm.masked.load.v32f16.p0(ptr, i32, <32 x i1>, <32 x half>
 declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32, <4 x i1>, <4 x float>)
 declare <2 x double> @llvm.masked.load.v2f64.p0(ptr, i32, <2 x i1>, <2 x double>)
+declare <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i1>)
 
 
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8.p0(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)

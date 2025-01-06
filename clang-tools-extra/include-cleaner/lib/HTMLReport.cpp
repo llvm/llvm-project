@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -167,22 +168,6 @@ class Reporter {
     return "semiused";
   }
 
-  std::string spellHeader(const Header &H) {
-    switch (H.kind()) {
-    case Header::Physical: {
-      bool IsAngled = false;
-      std::string Path = HS.suggestPathToFileForDiagnostics(
-          H.physical(), MainFE->tryGetRealPathName(), &IsAngled);
-      return IsAngled ? "<" + Path + ">" : "\"" + Path + "\"";
-    }
-    case Header::Standard:
-      return H.standard().name().str();
-    case Header::Verbatim:
-      return H.verbatim().str();
-    }
-    llvm_unreachable("Unknown Header kind");
-  }
-
   void fillTarget(Ref &R) {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
     for (auto &Loc : locateSymbol(R.Sym))
@@ -204,7 +189,7 @@ class Reporter {
                      R.Includes.end());
 
     if (!R.Headers.empty())
-      R.Insert = spellHeader(R.Headers.front());
+      R.Insert = spellHeader({R.Headers.front(), HS, MainFE});
   }
 
 public:

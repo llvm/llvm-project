@@ -141,7 +141,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
 /// @{
 
 /// \internal
-json::Object createMessage(StringRef Text) {
+static json::Object createMessage(StringRef Text) {
   return json::Object{{"text", Text.str()}};
 }
 

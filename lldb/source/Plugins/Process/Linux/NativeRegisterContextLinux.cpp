@@ -28,7 +28,8 @@ Status NativeRegisterContextLinux::ReadRegisterRaw(uint32_t reg_index,
                                                    RegisterValue &reg_value) {
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
   if (!reg_info)
-    return Status("register %" PRIu32 " not found", reg_index);
+    return Status::FromErrorStringWithFormat("register %" PRIu32 " not found",
+                                             reg_index);
 
   return DoReadRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
                              reg_info->byte_size, reg_value);
@@ -88,9 +89,10 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
   assert(register_to_write_info_p &&
          "register to write does not have valid RegisterInfo");
   if (!register_to_write_info_p)
-    return Status("NativeRegisterContextLinux::%s failed to get RegisterInfo "
-                  "for write register index %" PRIu32,
-                  __FUNCTION__, reg_to_write);
+    return Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux::%s failed to get RegisterInfo "
+        "for write register index %" PRIu32,
+        __FUNCTION__, reg_to_write);
 
   return DoWriteRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
                               reg_value);

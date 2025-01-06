@@ -566,7 +566,7 @@ define ptr @gep_cvbase_w_s_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_cv_idx(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @GLOBAL, i64 4)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @GLOBAL, i64 4)
 ;
   %gep = getelementptr i32, <2 x ptr> <ptr @GLOBAL, ptr @GLOBAL>, <2 x i64> <i64 0, i64 1>
   %ee = extractelement <2 x ptr> %gep, i32 1
@@ -641,7 +641,7 @@ define ptr @gep_demanded_lane_undef(ptr %base, i64 %idx) {
 ;; indices.
 define ptr @PR41624(<2 x ptr> %a) {
 ; CHECK-LABEL: @PR41624(
-; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> splat (i64 5), <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[W]], i64 0
 ; CHECK-NEXT:    ret ptr [[R]]
 ;

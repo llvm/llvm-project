@@ -48,7 +48,7 @@ define void @test0-icmp-check(ptr %p){
   ; ret = [0, 10)
 ; TUNIT-LABEL: define {{[^@]+}}@test0-icmp-check
 ; TUNIT-SAME: (ptr nocapture nofree readonly align 4 [[P:%.*]]) {
-; TUNIT-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]], !range [[RNG0]]
+; TUNIT-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]]
 ; TUNIT-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
 ; TUNIT-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; TUNIT-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8

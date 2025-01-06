@@ -201,8 +201,8 @@ public:
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
 
-  bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
-                                        Status &error);
+  llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
+                                               AddressRange &range);
 
   /// Find the best global data symbol visible from this context.
   ///

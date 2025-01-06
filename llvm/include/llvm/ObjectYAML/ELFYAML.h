@@ -582,6 +582,7 @@ struct VerdefEntry {
   std::optional<uint16_t> Flags;
   std::optional<uint16_t> VersionNdx;
   std::optional<uint32_t> Hash;
+  std::optional<uint16_t> VDAux;
   std::vector<StringRef> VerNames;
 };
 

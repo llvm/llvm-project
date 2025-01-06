@@ -5,11 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
-
-// ALLOW_RETRIES: 3
 
 // <shared_mutex>
 
@@ -19,75 +17,110 @@
 //     bool try_lock_shared_for(const chrono::duration<Rep, Period>& rel_time);
 
 #include <shared_mutex>
-#include <thread>
-#include <vector>
-#include <cstdlib>
+#include <atomic>
 #include <cassert>
 #include <chrono>
+#include <thread>
+#include <vector>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
-std::shared_timed_mutex m;
-
-typedef std::chrono::steady_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-ms WaitTime = ms(250);
-
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
-ms Tolerance = ms(50);
-#else
-ms Tolerance = ms(50 * 5);
-#endif
-
-void f1()
-{
-    time_point t0 = Clock::now();
-    assert(m.try_lock_shared_for(WaitTime + Tolerance) == true);
-    time_point t1 = Clock::now();
-    m.unlock_shared();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within 50ms
+template <class Function>
+std::chrono::microseconds measure(Function f) {
+  std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+  f();
+  std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 }
 
-void f2()
-{
-    time_point t0 = Clock::now();
-    assert(m.try_lock_shared_for(WaitTime) == false);
-    time_point t1 = Clock::now();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within 50ms
-}
+int main(int, char**) {
+  // Try to lock-shared a mutex that is not locked yet. This should succeed immediately.
+  {
+    std::shared_timed_mutex m;
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        bool succeeded = m.try_lock_shared_for(std::chrono::milliseconds(1));
+        assert(succeeded);
+        m.unlock_shared();
+      }));
+    }
 
-int main(int, char**)
-{
-    {
-        m.lock();
-        std::vector<std::thread> v;
-        for (int i = 0; i < 5; ++i)
-            v.push_back(support::make_test_thread(f1));
-        std::this_thread::sleep_for(WaitTime);
-        m.unlock();
-        for (auto& t : v)
-            t.join();
+    for (auto& t : threads)
+      t.join();
+  }
+
+  // Try to lock-shared an already-locked mutex for a long enough amount of time and succeed.
+  // This is technically flaky, but we use such long durations that it should pass even
+  // in slow or contended environments.
+  {
+    std::chrono::milliseconds const wait_time(500);
+    std::chrono::milliseconds const tolerance = wait_time * 3;
+    std::atomic<int> ready(0);
+
+    std::shared_timed_mutex m;
+    m.lock();
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        ++ready;
+        while (ready < 5)
+          /* spin until all threads are created */;
+
+        auto elapsed = measure([&] {
+          bool succeeded = m.try_lock_shared_for(wait_time);
+          assert(succeeded);
+          m.unlock_shared();
+        });
+
+        // Ensure we didn't wait significantly longer than our timeout. This is technically
+        // flaky and non-conforming because an implementation is free to block for arbitrarily
+        // long, but any decent quality implementation should pass this test.
+        assert(elapsed - wait_time < tolerance);
+      }));
     }
-    {
-        m.lock();
-        std::vector<std::thread> v;
-        for (int i = 0; i < 5; ++i)
-            v.push_back(support::make_test_thread(f2));
-        std::this_thread::sleep_for(WaitTime + Tolerance);
-        m.unlock();
-        for (auto& t : v)
-            t.join();
+
+    // Wait for all the threads to be ready to take the lock before we unlock it from here, otherwise
+    // there's a high chance that we're not testing the "locking an already locked" mutex use case.
+    // There is still technically a race condition here.
+    while (ready < 5)
+      /* spin */;
+    std::this_thread::sleep_for(wait_time / 5);
+
+    m.unlock(); // this should allow the threads to lock-shared 'm'
+
+    for (auto& t : threads)
+      t.join();
+  }
+
+  // Try to lock-shared an already-locked mutex for a short amount of time and fail.
+  // Again, this is technically flaky but we use such long durations that it should work.
+  {
+    std::chrono::milliseconds const wait_time(10);
+    std::chrono::milliseconds const tolerance(750); // in case the thread we spawned goes to sleep or something
+
+    std::shared_timed_mutex m;
+    m.lock();
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        auto elapsed = measure([&] {
+          bool succeeded = m.try_lock_shared_for(wait_time);
+          assert(!succeeded);
+        });
+
+        // Ensure we failed within some bounded time.
+        assert(elapsed - wait_time < tolerance);
+      }));
     }
+
+    for (auto& t : threads)
+      t.join();
+
+    m.unlock();
+  }
 
   return 0;
 }

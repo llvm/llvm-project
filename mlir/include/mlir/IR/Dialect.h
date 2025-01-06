@@ -17,9 +17,6 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/TypeID.h"
 
-#include <map>
-#include <tuple>
-
 namespace mlir {
 class DialectAsmParser;
 class DialectAsmPrinter;
@@ -371,7 +368,6 @@ private:
   DenseSet<std::pair<TypeID, TypeID>> unresolvedPromisedInterfaces;
 
   friend class DialectRegistry;
-  friend void registerDialect();
   friend class MLIRContext;
 };
 

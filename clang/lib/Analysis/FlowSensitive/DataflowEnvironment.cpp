@@ -15,6 +15,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
@@ -63,7 +64,8 @@ static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
 // expression must map to the same location / value. This is the case if we are
 // performing a join for control flow within a full-expression (which is the
 // only case when this function should be used).
-template <typename MapT> MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
+template <typename MapT>
+static MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
   MapT Result = Map1;
 
   for (const auto &Entry : Map2) {
@@ -203,10 +205,11 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
 // Returns whether the values in `Map1` and `Map2` compare equal for those
 // keys that `Map1` and `Map2` have in common.
 template <typename Key>
-bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
-                           const llvm::MapVector<Key, Value *> &Map2,
-                           const Environment &Env1, const Environment &Env2,
-                           Environment::ValueModel &Model) {
+static bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
+                                  const llvm::MapVector<Key, Value *> &Map2,
+                                  const Environment &Env1,
+                                  const Environment &Env2,
+                                  Environment::ValueModel &Model) {
   for (auto &Entry : Map1) {
     Key K = Entry.first;
     assert(K != nullptr);
@@ -259,7 +262,7 @@ joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
 // Perform widening on either `LocToVal` or `ExprToVal`. `Key` must be either
 // `const StorageLocation *` or `const Expr *`.
 template <typename Key>
-llvm::MapVector<Key, Value *>
+static llvm::MapVector<Key, Value *>
 widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
                    const llvm::MapVector<Key, Value *> &PrevMap,
                    Environment &CurEnv, const Environment &PrevEnv,
@@ -297,7 +300,7 @@ namespace {
 // Visitor that builds a map from record prvalues to result objects.
 // For each result object that it encounters, it propagates the storage location
 // of the result object to all record prvalues that can initialize it.
-class ResultObjectVisitor : public AnalysisASTVisitor<ResultObjectVisitor> {
+class ResultObjectVisitor : public AnalysisASTVisitor {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
   // object. If this visitor will traverse a function that returns a record by
@@ -314,7 +317,7 @@ public:
   // called by `RecursiveASTVisitor`; it should be called manually if we are
   // analyzing a constructor. `ThisPointeeLoc` is the storage location that
   // `this` points to.
-  void TraverseConstructorInits(const CXXConstructorDecl *Ctor,
+  void traverseConstructorInits(const CXXConstructorDecl *Ctor,
                                 RecordStorageLocation *ThisPointeeLoc) {
     assert(ThisPointeeLoc != nullptr);
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
@@ -338,7 +341,7 @@ public:
     }
   }
 
-  bool VisitVarDecl(VarDecl *VD) {
+  bool VisitVarDecl(VarDecl *VD) override {
     if (VD->getType()->isRecordType() && VD->hasInit())
       PropagateResultObject(
           VD->getInit(),
@@ -346,7 +349,7 @@ public:
     return true;
   }
 
-  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE) {
+  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE) override {
     if (MTE->getType()->isRecordType())
       PropagateResultObject(
           MTE->getSubExpr(),
@@ -354,7 +357,7 @@ public:
     return true;
   }
 
-  bool VisitReturnStmt(ReturnStmt *Return) {
+  bool VisitReturnStmt(ReturnStmt *Return) override {
     Expr *RetValue = Return->getRetValue();
     if (RetValue != nullptr && RetValue->getType()->isRecordType() &&
         RetValue->isPRValue())
@@ -362,7 +365,7 @@ public:
     return true;
   }
 
-  bool VisitExpr(Expr *E) {
+  bool VisitExpr(Expr *E) override {
     // Clang's AST can have record-type prvalues without a result object -- for
     // example as full-expressions contained in a compound statement or as
     // arguments of call expressions. We notice this if we get here and a
@@ -414,8 +417,8 @@ public:
     // lowest-level AST node that initializes a given object, and nothing
     // below them can initialize the same object (or part of it).
     if (isa<CXXConstructExpr>(E) || isa<CallExpr>(E) || isa<LambdaExpr>(E) ||
-        isa<CXXDefaultArgExpr>(E) || isa<CXXDefaultInitExpr>(E) ||
-        isa<CXXStdInitializerListExpr>(E) || isa<AtomicExpr>(E) ||
+        isa<CXXDefaultArgExpr>(E) || isa<CXXStdInitializerListExpr>(E) ||
+        isa<AtomicExpr>(E) || isa<CXXInheritedCtorInitExpr>(E) ||
         // We treat `BuiltinBitCastExpr` as an "original initializer" too as
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
@@ -460,6 +463,11 @@ public:
 
     if (auto *SE = dyn_cast<StmtExpr>(E)) {
       PropagateResultObject(cast<Expr>(SE->getSubStmt()->body_back()), Loc);
+      return;
+    }
+
+    if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(E)) {
+      PropagateResultObject(DIE->getExpr(), Loc);
       return;
     }
 
@@ -518,12 +526,21 @@ void Environment::initialize() {
           assert(VarDecl != nullptr);
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
-          const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
-          QualType ThisPointeeType =
-              SurroundingMethodDecl->getFunctionObjectParameterType();
-          setThisPointeeStorageLocation(
-              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+          if (auto *Ancestor = InitialTargetFunc->getNonClosureAncestor()) {
+            const auto *SurroundingMethodDecl = cast<CXXMethodDecl>(Ancestor);
+            QualType ThisPointeeType =
+                SurroundingMethodDecl->getFunctionObjectParameterType();
+            setThisPointeeStorageLocation(
+                cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+          } else if (auto *FieldBeingInitialized =
+                         dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
+            // This is in a field initializer, rather than a method.
+            setThisPointeeStorageLocation(
+                cast<RecordStorageLocation>(createObject(QualType(
+                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
+          } else {
+            assert(false && "Unexpected this-capturing lambda context.");
+          }
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
@@ -1196,7 +1213,7 @@ Environment::PrValueToResultObject Environment::buildResultObjectMap(
 
   ResultObjectVisitor Visitor(Map, LocForRecordReturnVal, *DACtx);
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FuncDecl))
-    Visitor.TraverseConstructorInits(Ctor, ThisPointeeLoc);
+    Visitor.traverseConstructorInits(Ctor, ThisPointeeLoc);
 
   return Map;
 }

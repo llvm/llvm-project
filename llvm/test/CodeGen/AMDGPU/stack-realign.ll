@@ -11,7 +11,7 @@
 ; GCN-LABEL: {{^}}needs_align16_default_stack_align:
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, v0
 ; GCN-DAG: v_lshrrev_b32_e64 [[FRAMEDIFF:v[0-9]+]], 6, s32
-; GCN: v_add_u32_e32 [[FI:v[0-9]+]], vcc, [[FRAMEDIFF]], [[SCALED_IDX]]
+; GCN: v_add_u32_e32 [[FI:v[0-9]+]], vcc, [[SCALED_IDX]], [[FRAMEDIFF]]
 
 ; GCN-NOT: s32
 

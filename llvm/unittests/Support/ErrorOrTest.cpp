@@ -36,9 +36,7 @@ TEST(ErrorOr, SimpleValue) {
 #endif
 }
 
-ErrorOr<std::unique_ptr<int> > t3() {
-  return std::unique_ptr<int>(new int(3));
-}
+ErrorOr<std::unique_ptr<int>> t3() { return std::make_unique<int>(3); }
 
 TEST(ErrorOr, Types) {
   int x;

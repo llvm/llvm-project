@@ -1,5 +1,5 @@
-// RUN: %clang -E -target bpfel -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
-// RUN: %clang -E -target bpfeb -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
+// RUN: %clang -E -target bpfel -mcpu=v1 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
+// RUN: %clang -E -target bpfeb -mcpu=v1 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_NO %s
 // RUN: %clang -E -target bpfel -mcpu=v1 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V1 %s
 // RUN: %clang -E -target bpfel -mcpu=v2 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V2 %s
 // RUN: %clang -E -target bpfel -mcpu=v3 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V3 %s
@@ -64,6 +64,9 @@ int s;
 #ifdef __BPF_FEATURE_ADDR_SPACE_CAST
 int t;
 #endif
+#ifdef __BPF_FEATURE_MAY_GOTO
+int u;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -97,6 +100,11 @@ int t;
 // CPU_V2: int t;
 // CPU_V3: int t;
 // CPU_V4: int t;
+
+// CPU_V1: int u;
+// CPU_V2: int u;
+// CPU_V3: int u;
+// CPU_V4: int u;
 
 // CPU_GENERIC: int g;
 

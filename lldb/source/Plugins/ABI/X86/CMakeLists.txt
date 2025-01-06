@@ -10,6 +10,7 @@ add_lldb_library(lldbPluginABIX86 PLUGIN
     lldbCore
     lldbSymbol
     lldbTarget
+    lldbValueObject
   LINK_COMPONENTS
     Support
     TargetParser

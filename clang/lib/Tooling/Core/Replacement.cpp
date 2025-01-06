@@ -19,9 +19,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Rewrite/Core/RewriteBuffer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -605,7 +605,6 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   Rewrite.getEditBuffer(ID).write(OS);
-  OS.flush();
   return Result;
 }
 
@@ -615,7 +614,7 @@ std::map<std::string, Replacements> groupReplacementsByFile(
   std::map<std::string, Replacements> Result;
   llvm::SmallPtrSet<const FileEntry *, 16> ProcessedFileEntries;
   for (const auto &Entry : FileToReplaces) {
-    auto FE = FileMgr.getFile(Entry.first);
+    auto FE = FileMgr.getOptionalFileRef(Entry.first);
     if (!FE)
       llvm::errs() << "File path " << Entry.first << " is invalid.\n";
     else if (ProcessedFileEntries.insert(*FE).second)

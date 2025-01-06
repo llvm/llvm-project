@@ -4,7 +4,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
 
-!0 = !{i32 7, !"Dwarf Version", i32 2}
+!0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "xyz", isOptimized: true, runtimeVersion: 0, emissionKind: 1, retainedTypes: !4)
 !3 = !DIFile(filename: "input.hlsl", directory: "/some/path")
@@ -17,7 +17,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ; CHECK: !llvm.module.flags = !{!0, !1}
 ; CHECK: !llvm.dbg.cu = !{!2}
 
-; CHECK: !0 = !{i32 7, !"Dwarf Version", i32 2}
+; CHECK: !0 = !{i32 2, !"Dwarf Version", i32 4}
 ; CHECK: !1 = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "xyz", isOptimized: true, runtimeVersion: 0, emissionKind: 1, retainedTypes: !4)
 ; CHECK: !3 = !DIFile(filename: "input.hlsl", directory: "/some/path")

@@ -346,7 +346,8 @@ static int run(int argc, char **argv) {
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend = createWriteIndexesThinBackend(/*OldPrefix=*/"",
+    Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
+                                            /*OldPrefix=*/"",
                                             /*NewPrefix=*/"",
                                             /*NativeObjectPrefix=*/"",
                                             ThinLTOEmitImports,

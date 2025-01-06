@@ -50,7 +50,7 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   memset(P, 1, Size);
   EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
 
-  MemMap.unmap(MemMap.getBase(), Size);
+  MemMap.unmap();
 }
 
 TEST(ScudoCommonTest, Zeros) {
@@ -69,7 +69,7 @@ TEST(ScudoCommonTest, Zeros) {
   MemMap.releasePagesToOS(MemMap.getBase(), Size);
   EXPECT_EQ(std::count(P, P + N, 0), N);
 
-  MemMap.unmap(MemMap.getBase(), Size);
+  MemMap.unmap();
 }
 
 } // namespace scudo

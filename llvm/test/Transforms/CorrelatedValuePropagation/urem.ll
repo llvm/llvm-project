@@ -462,4 +462,13 @@ join:
   ret i8 %res
 }
 
+define i1 @urem_i1() {
+; CHECK-LABEL: @urem_i1(
+; CHECK-NEXT:    [[REM:%.*]] = urem i1 false, false
+; CHECK-NEXT:    ret i1 [[REM]]
+;
+  %rem = urem i1 false, false
+  ret i1 %rem
+}
+
 declare void @use(i1)

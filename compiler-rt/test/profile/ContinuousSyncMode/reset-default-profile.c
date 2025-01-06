@@ -1,4 +1,4 @@
-// REQUIRES: darwin || linux
+// REQUIRES: target={{.*(darwin|linux|aix).*}}
 
 // Test when LLVM_PROFILE_FILE is set incorrectly, it should fall backs to use default.profraw without runtime error.
 

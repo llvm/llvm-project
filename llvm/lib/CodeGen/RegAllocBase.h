@@ -72,7 +72,7 @@ protected:
 
 private:
   /// Private, callees should go through shouldAllocateRegister
-  const RegClassFilterFunc ShouldAllocateClass;
+  const RegAllocFilterFunc shouldAllocateRegisterImpl;
 
 protected:
   /// Inst which is a def of an original reg and whose defs are already all
@@ -81,7 +81,8 @@ protected:
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
-  RegAllocBase(const RegClassFilterFunc F = nullptr) : ShouldAllocateClass(F) {}
+  RegAllocBase(const RegAllocFilterFunc F = nullptr)
+      : shouldAllocateRegisterImpl(F) {}
 
   virtual ~RegAllocBase() = default;
 
@@ -90,9 +91,9 @@ protected:
 
   /// Get whether a given register should be allocated
   bool shouldAllocateRegister(Register Reg) {
-    if (!ShouldAllocateClass)
+    if (!shouldAllocateRegisterImpl)
       return true;
-    return ShouldAllocateClass(*TRI, *MRI->getRegClass(Reg));
+    return shouldAllocateRegisterImpl(*TRI, *MRI, Reg);
   }
 
   // The top-level driver. The output is a VirtRegMap that us updated with
@@ -121,6 +122,12 @@ protected:
   // converge quickly toward fully spilled live ranges.
   virtual MCRegister selectOrSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &splitLVRs) = 0;
+
+  /// Query a physical register to use as a filler in contexts where the
+  /// allocation has failed. This will raise an error, but not abort the
+  /// compilation.
+  MCPhysReg getErrorAssignment(const TargetRegisterClass &RC,
+                               const MachineInstr *CtxMI = nullptr);
 
   // Use this group name for NamedRegionTimer.
   static const char TimerGroupName[];

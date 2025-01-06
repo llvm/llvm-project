@@ -38,3 +38,17 @@ func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.arra
 
 // DECL-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
 // DECL: fircg.ext_declare
+
+// Test DCE does not crash because of unreachable code.
+func.func @unreachable_code(%arg0: !fir.ref<!fir.char<1,10>>) {
+  %c10 = arith.constant 10 : index
+  %2 = fir.declare %arg0 typeparams %c10 {uniq_name = "live_code"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>)
+  return
+^bb2:  // no predecessors
+  %3 = fir.declare %arg0 typeparams %c10 {uniq_name = "dead_code"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>)
+  fir.unreachable
+}
+// NODECL-LABEL:   func.func @unreachable_code(
+// NODECL-NOT:       uniq_name = "live_code"
+// DECL-LABEL:    func.func @unreachable_code(
+// DECL:             uniq_name = "live_code"

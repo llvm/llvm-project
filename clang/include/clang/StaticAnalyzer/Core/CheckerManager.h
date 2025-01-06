@@ -164,8 +164,6 @@ public:
 
   bool hasPathSensitiveCheckers() const;
 
-  void finishedCheckerRegistration();
-
   const LangOptions &getLangOpts() const { return LangOpts; }
   const AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }
   const Preprocessor &getPreprocessor() const {
@@ -221,6 +219,10 @@ public:
            "Requested checker is not registered! Maybe you should add it as a "
            "dependency in Checkers.td?");
     return static_cast<CHECKER *>(CheckerTags[tag]);
+  }
+
+  template <typename CHECKER> bool isRegisteredChecker() {
+    return CheckerTags.contains(getTag<CHECKER>());
   }
 
 //===----------------------------------------------------------------------===//

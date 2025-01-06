@@ -126,7 +126,7 @@ struct CognitiveComplexity final {
   // Limit of 25 is the "upstream"'s default.
   static constexpr unsigned DefaultLimit = 25U;
 
-  // Based on the publicly-avaliable numbers for some big open-source projects
+  // Based on the publicly-available numbers for some big open-source projects
   // https://sonarcloud.io/projects?languages=c%2Ccpp&size=5   we can estimate:
   // value ~20 would result in no allocs for 98% of functions, ~12 for 96%, ~10
   // for 91%, ~8 for 88%, ~6 for 84%, ~4 for 77%, ~2 for 64%, and ~1 for 37%.

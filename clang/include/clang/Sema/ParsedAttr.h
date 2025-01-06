@@ -392,19 +392,17 @@ public:
   }
 
   bool isArgExpr(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<Expr*>();
+    return Arg < NumArgs && isa<Expr *>(getArg(Arg));
   }
 
-  Expr *getArgAsExpr(unsigned Arg) const {
-    return getArg(Arg).get<Expr*>();
-  }
+  Expr *getArgAsExpr(unsigned Arg) const { return cast<Expr *>(getArg(Arg)); }
 
   bool isArgIdent(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<IdentifierLoc*>();
+    return Arg < NumArgs && isa<IdentifierLoc *>(getArg(Arg));
   }
 
   IdentifierLoc *getArgAsIdent(unsigned Arg) const {
-    return getArg(Arg).get<IdentifierLoc*>();
+    return cast<IdentifierLoc *>(getArg(Arg));
   }
 
   const AvailabilityChange &getAvailabilityIntroduced() const {
@@ -1083,7 +1081,6 @@ enum AttributeArgumentNType {
   AANT_ArgumentIdentifier,
   AANT_ArgumentConstantExpr,
   AANT_ArgumentBuiltinFunction,
-  AANT_ArgumentNullptrOrBoolIntOrEnumLiteral,
 };
 
 /// These constants match the enumerated choices of
@@ -1102,7 +1099,6 @@ enum AttributeDeclKind {
   ExpectedFunctionVariableOrClass,
   ExpectedKernelFunction,
   ExpectedFunctionWithProtoType,
-  ExpectedFunctionReturningPointerBoolIntOrEnum,
 };
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,

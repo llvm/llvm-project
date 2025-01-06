@@ -65,7 +65,7 @@ struct PrinterConfig {
   int SourceContextLines;
 };
 
-using ErrorHandler = function_ref<void(const ErrorInfoBase &, StringRef)>;
+using ErrorHandler = std::function<void(const ErrorInfoBase &, StringRef)>;
 
 class PlainPrinterBase : public DIPrinter {
 protected:

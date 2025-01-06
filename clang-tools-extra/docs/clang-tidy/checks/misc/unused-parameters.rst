@@ -35,13 +35,13 @@ Options
 
 .. option:: StrictMode
 
-   When `false` (default value), the check will ignore trivially unused parameters,
-   i.e. when the corresponding function has an empty body (and in case of
-   constructors - no constructor initializers). When the function body is empty,
-   an unused parameter is unlikely to be unnoticed by a human reader, and
-   there's basically no place for a bug to hide.
+  When `false` (default value), the check will ignore trivially unused parameters,
+  i.e. when the corresponding function has an empty body (and in case of
+  constructors - no constructor initializers). When the function body is empty,
+  an unused parameter is unlikely to be unnoticed by a human reader, and
+  there's basically no place for a bug to hide.
 
 .. option:: IgnoreVirtual
 
-   Determines whether virtual method parameters should be inspected.
-   Set to `true` to ignore them. Default is `false`.
+  Determines whether virtual method parameters should be inspected.
+  Set to `true` to ignore them. Default is `false`.

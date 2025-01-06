@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s altera-id-dependent-backward-branch %t -- -header-filter=.* "--" -cl-std=CL1.2 -c
+// RUN: %check_clang_tidy %s altera-id-dependent-backward-branch %t -- -header-filter=.* "--" -cl-std=CLC++1.0 -c
 
 void error() {
   // ==== Conditional Expressions ====
@@ -80,3 +80,9 @@ void success() {
     }
   }
 }
+
+template<char... STOP>
+void gh55408(char const input[], int pos) {
+  while (((input[pos] != STOP) && ...));
+}
+

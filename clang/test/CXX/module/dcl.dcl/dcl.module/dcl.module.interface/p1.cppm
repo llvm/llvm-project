@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 %s -verify -o /dev/null
+// RUN: %clang_cc1 -std=c++20 %s -verify -emit-module-interface -o /dev/null
 // RUN: %clang_cc1 -std=c++20 %s -DINTERFACE -verify -emit-module-interface -o %t
 // RUN: %clang_cc1 -std=c++20 %s -DIMPLEMENTATION -verify -fmodule-file=A=%t -o /dev/null
 //
@@ -15,6 +15,8 @@ module A; // #module-decl
   // expected-error@-2 {{missing 'export' specifier in module declaration while building module interface}}
   #define INTERFACE
  #endif
+#else // Not in a module
+// expected-error@* {{missing 'export module' declaration in module interface unit}}
 #endif
 
 #ifndef INTERFACE

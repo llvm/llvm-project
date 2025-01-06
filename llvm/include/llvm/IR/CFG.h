@@ -304,7 +304,12 @@ template <> struct GraphTraits<BasicBlock*> {
   static NodeRef getEntryNode(BasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
+
+  static unsigned getNumber(const BasicBlock *BB) { return BB->getNumber(); }
 };
+
+static_assert(GraphHasNodeNumbers<BasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<const BasicBlock*> {
   using NodeRef = const BasicBlock *;
@@ -314,7 +319,12 @@ template <> struct GraphTraits<const BasicBlock*> {
 
   static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
+
+  static unsigned getNumber(const BasicBlock *BB) { return BB->getNumber(); }
 };
+
+static_assert(GraphHasNodeNumbers<const BasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 // Provide specializations of GraphTraits to be able to treat a function as a
 // graph of basic blocks... and to walk it in inverse order.  Inverse order for
@@ -328,7 +338,12 @@ template <> struct GraphTraits<Inverse<BasicBlock*>> {
   static NodeRef getEntryNode(Inverse<BasicBlock *> G) { return G.Graph; }
   static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
+
+  static unsigned getNumber(const BasicBlock *BB) { return BB->getNumber(); }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<BasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<const BasicBlock*>> {
   using NodeRef = const BasicBlock *;
@@ -337,7 +352,12 @@ template <> struct GraphTraits<Inverse<const BasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const BasicBlock *> G) { return G.Graph; }
   static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
+
+  static unsigned getNumber(const BasicBlock *BB) { return BB->getNumber(); }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const BasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for function basic block graphs (CFGs)
@@ -362,6 +382,13 @@ template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
   }
 
   static size_t size(Function *F) { return F->size(); }
+
+  static unsigned getMaxNumber(const Function *F) {
+    return F->getMaxBlockNumber();
+  }
+  static unsigned getNumberEpoch(const Function *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<const Function*> :
   public GraphTraits<const BasicBlock*> {
@@ -379,6 +406,13 @@ template <> struct GraphTraits<const Function*> :
   }
 
   static size_t size(const Function *F) { return F->size(); }
+
+  static unsigned getMaxNumber(const Function *F) {
+    return F->getMaxBlockNumber();
+  }
+  static unsigned getNumberEpoch(const Function *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -391,11 +425,25 @@ template <> struct GraphTraits<Inverse<Function*>> :
   static NodeRef getEntryNode(Inverse<Function *> G) {
     return &G.Graph->getEntryBlock();
   }
+
+  static unsigned getMaxNumber(const Function *F) {
+    return F->getMaxBlockNumber();
+  }
+  static unsigned getNumberEpoch(const Function *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<Inverse<const Function*>> :
   public GraphTraits<Inverse<const BasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const Function *> G) {
     return &G.Graph->getEntryBlock();
+  }
+
+  static unsigned getMaxNumber(const Function *F) {
+    return F->getMaxBlockNumber();
+  }
+  static unsigned getNumberEpoch(const Function *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 

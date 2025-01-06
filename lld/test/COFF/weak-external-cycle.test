@@ -1,0 +1,41 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows test.s -o test.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows sym2.s -o sym2.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows def.s -o def.obj
+
+RUN: not lld-link -machine:amd64 -dll -noentry -out:test.dll test.obj sym2.obj 2>&1 | FileCheck -check-prefix=ERR %s
+
+ERR:      error: undefined symbol: testsym
+ERR-NEXT: >>> referenced by test.obj
+ERR-EMPTY:
+ERR-NEXT: error: undefined symbol: sym1
+ERR-NEXT: >>> referenced by test.obj
+ERR-NEXT: >>> referenced by sym2.obj
+ERR-EMPTY:
+ERR-NEXT: error: undefined symbol: sym2
+ERR-NEXT: >>> referenced by test.obj
+ERR-NEXT: >>> referenced by sym2.obj
+
+Depending on symbol processing order, we may have temporary weak reference cycles:
+
+RUN: lld-link -machine:amd64 -dll -noentry -out:test.dll test.obj sym2.obj def.obj
+RUN: lld-link -machine:amd64 -dll -noentry -out:test.dll test.obj def.obj sym2.obj
+RUN: lld-link -machine:amd64 -dll -noentry -out:test.dll def.obj test.obj sym2.obj
+
+#--- test.s
+    .weak testsym
+.set testsym, sym1
+    .weak sym1
+.set sym1, sym2
+
+#--- sym2.s
+    .weak sym2
+.set sym2, sym1
+
+#--- def.s
+    .globl sym1
+    .data
+sym1:
+    .word 0

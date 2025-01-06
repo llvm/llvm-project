@@ -1,5 +1,6 @@
 #include "foo.h"
 
+#include <cstdint>
 #include <map>
 #include <vector>
 
@@ -7,8 +8,8 @@ static int static_int = 42;
 
 int non_static_int = 43;
 
-int a_function(int var) {
-  return var; // breakpoint 3
+int a_function(int list) {
+  return list; // breakpoint 3
 }
 
 struct my_struct {
@@ -45,5 +46,6 @@ int main(int argc, char const *argv[]) {
   my_bool_vec.push_back(false); // breakpoint 6
   my_bool_vec.push_back(true);  // breakpoint 7
 
-  return 0;
+  uint8_t my_ints[] = {5, 10, 15, 20, 25, 30};
+  return 0; // breakpoint 8
 }

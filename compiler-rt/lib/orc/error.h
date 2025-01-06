@@ -1,4 +1,4 @@
-//===-------- Error.h - Enforced error checking for ORC RT ------*- C++ -*-===//
+//===-------- error.h - Enforced error checking for ORC RT ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@
 #include <string>
 #include <type_traits>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// Base class for all errors.
 class ErrorInfoBase : public RTTIExtends<ErrorInfoBase, RTTIRoot> {
@@ -421,6 +421,6 @@ private:
   std::string ErrMsg;
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_ERROR_H

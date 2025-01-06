@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FSEEK_H
 #define LLVM_LIBC_SRC_STDIO_FSEEK_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fseek(::FILE *stream, long offset, int whence);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FSEEK_H

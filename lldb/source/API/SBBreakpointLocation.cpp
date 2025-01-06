@@ -239,9 +239,9 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
                                                callback_function_name,
                                                extra_args.m_impl_up
                                                    ->GetObjectSP());
-      sb_error.SetError(error);
+    sb_error.SetError(std::move(error));
     } else
-      sb_error.SetErrorString("invalid breakpoint");
+      sb_error = Status::FromErrorString("invalid breakpoint");
 
     return sb_error;
 }
@@ -264,9 +264,9 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
             .GetScriptInterpreter()
             ->SetBreakpointCommandCallback(bp_options, callback_body_text,
                                            /*is_callback=*/false);
-    sb_error.SetError(error);
+    sb_error.SetError(std::move(error));
   } else
-    sb_error.SetErrorString("invalid breakpoint");
+    sb_error = Status::FromErrorString("invalid breakpoint");
 
   return sb_error;
 }
@@ -302,7 +302,7 @@ bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
   return has_commands;
 }
 
-void SBBreakpointLocation::SetThreadID(tid_t thread_id) {
+void SBBreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
   LLDB_INSTRUMENT_VA(this, thread_id);
 
   BreakpointLocationSP loc_sp = GetSP();
@@ -313,10 +313,10 @@ void SBBreakpointLocation::SetThreadID(tid_t thread_id) {
   }
 }
 
-tid_t SBBreakpointLocation::GetThreadID() {
+lldb::tid_t SBBreakpointLocation::GetThreadID() {
   LLDB_INSTRUMENT_VA(this);
 
-  tid_t tid = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(

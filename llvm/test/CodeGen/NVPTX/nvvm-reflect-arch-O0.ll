@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_52 -mattr=+ptx64 -O0 | FileCheck %s --check-prefix=SM_52
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx64 -O0 | FileCheck %s --check-prefix=SM_70
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx72 -O0 | FileCheck %s --check-prefix=SM_90
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_52 -mattr=+ptx64 -O0 | FileCheck %s --check-prefix=SM_52
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx64 -O0 | FileCheck %s --check-prefix=SM_70
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx72 -O0 | FileCheck %s --check-prefix=SM_90
 
 @.str = private unnamed_addr constant [12 x i8] c"__CUDA_ARCH\00"
 @.str1 = constant [11 x i8] c"__CUDA_FTZ\00"
@@ -9,17 +9,17 @@ declare i32 @__nvvm_reflect(ptr)
 
 ;      SM_52: .visible .func  (.param .b32 func_retval0) foo()
 ;      SM_52: mov.b32         %[[REG:.+]], 3;
-; SM_52-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_52-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_52-NEXT: ret;
 ;
 ;      SM_70: .visible .func  (.param .b32 func_retval0) foo()
 ;      SM_70: mov.b32         %[[REG:.+]], 2;
-; SM_70-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_70-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_70-NEXT: ret;
 ;
 ;      SM_90: .visible .func  (.param .b32 func_retval0) foo()
 ;      SM_90: mov.b32         %[[REG:.+]], 1;
-; SM_90-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_90-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_90-NEXT: ret;
 define i32 @foo() {
 entry:
@@ -56,17 +56,17 @@ return:
 
 ;      SM_52: .visible .func  (.param .b32 func_retval0) bar()
 ;      SM_52: mov.b32         %[[REG:.+]], 2;
-; SM_52-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_52-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_52-NEXT: ret;
 ;
 ;      SM_70: .visible .func  (.param .b32 func_retval0) bar()
 ;      SM_70: mov.b32         %[[REG:.+]], 1;
-; SM_70-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_70-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_70-NEXT: ret;
 ;
 ;      SM_90: .visible .func  (.param .b32 func_retval0) bar()
 ;      SM_90: mov.b32         %[[REG:.+]], 1;
-; SM_90-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_90-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_90-NEXT: ret;
 define i32 @bar() {
 entry:
@@ -104,17 +104,17 @@ if.end:
 
 ;      SM_52: .visible .func  (.param .b32 func_retval0) qux()
 ;      SM_52: mov.b32         %[[REG:.+]], 3;
-; SM_52-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_52-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_52-NEXT: ret;
 ;
 ;      SM_70: .visible .func  (.param .b32 func_retval0) qux()
 ;      SM_70: mov.b32         %[[REG:.+]], 2;
-; SM_70-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_70-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_70-NEXT: ret;
 ;
 ;      SM_90: .visible .func  (.param .b32 func_retval0) qux()
 ;      SM_90: mov.b32         %[[REG:.+]], 1;
-; SM_90-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_90-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_90-NEXT: ret;
 define i32 @qux() {
 entry:
@@ -144,15 +144,15 @@ return:
 
 ;      SM_52: .visible .func  (.param .b32 func_retval0) phi()
 ;      SM_52: mov.f32         %[[REG:.+]], 0f00000000;
-; SM_52-NEXT: st.param.f32    [func_retval0+0], %[[REG]];
+; SM_52-NEXT: st.param.f32    [func_retval0], %[[REG]];
 ; SM_52-NEXT: ret;
 ;      SM_70: .visible .func  (.param .b32 func_retval0) phi()
 ;      SM_70: mov.f32         %[[REG:.+]], 0f00000000;
-; SM_70-NEXT: st.param.f32    [func_retval0+0], %[[REG]];
+; SM_70-NEXT: st.param.f32    [func_retval0], %[[REG]];
 ; SM_70-NEXT: ret;
 ;      SM_90: .visible .func  (.param .b32 func_retval0) phi()
 ;      SM_90: mov.f32         %[[REG:.+]], 0f00000000;
-; SM_90-NEXT: st.param.f32    [func_retval0+0], %[[REG]];
+; SM_90-NEXT: st.param.f32    [func_retval0], %[[REG]];
 ; SM_90-NEXT: ret;
 define float @phi() {
 entry:
@@ -177,17 +177,17 @@ exit:
 
 ;      SM_52: .visible .func  (.param .b32 func_retval0) prop()
 ;      SM_52: mov.b32         %[[REG:.+]], 3;
-; SM_52-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_52-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_52-NEXT: ret;
 ;
 ;      SM_70: .visible .func  (.param .b32 func_retval0) prop()
 ;      SM_70: mov.b32         %[[REG:.+]], 2;
-; SM_70-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_70-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_70-NEXT: ret;
 ;
 ;      SM_90: .visible .func  (.param .b32 func_retval0) prop()
 ;      SM_90: mov.b32         %[[REG:.+]], 1;
-; SM_90-NEXT: st.param.b32    [func_retval0+0], %[[REG:.+]];
+; SM_90-NEXT: st.param.b32    [func_retval0], %[[REG:.+]];
 ; SM_90-NEXT: ret;
 define i32 @prop() {
 entry:

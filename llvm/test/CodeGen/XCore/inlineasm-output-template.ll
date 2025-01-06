@@ -1,4 +1,4 @@
-; RUN: llc -march=xcore < %s | FileCheck %s
+; RUN: llc -mtriple=xcore < %s | FileCheck %s
 
 ; Test that %c works with immediates
 ; CHECK-LABEL: test_inlineasm_c_output_template0

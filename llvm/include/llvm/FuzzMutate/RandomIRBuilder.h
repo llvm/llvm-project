@@ -43,7 +43,7 @@ struct RandomIRBuilder {
   uint64_t MinFunctionNum = 1;
 
   RandomIRBuilder(int Seed, ArrayRef<Type *> AllowedTypes)
-      : Rand(Seed), KnownTypes(AllowedTypes.begin(), AllowedTypes.end()) {}
+      : Rand(Seed), KnownTypes(AllowedTypes) {}
 
   // TODO: Try to make this a bit less of a random mishmash of functions.
 

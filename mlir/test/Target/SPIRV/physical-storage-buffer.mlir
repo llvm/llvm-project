@@ -26,17 +26,17 @@ spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.5,
     %idx1 = spirv.Constant 1 : i64
     %idx2 = spirv.Constant 2 : i64
     %set_0_addr = spirv.mlir.addressof @set_0 : !set_0_ptr
-    %s0_b2_ptr = spirv.AccessChain %set_0_addr[%idx2] : !set_0_ptr, i64
+    %s0_b2_ptr = spirv.AccessChain %set_0_addr[%idx2] : !set_0_ptr, i64 -> !spirv.ptr<!f32_binding_ptr, StorageBuffer>
     %b2_ptr = spirv.Load "StorageBuffer" %s0_b2_ptr : !f32_binding_ptr
-    %b2_data_ptr = spirv.AccessChain %b2_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64
+    %b2_data_ptr = spirv.AccessChain %b2_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64 -> !spirv.ptr<f32, PhysicalStorageBuffer>
 
     // CHECK: spirv.Load "PhysicalStorageBuffer"
     %b2_data = spirv.Load "PhysicalStorageBuffer" %b2_data_ptr ["Aligned", 4] : f32
 
     %set_1_addr = spirv.mlir.addressof @set_1 : !set_1_ptr
-    %s1_b1_ptr = spirv.AccessChain %set_1_addr[%idx1] : !set_1_ptr, i64
+    %s1_b1_ptr = spirv.AccessChain %set_1_addr[%idx1] : !set_1_ptr, i64 -> !spirv.ptr<!f32_binding_ptr, StorageBuffer>
     %b1_ptr = spirv.Load "StorageBuffer" %s1_b1_ptr : !f32_binding_ptr
-    %b1_data_ptr = spirv.AccessChain %b1_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64
+    %b1_data_ptr = spirv.AccessChain %b1_ptr[%idx0, %idx0] : !f32_binding_ptr, i64, i64 -> !spirv.ptr<f32, PhysicalStorageBuffer>
 
     // CHECK: spirv.Store "PhysicalStorageBuffer"
     spirv.Store "PhysicalStorageBuffer" %b1_data_ptr, %b2_data ["Aligned", 4] : f32

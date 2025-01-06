@@ -291,7 +291,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
       return false;
     }
 
-    const DataLayout &DL = Dest.getParent()->getDataLayout();
+    const DataLayout &DL = Dest.getDataLayout();
     uint64_t DestSize = DL.getTypeAllocSize(Dest.getValueType());
     uint64_t SrcSize = DL.getTypeAllocSize(Src.getValueType());
     LinkFromSrc = SrcSize > DestSize;

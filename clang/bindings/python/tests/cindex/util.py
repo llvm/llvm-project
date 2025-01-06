@@ -1,18 +1,6 @@
 # This file provides common utility functions for the test suite.
 
-import os
-
-HAS_FSPATH = hasattr(os, "fspath")
-
-if HAS_FSPATH:
-    from pathlib import Path as str_to_path
-else:
-    str_to_path = None
-
-import unittest
-
-from clang.cindex import Cursor
-from clang.cindex import TranslationUnit
+from clang.cindex import Cursor, TranslationUnit
 
 
 def get_tu(source, lang="c", all_warnings=False, flags=[]):
@@ -81,14 +69,8 @@ def get_cursors(source, spelling):
     return cursors
 
 
-skip_if_no_fspath = unittest.skipUnless(
-    HAS_FSPATH, "Requires file system path protocol / Python 3.6+"
-)
-
 __all__ = [
     "get_cursor",
     "get_cursors",
     "get_tu",
-    "skip_if_no_fspath",
-    "str_to_path",
 ]

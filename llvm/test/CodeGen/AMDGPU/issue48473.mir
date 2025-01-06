@@ -2,7 +2,7 @@
 # RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 # ERR: error: register allocation failed: maximum depth for recoloring reached. Use -fexhaustive-register-search to skip cutoffs
-# ERR-NEXT: error: ran out of registers during register allocation
+# ERR-NEXT: error: <unknown>:0:0: ran out of registers during register allocation
 
 # This testcase used to fail with an "overlapping insert" assertion
 # when trying to roll back an unsucessful recoloring of %25. One of

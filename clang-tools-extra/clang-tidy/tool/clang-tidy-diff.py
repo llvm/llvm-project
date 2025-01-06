@@ -229,6 +229,11 @@ def main():
         default=[],
         help="Load the specified plugin in clang-tidy.",
     )
+    parser.add_argument(
+        "-allow-no-checks",
+        action="store_true",
+        help="Allow empty enabled checks.",
+    )
 
     clang_tidy_args = []
     argv = sys.argv[1:]
@@ -327,6 +332,8 @@ def main():
         common_clang_tidy_args.append("-p=%s" % args.build_path)
     if args.use_color:
         common_clang_tidy_args.append("--use-color")
+    if args.allow_no_checks:
+        common_clang_tidy_args.append("--allow-no-checks")
     for arg in args.extra_arg:
         common_clang_tidy_args.append("-extra-arg=%s" % arg)
     for arg in args.extra_arg_before:

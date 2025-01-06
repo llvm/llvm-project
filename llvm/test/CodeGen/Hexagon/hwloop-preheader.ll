@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -hexagon-hwloop-preheader < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -hexagon-hwloop-preheader < %s
 ; REQUIRES: asserts
 
 ; Test that the preheader is added to the parent loop, otherwise

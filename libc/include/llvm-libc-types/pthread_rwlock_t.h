@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_PTHREAD_RWLOCK_T_H
 #define LLVM_LIBC_TYPES_PTHREAD_RWLOCK_T_H
 
-#include "llvm-libc-types/__futex_word.h"
-#include "llvm-libc-types/pid_t.h"
+#include "__futex_word.h"
+#include "pid_t.h"
 typedef struct {
   unsigned __is_pshared : 1;
   unsigned __preference : 1;

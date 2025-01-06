@@ -154,8 +154,8 @@ exit:
 }
 
 ; Check that we can eliminate several dead blocks.
-define i32 @dead_block_propogate_test_branch_loop(i32 %end) {
-; CHECK-LABEL: @dead_block_propogate_test_branch_loop(
+define i32 @dead_block_propagate_test_branch_loop(i32 %end) {
+; CHECK-LABEL: @dead_block_propagate_test_branch_loop(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -192,8 +192,8 @@ exit:
 }
 
 ; Check that we can eliminate several blocks while removing a switch.
-define i32 @dead_block_propogate_test_switch_loop(i32 %end) {
-; CHECK-LABEL: @dead_block_propogate_test_switch_loop(
+define i32 @dead_block_propagate_test_switch_loop(i32 %end) {
+; CHECK-LABEL: @dead_block_propagate_test_switch_loop(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -2580,12 +2580,12 @@ exit:
   ret i32 %result
 }
 
-define void @test_crash_01() {
+define void @test_crash_01(i1 %arg, i32 %arg2) {
 ; CHECK-LABEL: @test_crash_01(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br i1 undef, label [[BB17:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB17:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    switch i32 0, label [[BB2_SPLIT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[BB19:%.*]]
@@ -2593,7 +2593,7 @@ define void @test_crash_01() {
 ; CHECK:       bb2.split:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    switch i32 undef, label [[BB16:%.*]] [
+; CHECK-NEXT:    switch i32 %arg2, label [[BB16:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[BB15:%.*]]
 ; CHECK-NEXT:    i32 1, label [[BB14:%.*]]
 ; CHECK-NEXT:    i32 2, label [[BB13:%.*]]
@@ -2607,7 +2607,7 @@ define void @test_crash_01() {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb8:
-; CHECK-NEXT:    switch i32 undef, label [[BB28:%.*]] [
+; CHECK-NEXT:    switch i32 %arg2, label [[BB28:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[BB27:%.*]]
 ; CHECK-NEXT:    i32 1, label [[BB26:%.*]]
 ; CHECK-NEXT:    i32 2, label [[BB23:%.*]]
@@ -2663,7 +2663,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb
-  br i1 undef, label %bb17, label %bb2
+  br i1 %arg, label %bb17, label %bb2
 
 bb2:                                              ; preds = %bb1
   br label %bb3
@@ -2678,7 +2678,7 @@ bb4:                                              ; preds = %bb3
   ]
 
 bb5:                                              ; preds = %bb4
-  switch i32 undef, label %bb16 [
+  switch i32 %arg2, label %bb16 [
   i32 0, label %bb15
   i32 1, label %bb14
   i32 2, label %bb13
@@ -2697,7 +2697,7 @@ bb7:                                              ; preds = %bb5
   unreachable
 
 bb8:                                              ; preds = %bb11, %bb5
-  switch i32 undef, label %bb28 [
+  switch i32 %arg2, label %bb28 [
   i32 0, label %bb27
   i32 1, label %bb26
   i32 2, label %bb23

@@ -33,11 +33,12 @@ foo:
 
 
 # Tests PC relative relocation for negative offset from PC
-# jitlink-check: decode_operand(baz, 0) = fooz - next_pc(baz)
+# jitlink-check: decode_operand(baz, 0) = fooz - next_pc(baz) + 1
         .globl  fooz
         .p2align        4
         .type   fooz,@function
 fooz:
+    nop
     retl
         .size   fooz, .-fooz
 
@@ -45,5 +46,5 @@ fooz:
         .p2align        4
         .type   baz,@function
 baz:
-    calll fooz
+    calll fooz+1
         .size       baz, .-baz
