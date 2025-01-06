@@ -1698,8 +1698,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   // We are going to permute multiple sources and the result will be in multiple
   // destinations. Providing an accurate cost only for splits where the element
   // type remains the same.
-  if ((Kind == TTI::SK_PermuteSingleSrc || Kind == TTI::SK_PermuteTwoSrc) &&
-      LT.first != 1) {
+  if (LT.first != 1) {
     MVT LegalVT = LT.second;
     if (LegalVT.isVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
