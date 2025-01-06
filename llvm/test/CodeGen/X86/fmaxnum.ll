@@ -24,14 +24,12 @@ declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
 define float @test_fmaxf(float %x, float %y) {
 ; SSE-LABEL: test_fmaxf:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    maxss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm2
-; SSE-NEXT:    orps %xmm3, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    maxss %xmm0, %xmm2
+; SSE-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm1
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaxf:
@@ -113,14 +111,12 @@ define x86_fp80 @test_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 define float @test_intrinsic_fmaxf(float %x, float %y) {
 ; SSE-LABEL: test_intrinsic_fmaxf:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    maxss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm2
-; SSE-NEXT:    orps %xmm3, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    maxss %xmm0, %xmm2
+; SSE-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm1
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_intrinsic_fmaxf:
