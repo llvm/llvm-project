@@ -113,10 +113,10 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
-  static void Profile(llvm::FoldingSetNodeID& profile, const Stmt *S,
-                      QualType T, unsigned Count, const LocationContext *LCtx,
+  static void Profile(llvm::FoldingSetNodeID &profile, const Stmt *S,
+                      const LocationContext *LCtx, QualType T, unsigned Count,
                       const void *SymbolTag) {
-    profile.AddInteger((unsigned) SymbolConjuredKind);
+    profile.AddInteger((unsigned)SymbolConjuredKind);
     profile.AddPointer(S);
     profile.AddPointer(LCtx);
     profile.Add(T);
@@ -125,7 +125,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, S, T, Count, LCtx, SymbolTag);
+    Profile(profile, S, LCtx, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
@@ -532,7 +532,9 @@ public:
                                       const LocationContext *LCtx,
                                       QualType T,
                                       unsigned VisitCount,
-                                      const void *SymbolTag = nullptr);
+                                      const void *SymbolTag = nullptr) {
+    return get<SymbolConjured>(E, LCtx, T, VisitCount, SymbolTag);
+  }
 
   const SymbolConjured* conjureSymbol(const Expr *E,
                                       const LocationContext *LCtx,

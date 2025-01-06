@@ -163,23 +163,6 @@ void SymExpr::symbol_iterator::expand() {
   llvm_unreachable("unhandled expansion case");
 }
 
-const SymbolConjured* SymbolManager::conjureSymbol(const Stmt *E,
-                                                   const LocationContext *LCtx,
-                                                   QualType T,
-                                                   unsigned Count,
-                                                   const void *SymbolTag) {
-  llvm::FoldingSetNodeID profile;
-  SymbolConjured::Profile(profile, E, T, Count, LCtx, SymbolTag);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = Alloc.make<SymbolConjured>(E, LCtx, T, Count, SymbolTag);
-    DataSet.InsertNode(SD, InsertPos);
-  }
-
-  return cast<SymbolConjured>(SD);
-}
-
 const SymbolDerived*
 SymbolManager::getDerivedSymbol(SymbolRef parentSymbol,
                                 const TypedValueRegion *R) {
