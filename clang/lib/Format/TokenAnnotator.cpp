@@ -2027,9 +2027,10 @@ public:
       if (!consumeToken())
         return LT_Invalid;
     }
-    if (Line.Type == LT_AccessModifier || Line.Type == LT_RequiresExpression ||
-        Line.Type == LT_SimpleRequirement) {
-      return Line.Type;
+    if (const auto Type = Line.Type; Type == LT_AccessModifier ||
+                                     Type == LT_RequiresExpression ||
+                                     Type == LT_SimpleRequirement) {
+      return Type;
     }
     if (KeywordVirtualFound)
       return LT_VirtualFunctionDecl;
