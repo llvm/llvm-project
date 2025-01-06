@@ -39,7 +39,7 @@ int * __counted_by(len) baz(int len);
 // CHECK:       [[FLEX_BASE_NONNULL]]:
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[CALL1]], i64 16
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[CALL1]], [[TMP1]], !annotation [[META7:![0-9]+]]
-// CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ugt ptr [[CALL1]], [[TMP0]], !annotation [[META8:![0-9]+]]
+// CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ugt ptr [[TMP1]], [[ADD_PTR3]], !annotation [[META8:![0-9]+]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[DOTNOT106]], !annotation [[META8]]
 // CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP]], label %[[CONT60:.*]], !annotation [[META7]]
 // CHECK:       [[CONT60]]:
@@ -88,7 +88,7 @@ struct Outer *foo(int len) {
 // CHECK:       [[FLEX_BASE_NONNULL]]:
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[CALL1]], i64 16
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[CALL1]], [[TMP1]], !annotation [[META7]]
-// CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ugt ptr [[CALL1]], [[TMP0]], !annotation [[META8]]
+// CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ugt ptr [[TMP1]], [[ADD_PTR3]], !annotation [[META8]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[DOTNOT106]], !annotation [[META8]]
 // CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP]], label %[[CONT60:.*]], !annotation [[META7]]
 // CHECK:       [[CONT60]]:
