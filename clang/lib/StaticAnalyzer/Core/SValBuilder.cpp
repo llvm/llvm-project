@@ -87,7 +87,7 @@ nonloc::SymbolVal SValBuilder::makeNonLoc(APSIntPtr lhs,
                                           const SymExpr *rhs, QualType type) {
   assert(rhs);
   assert(!Loc::isLocType(type));
-  return nonloc::SymbolVal(SymMgr.getIntSymExpr(lhs, op, rhs, type));
+  return nonloc::SymbolVal(SymMgr.get<IntSymExpr>(lhs, op, rhs, type));
 }
 
 nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
