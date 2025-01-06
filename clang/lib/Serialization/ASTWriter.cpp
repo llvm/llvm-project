@@ -6092,14 +6092,12 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
 
       // An updated body is emitted last, so that the reader doesn't need
       // to skip over the lazy body to reach statements for other records.
-      if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION) {
-        assert(isa<FunctionDecl>(D) && "expected FunctionDecl");
-        HasUpdatedBody = cast<FunctionDecl>(D)->hasBody();
-      } else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION) {
+      if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION)
+        HasUpdatedBody = true;
+      else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION)
         HasAddedVarDefinition = true;
-      } else {
+      else
         Record.push_back(Kind);
-      }
 
       switch (Kind) {
       case UPD_CXX_ADDED_IMPLICIT_MEMBER:
@@ -7232,6 +7230,9 @@ void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
   if (!D->isFromASTFile())
     return; // Declaration not imported from PCH.
 
+  if (!D->doesThisDeclarationHaveABody())
+    return; // The function definition may not have a body due to parsing errors.
+
   // Implicit function decl from a PCH was defined.
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
 }
@@ -7250,6 +7251,8 @@ void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
   assert(!WritingAST && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
+  if (!D->doesThisDeclarationHaveABody())
+    return; // The function definition may not have a body due to parsing errors.
 
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
 }
