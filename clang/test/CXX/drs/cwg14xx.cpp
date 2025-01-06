@@ -40,7 +40,7 @@ namespace cwg1413 { // cwg1413: 12
       //   expected-note@#cwg1413-var2 {{'var2' declared here}}
     }
   };
-}
+} // namespace cwg1413
 
 namespace cwg1423 { // cwg1423: 11
 #if __cplusplus >= 201103L
@@ -53,7 +53,7 @@ namespace cwg1423 { // cwg1423: 11
   bool b4{nullptr};
   // since-cxx11-warning@-1 {{implicit conversion of nullptr constant to 'bool'}}
 #endif
-}
+} // namespace 1423
 
 // cwg1425: na abi
 
@@ -76,7 +76,7 @@ namespace cwg1432 { // cwg1432: 16
 
   template struct common_type<int, double>;
 #endif
-}
+} // namespace cwg1432
 
 namespace cwg1443 { // cwg1443: yes
 struct A {
@@ -84,7 +84,7 @@ struct A {
   A() { void foo(int=i); }
   // expected-error@-1 {{default argument references 'this'}}
 };
-}
+} // namespace cwg1443
 
 namespace cwg1458 { // cwg1458: 3.1
 #if __cplusplus >= 201103L
@@ -357,7 +357,7 @@ namespace cwg1460 { // cwg1460: 3.5
     static_assert(d.a == 0, "");
   }
 #endif
-}
+} // namespace cwg1460
 
 #if __cplusplus >= 201103L
 namespace std {
@@ -388,7 +388,7 @@ namespace std {
     const _E* begin() const {return __begin_;}
     const _E* end()   const {return __begin_ + __size_;}
   };
-} // std
+} // namespace std
 #endif
 
 namespace cwg1467 {  // cwg1467: 3.7 c++11
@@ -601,7 +601,7 @@ namespace cwg1467 {  // cwg1467: 3.7 c++11
   }
   } // namespace StringLiterals
 #endif
-} // cwg1467
+} // namespace cwg1467
 
 namespace cwg1477 { // cwg1477: 2.7
 namespace N {
@@ -630,7 +630,7 @@ namespace cwg1479 { // cwg1479: 3.1
   int operator""_a(const char*, std::size_t = 0);
   // since-cxx11-error@-1 {{literal operator cannot have a default argument}}
 #endif
-}
+} // namespace cwg1479
 
 namespace cwg1482 { // cwg1482: 3.0
                    // NB: sup 2516, test reused there
@@ -675,7 +675,7 @@ namespace cwg1490 {  // cwg1490: 3.7 c++11
   std::initializer_list<char>{"abc"};
   // since-cxx11-error@-1 {{expected unqualified-id}}}
 #endif
-} // cwg1490
+} // namespace cwg1490
 
 namespace cwg1495 { // cwg1495: 4
 #if __cplusplus >= 201103L
@@ -717,7 +717,7 @@ namespace cwg1495 { // cwg1495: 4
   //   since-cxx14-note@#cwg1495-c {{template is declared here}}
 #endif
 #endif
-}
+} // namespace cwg1495
 
 namespace cwg1496 { // cwg1496: no
 #if __cplusplus >= 201103L
@@ -728,4 +728,4 @@ struct A {
 // default constructor which is not deleted.
 static_assert(__is_trivial(A), "");
 #endif
-}
+} // namespace cwg1496
