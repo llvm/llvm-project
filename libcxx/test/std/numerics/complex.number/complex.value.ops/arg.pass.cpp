@@ -26,45 +26,47 @@ test()
     assert(arg(z) == 0);
 }
 
+template<class T>
 void test_edges()
 {
-    const double pi = std::atan2(+0., -0.);
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
+    const T pi = std::atan2(T(+0.), T(-0.));
+    const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        double r = arg(testcases[i]);
-        if (std::isnan(testcases[i].real()) || std::isnan(testcases[i].imag()))
+        T r = arg(testcases<T>[i]);
+        if (std::isnan(testcases<T>[i].real()) || std::isnan(testcases<T>[i].imag()))
             assert(std::isnan(r));
         else
         {
-            switch (classify(testcases[i]))
+            switch (classify(testcases<T>[i]))
             {
             case zero:
-                if (std::signbit(testcases[i].real()))
+                if (std::signbit(testcases<T>[i].real()))
                 {
-                    if (std::signbit(testcases[i].imag()))
+                    if (std::signbit(testcases<T>[i].imag()))
                         is_about(r, -pi);
                     else
                         is_about(r, pi);
                 }
                 else
                 {
-                    assert(std::signbit(testcases[i].imag()) == std::signbit(r));
+                    assert(std::signbit(testcases<T>[i].imag()) == std::signbit(r));
                 }
                 break;
+            case maximum_value:
             case non_zero:
-                if (testcases[i].real() == 0)
+                if (testcases<T>[i].real() == 0)
                 {
-                    if (testcases[i].imag() < 0)
+                    if (testcases<T>[i].imag() < 0)
                         is_about(r, -pi/2);
                     else
                         is_about(r, pi/2);
                 }
-                else if (testcases[i].imag() == 0)
+                else if (testcases<T>[i].imag() == 0)
                 {
-                    if (testcases[i].real() < 0)
+                    if (testcases<T>[i].real() < 0)
                     {
-                        if (std::signbit(testcases[i].imag()))
+                        if (std::signbit(testcases<T>[i].imag()))
                             is_about(r, -pi);
                         else
                             is_about(r, pi);
@@ -72,37 +74,37 @@ void test_edges()
                     else
                     {
                         assert(r == 0);
-                        assert(std::signbit(testcases[i].imag()) == std::signbit(r));
+                        assert(std::signbit(testcases<T>[i].imag()) == std::signbit(r));
                     }
                 }
-                else if (testcases[i].imag() > 0)
+                else if (testcases<T>[i].imag() > 0)
                     assert(r > 0);
                 else
                     assert(r < 0);
                 break;
             case inf:
-                if (std::isinf(testcases[i].real()) && std::isinf(testcases[i].imag()))
+                if (std::isinf(testcases<T>[i].real()) && std::isinf(testcases<T>[i].imag()))
                 {
-                    if (testcases[i].real() < 0)
+                    if (testcases<T>[i].real() < 0)
                     {
-                        if (testcases[i].imag() > 0)
-                            is_about(r, 0.75 * pi);
+                        if (testcases<T>[i].imag() > 0)
+                            is_about(r, T( 0.75) * pi);
                         else
-                            is_about(r, -0.75 * pi);
+                            is_about(r, T(-0.75) * pi);
                     }
                     else
                     {
-                        if (testcases[i].imag() > 0)
-                            is_about(r, 0.25 * pi);
+                        if (testcases<T>[i].imag() > 0)
+                            is_about(r, T( 0.25) * pi);
                         else
-                            is_about(r, -0.25 * pi);
+                            is_about(r, T(-0.25) * pi);
                     }
                 }
-                else if (std::isinf(testcases[i].real()))
+                else if (std::isinf(testcases<T>[i].real()))
                 {
-                    if (testcases[i].real() < 0)
+                    if (testcases<T>[i].real() < 0)
                     {
-                        if (std::signbit(testcases[i].imag()))
+                        if (std::signbit(testcases<T>[i].imag()))
                             is_about(r, -pi);
                         else
                             is_about(r, pi);
@@ -110,12 +112,12 @@ void test_edges()
                     else
                     {
                         assert(r == 0);
-                        assert(std::signbit(r) == std::signbit(testcases[i].imag()));
+                        assert(std::signbit(r) == std::signbit(testcases<T>[i].imag()));
                     }
                 }
                 else
                 {
-                    if (testcases[i].imag() < 0)
+                    if (testcases<T>[i].imag() < 0)
                         is_about(r, -pi/2);
                     else
                         is_about(r, pi/2);
@@ -131,7 +133,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
   return 0;
 }

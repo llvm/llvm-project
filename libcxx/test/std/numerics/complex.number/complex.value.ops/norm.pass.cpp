@@ -26,13 +26,14 @@ test()
     assert(norm(z) == 25);
 }
 
+template<class T>
 void test_edges()
 {
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
+    const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        double r = norm(testcases[i]);
-        switch (classify(testcases[i]))
+        T r = norm(testcases<T>[i]);
+        switch (classify(testcases<T>[i]))
         {
         case zero:
             assert(r == 0);
@@ -41,6 +42,7 @@ void test_edges()
         case non_zero:
             assert(std::isfinite(r) && r > 0);
             break;
+        case maximum_value:
         case inf:
             assert(std::isinf(r) && r > 0);
             break;
@@ -59,7 +61,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
   return 0;
 }

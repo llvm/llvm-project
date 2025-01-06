@@ -34,15 +34,16 @@ test()
     test(T(2), std::complex<T>(2), std::complex<T>(4));
 }
 
+template<class T>
 void test_edges()
 {
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
+    const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
     for (unsigned i = 0; i < N; ++i)
     {
         for (unsigned j = 0; j < N; ++j)
         {
-            std::complex<double> r = pow(real(testcases[i]), testcases[j]);
-            std::complex<double> z = exp(testcases[j] * log(std::complex<double>(real(testcases[i]))));
+            std::complex<T> r = pow(real(testcases<T>[i]), testcases<T>[j]);
+            std::complex<T> z = exp(testcases<T>[j] * log(std::complex<T>(real(testcases<T>[i]))));
             if (std::isnan(real(r)))
                 assert(std::isnan(real(z)));
             else
@@ -64,7 +65,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
   return 0;
 }

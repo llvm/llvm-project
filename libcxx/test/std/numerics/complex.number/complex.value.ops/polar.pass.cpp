@@ -44,14 +44,15 @@ test()
     test(T(100), T(0), std::complex<T>(100, 0));
 }
 
+template<class T>
 void test_edges()
 {
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
+    const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        double r = real(testcases[i]);
-        double theta = imag(testcases[i]);
-        std::complex<double> z = std::polar(r, theta);
+        T r = real(testcases<T>[i]);
+        T theta = imag(testcases<T>[i]);
+        std::complex<T> z = std::polar(r, theta);
         switch (classify(r))
         {
         case zero:
@@ -62,9 +63,10 @@ void test_edges()
             }
             else
             {
-                assert(z == std::complex<double>());
+                assert(z == std::complex<T>());
             }
             break;
+        case maximum_value:
         case non_zero:
             if (std::signbit(r) || classify(theta) == inf || classify(theta) == NaN)
             {
@@ -108,7 +110,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
   return 0;
 }
