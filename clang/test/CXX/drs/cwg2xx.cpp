@@ -42,7 +42,7 @@ namespace cwg202 { // cwg202: 3.1
   template struct X<f>;
 }
 
-namespace cwg203 { // cwg203: 2.8
+namespace cwg203 { // cwg203: 3.0
 namespace ex1 {
 struct B {
   int i;
