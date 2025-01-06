@@ -11292,8 +11292,7 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
     if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
       unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
       if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
-        bool IsStreaming =
-            SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
+        bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
         return ConstantInt::getBool(Builder.getContext(), IsStreaming);
       }
     }
