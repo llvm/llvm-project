@@ -1,15 +1,11 @@
-//===-HoistVectorTransfers.cpp -----------------------------------------*-
-// C++-*-===//
+//===- HoistVectorTransfers.cpp ---------------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements tile configuration hoisting on parallel loops.
-//
-//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -25,6 +21,7 @@
 
 using namespace mlir;
 
+// Function to retrives vector transfer read operations (Acc, Lhs, and Rhs) from contraction operation. 
 static FailureOr<SmallVector<vector::TransferReadOp>>
 getContractOperands(vector::ContractionOp contractOp) {
   SmallVector<vector::TransferReadOp> list;
@@ -38,6 +35,7 @@ getContractOperands(vector::ContractionOp contractOp) {
   return list;
 }
 
+// Function to retrive subview from vector transfer read operation.
 static FailureOr<SmallVector<memref::SubViewOp>>
 getReadOperands(SmallVector<vector::TransferReadOp> readOps) {
   SmallVector<memref::SubViewOp> list;
@@ -50,6 +48,7 @@ getReadOperands(SmallVector<vector::TransferReadOp> readOps) {
   return list;
 }
 
+// Function to retrive the tiled nested loop structure (m->n->reduction->k) for the contract operation
 static FailureOr<SmallVector<scf::ForOp>>
 getNestedLoop(vector::ContractionOp contractOp) {
   SmallVector<scf::ForOp> list;
@@ -64,6 +63,7 @@ getNestedLoop(vector::ContractionOp contractOp) {
   return list;
 }
 
+// Function to check iv of nested loops matches with the subview
 static LogicalResult checkNestedLoop(SmallVector<scf::ForOp> loops,
                                      SmallVector<memref::SubViewOp> subviews) {
   auto subviewOpLhsOffsets = subviews[0].getOffsets();
@@ -90,6 +90,40 @@ static LogicalResult checkNestedLoop(SmallVector<scf::ForOp> loops,
   return success();
 }
 
+/// Hoist vector transfer read and write operations for the tiled batch reduce matmul operation
+/// outside the reduction and k-loop.
+///
+/// As an example, the following pseudo-code will be rewritten
+/// scf.for %arg3 = %c0 to %c32 step %c4  // m-loop
+///  scf.for %arg4 = %c0 to %c64 step %c64   // n-loop
+///   %subview_2 = memref.subview %subview[%arg3, %arg4] [4, 64] [1, 1] 
+///    scf.for %arg5 = %c0 to %c24 step %c1   // reduction-loop
+///     scf.for %arg6 = %c0 to %c64 step %c1   // k-loop
+///      %subview_3 = memref.subview %subview_1[%arg5, %arg3, %arg6] [1, 4, 1] [1, 1, 1] 
+///      %subview_4 = memref.subview %0[%arg5, %arg6, %arg4] [1, 1, 64] [1, 1, 1] 
+///      %1 = vector.transfer_read %subview_3[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} 
+///      %2 = vector.transfer_read %subview_4[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} 
+///      %3 = vector.transfer_read %subview_2[%c0, %c0], %cst {in_bounds = [true, true]} 
+///      %4 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %1, %2, %3 
+///      vector.transfer_write %4, %subview_2[%c0, %c0] {in_bounds = [true, true]}
+/// to:
+/// scf.for %arg3 = %c0 to %c32 step %c4 
+///  scf.for %arg4 = %c0 to %c64 step %c64 
+///   %subview_2 = memref.subview %subview[%arg3, %arg4] [4, 64] [1, 1] 
+///   %1 = vector.transfer_read %subview_2[%c0, %c0], %cst {in_bounds = [true, true]} 
+///   %2 = scf.for %arg5 = %c0 to %c24 step %c1 iter_args(%arg6 = %1) -> (!type) {
+///    %3 = scf.for %arg7 = %c0 to %c64 step %c1 iter_args(%arg8 = %arg6) -> (!type) {
+///     %subview_3 = memref.subview %subview_1[%arg5, %arg3, %arg7] [1, 4, 1] [1, 1, 1] 
+///     %subview_4 = memref.subview %0[%arg5, %arg7, %arg4] [1, 1, 64] [1, 1, 1] 
+///     %4 = vector.transfer_read %subview_3[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} 
+///     %5 = vector.transfer_read %subview_4[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} 
+///     %6 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %4, %5, %arg8 
+///     scf.yield %6 : !type
+///    }
+///    scf.yield %3 : !type
+///   }
+///   vector.transfer_write %2, %subview_2[%c0, %c0] {in_bounds = [true, true]} 
+///
 struct HoistVectorTransferOp : OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
 
@@ -98,7 +132,6 @@ struct HoistVectorTransferOp : OpRewritePattern<vector::ContractionOp> {
 
     // Check the vector contract operation satisfies the required pattern.
     // Check the Acc, Lhs, and Rhs of contract operation
-
     auto operands = getContractOperands(contractOp);
     if (failed(operands))
       return rewriter.notifyMatchFailure(contractOp,
@@ -145,7 +178,7 @@ struct HoistVectorTransferOp : OpRewritePattern<vector::ContractionOp> {
     if (K != 1)
       return rewriter.notifyMatchFailure(contractOp, "K dim is not 1");
 
-    // Check whether the linalg tiling + vector contract pattern matches for the
+    // Check whether the BR-matmul tiling + vector contract pattern matches for the
     // 4-nested loop structure
     auto loops = getNestedLoop(contractOp);
     if (failed(loops))

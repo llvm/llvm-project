@@ -1,4 +1,3 @@
-
 //===--------------- VectorContractToFMA.cpp ------------*- C++-*-===//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,6 +66,61 @@ struct TransformationContext {
 
 enum class MatMulType { Standard, Batch, BatchReduce };
 
+
+/// Pattern to lower vector contraction operation (batch reduce matmul) for GEMM of size MxN to
+/// sequence of vector FMAs.
+///
+/// As an example, the following pseudo-code will be rewritten
+/// %subview_1 = memref.subview %subview[%arg3, %arg4] [4, 64] [1, 1] 
+/// %1 = vector.transfer_read %subview_1[%c0, %c0], %cst {in_bounds = [true, true]} 
+/// %2 = scf.for %arg5 = %c0 to %c24 step %c1 iter_args(%arg6 = %1) -> (!type) {
+///  %3 = scf.for %arg7 = %c0 to %c64 step %c1 iter_args(%arg8 = %arg6) -> (!type) {
+///   %subview_3 = memref.subview %subview_0[%arg5, %arg3, %arg7] [1, 4, 1] [1, 1, 1]
+///   %subview_4 = memref.subview %0[%arg5, %arg7, %arg4] [1, 1, 64] [1, 1, 1] 
+///   %4 = vector.transfer_read %subview_3[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} 
+///   %5 = vector.transfer_read %subview_4[%c0, %c0, %c0], %cst {in_bounds = [true, true, true]} 
+///   %6 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %4, %5, %arg8
+///   scf.yield %6 : !type
+///  }
+///  scf.yield %3 : !type
+/// }
+/// vector.transfer_write %2, %subview_1[%c0, %c0] {in_bounds = [true, true]}
+/// to:
+/// %subview_1 = memref.subview %subview[%arg3, %arg4] [4, 64] [1, 1] 
+/// %subview_2 = memref.subview %subview_1[0, 0] [1, 64] [1, 1] 
+/// %subview_3 = memref.subview %subview_1[1, 0] [1, 64] [1, 1] 
+/// %subview_4 = memref.subview %subview_1[2, 0] [1, 64] [1, 1] 
+/// %subview_5 = memref.subview %subview_1[3, 0] [1, 64] [1, 1] 
+/// %1 = vector.load %subview_2[%c0, %c0] 
+/// %2 = vector.load %subview_3[%c0, %c0] 
+/// %3 = vector.load %subview_4[%c0, %c0] 
+/// %4 = vector.load %subview_5[%c0, %c0] 
+/// %5:4 = scf.for %arg5 = %c0 to %c24 step %c1 iter_args(%arg6 = %1, %arg7 = %2, %arg8 = %3, %arg9 = %4) -> (!type, !type, !type, !type) {
+///   %6:4 = scf.for %arg10 = %c0 to %c64 step %c1 iter_args(%arg11 = %arg6, %arg12 = %arg7, %arg13 = %arg8, %arg14 = %arg9) -> (!type, !type, !type, !type) {
+///     %subview_6 = memref.subview %subview_0[%arg5, %arg3, %arg10] [1, 4, 1] [1, 1, 1] 
+///     %7 = memref.load %subview_6[%c0, %c0, %c0] 
+///     %8 = vector.broadcast %7 : f32 to !type
+///     %9 = memref.load %subview_6[%c0, %c1, %c0] 
+///     %10 = vector.broadcast %9 : f32 to !type
+///     %11 = memref.load %subview_6[%c0, %c2, %c0] 
+///     %12 = vector.broadcast %11 : f32 to !type
+///     %13 = memref.load %subview_6[%c0, %c3, %c0] 
+///     %14 = vector.broadcast %13 : f32 to !type
+///     %subview_7 = memref.subview %0[%arg5, %arg10, %arg4] [1, 1, 64] [1, 1, 1] 
+///     %15 = vector.load %subview_7[%c0, %c0, %c0] 
+///     %16 = vector.fma %8, %15, %arg11 : !type
+///     %17 = vector.fma %10, %15, %arg12 : !type
+///     %18 = vector.fma %12, %15, %arg13 : !type
+///     %19 = vector.fma %14, %15, %arg14 : !type
+///     scf.yield %16, %17, %18, %19 : !type, !type, !type, !type
+///   }
+///   scf.yield %6#0, %6#1, %6#2, %6#3 : !type, !type, !type, !type
+/// }
+/// vector.store %5#0, %subview_2[%c0, %c0] 
+/// vector.store %5#1, %subview_3[%c0, %c0] 
+/// vector.store %5#2, %subview_4[%c0, %c0] 
+/// vector.store %5#3, %subview_5[%c0, %c0])
+///
 struct VectorContractToFMA
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;

@@ -1825,13 +1825,12 @@ void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
 void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 
 
-/// Pattern to hoists the vector transfer reads/writes outside the reduction and 
-/// k-loop.
+/// Pattern to hoists the vector transfer reads/writes outside the reduction and
+/// k-loop for batch reduce matmul operation if licm fails.
 void populateHoistVectorTransferPatterns(RewritePatternSet &patterns);
 
-
-/// Pattern to lower vector contraction op for GEMM of size MxN to
-/// sequence of vector FMAs
+/// Pattern to lower vector contraction operation (batch reduce matmul) for GEMM of size MxN to
+/// sequence of vector FMAs.
 void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
 
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
