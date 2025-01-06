@@ -632,6 +632,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FMAXNUM, VT, Action);
     setOperationAction(ISD::FMINIMUM, VT, Action);
     setOperationAction(ISD::FMAXIMUM, VT, Action);
+    setOperationAction(ISD::FMINIMUMNUM, VT, Action);
+    setOperationAction(ISD::FMAXIMUMNUM, VT, Action);
     setOperationAction(ISD::FSIN, VT, Action);
     setOperationAction(ISD::FCOS, VT, Action);
     setOperationAction(ISD::FSINCOS, VT, Action);
@@ -1075,6 +1077,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FMAXIMUM,           MVT::f32, Custom);
     setOperationAction(ISD::FMINIMUM,           MVT::f32, Custom);
+    setOperationAction(ISD::FMAXIMUMNUM,        MVT::f32, Custom);
+    setOperationAction(ISD::FMINIMUMNUM,        MVT::f32, Custom);
 
     setOperationAction(ISD::FNEG,               MVT::v4f32, Custom);
     setOperationAction(ISD::FABS,               MVT::v4f32, Custom);
@@ -1117,6 +1121,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::f64, MVT::v4f32, MVT::v2f64 }) {
       setOperationAction(ISD::FMAXIMUM, VT, Custom);
       setOperationAction(ISD::FMINIMUM, VT, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
     }
 
     for (auto VT : { MVT::v2i8, MVT::v4i8, MVT::v8i8,
@@ -1482,6 +1488,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setOperationAction(ISD::FMAXIMUM,          VT, Custom);
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM,       VT, Custom);
+      setOperationAction(ISD::FMINIMUMNUM,       VT, Custom);
       setOperationAction(ISD::FCANONICALIZE, VT, Custom);
     }
 
@@ -1827,6 +1835,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (MVT VT : { MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::FMAXIMUM, VT, Custom);
       setOperationAction(ISD::FMINIMUM, VT, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
       setOperationAction(ISD::FNEG,  VT, Custom);
       setOperationAction(ISD::FABS,  VT, Custom);
       setOperationAction(ISD::FMA,   VT, Legal);
@@ -2298,6 +2308,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND,      MVT::f16, Custom);
     setOperationAction(ISD::FMAXIMUM,             MVT::f16, Custom);
     setOperationAction(ISD::FMINIMUM,             MVT::f16, Custom);
+    setOperationAction(ISD::FMAXIMUMNUM,          MVT::f16, Custom);
+    setOperationAction(ISD::FMINIMUMNUM,          MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
 
@@ -2345,6 +2357,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setOperationAction(ISD::FMINIMUM, MVT::v32f16, Custom);
       setOperationAction(ISD::FMAXIMUM, MVT::v32f16, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, MVT::v32f16, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, MVT::v32f16, Custom);
     }
 
     if (Subtarget.hasVLX()) {
@@ -2392,9 +2406,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Custom);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, MVT::v8f16, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, MVT::v8f16, Custom);
 
       setOperationAction(ISD::FMINIMUM, MVT::v16f16, Custom);
       setOperationAction(ISD::FMAXIMUM, MVT::v16f16, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, MVT::v16f16, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, MVT::v16f16, Custom);
     }
   }
 
@@ -2453,6 +2471,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::FMINIMUM, VT, Custom);
       setOperationAction(ISD::FMAXIMUM, VT, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
     }
     if (Subtarget.hasAVX10_2_512()) {
       setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
@@ -2464,6 +2484,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
       setOperationAction(ISD::FMINIMUM, MVT::v32bf16, Custom);
       setOperationAction(ISD::FMAXIMUM, MVT::v32bf16, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, MVT::v32bf16, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, MVT::v32bf16, Custom);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
       setCondCodeAction(ISD::SETOEQ, VT, Custom);
@@ -28850,13 +28872,15 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
-  assert((Op.getOpcode() == ISD::FMAXIMUM || Op.getOpcode() == ISD::FMINIMUM) &&
-         "Expected FMAXIMUM or FMINIMUM opcode");
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = Op.getValueType();
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
   SDLoc DL(Op);
+  bool IsMaxOp =
+      Op.getOpcode() == ISD::FMAXIMUM || Op.getOpcode() == ISD::FMAXIMUMNUM;
+  bool IsNum =
+      Op.getOpcode() == ISD::FMINIMUMNUM || Op.getOpcode() == ISD::FMAXIMUMNUM;
   if (Subtarget.hasAVX10_2() && TLI.isTypeLegal(VT)) {
     unsigned Opc = 0;
     if (VT.isVector())
@@ -28866,7 +28890,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
 
     if (Opc) {
       SDValue Imm =
-          DAG.getTargetConstant(Op.getOpcode() == ISD::FMAXIMUM, DL, MVT::i32);
+          DAG.getTargetConstant(IsMaxOp + (IsNum ? 16 : 0), DL, MVT::i32);
       return DAG.getNode(Opc, DL, VT, X, Y, Imm, Op->getFlags());
     }
   }
@@ -28876,7 +28900,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   APInt OppositeZero = PreferredZero;
   EVT IVT = VT.changeTypeToInteger();
   X86ISD::NodeType MinMaxOp;
-  if (Op.getOpcode() == ISD::FMAXIMUM) {
+  if (IsMaxOp) {
     MinMaxOp = X86ISD::FMAX;
     OppositeZero.setSignBit();
   } else {
@@ -29006,7 +29030,9 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   if (IgnoreNaN || DAG.isKnownNeverNaN(NewX))
     return MinMax;
 
-  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, NewX, NewX, ISD::SETUO);
+  SDValue IsNaN =
+      DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
+
   return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
 }
 
@@ -33264,6 +33290,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UMIN:               return LowerMINMAX(Op, Subtarget, DAG);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
     return LowerFMINIMUM_FMAXIMUM(Op, Subtarget, DAG);
   case ISD::ABS:                return LowerABS(Op, Subtarget, DAG);
   case ISD::ABDS:
@@ -46027,6 +46055,8 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case X86ISD::FMAX:
   case X86ISD::FMIN:
   case ISD::FABS: // Begin 1 operand

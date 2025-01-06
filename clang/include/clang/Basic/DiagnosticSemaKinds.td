@@ -9361,7 +9361,7 @@ def note_inequality_comparison_to_or_assign : Note<
   "use '|=' to turn this inequality comparison into an or-assignment">;
 
 def err_incomplete_type_used_in_type_trait_expr : Error<
-  "incomplete type %0 used in type trait expression">;
+  "incomplete type %0 used in type trait expression">, NoSFINAE;
 
 // C++20 constinit and require_constant_initialization attribute
 def warn_cxx20_compat_constinit : Warning<
