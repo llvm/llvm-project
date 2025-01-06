@@ -71,7 +71,7 @@ int test_specialization() {
 }
 #endif
 
-}
+} // namespace cwg2518
 
 namespace cwg2521 { // cwg2521: 17
 #if __cplusplus >= 201103L
@@ -120,8 +120,8 @@ struct S2 {
 #endif
 } // namespace cwg2547
 
-#if __cplusplus >= 202302L
 namespace cwg2553 { // cwg2553: 18 review 2023-07-14
+#if __cplusplus >= 202302L
 struct B {
   virtual void f(this B&); 
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
@@ -134,12 +134,11 @@ struct D : B {
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   //   since-cxx23-note@#cwg2553-g {{overridden virtual function is here}}
 };
-
-}
 #endif
+} // namespace cwg2553
 
-#if __cplusplus >= 202302L
 namespace cwg2554 { // cwg2554: 18 review 2021-12-10
+#if __cplusplus >= 202302L
 struct B {
   virtual void f(); // #cwg2554-g
 };
@@ -161,12 +160,11 @@ struct D3 : B {
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   //   since-cxx23-note@#cwg2554-g {{overridden virtual function is here}}
 };
-
-}
 #endif
+} // namespace cwg2554
 
-#if __cplusplus >= 202302L
 namespace cwg2561 { // cwg2561: no
+#if __cplusplus >= 202302L
 struct C {
     constexpr C(auto) { }
 };
@@ -178,10 +176,8 @@ void foo() {
     static_assert(fp(1) == 1);
     static_assert((&decltype(b)::operator())(1) == 1);
 }
-
-}
 #endif
-
+} // namespace cwg2561
 
 namespace cwg2565 { // cwg2565: 16 open 2023-06-07
 #if __cplusplus >= 202002L
@@ -251,7 +247,7 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   //   expected-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
 #endif
-}
+} // namespace cwg2565
 
 namespace cwg2583 { // cwg2583: 19
 #if __cplusplus >= 201103L
@@ -372,8 +368,5 @@ union U {
 };
 static_assert(!__is_literal(U), "");
 #endif
-
-
-
 #endif
-}
+} // namespace cwg2598

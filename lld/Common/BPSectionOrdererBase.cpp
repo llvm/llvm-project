@@ -109,9 +109,6 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
 
   // Process input sections
   for (const auto &isec : inputSections) {
-    if (!isec->hasValidData())
-      continue;
-
     unsigned sectionIdx = sections.size();
     sectionToIdx.try_emplace(isec->getSection(), sectionIdx);
     sections.emplace_back(isec.get());

@@ -6,31 +6,9 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from header import HeaderFile
 
-class GpuHeaderFile:
-    def __init__(self, name):
-        self.name = name
-        self.macros = []
-        self.types = []
-        self.enumerations = []
-        self.objects = []
-        self.functions = []
-
-    def add_macro(self, macro):
-        self.macros.append(macro)
-
-    def add_type(self, type_):
-        self.types.append(type_)
-
-    def add_enumeration(self, enumeration):
-        self.enumerations.append(enumeration)
-
-    def add_object(self, object):
-        self.objects.append(object)
-
-    def add_function(self, function):
-        self.functions.append(function)
-
+class GpuHeaderFile(HeaderFile):
     def __str__(self):
         content = []
 

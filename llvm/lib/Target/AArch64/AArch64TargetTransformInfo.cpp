@@ -35,6 +35,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
+static cl::opt<bool> SVEPreferFixedOverScalableIfEqualCost(
+    "sve-prefer-fixed-over-scalable-if-equal", cl::Hidden);
+
 static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
                                            cl::Hidden);
 
@@ -4917,6 +4920,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
     }
   }
   return false;
+}
+
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+  if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
+    return SVEPreferFixedOverScalableIfEqualCost;
+  return ST->useFixedOverScalableIfEqualCost();
 }
 
 unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
