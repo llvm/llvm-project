@@ -668,6 +668,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   SDValue ADD23 = DAG->getNode(ISD::ADD, DL, Int32VT, Op2, Op3);
   SDValue ADD = DAG->getNode(ISD::ADD, DL, Int32VT, ADD01, ADD23);
 
+  EXPECT_FALSE(sd_match(ADD01, m_ReassociatableAdd(m_Value())));
   EXPECT_TRUE(sd_match(ADD01, m_ReassociatableAdd(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(ADD23, m_ReassociatableAdd(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(
@@ -680,6 +681,22 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
       sd_match(ADD123, m_ReassociatableAdd(m_Value(), m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(ADD0123, m_ReassociatableAdd(m_Value(), m_Value(),
                                                     m_Value(), m_Value())));
+
+  // (Op0 - Op1) + (Op2 - Op3)
+  SDValue SUB01 = DAG->getNode(ISD::SUB, DL, Int32VT, Op0, Op1);
+  SDValue SUB23 = DAG->getNode(ISD::SUB, DL, Int32VT, Op2, Op3);
+  SDValue ADDS0123 = DAG->getNode(ISD::ADD, DL, Int32VT, SUB01, SUB23);
+
+  EXPECT_FALSE(sd_match(SUB01, m_ReassociatableAdd(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(ADDS0123, m_ReassociatableAdd(m_Value(), m_Value(),
+                                                      m_Value(), m_Value())));
+
+  // SUB + SUB matches (Op0 - Op1) + (Op2 - Op3)
+  EXPECT_TRUE(
+      sd_match(ADDS0123, m_ReassociatableAdd(m_Sub(m_Value(), m_Value()),
+                                             m_Sub(m_Value(), m_Value()))));
+  EXPECT_FALSE(sd_match(ADDS0123, m_ReassociatableAdd(m_Value(), m_Value(),
+                                                      m_Value(), m_Value())));
 
   // (Op0 * Op1) * (Op2 * Op3)
   SDValue MUL01 = DAG->getNode(ISD::MUL, DL, Int32VT, Op0, Op1);
@@ -699,6 +716,14 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   EXPECT_TRUE(sd_match(MUL0123, m_ReassociatableMul(m_Value(), m_Value(),
                                                     m_Value(), m_Value())));
 
+  // (Op0 - Op1) * (Op2 - Op3)
+  SDValue MULS0123 = DAG->getNode(ISD::MUL, DL, Int32VT, SUB01, SUB23);
+  EXPECT_TRUE(
+      sd_match(MULS0123, m_ReassociatableMul(m_Sub(m_Value(), m_Value()),
+                                             m_Sub(m_Value(), m_Value()))));
+  EXPECT_FALSE(sd_match(MULS0123, m_ReassociatableMul(m_Value(), m_Value(),
+                                                      m_Value(), m_Value())));
+
   // (Op0 && Op1) && (Op2 && Op3)
   SDValue AND01 = DAG->getNode(ISD::AND, DL, Int32VT, Op0, Op1);
   SDValue AND23 = DAG->getNode(ISD::AND, DL, Int32VT, Op2, Op3);
@@ -717,6 +742,14 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   EXPECT_TRUE(sd_match(AND0123, m_ReassociatableAnd(m_Value(), m_Value(),
                                                     m_Value(), m_Value())));
 
+  // (Op0 - Op1) && (Op2 - Op3)
+  SDValue ANDS0123 = DAG->getNode(ISD::AND, DL, Int32VT, SUB01, SUB23);
+  EXPECT_TRUE(
+      sd_match(ANDS0123, m_ReassociatableAnd(m_Sub(m_Value(), m_Value()),
+                                             m_Sub(m_Value(), m_Value()))));
+  EXPECT_FALSE(sd_match(ANDS0123, m_ReassociatableAnd(m_Value(), m_Value(),
+                                                      m_Value(), m_Value())));
+
   // (Op0 || Op1) || (Op2 || Op3)
   SDValue OR01 = DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op1);
   SDValue OR23 = DAG->getNode(ISD::OR, DL, Int32VT, Op2, Op3);
@@ -734,4 +767,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
       sd_match(OR123, m_ReassociatableOr(m_Value(), m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(
       OR0123, m_ReassociatableOr(m_Value(), m_Value(), m_Value(), m_Value())));
+
+  // (Op0 - Op1) || (Op2 - Op3)
+  SDValue ORS0123 = DAG->getNode(ISD::OR, DL, Int32VT, SUB01, SUB23);
+  EXPECT_TRUE(
+      sd_match(ORS0123, m_ReassociatableOr(m_Sub(m_Value(), m_Value()),
+                                           m_Sub(m_Value(), m_Value()))));
+  EXPECT_FALSE(sd_match(
+      ORS0123, m_ReassociatableOr(m_Value(), m_Value(), m_Value(), m_Value())));
 }
