@@ -467,7 +467,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, p0, 2)
       .lowerIfMemSizeNotPow2()
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
-      .bitcastIf(typeInSet(0, {v4s8}),
+      .bitcastIf(all(typeInSet(0, {v4s8}),
+                     LegalityPredicate([=](const LegalityQuery &Query) {
+                       return Query.Types[0].getSizeInBits() ==
+                              Query.MMODescrs[0].MemoryTy.getSizeInBits();
+                     })),
                  [=](const LegalityQuery &Query) {
                    const LLT VecTy = Query.Types[0];
                    return std::pair(0, LLT::scalar(VecTy.getSizeInBits()));
