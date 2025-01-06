@@ -961,7 +961,7 @@ struct CounterCoverageMappingBuilder
 
     // Replace an expression (ParentCnt - ExecCnt) with SkipCnt.
     Counter SkipCnt = Counter::getCounter(TheMap.Skipped);
-    MapToExpand[SkipCnt] = Counters.Skipped;
+    MapToExpand[SkipCnt] = Builder.subst(Counters.Skipped, MapToExpand);
     Counters.Skipped = SkipCnt;
     return Counters;
   }
