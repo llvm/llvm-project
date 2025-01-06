@@ -2038,7 +2038,7 @@ void VPlanTransforms::createInterleaveGroups(
 ///
 ///  <x1> vector loop: {
 ///    vector.body:
-///      ir<%i> = WIDEN-INDUCTION-PHI vp<%induction>, vp<%vec.ind.next>
+///      ir<%i> = WIDEN-PHI vp<%induction>, vp<%vec.ind.next>
 ///      ...
 ///      vp<%vec.ind.next> = add ir<%i>, vp<%inc>
 ///      EMIT branch-on-count ...
