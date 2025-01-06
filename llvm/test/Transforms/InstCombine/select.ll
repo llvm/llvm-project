@@ -3787,12 +3787,8 @@ entry:
 define i32 @src_and_eq_0_xor_or(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_and_eq_0_xor_or(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[XOR]], i32 [[OR]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
 ;
 entry:
   %and = and i32 %y, %x
@@ -4428,7 +4424,7 @@ define i32 @src_no_trans_select_and_eq0_xor_and(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_no_trans_select_and_eq0_xor_and(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND0:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[AND0]], i32 [[XOR]], i32 [[AND]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -4461,7 +4457,7 @@ define i32 @src_no_trans_select_and_eq0_add(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND0:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND0]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[AND0]], i32 [[Z:%.*]], i32 [[ADD]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;

@@ -4395,5 +4395,31 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
   }
 
+  {
+    // (select (icmp eq (and X, Y), 0), (add/xor X, Y), F)
+    //	-> (select (icmp eq (and X, Y), 0), (or X, Y), F)
+    // And vice versa for `ne` pred.
+    CmpPredicate Pred;
+    Value *X, *Y;
+    if (match(CondVal, m_ICmp(Pred, m_And(m_Value(X), m_Value(Y)), m_Zero())) &&
+        ICmpInst::isEquality(Pred)) {
+      unsigned RepIdx;
+      Value *RepArm;
+      if (Pred == CmpInst::ICMP_EQ) {
+        RepIdx = 1;
+        RepArm = TrueVal;
+      } else {
+        RepIdx = 2;
+        RepArm = FalseVal;
+      }
+      auto ReduceToOrNoCommonBits =
+          m_CombineOr(m_c_Xor(m_Specific(X), m_Specific(Y)),
+                      m_c_Add(m_Specific(X), m_Specific(Y)));
+
+      if (RepArm->hasOneUse() && match(RepArm, ReduceToOrNoCommonBits))
+        return replaceOperand(SI, RepIdx, Builder.CreateOr(X, Y));
+    }
+  }
+
   return nullptr;
 }
