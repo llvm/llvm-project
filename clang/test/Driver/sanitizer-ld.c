@@ -332,8 +332,8 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-ANDROID-SHARED-LIBASAN
 //
 // CHECK-ASAN-ANDROID-SHARED-LIBASAN-NOT: argument unused during compilation: '-shared-libsan'
-// CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.asan.so"
-// CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.asan_static.a"
+// CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.asan{{.*}}.so"
+// CHECK-ASAN-ANDROID-SHARED-LIBASAN: libclang_rt.asan_static{{.*}}.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \

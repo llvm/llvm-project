@@ -39,7 +39,7 @@ void fallthrough(int n) {
   }
 }
 #endif
-}
+} // namespace cwg2406
 
 namespace cwg2428 { // cwg2428: 19
 #if __cplusplus >= 202002L
@@ -110,7 +110,7 @@ f<{.a= 0}>();
 }
 
 #endif
-}
+} // namespace cwg2450
 
 namespace cwg2459 { // cwg2459: 18
 #if __cplusplus >= 202302L
@@ -120,7 +120,7 @@ struct A {
 template<A> struct X {};
 X<1> x;
 #endif
-}
+} // namespace cwg2459
 
 namespace cwg2445 { // cwg2445: 19
 #if __cplusplus >= 202002L
@@ -181,7 +181,7 @@ namespace cwg2445 { // cwg2445: 19
     return d + 1;
   }
 #endif
-}
+} // namespace cwg2445
 
 namespace cwg2486 { // cwg2486: 4 c++17
 struct C {
