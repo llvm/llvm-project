@@ -837,12 +837,8 @@ void IntExprParsing() {
   // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async(5, 4)
 
-  // expected-error@+2{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
 #pragma acc set default_async(5)
 
-  // expected-error@+2{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
 #pragma acc set default_async(returns_int())
 
 
