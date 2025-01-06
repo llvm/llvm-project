@@ -3076,7 +3076,7 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
 
   unsigned NumDstElts = DstVecTy->getNumElements();
   unsigned NumSrcElts = SrcVecTy->getNumElements();
-  if (InsIdx >= NumDstElts || NumDstElts == 1)
+  if (InsIdx >= NumDstElts || ExtIdx >= NumSrcElts || NumDstElts == 1)
     return false;
 
   // Insertion into poison is a cheaper single operand shuffle.
