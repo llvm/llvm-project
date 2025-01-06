@@ -198,7 +198,7 @@ namespace cwg1813 { // cwg1813: 7
   static_assert(!__is_standard_layout(U), "");
 }
 
-namespace cwg1814 { // cwg1814: yes
+namespace cwg1814 { // cwg1814: 3.1
 #if __cplusplus >= 201103L
   void test() {
     auto lam = [](int x = 42) { return x; };
@@ -296,7 +296,7 @@ struct A {
 };
 } // namespace cwg1821
 
-namespace cwg1822 { // cwg1822: yes
+namespace cwg1822 { // cwg1822: 3.1
 #if __cplusplus >= 201103L
   double a;
   auto x = [] (int a) {
