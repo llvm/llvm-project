@@ -1779,18 +1779,17 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
 
   // If STRICT_/FMUL is not supported by the target (in case of f16) replace the
   // UINT_TO_FP with a larger float and round to the smaller type
-  if ((!IsStrict && TLI.getOperationAction(ISD::FMUL, Node->getValueType(0)) ==
-                        TargetLowering::Expand) ||
-      (IsStrict &&
-       TLI.getOperationAction(ISD::STRICT_FMUL, Node->getValueType(0)) ==
-           TargetLowering::Expand)) {
+  if ((!IsStrict &&
+       TLI.getOperationAction(ISD::FMUL, DstVT) == TargetLowering::Expand) ||
+      (IsStrict && TLI.getOperationAction(ISD::STRICT_FMUL, DstVT) ==
+                       TargetLowering::Expand)) {
     EVT FPVT = BW == 32 ? MVT::f32 : MVT::f64;
     SDLoc DL(Node);
     unsigned Round = IsStrict ? ISD::STRICT_FP_ROUND : ISD::FP_ROUND;
     unsigned UIToFP = IsStrict ? ISD::STRICT_UINT_TO_FP : ISD::UINT_TO_FP;
     SDValue Result = DAG.getNode(
-        Round, DL, Node->getValueType(0),
-        DAG.getNode(UIToFP, DL, VT.changeVectorElementType(FPVT), Src),
+        Round, DL, DstVT,
+        DAG.getNode(UIToFP, DL, SrcVT.changeVectorElementType(FPVT), Src),
         DAG.getTargetConstant(
             0, DL,
             DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout())));
