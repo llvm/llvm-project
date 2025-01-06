@@ -744,7 +744,8 @@ public:
 
   /// Add a DIE to the set of types that we're going to pull into
   /// type units.
-  void addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
+  /// Returns true if TU creation fails, and type was emitted in the CU.
+  bool addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
                             DIE &Die, const DICompositeType *CTy);
 
   /// Add a label so that arange data can be generated for it.
