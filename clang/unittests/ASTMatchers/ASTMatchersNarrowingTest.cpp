@@ -2249,7 +2249,7 @@ TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
                       dependentScopeDeclRefExpr(hasDependentName("Foo"))));
 
   EXPECT_TRUE(matches("template <typename T> struct S { static T foo(); };"
-                      "template <typename T> void x() { S<T>::foo; }",
+                      "template <typename T> void x() { S<T>::foo(); }",
                       dependentScopeDeclRefExpr(hasDependentName("foo"))));
 }
 
