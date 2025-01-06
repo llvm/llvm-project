@@ -460,8 +460,8 @@ private:
       return;
 
     StrTab.resize(Strings.size());
-    for (auto &KV : Strings)
-      StrTab[KV.second] = {KV.first, 0};
+    for (auto &[Str, Idx] : Strings)
+      StrTab[Idx] = {Str, 0};
     size_t Offset = 0;
     for (auto &Elem : StrTab) {
       Elem.Offset = Offset;
