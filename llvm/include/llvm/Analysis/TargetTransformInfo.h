@@ -211,12 +211,6 @@ typedef TargetTransformInfo TTI;
 /// for IR-level transformations.
 class TargetTransformInfo {
 public:
-  enum PartialReductionExtendKind { PR_None, PR_SignExtend, PR_ZeroExtend };
-
-  /// Get the kind of extension that an instruction represents.
-  static PartialReductionExtendKind
-  getPartialReductionExtendKind(Instruction *I);
-
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
   ///
@@ -1286,18 +1280,6 @@ public:
   /// \return if target want to issue a prefetch in address space \p AS.
   bool shouldPrefetchAddressSpace(unsigned AS) const;
 
-  /// \return The cost of a partial reduction, which is a reduction from a
-  /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
-  /// takes an accumulator and a binary operation operand that itself is fed by
-  /// two extends. An example of an operation that uses a partial reduction is a
-  /// dot product, which reduces a vector to another of 4 times fewer elements.
-  InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF, PartialReductionExtendKind OpAExtend,
-                          PartialReductionExtendKind OpBExtend,
-                          std::optional<unsigned> BinOp = std::nullopt) const;
-
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
   /// and the number of execution units in the CPU.
@@ -1611,8 +1593,9 @@ public:
   /// split during legalization. Zero is returned when the answer is unknown.
   unsigned getNumberOfParts(Type *Tp) const;
 
-  /// \return true if \p Tp represent a type, fully occupying whole register,
-  /// false otherwise.
+  /// \return true if \p Tp represents a type, fully occupying whole register,
+  /// false otherwise. If \p Tp represents <n x i1>, it returns true if it fits
+  /// fully into largest integer.
   bool isFullSingleRegisterType(Type *Tp) const;
 
   /// \returns The cost of the address computation. For most targets this can be
@@ -2128,18 +2111,6 @@ public:
 
   /// \return if target want to issue a prefetch in address space \p AS.
   virtual bool shouldPrefetchAddressSpace(unsigned AS) const = 0;
-
-  /// \return The cost of a partial reduction, which is a reduction from a
-  /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
-  /// takes an accumulator and a binary operation operand that itself is fed by
-  /// two extends. An example of an operation that uses a partial reduction is a
-  /// dot product, which reduces a vector to another of 4 times fewer elements.
-  virtual InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF, PartialReductionExtendKind OpAExtend,
-                          PartialReductionExtendKind OpBExtend,
-                          std::optional<unsigned> BinOp) const = 0;
 
   virtual unsigned getMaxInterleaveFactor(ElementCount VF) = 0;
   virtual InstructionCost getArithmeticInstrCost(
@@ -2819,15 +2790,6 @@ public:
   /// \return if target want to issue a prefetch in address space \p AS.
   bool shouldPrefetchAddressSpace(unsigned AS) const override {
     return Impl.shouldPrefetchAddressSpace(AS);
-  }
-
-  InstructionCost getPartialReductionCost(
-      unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
-      PartialReductionExtendKind OpAExtend,
-      PartialReductionExtendKind OpBExtend,
-      std::optional<unsigned> BinOp = std::nullopt) const override {
-    return Impl.getPartialReductionCost(Opcode, InputType, AccumType, VF,
-                                        OpAExtend, OpBExtend, BinOp);
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF) override {
