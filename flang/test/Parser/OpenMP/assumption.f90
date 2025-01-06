@@ -32,20 +32,20 @@ end subroutine sub1
 subroutine sub2
   integer :: r
   integer :: v
-!CHECK !$OMP ASSUMES NO_OPENMP
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumesConstruct
-!PARSE-TREE: OmpAssumesDirective
+!CHECK !$OMP ASSUME NO_OPENMP
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
+!PARSE-TREE: OmpAssumeDirective
 !PARSE-TREE: Verbatim
 !PARSE-TREE: OmpClauseList -> OmpClause -> NoOpenmp
-!PARSE-TREE: OmpAssumesPartConstruct -> Block
+!PARSE-TREE: Block
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 !PARSE-TREE: Expr -> Add
-  !PARSE-TREE: OmpEndAssumesDirective
+!PARSE-TREE: OmpEndAssumeDirective
   v = 87
-  !$omp assumes no_openmp
+  !$omp assume no_openmp
   r = r + 1
-!CHECK !$OMP END ASSUMES
-  !$omp end assumes
+!CHECK !$OMP END ASSUME
+  !$omp end assume
 end subroutine sub2
   
 program p

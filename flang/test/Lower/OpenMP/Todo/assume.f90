@@ -2,5 +2,9 @@
 
 ! CHECK: not yet implemented: OpenMP ASSUME construct
 program p
-  !$omp assume no_openmp
+  integer r
+  r = 1
+!$omp assume no_parallelism
+  print *,r
+!$omp end assume
 end program p

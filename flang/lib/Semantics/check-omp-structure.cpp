@@ -1252,8 +1252,7 @@ void OmpStructureChecker::CheckMasterNesting(
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAssumeConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_assume);
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assume);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPAssumeConstruct &) {
@@ -1265,14 +1264,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAssumes &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
-  dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(const parser::OpenMPAssumesConstruct &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
-}
-
-void OmpStructureChecker::Leave(const parser::OpenMPAssumesConstruct &) {
   dirContext_.pop_back();
 }
 

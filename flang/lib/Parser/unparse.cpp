@@ -2641,23 +2641,16 @@ public:
       Walk(*end);
     }
   }
-  void Unparse(const OpenMPAssumeConstruct &x) {
+  void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();
     Word("!$OMP ASSUME");
     Walk(std::get<OmpClauseList>(x.t), ", ");
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpAssumesDirective &x) {
+  void Unparse(const OmpEndAssumeDirective &x) {
     BeginOpenMP();
-    Word("!$OMP ASSUMES");
-    Walk(std::get<OmpClauseList>(x.t), ", ");
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpEndAssumesDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP END ASSUMES\n");
+    Word("!$OMP END ASSUME\n");
     EndOpenMP();
   }
   void Unparse(const OmpCriticalDirective &x) {
