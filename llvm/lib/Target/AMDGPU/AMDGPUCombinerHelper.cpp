@@ -455,7 +455,7 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
 
 bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     MachineInstr &MI, MachineInstr &Sel,
-    std::function<void(MachineIRBuilder &)> &MatchInfo) {
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
   assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
   assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
