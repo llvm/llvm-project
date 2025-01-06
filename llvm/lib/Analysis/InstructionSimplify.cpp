@@ -4599,13 +4599,21 @@ static Value *simplifySelectWithEquivalence(Value *CmpLHS, Value *CmpRHS,
                                             Value *TrueVal, Value *FalseVal,
                                             const SimplifyQuery &Q,
                                             unsigned MaxRecurse) {
-  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
+  Value *SimplifiedFalseVal =
+      simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
                              /* AllowRefinement */ false,
-                             /* DropFlags */ nullptr, MaxRecurse) == TrueVal)
-    return FalseVal;
-  if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+                             /* DropFlags */ nullptr, MaxRecurse);
+  if (!SimplifiedFalseVal)
+    SimplifiedFalseVal = FalseVal;
+
+  Value *SimplifiedTrueVal =
+      simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ true,
-                             /* DropFlags */ nullptr, MaxRecurse) == FalseVal)
+                             /* DropFlags */ nullptr, MaxRecurse);
+  if (!SimplifiedTrueVal)
+    SimplifiedTrueVal = TrueVal;
+
+  if (SimplifiedFalseVal == SimplifiedTrueVal)
     return FalseVal;
 
   return nullptr;
@@ -7144,7 +7152,6 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                             NewOps[1], I->getFastMathFlags(), Q, MaxRecurse);
   case Instruction::Select:
     return simplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse);
-    break;
   case Instruction::GetElementPtr: {
     auto *GEPI = cast<GetElementPtrInst>(I);
     return simplifyGEPInst(GEPI->getSourceElementType(), NewOps[0],

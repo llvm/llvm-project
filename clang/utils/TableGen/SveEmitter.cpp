@@ -779,6 +779,10 @@ void SVEType::applyModifier(char Mod) {
     Kind = UInt;
     ElementBitwidth = 64;
     break;
+  case '#':
+    Kind = SInt;
+    ElementBitwidth = 64;
+    break;
   case '[':
     Kind = UInt;
     ElementBitwidth = 8;

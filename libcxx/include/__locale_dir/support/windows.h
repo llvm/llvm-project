@@ -149,10 +149,6 @@ private:
   __lconv_storage* __lc_ = nullptr;
 };
 
-// __uselocale can't be implemented on Windows because Windows allows partial modification
-// of thread-local locale and so _get_current_locale() returns a copy while __uselocale does
-// not create any copies. We can still implement RAII even without __uselocale though.
-__locale_t __uselocale(__locale_t) = delete;
 _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::_free_locale(__loc); }
 _LIBCPP_EXPORTED_FROM_ABI lconv* __localeconv(__locale_t& __loc);
@@ -287,6 +283,44 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __s
 }
 _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
+
+struct __locale_guard {
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(__locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+    // Setting the locale can be expensive even when the locale given is
+    // already the current locale, so do an explicit check to see if the
+    // current locale is already the one we want.
+    const char* __lc = __setlocale(nullptr);
+    // If every category is the same, the locale string will simply be the
+    // locale name, otherwise it will be a semicolon-separated string listing
+    // each category.  In the second case, we know at least one category won't
+    // be what we want, so we only have to check the first case.
+    if (std::strcmp(__l.__get_locale(), __lc) != 0) {
+      __locale_all = _strdup(__lc);
+      if (__locale_all == nullptr)
+        __throw_bad_alloc();
+      __setlocale(__l.__get_locale());
+    }
+  }
+  _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
+    // The CRT documentation doesn't explicitly say, but setlocale() does the
+    // right thing when given a semicolon-separated list of locale settings
+    // for the different categories in the same format as returned by
+    // setlocale(LC_ALL, nullptr).
+    if (__locale_all != nullptr) {
+      __setlocale(__locale_all);
+      free(__locale_all);
+    }
+    _configthreadlocale(__status);
+  }
+  _LIBCPP_HIDE_FROM_ABI static const char* __setlocale(const char* __locale) {
+    const char* __new_locale = setlocale(LC_ALL, __locale);
+    if (__new_locale == nullptr)
+      __throw_bad_alloc();
+    return __new_locale;
+  }
+  int __status;
+  char* __locale_all = nullptr;
+};
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD

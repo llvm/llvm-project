@@ -176,10 +176,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case ISD::ADDRSPACECAST:
     SelectAddrSpaceCast(N);
     return;
-  case ISD::ConstantFP:
-    if (tryConstantFP(N))
-      return;
-    break;
   case ISD::CopyToReg: {
     if (N->getOperand(1).getValueType() == MVT::i128) {
       SelectV2I64toI128(N);
@@ -210,21 +206,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_ldu_global_p:
     return tryLDGLDU(N);
   }
-}
-
-// There's no way to specify FP16 and BF16 immediates in .(b)f16 ops, so we
-// have to load them into an .(b)f16 register first.
-bool NVPTXDAGToDAGISel::tryConstantFP(SDNode *N) {
-  if (N->getValueType(0) != MVT::f16 && N->getValueType(0) != MVT::bf16)
-    return false;
-  SDValue Val = CurDAG->getTargetConstantFP(
-      cast<ConstantFPSDNode>(N)->getValueAPF(), SDLoc(N), N->getValueType(0));
-  SDNode *LoadConstF16 = CurDAG->getMachineNode(
-      (N->getValueType(0) == MVT::f16 ? NVPTX::LOAD_CONST_F16
-                                      : NVPTX::LOAD_CONST_BF16),
-      SDLoc(N), N->getValueType(0), Val);
-  ReplaceNode(N, LoadConstF16);
-  return true;
 }
 
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
@@ -318,7 +299,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
-  for (auto *U : Vector.getNode()->uses()) {
+  for (auto *U : Vector.getNode()->users()) {
     if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       continue;
     if (U->getOperand(0) != Vector)

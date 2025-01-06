@@ -1454,12 +1454,13 @@ class VOP3Features<bit Clamp, bit OpSel, bit Packed, bit MAI> {
   bit IsMAI = MAI;
 }
 
-def VOP3_REGULAR : VOP3Features<0, 0, 0, 0>;
-def VOP3_CLAMP   : VOP3Features<1, 0, 0, 0>;
-def VOP3_OPSEL   : VOP3Features<1, 1, 0, 0>;
-def VOP3_PACKED  : VOP3Features<1, 1, 1, 0>;
-def VOP3_MAI     : VOP3Features<0, 0, 0, 1>;
-def VOP3_OPSEL_ONLY : VOP3Features<0, 1, 0, 0>;
+def VOP3_REGULAR         : VOP3Features<0, 0, 0, 0>;
+def VOP3_CLAMP           : VOP3Features<1, 0, 0, 0>;
+def VOP3_OPSEL           : VOP3Features<1, 1, 0, 0>;
+def VOP3_PACKED          : VOP3Features<1, 1, 1, 0>;
+def VOP3_PACKED_NO_OPSEL : VOP3Features<1, 0, 1, 0>;
+def VOP3_MAI             : VOP3Features<0, 0, 0, 1>;
+def VOP3_OPSEL_ONLY      : VOP3Features<0, 1, 0, 0>;
 
 // Packed is misleading, but it enables the appropriate op_sel
 // modifiers.

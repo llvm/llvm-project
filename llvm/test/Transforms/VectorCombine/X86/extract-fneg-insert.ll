@@ -48,7 +48,7 @@ define <4 x float> @ext2_v4f32(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @ext2_v2f32v4f32(<2 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @ext2_v2f32v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
@@ -81,7 +81,7 @@ define <4 x double> @ext1_v2f64v4f64(<2 x double> %x, <4 x double> %y) {
 ;
 ; AVX-LABEL: @ext1_v2f64v4f64(
 ; AVX-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x double> [[X:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[X]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
 ; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x double> [[Y:%.*]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; AVX-NEXT:    ret <4 x double> [[R]]
 ;
@@ -91,20 +91,11 @@ define <4 x double> @ext1_v2f64v4f64(<2 x double> %x, <4 x double> %y) {
   ret <4 x double> %r
 }
 
-; The vector fneg would cost twice as much as the scalar op with SSE,
-; so we don't transform there (the shuffle would also be more expensive).
-
 define <8 x float> @ext7_v8f32(<8 x float> %x, <8 x float> %y) {
-; SSE-LABEL: @ext7_v8f32(
-; SSE-NEXT:    [[E:%.*]] = extractelement <8 x float> [[X:%.*]], i32 7
-; SSE-NEXT:    [[N:%.*]] = fneg float [[E]]
-; SSE-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 7
-; SSE-NEXT:    ret <8 x float> [[R]]
-;
-; AVX-LABEL: @ext7_v8f32(
-; AVX-NEXT:    [[TMP1:%.*]] = fneg <8 x float> [[X:%.*]]
-; AVX-NEXT:    [[R:%.*]] = shufflevector <8 x float> [[Y:%.*]], <8 x float> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
-; AVX-NEXT:    ret <8 x float> [[R]]
+; CHECK-LABEL: @ext7_v8f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <8 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x float> [[Y:%.*]], <8 x float> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %e = extractelement <8 x float> %x, i32 7
   %n = fneg float %e
@@ -326,7 +317,7 @@ define <2 x float> @ext1_v2f32_fsub_fmf(<2 x float> %x, <2 x float> %y) {
 define <4 x float> @ext1_v2f32v4f32_fsub_fmf(<2 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @ext1_v2f32v4f32_fsub_fmf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan nsz <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;

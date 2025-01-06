@@ -2782,6 +2782,7 @@ static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
   // loop iteration).
   if (Op1 == &GEP)
     return nullptr;
+  GEPNoWrapFlags NW = Op1->getNoWrapFlags();
 
   int DI = -1;
 
@@ -2838,6 +2839,8 @@ static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
         }
       }
     }
+
+    NW &= Op2->getNoWrapFlags();
   }
 
   // If not all GEPs are identical we'll have to create a new PHI node.
@@ -2847,6 +2850,8 @@ static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
     return nullptr;
 
   auto *NewGEP = cast<GetElementPtrInst>(Op1->clone());
+  NewGEP->setNoWrapFlags(NW);
+
   if (DI == -1) {
     // All the GEPs feeding the PHI are identical. Clone one down into our
     // BB so that it can be merged with the current GEP.
@@ -3129,26 +3134,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         }
       }
     }
-  }
-
-  // The single (non-zero) index of an inbounds GEP of a base object cannot
-  // be negative.
-  auto HasOneNonZeroIndex = [&]() {
-    bool FoundNonZero = false;
-    for (Value *Idx : GEP.indices()) {
-      auto *C = dyn_cast<Constant>(Idx);
-      if (C && C->isNullValue())
-        continue;
-      if (FoundNonZero)
-        return false;
-      FoundNonZero = true;
-    }
-    return true;
-  };
-  if (GEP.isInBounds() && !GEP.hasNoUnsignedWrap() && isBaseOfObject(PtrOp) &&
-      HasOneNonZeroIndex()) {
-    GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
-    return &GEP;
   }
 
   // nusw + nneg -> nuw

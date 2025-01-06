@@ -39,11 +39,12 @@ static Value *getNewICmpValue(unsigned Code, bool Sign, Value *LHS, Value *RHS,
 /// This is the complement of getFCmpCode, which turns an opcode and two
 /// operands into either a FCmp instruction, or a true/false constant.
 static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
-                           InstCombiner::BuilderTy &Builder) {
+                           InstCombiner::BuilderTy &Builder,
+                           FastMathFlags FMF) {
   FCmpInst::Predicate NewPred;
   if (Constant *TorF = getPredForFCmpCode(Code, LHS->getType(), NewPred))
     return TorF;
-  return Builder.CreateFCmp(NewPred, LHS, RHS);
+  return Builder.CreateFCmpFMF(NewPred, LHS, RHS, FMF);
 }
 
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
@@ -455,14 +456,20 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // RHS. For example,
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
-  if (IsSuperSetOrEqual(BCst, DCst))
+  if (IsSuperSetOrEqual(BCst, DCst)) {
+    // We can't guarantee that samesign hold after this fold.
+    RHS->setSameSign(false);
     return RHS;
+  }
   // Otherwise, B is a subset of D. If B and E have a common bit set,
   // ie. (B & E) != 0, then LHS is subsumed by RHS. For example.
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
-  if ((*BCst & ECst) != 0)
+  if ((*BCst & ECst) != 0) {
+    // We can't guarantee that samesign hold after this fold.
+    RHS->setSameSign(false);
     return RHS;
+  }
   // Otherwise, LHS and RHS contradict and the whole expression becomes false
   // (or true if negated.) For example,
   // (icmp ne (A & 7), 0) & (icmp eq (A & 15), 8) -> false.
@@ -1423,12 +1430,9 @@ static Value *matchIsFiniteTest(InstCombiner::BuilderTy &Builder, FCmpInst *LHS,
       !matchUnorderedInfCompare(PredR, RHS0, RHS1))
     return nullptr;
 
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  FastMathFlags FMF = LHS->getFastMathFlags();
-  FMF &= RHS->getFastMathFlags();
-  Builder.setFastMathFlags(FMF);
-
-  return Builder.CreateFCmp(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1);
+  return Builder.CreateFCmpFMF(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1,
+                               LHS->getFastMathFlags() &
+                                   RHS->getFastMathFlags());
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -1464,12 +1468,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
 
     // Intersect the fast math flags.
     // TODO: We can union the fast math flags unless this is a logical select.
-    IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-    FastMathFlags FMF = LHS->getFastMathFlags();
-    FMF &= RHS->getFastMathFlags();
-    Builder.setFastMathFlags(FMF);
-
-    return getFCmpValue(NewPred, LHS0, LHS1, Builder);
+    return getFCmpValue(NewPred, LHS0, LHS1, Builder,
+                        LHS->getFastMathFlags() & RHS->getFastMathFlags());
   }
 
   // This transform is not valid for a logical select.
@@ -1486,10 +1486,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(LHS->getFastMathFlags() &
-                               RHS->getFastMathFlags());
-      return Builder.CreateFCmp(PredL, LHS0, RHS0);
+      return Builder.CreateFCmpFMF(
+          PredL, LHS0, RHS0, LHS->getFastMathFlags() & RHS->getFastMathFlags());
     }
   }
 
@@ -1551,15 +1549,14 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       std::swap(PredL, PredR);
     }
     if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
-      BuilderTy::FastMathFlagGuard Guard(Builder);
       FastMathFlags NewFlag = LHS->getFastMathFlags();
       if (!IsLogicalSelect)
         NewFlag |= RHS->getFastMathFlags();
-      Builder.setFastMathFlags(NewFlag);
 
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
-      return Builder.CreateFCmp(PredL, FAbs,
-                                ConstantFP::get(LHS0->getType(), *LHSC));
+      Value *FAbs =
+          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0, NewFlag);
+      return Builder.CreateFCmpFMF(
+          PredL, FAbs, ConstantFP::get(LHS0->getType(), *LHSC), NewFlag);
     }
   }
 
@@ -2366,6 +2363,26 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   return IC.Builder.CreateBinOp(I->getOpcode(), NewOp0, NewOp1);
 }
 
+/// Reassociate and/or expressions to see if we can fold the inner and/or ops.
+/// TODO: Make this recursive; it's a little tricky because an arbitrary
+/// number of and/or instructions might have to be created.
+Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
+                                                 Instruction &I, bool IsAnd,
+                                                 bool RHSIsLogical) {
+  Instruction::BinaryOps Opcode = IsAnd ? Instruction::And : Instruction::Or;
+  // LHS bop (X lop Y) --> (LHS bop X) lop Y
+  // LHS bop (X bop Y) --> (LHS bop X) bop Y
+  if (Value *Res = foldBooleanAndOr(LHS, X, I, IsAnd, /*IsLogical=*/false))
+    return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
+                        : Builder.CreateBinOp(Opcode, Res, Y);
+  // LHS bop (X bop Y) --> X bop (LHS bop Y)
+  // LHS bop (X lop Y) --> X lop (LHS bop Y)
+  if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
+    return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
+                        : Builder.CreateBinOp(Opcode, X, Res);
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2749,31 +2766,17 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/true, /*IsLogical=*/false))
     return replaceInstUsesWith(I, Res);
 
-  // TODO: Make this recursive; it's a little tricky because an arbitrary
-  // number of 'and' instructions might have to be created.
   if (match(Op1, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op1);
-    // Op0 & (X && Y) --> (Op0 && X) && Y
-    if (Value *Res = foldBooleanAndOr(Op0, X, I, /* IsAnd */ true, IsLogical))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalAnd(Res, Y)
-                                              : Builder.CreateAnd(Res, Y));
-    // Op0 & (X && Y) --> X && (Op0 & Y)
-    if (Value *Res = foldBooleanAndOr(Op0, Y, I, /* IsAnd */ true,
-                                      /* IsLogical */ false))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalAnd(X, Res)
-                                              : Builder.CreateAnd(X, Res));
+    if (auto *V = reassociateBooleanAndOr(Op0, X, Y, I, /*IsAnd=*/true,
+                                          /*RHSIsLogical=*/IsLogical))
+      return replaceInstUsesWith(I, V);
   }
   if (match(Op0, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op0);
-    // (X && Y) & Op1 --> (X && Op1) && Y
-    if (Value *Res = foldBooleanAndOr(X, Op1, I, /* IsAnd */ true, IsLogical))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalAnd(Res, Y)
-                                              : Builder.CreateAnd(Res, Y));
-    // (X && Y) & Op1 --> X && (Y & Op1)
-    if (Value *Res = foldBooleanAndOr(Y, Op1, I, /* IsAnd */ true,
-                                      /* IsLogical */ false))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalAnd(X, Res)
-                                              : Builder.CreateAnd(X, Res));
+    if (auto *V = reassociateBooleanAndOr(Op1, X, Y, I, /*IsAnd=*/true,
+                                          /*RHSIsLogical=*/IsLogical))
+      return replaceInstUsesWith(I, V);
   }
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
@@ -3834,31 +3837,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/false, /*IsLogical=*/false))
     return replaceInstUsesWith(I, Res);
 
-  // TODO: Make this recursive; it's a little tricky because an arbitrary
-  // number of 'or' instructions might have to be created.
   if (match(Op1, m_OneUse(m_LogicalOr(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op1);
-    // Op0 | (X || Y) --> (Op0 || X) || Y
-    if (Value *Res = foldBooleanAndOr(Op0, X, I, /* IsAnd */ false, IsLogical))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalOr(Res, Y)
-                                              : Builder.CreateOr(Res, Y));
-    // Op0 | (X || Y) --> X || (Op0 | Y)
-    if (Value *Res = foldBooleanAndOr(Op0, Y, I, /* IsAnd */ false,
-                                      /* IsLogical */ false))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalOr(X, Res)
-                                              : Builder.CreateOr(X, Res));
+    if (auto *V = reassociateBooleanAndOr(Op0, X, Y, I, /*IsAnd=*/false,
+                                          /*RHSIsLogical=*/IsLogical))
+      return replaceInstUsesWith(I, V);
   }
   if (match(Op0, m_OneUse(m_LogicalOr(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op0);
-    // (X || Y) | Op1 --> (X || Op1) || Y
-    if (Value *Res = foldBooleanAndOr(X, Op1, I, /* IsAnd */ false, IsLogical))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalOr(Res, Y)
-                                              : Builder.CreateOr(Res, Y));
-    // (X || Y) | Op1 --> X || (Y | Op1)
-    if (Value *Res = foldBooleanAndOr(Y, Op1, I, /* IsAnd */ false,
-                                      /* IsLogical */ false))
-      return replaceInstUsesWith(I, IsLogical ? Builder.CreateLogicalOr(X, Res)
-                                              : Builder.CreateOr(X, Res));
+    if (auto *V = reassociateBooleanAndOr(Op1, X, Y, I, /*IsAnd=*/false,
+                                          /*RHSIsLogical=*/IsLogical))
+      return replaceInstUsesWith(I, V);
   }
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))

@@ -128,8 +128,8 @@ def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
 ]>;
-def SDTIntBinHiLoOp : SDTypeProfile<2, 2, [ // mulhi, mullo, sdivrem, udivrem
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,SDTCisInt<0>
+def SDTIntBinHiLoOp : SDTypeProfile<2, 2, [ // smullohi, umullohi, sdivrem, udivrem
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<0>
 ]>;
 def SDTIntScaledBinOp : SDTypeProfile<1, 3, [  // smulfix, sdivfix, etc
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>

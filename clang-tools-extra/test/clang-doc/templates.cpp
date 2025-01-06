@@ -80,8 +80,8 @@ void function<bool, 0>(bool x) {}
 // YAML-NEXT:       Filename:        '{{.*}}'
 // YAML-NEXT:     Params:
 // YAML-NEXT:       - Type:
-// YAML-NEXT:           Name:            '_Bool'
-// YAML-NEXT:           QualName:        '_Bool'
+// YAML-NEXT:           Name:            'bool'
+// YAML-NEXT:           QualName:        'bool'
 // YAML-NEXT:         Name:            'x'
 // YAML-NEXT:     ReturnType:
 // YAML-NEXT:       Type:
@@ -95,7 +95,7 @@ void function<bool, 0>(bool x) {}
 // YAML-NEXT:           - Contents:        '0'
 
 // MD: ### function
-// MD: *void function(_Bool x)*
+// MD: *void function(bool x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 26]]*
 
 /// A Tuple type
@@ -136,7 +136,7 @@ tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
 // YAML-NEXT:      - Type:
 // YAML-NEXT:          Type:            Record
 // YAML-NEXT:          Name:            'tuple'
-// YAML-NEXT:          QualName:        'tuple<int, int, _Bool>'
+// YAML-NEXT:          QualName:        'tuple<int, int, bool>'
 // YAML-NEXT:          USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT:          Path:            'GlobalNamespace'
 // YAML-NEXT:        Name:            't'
@@ -144,13 +144,13 @@ tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
 // YAML-NEXT:      Type:
 // YAML-NEXT:        Type:            Record
 // YAML-NEXT:        Name:            'tuple'
-// YAML-NEXT:        QualName:        'tuple<int, int, _Bool>'
+// YAML-NEXT:        QualName:        'tuple<int, int, bool>'
 // YAML-NEXT:        USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT:        Path:            'GlobalNamespace'
 // YAML-NEXT: ...
 
 // MD: ### func_with_tuple_param
-// MD: *tuple<int, int, _Bool> func_with_tuple_param(tuple<int, int, _Bool> t)*
+// MD: *tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
 // MD:  A function with a tuple parameter
 // MD: **t** The input to func_with_tuple_param

@@ -749,6 +749,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                    clang::driver::options::OPT_fno_logical_abbreviations,
                    false));
 
+  // -f{no-}unsigned
+  opts.features.Enable(Fortran::common::LanguageFeature::Unsigned,
+                       args.hasFlag(clang::driver::options::OPT_funsigned,
+                                    clang::driver::options::OPT_fno_unsigned,
+                                    false));
+
   // -f{no-}xor-operator
   opts.features.Enable(
       Fortran::common::LanguageFeature::XOROperator,
