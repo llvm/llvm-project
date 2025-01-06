@@ -1083,7 +1083,6 @@ static void maybeShuffle(Ctx &ctx,
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  // Use the rarely used option --call-graph-ordering-file to sort sections.
   if (!ctx.arg.callGraphProfile.empty())
     return computeCallGraphProfileOrder(ctx);
 
