@@ -299,9 +299,18 @@ OPTIONS
   However, it is possible to stop at some stage before measuring. Choices are:
   * ``prepare-snippet``: Only generate the minimal instruction sequence.
   * ``prepare-and-assemble-snippet``: Same as ``prepare-snippet``, but also dumps an excerpt of the sequence (hex encoded).
-  * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
+  * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but
+    also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
+    If either zlib or zstd is available and we're using either duplicate or
+    loop repetition mode, this phase generates benchmarks with a serialized
+    snippet object file attached to it.
   * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
   * ``dry-run-measurement``: Same as measure, but does not actually execute the snippet.
+
+.. option:: --run-measurement=<benchmarks file>
+
+  Given a benchmarks file generated after the ``assembly-measured-code`` phase,
+  resume the measurement phase from it.
 
 .. option:: --x86-lbr-sample-period=<nBranches/sample>
 

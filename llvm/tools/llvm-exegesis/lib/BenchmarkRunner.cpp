@@ -619,6 +619,7 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
 Expected<BenchmarkRunner::RunnableConfiguration>
 BenchmarkRunner::getRunnableConfiguration(
     const BenchmarkCode &BC, unsigned MinInstructions, unsigned LoopBodySize,
+    Benchmark::RepetitionModeE RepetitionMode,
     const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
@@ -663,10 +664,52 @@ BenchmarkRunner::getRunnableConfiguration(
                         LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
+    // There is no need to serialize/deserialize the object file if we're
+    // simply running end-to-end measurements.
+    // Same goes for any repetition mode that requires more than a single
+    // snippet.
+    if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure &&
+        (RepetitionMode == Benchmark::Loop ||
+         RepetitionMode == Benchmark::Duplicate)) {
+      if (Error E = BenchmarkResult.setObjectFile(*Snippet))
+        return std::move(E);
+    }
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
   }
 
   return std::move(RC);
+}
+
+Expected<BenchmarkRunner::RunnableConfiguration>
+BenchmarkRunner::getRunnableConfiguration(Benchmark &&B) const {
+  assert(B.ObjFile.has_value() && B.ObjFile->isValid() &&
+         "No serialized obejct file is attached?");
+  const Benchmark::ObjectFile &ObjFile = *B.ObjFile;
+  SmallVector<uint8_t> DecompressedObjFile;
+  switch (ObjFile.CompressionFormat) {
+  case compression::Format::Zstd:
+    if (!compression::zstd::isAvailable())
+      return make_error<StringError>("zstd is not available for decompression.",
+                                     inconvertibleErrorCode());
+    if (Error E = compression::zstd::decompress(ObjFile.CompressedBytes,
+                                                DecompressedObjFile,
+                                                ObjFile.UncompressedSize))
+      return std::move(E);
+    break;
+  case compression::Format::Zlib:
+    if (!compression::zlib::isAvailable())
+      return make_error<StringError>("zlib is not available for decompression.",
+                                     inconvertibleErrorCode());
+    if (Error E = compression::zlib::decompress(ObjFile.CompressedBytes,
+                                                DecompressedObjFile,
+                                                ObjFile.UncompressedSize))
+      return std::move(E);
+    break;
+  }
+
+  StringRef Buffer(reinterpret_cast<const char *>(DecompressedObjFile.begin()),
+                   DecompressedObjFile.size());
+  return RunnableConfiguration{std::move(B), getObjectFromBuffer(Buffer)};
 }
 
 Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>>
