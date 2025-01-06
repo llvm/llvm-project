@@ -762,7 +762,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V:
+  case RISCV::VLOXEI64_V: {
+    for (const MachineMemOperand *MMO : MI.memoperands())
+      if (MMO->isVolatile())
+        return false;
+    return true;
+  }
+
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
