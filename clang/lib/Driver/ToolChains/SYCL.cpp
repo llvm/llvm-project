@@ -17,8 +17,7 @@ using namespace llvm::opt;
 
 SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args)
-    : D(D) {}
+    const llvm::opt::ArgList &Args) {}
 
 void SYCLInstallationDetector::addSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
@@ -32,7 +31,7 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
 
 // Unsupported options for SYCL device compilation.
 static ArrayRef<OptSpecifier> getUnsupportedOpts() {
-  return {
+  static std::vector<OptSpecifier> UnsupportedOpts = {
       options::OPT_fsanitize_EQ,      // -fsanitize
       options::OPT_fcf_protection_EQ, // -fcf-protection
       options::OPT_fprofile_generate,
@@ -54,6 +53,7 @@ static ArrayRef<OptSpecifier> getUnsupportedOpts() {
       options::OPT_forder_file_instrumentation, // -forder-file-instrumentation
       options::OPT_fcs_profile_generate,        // -fcs-profile-generate
       options::OPT_fcs_profile_generate_EQ};
+  return UnsupportedOpts;
 }
 
 SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
