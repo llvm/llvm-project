@@ -2030,13 +2030,8 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
 
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-    QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
-    const bool TypesMatch =
-        Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
-        (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
-    if (TypesMatch)
-      return true;
+    StringLiteral *SL = EE->getDataStringLiteral();
+    return IsStringInit(SL, InitArrayType, Context) == SIF_None;
   }
   return false;
 }
