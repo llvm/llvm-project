@@ -24,6 +24,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
@@ -208,7 +209,7 @@ private:
 } // namespace
 
 static LLVMModuleAndContext readAndMaterializeDependencies(
-    MemoryBuffer &Buf,
+    WritableMemoryBuffer &Buf,
     const llvm::MapVector<const llvm::GlobalValue *, unsigned> &Set,
     const StringConstantTable &Strtab) {
 
@@ -219,7 +220,7 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
     (void)Result.create(
         [&](llvm::LLVMContext &Ctx) -> Expected<std::unique_ptr<Module>> {
           return llvm::cantFail(llvm::getLazyBitcodeModule(
-              llvm::MemoryBufferRef(Buf.getBuffer(), "<split-module>"), Ctx,
+              llvm::MemoryBufferRef(Buf.MemoryBuffer::getBuffer(), "<split-module>"), Ctx,
               /*ShouldLazyLoadMetadata=*/false));
         });
     Result->setModuleInlineAsm("");
@@ -228,8 +229,8 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
   SmallVector<unsigned> SortIndices =
       llvm::to_vector(llvm::make_second_range(Set));
   llvm::sort(SortIndices, std::less<unsigned>());
-  auto IdxIt = SortIndices.begin();
-  auto IdxEnd = SortIndices.end();
+  auto* IdxIt = SortIndices.begin();
+  auto* IdxEnd = SortIndices.end();
 
   // The global value indices go from globals, functions, then aliases. This
   // mirrors the order in which global values are deleted by LLVM's GlobalDCE.
@@ -297,68 +298,69 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
 /// module.
 void splitPerAnchored(LLVMModuleAndContext Module, LLVMSplitProcessFn ProcessFn,
                       llvm::SmallVectorImpl<llvm::Function> &Anchors) {
-  LLVMModuleSplitterImpl impl(std::move(Module));
-  impl.split(ProcessFn, Anchors);
+  LLVMModuleSplitterImpl Impl(std::move(Module));
+  Impl.split(ProcessFn, Anchors);
 }
 
 void LLVMModuleSplitterImpl::split(
-    LLVMSplitProcessFn processFn,
+    LLVMSplitProcessFn ProcessFn,
     llvm::SmallVectorImpl<llvm::Function> &Anchors) {
   // The use-def list is sparse. Use it to build a sparse dependency graph
   // between global values.
-  auto strtab = RCRef<StringConstantTable>::create();
-  unsigned gvIdx = 0;
-  auto computeDeps = [&](const llvm::GlobalValue &value) {
-    strtab->recordIfStringConstant(gvIdx, value);
-    infos[&value].gvIdx = gvIdx++;
+  IntrusiveRefCntPtr<StringConstantTable> Strtab(new StringConstantTable());
+  unsigned GvIdx = 0;
+
+  auto ComputeDeps = [&](const llvm::GlobalValue &value) {
+    Strtab->recordIfStringConstant(GvIdx, value);
+    Infos[&value].GvIdx = GvIdx++;
     collectImmediateDependencies(&value, &value);
   };
   // NOTE: The visitation of globals then functions has to line up with
   // `readAndMaterializeDependencies`.
-  for (const llvm::GlobalVariable &global : mainModule->globals()) {
-    computeDeps(global);
+  for (const llvm::GlobalVariable &global : MainModule->globals()) {
+    ComputeDeps(global);
     if (!global.hasInternalLinkage() && !global.hasPrivateLinkage())
-      transitiveDeps[&global];
+      TransDeps[&global];
   }
-  for (const llvm::Function &fn : mainModule->functions()) {
-    computeDeps(fn);
-    if (!fn.isDeclaration() && (fn.hasExternalLinkage() || fn.hasWeakLinkage()))
-      transitiveDeps[&fn];
+  for (const llvm::Function &Fn : MainModule->functions()) {
+    ComputeDeps(Fn);
+    if (!Fn.isDeclaration() && (Fn.hasExternalLinkage() || Fn.hasWeakLinkage()))
+      TransDeps[&Fn];
   }
 
   // If there is only one (or fewer) exported functions, forward the main
   // module.
-  if (transitiveDeps.size() <= 1)
-    return processFn(forwardModule(std::move(mainModule)), std::nullopt,
+  if (TransDeps.size() <= 1)
+    return ProcessFn(forwardModule(std::move(MainModule)), std::nullopt,
                      /*numFunctionBase=*/0);
 
   // Now for each export'd global value, compute the transitive set of
   // dependencies using DFS.
-  SmallVector<const llvm::GlobalValue *> worklist;
-  for (auto &[value, deps] : transitiveDeps) {
-    worklist.clear();
-    worklist.push_back(value);
-    while (!worklist.empty()) {
-      const llvm::GlobalValue *it = worklist.pop_back_val();
+  SmallVector<const llvm::GlobalValue *> Worklist;
+  for (auto &[Value, Deps] : TransDeps) {
+    Worklist.clear();
+    Worklist.push_back(Value);
+    while (!Worklist.empty()) {
+      const llvm::GlobalValue *It = Worklist.pop_back_val();
 
-      auto [iter, inserted] = deps.deps.insert({it, -1});
+      auto [iter, inserted] = Deps.Deps.insert({It, -1});
       if (!inserted) {
         // Already visited.
         continue;
       }
       // Pay the cost of the name lookup only on a miss.
-      const ValueInfo &info = infos.at(it);
-      iter->second = info.gvIdx;
+      const ValueInfo &Info = Infos.at(It);
+      iter->second = Info.GvIdx;
 
       // If this value depends on another value that is going to be split, we
       // don't want to duplicate the symbol. Keep all the users together.
-      if (it != value) {
-        if (auto depIt = transitiveDeps.find(it);
-            depIt != transitiveDeps.end()) {
-          auto &users = splitAnchorUsers[it];
-          users.insert(&deps);
+      if (It != Value) {
+        if (auto* DepIt = TransDeps.find(It);
+            DepIt != TransDeps.end()) {
+          auto &Users = SplitAnchorUsers[It];
+          Users.insert(&Deps);
           // Make sure to include the other value in its own user list.
-          users.insert(&depIt->second);
+          Users.insert(&DepIt->second);
           // We don't have to recurse since the subgraph will get processed.
           continue;
         }
@@ -366,15 +368,15 @@ void LLVMModuleSplitterImpl::split(
 
       // If this value depends on a mutable global, keep track of it. We have to
       // put all users of a mutable global in the same module.
-      if (auto *global = dyn_cast<llvm::GlobalVariable>(it);
-          global && !global->isConstant())
-        splitAnchorUsers[global].insert(&deps);
+      if (auto *Global = dyn_cast<llvm::GlobalVariable>(It);
+          Global && !Global->isConstant())
+        SplitAnchorUsers[Global].insert(&Deps);
 
       // Recursive on dependencies.
-      llvm::append_range(worklist, info.dependencies);
+      llvm::append_range(Worklist, Info.Dependencies);
     }
 
-    deps.complete = true;
+    Deps.Complete = true;
   }
 
   // For each mutable global, grab all the transitive users and put them in one
@@ -382,69 +384,68 @@ void LLVMModuleSplitterImpl::split(
   // A* and B* have an empty intersection, all values in A* will be assigned 0
   // and all values in B* will be assigned 1. If global C has user set C* that
   // overlaps both A* and B*, it will overwrite both to 2.
-  SmallVector<SmallVector<TransitiveDeps *>> bucketing(splitAnchorUsers.size());
-  for (auto [curMutIdx, bucket, users] :
-       llvm::enumerate(bucketing, llvm::make_second_range(splitAnchorUsers))) {
-    for (TransitiveDeps *deps : users) {
-      if (deps->mutIdx && *deps->mutIdx != curMutIdx) {
-        auto &otherBucket = bucketing[*deps->mutIdx];
-        for (TransitiveDeps *other : otherBucket) {
-          bucket.push_back(other);
-          other->mutIdx = curMutIdx;
+  SmallVector<SmallVector<TransitiveDeps *>> Bucketing(SplitAnchorUsers.size());
+  for (auto [CurMutIdx, Bucket, Users] :
+       llvm::enumerate(Bucketing, llvm::make_second_range(SplitAnchorUsers))) {
+    for (TransitiveDeps *Deps : Users) {
+      if (Deps->MutIdx && *Deps->MutIdx != CurMutIdx) {
+        auto &OtherBucket = Bucketing[*Deps->MutIdx];
+        for (TransitiveDeps *Other : OtherBucket) {
+          Bucket.push_back(Other);
+          Other->MutIdx = CurMutIdx;
         }
-        otherBucket.clear();
-        assert(*deps->mutIdx == curMutIdx);
+        OtherBucket.clear();
+        assert(*Deps->MutIdx == CurMutIdx);
       } else {
-        bucket.push_back(deps);
-        deps->mutIdx = curMutIdx;
+        Bucket.push_back(Deps);
+        Deps->MutIdx = CurMutIdx;
       }
     }
   }
 
   // Now that we have assigned buckets to each value, merge the transitive
   // dependency sets of all values belonging to the same set.
-  SmallVector<llvm::MapVector<const llvm::GlobalValue *, unsigned>> buckets(
-      bucketing.size());
-  for (auto [deps, bucket] : llvm::zip(bucketing, buckets)) {
-    for (TransitiveDeps *dep : deps) {
-      for (auto &namedValue : dep->deps)
-        bucket.insert(namedValue);
+  SmallVector<llvm::MapVector<const llvm::GlobalValue *, unsigned>> Buckets(
+      Bucketing.size());
+  for (auto [Deps, Bucket] : llvm::zip(Bucketing, Buckets)) {
+    for (TransitiveDeps *Dep : Deps) {
+      for (auto &NamedValue : Dep->Deps)
+        Bucket.insert(NamedValue);
     }
   }
 
   SmallVector<llvm::MapVector<const llvm::GlobalValue *, unsigned> *>
-      setsToProcess;
-  setsToProcess.reserve(buckets.size() + transitiveDeps.size());
+      SetsToProcess;
+  SetsToProcess.reserve(Buckets.size() + TransDeps.size());
 
   // Clone each mutable global bucket into its own module.
-  for (auto &bucket : buckets) {
-    if (bucket.empty())
+  for (auto &Bucket : Buckets) {
+    if (Bucket.empty())
       continue;
-    setsToProcess.push_back(&bucket);
+    SetsToProcess.push_back(&Bucket);
   }
 
-  for (auto &[root, deps] : transitiveDeps) {
+  for (auto &[Root, Deps] : TransDeps) {
     // Skip values included in another transitive dependency set and values
     // included in mutable global sets.
-    if (!deps.mutIdx)
-      setsToProcess.push_back(&deps.deps);
+    if (!Deps.MutIdx)
+      SetsToProcess.push_back(&Deps.Deps);
   }
 
-  if (setsToProcess.size() <= 1)
-    return processFn(forwardModule(std::move(mainModule)), std::nullopt,
+  if (SetsToProcess.size() <= 1)
+    return ProcessFn(forwardModule(std::move(MainModule)), std::nullopt,
                      /*numFunctionBase=*/0);
 
   // Sort the sets by to schedule the larger modules first.
-  llvm::sort(setsToProcess,
-             [](auto *lhs, auto *rhs) { return lhs->size() > rhs->size(); });
+  llvm::sort(SetsToProcess,
+             [](auto *Lhs, auto *Rhs) { return Lhs->size() > Rhs->size(); });
 
   // Prepare to materialize slices of the module by first writing the main
   // module as bitcode to a shared buffer.
-  auto buf = WriteableBuffer::get();
+  auto Buf = WritableMemoryBuffer::getNewMemBuffer(size_t Size);
   {
-    CompilerTimeTraceScope traceScope("writeMainModuleBitcode");
-    llvm::Module &module = strtab->externalizeStrings(std::move(mainModule));
-    llvm::WriteBitcodeToFile(module, *buf);
+    llvm::Module &Module = Strtab->externalizeStrings(std::move(MainModule));
+    llvm::WriteBitcodeToFile(Module, *Buf);
   }
 
   unsigned numFunctions = 0;
