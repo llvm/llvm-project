@@ -163,20 +163,6 @@ void SymExpr::symbol_iterator::expand() {
   llvm_unreachable("unhandled expansion case");
 }
 
-const SymbolExtent*
-SymbolManager::getExtentSymbol(const SubRegion *R) {
-  llvm::FoldingSetNodeID profile;
-  SymbolExtent::Profile(profile, R);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
-  if (!SD) {
-    SD = Alloc.make<SymbolExtent>(R);
-    DataSet.InsertNode(SD, InsertPos);
-  }
-
-  return cast<SymbolExtent>(SD);
-}
-
 const SymbolMetadata *
 SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
                                  const LocationContext *LCtx,

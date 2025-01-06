@@ -543,8 +543,6 @@ public:
     return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
   }
 
-  const SymbolExtent *getExtentSymbol(const SubRegion *R);
-
   /// Creates a metadata symbol associated with a specific region.
   ///
   /// VisitCount can be used to differentiate regions corresponding to

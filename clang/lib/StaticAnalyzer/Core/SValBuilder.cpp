@@ -724,7 +724,7 @@ public:
             // because there are no generic region address metadata
             // symbols to use, only content metadata.
             return nonloc::SymbolVal(
-                VB.getSymbolManager().getExtentSymbol(FTR));
+                VB.getSymbolManager().get<SymbolExtent>(FTR));
 
       if (const SymbolicRegion *SymR = R->getSymbolicBase()) {
         SymbolRef Sym = SymR->getSymbol();
