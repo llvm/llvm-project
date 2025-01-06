@@ -39,11 +39,12 @@ static Value *getNewICmpValue(unsigned Code, bool Sign, Value *LHS, Value *RHS,
 /// This is the complement of getFCmpCode, which turns an opcode and two
 /// operands into either a FCmp instruction, or a true/false constant.
 static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
-                           InstCombiner::BuilderTy &Builder) {
+                           InstCombiner::BuilderTy &Builder,
+                           FastMathFlags FMF) {
   FCmpInst::Predicate NewPred;
   if (Constant *TorF = getPredForFCmpCode(Code, LHS->getType(), NewPred))
     return TorF;
-  return Builder.CreateFCmp(NewPred, LHS, RHS);
+  return Builder.CreateFCmpFMF(NewPred, LHS, RHS, FMF);
 }
 
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
@@ -1429,12 +1430,9 @@ static Value *matchIsFiniteTest(InstCombiner::BuilderTy &Builder, FCmpInst *LHS,
       !matchUnorderedInfCompare(PredR, RHS0, RHS1))
     return nullptr;
 
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  FastMathFlags FMF = LHS->getFastMathFlags();
-  FMF &= RHS->getFastMathFlags();
-  Builder.setFastMathFlags(FMF);
-
-  return Builder.CreateFCmp(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1);
+  return Builder.CreateFCmpFMF(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1,
+                               LHS->getFastMathFlags() &
+                                   RHS->getFastMathFlags());
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -1470,12 +1468,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
 
     // Intersect the fast math flags.
     // TODO: We can union the fast math flags unless this is a logical select.
-    IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-    FastMathFlags FMF = LHS->getFastMathFlags();
-    FMF &= RHS->getFastMathFlags();
-    Builder.setFastMathFlags(FMF);
-
-    return getFCmpValue(NewPred, LHS0, LHS1, Builder);
+    return getFCmpValue(NewPred, LHS0, LHS1, Builder,
+                        LHS->getFastMathFlags() & RHS->getFastMathFlags());
   }
 
   // This transform is not valid for a logical select.
@@ -1492,10 +1486,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(LHS->getFastMathFlags() &
-                               RHS->getFastMathFlags());
-      return Builder.CreateFCmp(PredL, LHS0, RHS0);
+      return Builder.CreateFCmpFMF(
+          PredL, LHS0, RHS0, LHS->getFastMathFlags() & RHS->getFastMathFlags());
     }
   }
 
@@ -1557,15 +1549,14 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       std::swap(PredL, PredR);
     }
     if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
-      BuilderTy::FastMathFlagGuard Guard(Builder);
       FastMathFlags NewFlag = LHS->getFastMathFlags();
       if (!IsLogicalSelect)
         NewFlag |= RHS->getFastMathFlags();
-      Builder.setFastMathFlags(NewFlag);
 
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
-      return Builder.CreateFCmp(PredL, FAbs,
-                                ConstantFP::get(LHS0->getType(), *LHSC));
+      Value *FAbs =
+          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0, NewFlag);
+      return Builder.CreateFCmpFMF(
+          PredL, FAbs, ConstantFP::get(LHS0->getType(), *LHSC), NewFlag);
     }
   }
 

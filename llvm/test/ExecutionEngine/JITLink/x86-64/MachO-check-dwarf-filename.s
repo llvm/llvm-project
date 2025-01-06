@@ -2,7 +2,7 @@
 # RUN: llvm-jitlink -debug-only=orc -noexec -debugger-support %t.o 2>&1 | \
 # RUN:     FileCheck %s
 #
-# REQUIRES: asserts
+# REQUIRES: asserts && system-darwin
 #
 # Test that source file names can be indentified from DWARF line tables.
 
