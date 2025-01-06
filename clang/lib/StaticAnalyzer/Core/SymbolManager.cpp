@@ -163,21 +163,6 @@ void SymExpr::symbol_iterator::expand() {
   llvm_unreachable("unhandled expansion case");
 }
 
-const UnarySymExpr *SymbolManager::getUnarySymExpr(const SymExpr *Operand,
-                                                   UnaryOperator::Opcode Opc,
-                                                   QualType T) {
-  llvm::FoldingSetNodeID ID;
-  UnarySymExpr::Profile(ID, Operand, Opc, T);
-  void *InsertPos;
-  SymExpr *data = DataSet.FindNodeOrInsertPos(ID, InsertPos);
-  if (!data) {
-    data = Alloc.make<UnarySymExpr>(Operand, Opc, T);
-    DataSet.InsertNode(data, InsertPos);
-  }
-
-  return cast<UnarySymExpr>(data);
-}
-
 QualType SymbolConjured::getType() const {
   return T;
 }

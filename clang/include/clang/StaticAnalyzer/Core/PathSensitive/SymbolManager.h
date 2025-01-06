@@ -545,10 +545,6 @@ public:
     return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
   }
 
-
-  const UnarySymExpr *getUnarySymExpr(const SymExpr *operand,
-                                      UnaryOperator::Opcode op, QualType t);
-
   QualType getType(const SymExpr *SE) const {
     return SE->getType();
   }

@@ -1481,8 +1481,8 @@ private:
   std::optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
     return getRangeForNegatedExpr(
         [Sym, State = this->State]() {
-          return State->getSymbolManager().getUnarySymExpr(Sym, UO_Minus,
-                                                           Sym->getType());
+          return State->getSymbolManager().get<UnarySymExpr>(Sym, UO_Minus,
+                                                             Sym->getType());
         },
         Sym->getType());
   }
