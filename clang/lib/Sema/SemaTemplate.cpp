@@ -1228,36 +1228,37 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
                                 NonTypeTemplateParmDecl *NewConstrainedParm,
                                 NonTypeTemplateParmDecl *OrigConstrainedParm,
                                 SourceLocation EllipsisLoc) {
-  if (NewConstrainedParm->getType().getNonPackExpansionType() != TL.getType() ||
-      TL.getAutoKeyword() != AutoTypeKeyword::Auto) {
-    Diag(NewConstrainedParm->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-         diag::err_unsupported_placeholder_constraint)
-        << NewConstrainedParm->getTypeSourceInfo()
-               ->getTypeLoc()
-               .getSourceRange();
-    NewConstrainedParm->setPlaceholderTypeConstraint(
-        RecoveryExpr::Create(Context, OrigConstrainedParm->getType(),
-                             OrigConstrainedParm->getBeginLoc(),
-                             OrigConstrainedParm->getEndLoc(), {}));
-    return true;
-  }
-  // FIXME: Concepts: This should be the type of the placeholder, but this is
-  // unclear in the wording right now.
-  DeclRefExpr *Ref =
-      BuildDeclRefExpr(OrigConstrainedParm, OrigConstrainedParm->getType(),
-                       VK_PRValue, OrigConstrainedParm->getLocation());
-  assert(Ref != nullptr && "Unexpected nullptr!");
+  ExprResult ImmediatelyDeclaredConstraint = [&] {
+    if (NewConstrainedParm->getType().getNonPackExpansionType() !=
+            TL.getType() ||
+        TL.getAutoKeyword() != AutoTypeKeyword::Auto) {
+      Diag(NewConstrainedParm->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+           diag::err_unsupported_placeholder_constraint)
+          << NewConstrainedParm->getTypeSourceInfo()
+                 ->getTypeLoc()
+                 .getSourceRange();
+      return ExprResult();
+    }
 
-  ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
-      *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
-      TL.getNamedConcept(), /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(),
-      TL.getRAngleLoc(), BuildDecltypeType(Ref),
-      OrigConstrainedParm->getLocation(),
-      [&](TemplateArgumentListInfo &ConstraintArgs) {
-        for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
-          ConstraintArgs.addArgument(TL.getArgLoc(I));
-      },
-      EllipsisLoc);
+    // FIXME: Concepts: This should be the type of the placeholder, but this is
+    // unclear in the wording right now.
+    DeclRefExpr *Ref =
+        BuildDeclRefExpr(OrigConstrainedParm, OrigConstrainedParm->getType(),
+                         VK_PRValue, OrigConstrainedParm->getLocation());
+    assert(Ref != nullptr && "Unexpected nullptr!");
+
+    return formImmediatelyDeclaredConstraint(
+        *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
+        TL.getNamedConcept(), /*FoundDecl=*/TL.getFoundDecl(),
+        TL.getLAngleLoc(), TL.getRAngleLoc(), BuildDecltypeType(Ref),
+        OrigConstrainedParm->getLocation(),
+        [&](TemplateArgumentListInfo &ConstraintArgs) {
+          for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
+            ConstraintArgs.addArgument(TL.getArgLoc(I));
+        },
+        EllipsisLoc);
+  }();
+
   if (ImmediatelyDeclaredConstraint.isInvalid() ||
       !ImmediatelyDeclaredConstraint.isUsable()) {
     NewConstrainedParm->setPlaceholderTypeConstraint(
