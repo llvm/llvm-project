@@ -545,14 +545,6 @@ public:
     return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
   }
 
-  const SymIntExpr *getSymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                  APSIntPtr rhs, QualType t);
-
-  const SymIntExpr *getSymIntExpr(const SymExpr &lhs, BinaryOperator::Opcode op,
-                                  APSIntPtr rhs, QualType t) {
-    return getSymIntExpr(&lhs, op, rhs, t);
-  }
-
   const IntSymExpr *getIntSymExpr(APSIntPtr lhs, BinaryOperator::Opcode op,
                                   const SymExpr *rhs, QualType t);
 

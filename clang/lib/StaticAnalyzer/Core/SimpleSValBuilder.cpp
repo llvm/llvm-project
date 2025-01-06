@@ -351,7 +351,7 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
   }
   APSIntPtr PersistentResultInt = BV.getValue(ResultInt);
   return nonloc::SymbolVal(
-      SymMgr.getSymIntExpr(ResultSym, ResultOp, PersistentResultInt, ResultTy));
+      SymMgr.get<SymIntExpr>(ResultSym, ResultOp, PersistentResultInt, ResultTy));
 }
 
 // Rearrange if symbol type matches the result type and if the operator is a
