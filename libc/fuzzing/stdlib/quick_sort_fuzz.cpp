@@ -1,4 +1,4 @@
-//===-- qsort_fuzz.cpp ----------------------------------------------------===//
+//===-- quick_sort_fuzz.cpp------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Fuzzing test for llvm-libc qsort implementation.
+/// Fuzzing test for llvm-libc quick_sort implementation.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/qsort.h"
+#include "src/stdlib/qsort_util.h"
 #include <stdint.h>
-
-static int int_compare(const void *l, const void *r) {
-  int li = *reinterpret_cast<const int *>(l);
-  int ri = *reinterpret_cast<const int *>(r);
-  if (li == ri)
-    return 0;
-  else if (li > ri)
-    return 1;
-  else
-    return -1;
-}
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   const size_t array_size = size / sizeof(int);
@@ -34,7 +23,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   for (size_t i = 0; i < array_size; ++i)
     array[i] = data_as_int[i];
 
-  LIBC_NAMESPACE::qsort(array, array_size, sizeof(int), int_compare);
+  const auto is_less = [](const void *a_ptr,
+                          const void *b_ptr) noexcept -> bool {
+    const int &a = *static_cast<const int *>(a_ptr);
+    const int &b = *static_cast<const int *>(b_ptr);
+
+    return a < b;
+  };
+
+  constexpr bool USE_QUICKSORT = true;
+  LIBC_NAMESPACE::internal::unstable_sort_impl<USE_QUICKSORT>(
+      array, array_size, sizeof(int), is_less);
 
   for (size_t i = 0; i < array_size - 1; ++i) {
     if (array[i] > array[i + 1])
