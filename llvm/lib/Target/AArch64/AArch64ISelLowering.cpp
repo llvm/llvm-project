@@ -21975,6 +21975,9 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
     MulOpLHS = ExtMulOpLHS->getOperand(0);
     MulOpRHS = ExtMulOpRHS->getOperand(0);
+
+    if (MulOpLHS.getValueType() != MulOpRHS.getValueType())
+      return SDValue();
   } else
     return SDValue();
 
@@ -21984,13 +21987,12 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if ((!(ReducedVT == MVT::nxv4i64 && MulSrcVT == MVT::nxv16i8) &&
-       !(ReducedVT == MVT::nxv4i32 && MulSrcVT == MVT::nxv16i8) &&
-       !(ReducedVT == MVT::nxv2i64 && MulSrcVT == MVT::nxv8i16) &&
-       !(ReducedVT == MVT::v4i64 && MulSrcVT == MVT::v16i8) &&
-       !(ReducedVT == MVT::v4i32 && MulSrcVT == MVT::v16i8) &&
-       !(ReducedVT == MVT::v2i32 && MulSrcVT == MVT::v8i8)) ||
-      (MulOpLHS.getValueType() != MulOpRHS.getValueType()))
+  if (!(ReducedVT == MVT::nxv4i64 && MulSrcVT == MVT::nxv16i8) &&
+      !(ReducedVT == MVT::nxv4i32 && MulSrcVT == MVT::nxv16i8) &&
+      !(ReducedVT == MVT::nxv2i64 && MulSrcVT == MVT::nxv8i16) &&
+      !(ReducedVT == MVT::v4i64 && MulSrcVT == MVT::v16i8) &&
+      !(ReducedVT == MVT::v4i32 && MulSrcVT == MVT::v16i8) &&
+      !(ReducedVT == MVT::v2i32 && MulSrcVT == MVT::v8i8))
     return SDValue();
 
   // If the extensions are mixed, we should lower it to a usdot instead
