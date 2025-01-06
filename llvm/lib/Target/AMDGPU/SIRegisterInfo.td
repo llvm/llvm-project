@@ -936,6 +936,9 @@ def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16,
   let BaseClassOrder = 32;
 }
 
+def SGPR_NULL128 : SIReg<"null">;
+def SGPR_NULL256 : SIReg<"null">;
+
 let GeneratePressureSet = 0 in {
 def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
   (add SReg_32, LDS_DIRECT_CLASS)> {
@@ -1013,6 +1016,7 @@ multiclass SRegClass<int numRegs,
                      list<ValueType> regTypes,
                      SIRegisterTuples regList,
                      SIRegisterTuples ttmpList = regList,
+                     bit hasNull = 0,
                      int copyCost = !sra(!add(numRegs, 1), 1)> {
   defvar hasTTMP = !ne(regList, ttmpList);
   defvar suffix = !cast<string>(!mul(numRegs, 32));
@@ -1029,7 +1033,7 @@ multiclass SRegClass<int numRegs,
       }
     }
 
-    def SReg_ # suffix :
+    def SReg_ # suffix # !if(hasNull, "_XNULL", ""):
       SIRegisterClass<"AMDGPU", regTypes, 32,
                       !con((add !cast<RegisterClass>(sgprName)),
                            !if(hasTTMP,
@@ -1038,15 +1042,24 @@ multiclass SRegClass<int numRegs,
       let isAllocatable = 0;
       let BaseClassOrder = !mul(numRegs, 32);
     }
+
+    if hasNull then {
+      def SReg_ # suffix :
+        SIRegisterClass<"AMDGPU", regTypes, 32,
+                        (add !cast<RegisterClass>("SReg_" # suffix # "_XNULL"), !cast<Register>("SGPR_NULL" # suffix))> {
+        let isAllocatable = 0;
+        let BaseClassOrder = !mul(numRegs, 32);
+      }
+    }
   }
 }
 
 defm "" : SRegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], SGPR_96Regs, TTMP_96Regs>;
-defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs>;
+defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs, /*hasNull*/ true>;
 defm "" : SRegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], SGPR_160Regs, TTMP_160Regs>;
 defm "" : SRegClass<6, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
 defm "" : SRegClass<7, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
-defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs>;
+defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
 defm "" : SRegClass<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], SGPR_288Regs, TTMP_288Regs>;
 defm "" : SRegClass<10, [v10i32, v10f32], SGPR_320Regs, TTMP_320Regs>;
 defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
@@ -1228,13 +1241,13 @@ def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_S
 } // End GeneratePressureSet = 0
 
 // TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
-def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_128)> {
+def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_128_XNULL)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
 
 // TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
-def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_256)> {
+def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_256_XNULL)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }

@@ -26,7 +26,7 @@ S<i> V; // #cwg1801-S-i
 // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
 //   cxx98-14-note@#cwg1801-S {{template parameter is declared here}}
 // cxx17-error@#cwg1801-S-i {{non-type template argument refers to subobject '.i'}}
-}
+} // namespace cwg1801
 
 namespace cwg1802 { // cwg1802: 3.1
 #if __cplusplus >= 201103L
@@ -204,7 +204,7 @@ namespace cwg1814 { // cwg1814: yes
     auto lam = [](int x = 42) { return x; };
   }
 #endif
-}
+} // namespace cwg1814
 
 namespace cwg1815 { // cwg1815: 20
 #if __cplusplus >= 201402L
@@ -229,7 +229,7 @@ namespace cwg1815 { // cwg1815: 20
   static_assert(f() == 0);
 #endif
 #endif
-}
+} // namespace cwg1815
 
 // cwg1818 is in cwg1818.cpp
 
@@ -303,7 +303,7 @@ namespace cwg1822 { // cwg1822: yes
     static_assert(__is_same(decltype(a), int), "should be resolved to lambda parameter");
   };
 #endif
-}
+} // namespace cwg1822
 
 namespace cwg1824 { // cwg1824: 2.7
 template<typename T>
@@ -373,7 +373,7 @@ namespace cwg1837 { // cwg1837: 3.3
     };
   };
 #endif
-}
+} // namespace cwg1837
 
 namespace cwg1862 { // cwg1862: no
 template<class T>
@@ -498,7 +498,7 @@ namespace cwg1872 { // cwg1872: 9
   //   since-cxx23-note@-5 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
 #endif
 #endif
-}
+} // namespace cwg1872
 
 namespace cwg1878 { // cwg1878: 18
 #if __cplusplus >= 201402L
@@ -533,7 +533,7 @@ struct S {
 #endif
 };
 #endif
-}
+} // namespace cwg1878
 
 namespace cwg1881 { // cwg1881: 7
   struct A { int a : 4; };
@@ -545,7 +545,7 @@ namespace cwg1881 { // cwg1881: 7
   struct D : C { int : 0; };
   static_assert(__is_standard_layout(C), "");
   static_assert(!__is_standard_layout(D), "");
-}
+} // namespace cwg1881
 
 // cwg1884 is in cwg1884.cpp
 
@@ -613,7 +613,7 @@ void cwg1891() { // cwg1891: 4
   // since-cxx11-error-re@-1 {{{{object of type '\(lambda at .+\)' cannot be assigned because its copy assignment operator is implicitly deleted}}}}
   //   since-cxx11-note@#cwg1891-b {{lambda expression begins here}}
 #endif
-}
+} // void cwg1891()
 
 namespace cwg1894 { // cwg1894: 3.8
                    // NB: reusing part of cwg407 test
@@ -641,7 +641,7 @@ namespace H {
   using namespace A;
   struct S s;
 }
-}
+} // namespace cwg1894
 
 namespace cwg1898 { // cwg1898: 2.7
 void e(int) {} // #cwg1898-e

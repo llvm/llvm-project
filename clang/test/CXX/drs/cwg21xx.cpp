@@ -64,7 +64,7 @@ namespace cwg2100 { // cwg2100: 12
   template<int N> struct Y<N> {
     static const int declared_later = 0;
   };
-}
+} // namespace cwg2100
 
 namespace cwg2103 { // cwg2103: yes
   void f() {
@@ -79,7 +79,7 @@ namespace cwg2103 { // cwg2103: yes
       }
     };
   }
-}
+} // namespace cwg2103
 
 namespace cwg2120 { // cwg2120: 7
   struct A {};
@@ -90,7 +90,7 @@ namespace cwg2120 { // cwg2120: 7
   static_assert(__is_standard_layout(B), "");
   static_assert(__is_standard_layout(D), "");
   static_assert(!__is_standard_layout(E), "");
-}
+} // namespace cwg2120
 
 namespace cwg2126 { // cwg2126: 12
 #if __cplusplus >= 201103L
@@ -142,7 +142,7 @@ namespace cwg2126 { // cwg2126: 12
   //   since-cxx11-note@#cwg21260-j {{temporary created here}}
   static_assert(k.a.n == 1, "");
 #endif
-}
+} // namespace cwg2126
 
 namespace cwg2137 { // cwg2137: 20
 #if __cplusplus >= 201103L
@@ -177,7 +177,7 @@ namespace cwg2137 { // cwg2137: 20
 
   int z = g({ d });
 #endif
-}
+} // namespace cwg2137
 
 namespace cwg2140 { // cwg2140: 9
 #if __cplusplus >= 201103L
@@ -187,7 +187,7 @@ namespace cwg2140 { // cwg2140: 9
   }
   static_assert(!test({123}), "u.b should be valid even when b is inactive");
 #endif
-}
+} // namespace cwg2140
 
 namespace cwg2141 { // cwg2141: 17
 struct A{};
@@ -220,7 +220,7 @@ void foo() {
   // expected-error@-1 {{'E' cannot be defined in a type specifier}}
 
 }
-}
+} // namespace cwg2141
 
 // cwg2149 is in cwg2149.cpp
 
@@ -232,7 +232,7 @@ namespace cwg2157 { // cwg2157: 11
     // since-cxx11-error@-1 {{ISO C++ only allows ':' in member enumeration declaration to introduce a fixed underlying type, not an anonymous bit-field}}
   };
 #endif
-}
+} // namespace cwg2157
 
 // cwg2165: na
 
@@ -249,7 +249,7 @@ namespace cwg2170 { // cwg2170: 9
     };
   }
 #endif
-}
+} // namespace cwg2170
 
 namespace cwg2171 { // cwg2171: 15
 #if __cplusplus >= 201103L
@@ -315,7 +315,7 @@ namespace cwg2180 { // cwg2180: yes
   //   cxx98-note@#cwg2180-A-move {{implicitly declared private here}}
   // since-cxx11-error@#cwg2180-B-move {{defaulting this move assignment operator would delete it after its first declaration}}
   //   since-cxx11-note@#cwg2180-B {{move assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible move assignment operator}}
-}
+} // namespace cwg2180
 
 namespace cwg2199 { // cwg2199: 3.8
                    // NB: reusing part of cwg407 test
@@ -343,4 +343,4 @@ namespace H {
   using namespace A;
   struct S s;
 }
-}
+} // namespace cwg2199
