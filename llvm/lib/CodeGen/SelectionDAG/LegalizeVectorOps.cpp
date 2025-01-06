@@ -402,6 +402,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FCOPYSIGN:
   case ISD::FSQRT:
   case ISD::FSIN:
@@ -1080,6 +1082,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     Results.push_back(TLI.expandFMINIMUM_FMAXIMUM(Node, DAG));
+    return;
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    Results.push_back(TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG));
     return;
   case ISD::SMIN:
   case ISD::SMAX:
