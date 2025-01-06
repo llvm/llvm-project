@@ -30,6 +30,9 @@ void first_arg_overlaps() {
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: the 3rd argument in 'snprintf' overlaps the 1st argument, which is undefined behavior [bugprone-undefined-sprintf-overlap]
   std::snprintf(buf, sizeof(buf), "%s", buf);
   // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: the 3rd argument in 'snprintf' overlaps the 1st argument, which is undefined behavior [bugprone-undefined-sprintf-overlap]
+  sprintf(buf+1, "%s", (buf+1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: the 2nd argument in 'sprintf' overlaps the 1st argument, which is undefined behavior [bugprone-undefined-sprintf-overlap]
+  sprintf(buf+1, "%s", buf+2);
 
   char* c = &buf[0];
   sprintf(c, "%s", c);

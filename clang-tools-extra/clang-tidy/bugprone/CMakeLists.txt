@@ -83,7 +83,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   TooSmallLoopVariableCheck.cpp
   UncheckedOptionalAccessCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
-  UndefinedSprintfOverlapCheck.cpp
+  SprintfArgumentOverlapCheck.cpp
   UndelegatedConstructorCheck.cpp
   UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp

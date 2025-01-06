@@ -86,7 +86,7 @@
 #include "TooSmallLoopVariableCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
-#include "UndefinedSprintfOverlapCheck.h"
+#include "SprintfArgumentOverlapCheck.h"
 #include "UndelegatedConstructorCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
@@ -249,8 +249,8 @@ public:
         "bugprone-unchecked-optional-access");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
-    CheckFactories.registerCheck<UndefinedSprintfOverlapCheck>(
-        "bugprone-undefined-sprintf-overlap");
+    CheckFactories.registerCheck<SprintfArgumentOverlapCheck>(
+        "bugprone-sprintf-argument-overlap");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
         "bugprone-undelegated-constructor");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(

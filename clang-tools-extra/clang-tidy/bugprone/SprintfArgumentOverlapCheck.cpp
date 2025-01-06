@@ -1,4 +1,4 @@
-//===--- UndefinedSprintfOverlapCheck.cpp - clang-tidy --------------------===//
+//===--- SprintfArgumentOverlapCheck.cpp - clang-tidy --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UndefinedSprintfOverlapCheck.h"
+#include "SprintfArgumentOverlapCheck.h"
 #include "../utils/ASTUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -48,12 +48,12 @@ AST_MATCHER_P(CallExpr, forEachArgument, ast_matchers::internal::Matcher<Expr>,
   return Matched;
 }
 
-UndefinedSprintfOverlapCheck::UndefinedSprintfOverlapCheck(
+SprintfArgumentOverlapCheck::SprintfArgumentOverlapCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       SprintfRegex(Options.get("SprintfFunction", "(::std)?::sn?printf")) {}
 
-void UndefinedSprintfOverlapCheck::registerMatchers(MatchFinder *Finder) {
+void SprintfArgumentOverlapCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
                hasArgument(0, expr().bind("firstArgExpr")),
@@ -63,7 +63,7 @@ void UndefinedSprintfOverlapCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void UndefinedSprintfOverlapCheck::check(
+void SprintfArgumentOverlapCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *FirstArg = Result.Nodes.getNodeAs<Expr>("firstArgExpr");
   const auto *OtherArg = Result.Nodes.getNodeAs<Expr>("otherArgExpr");
@@ -97,7 +97,7 @@ void UndefinedSprintfOverlapCheck::check(
       << OtherArg->getSourceRange();
 }
 
-void UndefinedSprintfOverlapCheck::storeOptions(
+void SprintfArgumentOverlapCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "SprintfRegex", SprintfRegex);
 }

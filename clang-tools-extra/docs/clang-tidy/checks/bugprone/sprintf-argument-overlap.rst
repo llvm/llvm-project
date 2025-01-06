@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-undefined-sprintf-overlap
+.. title:: clang-tidy - bugprone-sprintf-argument-overlap
 
-bugprone-undefined-sprintf-overlap
-==================================
+bugprone-sprintf-argument-overlap
+=================================
 
 Warns if any arguments to the ``sprintf`` family of functions overlap with the
 destination buffer (the first argument).
