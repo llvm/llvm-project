@@ -13866,22 +13866,23 @@ static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
 static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
                                  SDValue MulLHS, SDValue MulRHS,
                                  SDValue AddRHS) {
+  if (MulRHS.getOpcode() == ISD::SRL)
+    std::swap(MulLHS, MulRHS);
 
   if (MulLHS.getValueType() != MVT::i64 || MulLHS.getOpcode() != ISD::SRL)
     return SDValue();
 
   ConstantSDNode *ShiftVal = dyn_cast<ConstantSDNode>(MulLHS.getOperand(1));
-  if (!ShiftVal || MulLHS.getOperand(0) != AddRHS)
+  if (!ShiftVal || ShiftVal->getAsZExtVal() != 32 ||
+      MulLHS.getOperand(0) != AddRHS)
     return SDValue();
 
-  if (ShiftVal->getAsZExtVal() != 32)
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(MulRHS.getNode());
+  if (!Const || Hi_32(Const->getZExtValue()) != -1)
     return SDValue();
 
-  uint64_t Const = dyn_cast<ConstantSDNode>(MulRHS.getNode())->getZExtValue();
-  if (Hi_32(Const) != -1)
-    return SDValue();
-
-  SDValue ConstMul = DAG.getConstant(Const & 0x00000000FFFFFFFF, SL, MVT::i32);
+  SDValue ConstMul =
+      DAG.getConstant(Const->getZExtValue() & 0x00000000FFFFFFFF, SL, MVT::i32);
   return getMad64_32(DAG, SL, MVT::i64,
                      DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
                      DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
@@ -13945,13 +13946,8 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   SDValue MulRHS = LHS.getOperand(1);
   SDValue AddRHS = RHS;
 
-  if (isa<ConstantSDNode>(MulLHS) || isa<ConstantSDNode>(MulRHS)) {
-    if (MulRHS.getOpcode() == ISD::SRL)
-      std::swap(MulLHS, MulRHS);
-
-    if (SDValue FoldedMAD = tryFoldMADwithSRL(DAG, SL, MulLHS, MulRHS, AddRHS))
-      return FoldedMAD;
-  }
+  if (SDValue FoldedMAD = tryFoldMADwithSRL(DAG, SL, MulLHS, MulRHS, AddRHS))
+    return FoldedMAD;
 
   // Always check whether operands are small unsigned values, since that
   // knowledge is useful in more cases. Check for small signed values only if
