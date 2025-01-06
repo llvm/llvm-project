@@ -2226,9 +2226,18 @@ InstructionCost X86TTIImpl::getShuffleCost(
     { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
   };
 
-  if (ST->hasSSE1())
+  if (ST->hasSSE1()) {
+    if (LT.first == 1 && LT.second == MVT::v4f32 && Mask.size() == 4) {
+      // SHUFPS: both pairs must come from the same source register.
+      auto MatchSHUFPS = [](int X, int Y) {
+        return X < 0 || Y < 0 || ((X & 4) == (Y & 4));
+      };
+      if (MatchSHUFPS(Mask[0], Mask[1]) && MatchSHUFPS(Mask[2], Mask[3]))
+        return 1;
+    }
     if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
+  }
 
   return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
 }
