@@ -15,16 +15,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-AST_MATCHER_P(IntegerLiteral, hasSameValueAs, std::string, ID) {
-  return Builder->removeBindings(
-      [this, &Node](const ast_matchers::internal::BoundNodesMap &Nodes) {
-        const DynTypedNode &BN = Nodes.getNode(ID);
-        if (const auto *Lit = BN.get<IntegerLiteral>())
-          return Lit->getValue() != Node.getValue();
-        return true;
-      });
-}
-
 // Similar to forEachArgumentWithParam. forEachArgumentWithParam does not work
 // with variadic functions like sprintf, since there is no `decl()` to match
 // against in the parameter list `...`.
