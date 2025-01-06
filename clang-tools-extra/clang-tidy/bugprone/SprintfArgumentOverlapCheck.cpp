@@ -80,20 +80,20 @@ void SprintfArgumentOverlapCheck::check(
   if (FirstArg->HasSideEffects(Context) || OtherArg->HasSideEffects(Context))
     return;
 
-  std::optional<unsigned> ArgNumber;
+  std::optional<unsigned> ArgIndex;
   for (unsigned I = 0; I != Call->getNumArgs(); ++I) {
     if (Call->getArg(I)->IgnoreUnlessSpelledInSource() == OtherArg) {
-      ArgNumber = I;
+      ArgIndex = I;
       break;
     }
   }
-  if (!ArgNumber)
+  if (!ArgIndex)
     return;
 
   diag(OtherArg->getBeginLoc(),
        "the %ordinal0 argument in %1 overlaps the 1st argument, "
        "which is undefined behavior")
-      << *ArgNumber << FnDecl << FirstArg->getSourceRange()
+      << (*ArgIndex+1) << FnDecl << FirstArg->getSourceRange()
       << OtherArg->getSourceRange();
 }
 
