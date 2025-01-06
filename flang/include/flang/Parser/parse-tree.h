@@ -3824,6 +3824,33 @@ struct OmpExpectation {
   WRAPPER_CLASS_BOILERPLATE(OmpExpectation, Value);
 };
 
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// InteropType -> target || targetsync              // since 5.2
+// There can be at most only two interop-type.
+struct OmpInteropType {
+  ENUM_CLASS(Value, Target, TargetSync)
+  WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// OmpRuntimeIdentifier ->                          // since 5.2
+// CharLiteralConstant || ScalarIntConstantExpr
+struct OmpInteropRuntimeIdentifier {
+  UNION_CLASS_BOILERPLATE(OmpInteropRuntimeIdentifier);
+  std::variant<CharLiteralConstant, ScalarIntConstantExpr> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// OmpInteropPreference ->                          // since 5.2
+// ([OmpRuntimeIdentifier, ...])
+struct OmpInteropPreference {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpInteropPreference, std::list<OmpInteropRuntimeIdentifier>);
+};
+
 // Ref: [5.0:47-49], [5.1:49-51], [5.2:67-69]
 //
 // iterator-modifier ->
@@ -4487,23 +4514,12 @@ struct OmpWhenClause {
 //                              interop-type: interop-var)
 // interop-modifier: prefer_type(preference-list)
 // interop-type: target, targetsync
+// interop-var: Ompobject
 // There can be at most only two interop-type.
-struct InteropType {
-  ENUM_CLASS(Kind, Target, TargetSync)
-  WRAPPER_CLASS_BOILERPLATE(InteropType, Kind);
-};
-
-struct InteropPreference {
-  UNION_CLASS_BOILERPLATE(InteropPreference);
-  std::variant<CharLiteralConstant, ScalarIntConstantExpr> u;
-};
-
 struct OmpInitClause {
   TUPLE_CLASS_BOILERPLATE(OmpInitClause);
-  WRAPPER_CLASS(InteropModifier, std::list<InteropPreference>);
-  WRAPPER_CLASS(InteropTypes, std::list<InteropType>);
-  WRAPPER_CLASS(InteropVar, OmpObject);
-  std::tuple<std::optional<InteropModifier>, InteropTypes, InteropVar> t;
+  MODIFIER_BOILERPLATE(OmpInteropPreference, OmpInteropType);
+  std::tuple<MODIFIERS(), OmpObject> t;
 };
 
 // REF: [5.1:217-220], [5.2:294]

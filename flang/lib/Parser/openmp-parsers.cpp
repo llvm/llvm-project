@@ -394,6 +394,10 @@ TYPE_PARSER(construct<OmpDeviceModifier>(
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
 
+TYPE_PARSER(construct<OmpInteropType>(
+    "TARGETSYNC" >> pure(OmpInteropType::Value::TargetSync) ||
+    "TARGET" >> pure(OmpInteropType::Value::Target)))
+
 TYPE_PARSER(construct<OmpIteratorSpecifier>(
     // Using Parser<TypeDeclarationStmt> or Parser<EntityDecl> has the problem
     // that they will attempt to treat what follows the '=' as initialization.
@@ -466,6 +470,10 @@ TYPE_PARSER(construct<OmpReductionModifier>(
     "TASK" >> pure(OmpReductionModifier::Value::Task) ||
     "DEFAULT" >> pure(OmpReductionModifier::Value::Default)))
 
+TYPE_PARSER(construct<OmpInteropRuntimeIdentifier>(
+    construct<OmpInteropRuntimeIdentifier>(charLiteralConstant) ||
+    construct<OmpInteropRuntimeIdentifier>(scalarIntConstantExpr)))
+
 TYPE_PARSER(construct<OmpStepComplexModifier>( //
     "STEP" >> parenthesized(scalarIntExpr)))
 
@@ -520,6 +528,14 @@ TYPE_PARSER(sourced(
     construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
 TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
+
+TYPE_PARSER(construct<OmpInteropPreference>(verbatim("PREFER_TYPE"_tok) >>
+    parenthesized(nonemptyList(Parser<OmpInteropRuntimeIdentifier>{}))))
+
+TYPE_PARSER(sourced(
+    construct<OmpInitClause::Modifier>(
+        construct<OmpInitClause::Modifier>(Parser<OmpInteropPreference>{})) ||
+    construct<OmpInitClause::Modifier>(Parser<OmpInteropType>{})))
 
 TYPE_PARSER(sourced(construct<OmpInReductionClause::Modifier>(
     Parser<OmpReductionIdentifier>{})))
@@ -757,21 +773,10 @@ TYPE_PARSER(
 // OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
-// InteropTypes
-TYPE_PARSER(construct<InteropType>(
-    "TARGETSYNC" >> pure(InteropType::Kind::TargetSync) ||
-    "TARGET" >> pure(InteropType::Kind::Target)))
-
-// InteropPreference
-TYPE_PARSER(construct<InteropPreference>(
-    construct<InteropPreference>(charLiteralConstant) ||
-    construct<InteropPreference>(scalarIntConstantExpr)))
-
 // init clause
 TYPE_PARSER(construct<OmpInitClause>(
-    maybe(verbatim("PREFER_TYPE"_tok) >>
-        parenthesized(nonemptyList(Parser<InteropPreference>{})) / ","),
-    nonemptyList(Parser<InteropType>{}) / ":", Parser<OmpObject>{}))
+    maybe(nonemptyList(Parser<OmpInitClause::Modifier>{}) / ":"),
+    Parser<OmpObject>{}))
 
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},

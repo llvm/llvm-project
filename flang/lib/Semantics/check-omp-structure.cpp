@@ -5649,24 +5649,31 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     common::visit(
         common::visitors{
             [&](const parser::OmpClause::Init &InitClause) {
-              const auto &InteropTypeList{
-                  std::get<parser::OmpInitClause::InteropTypes>(
-                      InitClause.v.t)};
-              for (auto &InteropTypeVal : InteropTypeList.v) {
-                if (*(parser::Unwrap<parser::InteropType::Kind>(
-                        InteropTypeVal)) ==
-                    parser::InteropType::Kind::TargetSync) {
-                  ++targetSyncCount;
-                } else {
-                  ++targetCount;
-                }
-                if (targetCount > 1 || targetSyncCount > 1) {
-                  context_.Say(GetContext().directiveSource,
-                      "Each interop-type may be speciﬁed at most once."_err_en_US);
+              if (OmpVerifyModifiers(InitClause.v, llvm::omp::OMPC_init,
+                      GetContext().directiveSource, context_)) {
+
+                auto &modifiers{OmpGetModifiers(InitClause.v)};
+                auto &&interopTypeModifier{
+                    OmpGetRepeatableModifier<parser::OmpInteropType>(
+                        modifiers)};
+                for (auto it{interopTypeModifier.begin()},
+                     end{interopTypeModifier.end()};
+                     it != end; ++it) {
+                  if (parser::ToUpperCaseLetters(
+                          parser::OmpInteropType::EnumToString((*it)->v)) ==
+                      "TARGETSYNC") {
+                    ++targetSyncCount;
+                  } else {
+                    ++targetCount;
+                  }
+                  if (targetCount > 1 || targetSyncCount > 1) {
+                    context_.Say(GetContext().directiveSource,
+                        "Each interop-type may be speciﬁed at most once."_err_en_US);
+                  }
                 }
               }
               const auto &InteropVar{parser::Unwrap<parser::OmpObject>(
-                  std::get<parser::OmpInitClause::InteropVar>(InitClause.v.t))};
+                  std::get<parser::OmpObject>(InitClause.v.t))};
               const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
               const auto ObjectName{name->ToString()};
               if (ObjectNameList.end() !=

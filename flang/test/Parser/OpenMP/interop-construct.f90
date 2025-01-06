@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -fdebug-unparse -fopenmp %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s 
-! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp-version=52 -fopenmp %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s 
+! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp-version=52 -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 subroutine test_interop_01()
   !$omp interop device(1)
@@ -7,7 +7,7 @@ subroutine test_interop_01()
 end subroutine test_interop_01
 
 !UNPARSE: SUBROUTINE test_interop_01
-!UNPARSE: !$OMP INTEROP  DEVICE(1_4)
+!UNPARSE: !$OMP INTEROP DEVICE(1_4)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_01
 
@@ -58,8 +58,8 @@ end subroutine test_interop_02
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
 !PARSE-TREE: | | | Verbatim
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
-!PARSE-TREE: | | | | InteropTypes -> InteropType -> Kind = TargetSync
-!PARSE-TREE: | | | | InteropVar -> OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Use -> OmpUseClause -> OmpObject -> Designator -> DataRef -> Name = 'obj1'
 !PARSE-TREE: | | | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'obj3'
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
@@ -96,8 +96,8 @@ end subroutine test_interop_03
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
 !PARSE-TREE: | | | Verbatim
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
-!PARSE-TREE: | | | | InteropTypes -> InteropType -> Kind = TargetSync
-!PARSE-TREE: | | | | InteropVar -> OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'obj'
@@ -146,11 +146,11 @@ end subroutine test_interop_04
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
 !PARSE-TREE: | | | Verbatim
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
-!PARSE-TREE: | | | | InteropModifier -> InteropPreference -> CharLiteralConstant
+!PARSE-TREE: | | | | Modifier -> OmpInteropPreference -> OmpInteropRuntimeIdentifier -> CharLiteralConstant
 !PARSE-TREE: | | | | | string = 'cuda'
-!PARSE-TREE: | | | | InteropTypes -> InteropType -> Kind = TargetSync
-!PARSE-TREE: | | | | InteropType -> Kind = Target
-!PARSE-TREE: | | | | InteropVar -> OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = Target
+!PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr'
@@ -160,7 +160,6 @@ end subroutine test_interop_04
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
 !PARSE-TREE: | | | | string = 'pass'
 !PARSE-TREE: | EndSubroutineStmt -> Name = 'test_interop_04'
-
 
 subroutine test_interop_05()
   use omp_lib
@@ -190,9 +189,9 @@ end subroutine test_interop_05
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
 !PARSE-TREE: | | | Verbatim
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
-!PARSE-TREE: | | | | InteropModifier -> InteropPreference -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_ifr_sycl'
-!PARSE-TREE: | | | | InteropTypes -> InteropType -> Kind = TargetSync
-!PARSE-TREE: | | | | InteropVar -> OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | | | | Modifier -> OmpInteropPreference -> OmpInteropRuntimeIdentifier -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_ifr_sycl'
+!PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
+!PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Modifier -> OmpDeviceModifier -> Value = Device_Num
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '0'
