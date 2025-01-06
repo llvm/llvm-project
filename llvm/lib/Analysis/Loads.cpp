@@ -276,8 +276,20 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 bool llvm::isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const SCEV *Ptr = SE.getSCEV(LI->getPointerOperand());
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(Ptr);
+  const Align Alignment = LI->getAlign();
+  auto &DL = LI->getDataLayout();
+  Value *Ptr = LI->getPointerOperand();
+  APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
+                DL.getTypeStoreSize(LI->getType()).getFixedValue());
+
+  // If given a uniform (i.e. non-varying) address, see if we can prove the
+  // access is safe within the loop w/o needing predication.
+  if (L->isLoopInvariant(Ptr))
+    return isDereferenceableAndAlignedPointer(
+        Ptr, Alignment, EltSize, DL, L->getHeader()->getFirstNonPHI(), AC, &DT);
+
+  const SCEV *PtrScev = SE.getSCEV(Ptr);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrScev);
 
   // Check to see if we have a repeating access pattern and it's possible
   // to prove all accesses are well aligned.
@@ -291,10 +303,6 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
   // TODO: generalize if a case found which warrants
-  const Align Alignment = LI->getAlign();
-  auto &DL = LI->getDataLayout();
-  APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
-                DL.getTypeStoreSize(LI->getType()).getFixedValue());
   if (EltSize.urem(Alignment.value()) != 0)
     return false;
 
@@ -307,8 +315,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
-  const auto &[AccessStart, AccessEnd] =
-      getStartAndEndForAccess(L, Ptr, LI->getType(), MaxBECount, &SE, nullptr);
+  const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
+      L, PtrScev, LI->getType(), MaxBECount, &SE, nullptr);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
