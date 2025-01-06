@@ -717,7 +717,7 @@ public:
 // allocated. This is usually stable across runs leading to the stability of
 // ConstraintMap and other containers using SymbolRef as keys.
 template <>
-struct ::llvm::ImutContainerInfo<clang::ento::SymbolRef>
+struct llvm::ImutContainerInfo<clang::ento::SymbolRef>
     : public ImutProfileInfo<clang::ento::SymbolRef> {
   using value_type = clang::ento::SymbolRef;
   using value_type_ref = clang::ento::SymbolRef;
