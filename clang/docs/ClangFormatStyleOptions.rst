@@ -4661,12 +4661,13 @@ the configuration (without a prefix: ``Auto``).
 .. _KeepEmptyLinesAtEOF:
 
 **KeepEmptyLinesAtEOF** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <KeepEmptyLinesAtEOF>`
-  This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
 
 .. _KeepEmptyLinesAtTheStartOfBlocks:
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
-  This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtStartOfBlock`` of
+  ``KeepEmptyLines``.
 
 .. _KeepFormFeed:
 
@@ -6730,8 +6731,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TemplateNames:
 
 **TemplateNames** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <TemplateNames>`
-  A vector of non-keyword identifiers that should be interpreted as
-  template names.
+  A vector of non-keyword identifiers that should be interpreted as template
+  names.
 
   A ``<`` after a template name is annotated as a template opener instead of
   a binary operator.
