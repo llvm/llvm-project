@@ -918,15 +918,16 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (RVVStackSize) {
-    if (NeedProbe)
+    if (NeedProbe) {
       allocateAndProbeStackForRVV(MF, MBB, MBBI, DL, RVVStackSize,
                                   MachineInstr::FrameSetup, !hasFP(MF));
-    else
+    } else {
       // We must keep the stack pointer aligned through any intermediate
       // updates.
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
                     StackOffset::getScalable(-RVVStackSize),
                     MachineInstr::FrameSetup, getStackAlign());
+    }
 
     if (!hasFP(MF)) {
       // Emit .cfi_def_cfa_expression "sp + StackSize + RVVStackSize * vlenb".
