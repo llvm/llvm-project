@@ -414,7 +414,6 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 ### Other subprojects
 
 Some subprojects maintain their own list of per-component maintainers.
-Others only have a lead maintainer listed here.
 
 [Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
 
@@ -428,6 +427,8 @@ Others only have a lead maintainer listed here.
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
+[libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
+
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
 [LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
@@ -435,11 +436,6 @@ Others only have a lead maintainer listed here.
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 
 [Polly maintainers](https://github.com/llvm/llvm-project/blob/main/polly/Maintainers.md)
-
-#### libclc
-
-Tom Stellard \
-tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 
 ## Inactive Maintainers
 
