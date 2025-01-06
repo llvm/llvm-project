@@ -44,6 +44,7 @@
 #include "ToolChains/RISCVToolchain.h"
 #include "ToolChains/SPIRV.h"
 #include "ToolChains/SPIRVOpenMP.h"
+#include "ToolChains/SYCL.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -781,6 +782,35 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
+static llvm::Triple getSYCLDeviceTriple(StringRef TargetArch) {
+  SmallVector<StringRef, 5> SYCLAlias = {"spir", "spir64", "spirv", "spirv32",
+                                         "spirv64"};
+  if (llvm::is_contained(SYCLAlias, TargetArch)) {
+    llvm::Triple TargetTriple;
+    TargetTriple.setArchName(TargetArch);
+    TargetTriple.setVendor(llvm::Triple::UnknownVendor);
+    TargetTriple.setOS(llvm::Triple::UnknownOS);
+    return TargetTriple;
+  }
+  return llvm::Triple(TargetArch);
+}
+
+static bool addSYCLDefaultTriple(Compilation &C,
+                                 SmallVectorImpl<llvm::Triple> &SYCLTriples) {
+  // Check current set of triples to see if the default has already been set.
+  for (const auto &SYCLTriple : SYCLTriples) {
+    if (SYCLTriple.getSubArch() == llvm::Triple::NoSubArch &&
+        SYCLTriple.isSPIROrSPIRV())
+      return false;
+  }
+  // Add the default triple as it was not found.
+  llvm::Triple DefaultTriple = getSYCLDeviceTriple(
+      C.getDefaultToolChain().getTriple().isArch32Bit() ? "spirv32"
+                                                        : "spirv64");
+  SYCLTriples.insert(SYCLTriples.begin(), DefaultTriple);
+  return true;
+}
+
 void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
 
@@ -842,7 +872,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       return;
     auto *HIPTC = &getOffloadingDeviceToolChain(C.getInputArgs(), *HIPTriple,
                                                 *HostTC, OFK);
-    assert(HIPTC && "Could not create offloading device tool chain.");
     C.addOffloadDeviceToolChain(HIPTC, OFK);
   }
 
@@ -995,6 +1024,38 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   } else if (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ)) {
     Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
     return;
+  }
+
+  // We need to generate a SYCL toolchain if the user specified -fsycl.
+  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
+                                         options::OPT_fno_sycl, false);
+
+  auto argSYCLIncompatible = [&](OptSpecifier OptId) {
+    if (!IsSYCL)
+      return;
+    if (Arg *IncompatArg = C.getInputArgs().getLastArg(OptId))
+      Diag(clang::diag::err_drv_argument_not_allowed_with)
+          << IncompatArg->getSpelling() << "-fsycl";
+  };
+  // -static-libstdc++ is not compatible with -fsycl.
+  argSYCLIncompatible(options::OPT_static_libstdcxx);
+  // -ffreestanding cannot be used with -fsycl
+  argSYCLIncompatible(options::OPT_ffreestanding);
+
+  llvm::SmallVector<llvm::Triple, 4> UniqueSYCLTriplesVec;
+
+  if (IsSYCL) {
+    addSYCLDefaultTriple(C, UniqueSYCLTriplesVec);
+
+    // We'll need to use the SYCL and host triples as the key into
+    // getOffloadingDeviceToolChain, because the device toolchains we're
+    // going to create will depend on both.
+    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    for (const auto &TargetTriple : UniqueSYCLTriplesVec) {
+      auto SYCLTC = &getOffloadingDeviceToolChain(
+          C.getInputArgs(), TargetTriple, *HostTC, Action::OFK_SYCL);
+      C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
+    }
   }
 
   //
@@ -4234,6 +4295,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
+      C.isOffloadingHostKind(Action::OFK_SYCL) ||
       Args.hasFlag(options::OPT_foffload_via_llvm,
                    options::OPT_fno_offload_via_llvm, false) ||
       Args.hasFlag(options::OPT_offload_new_driver,
@@ -4651,6 +4713,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
       Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
     else if (Kind == Action::OFK_OpenMP)
       Archs.insert(StringRef());
+    else if (Kind == Action::OFK_SYCL)
+      Archs.insert(StringRef());
   } else {
     Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
     Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
@@ -4675,7 +4739,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   OffloadAction::DeviceDependences DDeps;
 
   const Action::OffloadKind OffloadKinds[] = {
-      Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP};
+      Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP, Action::OFK_SYCL};
 
   for (Action::OffloadKind Kind : OffloadKinds) {
     SmallVector<const ToolChain *, 2> ToolChains;
@@ -4712,6 +4776,15 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     if (DeviceActions.empty())
       return HostAction;
 
+    // FIXME: Do not collapse the host side for Darwin targets with SYCL offload
+    // compilations. The toolchain is not properly initialized for the target.
+    if (isa<CompileJobAction>(HostAction) && Kind == Action::OFK_SYCL &&
+        HostAction->getType() != types::TY_Nothing &&
+        C.getSingleOffloadToolChain<Action::OFK_Host>()
+            ->getTriple()
+            .isOSDarwin())
+      HostAction->setCannotBeCollapsedWithNextDependentAction();
+
     auto PL = types::getCompilationPhases(*this, Args, InputType);
 
     for (phases::ID Phase : PL) {
@@ -4719,6 +4792,11 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         assert(Phase == PL.back() && "linking must be final compilation step.");
         break;
       }
+
+      // Assemble actions are not used for the SYCL device side.  Both compile
+      // and backend actions are used to generate IR and textual IR if needed.
+      if (Kind == Action::OFK_SYCL && Phase == phases::Assemble)
+        continue;
 
       auto TCAndArch = TCAndArchs.begin();
       for (Action *&A : DeviceActions) {
@@ -4958,6 +5036,7 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
     if (Args.hasArg(options::OPT_emit_llvm) ||
+        TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
@@ -6644,11 +6723,16 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
                                                            HostTC, Args);
       break;
     }
+    case Action::OFK_SYCL:
+      if (Target.isSPIROrSPIRV())
+        TC = std::make_unique<toolchains::SYCLToolChain>(*this, Target, HostTC,
+                                                         Args);
+      break;
     default:
       break;
     }
   }
-
+  assert(TC && "Could not create offloading device tool chain.");
   return *TC;
 }
 
