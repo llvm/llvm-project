@@ -304,6 +304,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
 
   auto GetExtendKind = [](VPRecipeBase *R) {
+    // The extend could come from outside the plan.
+    if (!R)
+      return TargetTransformInfo::PR_None;
     auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
     if (!WidenCastR)
       return TargetTransformInfo::PR_None;
