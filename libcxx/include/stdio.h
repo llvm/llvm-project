@@ -87,8 +87,9 @@ int ferror(FILE* stream);
 void perror(const char* s);
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stdio.h>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -105,10 +106,6 @@ void perror(const char* s);
 #  ifndef _LIBCPP_STDIO_H
 #    define _LIBCPP_STDIO_H
 
-#    if __has_include_next(<stdio.h>)
-#      include_next <stdio.h>
-#    endif
-
 #    ifdef __cplusplus
 
 #      undef getc
@@ -119,7 +116,7 @@ void perror(const char* s);
 #      undef putchar
 #      undef getchar
 
-#    endif
-#  endif // 0
+#    endif // __cplusplus
+#  endif   // _LIBCPP_STDIO_H
 
-#endif // _LIBCPP_STDIO_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

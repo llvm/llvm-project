@@ -308,6 +308,10 @@ private:
 ///    according to their dependency relations until a fixed point is reached.
 /// 3. Query analysis state results from the solver.
 ///
+/// Steps to re-run a data-flow analysis when IR changes:
+/// 1. Erase all analysis states as they are no longer valid.
+/// 2. Re-run the analysis using `initializeAndRun`.
+///
 /// TODO: Optimize the internal implementation of the solver.
 class DataFlowSolver {
 public:
@@ -345,6 +349,9 @@ public:
         analysisStates.erase(it);
     }
   }
+
+  // Erase all analysis states
+  void eraseAllStates() { analysisStates.clear(); }
 
   /// Get a uniqued lattice anchor instance. If one is not present, it is
   /// created with the provided arguments.

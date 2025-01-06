@@ -592,5 +592,85 @@ public:
     return const_child_range(Begin, Begin + NumExprs);
   }
 };
+
+// This class represents an 'init' construct, which has just a clause list.
+class OpenACCInitConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCInitConstruct,
+                                    const OpenACCClause *> {
+  friend TrailingObjects;
+  OpenACCInitConstruct(unsigned NumClauses)
+      : OpenACCConstructStmt(OpenACCInitConstructClass,
+                             OpenACCDirectiveKind::Init, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+  OpenACCInitConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                       SourceLocation End,
+                       ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructStmt(OpenACCInitConstructClass,
+                             OpenACCDirectiveKind::Init, Start, DirectiveLoc,
+                             End) {
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCInitConstructClass;
+  }
+  static OpenACCInitConstruct *CreateEmpty(const ASTContext &C,
+                                           unsigned NumClauses);
+  static OpenACCInitConstruct *Create(const ASTContext &C, SourceLocation Start,
+                                      SourceLocation DirectiveLoc,
+                                      SourceLocation End,
+                                      ArrayRef<const OpenACCClause *> Clauses);
+};
+
+// This class represents a 'shutdown' construct, which has just a clause list.
+class OpenACCShutdownConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCShutdownConstruct,
+                                    const OpenACCClause *> {
+  friend TrailingObjects;
+  OpenACCShutdownConstruct(unsigned NumClauses)
+      : OpenACCConstructStmt(OpenACCShutdownConstructClass,
+                             OpenACCDirectiveKind::Shutdown, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+  OpenACCShutdownConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                           SourceLocation End,
+                           ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructStmt(OpenACCShutdownConstructClass,
+                             OpenACCDirectiveKind::Shutdown, Start,
+                             DirectiveLoc, End) {
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCShutdownConstructClass;
+  }
+  static OpenACCShutdownConstruct *CreateEmpty(const ASTContext &C,
+                                               unsigned NumClauses);
+  static OpenACCShutdownConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
+};
+
 } // namespace clang
 #endif // LLVM_CLANG_AST_STMTOPENACC_H

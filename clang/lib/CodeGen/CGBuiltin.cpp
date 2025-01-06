@@ -835,6 +835,38 @@ static Value *emitFrexpBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   return CGF.Builder.CreateExtractValue(Call, 0);
 }
 
+static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                              llvm::Intrinsic::ID IntrinsicID) {
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Dest0 = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *Dest1 = CGF.EmitScalarExpr(E->getArg(2));
+
+  llvm::Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {Val->getType()});
+  llvm::Value *Call = CGF.Builder.CreateCall(F, Val);
+
+  llvm::Value *SinResult = CGF.Builder.CreateExtractValue(Call, 0);
+  llvm::Value *CosResult = CGF.Builder.CreateExtractValue(Call, 1);
+
+  QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
+  LValue SinLV = CGF.MakeNaturalAlignAddrLValue(Dest0, DestPtrType);
+  LValue CosLV = CGF.MakeNaturalAlignAddrLValue(Dest1, DestPtrType);
+
+  llvm::StoreInst *StoreSin =
+      CGF.Builder.CreateStore(SinResult, SinLV.getAddress());
+  llvm::StoreInst *StoreCos =
+      CGF.Builder.CreateStore(CosResult, CosLV.getAddress());
+
+  // Mark the two stores as non-aliasing with each other. The order of stores
+  // emitted by this builtin is arbitrary, enforcing a particular order will
+  // prevent optimizations later on.
+  llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+  MDNode *Domain = MDHelper.createAnonymousAliasScopeDomain();
+  MDNode *AliasScope = MDHelper.createAnonymousAliasScope(Domain);
+  MDNode *AliasScopeList = MDNode::get(Call->getContext(), AliasScope);
+  StoreSin->setMetadata(LLVMContext::MD_alias_scope, AliasScopeList);
+  StoreCos->setMetadata(LLVMContext::MD_noalias, AliasScopeList);
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -3232,6 +3264,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BI__builtin_sincos:
+    case Builtin::BI__builtin_sincosf:
+    case Builtin::BI__builtin_sincosf16:
+    case Builtin::BI__builtin_sincosl:
+    case Builtin::BI__builtin_sincosf128:
+      emitSincosBuiltin(*this, E, Intrinsic::sincos);
+      return RValue::get(nullptr);
+
     case Builtin::BIsqrt:
     case Builtin::BIsqrtf:
     case Builtin::BIsqrtl:
@@ -5099,6 +5139,147 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                     ReturnValueSlot(), Args);
   }
 
+  case Builtin::BI__atomic_test_and_set: {
+    // Look at the argument type to determine whether this is a volatile
+    // operation. The parameter type is always volatile.
+    QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
+    bool Volatile =
+        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+
+    Address Ptr =
+        EmitPointerWithAlignment(E->getArg(0)).withElementType(Int8Ty);
+
+    Value *NewVal = Builder.getInt8(1);
+    Value *Order = EmitScalarExpr(E->getArg(1));
+    if (isa<llvm::ConstantInt>(Order)) {
+      int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+      AtomicRMWInst *Result = nullptr;
+      switch (ord) {
+      case 0:  // memory_order_relaxed
+      default: // invalid order
+        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
+                                         llvm::AtomicOrdering::Monotonic);
+        break;
+      case 1: // memory_order_consume
+      case 2: // memory_order_acquire
+        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
+                                         llvm::AtomicOrdering::Acquire);
+        break;
+      case 3: // memory_order_release
+        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
+                                         llvm::AtomicOrdering::Release);
+        break;
+      case 4: // memory_order_acq_rel
+
+        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
+                                         llvm::AtomicOrdering::AcquireRelease);
+        break;
+      case 5: // memory_order_seq_cst
+        Result = Builder.CreateAtomicRMW(
+            llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
+            llvm::AtomicOrdering::SequentiallyConsistent);
+        break;
+      }
+      Result->setVolatile(Volatile);
+      return RValue::get(Builder.CreateIsNotNull(Result, "tobool"));
+    }
+
+    llvm::BasicBlock *ContBB = createBasicBlock("atomic.continue", CurFn);
+
+    llvm::BasicBlock *BBs[5] = {
+      createBasicBlock("monotonic", CurFn),
+      createBasicBlock("acquire", CurFn),
+      createBasicBlock("release", CurFn),
+      createBasicBlock("acqrel", CurFn),
+      createBasicBlock("seqcst", CurFn)
+    };
+    llvm::AtomicOrdering Orders[5] = {
+        llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Acquire,
+        llvm::AtomicOrdering::Release, llvm::AtomicOrdering::AcquireRelease,
+        llvm::AtomicOrdering::SequentiallyConsistent};
+
+    Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
+    llvm::SwitchInst *SI = Builder.CreateSwitch(Order, BBs[0]);
+
+    Builder.SetInsertPoint(ContBB);
+    PHINode *Result = Builder.CreatePHI(Int8Ty, 5, "was_set");
+
+    for (unsigned i = 0; i < 5; ++i) {
+      Builder.SetInsertPoint(BBs[i]);
+      AtomicRMWInst *RMW = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg,
+                                                   Ptr, NewVal, Orders[i]);
+      RMW->setVolatile(Volatile);
+      Result->addIncoming(RMW, BBs[i]);
+      Builder.CreateBr(ContBB);
+    }
+
+    SI->addCase(Builder.getInt32(0), BBs[0]);
+    SI->addCase(Builder.getInt32(1), BBs[1]);
+    SI->addCase(Builder.getInt32(2), BBs[1]);
+    SI->addCase(Builder.getInt32(3), BBs[2]);
+    SI->addCase(Builder.getInt32(4), BBs[3]);
+    SI->addCase(Builder.getInt32(5), BBs[4]);
+
+    Builder.SetInsertPoint(ContBB);
+    return RValue::get(Builder.CreateIsNotNull(Result, "tobool"));
+  }
+
+  case Builtin::BI__atomic_clear: {
+    QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
+    bool Volatile =
+        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+
+    Address Ptr = EmitPointerWithAlignment(E->getArg(0));
+    Ptr = Ptr.withElementType(Int8Ty);
+    Value *NewVal = Builder.getInt8(0);
+    Value *Order = EmitScalarExpr(E->getArg(1));
+    if (isa<llvm::ConstantInt>(Order)) {
+      int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+      StoreInst *Store = Builder.CreateStore(NewVal, Ptr, Volatile);
+      switch (ord) {
+      case 0:  // memory_order_relaxed
+      default: // invalid order
+        Store->setOrdering(llvm::AtomicOrdering::Monotonic);
+        break;
+      case 3:  // memory_order_release
+        Store->setOrdering(llvm::AtomicOrdering::Release);
+        break;
+      case 5:  // memory_order_seq_cst
+        Store->setOrdering(llvm::AtomicOrdering::SequentiallyConsistent);
+        break;
+      }
+      return RValue::get(nullptr);
+    }
+
+    llvm::BasicBlock *ContBB = createBasicBlock("atomic.continue", CurFn);
+
+    llvm::BasicBlock *BBs[3] = {
+      createBasicBlock("monotonic", CurFn),
+      createBasicBlock("release", CurFn),
+      createBasicBlock("seqcst", CurFn)
+    };
+    llvm::AtomicOrdering Orders[3] = {
+        llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Release,
+        llvm::AtomicOrdering::SequentiallyConsistent};
+
+    Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
+    llvm::SwitchInst *SI = Builder.CreateSwitch(Order, BBs[0]);
+
+    for (unsigned i = 0; i < 3; ++i) {
+      Builder.SetInsertPoint(BBs[i]);
+      StoreInst *Store = Builder.CreateStore(NewVal, Ptr, Volatile);
+      Store->setOrdering(Orders[i]);
+      Builder.CreateBr(ContBB);
+    }
+
+    SI->addCase(Builder.getInt32(0), BBs[0]);
+    SI->addCase(Builder.getInt32(3), BBs[1]);
+    SI->addCase(Builder.getInt32(5), BBs[2]);
+
+    Builder.SetInsertPoint(ContBB);
+    return RValue::get(nullptr);
+  }
+
   case Builtin::BI__atomic_thread_fence:
   case Builtin::BI__atomic_signal_fence:
   case Builtin::BI__c11_atomic_thread_fence:
@@ -6616,6 +6797,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
+  case llvm::Triple::spirv:
+    return CGF->EmitSPIRVBuiltinExpr(BuiltinID, E);
   case llvm::Triple::spirv64:
     if (CGF->getTarget().getTriple().getOS() != llvm::Triple::OSType::AMDHSA)
       return nullptr;
@@ -20297,6 +20480,26 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   default:
     return nullptr;
   }
+}
+
+Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
+                                             const CallExpr *E) {
+  switch (BuiltinID) {
+  case SPIRV::BI__builtin_spirv_distance: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "Distance operands must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           E->getArg(1)->getType()->isVectorType() &&
+           "Distance operands must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_distance,
+        ArrayRef<Value *>{X, Y}, nullptr, "spv.distance");
+  }
+  }
+  return nullptr;
 }
 
 /// Handle a SystemZ function in which the final argument is a pointer

@@ -348,10 +348,10 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -12, [[MIDDLE_BLOCK]] ], [ 100, [[VECTOR_MEMCHECK]] ], [ 100, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 2048, [[VECTOR_MEMCHECK]] ], [ 2048, [[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[A]], [[VECTOR_MEMCHECK]] ], [ [[A]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[IND_END3]], [[MIDDLE_BLOCK]] ], [ [[B]], [[VECTOR_MEMCHECK]] ], [ [[B]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi ptr [ [[IND_END5]], [[MIDDLE_BLOCK]] ], [ [[B]], [[VECTOR_MEMCHECK]] ], [ [[B]], [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 2048, [[VECTOR_MEMCHECK]] ], [ 2048, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[LOOP]] ]

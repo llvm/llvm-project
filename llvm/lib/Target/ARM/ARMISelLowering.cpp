@@ -806,7 +806,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_BF16, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f64, Custom);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -1113,12 +1115,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   for (MVT VT : MVT::fp_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
   }
 
   // ... or truncating stores
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
 
   // ARM does not have i1 sign extending load.
   for (MVT VT : MVT::integer_valuetypes())

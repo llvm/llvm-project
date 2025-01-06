@@ -615,9 +615,14 @@ bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
   return TTIImpl->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
 }
 
-bool TargetTransformInfo::isVectorIntrinsicWithOverloadTypeAtArg(
-    Intrinsic::ID ID, int ScalarOpdIdx) const {
-  return TTIImpl->isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
+bool TargetTransformInfo::isTargetIntrinsicWithOverloadTypeAtArg(
+    Intrinsic::ID ID, int OpdIdx) const {
+  return TTIImpl->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+}
+
+bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx) const {
+  return TTIImpl->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
 }
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
@@ -858,14 +863,6 @@ bool TargetTransformInfo::shouldPrefetchAddressSpace(unsigned AS) const {
   return TTIImpl->shouldPrefetchAddressSpace(AS);
 }
 
-InstructionCost TargetTransformInfo::getPartialReductionCost(
-    unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
-    PartialReductionExtendKind OpAExtend, PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
-  return TTIImpl->getPartialReductionCost(Opcode, InputType, AccumType, VF,
-                                          OpAExtend, OpBExtend, BinOp);
-}
-
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }
@@ -975,15 +972,6 @@ InstructionCost TargetTransformInfo::getShuffleCost(
                                                  Index, SubTp, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
-}
-
-TargetTransformInfo::PartialReductionExtendKind
-TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
-  if (isa<SExtInst>(I))
-    return PR_SignExtend;
-  if (isa<ZExtInst>(I))
-    return PR_ZeroExtend;
-  return PR_None;
 }
 
 TTI::CastContextHint

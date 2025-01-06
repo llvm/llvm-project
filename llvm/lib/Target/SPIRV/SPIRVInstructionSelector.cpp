@@ -2881,6 +2881,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // translated to a `LocalInvocationId` builtin variable
     return loadVec3BuiltinInputID(SPIRV::BuiltIn::LocalInvocationId, ResVReg,
                                   ResType, I);
+  case Intrinsic::spv_group_id:
+    // The HLSL SV_GroupId semantic is lowered to
+    // llvm.spv.group.id intrinsic in LLVM IR for SPIR-V backend.
+    //
+    // In SPIR-V backend, llvm.spv.group.id is now translated to a `WorkgroupId`
+    // builtin variable
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::WorkgroupId, ResVReg, ResType,
+                                  I);
   case Intrinsic::spv_fdot:
     return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
@@ -2906,6 +2914,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAny(ResVReg, ResType, I);
   case Intrinsic::spv_cross:
     return selectExtInst(ResVReg, ResType, I, CL::cross, GL::Cross);
+  case Intrinsic::spv_distance:
+    return selectExtInst(ResVReg, ResType, I, CL::distance, GL::Distance);
   case Intrinsic::spv_lerp:
     return selectExtInst(ResVReg, ResType, I, CL::mix, GL::FMix);
   case Intrinsic::spv_length:
@@ -2987,14 +2997,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
-  case Intrinsic::spv_handle_fromBinding: {
+  case Intrinsic::spv_resource_handlefrombinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
-  case Intrinsic::spv_typedBufferStore: {
+  case Intrinsic::spv_resource_store_typedbuffer: {
     selectImageWriteIntrinsic(I);
     return true;
   }
-  case Intrinsic::spv_typedBufferLoad: {
+  case Intrinsic::spv_resource_load_typedbuffer: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
   }

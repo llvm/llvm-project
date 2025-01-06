@@ -54,7 +54,7 @@ static void updateFunctionFlags(ComputedShaderFlags &CSF, const Instruction &I,
     switch (II->getIntrinsicID()) {
     default:
       break;
-    case Intrinsic::dx_typedBufferLoad: {
+    case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())

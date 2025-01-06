@@ -94,6 +94,7 @@ static_library("Driver") {
     "ToolChains/PS4CPU.cpp",
     "ToolChains/RISCVToolchain.cpp",
     "ToolChains/SPIRV.cpp",
+    "ToolChains/SPIRVOpenMP.cpp",
     "ToolChains/Solaris.cpp",
     "ToolChains/TCE.cpp",
     "ToolChains/UEFI.cpp",

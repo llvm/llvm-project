@@ -460,10 +460,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     1 value is returned, packed into an LLVM IR struct type. Function calls and
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
-
-    Note that until https://github.com/llvm/llvm-project/issues/70982 is resolved,
-    this pass includes patterns that lower `arith` and `cf` to LLVM. This is legacy
-    code due to when they were all converted in the same pass.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [

@@ -296,9 +296,10 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue
-      genIeeeSupportFlagOrHalting(mlir::Type,
-                                  llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIeeeSupportFlag(mlir::Type,
+                                        llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIeeeSupportHalting(mlir::Type,
+                                           llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
