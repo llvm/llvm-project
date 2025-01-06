@@ -17,10 +17,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#if defined(_AIX)
-#include <strings.h>
-#endif
-
 using namespace lldb;
 using namespace lldb_private;
 
