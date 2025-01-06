@@ -310,6 +310,7 @@ set(x86_80_BIT_SOURCES
   mulxc3.c
   powixf2.c
   trunctfxf2.c
+  truncxfhf2.c
 )
 
 if (NOT MSVC)

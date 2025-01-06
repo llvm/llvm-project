@@ -3423,7 +3423,7 @@ def warn_typecheck_vector_element_sizes_not_equal : Warning<
 def err_ext_vector_component_exceeds_length : Error<
   "vector component access exceeds type %0">;
 def err_ext_vector_component_name_illegal : Error<
-  "illegal vector component name '%0'">;
+  "illegal vector component name %0">;
 def err_attribute_address_space_negative : Error<
   "address space is negative">;
 def err_attribute_address_space_too_high : Error<
@@ -3999,6 +3999,10 @@ def warn_thread_attribute_decl_not_lockable : Warning<
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
+  "%0 attribute applies to function parameters only if their type is a "
+  "reference to a 'scoped_lockable'-annotated type">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4054,6 +4058,17 @@ def warn_acquired_before : Warning<
 def warn_acquired_before_after_cycle : Warning<
   "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_unmatched_underlying_mutexes : Warning<
+  "%0 managed by '%1' is '%3' instead of '%2'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_expect_more_underlying_mutexes : Warning<
+  "%0 '%2' not managed by '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_expect_fewer_underlying_mutexes : Warning<
+  "did not expect %0 '%2' to be managed by '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def note_managed_mismatch_here_for_param : Note<
+  "see attribute on parameter here">;
 
 
 // Thread safety warnings negative capabilities

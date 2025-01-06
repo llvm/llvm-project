@@ -46,10 +46,12 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
-#### InstCombine, ConstantFold
+#### InstCombine, InstSimplify, ValueTracking, ConstantFold
 
-David Majnemer \
-david.majnemer@gmail.com (email), [majnemer](https://github.com/majnemer) (GitHub)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse) \
+Yingwei Zheng \
+dtcxzyw2333@gmail.com (email), [dtcxzyw](https://github.com/dtcxzyw) (GitHub)
 
 #### InstrProfiling and related parts of ProfileData
 
@@ -247,12 +249,16 @@ czhengsz@cn.ibm.com (email), [chenzheng1030](https://github.com/chenzheng1030) (
 #### RISCV backend
 
 Alex Bradbury \
-asb@igalia.com (email), [asb](https://github.com/asb) (GitHub)
+asb@igalia.com (email), [asb](https://github.com/asb) (GitHub) \
+Craig Topper \
+craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub) \
+Philip Reames \
+listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub)
 
 #### Sparc backend
 
-Venkatraman Govindaraju \
-venkatra@cs.wisc.edu (email), [vegovin](https://github.com/vegovin) (GitHub)
+Koakuma \
+koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
 
 #### SPIRV backend
 
@@ -320,15 +326,10 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Benjamin Kramer \
 benny.kra@gmail.com (email), [d0k](https://github.com/d0k) (GitHub)
 
-#### IR Linker
+#### IR Linker and LTO
 
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
-
-#### LTO
-
-Peter Collingbourne \
-peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 
 #### MCJIT, Orc, RuntimeDyld, PerfJITEvents
 
@@ -456,11 +457,14 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
+Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \

@@ -8,13 +8,11 @@
 // This is the nanobind edition of the PythonTest dialect module.
 //===----------------------------------------------------------------------===//
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/vector.h>
-
 #include "PythonTestCAPI.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;

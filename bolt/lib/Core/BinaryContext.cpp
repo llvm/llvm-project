@@ -1076,6 +1076,7 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = GAI->second;
     if (!BD->hasName(Name)) {
       GlobalSymbols[Name] = BD;
+      BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
   }
@@ -1961,7 +1962,15 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << "\tjit\t" << MIB->getTargetSymbol(Instruction)->getName()
        << " # ID: " << DynamicID;
   } else {
-    InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
+    // If there are annotations on the instruction, the MCInstPrinter will fail
+    // to print the preferred alias as it only does so when the number of
+    // operands is as expected. See
+    // https://github.com/llvm/llvm-project/blob/782f1a0d895646c364a53f9dcdd6d4ec1f3e5ea0/llvm/lib/MC/MCInstPrinter.cpp#L142
+    // Therefore, create a temporary copy of the Inst from which the annotations
+    // are removed, and print that Inst.
+    MCInst InstNoAnnot = Instruction;
+    MIB->stripAnnotations(InstNoAnnot);
+    InstPrinter->printInst(&InstNoAnnot, 0, "", *STI, OS);
   }
   if (MIB->isCall(Instruction)) {
     if (MIB->isTailCall(Instruction))

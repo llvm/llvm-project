@@ -1176,10 +1176,13 @@ bool AMDGPUSwLowerLDS::run() {
         LDSParams.IndirectAccess.DynamicLDSGlobals.empty()) {
       Changed = false;
     } else {
-      removeFnAttrFromReachable(CG, Func,
-                                {"amdgpu-no-workitem-id-x",
-                                 "amdgpu-no-workitem-id-y",
-                                 "amdgpu-no-workitem-id-z"});
+      removeFnAttrFromReachable(
+          CG, Func,
+          {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
+           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
+      if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
+          !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
+        removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
       reorderStaticDynamicIndirectLDSSet(LDSParams);
       buildSwLDSGlobal(Func);
       buildSwDynLDSGlobal(Func);

@@ -417,7 +417,7 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
     if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
       // Op is isolated from above. Apply patterns and also perform region
       // simplification.
-      result = applyPatternsAndFoldGreedily(target, frozenPatterns, config);
+      result = applyPatternsGreedily(target, frozenPatterns, config);
     } else {
       // Manually gather list of ops because the other
       // GreedyPatternRewriteDriver overloads only accepts ops that are isolated
@@ -429,7 +429,7 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
         if (target != nestedOp)
           ops.push_back(nestedOp);
       });
-      result = applyOpPatternsAndFold(ops, frozenPatterns, config);
+      result = applyOpPatternsGreedily(ops, frozenPatterns, config);
     }
 
     // A failure typically indicates that the pattern application did not
