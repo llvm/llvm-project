@@ -326,6 +326,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvbc32e``, ``experimental-zvkgs``
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
+``experimental-sdext``, ``experimental-sdtrig``
+  LLVM implements the `1.0-rc4 specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0.0-rc4/riscv-debug-specification.pdf>`__.
+
 ``experimental-smctr``, ``experimental-ssctr``
   LLVM implements the `1.0-rc3 specification <https://github.com/riscv/riscv-control-transfer-records/releases/tag/v1.0_rc3>`__.
 

@@ -448,7 +448,7 @@ public:
 };
 
 /// '?' - Represents an uninitialized value.
-class UnsetInit : public Init {
+class UnsetInit final : public Init {
   friend detail::RecordKeeperImpl;
 
   /// The record keeper that initialized this Init.
@@ -486,7 +486,7 @@ public:
 
 // Represent an argument.
 using ArgAuxType = std::variant<unsigned, const Init *>;
-class ArgumentInit : public Init, public FoldingSetNode {
+class ArgumentInit final : public Init, public FoldingSetNode {
 public:
   enum Kind {
     Positional,
@@ -638,7 +638,7 @@ public:
 };
 
 /// '7' - Represent an initialization by a literal integer value.
-class IntInit : public TypedInit {
+class IntInit final : public TypedInit {
   int64_t Value;
 
   explicit IntInit(RecordKeeper &RK, int64_t V)
@@ -669,7 +669,7 @@ public:
 };
 
 /// "anonymous_n" - Represent an anonymous record name
-class AnonymousNameInit : public TypedInit {
+class AnonymousNameInit final : public TypedInit {
   unsigned Value;
 
   explicit AnonymousNameInit(RecordKeeper &RK, unsigned V)
@@ -699,7 +699,7 @@ public:
 };
 
 /// "foo" - Represent an initialization by a string value.
-class StringInit : public TypedInit {
+class StringInit final : public TypedInit {
 public:
   enum StringFormat {
     SF_String, // Format as "text"
@@ -845,7 +845,7 @@ public:
 
 /// !op (X) - Transform an init.
 ///
-class UnOpInit : public OpInit, public FoldingSetNode {
+class UnOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum UnaryOp : uint8_t {
     TOLOWER,
@@ -908,7 +908,7 @@ public:
 };
 
 /// !op (X, Y) - Combine two inits.
-class BinOpInit : public OpInit, public FoldingSetNode {
+class BinOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t {
     ADD,
@@ -995,7 +995,7 @@ public:
 };
 
 /// !op (X, Y, Z) - Combine two inits.
-class TernOpInit : public OpInit, public FoldingSetNode {
+class TernOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum TernaryOp : uint8_t {
     SUBST,
@@ -1144,7 +1144,7 @@ public:
 };
 
 /// !foldl (a, b, expr, start, lst) - Fold over a list.
-class FoldOpInit : public TypedInit, public FoldingSetNode {
+class FoldOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const Init *Start, *List, *A, *B, *Expr;
 
@@ -1179,7 +1179,7 @@ public:
 };
 
 /// !isa<type>(expr) - Dynamically determine the type of an expression.
-class IsAOpInit : public TypedInit, public FoldingSetNode {
+class IsAOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *CheckType;
   const Init *Expr;
@@ -1213,7 +1213,7 @@ public:
 
 /// !exists<type>(expr) - Dynamically determine if a record of `type` named
 /// `expr` exists.
-class ExistsOpInit : public TypedInit, public FoldingSetNode {
+class ExistsOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *CheckType;
   const Init *Expr;
@@ -1246,7 +1246,7 @@ public:
 };
 
 /// 'Opcode' - Represent a reference to an entire variable object.
-class VarInit : public TypedInit {
+class VarInit final : public TypedInit {
   const Init *VarName;
 
   explicit VarInit(const Init *VN, const RecTy *T)
@@ -1320,7 +1320,7 @@ public:
 };
 
 /// AL - Represent a reference to a 'def' in the description
-class DefInit : public TypedInit {
+class DefInit final : public TypedInit {
   friend class Record;
 
   const Record *Def;
@@ -1409,7 +1409,7 @@ public:
 };
 
 /// X.Y - Represent a reference to a subfield of a variable
-class FieldInit : public TypedInit {
+class FieldInit final : public TypedInit {
   const Init *Rec;             // Record we are referring to
   const StringInit *FieldName; // Field we are accessing
 

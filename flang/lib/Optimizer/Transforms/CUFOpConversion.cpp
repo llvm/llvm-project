@@ -792,10 +792,6 @@ struct CUFSyncDescriptorOpConversion
     : public mlir::OpRewritePattern<cuf::SyncDescriptorOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  CUFSyncDescriptorOpConversion(mlir::MLIRContext *context,
-                                const mlir::SymbolTable &symTab)
-      : OpRewritePattern(context), symTab{symTab} {}
-
   mlir::LogicalResult
   matchAndRewrite(cuf::SyncDescriptorOp op,
                   mlir::PatternRewriter &rewriter) const override {
@@ -822,9 +818,6 @@ struct CUFSyncDescriptorOpConversion
     op.erase();
     return mlir::success();
   }
-
-private:
-  const mlir::SymbolTable &symTab;
 };
 
 class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
@@ -887,11 +880,11 @@ void cuf::populateCUFToFIRConversionPatterns(
     const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
   patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
-                  CUFFreeOpConversion>(patterns.getContext());
+                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion>(
+      patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
-  patterns.insert<CUFLaunchOpConversion, CUFSyncDescriptorOpConversion>(
-      patterns.getContext(), symtab);
+  patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
 }
 
 void cuf::populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,

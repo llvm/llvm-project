@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
-namespace cwg2913 { // cwg2913: 20 tentatively ready 2024-08-16
+namespace cwg2913 { // cwg2913: 20
 
 #if __cplusplus >= 202002L
 
@@ -26,13 +26,13 @@ R(T, T) requires true -> R<T>; // expected-error {{expected function body after 
 
 } // namespace cwg2913
 
-namespace cwg2915 { // cwg2915: 20 tentatively ready 2024-08-16
+namespace cwg2915 { // cwg2915: 20
 #if __cplusplus >= 202302L
 struct A {
   void f(this void); // expected-error {{explicit object parameter cannot have 'void' type}}
 };
 #endif
-}
+} // namespace cwg2915
 
 namespace cwg2917 { // cwg2917: 20 review 2024-07-30
 template <typename>
@@ -52,16 +52,16 @@ struct S {
 };
 } // namespace cwg2917
 
-#if __cplusplus >= 202400L
-
+#if __cplusplus > 202302L
 namespace std {
   using size_t = decltype(sizeof(0));
-};
+} // namespace std
 void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
+#endif
 
-
-namespace cwg2922 { // cwg2922: 20 tentatively ready 2024-07-10
+namespace cwg2922 { // cwg2922: 20
+#if __cplusplus > 202302L
 union U { int a, b; };
 constexpr U nondeterministic(bool i) {
   if(i) {
@@ -75,5 +75,5 @@ constexpr U nondeterministic(bool i) {
 constexpr U _ = nondeterministic(true);
 // expected-error@-1 {{constexpr variable '_' must be initialized by a constant expression}} \
 // expected-note@-1 {{in call to 'nondeterministic(true)'}}
-}
 #endif
+} // namespace cwg2922
