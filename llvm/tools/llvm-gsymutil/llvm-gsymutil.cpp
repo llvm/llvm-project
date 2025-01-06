@@ -98,7 +98,7 @@ static uint64_t SegmentSize;
 static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
-static bool StoreMergedFunctionInfo = false;
+static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 
@@ -181,7 +181,7 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
-  StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
+  UseMergedFunctions = Args.hasArg(OPT_merged_functions);
 
   if (Args.hasArg(OPT_callsites_yaml_file_EQ)) {
     CallSiteYamlPath = Args.getLastArgValue(OPT_callsites_yaml_file_EQ);
@@ -380,7 +380,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   // functions in the first FunctionInfo with that address range. Do this right
   // after loading the DWARF data so we don't have to deal with functions from
   // the symbol table.
-  if (StoreMergedFunctionInfo)
+  if (UseMergedFunctions)
     Gsym.prepareMergedFunctions(Out);
 
   // Get the UUID and convert symbol table to GSYM.
@@ -508,24 +508,39 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
 }
 
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
-  if (auto Result = Gsym.lookup(Addr)) {
-    // If verbose is enabled dump the full function info for the address.
-    if (Verbose) {
-      if (auto FI = Gsym.getFunctionInfo(Addr)) {
-        OS << "FunctionInfo for " << HEX64(Addr) << ":\n";
-        Gsym.dump(OS, *FI);
-        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+  auto logError = [Addr, &OS](Error E) {
+    OS << HEX64(Addr) << ": ";
+    logAllUnhandledErrors(std::move(E), OS, "error: ");
+  };
+
+  if (UseMergedFunctions) {
+    if (auto Results = Gsym.lookupAll(Addr)) {
+      OS << "Found " << Results->size() << " functions at address "
+         << HEX64(Addr) << ":\n";
+      for (size_t i = 0; i < Results->size(); ++i) {
+        OS << "   " << Results->at(i);
+
+        if (i != Results->size() - 1)
+          OS << "\n";
       }
     }
-    OS << Result.get();
-  } else {
-    if (Verbose)
-      OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
-    OS << HEX64(Addr) << ": ";
-    logAllUnhandledErrors(Result.takeError(), OS, "error: ");
+  } else { /* UseMergedFunctions == false */
+    if (auto Result = Gsym.lookup(Addr)) {
+      OS << Result.get();
+    } else {
+      logError(Result.takeError());
+      return;
+    }
   }
-  if (Verbose)
+
+  if (Verbose) {
+    if (auto FI = Gsym.getFunctionInfo(Addr)) {
+      OS << "FunctionInfo for " << HEX64(Addr) << ":\n";
+      Gsym.dump(OS, *FI);
+      OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+    }
     OS << "\n";
+  }
 }
 
 int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
