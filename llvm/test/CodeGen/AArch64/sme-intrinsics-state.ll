@@ -3,7 +3,7 @@
 
 
 define i1 @streaming_mode_streaming_compatible() #0 {
-; CHECK-LABEL: streaming_mode_st_compatible:
+; CHECK-LABEL: streaming_mode_streaming_compatible:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
