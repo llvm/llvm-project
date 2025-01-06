@@ -12827,6 +12827,10 @@ def err_acc_loop_not_monotonic
             "('++', '--', or compound assignment)">;
 def err_acc_construct_one_clause_of
     : Error<"OpenACC '%0' construct must have at least one %1 clause">;
+def err_acc_update_as_body
+    : Error<"OpenACC 'update' construct may not appear in place of the "
+            "statement following a%select{n if statement| while statement| do "
+            "statement| switch statement| label statement}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
