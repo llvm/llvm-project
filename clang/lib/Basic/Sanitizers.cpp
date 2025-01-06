@@ -75,12 +75,12 @@ void clang::serializeSanitizerSet(SanitizerSet Set,
 #include "clang/Basic/Sanitizers.def"
 }
 
-void clang::serializeSanitizerMaskWeights(const SanitizerMaskWeights Weights,
-                                          SmallVectorImpl<std::string> &Values) {
+void clang::serializeSanitizerMaskWeights(
+    const SanitizerMaskWeights Weights, SmallVectorImpl<std::string> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
   if (Weights[SanitizerKind::SO_##ID])                                         \
-    Values.push_back(std::string(NAME "=")                                    \
-                     + std::to_string(Weights[SanitizerKind::SO_##ID]));
+    Values.push_back(std::string(NAME "=") +                                   \
+                     std::to_string(Weights[SanitizerKind::SO_##ID]));
 #include "clang/Basic/Sanitizers.def"
 }
 

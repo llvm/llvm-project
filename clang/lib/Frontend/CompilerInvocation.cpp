@@ -1436,11 +1436,12 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
   return Values;
 }
 
-static void parseSanitizerWeightedKinds(StringRef FlagName,
-                                const std::vector<std::string> &Sanitizers,
-                                DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskWeights &Weights) {
+static void parseSanitizerWeightedKinds(
+    StringRef FlagName, const std::vector<std::string> &Sanitizers,
+    DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskWeights &Weights) {
   for (const auto &Sanitizer : Sanitizers) {
-    SanitizerMask K = parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Weights);
+    SanitizerMask K =
+        parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Weights);
     if (K == SanitizerMask())
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
     else
@@ -2296,8 +2297,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // Parse -fno-sanitize-top-hot= arguments.
   parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
-                      Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
-                      Diags, Opts.NoSanitizeTopHot, Opts.NoSanitizeTopHotWeights);
+                              Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
+                              Diags, Opts.NoSanitizeTopHot,
+                              Opts.NoSanitizeTopHotWeights);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

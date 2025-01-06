@@ -1335,7 +1335,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   std::string TopHotWeightsStr = toString(TopHotWeights);
   if (TopHotWeightsStr != "")
-    CmdArgs.push_back(Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotWeightsStr));
+    CmdArgs.push_back(
+        Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotWeightsStr));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
