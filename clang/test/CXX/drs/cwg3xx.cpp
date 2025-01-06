@@ -170,9 +170,9 @@ namespace cwg305 { // cwg305: no
   };
   void k(Z *z) {
     z->~T1<int>();
-    // expected-error@-1 {{no member named 'T1' in 'cwg305::Z'}}
+    // since-cxx11-error@-1 {{no member named 'T1' in 'cwg305::Z'}}
     z->~T2<int>();
-    // expected-error@-1 {{no member named '~int' in 'cwg305::Z'}}
+    // since-cxx11-error@-1 {{no member named '~int' in 'cwg305::Z'}}
     z->~T2<Z>();
   }
 
@@ -182,7 +182,7 @@ namespace cwg305 { // cwg305: no
   }
   template<typename A> using R = Q::R<int>;
   void qr(Q::R<int> x) { x.~R<char>(); }
-  // expected-error@-1 {{no member named '~R' in 'cwg305::Q::R<int>'}}
+  // since-cxx11-error@-1 {{no member named '~R' in 'cwg305::Q::R<int>'}}
 #endif
 } // namespace cwg305
 
