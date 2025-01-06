@@ -162,13 +162,19 @@ class MapInfoFinalizationPass
     mlir::Value baseAddrAddr = builder.create<fir::BoxOffsetOp>(
         loc, descriptor, fir::BoxFieldAttr::base_addr);
 
+    mlir::Type underlyingVarType =
+        llvm::cast<mlir::omp::PointerLikeType>(
+            fir::unwrapRefType(baseAddrAddr.getType()))
+            .getElementType();
+    if (auto seqType = llvm::dyn_cast<fir::SequenceType>(underlyingVarType))
+      if (seqType.hasDynamicExtents())
+        underlyingVarType = seqType.getEleTy();
+
     // Member of the descriptor pointing at the allocated data
     return builder.create<mlir::omp::MapInfoOp>(
         loc, baseAddrAddr.getType(), descriptor,
-        mlir::TypeAttr::get(llvm::cast<mlir::omp::PointerLikeType>(
-                                fir::unwrapRefType(baseAddrAddr.getType()))
-                                .getElementType()),
-        baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
+        mlir::TypeAttr::get(underlyingVarType), baseAddrAddr,
+        /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
         builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(

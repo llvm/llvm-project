@@ -886,6 +886,10 @@ Bug Fixes to C++ Support
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 - Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
+- Passing incomplete types to ``__is_base_of`` and other builtin type traits for which the corresponding
+  standard type trait mandates a complete type is now a hard (non-sfinae-friendly) error
+  (`LWG3929 <https://wg21.link/LWG3929>`__.) (#GH121278)
+- Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 
 Bug Fixes to AST Handling
@@ -1113,6 +1117,10 @@ AST Matchers
 
 - Add ``dependentNameType`` matcher to match a dependent name type.
 
+- Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
+
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr.
+
 clang-format
 ------------
 
@@ -1127,6 +1135,7 @@ clang-format
 - Adds ``AllowShortNamespacesOnASingleLine`` option.
 - Adds ``VariableTemplates`` option.
 - Adds support for bash globstar in ``.clang-format-ignore``.
+- Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 
 libclang
 --------
