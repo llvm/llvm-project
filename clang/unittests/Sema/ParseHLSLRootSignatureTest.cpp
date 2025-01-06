@@ -55,4 +55,102 @@ TEST(ParseHLSLRootSignature, ValidRootFlags) {
   ASSERT_EQ(RootFlags::ValidFlags, RootElements[0].Flags);
 }
 
+TEST(ParseHLSLRootSignature, MandatoryRootConstant) {
+  llvm::StringRef RootFlagString = "RootConstants(num32BitConstants = 4, b42)";
+  llvm::SmallVector<RootElement> RootElements;
+  Parser Parser(RootFlagString, &RootElements);
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ(RootElements.size(), (unsigned long)1);
+
+  RootParameter Parameter = RootElements[0].Parameter;
+  ASSERT_EQ(RootType::Constants, Parameter.Type);
+  ASSERT_EQ(RegisterType::BReg, Parameter.Register.ViewType);
+  ASSERT_EQ((uint32_t)42, Parameter.Register.Number);
+  ASSERT_EQ((uint32_t)4, Parameter.Num32BitConstants);
+  ASSERT_EQ((uint32_t)0, Parameter.Space);
+  ASSERT_EQ(ShaderVisibility::All, Parameter.Visibility);
+}
+
+TEST(ParseHLSLRootSignature, OptionalRootConstant) {
+  llvm::StringRef RootFlagString =
+      "RootConstants(num32BitConstants = 4, b42, space = 4, visibility = "
+      "SHADER_VISIBILITY_DOMAIN)";
+  llvm::SmallVector<RootElement> RootElements;
+  Parser Parser(RootFlagString, &RootElements);
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ(RootElements.size(), (unsigned long)1);
+
+  RootParameter Parameter = RootElements[0].Parameter;
+  ASSERT_EQ(RootType::Constants, Parameter.Type);
+  ASSERT_EQ(RegisterType::BReg, Parameter.Register.ViewType);
+  ASSERT_EQ((uint32_t)42, Parameter.Register.Number);
+  ASSERT_EQ((uint32_t)4, Parameter.Num32BitConstants);
+  ASSERT_EQ((uint32_t)4, Parameter.Space);
+  ASSERT_EQ(ShaderVisibility::Domain, Parameter.Visibility);
+}
+
+TEST(ParseHLSLRootSignature, DefaultRootCBV) {
+  llvm::StringRef ViewsString = "CBV(b0)";
+  llvm::SmallVector<RootElement> RootElements;
+  Parser Parser(ViewsString, &RootElements);
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ(RootElements.size(), (unsigned long)1);
+
+  RootParameter Parameter = RootElements[0].Parameter;
+  ASSERT_EQ(RootType::CBV, Parameter.Type);
+  ASSERT_EQ(RegisterType::BReg, Parameter.Register.ViewType);
+  ASSERT_EQ((uint32_t)0, Parameter.Register.Number);
+  ASSERT_EQ(RootDescriptorFlags::None, Parameter.Flags);
+  ASSERT_EQ((uint32_t)0, Parameter.Space);
+  ASSERT_EQ(ShaderVisibility::All, Parameter.Visibility);
+}
+
+TEST(ParseHLSLRootSignature, SampleRootCBV) {
+  llvm::StringRef ViewsString = "CBV(b982374, space = 1, flags = DATA_STATIC)";
+  llvm::SmallVector<RootElement> RootElements;
+  Parser Parser(ViewsString, &RootElements);
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ(RootElements.size(), (unsigned long)1);
+
+  RootParameter Parameter = RootElements[0].Parameter;
+  ASSERT_EQ(RootType::CBV, Parameter.Type);
+  ASSERT_EQ(RegisterType::BReg, Parameter.Register.ViewType);
+  ASSERT_EQ((uint32_t)982374, Parameter.Register.Number);
+  ASSERT_EQ(RootDescriptorFlags::DataStatic, Parameter.Flags);
+  ASSERT_EQ((uint32_t)1, Parameter.Space);
+  ASSERT_EQ(ShaderVisibility::All, Parameter.Visibility);
+}
+
+TEST(ParseHLSLRootSignature, SampleRootSRV) {
+  llvm::StringRef ViewsString = "SRV(t3, visibility = SHADER_VISIBILITY_MESH, "
+                                "flags = Data_Static_While_Set_At_Execute)";
+  llvm::SmallVector<RootElement> RootElements;
+  Parser Parser(ViewsString, &RootElements);
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ(RootElements.size(), (unsigned long)1);
+
+  RootParameter Parameter = RootElements[0].Parameter;
+  ASSERT_EQ(RootType::SRV, Parameter.Type);
+  ASSERT_EQ(RegisterType::TReg, Parameter.Register.ViewType);
+  ASSERT_EQ((uint32_t)3, Parameter.Register.Number);
+  ASSERT_EQ(RootDescriptorFlags::DataStaticWhileSetAtExecute, Parameter.Flags);
+  ASSERT_EQ((uint32_t)0, Parameter.Space);
+  ASSERT_EQ(ShaderVisibility::Mesh, Parameter.Visibility);
+}
+
+TEST(ParseHLSLRootSignature, SampleRootUAV) {
+  llvm::StringRef ViewsString = "UAV(u0, flags = DATA_VOLATILE)";
+  llvm::SmallVector<RootElement> RootElements;
+  Parser Parser(ViewsString, &RootElements);
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ(RootElements.size(), (unsigned long)1);
+
+  RootParameter Parameter = RootElements[0].Parameter;
+  ASSERT_EQ(RootType::UAV, Parameter.Type);
+  ASSERT_EQ(RegisterType::UReg, Parameter.Register.ViewType);
+  ASSERT_EQ((uint32_t)0, Parameter.Register.Number);
+  ASSERT_EQ(RootDescriptorFlags::DataVolatile, Parameter.Flags);
+  ASSERT_EQ((uint32_t)0, Parameter.Space);
+  ASSERT_EQ(ShaderVisibility::All, Parameter.Visibility);
+}
 } // anonymous namespace

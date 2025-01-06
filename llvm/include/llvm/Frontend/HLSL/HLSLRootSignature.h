@@ -65,20 +65,65 @@ enum class RootFlags : uint32_t {
 };
 RS_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(RootFlags)
 
+enum class RootDescriptorFlags : unsigned {
+  None = 0,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  ValidFlags = 0xe
+};
+RS_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(RootDescriptorFlags)
+
+enum class ShaderVisibility {
+  All = 0,
+  Vertex = 1,
+  Hull = 2,
+  Domain = 3,
+  Geometry = 4,
+  Pixel = 5,
+  Amplification = 6,
+  Mesh = 7,
+};
+
 // Define the in-memory layout structures
+
+// Models the different registers: bReg | tReg | uReg | sReg
+enum class RegisterType { BReg, TReg, UReg, SReg };
+struct Register {
+  RegisterType ViewType;
+  uint32_t Number;
+};
+
+// Models RootConstants | RootCBV | RootSRV | RootUAV collecting like
+// parameters
+enum class RootType { CBV, SRV, UAV, Constants };
+struct RootParameter {
+  RootType Type;
+  Register Register;
+  union {
+    uint32_t Num32BitConstants;
+    RootDescriptorFlags Flags = RootDescriptorFlags::None;
+  };
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
+};
 
 struct RootElement {
   enum class ElementType {
     RootFlags,
+    RootParameter,
   };
 
   ElementType Tag;
   union {
     RootFlags Flags;
+    RootParameter Parameter;
   };
 
   // Constructors
   RootElement(RootFlags Flags) : Tag(ElementType::RootFlags), Flags(Flags) {}
+  RootElement(RootParameter Parameter)
+      : Tag(ElementType::RootParameter), Parameter(Parameter) {}
 };
 
 } // namespace root_signature
