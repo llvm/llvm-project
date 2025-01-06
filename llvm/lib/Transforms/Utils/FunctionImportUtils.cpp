@@ -331,9 +331,7 @@ void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
       }
 }
 
-void FunctionImportGlobalProcessing::run() {
-  processGlobalsForThinLTO();
-}
+void FunctionImportGlobalProcessing::run() { processGlobalsForThinLTO(); }
 
 void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,

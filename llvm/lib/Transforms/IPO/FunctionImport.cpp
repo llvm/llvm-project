@@ -1951,7 +1951,7 @@ Expected<bool> FunctionImporter::importFunctions(
 
     // Link in the specified functions.
     renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
-                               &GlobalsToImport);
+                           &GlobalsToImport);
 
     if (PrintImports) {
       for (const auto *GV : GlobalsToImport)
@@ -2026,7 +2026,7 @@ static bool doImportingForModuleForTest(
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
   renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
-                             /*GlobalsToImport=*/nullptr);
+                         /*GlobalsToImport=*/nullptr);
 
   // Perform the import now.
   auto ModuleLoader = [&M](StringRef Identifier) {

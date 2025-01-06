@@ -450,7 +450,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 
       // Promotion
       renameModuleForThinLTO(*M, *Index,
-                                 /*ClearDSOLocalOnDeclarations=*/false);
+                             /*ClearDSOLocalOnDeclarations=*/false);
     }
 
     if (Verbose)
