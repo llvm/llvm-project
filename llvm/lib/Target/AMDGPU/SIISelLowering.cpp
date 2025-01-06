@@ -13877,12 +13877,11 @@ static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
   if (ShiftVal->getAsZExtVal() != 32)
     return SDValue();
 
-  APInt Const = dyn_cast<ConstantSDNode>(MulRHS.getNode())->getAPIntValue();
-  if (!Const.isNegative() || !Const.isSignedIntN(33))
+  uint64_t Const = dyn_cast<ConstantSDNode>(MulRHS.getNode())->getZExtValue();
+  if (Hi_32(Const) != -1)
     return SDValue();
 
-  SDValue ConstMul =
-      DAG.getConstant(Const.getZExtValue() & 0x00000000FFFFFFFF, SL, MVT::i32);
+  SDValue ConstMul = DAG.getConstant(Const & 0x00000000FFFFFFFF, SL, MVT::i32);
   return getMad64_32(DAG, SL, MVT::i64,
                      DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
                      DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
