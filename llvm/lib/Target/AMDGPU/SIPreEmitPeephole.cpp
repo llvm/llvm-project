@@ -369,6 +369,9 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (MI.isMetaInstruction())
         continue;
 
+      if (MI.modifiesRegister(AMDGPU::EXEC, nullptr))
+        return true;
+
       if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 
