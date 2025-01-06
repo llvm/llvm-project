@@ -233,9 +233,9 @@ Hardware
 
 LLVM is known to work on the following host platforms:
 
-================== ===================== =============
+================== ===================== ==============================
 OS                 Arch                  Compilers
-================== ===================== =============
+================== ===================== ==============================
 Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
@@ -259,7 +259,7 @@ Cygwin/Win32       x86\ :sup:`1, 3`      GCC
 Windows            x86\ :sup:`1`         Visual Studio
 Windows x64        x86-64                Visual Studio, Clang\ :sup:`4`
 Windows on Arm     ARM64                 Visual Studio, Clang\ :sup:`4`
-================== ===================== =============
+================== ===================== ==============================
 
 .. note::
 
