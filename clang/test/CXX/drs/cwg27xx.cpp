@@ -174,7 +174,7 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3)
 #endif
 } // namespace cwg2759
 
-namespace cwg2770 { // cwg2770: 20
+namespace cwg2770 { // cwg2770: 20 open 2023-07-14
 #if __cplusplus >= 202002L
 template<typename T>
 struct B {
