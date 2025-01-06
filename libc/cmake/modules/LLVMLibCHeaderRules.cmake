@@ -95,10 +95,7 @@ function(add_gen_header target_name)
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
   set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(dep_file "${out_file}.d")
-  file(RELATIVE_PATH rel_out_file ${CMAKE_BINARY_DIR} ${out_file})
-  file(RELATIVE_PATH rel_dep_file ${CMAKE_BINARY_DIR} ${dep_file})
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
-  file(RELATIVE_PATH rel_yaml_file ${CMAKE_BINARY_DIR} ${yaml_file})
 
   set(fq_data_files "")
   if(ADD_GEN_HDR_DATA_FILES)
@@ -114,10 +111,10 @@ function(add_gen_header target_name)
     OUTPUT ${out_file}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/main.py"
-            --output ${rel_out_file}
-            --depfile ${rel_dep_file}
+            --output ${out_file}
+            --depfile ${dep_file}
             ${entry_points}
-            ${rel_yaml_file}
+            ${yaml_file}
     DEPENDS ${yaml_file} ${fq_data_files}
     DEPFILE ${dep_file}
     COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
