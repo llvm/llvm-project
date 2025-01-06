@@ -141,7 +141,10 @@ else()
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
     add_host_subdirectory(aix
+      aix/AbstractSocket.cpp
+      aix/Host.cpp
       aix/HostInfoAIX.cpp
+      aix/Support.cpp
       )    
   endif()
 endif()
