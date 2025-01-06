@@ -864,6 +864,9 @@ public:
   /// Combine select to integer min/max.
   bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
 
+  /// Tranform (neg (min/max x, (neg x))) into (max/min x, (neg x)).
+  bool matchSimplifyNegMinMax(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 

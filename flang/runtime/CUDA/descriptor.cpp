@@ -46,6 +46,13 @@ void RTDEF(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,
       (void *)dst, (const void *)src, count, cudaMemcpyHostToDevice));
 }
 
+void RTDEF(CUFSyncGlobalDescriptor)(
+    void *hostPtr, const char *sourceFile, int sourceLine) {
+  void *devAddr{RTNAME(CUFGetDeviceAddress)(hostPtr, sourceFile, sourceLine)};
+  RTNAME(CUFDescriptorSync)
+  ((Descriptor *)devAddr, (Descriptor *)hostPtr, sourceFile, sourceLine);
+}
+
 RT_EXT_API_GROUP_END
 }
 } // namespace Fortran::runtime::cuda
