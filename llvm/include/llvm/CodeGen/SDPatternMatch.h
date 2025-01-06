@@ -1184,17 +1184,14 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   [[nodiscard]] inline bool
   reassociatableMatchHelper(const SmallVector<SmallVector<size_t>> &Matches,
                             SmallVector<bool> &Used, size_t Curr = 0) {
-    if (Curr == Matches.size()) {
+    if (Curr == Matches.size())
       return true;
-    }
     for (auto Match : Matches[Curr]) {
-      if (Used[Match]) {
+      if (Used[Match])
         continue;
-      }
       Used[Match] = true;
-      if (reassociatableMatchHelper(Matches, Used, Curr + 1)) {
+      if (reassociatableMatchHelper(Matches, Used, Curr + 1))
         return true;
-      }
       Used[Match] = false;
     }
     return false;
