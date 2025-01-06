@@ -454,6 +454,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {nxv2s64, p0, nxv2s64, 8},
       })
       .clampScalar(0, s8, s64)
+      .minScalarOrElt(0, s8)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
                Query.Types[0] != Query.MMODescrs[0].MemoryTy;
