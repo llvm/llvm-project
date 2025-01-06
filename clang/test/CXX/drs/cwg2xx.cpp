@@ -44,7 +44,7 @@ namespace cwg202 { // cwg202: 3.1
 
 // cwg204: sup 820
 
-namespace cwg206 { // cwg206: yes
+namespace cwg206 { // cwg206: 2.7
   struct S; // #cwg206-S
   template<typename T> struct Q { S s; };
   // expected-error@-1 {{field has incomplete type 'S'}}
@@ -54,7 +54,7 @@ namespace cwg206 { // cwg206: yes
   //   expected-note@#cwg206-S {{forward declaration of 'cwg206::S'}}
 } // namespace cwg206
 
-namespace cwg207 { // cwg207: yes
+namespace cwg207 { // cwg207: 2.7
   class A {
   protected:
     static void f() {}
@@ -84,7 +84,7 @@ namespace cwg209 { // cwg209: 3.2
 
 // cwg210 is in cwg210.cpp
 
-namespace cwg211 { // cwg211: yes
+namespace cwg211 { // cwg211: 2.7
   struct A {
     A() try {
       throw 0;
@@ -95,7 +95,7 @@ namespace cwg211 { // cwg211: yes
   };
 } // namespace cwg211
 
-namespace cwg213 { // cwg213: yes
+namespace cwg213 { // cwg213: 2.7
   template <class T> struct A : T {
     void h(T t) {
       char &r1 = f(t);
@@ -114,7 +114,7 @@ namespace cwg213 { // cwg213: yes
   template void A<B>::h(B); // #cwg213-instantiation
 } // namespace cwg213
 
-namespace cwg214 { // cwg214: yes
+namespace cwg214 { // cwg214: 2.7
   template<typename T, typename U> T checked_cast(U from) { U::error; }
   template<typename T, typename U> T checked_cast(U *from);
   class C {};
@@ -153,7 +153,7 @@ namespace cwg216 { // cwg216: no
   void g(S s, S::E e) { s.f(e); }
 } // namespace cwg216
 
-namespace cwg217 { // cwg217: yes
+namespace cwg217 { // cwg217: 2.7
   template<typename T> struct S {
     void f(int);
   };
@@ -161,7 +161,7 @@ namespace cwg217 { // cwg217: yes
   // expected-error@-1 {{default arguments cannot be added to an out-of-line definition of a member of a class template}}
 } // namespace cwg217
 
-namespace cwg218 { // cwg218: yes
+namespace cwg218 { // cwg218: 2.7
                   // NB: also dup 405
   namespace A {
     struct S {};
@@ -412,14 +412,16 @@ namespace cwg226 { // cwg226: no
   int x = foo(0, 0);
 } // namespace cwg226
 
-void cwg227(bool b) { // cwg227: yes
+namespace cwg227 { // cwg227: 2.7
+void f(bool b) {
   if (b)
     int n;
   else
     int n;
 }
+} // namespace cwg227
 
-namespace cwg228 { // cwg228: yes
+namespace cwg228 { // cwg228: 2.7
   template <class T> struct X {
     void f();
   };
@@ -444,7 +446,7 @@ namespace cwg230 { // cwg230: 3.0
   };
 } // namespace cwg230
 
-namespace cwg231 { // cwg231: yes
+namespace cwg231 { // cwg231: 2.7
   namespace outer {
     namespace inner {
       int i; // #cwg231-i
@@ -471,7 +473,7 @@ namespace cwg237 { // cwg237: dup 470
   template struct B<int>; // ok
 } // namespace cwg237
 
-namespace cwg239 { // cwg239: yes
+namespace cwg239 { // cwg239: 2.7
   namespace NS {
     class T {};
     void f(T);
@@ -489,7 +491,7 @@ namespace cwg239 { // cwg239: yes
 
 // cwg240: dup 616
 
-namespace cwg241 { // cwg241: yes
+namespace cwg241 { // cwg241: 9
   namespace A {
     struct B {};
     template <int X> void f(); // #cwg241-A-f
@@ -526,7 +528,7 @@ namespace cwg241 { // cwg241: yes
   }
 } // namespace cwg241
 
-namespace cwg243 { // cwg243: yes
+namespace cwg243 { // cwg243: 2.8
   struct B;
   struct A {
     A(B); // #cwg243-A
@@ -636,7 +638,7 @@ namespace cwg244 { // cwg244: 11
   }
 } // namespace cwg244
 
-namespace cwg245 { // cwg245: yes
+namespace cwg245 { // cwg245: 2.8
   struct S {
     enum E {}; // #cwg245-E
     class E *p;
@@ -658,7 +660,7 @@ X: ;
   };
 } // namespace cwg246
 
-namespace cwg247 { // cwg247: yes
+namespace cwg247 { // cwg247: 2.7
   struct A {};
   struct B : A {
     void f();
@@ -688,12 +690,12 @@ namespace cwg248 { // cwg248: sup P1949
   int \u040d\u040e = 0;
 } // namespace cwg248
 
-namespace cwg249 { // cwg249: yes
+namespace cwg249 { // cwg249: 2.7
   template<typename T> struct X { void f(); };
   template<typename T> void X<T>::f() {}
 } // namespace cwg249
 
-namespace cwg250 { // cwg250: yes
+namespace cwg250 { // cwg250: 2.7
   typedef void (*FPtr)(double x[]);
 
   template<int I> void f(double x[]);
@@ -770,10 +772,10 @@ namespace cwg254 { // cwg254: 2.9
   A<C>::type n; // #cwg254-instantiation
 } // namespace cwg254
 
-namespace cwg255 { // cwg255: yes
+namespace cwg255 { // cwg255: 2.7
 struct S {
-  void operator delete(void *){};
-  void operator delete(void *, int){};
+  void operator delete(void *){}
+  void operator delete(void *, int){}
 };
 void f(S *p) { delete p; }
 } // namespace cwg255
@@ -907,7 +909,7 @@ namespace cwg261 { // cwg261: no
 #pragma clang diagnostic pop
 } // namespace cwg261
 
-namespace cwg262 { // cwg262: yes
+namespace cwg262 { // cwg262: 2.7
   int f(int = 0, ...);
   int k = f();
   int l = f(0);
@@ -939,7 +941,7 @@ namespace cwg263 { // cwg263: 3.3
 // cwg269: na
 // cwg270: na
 
-namespace cwg272 { // cwg272: yes
+namespace cwg272 { // cwg272: 2.7
   struct X {
     void f() {
       this->~X();
@@ -950,21 +952,7 @@ namespace cwg272 { // cwg272: yes
   };
 } // namespace cwg272
 
-#include <stdarg.h>
-#include <stddef.h>
-namespace cwg273 { // cwg273: yes
-  struct A {
-    int n;
-  };
-  void operator&(A);
-  void f(A a, ...) {
-    offsetof(A, n);
-    va_list val;
-    va_start(val, a);
-    va_end(val);
-  }
-} // namespace cwg273
-
+// cwg273 is in cwg273.cpp
 // cwg274: na
 
 namespace cwg275 { // cwg275: no
@@ -1105,7 +1093,7 @@ namespace cwg281 { // cwg281: no
   };
 } // namespace cwg281
 
-namespace cwg283 { // cwg283: yes
+namespace cwg283 { // cwg283: 2.7
   template<typename T> // #cwg283-template
   struct S {
     friend class T;
@@ -1155,7 +1143,7 @@ namespace cwg284 { // cwg284: no
   class D::Z z2; // ok per cwg417
 } // namespace cwg284
 
-namespace cwg285 { // cwg285: yes
+namespace cwg285 { // cwg285: 2.7
   template<typename T> void f(T, int); // #cwg285-f-T-int
   template<typename T> void f(int, T); // #cwg285-f-int-T
   template<> void f<int>(int, int) {}
@@ -1182,7 +1170,7 @@ namespace cwg286 { // cwg286: 2.8
 
 // cwg288: na
 
-namespace cwg289 { // cwg289: yes
+namespace cwg289 { // cwg289: 2.7
   struct A; // #cwg289-A
   struct B : A {};
   // expected-error@-1 {{base class has incomplete type}}
@@ -1245,7 +1233,7 @@ namespace cwg295 { // cwg295: 3.7
   // expected-warning@-1 {{'volatile' qualifier on function type 'U' (aka 'int ()') has no effect}}
 } // namespace cwg295
 
-namespace cwg296 { // cwg296: yes
+namespace cwg296 { // cwg296: 2.7
   struct A {
     static operator int() { return 0; }
     // expected-error@-1 {{conversion function must be a non-static member function}}
