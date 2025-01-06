@@ -234,6 +234,7 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
   extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
