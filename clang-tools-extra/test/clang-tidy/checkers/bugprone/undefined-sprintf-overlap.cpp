@@ -33,6 +33,7 @@ void first_arg_overlaps() {
   sprintf(buf+1, "%s", (buf+1));
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: the 2nd argument in 'sprintf' overlaps the 1st argument, which is undefined behavior [bugprone-undefined-sprintf-overlap]
   sprintf(buf+1, "%s", buf+2);
+  sprintf(buf+1, "%s", buf[1]);
 
   char* c = &buf[0];
   sprintf(c, "%s", c);
