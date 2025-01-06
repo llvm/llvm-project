@@ -14,6 +14,14 @@ struct st_t {
   char buf2[10];
 };
 
+struct st2_t {
+  st_t inner;
+};
+
+struct st3_t {
+  st2_t inner;
+};
+
 void first_arg_overlaps() {
   char buf[10];
   sprintf(buf, "%s", buf);
@@ -31,6 +39,7 @@ void first_arg_overlaps() {
 
   snprintf(c, sizeof(buf), "%s%s", c, c);
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: argument 'c' overlaps the first argument in 'snprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
+  // CHECK-MESSAGES: :[[@LINE-2]]:39: warning: argument 'c' overlaps the first argument in 'snprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
 
   char buf2[10];
   sprintf(buf, "%s", buf2);
@@ -42,6 +51,12 @@ void first_arg_overlaps() {
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: argument 'st1.buf' overlaps the first argument in 'sprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
   sprintf(st1.buf, "%s", st1.buf2);
   sprintf(st1.buf, "%s", st2.buf);
+
+  st3_t st3;
+  sprintf(st3.inner.inner.buf, "%s", st3.inner.inner.buf);
+  // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: argument 'st3.inner.inner.buf' overlaps the first argument in 'sprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
+  sprintf((st3.inner.inner.buf), "%s", st3.inner.inner.buf);
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: argument 'st3.inner.inner.buf' overlaps the first argument in 'sprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
 
   st_t* stp;
   sprintf(stp->buf, "%s", stp->buf);
@@ -58,4 +73,10 @@ void first_arg_overlaps() {
 
   char bufss[10][10][10];
   sprintf(bufss[0][1], "%s", bufss[0][1]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:30:  warning: argument 'bufss[0][1]' overlaps the first argument in 'sprintf', which is undefined behavior [bugprone-undefined-sprintf-overlap]
+
+  sprintf(bufss[0][0], "%s", bufss[0][1]);
+
+  int i = 0;
+  sprintf(bufss[0][++i], "%s", bufss[0][++i]);
 }

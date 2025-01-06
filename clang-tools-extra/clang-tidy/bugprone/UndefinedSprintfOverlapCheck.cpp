@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UndefinedSprintfOverlapCheck.h"
+#include "../utils/ASTUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -24,35 +25,40 @@ AST_MATCHER_P(IntegerLiteral, hasSameValueAs, std::string, ID) {
       });
 }
 
+// Similar to forEachArgumentWithParam. forEachArgumentWithParam does not work
+// with variadic functions like sprintf, since there is no `decl()` to match
+// against in the parameter list `...`.
+AST_MATCHER_P(CallExpr, forEachArgument, ast_matchers::internal::Matcher<Expr>,
+              ArgMatcher) {
+  using namespace clang::ast_matchers::internal;
+  BoundNodesTreeBuilder Result;
+  int ParamIndex = 0;
+  bool Matched = false;
+  for (unsigned ArgIndex = 0; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
+    BoundNodesTreeBuilder ArgMatches(*Builder);
+    if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()), Finder,
+                           &ArgMatches)) {
+      BoundNodesTreeBuilder ParamMatches(ArgMatches);
+      Result.addMatch(ArgMatches);
+      Matched = true;
+    }
+    ++ParamIndex;
+  }
+  *Builder = std::move(Result);
+  return Matched;
+}
+
 UndefinedSprintfOverlapCheck::UndefinedSprintfOverlapCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       SprintfRegex(Options.get("SprintfFunction", "(::std)?::sn?printf")) {}
 
 void UndefinedSprintfOverlapCheck::registerMatchers(MatchFinder *Finder) {
-  auto FirstArg = declRefExpr(to(varDecl().bind("firstArgDecl")));
-  auto OtherRefToArg =
-      declRefExpr(to(varDecl(equalsBoundNode("firstArgDecl"))));
   Finder->addMatcher(
-      callExpr(
-          callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
-          hasArgument(0,
-                      expr(anyOf(FirstArg,
-                                 arraySubscriptExpr(
-                                     hasBase(FirstArg),
-                                     hasIndex(integerLiteral().bind("index"))),
-                                 memberExpr(member(decl().bind("member")),
-                                            hasObjectExpression(FirstArg))))
-                          .bind("firstArgExpr")),
-          hasAnyArgument(
-              expr(unless(equalsBoundNode("firstArgExpr")),
-                   anyOf(OtherRefToArg,
-                         arraySubscriptExpr(
-                             hasBase(OtherRefToArg),
-                             hasIndex(integerLiteral(hasSameValueAs("index")))),
-                         memberExpr(member(decl(equalsBoundNode("member"))),
-                                    hasObjectExpression(OtherRefToArg))))
-                  .bind("secondArgExpr"))),
+      callExpr(callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
+               hasArgument(0, expr().bind("firstArgExpr")),
+               forEachArgument(expr(unless(equalsBoundNode("firstArgExpr")))
+                                   .bind("secondArgExpr"))),
       this);
 }
 
@@ -61,6 +67,16 @@ void UndefinedSprintfOverlapCheck::check(
   const auto *FirstArg = Result.Nodes.getNodeAs<Expr>("firstArgExpr");
   const auto *SecondArg = Result.Nodes.getNodeAs<Expr>("secondArgExpr");
   const auto *FnDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
+
+  clang::ASTContext &Context = *Result.Context;
+
+  if (!FirstArg || !SecondArg)
+    return;
+
+  if (!utils::areStatementsIdentical(FirstArg, SecondArg, Context))
+    return;
+  if (FirstArg->HasSideEffects(Context) || SecondArg->HasSideEffects(Context))
+    return;
 
   const llvm::StringRef FirstArgText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(FirstArg->getSourceRange()),
