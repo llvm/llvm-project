@@ -46,11 +46,11 @@ name: kern
 body: |
   bb.0:
 
-    ; CHECK: DW_AT_location (DW_OP_regx SGPR42, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK: DW_AT_location (DW_OP_regx SGPR42)
     ; CHECK-NEXT: DW_AT_name ("s_lo16")
     DBG_VALUE renamable $sgpr42_lo16, $noreg, !17, !DIExpression(DIOpArg(0, i16)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx SGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK: DW_AT_location (DW_OP_regx SGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2)
     ; CHECK-NEXT: DW_AT_name ("s_hi16")
     DBG_VALUE renamable $sgpr42_hi16, $noreg, !18, !DIExpression(DIOpArg(0, i16)), debug-location !16
 
@@ -58,11 +58,11 @@ body: |
     ; CHECK-NEXT: DW_AT_name ("s_s")
     DBG_VALUE renamable $sgpr42_sgpr43, $noreg, !19, !DIExpression(DIOpArg(0, i64)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42)
     ; CHECK-NEXT: DW_AT_name ("v_lo16")
     DBG_VALUE renamable $vgpr42_lo16, $noreg, !20, !DIExpression(DIOpArg(0, i16)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2, DW_OP_deref_size 0x2, DW_OP_stack_value)
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2)
     ; CHECK-NEXT: DW_AT_name ("v_hi16")
     DBG_VALUE renamable $vgpr42_hi16, $noreg, !21, !DIExpression(DIOpArg(0, i16)), debug-location !16
 

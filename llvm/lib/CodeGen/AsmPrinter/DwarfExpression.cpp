@@ -976,11 +976,8 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
         emitUnsigned(SubRegOffset);
       }
 
-      if (SubRegSize) {
-        emitOp(dwarf::DW_OP_deref_size);
-        emitData1(SubRegSize);
-        return NewOpResult{Arg.getResultType(), ValueKind::Value};
-      }
+      // Ignore SubRegSize, no correct consumer can read or write past the end
+      // of the subregister location.
 
       return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
     }
