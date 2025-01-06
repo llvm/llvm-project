@@ -70,10 +70,10 @@ TEST_F(OpenMPContextTest, ValidNesting) {
 }
 
 TEST_F(OpenMPContextTest, ApplicabilityNonConstruct) {
-  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple());
-  OMPContext DeviceLinux(true, Triple("x86_64-unknown-linux"), Triple());
-  OMPContext HostNVPTX(false, Triple("nvptx64-nvidia-cuda"), Triple());
-  OMPContext DeviceNVPTX(true, Triple("nvptx64-nvidia-cuda"), Triple());
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  OMPContext DeviceLinux(true, Triple("x86_64-unknown-linux"), Triple(), -1);
+  OMPContext HostNVPTX(false, Triple("nvptx64-nvidia-cuda"), Triple(), -1);
+  OMPContext DeviceNVPTX(true, Triple("nvptx64-nvidia-cuda"), Triple(), -1);
 
   VariantMatchInfo Empty;
   EXPECT_TRUE(isVariantApplicableInContext(Empty, HostLinux));
@@ -132,20 +132,20 @@ TEST_F(OpenMPContextTest, ApplicabilityNonConstruct) {
 
 TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
   OMPContext HostLinuxParallelParallel(false, Triple("x86_64-unknown-linux"),
-                                       Triple());
+                                       Triple(), -1);
   HostLinuxParallelParallel.addTrait(
       TraitProperty::construct_parallel_parallel);
   HostLinuxParallelParallel.addTrait(
       TraitProperty::construct_parallel_parallel);
   OMPContext DeviceLinuxTargetParallel(true, Triple("x86_64-unknown-linux"),
-                                       Triple());
+                                       Triple(), -1);
   DeviceLinuxTargetParallel.addTrait(TraitProperty::construct_target_target);
   DeviceLinuxTargetParallel.addTrait(
       TraitProperty::construct_parallel_parallel);
-  OMPContext HostNVPTXFor(false, Triple("nvptx64-nvidia-cuda"), Triple());
+  OMPContext HostNVPTXFor(false, Triple("nvptx64-nvidia-cuda"), Triple(), -1);
   HostNVPTXFor.addTrait(TraitProperty::construct_for_for);
   OMPContext DeviceNVPTXTargetTeamsParallel(true, Triple("nvptx64-nvidia-cuda"),
-                                            Triple());
+                                            Triple(), -1);
   DeviceNVPTXTargetTeamsParallel.addTrait(
       TraitProperty::construct_target_target);
   DeviceNVPTXTargetTeamsParallel.addTrait(TraitProperty::construct_teams_teams);

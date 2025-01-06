@@ -158,7 +158,7 @@ struct VariantMatchInfo {
 /// in OpenMP constructs at the location.
 struct OMPContext {
   OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
-             Triple TargetOffloadTriple);
+             Triple TargetOffloadTriple, int DeviceNum);
   virtual ~OMPContext() = default;
 
   void addTrait(TraitProperty Property) {
@@ -177,8 +177,6 @@ struct OMPContext {
 
   BitVector ActiveTraits = BitVector(unsigned(TraitProperty::Last) + 1);
   SmallVector<TraitProperty, 8> ConstructTraits;
-  static int DeviceNum;
-  static StringRef DeviceNumID;
 };
 
 /// Return true if \p VMI is applicable in \p Ctx, that is, all traits required

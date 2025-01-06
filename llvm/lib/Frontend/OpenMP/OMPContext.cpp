@@ -25,7 +25,7 @@ using namespace llvm;
 using namespace omp;
 
 OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
-                       Triple TargetOffloadTriple) {
+                       Triple TargetOffloadTriple, int DeviceNum) {
   // Add the appropriate target device kind trait based on the target triple
   if (!TargetOffloadTriple.getTriple().empty() && DeviceNum > 0) {
     // If target triple is present, then target device is not a host
