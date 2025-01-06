@@ -140,3 +140,41 @@ define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 1
 .exit_point:
   ret void
 }
+
+; The regression test for merging equivalence classes. It is reduced and adapted
+; for LSV from llvm/test/CodeGen/NVPTX/variadics-backend.ll, which failed at
+; post-commit checks with memory sanitizer on the initial attempt to implement
+; the merging of the equivalence classes.
+define void @variadics1(ptr %vlist) {
+; CHECK-LABEL: define void @variadics1(
+; CHECK-SAME: ptr [[VLIST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ARGP_CUR7_ALIGNED2:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[VLIST]], i64 0)
+; CHECK-NEXT:    [[ARGP_NEXT8:%.*]] = getelementptr i8, ptr [[ARGP_CUR7_ALIGNED2]], i64 8
+; CHECK-NEXT:    [[X0:%.*]] = getelementptr i8, ptr [[ARGP_NEXT8]], i32 7
+; CHECK-NEXT:    [[ARGP_CUR11_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[X0]], i64 0)
+; CHECK-NEXT:    [[ARGP_NEXT12:%.*]] = getelementptr i8, ptr [[ARGP_CUR11_ALIGNED]], i64 8
+; CHECK-NEXT:    [[X2:%.*]] = getelementptr i8, ptr [[ARGP_NEXT12]], i32 7
+; CHECK-NEXT:    [[ARGP_CUR16_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[X2]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARGP_CUR16_ALIGNED]], align 4294967296
+; CHECK-NEXT:    [[X31:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
+; CHECK-NEXT:    [[X42:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[X5:%.*]] = fadd double [[X42]], [[X31]]
+; CHECK-NEXT:    store double [[X5]], ptr null, align 8
+; CHECK-NEXT:    ret void
+;
+  %argp.cur7.aligned2 = call ptr @llvm.ptrmask.p0.i64(ptr %vlist, i64 0)
+  %argp.next8 = getelementptr i8, ptr %argp.cur7.aligned2, i64 8
+  %x0 = getelementptr i8, ptr %argp.next8, i32 7
+  %argp.cur11.aligned = call ptr @llvm.ptrmask.p0.i64(ptr %x0, i64 0)
+  %argp.next12 = getelementptr i8, ptr %argp.cur11.aligned, i64 8
+  %x2 = getelementptr i8, ptr %argp.next12, i32 7
+  %argp.cur16.aligned = call ptr @llvm.ptrmask.p0.i64(ptr %x2, i64 0)
+  %x3 = load double, ptr %argp.cur16.aligned, align 8
+  %argp.cur16.aligned_off8 = getelementptr i8, ptr %argp.cur16.aligned, i32 8
+  %x4 = load double, ptr %argp.cur16.aligned_off8, align 8
+  %x5 = fadd double %x4, %x3
+  store double %x5, ptr null, align 8
+  ret void
+}
+
+declare ptr @llvm.ptrmask.p0.i64(ptr, i64)

@@ -1345,23 +1345,20 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
   LLVM_DEBUG({
     dbgs() << "LSV: mergeEquivalenceClasses: before merging:\n";
     for (const auto &EC : EQClasses) {
-      dbgs() << "    Key: ([" << std::get<0>(EC.first)
-             << "]: " << *std::get<0>(EC.first) << ", " << std::get<1>(EC.first)
-             << ", " << std::get<2>(EC.first) << ", "
-             << static_cast<int>(std::get<3>(EC.first)) << ")\n";
+      dbgs() << "  Key: {" << EC.first << "}\n";
       for (const auto &Inst : EC.second)
-        dbgs() << "\tInst: " << *Inst << '\n';
+        dbgs() << "    Inst: " << *Inst << '\n';
     }
   });
   LLVM_DEBUG({
     dbgs() << "LSV: mergeEquivalenceClasses: RedKeyToUOMap:\n";
     for (const auto &RedKeyToUO : RedKeyToUOMap) {
-      dbgs() << "    Reduced key: (" << std::get<0>(RedKeyToUO.first) << ", "
+      dbgs() << "  Reduced key: {" << std::get<0>(RedKeyToUO.first) << ", "
              << std::get<1>(RedKeyToUO.first) << ", "
-             << static_cast<int>(std::get<2>(RedKeyToUO.first)) << ") --> "
+             << static_cast<int>(std::get<2>(RedKeyToUO.first)) << "} --> "
              << RedKeyToUO.second.size() << " underlying objects:\n";
       for (auto UObject : RedKeyToUO.second)
-        dbgs() << "    [" << UObject << "]: " << *UObject << '\n';
+        dbgs() << "    " << *UObject << '\n';
     }
   });
 
@@ -1402,8 +1399,10 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
                          std::get<2>(RedKey)};
       EqClassKey KeyTo{UltimateTarget, std::get<0>(RedKey), std::get<1>(RedKey),
                        std::get<2>(RedKey)};
-      const auto &VecFrom = EQClasses[KeyFrom];
+      // The entry for KeyFrom is guarantted to exist, unlike KeyTo. Thus,
+      // request the reference to the instructions vector for KeyTo first.
       const auto &VecTo = EQClasses[KeyTo];
+      const auto &VecFrom = EQClasses[KeyFrom];
       SmallVector<Instruction *, 8> MergedVec;
       std::merge(VecFrom.begin(), VecFrom.end(), VecTo.begin(), VecTo.end(),
                  std::back_inserter(MergedVec),
@@ -1417,12 +1416,9 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
   LLVM_DEBUG({
     dbgs() << "LSV: mergeEquivalenceClasses: after merging:\n";
     for (const auto &EC : EQClasses) {
-      dbgs() << "    Key: ([" << std::get<0>(EC.first)
-             << "]: " << *std::get<0>(EC.first) << ", " << std::get<1>(EC.first)
-             << ", " << std::get<2>(EC.first) << ", "
-             << static_cast<int>(std::get<3>(EC.first)) << ")\n";
+      dbgs() << "  Key: {" << EC.first << "}\n";
       for (const auto &Inst : EC.second)
-        dbgs() << "\tInst: " << *Inst << '\n';
+        dbgs() << "    Inst: " << *Inst << '\n';
     }
   });
 }
