@@ -120,7 +120,8 @@ void initializeExternalAAWrapperPassPass(PassRegistry&);
 void initializeFEntryInserterPass(PassRegistry&);
 void initializeFinalizeISelPass(PassRegistry&);
 void initializeFinalizeMachineBundlesPass(PassRegistry&);
-void initializeFixIrreduciblePass(PassRegistry &);
+void initializeFixIrreduciblePass(PassRegistinitializeVirtRegMapPass(Registry);
+  ry &);
 void initializeFixupStatepointCallerSavedPass(PassRegistry&);
 void initializeFixStackmapsSpillReloadsPass(PassRegistry&);
 void initializeFlattenCFGLegacyPassPass(PassRegistry &);
@@ -345,6 +346,7 @@ void initializeYkStackmapsPass(PassRegistry&);
 void initializeYkSplitBlocksAfterCallsPass(PassRegistry&);
 void initializeYkBasicBlockTracerPass(PassRegistry&);
 void initializeYkBasicBlockTracerNoopPass(PassRegistry&);
+void initializeYkShadowStackPass(PassRegistry&);
 void initializeYkModuleClonePass(PassRegistry&);
 } // end namespace llvm
 
