@@ -6,21 +6,10 @@
 ; IR generated from clang for:
 ; __builtin_convertvector + reinterpret_cast<uint16&>
 
-; GISEL: warning: Instruction selection used fallback path for convert_to_bitmask4
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask2
-; GISEL-NEXT: warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_no_compare
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_compare_chain
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_trunc_in_chain
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_unknown_type_in_long_chain
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_with_different_types_in_chain
+; GISEL: warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
 ; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_4xi8
 ; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_8xi2
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_to_bitmask_float
-; GISEL-NEXT: warning: Instruction selection used fallback path for convert_legalized_illegal_element_size
 ; GISEL-NEXT: warning: Instruction selection used fallback path for no_direct_convert_for_bad_concat
-; GISEL-NEXT: warning: Instruction selection used fallback path for no_combine_illegal_num_elements
 
 define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; Bits used in mask
@@ -154,15 +143,36 @@ define i16 @convert_to_bitmask8(<8 x i16> %vec) {
 }
 
 define i4 @convert_to_bitmask4(<4 x i32> %vec) {
-; CHECK-LABEL: convert_to_bitmask4:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    adrp x8, lCPI2_0@PAGE
-; CHECK-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-NEXT:    ldr q1, [x8, lCPI2_0@PAGEOFF]
-; CHECK-NEXT:    bic.16b v0, v1, v0
-; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask4:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    adrp x8, lCPI2_0@PAGE
+; SDAG-NEXT:    cmeq.4s v0, v0, #0
+; SDAG-NEXT:    ldr q1, [x8, lCPI2_0@PAGEOFF]
+; SDAG-NEXT:    bic.16b v0, v1, v0
+; SDAG-NEXT:    addv.4s s0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask4:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    cmeq.4s v0, v0, #0
+; GISEL-NEXT:    mvn.16b v0, v0
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp_result = icmp ne <4 x i32> %vec, zeroinitializer
@@ -210,17 +220,37 @@ define i8 @clang_builtins_undef_concat_convert_to_bitmask4(<4 x i32> %vec) {
 
 
 define i4 @convert_to_bitmask_no_compare(<4 x i32> %vec1, <4 x i32> %vec2) {
-; CHECK-LABEL: convert_to_bitmask_no_compare:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    adrp x8, lCPI5_0@PAGE
-; CHECK-NEXT:    ldr q1, [x8, lCPI5_0@PAGEOFF]
-; CHECK-NEXT:    shl.4s v0, v0, #31
-; CHECK-NEXT:    cmlt.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_no_compare:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    and.16b v0, v0, v1
+; SDAG-NEXT:    adrp x8, lCPI5_0@PAGE
+; SDAG-NEXT:    ldr q1, [x8, lCPI5_0@PAGEOFF]
+; SDAG-NEXT:    shl.4s v0, v0, #31
+; SDAG-NEXT:    cmlt.4s v0, v0, #0
+; SDAG-NEXT:    and.16b v0, v0, v1
+; SDAG-NEXT:    addv.4s s0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_no_compare:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    and.16b v0, v0, v1
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp = and <4 x i32> %vec1, %vec2
@@ -230,17 +260,39 @@ define i4 @convert_to_bitmask_no_compare(<4 x i32> %vec1, <4 x i32> %vec2) {
 }
 
 define i4 @convert_to_bitmask_with_compare_chain(<4 x i32> %vec1, <4 x i32> %vec2) {
-; CHECK-LABEL: convert_to_bitmask_with_compare_chain:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmeq.4s v2, v0, #0
-; CHECK-NEXT:    cmeq.4s v0, v0, v1
-; CHECK-NEXT:    adrp x8, lCPI6_0@PAGE
-; CHECK-NEXT:    ldr q1, [x8, lCPI6_0@PAGEOFF]
-; CHECK-NEXT:    bic.16b v0, v0, v2
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_with_compare_chain:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    cmeq.4s v2, v0, #0
+; SDAG-NEXT:    cmeq.4s v0, v0, v1
+; SDAG-NEXT:    adrp x8, lCPI6_0@PAGE
+; SDAG-NEXT:    ldr q1, [x8, lCPI6_0@PAGEOFF]
+; SDAG-NEXT:    bic.16b v0, v0, v2
+; SDAG-NEXT:    and.16b v0, v0, v1
+; SDAG-NEXT:    addv.4s s0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_with_compare_chain:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    cmeq.4s v2, v0, #0
+; GISEL-NEXT:    cmeq.4s v0, v0, v1
+; GISEL-NEXT:    bic.16b v0, v0, v2
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp1 = icmp ne <4 x i32> %vec1, zeroinitializer
@@ -251,18 +303,39 @@ define i4 @convert_to_bitmask_with_compare_chain(<4 x i32> %vec1, <4 x i32> %vec
 }
 
 define i4 @convert_to_bitmask_with_trunc_in_chain(<4 x i32> %vec1, <4 x i32> %vec2) {
-; CHECK-LABEL: convert_to_bitmask_with_trunc_in_chain:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-NEXT:    adrp x8, lCPI7_0@PAGE
-; CHECK-NEXT:    bic.16b v0, v1, v0
-; CHECK-NEXT:    ldr q1, [x8, lCPI7_0@PAGEOFF]
-; CHECK-NEXT:    shl.4s v0, v0, #31
-; CHECK-NEXT:    cmlt.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_with_trunc_in_chain:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    cmeq.4s v0, v0, #0
+; SDAG-NEXT:    adrp x8, lCPI7_0@PAGE
+; SDAG-NEXT:    bic.16b v0, v1, v0
+; SDAG-NEXT:    ldr q1, [x8, lCPI7_0@PAGEOFF]
+; SDAG-NEXT:    shl.4s v0, v0, #31
+; SDAG-NEXT:    cmlt.4s v0, v0, #0
+; SDAG-NEXT:    and.16b v0, v0, v1
+; SDAG-NEXT:    addv.4s s0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_with_trunc_in_chain:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    cmeq.4s v0, v0, #0
+; GISEL-NEXT:    bic.16b v0, v1, v0
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp1 = icmp ne <4 x i32> %vec1, zeroinitializer
@@ -273,30 +346,82 @@ define i4 @convert_to_bitmask_with_trunc_in_chain(<4 x i32> %vec1, <4 x i32> %ve
 }
 
 define i4 @convert_to_bitmask_with_unknown_type_in_long_chain(<4 x i32> %vec1, <4 x i32> %vec2) {
-; CHECK-LABEL: convert_to_bitmask_with_unknown_type_in_long_chain:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-NEXT:    cmeq.4s v1, v1, #0
-; CHECK-NEXT:    adrp x8, lCPI8_0@PAGE
-; CHECK-NEXT:    movi d2, #0x000000ffffffff
-; CHECK-NEXT:    movi d3, #0x00ffffffffffff
-; CHECK-NEXT:    bic.16b v0, v1, v0
-; CHECK-NEXT:    movi d1, #0xffff0000ffff0000
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    orr.8b v0, v0, v2
-; CHECK-NEXT:    movi d2, #0x00ffffffff0000
-; CHECK-NEXT:    eor.8b v1, v0, v1
-; CHECK-NEXT:    eor.8b v0, v0, v2
-; CHECK-NEXT:    mov.h v1[2], wzr
-; CHECK-NEXT:    orr.8b v0, v0, v3
-; CHECK-NEXT:    orr.8b v0, v1, v0
-; CHECK-NEXT:    ldr d1, [x8, lCPI8_0@PAGEOFF]
-; CHECK-NEXT:    shl.4h v0, v0, #15
-; CHECK-NEXT:    cmlt.4h v0, v0, #0
-; CHECK-NEXT:    and.8b v0, v0, v1
-; CHECK-NEXT:    addv.4h h0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_with_unknown_type_in_long_chain:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    cmeq.4s v0, v0, #0
+; SDAG-NEXT:    cmeq.4s v1, v1, #0
+; SDAG-NEXT:    adrp x8, lCPI8_0@PAGE
+; SDAG-NEXT:    movi d2, #0x000000ffffffff
+; SDAG-NEXT:    movi d3, #0x00ffffffffffff
+; SDAG-NEXT:    bic.16b v0, v1, v0
+; SDAG-NEXT:    movi d1, #0xffff0000ffff0000
+; SDAG-NEXT:    xtn.4h v0, v0
+; SDAG-NEXT:    orr.8b v0, v0, v2
+; SDAG-NEXT:    movi d2, #0x00ffffffff0000
+; SDAG-NEXT:    eor.8b v1, v0, v1
+; SDAG-NEXT:    eor.8b v0, v0, v2
+; SDAG-NEXT:    mov.h v1[2], wzr
+; SDAG-NEXT:    orr.8b v0, v0, v3
+; SDAG-NEXT:    orr.8b v0, v1, v0
+; SDAG-NEXT:    ldr d1, [x8, lCPI8_0@PAGEOFF]
+; SDAG-NEXT:    shl.4h v0, v0, #15
+; SDAG-NEXT:    cmlt.4h v0, v0, #0
+; SDAG-NEXT:    and.8b v0, v0, v1
+; SDAG-NEXT:    addv.4h h0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_with_unknown_type_in_long_chain:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    mov w8, #1 ; =0x1
+; GISEL-NEXT:    mov w9, #0 ; =0x0
+; GISEL-NEXT:    cmeq.4s v5, v0, #0
+; GISEL-NEXT:    fmov s2, w8
+; GISEL-NEXT:    fmov s4, w9
+; GISEL-NEXT:    cmeq.4s v1, v1, #0
+; GISEL-NEXT:    mov.16b v3, v2
+; GISEL-NEXT:    mov.16b v0, v4
+; GISEL-NEXT:    mov.h v4[1], w8
+; GISEL-NEXT:    bic.16b v1, v1, v5
+; GISEL-NEXT:    mov.16b v5, v2
+; GISEL-NEXT:    mov.h v2[1], w8
+; GISEL-NEXT:    mov.h v3[1], w8
+; GISEL-NEXT:    mov.h v0[1], w8
+; GISEL-NEXT:    mov.h v5[1], w8
+; GISEL-NEXT:    mov.h v4[2], w8
+; GISEL-NEXT:    xtn.4h v1, v1
+; GISEL-NEXT:    mov.h v2[2], w8
+; GISEL-NEXT:    mov.h v3[2], w9
+; GISEL-NEXT:    mov.h v0[2], w9
+; GISEL-NEXT:    mov.h v5[2], w9
+; GISEL-NEXT:    mov.h v4[3], w9
+; GISEL-NEXT:    mov.h v2[3], w9
+; GISEL-NEXT:    mov.h v3[3], w9
+; GISEL-NEXT:    mov.h v0[3], w8
+; GISEL-NEXT:    mov.h v5[3], w8
+; GISEL-NEXT:    orr.8b v1, v1, v3
+; GISEL-NEXT:    eor.8b v0, v1, v0
+; GISEL-NEXT:    eor.8b v1, v4, v1
+; GISEL-NEXT:    and.8b v0, v0, v5
+; GISEL-NEXT:    orr.8b v1, v2, v1
+; GISEL-NEXT:    orr.8b v0, v0, v1
+; GISEL-NEXT:    ushll.4s v0, v0, #0
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp1 = icmp ne <4 x i32> %vec1, zeroinitializer
@@ -315,18 +440,42 @@ define i4 @convert_to_bitmask_with_unknown_type_in_long_chain(<4 x i32> %vec1, <
 }
 
 define i4 @convert_to_bitmask_with_different_types_in_chain(<4 x i16> %vec1, <4 x i32> %vec2) {
-; CHECK-LABEL: convert_to_bitmask_with_different_types_in_chain:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmeq.4s v1, v1, #0
-; CHECK-NEXT:    cmeq.4h v0, v0, #0
-; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    orn.8b v0, v1, v0
-; CHECK-NEXT:    ldr d1, [x8, lCPI9_0@PAGEOFF]
-; CHECK-NEXT:    and.8b v0, v0, v1
-; CHECK-NEXT:    addv.4h h0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_with_different_types_in_chain:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    cmeq.4s v1, v1, #0
+; SDAG-NEXT:    cmeq.4h v0, v0, #0
+; SDAG-NEXT:    adrp x8, lCPI9_0@PAGE
+; SDAG-NEXT:    xtn.4h v1, v1
+; SDAG-NEXT:    orn.8b v0, v1, v0
+; SDAG-NEXT:    ldr d1, [x8, lCPI9_0@PAGEOFF]
+; SDAG-NEXT:    and.8b v0, v0, v1
+; SDAG-NEXT:    addv.4h h0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_with_different_types_in_chain:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    cmeq.4s v1, v1, #0
+; GISEL-NEXT:    cmeq.4h v0, v0, #0
+; GISEL-NEXT:    xtn.4h v1, v1
+; GISEL-NEXT:    orn.8b v0, v1, v0
+; GISEL-NEXT:    ushll.4s v0, v0, #0
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp1 = icmp ne <4 x i16> %vec1, zeroinitializer
@@ -426,16 +575,51 @@ define i2 @convert_to_bitmask_2xi32(<2 x i32> %vec) {
 }
 
 define i4 @convert_to_bitmask_4xi8(<4 x i8> %vec) {
-; CHECK-LABEL: convert_to_bitmask_4xi8:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    adrp x8, lCPI12_0@PAGE
-; CHECK-NEXT:    ldr d1, [x8, lCPI12_0@PAGEOFF]
-; CHECK-NEXT:    cmeq.4h v0, v0, #0
-; CHECK-NEXT:    bic.8b v0, v1, v0
-; CHECK-NEXT:    addv.4h h0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_4xi8:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    bic.4h v0, #255, lsl #8
+; SDAG-NEXT:    adrp x8, lCPI12_0@PAGE
+; SDAG-NEXT:    ldr d1, [x8, lCPI12_0@PAGEOFF]
+; SDAG-NEXT:    cmeq.4h v0, v0, #0
+; SDAG-NEXT:    bic.8b v0, v1, v0
+; SDAG-NEXT:    addv.4h h0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_4xi8:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    mov w8, #0 ; =0x0
+; GISEL-NEXT:    uzp1.8b v0, v0, v0
+; GISEL-NEXT:    fmov s1, w8
+; GISEL-NEXT:    mov.b v1[1], w8
+; GISEL-NEXT:    mov.b v1[2], w8
+; GISEL-NEXT:    mov.b v1[3], w8
+; GISEL-NEXT:    cmeq.8b v0, v0, v1
+; GISEL-NEXT:    mvn.8b v0, v0
+; GISEL-NEXT:    umov.b w8, v0[0]
+; GISEL-NEXT:    umov.b w9, v0[1]
+; GISEL-NEXT:    mov.s v1[0], w8
+; GISEL-NEXT:    umov.b w8, v0[2]
+; GISEL-NEXT:    mov.s v1[1], w9
+; GISEL-NEXT:    umov.b w9, v0[3]
+; GISEL-NEXT:    mov.s v1[2], w8
+; GISEL-NEXT:    mov.s v1[3], w9
+; GISEL-NEXT:    mov.s w8, v1[1]
+; GISEL-NEXT:    mov.s w9, v1[2]
+; GISEL-NEXT:    fmov w11, s1
+; GISEL-NEXT:    mov.s w10, v1[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
   %cmp_result = icmp ne <4 x i8> %vec, zeroinitializer
   %bitmask = bitcast <4 x i1> %cmp_result to i4
@@ -461,17 +645,39 @@ define i8 @convert_to_bitmask_8xi2(<8 x i2> %vec) {
 }
 
 define i4 @convert_to_bitmask_float(<4 x float> %vec) {
-; CHECK-LABEL: convert_to_bitmask_float:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    fcmgt.4s v1, v0, #0.0
-; CHECK-NEXT:    fcmlt.4s v0, v0, #0.0
-; CHECK-NEXT:    adrp x8, lCPI14_0@PAGE
-; CHECK-NEXT:    orr.16b v0, v0, v1
-; CHECK-NEXT:    ldr q1, [x8, lCPI14_0@PAGEOFF]
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_to_bitmask_float:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    fcmgt.4s v1, v0, #0.0
+; SDAG-NEXT:    fcmlt.4s v0, v0, #0.0
+; SDAG-NEXT:    adrp x8, lCPI14_0@PAGE
+; SDAG-NEXT:    orr.16b v0, v0, v1
+; SDAG-NEXT:    ldr q1, [x8, lCPI14_0@PAGEOFF]
+; SDAG-NEXT:    and.16b v0, v0, v1
+; SDAG-NEXT:    addv.4s s0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_to_bitmask_float:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    fcmgt.4s v1, v0, #0.0
+; GISEL-NEXT:    fcmlt.4s v0, v0, #0.0
+; GISEL-NEXT:    orr.16b v0, v0, v1
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
 
   %cmp_result = fcmp one <4 x float> %vec, zeroinitializer
@@ -542,17 +748,40 @@ define i8 @convert_large_vector(<8 x i32> %vec) {
 }
 
 define i4 @convert_legalized_illegal_element_size(<4 x i22> %vec) {
-; CHECK-LABEL: convert_legalized_illegal_element_size:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.4s v1, #63, msl #16
-; CHECK-NEXT:    adrp x8, lCPI16_0@PAGE
-; CHECK-NEXT:    cmtst.4s v0, v0, v1
-; CHECK-NEXT:    ldr d1, [x8, lCPI16_0@PAGEOFF]
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    and.8b v0, v0, v1
-; CHECK-NEXT:    addv.4h h0, v0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: convert_legalized_illegal_element_size:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    movi.4s v1, #63, msl #16
+; SDAG-NEXT:    adrp x8, lCPI16_0@PAGE
+; SDAG-NEXT:    cmtst.4s v0, v0, v1
+; SDAG-NEXT:    ldr d1, [x8, lCPI16_0@PAGEOFF]
+; SDAG-NEXT:    xtn.4h v0, v0
+; SDAG-NEXT:    and.8b v0, v0, v1
+; SDAG-NEXT:    addv.4h h0, v0
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: convert_legalized_illegal_element_size:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    movi.4s v1, #63, msl #16
+; GISEL-NEXT:    and.16b v0, v0, v1
+; GISEL-NEXT:    cmeq.4s v0, v0, #0
+; GISEL-NEXT:    mvn.16b v0, v0
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    fmov w11, s0
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w11, w8, #1, #31
+; GISEL-NEXT:    and w8, w9, #0x1
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w11, w8, lsl #2
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
   %cmp_result = icmp ne <4 x i22> %vec, zeroinitializer
   %bitmask = bitcast <4 x i1> %cmp_result to i4
@@ -607,36 +836,83 @@ define <8 x i1> @no_convert_without_direct_bitcast(<8 x i16> %vec) {
 }
 
 define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
-; CHECK-LABEL: no_combine_illegal_num_elements:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    fmov s1, w4
-; CHECK-NEXT:    mov.s v0[1], w1
-; CHECK-NEXT:    mov.s v1[1], w5
-; CHECK-NEXT:    mov.s v0[2], w2
-; CHECK-NEXT:    cmeq.4s v1, v1, #0
-; CHECK-NEXT:    mov.s v0[3], w3
-; CHECK-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-NEXT:    uzp1.8h v0, v0, v1
-; CHECK-NEXT:    mvn.16b v0, v0
-; CHECK-NEXT:    xtn.8b v0, v0
-; CHECK-NEXT:    umov.b w8, v0[0]
-; CHECK-NEXT:    umov.b w9, v0[1]
-; CHECK-NEXT:    umov.b w10, v0[2]
-; CHECK-NEXT:    and w8, w8, #0x1
-; CHECK-NEXT:    bfi w8, w9, #1, #1
-; CHECK-NEXT:    umov.b w9, v0[3]
-; CHECK-NEXT:    bfi w8, w10, #2, #1
-; CHECK-NEXT:    umov.b w10, v0[4]
-; CHECK-NEXT:    bfi w8, w9, #3, #1
-; CHECK-NEXT:    umov.b w9, v0[5]
-; CHECK-NEXT:    bfi w8, w10, #4, #1
-; CHECK-NEXT:    orr w8, w8, w9, lsl #5
-; CHECK-NEXT:    and w0, w8, #0x3f
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ret
+; SDAG-LABEL: no_combine_illegal_num_elements:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    sub sp, sp, #16
+; SDAG-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-NEXT:    fmov s0, w0
+; SDAG-NEXT:    fmov s1, w4
+; SDAG-NEXT:    mov.s v0[1], w1
+; SDAG-NEXT:    mov.s v1[1], w5
+; SDAG-NEXT:    mov.s v0[2], w2
+; SDAG-NEXT:    cmeq.4s v1, v1, #0
+; SDAG-NEXT:    mov.s v0[3], w3
+; SDAG-NEXT:    cmeq.4s v0, v0, #0
+; SDAG-NEXT:    uzp1.8h v0, v0, v1
+; SDAG-NEXT:    mvn.16b v0, v0
+; SDAG-NEXT:    xtn.8b v0, v0
+; SDAG-NEXT:    umov.b w8, v0[0]
+; SDAG-NEXT:    umov.b w9, v0[1]
+; SDAG-NEXT:    umov.b w10, v0[2]
+; SDAG-NEXT:    and w8, w8, #0x1
+; SDAG-NEXT:    bfi w8, w9, #1, #1
+; SDAG-NEXT:    umov.b w9, v0[3]
+; SDAG-NEXT:    bfi w8, w10, #2, #1
+; SDAG-NEXT:    umov.b w10, v0[4]
+; SDAG-NEXT:    bfi w8, w9, #3, #1
+; SDAG-NEXT:    umov.b w9, v0[5]
+; SDAG-NEXT:    bfi w8, w10, #4, #1
+; SDAG-NEXT:    orr w8, w8, w9, lsl #5
+; SDAG-NEXT:    and w0, w8, #0x3f
+; SDAG-NEXT:    add sp, sp, #16
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: no_combine_illegal_num_elements:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    sub sp, sp, #16
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    mov.s v0[0], w0
+; GISEL-NEXT:    mov.s v1[0], w4
+; GISEL-NEXT:    mov.s v2[0], wzr
+; GISEL-NEXT:    mov.s v0[1], w1
+; GISEL-NEXT:    mov.s v1[1], w5
+; GISEL-NEXT:    mov.s v2[1], wzr
+; GISEL-NEXT:    mov.s v0[2], w2
+; GISEL-NEXT:    cmeq.4s v1, v1, v2
+; GISEL-NEXT:    mvn.16b v1, v1
+; GISEL-NEXT:    mov.s v0[3], w3
+; GISEL-NEXT:    cmeq.4s v0, v0, #0
+; GISEL-NEXT:    mvn.16b v0, v0
+; GISEL-NEXT:    mov.s w8, v0[1]
+; GISEL-NEXT:    mov.s w9, v0[2]
+; GISEL-NEXT:    mov.s w10, v0[3]
+; GISEL-NEXT:    mov.h v0[1], w8
+; GISEL-NEXT:    mov.s w8, v1[1]
+; GISEL-NEXT:    mov.h v0[2], w9
+; GISEL-NEXT:    mov.h v0[3], w10
+; GISEL-NEXT:    mov.h v0[4], v1[0]
+; GISEL-NEXT:    mov.h v0[5], w8
+; GISEL-NEXT:    umov.h w8, v0[1]
+; GISEL-NEXT:    umov.h w9, v0[0]
+; GISEL-NEXT:    umov.h w10, v0[2]
+; GISEL-NEXT:    umov.h w11, v0[3]
+; GISEL-NEXT:    and w8, w8, #0x1
+; GISEL-NEXT:    bfi w9, w8, #1, #31
+; GISEL-NEXT:    and w8, w10, #0x1
+; GISEL-NEXT:    umov.h w10, v0[4]
+; GISEL-NEXT:    orr w8, w9, w8, lsl #2
+; GISEL-NEXT:    and w9, w11, #0x1
+; GISEL-NEXT:    umov.h w11, v0[5]
+; GISEL-NEXT:    orr w8, w8, w9, lsl #3
+; GISEL-NEXT:    and w9, w10, #0x1
+; GISEL-NEXT:    orr w8, w8, w9, lsl #4
+; GISEL-NEXT:    and w9, w11, #0x1
+; GISEL-NEXT:    orr w8, w8, w9, lsl #5
+; GISEL-NEXT:    and w8, w8, #0x3f
+; GISEL-NEXT:    strb w8, [sp, #15]
+; GISEL-NEXT:    and w0, w8, #0xff
+; GISEL-NEXT:    add sp, sp, #16
+; GISEL-NEXT:    ret
 
   %cmp_result = icmp ne <6 x i32> %vec, zeroinitializer
   %bitmask = bitcast <6 x i1> %cmp_result to i6
