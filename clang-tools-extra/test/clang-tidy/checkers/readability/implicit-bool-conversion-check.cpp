@@ -36,7 +36,7 @@ void TestImplicitBoolConversion() {
     do {
         break;
     } while (charValue); // CHECK-MESSAGES-TO: :[[@LINE]]:14: warning: implicit conversion 'char' -> 'bool' [readability-implicit-bool-conversion]
-                         // CHECK-FIXES-TO: } while (charValue != 0);
+                         // CHECK-FIXES-TO: } while (charValue != 0u);
 
     // Pointer conversions to bool
     int* ptrValue = &intValue;
