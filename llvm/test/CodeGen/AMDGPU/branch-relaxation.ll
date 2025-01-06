@@ -297,7 +297,10 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX12-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_f32 s0, 0
-; GFX12-NEXT:    s_cbranch_scc0 .LBB2_1
+; GFX12-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
+; GFX12-NEXT:    s_cbranch_vccz .LBB2_1
 ; GFX12-NEXT:  ; %bb.3: ; %bb0
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
 ; GFX12-NEXT:  .Lpost_getpc2:
