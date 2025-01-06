@@ -17,7 +17,7 @@
 __extension__ typedef __SIZE_TYPE__ size_t;
 void *operator new(size_t); // #cwg5xx-global-operator-new
 // cxx98-error@-1 {{'operator new' is missing exception specification 'throw(std::bad_alloc)'}}
-#if __cplusplus > 201402L
+#if __cplusplus >= 201703L
 namespace std {
   enum class align_val_t : size_t {};
 } // namespace std

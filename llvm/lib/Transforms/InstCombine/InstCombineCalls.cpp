@@ -2673,8 +2673,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Propagate sign argument through nested calls:
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
-    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
-      return replaceOperand(*II, 1, X);
+    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
+      Value *CopySign = Builder.CreateCopySign(
+          Mag, X,
+          II->getFastMathFlags() & cast<Instruction>(Sign)->getFastMathFlags());
+      return replaceInstUsesWith(*II, CopySign);
+    }
 
     // Clear sign-bit of constant magnitude:
     // copysign -MagC, X --> copysign MagC, X
