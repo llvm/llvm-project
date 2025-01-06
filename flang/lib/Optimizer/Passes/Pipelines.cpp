@@ -234,6 +234,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
     pm.addPass(mlir::createCSEPass());
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createOptimizedBufferization);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createInlineHLFIRAssign);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
