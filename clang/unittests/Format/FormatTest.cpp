@@ -5887,6 +5887,11 @@ TEST_F(FormatTest, MacrosWithoutTrailingSemicolon) {
   verifyFormat("SOME_WEIRD_LOG_MACRO << SomeThing;", "SOME_WEIRD_LOG_MACRO\n"
                                                      "<< SomeThing;");
 
+  verifyFormat("GGGG(ffff(xxxxxxxxxxxxxxxxxxxx)->yyyyyyyyyyyyyyyyyyyy)(foo);",
+               "GGGG(ffff(xxxxxxxxxxxxxxxxxxxx)->yyyyyyyyyyyyyyyyyyyy)\n"
+               "(foo);",
+               getLLVMStyleWithColumns(60));
+
   verifyFormat("VISIT_GL_CALL(GenBuffers, void, (GLsizei n, GLuint* buffers), "
                "(n, buffers))",
                getChromiumStyle(FormatStyle::LK_Cpp));

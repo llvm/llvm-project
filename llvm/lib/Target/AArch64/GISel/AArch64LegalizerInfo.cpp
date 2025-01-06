@@ -454,6 +454,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {nxv2s64, p0, nxv2s64, 8},
       })
       .clampScalar(0, s8, s64)
+      .minScalarOrElt(0, s8)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
                Query.Types[0] != Query.MMODescrs[0].MemoryTy;
@@ -861,6 +862,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForCartesianProduct({s32, v2s16, v4s8})
       .legalForCartesianProduct({s64, v8s8, v4s16, v2s32})
       .legalForCartesianProduct({s128, v16s8, v8s16, v4s32, v2s64, v2p0})
+      .customIf([=](const LegalityQuery &Query) {
+        // Handle casts from i1 vectors to scalars.
+        LLT DstTy = Query.Types[0];
+        LLT SrcTy = Query.Types[1];
+        return DstTy.isScalar() && SrcTy.isVector() &&
+               SrcTy.getScalarSizeInBits() == 1;
+      })
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isVector() != Query.Types[1].isVector();
       })
@@ -1405,9 +1413,26 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return Helper.lowerAbsToCNeg(MI);
   case TargetOpcode::G_ICMP:
     return legalizeICMP(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_BITCAST:
+    return legalizeBitcast(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeBitcast(MachineInstr &MI,
+                                           LegalizerHelper &Helper) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITCAST && "Unexpected opcode");
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  // We're trying to handle casts from i1 vectors to scalars but reloading from
+  // stack.
+  if (!DstTy.isScalar() || !SrcTy.isVector() ||
+      SrcTy.getElementType() != LLT::scalar(1))
+    return false;
+
+  Helper.createStackStoreLoad(DstReg, SrcReg);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
