@@ -53,9 +53,16 @@ TEST_F(PointerUnionTest, Comparison) {
   EXPECT_TRUE(i4 != l4);
   EXPECT_TRUE(f4 != l4);
   EXPECT_TRUE(l4 != d4);
-  EXPECT_TRUE(i4null != f4null);
-  EXPECT_TRUE(i4null != l4null);
-  EXPECT_TRUE(i4null != d4null);
+  EXPECT_TRUE(i4null == f4null);
+  EXPECT_FALSE(i4null != f4null);
+  EXPECT_TRUE(i4null == l4null);
+  EXPECT_FALSE(i4null != l4null);
+  EXPECT_TRUE(i4null == d4null);
+  EXPECT_FALSE(i4null != d4null);
+  EXPECT_FALSE(i4null == i4);
+  EXPECT_TRUE(i4null != i4);
+  EXPECT_FALSE(i4null == f4);
+  EXPECT_TRUE(i4null != f4);
 }
 
 TEST_F(PointerUnionTest, Null) {

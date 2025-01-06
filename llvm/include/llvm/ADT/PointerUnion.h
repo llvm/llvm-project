@@ -198,14 +198,14 @@ public:
   }
 };
 
-template <typename ...PTs>
-bool operator==(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
-  return lhs.getOpaqueValue() == rhs.getOpaqueValue();
+template <typename... PTs>
+bool operator==(PointerUnion<PTs...> LHS, PointerUnion<PTs...> RHS) {
+  return (!LHS && !RHS) || LHS.getOpaqueValue() == RHS.getOpaqueValue();
 }
 
-template <typename ...PTs>
-bool operator!=(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
-  return lhs.getOpaqueValue() != rhs.getOpaqueValue();
+template <typename... PTs>
+bool operator!=(PointerUnion<PTs...> LHS, PointerUnion<PTs...> RHS) {
+  return !operator==(LHS, RHS);
 }
 
 template <typename ...PTs>
