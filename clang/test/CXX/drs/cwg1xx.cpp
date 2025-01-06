@@ -279,19 +279,19 @@ namespace cwg115 { // cwg115: 3.0
   // Special case kicks in only if a template argument list is specified.
   template<typename T=int> void with_default(); // #cwg115-with-default
   int k10 = f(&with_default);
-  // expected-error@-1 {{no matching function for call to 'f'}}
-  //   expected-note@#cwg115-f {{candidate template ignored: couldn't infer template argument 'T'}}
+  // since-cxx11-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx11-note@#cwg115-f {{candidate template ignored: couldn't infer template argument 'T'}}
   int k11 = f(&with_default<>);
   void k() {
     (void)&with_default;
-    // expected-error@-1 {{address of overloaded function 'with_default' cannot be cast to type 'void'}}
-    //   expected-note@#cwg115-with-default {{candidate function template}}
+    // since-cxx11-error@-1 {{address of overloaded function 'with_default' cannot be cast to type 'void'}}
+    //   since-cxx11-note@#cwg115-with-default {{candidate function template}}
     (void)&with_default<>;
     &with_default;
-    // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
-    //   expected-note@#cwg115-with-default {{possible target for call}}
+    // since-cxx11-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
+    //   since-cxx11-note@#cwg115-with-default {{possible target for call}}
     &with_default<>;
-    // expected-warning@-1 {{expression result unused}}
+    // since-cxx11-warning@-1 {{expression result unused}}
   }
 #endif
 } // namespace cwg115
