@@ -324,5 +324,5 @@ if (TARGET flang AND TARGET module_files)
 endif()
 
 if (FLANG_CUF_RUNTIME)
-  add_subdirectory(../CufRuntime CUDA)
+  add_subdirectory(CUDA)
 endif()
