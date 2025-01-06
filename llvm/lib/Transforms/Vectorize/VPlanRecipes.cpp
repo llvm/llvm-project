@@ -1352,10 +1352,9 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *C = nullptr;
     if (FCmp) {
       // Propagate fast math flags.
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
-        Builder.setFastMathFlags(I->getFastMathFlags());
-      C = Builder.CreateFCmp(getPredicate(), A, B);
+      C = Builder.CreateFCmpFMF(
+          getPredicate(), A, B,
+          dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
