@@ -12,18 +12,41 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <array>
 
 using namespace clang::ast_matchers;
+using clang::ast_matchers::internal::Matcher;
 
 namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER_P(QualType, hasCleanType, ast_matchers::internal::Matcher<QualType>,
-              InnerMatcher) {
+AST_MATCHER_P(QualType, hasCleanType, Matcher<QualType>, InnerMatcher) {
   return InnerMatcher.matches(
       Node.getNonReferenceType().getUnqualifiedType().getCanonicalType(),
       Finder, Builder);
+}
+
+constexpr std::array<StringRef, 2> NameList{
+    "::std::make_unique",
+    "::std::make_shared",
+};
+
+Matcher<Expr> constructFrom(Matcher<QualType> TypeMatcher,
+                            Matcher<Expr> ArgumentMatcher) {
+  return expr(
+      anyOf(
+          // construct optional
+          cxxConstructExpr(argumentCountIs(1U), hasType(TypeMatcher),
+                           hasArgument(0U, ArgumentMatcher)),
+          // known template methods in std
+          callExpr(argumentCountIs(1),
+                   callee(functionDecl(
+                       matchers::matchesAnyListedName(NameList),
+                       hasTemplateArgument(0, refersToType(TypeMatcher)))),
+                   hasArgument(0, ArgumentMatcher))),
+      unless(anyOf(hasAncestor(typeLoc()),
+                   hasAncestor(expr(matchers::hasUnevaluatedContext())))));
 }
 
 } // namespace
@@ -67,12 +90,9 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(argumentCountIs(1), callee(functionDecl(hasName("::std::move"))),
                hasArgument(0, ignoringImpCasts(OptionalDereferenceMatcher)));
   Finder->addMatcher(
-      cxxConstructExpr(
-          argumentCountIs(1U), hasType(BindOptionalType),
-          hasArgument(0U, ignoringImpCasts(anyOf(OptionalDereferenceMatcher,
-                                                 StdMoveCallMatcher))),
-          unless(anyOf(hasAncestor(typeLoc()),
-                       hasAncestor(expr(matchers::hasUnevaluatedContext())))))
+      expr(constructFrom(BindOptionalType,
+                         ignoringImpCasts(anyOf(OptionalDereferenceMatcher,
+                                                StdMoveCallMatcher))))
           .bind("expr"),
       this);
 }

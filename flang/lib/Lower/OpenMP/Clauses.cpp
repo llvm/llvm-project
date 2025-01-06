@@ -859,10 +859,14 @@ Init make(const parser::OmpClause::Init &inp,
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpInReductionClause
-  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(m0 && "OmpReductionIdentifier is required");
+
   return InReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*m0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 
@@ -895,8 +899,6 @@ Lastprivate make(const parser::OmpClause::Lastprivate &inp,
 Linear make(const parser::OmpClause::Linear &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpLinearClause
-  using wrapped = parser::OmpLinearClause;
-
   CLAUSET_ENUM_CONVERT( //
       convert, parser::OmpLinearModifier::Value, Linear::LinearModifier,
       // clang-format off
@@ -906,26 +908,23 @@ Linear make(const parser::OmpClause::Linear &inp,
       // clang-format on
   );
 
-  using Tuple = decltype(Linear::t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpStepComplexModifier>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpStepSimpleModifier>(mods);
+  assert((!m0 || !m1) && "Simple and complex modifiers both present");
 
-  return Linear{Fortran::common::visit(
-      common::visitors{
-          [&](const wrapped::WithModifier &s) -> Tuple {
-            return {
-                /*StepSimpleModifier=*/std::nullopt,
-                /*StepComplexModifier=*/maybeApply(makeExprFn(semaCtx), s.step),
-                /*LinearModifier=*/convert(s.modifier.v),
-                /*List=*/makeList(s.names, makeObjectFn(semaCtx))};
-          },
-          [&](const wrapped::WithoutModifier &s) -> Tuple {
-            return {
-                /*StepSimpleModifier=*/maybeApply(makeExprFn(semaCtx), s.step),
-                /*StepComplexModifier=*/std::nullopt,
-                /*LinearModifier=*/std::nullopt,
-                /*List=*/makeList(s.names, makeObjectFn(semaCtx))};
-          },
-      },
-      inp.v.u)};
+  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto &&maybeStep = m0   ? maybeApplyToV(makeExprFn(semaCtx), m0)
+                     : m1 ? maybeApplyToV(makeExprFn(semaCtx), m1)
+                          : std::optional<Linear::StepComplexModifier>{};
+
+  return Linear{{/*StepComplexModifier=*/std::move(maybeStep),
+                 /*LinearModifier=*/maybeApplyToV(convert, m2),
+                 /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Link make(const parser::OmpClause::Link &inp,
@@ -1155,17 +1154,17 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   );
 
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 =
+  auto *m0 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionModifier>(mods);
-  auto *t1 =
+  auto *m1 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
-  assert(t1 && "OmpReductionIdentifier is required");
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(m1 && "OmpReductionIdentifier is required");
 
   return Reduction{
-      {/*ReductionModifier=*/maybeApplyToV(convert, t0),
-       /*ReductionIdentifiers=*/{makeReductionOperator(*t1, semaCtx)},
-       /*List=*/makeObjects(t2, semaCtx)}};
+      {/*ReductionModifier=*/maybeApplyToV(convert, m0),
+       /*ReductionIdentifiers=*/{makeReductionOperator(*m1, semaCtx)},
+       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 // Relaxed: empty
@@ -1259,13 +1258,13 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 =
+  auto *m0 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  assert(t0 && "OmpReductionIdentifier is required");
+  assert(m0 && "OmpReductionIdentifier is required");
 
   return TaskReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(*t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*m0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 

@@ -232,7 +232,8 @@ def imm_port6 : Operand<i8> {
 }
 
 // Addressing mode pattern reg+imm6
-def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], [SDNPWantRoot]>;
+let WantsRoot = true in
+def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
 
 //===----------------------------------------------------------------------===//
 // AVR predicates for subtarget features

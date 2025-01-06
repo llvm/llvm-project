@@ -1225,25 +1225,25 @@ def PostIdxRegShiftedAsmOperand : AsmOperandClass {
   let ParserMethod = "parsePostIdxReg";
 }
 def am2offset_reg : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode2OffsetReg",
-                [], [SDNPWantRoot]> {
+                    ComplexPattern<i32, 2, "SelectAddrMode2OffsetReg"> {
   let EncoderMethod = "getAddrMode2OffsetOpValue";
   let PrintMethod = "printAddrMode2OffsetOperand";
   // When using this for assembly, it's always as a post-index offset.
   let ParserMatchClass = PostIdxRegShiftedAsmOperand;
   let MIOperandInfo = (ops GPRnopc, i32imm);
+  let WantsRoot = true;
 }
 
 // FIXME: am2offset_imm should only need the immediate, not the GPR. Having
 // the GPR is purely vestigal at this point.
 def AM2OffsetImmAsmOperand : AsmOperandClass { let Name = "AM2OffsetImm"; }
 def am2offset_imm : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode2OffsetImm",
-                [], [SDNPWantRoot]> {
+                    ComplexPattern<i32, 2, "SelectAddrMode2OffsetImm"> {
   let EncoderMethod = "getAddrMode2OffsetOpValue";
   let PrintMethod = "printAddrMode2OffsetOperand";
   let ParserMatchClass = AM2OffsetImmAsmOperand;
   let MIOperandInfo = (ops GPRnopc, i32imm);
+  let WantsRoot = true;
 }
 
 
@@ -1275,13 +1275,12 @@ def AM3OffsetAsmOperand : AsmOperandClass {
   let Name = "AM3Offset";
   let ParserMethod = "parseAM3Offset";
 }
-def am3offset : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode3Offset",
-                               [], [SDNPWantRoot]> {
+def am3offset : MemOperand, ComplexPattern<i32, 2, "SelectAddrMode3Offset"> {
   let EncoderMethod = "getAddrMode3OffsetOpValue";
   let PrintMethod = "printAddrMode3OffsetOperand";
   let ParserMatchClass = AM3OffsetAsmOperand;
   let MIOperandInfo = (ops GPR, i32imm);
+  let WantsRoot = true;
 }
 
 // ldstm_mode := {ia, ib, da, db}
@@ -1328,40 +1327,39 @@ def addrmode5fp16 : AddrMode5FP16 {
 // addrmode6 := reg with optional alignment
 //
 def AddrMode6AsmOperand : AsmOperandClass { let Name = "AlignedMemory"; }
-def addrmode6 : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode6", [], [SDNPWantParent]>{
+def addrmode6 : MemOperand, ComplexPattern<i32, 2, "SelectAddrMode6"> {
   let PrintMethod = "printAddrMode6Operand";
   let MIOperandInfo = (ops GPR:$addr, i32imm:$align);
   let EncoderMethod = "getAddrMode6AddressOpValue";
   let DecoderMethod = "DecodeAddrMode6Operand";
   let ParserMatchClass = AddrMode6AsmOperand;
+  let WantsParent = true;
 }
 
-def am6offset : MemOperand,
-                ComplexPattern<i32, 1, "SelectAddrMode6Offset",
-                               [], [SDNPWantRoot]> {
+def am6offset : MemOperand, ComplexPattern<i32, 1, "SelectAddrMode6Offset"> {
   let PrintMethod = "printAddrMode6OffsetOperand";
   let MIOperandInfo = (ops GPR);
   let EncoderMethod = "getAddrMode6OffsetOpValue";
   let DecoderMethod = "DecodeGPRRegisterClass";
+  let WantsRoot = true;
 }
 
 // Special version of addrmode6 to handle alignment encoding for VST1/VLD1
 // (single element from one lane) for size 32.
-def addrmode6oneL32 : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode6", [], [SDNPWantParent]>{
+def addrmode6oneL32 : MemOperand, ComplexPattern<i32, 2, "SelectAddrMode6"> {
   let PrintMethod = "printAddrMode6Operand";
   let MIOperandInfo = (ops GPR:$addr, i32imm);
   let EncoderMethod = "getAddrMode6OneLane32AddressOpValue";
+  let WantsParent = true;
 }
 
 // Base class for addrmode6 with specific alignment restrictions.
-class AddrMode6Align : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode6", [], [SDNPWantParent]>{
+class AddrMode6Align : MemOperand, ComplexPattern<i32, 2, "SelectAddrMode6"> {
   let PrintMethod = "printAddrMode6Operand";
   let MIOperandInfo = (ops GPR:$addr, i32imm:$align);
   let EncoderMethod = "getAddrMode6AddressOpValue";
   let DecoderMethod = "DecodeAddrMode6Operand";
+  let WantsParent = true;
 }
 
 // Special version of addrmode6 to handle no allowed alignment encoding for
@@ -1432,22 +1430,23 @@ def addrmode6align64or128or256 : AddrMode6Align {
 
 // Special version of addrmode6 to handle alignment encoding for VLD-dup
 // instructions, specifically VLD4-dup.
-def addrmode6dup : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode6", [], [SDNPWantParent]>{
+def addrmode6dup : MemOperand, ComplexPattern<i32, 2, "SelectAddrMode6"> {
   let PrintMethod = "printAddrMode6Operand";
   let MIOperandInfo = (ops GPR:$addr, i32imm);
   let EncoderMethod = "getAddrMode6DupAddressOpValue";
   // FIXME: This is close, but not quite right. The alignment specifier is
   // different.
   let ParserMatchClass = AddrMode6AsmOperand;
+  let WantsParent = true;
 }
 
 // Base class for addrmode6dup with specific alignment restrictions.
 class AddrMode6DupAlign : MemOperand,
-                ComplexPattern<i32, 2, "SelectAddrMode6", [], [SDNPWantParent]>{
+                          ComplexPattern<i32, 2, "SelectAddrMode6"> {
   let PrintMethod = "printAddrMode6Operand";
   let MIOperandInfo = (ops GPR:$addr, i32imm);
   let EncoderMethod = "getAddrMode6DupAddressOpValue";
+  let WantsParent = true;
 }
 
 // Special version of addrmode6 to handle no allowed alignment encoding for
@@ -4766,6 +4765,7 @@ def : ARMV6Pat<(int_arm_smusdx GPRnopc:$Rn, GPRnopc:$Rm),
 //===----------------------------------------------------------------------===//
 //  Division Instructions (ARMv7-A with virtualization extension)
 //
+let TwoOperandAliasConstraint = "$Rn = $Rd" in {
 def SDIV : ADivA1I<0b001, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), IIC_iDIV,
                    "sdiv", "\t$Rd, $Rn, $Rm",
                    [(set GPR:$Rd, (sdiv GPR:$Rn, GPR:$Rm))]>,
@@ -4777,6 +4777,7 @@ def UDIV : ADivA1I<0b011, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), IIC_iDIV,
                    [(set GPR:$Rd, (udiv GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasDivideInARM]>,
            Sched<[WriteDIV]>;
+}
 
 //===----------------------------------------------------------------------===//
 //  Misc. Arithmetic Instructions.

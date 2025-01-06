@@ -15,7 +15,7 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - iswalnum
     -
     - 7.32.2.1.1

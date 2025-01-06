@@ -20,7 +20,7 @@ add_libc_test(
     index_test.cpp
   DEPENDS
     libc.src.strings.index
-    libc.test.src.strchr_test_support
+    libc.test.src.string.strchr_test_support
 )
 
 add_libc_test(
@@ -31,7 +31,7 @@ add_libc_test(
     rindex_test.cpp
   DEPENDS
     libc.src.strings.rindex
-    libc.test.src.strchr_test_support
+    libc.test.src.string.strchr_test_support
 )
 
 add_libc_test(

@@ -52,11 +52,36 @@ template <> struct ScalarTraits<memprof::GUIDHex64> {
 };
 
 template <> struct MappingTraits<memprof::Frame> {
+  // Essentially the same as memprof::Frame except that Function is of type
+  // memprof::GUIDHex64 instead of GlobalValue::GUID.  This class helps in two
+  // ways.  During serialization, we print Function as a 16-digit hexadecimal
+  // number.  During deserialization, we accept a function name as an
+  // alternative to the usual GUID expressed as a hexadecimal number.
+  class FrameWithHex64 {
+  public:
+    FrameWithHex64(IO &) {}
+    FrameWithHex64(IO &, const memprof::Frame &F)
+        : Function(F.Function), LineOffset(F.LineOffset), Column(F.Column),
+          IsInlineFrame(F.IsInlineFrame) {}
+    memprof::Frame denormalize(IO &) {
+      return memprof::Frame(Function, LineOffset, Column, IsInlineFrame);
+    }
+
+    memprof::GUIDHex64 Function = 0;
+    static_assert(std::is_same_v<decltype(Function.value),
+                                 decltype(memprof::Frame::Function)>);
+    decltype(memprof::Frame::LineOffset) LineOffset = 0;
+    decltype(memprof::Frame::Column) Column = 0;
+    decltype(memprof::Frame::IsInlineFrame) IsInlineFrame = false;
+  };
+
   static void mapping(IO &Io, memprof::Frame &F) {
-    Io.mapRequired("Function", F.Function);
-    Io.mapRequired("LineOffset", F.LineOffset);
-    Io.mapRequired("Column", F.Column);
-    Io.mapRequired("IsInlineFrame", F.IsInlineFrame);
+    MappingNormalization<FrameWithHex64, memprof::Frame> Keys(Io, F);
+
+    Io.mapRequired("Function", Keys->Function);
+    Io.mapRequired("LineOffset", Keys->LineOffset);
+    Io.mapRequired("Column", Keys->Column);
+    Io.mapRequired("IsInlineFrame", Keys->IsInlineFrame);
 
     // Assert that the definition of Frame matches what we expect.  The
     // structured bindings below detect changes to the number of fields.

@@ -124,10 +124,10 @@ func.func @no_remap_nested() {
   // CHECK-NEXT: "foo.region"
   // expected-remark@+1 {{op 'foo.region' is not legalizable}}
   "foo.region"() ({
-    // CHECK-NEXT: ^bb0(%{{.*}}: i64, %{{.*}}: i16, %{{.*}}: i64):
-    ^bb0(%i0: i64, %unused: i16, %i1: i64):
-      // CHECK-NEXT: "test.valid"{{.*}} : (i64, i64)
-      "test.invalid"(%i0, %i1) : (i64, i64) -> ()
+    // CHECK-NEXT: ^bb0(%{{.*}}: f64, %{{.*}}: i16, %{{.*}}: f64):
+    ^bb0(%i0: f64, %unused: i16, %i1: f64):
+      // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64)
+      "test.invalid"(%i0, %i1) : (f64, f64) -> ()
   }) : () -> ()
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
@@ -450,7 +450,7 @@ func.func @fold_legalization() -> i32 {
 // -----
 
 // CHECK-LABEL: func @convert_detached_signature()
-//       CHECK:   "test.legal_op_with_region"() ({
+//       CHECK:   "test.legal_op"() ({
 //       CHECK:   ^bb0(%arg0: f64):
 //       CHECK:     "test.return"() : () -> ()
 //       CHECK:   }) : () -> ()
@@ -483,3 +483,25 @@ func.func @test_1_to_n_block_signature_conversion() {
   "test.return"() : () -> ()
 }
 
+// -----
+
+// CHECK: notifyOperationInserted: test.step_1
+// CHECK: notifyOperationReplaced: test.multiple_1_to_n_replacement
+// CHECK: notifyOperationErased: test.multiple_1_to_n_replacement
+// CHECK: notifyOperationInserted: test.legal_op
+// CHECK: notifyOperationReplaced: test.step_1
+// CHECK: notifyOperationErased: test.step_1
+
+// CHECK-LABEL: func @test_multiple_1_to_n_replacement()
+//       CHECK:   %[[legal_op:.*]]:4 = "test.legal_op"() : () -> (f16, f16, f16, f16)
+// TODO: There should be a single cast (i.e., a single target materialization).
+// This is currently not possible due to 1:N limitations of the conversion
+// mapping. Instead, we have 3 argument materializations.
+//       CHECK:   %[[cast1:.*]] = "test.cast"(%[[legal_op]]#2, %[[legal_op]]#3) : (f16, f16) -> f16
+//       CHECK:   %[[cast2:.*]] = "test.cast"(%[[legal_op]]#0, %[[legal_op]]#1) : (f16, f16) -> f16
+//       CHECK:   %[[cast3:.*]] = "test.cast"(%[[cast2]], %[[cast1]]) : (f16, f16) -> f16
+//       CHECK:   "test.valid"(%[[cast3]]) : (f16) -> ()
+func.func @test_multiple_1_to_n_replacement() {
+  %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
+  "test.invalid"(%0) : (f16) -> ()
+}

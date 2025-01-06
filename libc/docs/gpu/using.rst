@@ -99,39 +99,6 @@ threads and two blocks.
 Including the wrapper headers, linking the C library, and running the :ref:`RPC
 server<libc_gpu_rpc>` are all handled automatically by the compiler and runtime.
 
-Binary format
-^^^^^^^^^^^^^
-
-The ``libcgpu.a`` static archive is a fat-binary containing LLVM-IR for each
-supported target device. The supported architectures can be seen using LLVM's
-``llvm-objdump`` with the ``--offloading`` flag:
-
-.. code-block:: sh
-
-  $> llvm-objdump --offloading libcgpu-amdgpu.a
-  libcgpu-amdgpu.a(strcmp.cpp.o):    file format elf64-x86-64
-
-  OFFLOADING IMAGE [0]:
-  kind            llvm ir
-  arch            generic
-  triple          amdgcn-amd-amdhsa
-  producer        none
-  ...
-
-Because the device code is stored inside a fat binary, it can be difficult to
-inspect the resulting code. This can be done using the following utilities:
-
-.. code-block:: sh
-
-  $> llvm-ar x libcgpu.a strcmp.cpp.o
-  $> clang-offload-packager strcmp.cpp.o --image=arch=generic,file=strcmp.bc
-  $> opt -S out.bc
-  ...
-
-Please note that this fat binary format is provided for compatibility with
-existing offloading toolchains. The implementation in ``libc`` does not depend
-on any existing offloading languages and is completely freestanding.
-
 Direct compilation
 ------------------
 
@@ -246,7 +213,7 @@ compilation. Using link time optimization will help hide this.
 
 .. code-block:: sh
 
-  $> clang hello.c --target=nvptx64-nvidia-cuda -mcpu=native -flto -lc <install>/lib/nvptx64-nvidia-cuda/crt1.o
+  $> clang hello.c --target=nvptx64-nvidia-cuda -march=native -flto -lc <install>/lib/nvptx64-nvidia-cuda/crt1.o
   $> nvptx-loader --threads 2 --blocks 2 a.out
   Hello from NVPTX!
   Hello from NVPTX!

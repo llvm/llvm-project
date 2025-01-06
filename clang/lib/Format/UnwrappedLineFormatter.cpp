@@ -361,8 +361,17 @@ private:
     const auto *FirstNonComment = TheLine->getFirstNonComment();
     if (!FirstNonComment)
       return 0;
+
     // FIXME: There are probably cases where we should use FirstNonComment
     // instead of TheLine->First.
+
+    if (Style.AllowShortNamespacesOnASingleLine &&
+        TheLine->First->is(tok::kw_namespace) &&
+        TheLine->Last->is(tok::l_brace)) {
+      const auto result = tryMergeNamespace(I, E, Limit);
+      if (result > 0)
+        return result;
+    }
 
     if (Style.CompactNamespaces) {
       if (const auto *NSToken = TheLine->First->getNamespaceToken()) {
@@ -373,7 +382,7 @@ private:
              ClosingLineIndex == I[J]->MatchingClosingBlockLineIndex &&
              I[J]->Last->TotalLength < Limit;
              ++J, --ClosingLineIndex) {
-          Limit -= I[J]->Last->TotalLength;
+          Limit -= I[J]->Last->TotalLength + 1;
 
           // Reduce indent level for bodies of namespaces which were compacted,
           // but only if their content was indented in the first place.
@@ -420,6 +429,7 @@ private:
         TheLine->First != LastNonComment) {
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
+
     // Try to merge a control statement block with left brace unwrapped.
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
@@ -614,6 +624,72 @@ private:
     if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
     return 1;
+  }
+
+  unsigned tryMergeNamespace(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
+                             SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+                             unsigned Limit) {
+    if (Limit == 0)
+      return 0;
+
+    assert(I[1]);
+    const auto &L1 = *I[1];
+    if (L1.InPPDirective != (*I)->InPPDirective ||
+        (L1.InPPDirective && L1.First->HasUnescapedNewline)) {
+      return 0;
+    }
+
+    if (std::distance(I, E) <= 2)
+      return 0;
+
+    assert(I[2]);
+    const auto &L2 = *I[2];
+    if (L2.Type == LT_Invalid)
+      return 0;
+
+    Limit = limitConsideringMacros(I + 1, E, Limit);
+
+    if (!nextTwoLinesFitInto(I, Limit))
+      return 0;
+
+    // Check if it's a namespace inside a namespace, and call recursively if so.
+    // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
+    if (L1.First->is(tok::kw_namespace)) {
+      if (L1.Last->is(tok::comment) || !Style.CompactNamespaces)
+        return 0;
+
+      assert(Limit >= L1.Last->TotalLength + 3);
+      const auto InnerLimit = Limit - L1.Last->TotalLength - 3;
+      const auto MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
+      if (MergedLines == 0)
+        return 0;
+      const auto N = MergedLines + 2;
+      // Check if there is even a line after the inner result.
+      if (std::distance(I, E) <= N)
+        return 0;
+      // Check that the line after the inner result starts with a closing brace
+      // which we are permitted to merge into one line.
+      if (I[N]->First->is(tok::r_brace) && !I[N]->First->MustBreakBefore &&
+          I[MergedLines + 1]->Last->isNot(tok::comment) &&
+          nextNLinesFitInto(I, I + N + 1, Limit)) {
+        return N;
+      }
+      return 0;
+    }
+
+    // There's no inner namespace, so we are considering to merge at most one
+    // line.
+
+    // The line which is in the namespace should end with semicolon.
+    if (L1.Last->isNot(tok::semi))
+      return 0;
+
+    // Last, check that the third line starts with a closing brace.
+    if (L2.First->isNot(tok::r_brace) || L2.First->MustBreakBefore)
+      return 0;
+
+    // If so, merge all three lines.
+    return 2;
   }
 
   unsigned tryMergeSimpleControlStatement(
@@ -914,6 +990,21 @@ private:
     if (I[1]->First->MustBreakBefore || I[2]->First->MustBreakBefore)
       return false;
     return 1 + I[1]->Last->TotalLength + 1 + I[2]->Last->TotalLength <= Limit;
+  }
+
+  bool nextNLinesFitInto(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
+                         SmallVectorImpl<AnnotatedLine *>::const_iterator E,
+                         unsigned Limit) {
+    unsigned JoinedLength = 0;
+    for (const auto *J = I + 1; J != E; ++J) {
+      if ((*J)->First->MustBreakBefore)
+        return false;
+
+      JoinedLength += 1 + (*J)->Last->TotalLength;
+      if (JoinedLength > Limit)
+        return false;
+    }
+    return true;
   }
 
   bool containsMustBreak(const AnnotatedLine *Line) {
@@ -1491,6 +1582,23 @@ static auto computeNewlines(const AnnotatedLine &Line,
         PreviousLine->startsWith(tok::l_brace)) &&
       !startsExternCBlock(*PreviousLine)) {
     Newlines = 1;
+  }
+
+  if (Style.WrapNamespaceBodyWithEmptyLines != FormatStyle::WNBWELS_Leave) {
+    // Modify empty lines after TT_NamespaceLBrace.
+    if (PreviousLine && PreviousLine->endsWith(TT_NamespaceLBrace)) {
+      if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
+        Newlines = 1;
+      else if (!Line.startsWithNamespace())
+        Newlines = std::max(Newlines, 2u);
+    }
+    // Modify empty lines before TT_NamespaceRBrace.
+    if (Line.startsWith(TT_NamespaceRBrace)) {
+      if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
+        Newlines = 1;
+      else if (!PreviousLine->startsWith(TT_NamespaceRBrace))
+        Newlines = std::max(Newlines, 2u);
+    }
   }
 
   // Insert or remove empty line before access specifiers.

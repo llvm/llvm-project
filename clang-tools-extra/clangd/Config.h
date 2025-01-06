@@ -124,6 +124,10 @@ struct Config {
     // declarations, always spell out the whole name (with or without leading
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
+
+    // List of matcher functions for inserting certain headers with <> or "".
+    std::vector<std::function<bool(llvm::StringRef)>> QuotedHeaders;
+    std::vector<std::function<bool(llvm::StringRef)>> AngledHeaders;
   } Style;
 
   /// controls the completion options for argument lists.

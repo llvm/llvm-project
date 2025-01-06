@@ -362,8 +362,9 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/future>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_THREADS
@@ -373,6 +374,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__chrono/steady_clock.h>
 #    include <__chrono/time_point.h>
 #    include <__condition_variable/condition_variable.h>
+#    include <__cstddef/nullptr_t.h>
 #    include <__exception/exception_ptr.h>
 #    include <__memory/addressof.h>
 #    include <__memory/allocator.h>
@@ -406,7 +408,6 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__utility/forward.h>
 #    include <__utility/move.h>
 #    include <__utility/swap.h>
-#    include <new>
 #    include <stdexcept>
 #    include <tuple>
 #    include <version>
@@ -2084,6 +2085,6 @@ _LIBCPP_POP_MACROS
 #    include <system_error>
 #    include <thread>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FUTURE

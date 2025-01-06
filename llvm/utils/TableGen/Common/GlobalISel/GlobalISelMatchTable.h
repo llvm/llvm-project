@@ -2091,13 +2091,15 @@ protected:
   unsigned InsnID;
   const Record *RegisterDef;
   bool IsDef;
+  bool IsDead;
   const CodeGenTarget &Target;
 
 public:
   AddRegisterRenderer(unsigned InsnID, const CodeGenTarget &Target,
-                      const Record *RegisterDef, bool IsDef = false)
+                      const Record *RegisterDef, bool IsDef = false,
+                      bool IsDead = false)
       : OperandRenderer(OR_Register), InsnID(InsnID), RegisterDef(RegisterDef),
-        IsDef(IsDef), Target(Target) {}
+        IsDef(IsDef), IsDead(IsDead), Target(Target) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Register;

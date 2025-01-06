@@ -592,8 +592,7 @@ bool needConversion(StringRef Filename) {
 #ifdef __MVS__
   llvm::ErrorOr<bool> NeedConversion =
       llvm::needzOSConversion(Filename.str().c_str());
-  assert(NeedConversion && "Filename was not found");
-  return *NeedConversion;
+  return NeedConversion && *NeedConversion;
 #else
   return false;
 #endif

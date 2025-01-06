@@ -512,13 +512,17 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
       IP = Token->getNextNode();
     }
     IRBuilder<> B(IP);
-    for (auto *Fn : CtorFns)
-      B.CreateCall(FunctionCallee(Fn), {}, OB);
+    for (auto *Fn : CtorFns) {
+      auto CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
 
     // Insert global dtors before the terminator of the last instruction
     B.SetInsertPoint(F.back().getTerminator());
-    for (auto *Fn : DtorFns)
-      B.CreateCall(FunctionCallee(Fn), {}, OB);
+    for (auto *Fn : DtorFns) {
+      auto CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
   }
 
   // No need to keep global ctors/dtors for non-lib profile after call to

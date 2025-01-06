@@ -186,6 +186,7 @@ namespace format {
   TYPE(UnionLBrace)                                                            \
   TYPE(UnionRBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  TYPE(VariableTemplate)                                                       \
   /* Like in 'assign x = 0, y = 1;' . */                                       \
   TYPE(VerilogAssignComma)                                                     \
   /* like in begin : block */                                                  \

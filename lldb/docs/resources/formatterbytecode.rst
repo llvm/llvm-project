@@ -58,7 +58,7 @@ These instructions manipulate the data stack directly.
  0x03      `over`      `(x y -> x y x)`
  0x04      `swap`      `(x y -> y x)`
  0x05      `rot`       `(x y z -> z x y)`
-=======  ==========  ===========================
+========  ==========  ===========================
 
 Control flow
 ~~~~~~~~~~~~

@@ -1193,7 +1193,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
   let arguments = (ins Variadic<Index>:$multi_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis,
-    UnitProperty:$disjoint);
+    UnitProp:$disjoint);
   let results = (outs Index:$linear_index);
 
   let assemblyFormat = [{

@@ -30,6 +30,16 @@ void RTDEF(Initialize)(
   }
 }
 
+void RTDEF(InitializeClone)(const Descriptor &clone, const Descriptor &orig,
+    const char *sourceFile, int sourceLine) {
+  if (const DescriptorAddendum * addendum{clone.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      Terminator terminator{sourceFile, sourceLine};
+      InitializeClone(clone, orig, *derived, terminator);
+    }
+  }
+}
+
 void RTDEF(Destroy)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {

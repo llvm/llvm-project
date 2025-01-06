@@ -143,6 +143,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
                 },
                 c.u);
           },
+          [&](const OpenMPErrorConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(c.t).source};
+            return normalize_construct_name(source.ToString());
+          },
           [&](const OpenMPSectionConstruct &c) -> std::string {
             return "section";
           },

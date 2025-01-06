@@ -1532,6 +1532,11 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
+  // If all args are constant than this will be constant folded away.
+  if (!Args.empty() &&
+      all_of(Args, [](const Value *Arg) { return isa<Constant>(Arg); }))
+    return TTI::TCC_Free;
+
   // Recognize a basic concat_vector shuffle.
   if (Kind == TTI::SK_PermuteTwoSrc &&
       Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
@@ -1693,7 +1698,8 @@ InstructionCost X86TTIImpl::getShuffleCost(
   // We are going to permute multiple sources and the result will be in multiple
   // destinations. Providing an accurate cost only for splits where the element
   // type remains the same.
-  if (Kind == TTI::SK_PermuteSingleSrc && LT.first != 1) {
+  if ((Kind == TTI::SK_PermuteSingleSrc || Kind == TTI::SK_PermuteTwoSrc) &&
+      LT.first != 1) {
     MVT LegalVT = LT.second;
     if (LegalVT.isVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
@@ -1723,7 +1729,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
         // destination register is just a copy of the source register or the
         // copy of the previous destination register (the cost is
         // TTI::TCC_Basic). If the source register is just reused, the cost for
-        // this operation is 0.
+        // this operation is TTI::TCC_Free.
         NumOfDests =
             getTypeLegalizationCost(
                 FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
@@ -1757,7 +1763,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
               if (SrcReg != DestReg &&
                   any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
                 // Just a copy of the source register.
-                Cost += TTI::TCC_Basic;
+                Cost += TTI::TCC_Free;
               }
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;
@@ -1777,14 +1783,6 @@ InstructionCost X86TTIImpl::getShuffleCost(
     }
 
     return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
-  }
-
-  // For 2-input shuffles, we must account for splitting the 2 inputs into many.
-  if (Kind == TTI::SK_PermuteTwoSrc && !IsInLaneShuffle && LT.first != 1) {
-    // We assume that source and destination have the same vector type.
-    InstructionCost NumOfDests = LT.first;
-    InstructionCost NumOfShufflesPerDest = LT.first * 2 - 1;
-    LT.first = NumOfDests * NumOfShufflesPerDest;
   }
 
   static const CostTblEntry AVX512VBMIShuffleTbl[] = {

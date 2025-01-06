@@ -41,9 +41,11 @@ define i32 @reduce_and_v2i8(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
-; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    uminp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
@@ -56,9 +58,11 @@ define i32 @reduce_and_v4i8(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    uminv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
@@ -69,9 +73,11 @@ define i32 @reduce_and_v4i8(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v8i8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v0.8b, v0.8b, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <8 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %x)
@@ -129,9 +135,11 @@ define i32 @reduce_and_v2i16(<2 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
-; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    uminp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i16> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
@@ -142,9 +150,11 @@ define i32 @reduce_and_v2i16(<2 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v4i16(<4 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    uminv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i16> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
@@ -155,10 +165,11 @@ define i32 @reduce_and_v4i16(<4 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v8i16(<8 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    uminv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <8 x i16> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %x)
@@ -200,9 +211,11 @@ define i32 @reduce_and_v1i32(<1 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v2i32(<2 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    uminp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i32> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
@@ -213,10 +226,11 @@ define i32 @reduce_and_v2i32(<2 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v4i32(<4 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i32> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
@@ -227,12 +241,13 @@ define i32 @reduce_and_v4i32(<4 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v8i32(<8 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v1.4s, v1.4s, #0
-; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    uminv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <8 x i32> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %x)
@@ -257,10 +272,11 @@ define i32 @reduce_and_v1i64(<1 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v0.2d, v0.2d, #0
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i64> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
@@ -271,12 +287,13 @@ define i32 @reduce_and_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 define i32 @reduce_and_v4i64(<4 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmge v1.2d, v1.2d, #0
-; CHECK-NEXT:    cmge v0.2d, v0.2d, #0
+; CHECK-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    csel w0, w0, w1, eq
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i64> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
@@ -304,7 +321,9 @@ define i32 @reduce_or_v2i8(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i8> %a0, zeroinitializer
@@ -319,7 +338,9 @@ define i32 @reduce_or_v4i8(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i8> %a0, zeroinitializer
@@ -332,7 +353,9 @@ define i32 @reduce_or_v8i8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <8 x i8> %a0, zeroinitializer
@@ -392,7 +415,9 @@ define i32 @reduce_or_v2i16(<2 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i16> %a0, zeroinitializer
@@ -405,7 +430,9 @@ define i32 @reduce_or_v4i16(<4 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i16> %a0, zeroinitializer
@@ -418,8 +445,9 @@ define i32 @reduce_or_v8i16(<8 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <8 x i16> %a0, zeroinitializer
@@ -463,7 +491,9 @@ define i32 @reduce_or_v2i32(<2 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i32> %a0, zeroinitializer
@@ -476,8 +506,9 @@ define i32 @reduce_or_v4i32(<4 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i32> %a0, zeroinitializer
@@ -492,8 +523,9 @@ define i32 @reduce_or_v8i32(<8 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <8 x i32> %a0, zeroinitializer
@@ -520,8 +552,9 @@ define i32 @reduce_or_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <2 x i64> %a0, zeroinitializer
@@ -536,8 +569,9 @@ define i32 @reduce_or_v4i64(<4 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    cmlt v1.2d, v1.2d, #0
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <4 x i64> %a0, zeroinitializer
@@ -799,7 +833,7 @@ define i32 @reduce_xor_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret

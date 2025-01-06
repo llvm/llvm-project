@@ -3172,9 +3172,6 @@ TEST_P(ImportDecl, ImportFieldOrder) {
              recordDecl(hasFieldOrder({"b", "a"})));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Expr, DependentScopeDeclRefExpr>
-    dependentScopeDeclRefExpr;
-
 TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> struct S { static T foo; };"
@@ -3198,9 +3195,6 @@ TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
              functionTemplateDecl(has(functionDecl(has(compoundStmt(
                  has(callExpr(has(dependentScopeDeclRefExpr())))))))));
 }
-
-const internal::VariadicDynCastAllOfMatcher<Type, DependentNameType>
-    dependentNameType;
 
 TEST_P(ImportExpr, DependentNameType) {
   MatchVerifier<Decl> Verifier;
@@ -9657,7 +9651,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportConflictTypeAliasTemplate) {
 AST_MATCHER(ClassTemplateSpecializationDecl, hasInstantiatedFromMember) {
   if (auto Instantiate = Node.getInstantiatedFrom()) {
     if (auto *FromPartialSpecialization =
-            Instantiate.get<ClassTemplatePartialSpecializationDecl *>()) {
+            cast<ClassTemplatePartialSpecializationDecl *>(Instantiate)) {
       return nullptr != FromPartialSpecialization->getInstantiatedFromMember();
     }
   }

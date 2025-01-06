@@ -563,8 +563,7 @@ struct LinalgDetensorize
 
     RewritePatternSet canonPatterns(context);
     tensor::FromElementsOp::getCanonicalizationPatterns(canonPatterns, context);
-    if (failed(applyPatternsAndFoldGreedily(getOperation(),
-                                            std::move(canonPatterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(canonPatterns))))
       signalPassFailure();
 
     // Get rid of the dummy entry block we created in the beginning to work

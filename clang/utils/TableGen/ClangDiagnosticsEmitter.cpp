@@ -362,7 +362,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(R);
     else
-      DiagsInPedantic.get<RecordSet *>()->insert(R);
+      cast<RecordSet *>(DiagsInPedantic)->insert(R);
   }
 
   if (!GroupsInPedantic)
@@ -389,7 +389,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(Group);
     else
-      GroupsInPedantic.get<RecordSet *>()->insert(Group);
+      cast<RecordSet *>(GroupsInPedantic)->insert(Group);
   }
 }
 

@@ -427,8 +427,7 @@ struct ConvertMeshToMPIPass
                     ConvertProcessLinearIndexOp, ConvertProcessMultiIndexOp>(
         ctx);
 
-    (void)mlir::applyPatternsAndFoldGreedily(getOperation(),
-                                             std::move(patterns));
+    (void)mlir::applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 

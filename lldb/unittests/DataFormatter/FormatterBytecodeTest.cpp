@@ -147,9 +147,12 @@ TEST_F(FormatterBytecodeTest, ArithOps) {
   {
     DataStack data;
     unsigned char minus_one = 127;
-    ASSERT_TRUE(
+    ASSERT_FALSE(
         Interpret({op_lit_int, minus_one, op_lit_uint, 2, op_shl}, data));
-    ASSERT_EQ(data.Pop<int64_t>(), -4);
+    unsigned char minus_two = 126;
+    ASSERT_TRUE(
+        Interpret({op_lit_int, minus_two, op_lit_uint, 1, op_shr}, data));
+    ASSERT_EQ(data.Pop<int64_t>(), -1);
   }
   {
     DataStack data;

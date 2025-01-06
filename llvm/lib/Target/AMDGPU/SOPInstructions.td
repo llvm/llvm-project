@@ -948,7 +948,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
-    isReMaterializable = 1, SchedRW = [WriteSFPU] in {
+    isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 17 in {
   def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
   def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
   def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;

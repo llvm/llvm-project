@@ -367,6 +367,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.conj
     libc.src.complex.conjf
     libc.src.complex.conjl
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
 
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
@@ -617,13 +620,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_CFLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float128 entrypoints
     libc.src.complex.crealf128
     libc.src.complex.cimagf128
     libc.src.complex.conjf128
-    
+    libc.src.complex.cprojf128
+  )
+endif()
+
+if(LIBC_TYPES_HAS_FLOAT128)    
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128

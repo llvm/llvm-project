@@ -199,7 +199,11 @@ public:
   /// \param OS The output stream to dump to.
   ///
   /// \param CSIC The CallSiteInfoCollection object to dump.
-  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC);
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+            uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///

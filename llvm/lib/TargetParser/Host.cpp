@@ -347,6 +347,29 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x61") { // Apple
+    return StringSwitch<const char *>(Part)
+        .Case("0x020", "apple-m1")
+        .Case("0x021", "apple-m1")
+        .Case("0x022", "apple-m1")
+        .Case("0x023", "apple-m1")
+        .Case("0x024", "apple-m1")
+        .Case("0x025", "apple-m1")
+        .Case("0x028", "apple-m1")
+        .Case("0x029", "apple-m1")
+        .Case("0x030", "apple-m2")
+        .Case("0x031", "apple-m2")
+        .Case("0x032", "apple-m2")
+        .Case("0x033", "apple-m2")
+        .Case("0x034", "apple-m2")
+        .Case("0x035", "apple-m2")
+        .Case("0x038", "apple-m2")
+        .Case("0x039", "apple-m2")
+        .Case("0x049", "apple-m3")
+        .Case("0x048", "apple-m3")
+        .Default("generic");
+  }
+
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
