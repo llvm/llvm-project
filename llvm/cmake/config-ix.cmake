@@ -310,7 +310,7 @@ if(LLVM_ENABLE_ICU)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ${LIBRARY_SUFFIXES})
 endif()
 
-# Check for iconv.
+# Check for builtin iconv to avoid licensing issues.
 if(LLVM_ENABLE_ICONV)
   if (LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
     find_package(Iconv REQUIRED)
