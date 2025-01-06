@@ -1,5 +1,19 @@
-// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -O1 %s -o - | FileCheck --check-prefix=NO-MATH-ERRNO %s
-// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -fmath-errno %s -o - | FileCheck --check-prefix=MATH-ERRNO %s
+// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -O1 %s -o - -DUSE_BUILTIN | FileCheck --check-prefix=NO-MATH-ERRNO %s
+// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -fmath-errno %s -o - -DUSE_BUILTIN | FileCheck --check-prefix=MATH-ERRNO %s
+// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -O1 %s -o - -DUSE_C_DECL | FileCheck --check-prefix=NO-MATH-ERRNO %s
+// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -fmath-errno %s -o - -DUSE_C_DECL | FileCheck --check-prefix=MATH-ERRNO %s
+
+#if defined(USE_BUILTIN)
+  #define sincos __builtin_sincos
+  #define sincosf __builtin_sincosf
+  #define sincosl __builtin_sincosl
+#elif defined(USE_C_DECL)
+  void sincos(double, double*, double*);
+  void sincosf(float, float*, float*);
+  void sincosl(long double, long double*, long double*);
+#else
+    #error Expected USE_BUILTIN or USE_C_DECL to be defined.
+#endif
 
 // NO-MATH-ERRNO-LABEL: @sincos_f32
 //      NO-MATH-ERRNO:    [[SINCOS:%.*]] = tail call { float, float } @llvm.sincos.f32(float {{.*}})
@@ -12,7 +26,7 @@
 //      MATH-ERRNO:    call void @sincosf(
 //
 void sincos_f32(float x, float* fp0, float* fp1) {
-  __builtin_sincosf(x, fp0, fp1);
+  sincosf(x, fp0, fp1);
 }
 
 // NO-MATH-ERRNO-LABEL: @sincos_f64
@@ -26,7 +40,7 @@ void sincos_f32(float x, float* fp0, float* fp1) {
 //      MATH-ERRNO:    call void @sincos(
 //
 void sincos_f64(double x, double* dp0, double* dp1) {
-  __builtin_sincos(x, dp0, dp1);
+  sincos(x, dp0, dp1);
 }
 
 // NO-MATH-ERRNO-LABEL: @sincos_f128
@@ -40,5 +54,5 @@ void sincos_f64(double x, double* dp0, double* dp1) {
 //      MATH-ERRNO:    call void @sincosl(
 //
 void sincos_f128(long double x, long double* ldp0, long double* ldp1) {
-  __builtin_sincosl(x, ldp0, ldp1);
+  sincosl(x, ldp0, ldp1);
 }
