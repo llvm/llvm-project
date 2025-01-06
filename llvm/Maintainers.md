@@ -76,7 +76,7 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 #### SandboxVectorizer
 
 Vasileios Porpodas \
-vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub) \
 Jorge Gorbe Moya \
 jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
@@ -233,11 +233,11 @@ anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 #### NVPTX backend
 
 Justin Holewinski \
-jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub)
+jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub) \
 Artem Belevich \
-tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub)
+tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
 Justin Fargnoli \
 jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
@@ -339,7 +339,7 @@ lhames@gmail.com (email), [lhames](https://github.com/lhames) (GitHub)
 #### SandboxIR
 
 Vasileios Porpodas \
-vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub) \
 Jorge Gorbe Moya \
 jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
