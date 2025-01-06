@@ -961,7 +961,7 @@ struct CounterCoverageMappingBuilder
 
     // Replace an expression (ParentCnt - ExecCnt) with SkipCnt.
     Counter SkipCnt = Counter::getCounter(TheMap.Skipped);
-    MapToExpand[SkipCnt] = Counters.Skipped;
+    MapToExpand[SkipCnt] = Builder.subst(Counters.Skipped, MapToExpand);
     Counters.Skipped = SkipCnt;
     return Counters;
   }
@@ -990,6 +990,14 @@ struct CounterCoverageMappingBuilder
       return true;
 
     // Try comaparison with pre-replaced expressions.
+    //
+    // For example, getBranchCounterPair(#0) returns {#1, #0 - #1}.
+    // The sum of the pair should be equivalent to the Parent, #0.
+    // OTOH when (#0 - #1) is replaced with the new counter #2,
+    // The sum is (#1 + #2). If the reverse substitution #2 => (#0 - #1)
+    // can be applied, the sum can be transformed to (#1 + (#0 - #1)).
+    // To apply substitutions to both hand expressions, transform (LHS - RHS)
+    // and check isZero.
     if (Builder.subst(Builder.subtract(OutCount, ParentCount), MapToExpand)
             .isZero())
       return true;
