@@ -20,11 +20,12 @@ This is stated in the `C23/N3220 standard
 In practice, passing the output buffer to an input argument can result in
 incorrect output. For example, Linux with glibc may produce the following.
 
-.. clode-block:: c++
-   char buf[10];
-   sprintf(buf, "%s", "12");
-   sprintf(buf, "%s%s", "34", buf);
-   printf("%s\n", buf); // prints 3434
+.. code-block:: c++
+
+    char buf[10];
+    sprintf(buf, "%s", "12");
+    sprintf(buf, "%s%s", "34", buf);
+    printf("%s\n", buf); // prints 3434
 
 Options
 -------
