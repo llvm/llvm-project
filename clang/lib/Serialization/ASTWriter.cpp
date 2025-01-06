@@ -6094,7 +6094,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
       // to skip over the lazy body to reach statements for other records.
       if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION) {
         assert(isa<FunctionDecl>(D) && "expected FunctionDecl");
-        HasUpdatedBody = dyn_cast<FunctionDecl>(D)->hasBody();
+        HasUpdatedBody = cast<FunctionDecl>(D)->hasBody();
       } else if (Kind == UPD_CXX_ADDED_VAR_DEFINITION)
         HasAddedVarDefinition = true;
       else
