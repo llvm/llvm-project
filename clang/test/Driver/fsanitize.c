@@ -1170,3 +1170,6 @@
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0,signed-integer-overflow=0.7 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TOP-HOT4
 // CHECK-UNDEFINED-TOP-HOT4: "-fno-sanitize-top-hot={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=(0.5|0.7)(0*),?){16}"}}
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=integer -fno-sanitize-top-hot=undefined=0.4 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TOP-HOT5
+// CHECK-UNDEFINED-TOP-HOT5: "-fno-sanitize-top-hot={{((integer-divide-by-zero|shift-base|shift-exponent|signed-integer-overflow)=0.4(0*),?){4}"}}

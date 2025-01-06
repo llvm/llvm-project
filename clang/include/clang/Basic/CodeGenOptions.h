@@ -387,7 +387,10 @@ public:
   /// Set of thresholds, specifying the top hottest fraction of code to be
   /// excluded from sanitization (0.0 = skip none, 0.1 = skip hottest 10%,
   /// 1.0 = skip all).
-  SanitizerMaskWeights NoSanitizeTopHot = {0};
+  SanitizerSet NoSanitizeTopHot;
+  /// N.B. The weights contain strictly more information than the SanitizerSet,
+  /// but the SanitizerSet is more efficient for some calculations.
+  SanitizerMaskWeights NoSanitizeTopHotWeights = {0};
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;

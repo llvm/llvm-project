@@ -723,9 +723,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeKinds &= Kinds;
 
   // Parse -fno-sanitize-top-hot flags
-  SanitizerMask HotMask =
-      parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, TopHot);
-  (void)HotMask;
+  SanitizerMask TopHotMask =
+      parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, TopHotWeights);
+  (void)TopHotMask;
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
@@ -1147,10 +1147,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   MergeHandlers.Mask |= MergeKinds;
 
+  TopHotMask &= Sanitizers.Mask;
+  TopHot.Mask = TopHotMask;
+
   // Zero out TopHot for unused sanitizers
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
     if (!(Sanitizers.Mask & SanitizerMask::bitPosToMask(i)))
-      TopHot[i] = 0;
+      TopHotWeights[i] = 0;
   }
 }
 
@@ -1330,9 +1333,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
 
-  std::string TopHotStr = toString(TopHot);
-  if (TopHotStr != "")
-    CmdArgs.push_back(Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotStr));
+  std::string TopHotWeightsStr = toString(TopHotWeights);
+  if (TopHotWeightsStr != "")
+    CmdArgs.push_back(Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotWeightsStr));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);

@@ -1436,6 +1436,18 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
   return Values;
 }
 
+static void parseSanitizerWeightedKinds(StringRef FlagName,
+                                const std::vector<std::string> &Sanitizers,
+                                DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskWeights &Weights) {
+  for (const auto &Sanitizer : Sanitizers) {
+    SanitizerMask K = parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Weights);
+    if (K == SanitizerMask())
+      Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
+    else
+      S.set(K, true);
+  }
+}
+
 static void parseXRayInstrumentationBundle(StringRef FlagName, StringRef Bundle,
                                            ArgList &Args, DiagnosticsEngine &D,
                                            XRayInstrSet &S) {
@@ -1796,9 +1808,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
        serializeSanitizerKinds(Opts.SanitizeMergeHandlers))
     GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
-  SmallVector<StringRef, 4> Values;
-  serializeSanitizerMaskWeights(Opts.NoSanitizeTopHot, Values);
-  for (StringRef Sanitizer : Values)
+  SmallVector<std::string, 4> Values;
+  serializeSanitizerMaskWeights(Opts.NoSanitizeTopHotWeights, Values);
+  for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fno_sanitize_top_hot_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
@@ -2281,6 +2293,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerKinds("-fsanitize-merge=",
                       Args.getAllArgValues(OPT_fsanitize_merge_handlers_EQ),
                       Diags, Opts.SanitizeMergeHandlers);
+
+  // Parse -fno-sanitize-top-hot= arguments.
+  parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
+                      Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
+                      Diags, Opts.NoSanitizeTopHot, Opts.NoSanitizeTopHotWeights);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

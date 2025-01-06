@@ -204,7 +204,7 @@ void serializeSanitizerSet(SanitizerSet Set,
 /// Serialize a SanitizerMaskWeights into values for -fsanitize= or
 /// -fno-sanitize=.
 void serializeSanitizerMaskWeights(const SanitizerMaskWeights Weights,
-                                   SmallVectorImpl<StringRef> &Values);
+                                   SmallVectorImpl<std::string> &Values);
 
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers
 /// this group enables.
