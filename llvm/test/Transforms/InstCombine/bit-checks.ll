@@ -1337,11 +1337,10 @@ define i1 @no_masks_with_logical_or(i32 %a, i32 %b, i32 noundef %c) {
 
 define i1 @no_masks_with_logical_or_commuted(i32 %a, i32 %b, i32 noundef %c) {
 ; CHECK-LABEL: @no_masks_with_logical_or_commuted(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[B:%.*]], 63
-; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[CMP3]], [[OR1]]
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[C1:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C]], 0
+; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[CMP3]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[OR2]]
 ;
   %cmp1 = icmp ne i32 %a, 0
