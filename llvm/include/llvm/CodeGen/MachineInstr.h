@@ -45,6 +45,7 @@ class AAResults;
 template <typename T> class ArrayRef;
 class DIExpression;
 class DILocalVariable;
+class LiveRegUnits;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineRegisterInfo;
@@ -1785,6 +1786,13 @@ public:
 
   /// Return true if all the implicit defs of this instruction are dead.
   bool allImplicitDefsAreDead() const;
+
+  /// Check whether an MI is dead. If \p LivePhysRegs is provided, it is assumed
+  /// to be at the position of MI and will be used to check the Liveness of
+  /// physical register defs. If \p LivePhysRegs is not provided, this will
+  /// pessimistically assume any PhysReg def is live.
+  bool isDead(const MachineRegisterInfo *MRI,
+              LiveRegUnits *LivePhysRegs = nullptr) const;
 
   /// Return a valid size if the instruction is a spill instruction.
   std::optional<LocationSize> getSpillSize(const TargetInstrInfo *TII) const;

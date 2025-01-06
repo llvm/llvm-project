@@ -164,6 +164,8 @@ class MachineSinking : public MachineFunctionPass {
   /// would re-order assignments.
   using SeenDbgUser = PointerIntPair<MachineInstr *, 1>;
 
+  using SinkItem = std::pair<MachineInstr *, MachineBasicBlock *>;
+
   /// Record of DBG_VALUE uses of vregs in a block, so that we can identify
   /// debug instructions to sink.
   SmallDenseMap<unsigned, TinyPtrVector<SeenDbgUser>> SeenDbgUsers;
@@ -259,11 +261,9 @@ private:
   void FindCycleSinkCandidates(MachineCycle *Cycle, MachineBasicBlock *BB,
                                SmallVectorImpl<MachineInstr *> &Candidates);
 
-  bool isDead(const MachineInstr *MI) const;
-  bool aggressivelySinkIntoCycle(
-      MachineCycle *Cycle, MachineInstr &I,
-      DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
-          &SunkInstrs);
+  bool
+  aggressivelySinkIntoCycle(MachineCycle *Cycle, MachineInstr &I,
+                            DenseMap<SinkItem, MachineInstr *> &SunkInstrs);
 
   bool isProfitableToSinkTo(Register Reg, MachineInstr &MI,
                             MachineBasicBlock *MBB,
@@ -692,7 +692,7 @@ void MachineSinking::FindCycleSinkCandidates(
   for (auto &MI : *BB) {
     LLVM_DEBUG(dbgs() << "CycleSink: Analysing candidate: " << MI);
     if (MI.isMetaInstruction()) {
-      LLVM_DEBUG(dbgs() << "CycleSink: Dont sink meta instructions\n");
+      LLVM_DEBUG(dbgs() << "CycleSink: not sinking meta instruction\n");
       continue;
     }
     if (!TII->shouldSink(MI)) {
@@ -789,8 +789,8 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
     SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
     bool HasHighPressure;
-    DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
-        SunkInstrs;
+
+    DenseMap<SinkItem, MachineInstr *> SunkInstrs;
 
     enum CycleSinkStage { COPY, LOW_LATENCY, AGGRESSIVE, END };
     for (unsigned Stage = CycleSinkStage::COPY; Stage != CycleSinkStage::END;
@@ -1644,43 +1644,6 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
   return HasAliasedStore;
 }
 
-bool MachineSinking::isDead(const MachineInstr *MI) const {
-  // Instructions without side-effects are dead iff they only define dead regs.
-  // This function is hot and this loop returns early in the common case,
-  // so only perform additional checks before this if absolutely necessary.
-
-  for (const MachineOperand &MO : MI->all_defs()) {
-    Register Reg = MO.getReg();
-    if (Reg.isPhysical())
-      return false;
-
-    if (MO.isDead()) {
-#ifndef NDEBUG
-      // Basic check on the register. All of them should be 'undef'.
-      for (auto &U : MRI->use_nodbg_operands(Reg))
-        assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
-#endif
-      continue;
-    }
-
-    if (!(MRI->hasAtMostUserInstrs(Reg, 0)))
-      return false;
-  }
-
-  // Technically speaking inline asm without side effects and no defs can still
-  // be deleted. But there is so much bad inline asm code out there, we should
-  // let them be.
-  if (MI->isInlineAsm())
-    return false;
-
-  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
-  if (MI->isLifetimeMarker())
-    return true;
-
-  // If there are no defs with uses, the instruction might be dead.
-  return MI->wouldBeTriviallyDead();
-}
-
 /// Aggressively sink instructions into cycles. This will aggressively try to
 /// sink all instructions in the top-most preheaders in an attempt to reduce RP.
 /// In particular, it will sink into multiple successor blocks without limits
@@ -1688,8 +1651,7 @@ bool MachineSinking::isDead(const MachineInstr *MI) const {
 /// they are safe to sink).
 bool MachineSinking::aggressivelySinkIntoCycle(
     MachineCycle *Cycle, MachineInstr &I,
-    DenseMap<std::pair<MachineInstr *, MachineBasicBlock *>, MachineInstr *>
-        &SunkInstrs) {
+    DenseMap<SinkItem, MachineInstr *> &SunkInstrs) {
   // TODO: support instructions with multiple defs
   if (I.getNumDefs() > 1)
     return false;
@@ -1713,7 +1675,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
       continue;
     }
     // We cannot sink before the prologue
-    if (TII->isBasicBlockPrologue(*MI) || MI->isPosition()) {
+    if (MI->isPosition() || TII->isBasicBlockPrologue(*MI)) {
       LLVM_DEBUG(dbgs() << "AggressiveCycleSink:   Use is BasicBlock prologue, "
                            "can't sink.\n");
       continue;
@@ -1726,7 +1688,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
 
     MachineBasicBlock *SinkBlock = MI->getParent();
     MachineInstr *NewMI = nullptr;
-    std::pair<MachineInstr *, MachineBasicBlock *> MapEntry(&I, SinkBlock);
+    SinkItem MapEntry(&I, SinkBlock);
 
     auto SI = SunkInstrs.find(MapEntry);
 
@@ -1772,7 +1734,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            UseReg.SubReg, *TRI);
   }
   // If we have replaced all uses, then delete the dead instruction
-  if (isDead(&I))
+  if (I.isDead(MRI))
     I.eraseFromParent();
   return true;
 }
