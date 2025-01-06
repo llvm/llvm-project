@@ -981,7 +981,6 @@ exit:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/121745.
-; FIXME: At the moment an incorrect exit value is used for %iv.next.
 define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification(
 ; VEC-SAME: ptr [[DST:%.*]]) {
@@ -994,10 +993,12 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
+; VEC-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
 ; VEC-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP2]], align 2
 ; VEC-NEXT:    [[TMP4:%.*]] = add i32 [[STEP_2]], [[TMP0]]
+; VEC-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP6]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
 ; VEC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -1014,7 +1015,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[IV_NEXT]], 8
 ; VEC-NEXT:    br i1 [[CMP_I]], label %[[LOOP]], label %[[E_EXIT]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[E_EXIT]]:
-; VEC-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[RES:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i32 [[RES]]
 ;
 ; INTERLEAVE-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification(
@@ -1071,7 +1072,6 @@ e.exit:
   ret i32 %res
 }
 
-; FIXME: At the moment an incorrect exit value is used for %iv.next.
 define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(
 ; VEC-SAME: ptr [[DST:%.*]]) {
