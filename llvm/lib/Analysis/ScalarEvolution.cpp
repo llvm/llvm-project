@@ -15765,6 +15765,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // original header.
   // TODO: share this logic with isLoopEntryGuardedByCond.
   unsigned NumCollectedConditions = 0;
+  VisitedBlocks.insert(Block);
   std::pair<const BasicBlock *, const BasicBlock *> Pair(Pred, Block);
   for (; Pair.first;
        Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
