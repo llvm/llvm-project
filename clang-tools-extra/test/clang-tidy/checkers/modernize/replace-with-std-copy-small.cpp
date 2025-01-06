@@ -109,6 +109,12 @@ void notSupportedEx() {
     std::int64_t N;
     // don't warn on calls over non-sequences
     std::memmove(&N, &D, sizeof D);
+
+    std::vector<char> Dest(4);
+
+    // don't warn on memcpy by default
+    memcpy(Dest.data(), Source, Dest.size());
+    std::memcpy(std::data(Dest), Source, Dest.size());
 }
 
 void noFixItEx() {
@@ -120,7 +126,7 @@ void noFixItEx() {
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
 }
 
-void sequenceOfBytesEx() {
+void supportedEx() {
     {
         char Source[] = "once upon a daydream...";
         char Dest[4];

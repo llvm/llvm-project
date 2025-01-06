@@ -2,12 +2,10 @@
 // RUN:   -config='{CheckOptions: {modernize-replace-with-std-copy.FlagMemcpy: true}}'
 
 // possible call scenarios, infeasible to cover all
-// replacement type:
-// [ ] members when possible
 // [X] all free
 // source:
 //   type:
-//   [ ] T[]
+//   [ ] c-array
 //     std::data:
 //     [ ] free
 //     [ ] N/A
@@ -49,21 +47,13 @@
 //   [ ] y
 //   [ ] n
 
-// CHECK-FIXES: #include <algorithm>
-
-namespace {
-
+namespace std {
 using size_t = decltype(sizeof(int));
 
-namespace std {
 using int64_t = long long ;
 using int32_t = int ;
 using int16_t = short ;
 using int8_t = char ;
-
-using char32 = int32_t;
-using char16 = int16_t; 
-using char8 = int8_t;
 
 template <typename T>
 class allocator {};
@@ -75,38 +65,35 @@ struct basic_string {
   basic_string();
   basic_string(const C* p, const A& a = A());
 
-  const C* c_str() const;
   const C* data() const;
-
-  _Type& append(const C* s);
-  _Type& append(const C* s, size_t n);
-  _Type& assign(const C* s);
-  _Type& assign(const C* s, size_t n);
-
-  int compare(const _Type&) const;
-  int compare(const C* s) const;
-  int compare(size_t pos, size_t len, const _Type&) const;
-  int compare(size_t pos, size_t len, const C* s) const;
-
-  size_t find(const _Type& str, size_t pos = 0) const;
-  size_t find(const C* s, size_t pos = 0) const;
-  size_t find(const C* s, size_t pos, size_t n) const;
-
-  _Type& insert(size_t pos, const _Type& str);
-  _Type& insert(size_t pos, const C* s);
-  _Type& insert(size_t pos, const C* s, size_t n);
-
-  _Type& operator+=(const _Type& str);
-  _Type& operator+=(const C* s);
-  _Type& operator=(const _Type& str);
-  _Type& operator=(const C* s);
+  C* data();
+  size_t size() const;
 };
 
 using string = basic_string<char, std::char_traits<char>, std::allocator<char>>;
 using wstring = basic_string<wchar_t, std::char_traits<wchar_t>,std::allocator<wchar_t>>;
-using u16string = basic_string<char16, std::char_traits<char16>, std::allocator<char16>>;
-using u32string = basic_string<char32, std::char_traits<char32>, std::allocator<char32>>;
+using u16string = basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>;
+using u32string = basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>;
 
+template <typename CharT>
+class basic_string_view {
+public:
+  basic_string_view();
+
+  basic_string_view(const CharT *);
+
+  basic_string_view(const CharT *, size_t);
+
+  basic_string_view(const basic_string_view &);
+
+  basic_string_view &operator=(const basic_string_view &);
+
+  const CharT* data() const;
+
+  size_t size() const;
+};
+
+using string_view = basic_string_view<char>;
 
 
 void *memcpy(void *__restrict dest, const void *__restrict src, size_t n);
@@ -122,200 +109,217 @@ template <typename T> struct vector {
   using value_type = T;
 };
 
-template<typename T>
-T* data(vector<T>&);
+template <typename T, size_t N>
+struct array {
+  T* begin();
+  T* end();
+  const T* begin() const;
+  const T* end() const;
+  
+  size_t size() const;
+
+  const T* data() const;
+  T* data();
+
+  T _data[N];
+};
 
 template<typename T>
-T* data(T[]);
+struct span {
+  template<size_t N>
+  span(T (&arr)[N]);
+
+  const T* data() const;
+  T* data();
+
+  using value_type = T;
+};
+
+template<typename Container>
+typename Container::value_type* data(Container& Arg)  {
+    return Arg.data();
+}
 
 template<typename T>
-const T* data(const vector<T>&);
+T* data(T Arg[]);
+
+template<typename Container>
+const typename Container::value_type* data(const Container& Arg) {
+    return Arg.data();
+}
 
 template<typename T>
 const T* data(const T[]);
 
 size_t size(void *);
 
+template<typename Container>
+size_t size(const Container& c) {
+  return c.size();
+}
+
 size_t strlen(const char *);
+
+wchar_t* wmemcpy( wchar_t* dest, const wchar_t* src, size_t count );
+wchar_t* wmemmove( wchar_t* dest, const wchar_t* src, size_t count );
+
+template <typename T>
+struct unique_ptr {
+  unique_ptr(T);
+  T *get() const;
+  explicit operator bool() const;
+  void reset(T *ptr);
+  T &operator*() const;
+  T *operator->() const;
+  T& operator[](size_t i) const;
+};
 } // namespace std
 
-void *memcpy(void *__restrict dest, const void *__restrict src, size_t n);
-void *memmove(void *__restrict dest, const void *__restrict src, size_t n);
-} // namespace
+namespace {
+using size_t = std::size_t;
 
+void *memcpy(void *__restrict dest, const void *__restrict src, size_t n) {
+  return nullptr;
+}
+void *memmove(void *__restrict dest, const void *__restrict src, size_t n) {
+  return nullptr;
+}
+wchar_t* wmemcpy( wchar_t* dest, const wchar_t* src, size_t count ) {
+  return nullptr;
+}
+wchar_t* wmemmove( wchar_t* dest, const wchar_t* src, size_t count ) {
+  return nullptr;
+}
+} // namespace
 
 namespace {
 void notSupportedEx() {
-  char Source[] = "once upon a daydream...", Dest[4];
 
-  auto *PrimitiveDest = new std::int8_t;
-  std::memcpy(PrimitiveDest, Source, sizeof PrimitiveDest);
+  { // pointee is not a collection
+    char Source[] = "once upon a daydream...";
+    auto *PrimitiveDest = new std::int8_t;
+  
+    std::memcpy(PrimitiveDest, Source, sizeof PrimitiveDest);
+  }
 
-  auto *PrimitiveDest2 = new std::int16_t;
-  std::memcpy(PrimitiveDest2, Source, sizeof PrimitiveDest);
-  std::memcpy(PrimitiveDest2, Source, sizeof PrimitiveDest2);
+  { // reinterpretation
+    double D = 0.1;
+    std::int64_t N;
+    // don't warn on calls over non-sequences
+    std::memcpy(&N, &D, sizeof D);
+  }
 
-  double D = 0.1;
-  std::int64_t N;
-  // don't warn on calls over non-sequences
-  std::memcpy(&N, &D, sizeof D);
+  { // [de]serialization
+    struct ComplexObj {
+      int A;
+      float B;
+    };
+    auto *Obj = new ComplexObj();
 
-  // object creation in destination buffer
-  struct StructType {
-    int X{42};
-    void *operator new(size_t, void *) noexcept { return nullptr; }
-  } Struct;
-  alignas(StructType) char Buf[sizeof(StructType)];
-  StructType *Ps = new (Buf) StructType; // placement new
-  // // don't warn on calls over non-sequences
-  std::memcpy(Ps, &Struct, sizeof Struct);
+    char Src[sizeof(ComplexObj)] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    std::memcpy(Obj, Src, sizeof(ComplexObj));
+    char Dst[sizeof(ComplexObj)];
+    std::memcpy(Dst, Obj, sizeof(ComplexObj));
+  }
 
-  const char *PtrSource = "once upon a daydream...";
-  char *PtrDest = new char[4];
-  std::memcpy(Dest, PtrSource, sizeof Dest);
-  std::memcpy(PtrDest, Source, 4);
+  { // incomplete array type (should be treated the same as a raw ptr)
+    char Src[] = "once upon a daydream...";
+    auto CopySrc = [&Src](char Dst[], size_t sz) {
+      std::memcpy(Dst, Src, sz);
+    };
+
+    char Dst[4];
+    CopySrc(Dst, 4);
+  }
+
+  { // pointers
+    const char *Src = "once upon a daydream...";
+    char *Dst = new char[64];
+
+    std::memcpy(Dst, Src, std::strlen(Src));
+  }
 }
 
-void noFixItEx() {
-  {
-    int Source[10];
-    std::vector<char> Dest(5);
+void supportedEx() {
+  { // two wchar c-arrays
+    wchar_t Src[] = L"once upon a daydream...";
+    wchar_t Dst[4];
 
-    memmove(Source, std::data(Dest), 1);
-    // CHECK-MESSAGES: [[@LINE-1]]:20: warning: prefer std::copy_n to memcpy
-    std::memmove(Source, std::data(Dest), 1);
-    memmove(std::data(Source), std::data(Dest), 1);
-    std::memmove(std::data(Source), std::data(Dest), 1);
-    memmove(std::data(Source), std::data(Dest), 1);
-    std::memmove(std::data(Source), std::data(Dest), 1);
-  }
-  char Source[] = "once upon a daydream...", Dest[4];
+    std::wmemcpy(Dst, Src, sizeof Dst);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));
 
-  // no FixIt when return value is used
+    std::wmemcpy(Dst, Src, sizeof(Dst));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));
 
-  [](auto){}(std::memcpy(Dest, Source, sizeof Dest));
-  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: prefer std::copy_n to memcpy
+    wmemcpy(Dst, Src, sizeof Src);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Src), std::begin(Dst));
 
-  std::vector<std::int16_t> VecI16(4);
-  // not a supported type, should be a sequence of bytes, otherwise it is difficult to compute the n in copy_n
-  std::memcpy(VecI16.data(), Source,
-              VecI16.size() * sizeof(decltype(VecI16)::value_type));
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-
-  std::memcpy(std::data(VecI16), Source,
-              VecI16.size() * sizeof(decltype(VecI16)::value_type));
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-}
-
-void sequenceOfBytesEx() {
-  // the check should support memcpy conversion for the following types:
-  // T[]
-  // std::vector<T>
-  // std::span<T>
-  // std::deque<T>
-  // std::array<T, _>
-  // std::string
-  // std::string_view
-  // where T is byte-like
-
-  {
-    char Source[] = "once upon a daydream...";
-    char Dest[4];
-
-    std::memcpy(Dest, Source, sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    std::memcpy(std::data(Dest), Source, sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    std::memcpy(Dest, std::data(Source), sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    std::memcpy(std::data(Dest), std::data(Source), sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    // __jm__ warn on global call as well
-    memcpy(Dest, Source, sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    memcpy(std::data(Dest), Source, sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    memcpy(Dest, std::data(Source), sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    memcpy(std::data(Dest), std::data(Source), sizeof Dest);
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
+    wmemmove(Dst, Src, sizeof(Src));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Src), std::begin(Dst));
   }
 
-  {
-    char Source[] = "once upon a daydream...";
-    std::vector<char> Dest(4);
+  { // std::string + std::vector
+    std::string Src = "once upon a daydream...";
+    std::vector<char> Dst(4);
 
-    std::memcpy(Dest.data(), Source, Dest.size());
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
-
-    std::memcpy(std::data(Dest), Source, Dest.size());
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Dest), std::begin(Dest));
+    std::memcpy(Dst.data(), Src.data(), Dst.size());
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), Dst.size(), std::begin(Dst));
   }
 
-  {
-    std::vector<char> Source(10);
-    char Dest[4];
+  { // std::string + std::vector
+    std::string Src = "once upon a daydream...";
+    std::vector<char> Dst(4);
 
-    std::memcpy(Dest, Source.data(), Source.size());
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Source), std::begin(Dest));
-    std::memcpy(Dest, Source.data(), sizeof(Dest));
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(Source.data(), std::size(Dest), std::begin(Dest));
-    std::memcpy(Dest, Source.data(), std::size(Dest));
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Source), std::begin(Source));
-
-    std::memcpy(Dest, Source.data(), 1 + Source.size() / 2);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), 1 + std::size(Source) / 2, std::begin(Dest));
-    std::memcpy(Dest, Source.data(), 1 + sizeof(Dest) / 2);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(Source.data(), 1 + std::size(Dest) / 2, std::begin(Dest));
-    std::memcpy(Dest, Source.data(), 1 + std::size(Dest) / 2);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), 1 + std::size(Dest) / 2, std::begin(Source));
-
-    std::memcpy(Dest, std::data(Source), Source.size());
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Source), std::begin(Dest));
-    std::memcpy(Dest, std::data(Source), sizeof(Dest));
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(Source.data(), std::size(Dest), std::begin(Dest));
-    std::memcpy(Dest, std::data(Source), std::size(Dest));
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), std::size(Source), std::begin(Source));
-
-    std::memcpy(Dest, std::data(Source), 1 + Source.size() / 2);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), 1 + std::size(Source) / 2, std::begin(Dest));
-    std::memcpy(Dest, std::data(Source), 1 + sizeof(Dest) / 2);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(Source.data(), 1 + std::size(Dest) / 2, std::begin(Dest));
-    std::memcpy(Dest, std::data(Source), 1 + std::size(Dest) / 2);
-    // CHECK-MESSAGES: [[@LINE-1]]:8: warning: prefer std::copy_n to memcpy
-    // CHECK-FIXES: std::copy_n(std::begin(Source), 1 + std::size(Dest) / 2, std::begin(Source));
+    std::memmove(Dst.data(), Src.data(), Src.size());
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), Src.size(), std::begin(Dst));
   }
 
-  // __jm__ make configurable whether stl containers should use members or free fns.
-  // __jm__ for now use free fns. only
+  { // std::wstring + std::unique_ptr
+    std::wstring Src = L"once upon a daydream...";
+    std::unique_ptr<wchar_t[16]> Dst(new wchar_t[16]);
 
+    std::wmemcpy(*Dst, Src.data(), sizeof(*Dst));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(*Dst), std::begin(*Dst));
+  }
+
+  { // std::string_view + std::array
+    std::string_view Src = "once upon a daydream...";
+    std::array<char, 16> Dst;
+
+    std::memmove(Dst.data(), Src.data(), Dst.size() - 1);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), Dst.size() - 1, std::begin(Dst));
+  }
+
+  { // using namespace std;
+    using namespace std;
+    string_view Src = "once upon a daydream...";
+    array<char, 16> Dst;
+
+    memmove(Dst.data(), Src.data(), Src.size() - 2);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), Src.size() - 2, std::begin(Dst));
+  }
+
+  { // NSizeOfExpr cases
+    std::int32_t Data[] = {1, 2, 3, 4, 1, 2, 3, 4};
+    std::span<std::int32_t> Src{Data};
+    std::vector<std::int32_t> Dst(8);
+
+    memcpy(Dst.data(), Src.data(), Dst.size() * sizeof(std::int32_t));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), Dst.size(), std::begin(Dst));
+
+    memmove(std::data(Dst), std::data(Src), sizeof(int) * std::size(Dst));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));
+  }
 }
 } // namespace
