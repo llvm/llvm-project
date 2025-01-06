@@ -23,8 +23,10 @@ llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (G
 
 #### AliasAnalysis
 
-Hal Finkel \
-hfinkel@anl.gov (email), [hfinkel](https://github.com/hfinkel) (GitHub)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse) \
+Florian Hahn \
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
 #### Attributor, OpenMPOpt
 
@@ -73,10 +75,15 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
+#### MemorySSA
+
+Alina Sbirlea \
+asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
+
 #### SandboxVectorizer
 
 Vasileios Porpodas \
-vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub) \
 Jorge Gorbe Moya \
 jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
@@ -233,11 +240,11 @@ anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 #### NVPTX backend
 
 Justin Holewinski \
-jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub)
+jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (GitHub) \
 Artem Belevich \
-tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub)
+tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
 Justin Fargnoli \
 jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
@@ -339,7 +346,7 @@ lhames@gmail.com (email), [lhames](https://github.com/lhames) (GitHub)
 #### SandboxIR
 
 Vasileios Porpodas \
-vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub)
+vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub) \
 Jorge Gorbe Moya \
 jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
@@ -414,7 +421,6 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 ### Other subprojects
 
 Some subprojects maintain their own list of per-component maintainers.
-Others only have a lead maintainer listed here.
 
 [Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
 
@@ -428,6 +434,8 @@ Others only have a lead maintainer listed here.
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
+[libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
+
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
 [LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
@@ -435,11 +443,6 @@ Others only have a lead maintainer listed here.
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 
 [Polly maintainers](https://github.com/llvm/llvm-project/blob/main/polly/Maintainers.md)
-
-#### libclc
-
-Tom Stellard \
-tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 
 ## Inactive Maintainers
 
@@ -460,6 +463,7 @@ Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https:/
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
+Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnalysis \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
