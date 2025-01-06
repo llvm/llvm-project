@@ -880,6 +880,8 @@ public:
     // Extracts the first active lane of a vector, where the first operand is
     // the predicate, and the second operand is the vector to extract.
     ExtractFirstActive,
+    // Splats a scalar value across all lanes.
+    Splat,
   };
 
 private:
@@ -1230,39 +1232,6 @@ public:
 
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     // At the moment, only uniform codegen is implemented.
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-};
-
-/// A for splatting a scalar value to a vector.
-class VPSplatRecipe : public VPSingleDefRecipe {
-public:
-  VPSplatRecipe(VPValue *Op) : VPSingleDefRecipe(VPDef::VPSplatSC, {Op}) {}
-
-  ~VPSplatRecipe() override = default;
-
-  VPSplatRecipe *clone() override { return new VPSplatRecipe(getOperand(0)); }
-
-  VP_CLASSOF_IMPL(VPDef::VPSplatSC)
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPSplatRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;

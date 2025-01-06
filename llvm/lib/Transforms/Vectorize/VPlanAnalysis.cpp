@@ -96,6 +96,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
     return Type::getVoidTy(Ctx);
+  case VPInstruction::Splat:
+    return inferScalarType(R->getOperand(0));
   default:
     break;
   }

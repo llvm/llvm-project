@@ -265,8 +265,8 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
   }
 
-  VPSplatRecipe *createSplat(VPValue *Val) {
-    return tryInsertInstruction(new VPSplatRecipe(Val));
+  VPInstruction *createSplat(VPValue *Val) {
+    return tryInsertInstruction(new VPInstruction(VPInstruction::Splat, {Val}));
   }
 
   VPStepVectorRecipe *createStepVector(Type *Ty) {
