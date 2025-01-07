@@ -11335,6 +11335,12 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
       unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
       if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
         bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
+        // Emit the llvm.assume intrinsic so that called functions can use the
+        // streaming mode information discerned here
+        Value* call = Builder.CreateCall(CGM.getIntrinsic(Builtin->LLVMIntrinsic));
+        if (!IsStreaming)
+          call = Builder.CreateNot(call);
+        Builder.CreateIntrinsic(Intrinsic::assume, {}, {call});
         return ConstantInt::getBool(Builder.getContext(), IsStreaming);
       }
     }
