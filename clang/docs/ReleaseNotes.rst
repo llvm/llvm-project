@@ -1275,6 +1275,8 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
+  a declaration is an anonymous union or anonymous struct.
 
 OpenMP Support
 --------------
