@@ -3091,12 +3091,12 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     unsigned BW = C.getBitWidth();
     std::bitset<4> Table;
     auto ComputeTable = [&](bool Op0Val, bool Op1Val) {
-      int Res = 0;
+      APInt Res(BW, 0);
       if (Op0Val)
-        Res += isa<ZExtInst>(Ext0) ? 1 : -1;
+        Res += APInt(BW, isa<ZExtInst>(Ext0) ? 1 : -1, /*isSigned=*/true);
       if (Op1Val)
-        Res += isa<ZExtInst>(Ext1) ? 1 : -1;
-      return ICmpInst::compare(APInt(BW, Res, true), C, Pred);
+        Res += APInt(BW, isa<ZExtInst>(Ext1) ? 1 : -1, /*isSigned=*/true);
+      return ICmpInst::compare(Res, C, Pred);
     };
 
     Table[0] = ComputeTable(false, false);
