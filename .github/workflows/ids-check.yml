@@ -1,0 +1,95 @@
+name: ids-check
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+  push:
+    branches:
+      - 'main'
+      - 'release/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository_owner == 'llvm'
+    name: ids-check
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: compnerd/ids
+        path: ${{ github.workspace }}/ids
+        fetch-depth: 0
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        path: ${{ github.workspace }}/llvm-project
+        fetch-depth: 2
+
+    - name: install dependencies
+      run: |
+        sudo apt install -y clang-19 ninja-build libclang-19-dev
+        pip install lit
+
+    - name: Configure and build minimal LLVM for use by ids
+      run: |
+        cmake -B ${{ github.workspace }}/llvm-project/build/ \
+              -D CMAKE_BUILD_TYPE=Release \
+              -S ${{ github.workspace }}/llvm-project/llvm/ \
+              -D LLVM_ENABLE_PROJECTS=clang \
+              -D LLVM_TARGETS_TO_BUILD="host" \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+              -G Ninja
+        cd ${{ github.workspace }}/llvm-project/build/
+        ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//'
+
+    - name: Configure ids
+      run: |
+        cmake -B ${{ github.workspace }}/ids/build/ \
+              -S ${{ github.workspace }}/ids/ \
+               -D CMAKE_BUILD_TYPE=Release \
+               -D CMAKE_C_COMPILER=clang \
+               -D CMAKE_CXX_COMPILER=clang++ \
+               -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
+               -D LLVM_DIR=/usr/lib/llvm-19/lib/cmake/llvm/ \
+               -D Clang_DIR=/usr/lib/llvm-19/lib/cmake/clang/ \
+               -D FILECHECK_EXECUTABLE=$(which FileCheck-19) \
+               -D LIT_EXECUTABLE=$(which lit)
+
+    - name: Build ids
+      run: |
+        cmake --build ${{ github.workspace }}/ids/build \
+              --config Release \
+              --parallel $(nproc --all)
+
+    - name: Run ids over compilation database
+      run: |
+        cd ${{ github.workspace }}/llvm-project
+        export H_OR_CPP_FILES_CHANGED_LAST_COMMIT=$(git diff --name-only HEAD~1 HEAD -- 'llvm/include/llvm/**/*.h' ':!llvm/include/llvm/Debuginfod/' ':!llvm/include/llvm/Demangle/' )
+        if [ ! -z "${H_OR_CPP_FILES_CHANGED_LAST_COMMIT}" ]; then
+          for file in $H_OR_CPP_FILES_CHANGED_LAST_COMMIT; do
+            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro=LLVM_ABI --include-header="llvm/Support/Compiler.h" --extra-arg="-DLLVM_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
+          done
+        fi
+        export H_OR_CPP_FILES_CHANGED_LAST_COMMIT=$(git diff --name-only HEAD~1 HEAD -- 'llvm/include/llvm-c/**/*.h' )
+        if [ ! -z "${H_OR_CPP_FILES_CHANGED_LAST_COMMIT}" ]; then
+          for file in $H_OR_CPP_FILES_CHANGED_LAST_COMMIT; do
+            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro=LLVM_C_ABI --include-header="llvm-c/Visibility.h" --extra-arg="-DLLVM_C_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
+          done
+        fi
+        export H_OR_CPP_FILES_CHANGED_LAST_COMMIT=$(git diff --name-only HEAD~1 HEAD -- 'llvm/include/llvm/Demangle/**/*.h' )
+        if [ ! -z "${H_OR_CPP_FILES_CHANGED_LAST_COMMIT}" ]; then
+          for file in $H_OR_CPP_FILES_CHANGED_LAST_COMMIT; do
+            ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro=DEMANGLE_ABI --include-header="llvm/Demangle/Visibility.h" --extra-arg="-DEMANGLE_ABI=__attribute__((visibility(\"default\")))" --extra-arg="-Wno-macro-redefined" $file
+          done
+        fi
