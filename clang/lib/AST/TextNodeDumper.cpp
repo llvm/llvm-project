@@ -414,6 +414,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
@@ -2969,6 +2970,9 @@ void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
 }
 void TextNodeDumper::VisitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct *S) {
+  OS << " " << S->getDirectiveKind();
+}
+void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
   OS << " " << S->getDirectiveKind();
 }
 

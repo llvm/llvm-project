@@ -119,8 +119,7 @@ bool ConnectionFileDescriptor::IsConnected() const {
 
 ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Status *error_ptr) {
-  return Connect(
-      path, [](llvm::StringRef) {}, error_ptr);
+  return Connect(path, [](llvm::StringRef) {}, error_ptr);
 }
 
 ConnectionStatus
