@@ -157,7 +157,7 @@ struct SanitizerKind {
 class SanitizerMaskCutoffs {
   std::array<float, SanitizerKind::SO_Count> cutoffs = {0};
 
- public:
+public:
   float &operator[](int index) { return cutoffs[index]; }
   const float &operator[](int index) const { return cutoffs[index]; }
 }; // SanitizerMaskCutoffs;
