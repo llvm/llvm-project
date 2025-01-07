@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the pipeliner generates correct code when attempting to reuse
 ; an existing phi. This test case contains a phi that references another

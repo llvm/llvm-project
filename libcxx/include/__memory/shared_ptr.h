@@ -57,7 +57,6 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <new>
 #include <typeinfo>
 #if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <__atomic/memory_order.h>

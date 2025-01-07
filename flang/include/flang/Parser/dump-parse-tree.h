@@ -486,6 +486,7 @@ public:
   NODE(parser, OmpAffinityClause)
   NODE(OmpAffinityClause, Modifier)
   NODE(parser, OmpAlignment)
+  NODE(parser, OmpAlignClause)
   NODE(parser, OmpAlignedClause)
   NODE(OmpAlignedClause, Modifier)
   NODE(parser, OmpAtClause)
@@ -516,6 +517,8 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCriticalDirective)
+  NODE(parser, OmpErrorDirective)
+  NODE(parser, OmpNothingDirective)
   NODE(parser, OmpDeclareTargetSpecifier)
   NODE(parser, OmpDeclareTargetWithClause)
   NODE(parser, OmpDeclareTargetWithList)
@@ -662,7 +665,7 @@ public:
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
   NODE(parser, OpenMPDepobjConstruct)
-  NODE(parser, OpenMPErrorConstruct)
+  NODE(parser, OpenMPUtilityConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
@@ -806,6 +809,7 @@ public:
   NODE(Union, EndUnionStmt)
   NODE(Union, UnionStmt)
   NODE(parser, UnlockStmt)
+  NODE(parser, UnsignedLiteralConstant)
   NODE(parser, UnsignedTypeSpec)
   NODE(parser, UseStmt)
   NODE_ENUM(UseStmt, ModuleNature)
@@ -928,7 +932,8 @@ protected:
         asFortran_->call(ss, *x.typedCall);
       }
     } else if constexpr (std::is_same_v<T, IntLiteralConstant> ||
-        std::is_same_v<T, SignedIntLiteralConstant>) {
+        std::is_same_v<T, SignedIntLiteralConstant> ||
+        std::is_same_v<T, UnsignedLiteralConstant>) {
       ss << std::get<CharBlock>(x.t);
     } else if constexpr (std::is_same_v<T, RealLiteralConstant::Real>) {
       ss << x.source;

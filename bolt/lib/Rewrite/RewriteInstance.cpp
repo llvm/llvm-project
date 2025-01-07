@@ -19,6 +19,7 @@
 #include "bolt/Core/Relocation.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
+#include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -78,7 +79,6 @@ namespace opts {
 extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
-extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> ReorderData;
@@ -86,6 +86,9 @@ extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 extern cl::opt<bool> TimeRewrite;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -2056,6 +2059,13 @@ void RewriteInstance::adjustCommandLineOptions() {
     exit(1);
   }
 
+  if (!BC->HasRelocations &&
+      opts::ICF == IdenticalCodeFolding::ICFLevel::Safe) {
+    BC->errs() << "BOLT-ERROR: binary built without relocations. Safe ICF is "
+                  "not supported\n";
+    exit(1);
+  }
+
   if (opts::Instrument ||
       (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
        !opts::HotText.getNumOccurrences())) {
@@ -3848,20 +3858,6 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     assert(Function.getImageSize() <= Function.getMaxSize() &&
            "Unexpected large function");
 
-    // Map jump tables if updating in-place.
-    if (opts::JumpTables == JTS_BASIC) {
-      for (auto &JTI : Function.JumpTables) {
-        JumpTable *JT = JTI.second;
-        BinarySection &Section = JT->getOutputSection();
-        Section.setOutputAddress(JT->getAddress());
-        Section.setOutputFileOffset(getFileOffsetForAddress(JT->getAddress()));
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: mapping JT " << Section.getName()
-                          << " to 0x" << Twine::utohexstr(JT->getAddress())
-                          << '\n');
-        MapSection(Section, JT->getAddress());
-      }
-    }
-
     if (!Function.isSplit())
       continue;
 
@@ -5644,26 +5640,8 @@ void RewriteInstance::rewriteFile() {
     if (Function->getImageAddress() == 0 || Function->getImageSize() == 0)
       continue;
 
-    if (Function->getImageSize() > Function->getMaxSize()) {
-      assert(!BC->isX86() && "Unexpected large function.");
-      if (opts::Verbosity >= 1)
-        BC->errs() << "BOLT-WARNING: new function size (0x"
-                   << Twine::utohexstr(Function->getImageSize())
-                   << ") is larger than maximum allowed size (0x"
-                   << Twine::utohexstr(Function->getMaxSize())
-                   << ") for function " << *Function << '\n';
-
-      // Remove jump table sections that this function owns in non-reloc mode
-      // because we don't want to write them anymore.
-      if (!BC->HasRelocations && opts::JumpTables == JTS_BASIC) {
-        for (auto &JTI : Function->JumpTables) {
-          JumpTable *JT = JTI.second;
-          BinarySection &Section = JT->getOutputSection();
-          BC->deregisterSection(Section);
-        }
-      }
-      continue;
-    }
+    assert(Function->getImageSize() <= Function->getMaxSize() &&
+           "Unexpected large function");
 
     const auto HasAddress = [](const FunctionFragment &FF) {
       return FF.empty() ||

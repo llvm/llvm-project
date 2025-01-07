@@ -42,10 +42,7 @@ def HasCONTEXTIDREL2
 //===----------------------------------------------------------------------===//
 
 class AT<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-         bits<3> op2> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+         bits<3> op2> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
@@ -53,6 +50,27 @@ class AT<string name, bits<3> op1, bits<4> crn, bits<4> crm,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   code Requires = [{ {} }];
+}
+
+def ATValues : GenericEnum {
+  let FilterClass = "AT";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def ATsList : GenericTable {
+  let FilterClass = "AT";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupATByName : SearchIndex {
+  let Table = ATsList;
+  let Key = ["Name"];
+}
+
+def lookupATByEncoding : SearchIndex {
+  let Table = ATsList;
+  let Key = ["Encoding"];
 }
 
 def : AT<"S1E1R",  0b000, 0b0111, 0b1000, 0b000>;
@@ -82,12 +100,30 @@ def : AT<"S1E3A", 0b110, 0b0111, 0b1001, 0b010>;
 // DMB/DSB (data barrier) instruction options.
 //===----------------------------------------------------------------------===//
 
-class DB<string name, bits<4> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class DB<string name, bits<4> encoding> {
   string Name = name;
   bits<4> Encoding = encoding;
+}
+
+def DBValues : GenericEnum {
+  let FilterClass = "DB";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def DBsList : GenericTable {
+  let FilterClass = "DB";
+  let Fields = ["Name", "Encoding"];
+}
+
+def lookupDBByName : SearchIndex {
+  let Table = DBsList;
+  let Key = ["Name"];
+}
+
+def lookupDBByEncoding : SearchIndex {
+  let Table = DBsList;
+  let Key = ["Encoding"];
 }
 
 def : DB<"oshld", 0x1>;
@@ -103,14 +139,37 @@ def : DB<"ld",    0xd>;
 def : DB<"st",    0xe>;
 def : DB<"sy",    0xf>;
 
-class DBnXS<string name, bits<4> encoding, bits<5> immValue> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding", "ImmValue"];
-  let EnumValueField = "Encoding";
-
+class DBnXS<string name, bits<4> encoding, bits<5> immValue> {
   string Name = name;
   bits<4> Encoding = encoding;
   bits<5> ImmValue = immValue;
   code Requires = [{ {AArch64::FeatureXS} }];
+}
+
+def DBnXSValues : GenericEnum {
+  let FilterClass = "DBnXS";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def DBnXSsList : GenericTable {
+  let FilterClass = "DBnXS";
+  let Fields = ["Name", "Encoding", "ImmValue", "Requires"];
+}
+
+def lookupDBnXSByName : SearchIndex {
+  let Table = DBnXSsList;
+  let Key = ["Name"];
+}
+
+def lookupDBnXSByEncoding : SearchIndex {
+  let Table = DBnXSsList;
+  let Key = ["Encoding"];
+}
+
+def lookupDBnXSByImmValue : SearchIndex {
+  let Table = DBnXSsList;
+  let Key = ["ImmValue"];
 }
 
 def : DBnXS<"oshnxs", 0x3, 0x10>;
@@ -123,10 +182,7 @@ def : DBnXS<"synxs",  0xf, 0x1c>;
 //===----------------------------------------------------------------------===//
 
 class DC<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-         bits<3> op2> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+         bits<3> op2> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
@@ -134,6 +190,27 @@ class DC<string name, bits<3> op1, bits<4> crn, bits<4> crm,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   code Requires = [{ {} }];
+}
+
+def DCValues : GenericEnum {
+  let FilterClass = "DC";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def DCsList : GenericTable {
+  let FilterClass = "DC";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupDCByName : SearchIndex {
+  let Table = DCsList;
+  let Key = ["Name"];
+}
+
+def lookupDCByEncoding : SearchIndex {
+  let Table = DCsList;
+  let Key = ["Encoding"];
 }
 
 def : DC<"ZVA",   0b011, 0b0111, 0b0100, 0b001>;
@@ -193,10 +270,7 @@ def : DC<"CGDVAOC",  0b011, 0b0111, 0b1011, 0b111>;
 //===----------------------------------------------------------------------===//
 
 class IC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2,
-         bit needsreg> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+         bit needsreg> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
@@ -204,6 +278,27 @@ class IC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   bit NeedsReg = needsreg;
+}
+
+def ICValues : GenericEnum {
+  let FilterClass = "IC";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def ICsList : GenericTable {
+  let FilterClass = "IC";
+  let Fields = ["Name", "Encoding", "NeedsReg"];
+}
+
+def lookupICByName : SearchIndex {
+  let Table = ICsList;
+  let Key = ["Name"];
+}
+
+def lookupICByEncoding : SearchIndex {
+  let Table = ICsList;
+  let Key = ["Encoding"];
 }
 
 def : IC<"IALLUIS", 0b000, 0b0111, 0b0001, 0b000, 0>;
@@ -214,13 +309,31 @@ def : IC<"IVAU",    0b011, 0b0111, 0b0101, 0b001, 1>;
 // ISB (instruction-fetch barrier) instruction options.
 //===----------------------------------------------------------------------===//
 
-class ISB<string name, bits<4> encoding> : SearchableTable{
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class ISB<string name, bits<4> encoding> {
   string Name = name;
   bits<4> Encoding;
   let Encoding = encoding;
+}
+
+def ISBValues : GenericEnum {
+  let FilterClass = "ISB";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def ISBsList : GenericTable {
+  let FilterClass = "ISB";
+  let Fields = ["Name", "Encoding"];
+}
+
+def lookupISBByName : SearchIndex {
+  let Table = ISBsList;
+  let Key = ["Name"];
+}
+
+def lookupISBByEncoding : SearchIndex {
+  let Table = ISBsList;
+  let Key = ["Encoding"];
 }
 
 def : ISB<"sy", 0xf>;
@@ -229,15 +342,33 @@ def : ISB<"sy", 0xf>;
 // TSB (Trace synchronization barrier) instruction options.
 //===----------------------------------------------------------------------===//
 
-class TSB<string name, bits<4> encoding> : SearchableTable{
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class TSB<string name, bits<4> encoding> {
   string Name = name;
   bits<4> Encoding;
   let Encoding = encoding;
 
   code Requires = [{ {AArch64::FeatureTRACEV8_4} }];
+}
+
+def TSBValues : GenericEnum {
+  let FilterClass = "TSB";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def TSBsList : GenericTable {
+  let FilterClass = "TSB";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupTSBByName : SearchIndex {
+  let Table = TSBsList;
+  let Key = ["Name"];
+}
+
+def lookupTSBByEncoding : SearchIndex {
+  let Table = TSBsList;
+  let Key = ["Encoding"];
 }
 
 def : TSB<"csync", 0>;
@@ -248,10 +379,7 @@ def : TSB<"csync", 0>;
 
 class PRFM<string type,   bits<2> type_encoding,
            string target, bits<2> target_encoding,
-           string policy, bits<1> policy_encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+           string policy, bits<1> policy_encoding> {
   string Name = type # target # policy;
   bits<5> Encoding;
   let Encoding{4-3} = type_encoding;
@@ -259,6 +387,27 @@ class PRFM<string type,   bits<2> type_encoding,
   let Encoding{0} = policy_encoding;
 
   code Requires = [{ {} }];
+}
+
+def PRFMValues : GenericEnum {
+  let FilterClass = "PRFM";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def PRFMsList : GenericTable {
+  let FilterClass = "PRFM";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupPRFMByName : SearchIndex {
+  let Table = PRFMsList;
+  let Key = ["Name"];
+}
+
+def lookupPRFMByEncoding : SearchIndex {
+  let Table = PRFMsList;
+  let Key = ["Encoding"];
 }
 
 def : PRFM<"pld", 0b00, "l1",  0b00, "keep", 0b0>;
@@ -296,14 +445,32 @@ def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
 // SVE Prefetch instruction options.
 //===----------------------------------------------------------------------===//
 
-class SVEPRFM<string name, bits<4> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class SVEPRFM<string name, bits<4> encoding> {
   string Name = name;
   bits<4> Encoding;
   let Encoding = encoding;
   code Requires = [{ {} }];
+}
+
+def SVEPRFMValues : GenericEnum {
+  let FilterClass = "SVEPRFM";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def SVEPRFMsList : GenericTable {
+  let FilterClass = "SVEPRFM";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupSVEPRFMByName : SearchIndex {
+  let Table = SVEPRFMsList;
+  let Key = ["Name"];
+}
+
+def lookupSVEPRFMByEncoding : SearchIndex {
+  let Table = SVEPRFMsList;
+  let Key = ["Encoding"];
 }
 
 let Requires = [{ {AArch64::FeatureSVE} }] in {
@@ -325,15 +492,33 @@ def : SVEPRFM<"pstl3strm", 0x0d>;
 // RPRFM (prefetch) instruction options.
 //===----------------------------------------------------------------------===//
 
-class RPRFM<string name, bits<1> type_encoding, bits<5> policy_encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class RPRFM<string name, bits<1> type_encoding, bits<5> policy_encoding> {
   string Name = name;
   bits<6> Encoding;
   let Encoding{0} = type_encoding;
   let Encoding{5-1} = policy_encoding;
   code Requires = [{ {} }];
+}
+
+def RPRFMValues : GenericEnum {
+  let FilterClass = "RPRFM";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def RPRFMsList : GenericTable {
+  let FilterClass = "RPRFM";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupRPRFMByName : SearchIndex {
+  let Table = RPRFMsList;
+  let Key = ["Name"];
+}
+
+def lookupRPRFMByEncoding : SearchIndex {
+  let Table = RPRFMsList;
+  let Key = ["Encoding"];
 }
 
 def : RPRFM<"pldkeep", 0b0, 0b00000>;
@@ -345,13 +530,31 @@ def : RPRFM<"pststrm", 0b1, 0b00010>;
 // SVE Predicate patterns
 //===----------------------------------------------------------------------===//
 
-class SVEPREDPAT<string name, bits<5> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class SVEPREDPAT<string name, bits<5> encoding> {
   string Name = name;
   bits<5> Encoding;
   let Encoding = encoding;
+}
+
+def SVEPREDPATValues : GenericEnum {
+  let FilterClass = "SVEPREDPAT";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def SVEPREDPATsList : GenericTable {
+  let FilterClass = "SVEPREDPAT";
+  let Fields = ["Name", "Encoding"];
+}
+
+def lookupSVEPREDPATByName : SearchIndex {
+  let Table = SVEPREDPATsList;
+  let Key = ["Name"];
+}
+
+def lookupSVEPREDPATByEncoding : SearchIndex {
+  let Table = SVEPREDPATsList;
+  let Key = ["Encoding"];
 }
 
 def : SVEPREDPAT<"pow2",  0x00>;
@@ -376,13 +579,31 @@ def : SVEPREDPAT<"all",   0x1f>;
 // SVE Predicate-as-counter patterns
 //===----------------------------------------------------------------------===//
 
-class SVEVECLENSPECIFIER<string name, bits<1> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class SVEVECLENSPECIFIER<string name, bits<1> encoding> {
   string Name = name;
   bits<1> Encoding;
   let Encoding = encoding;
+}
+
+def SVEVECLENSPECIFIERValues : GenericEnum {
+  let FilterClass = "SVEVECLENSPECIFIER";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def SVEVECLENSPECIFIERsList : GenericTable {
+  let FilterClass = "SVEVECLENSPECIFIER";
+  let Fields = ["Name", "Encoding"];
+}
+
+def lookupSVEVECLENSPECIFIERByName : SearchIndex {
+  let Table = SVEVECLENSPECIFIERsList;
+  let Key = ["Name"];
+}
+
+def lookupSVEVECLENSPECIFIERByEncoding : SearchIndex {
+  let Table = SVEVECLENSPECIFIERsList;
+  let Key = ["Encoding"];
 }
 
 def : SVEVECLENSPECIFIER<"vlx2", 0x0>;
@@ -395,13 +616,31 @@ def : SVEVECLENSPECIFIER<"vlx4", 0x1>;
 // is used for a few instructions that only accept a limited set of exact FP
 // immediates values.
 //===----------------------------------------------------------------------===//
-class ExactFPImm<string name, string repr, bits<4> enum > : SearchableTable {
-  let SearchableFields = ["Enum", "Repr"];
-  let EnumValueField = "Enum";
-
+class ExactFPImm<string name, string repr, bits<4> enum > {
   string Name = name;
   bits<4> Enum = enum;
   string Repr = repr;
+}
+
+def ExactFPImmValues : GenericEnum {
+  let FilterClass = "ExactFPImm";
+  let NameField = "Name";
+  let ValueField = "Enum";
+}
+
+def ExactFPImmsList : GenericTable {
+  let FilterClass = "ExactFPImm";
+  let Fields = ["Name", "Enum", "Repr"];
+}
+
+def lookupExactFPImmByEnum : SearchIndex {
+  let Table = ExactFPImmsList;
+  let Key = ["Enum"];
+}
+
+def lookupExactFPImmByRepr : SearchIndex {
+  let Table = ExactFPImmsList;
+  let Key = ["Repr"];
 }
 
 def : ExactFPImm<"zero", "0.0", 0x0>;
@@ -413,10 +652,7 @@ def : ExactFPImm<"two",  "2.0", 0x3>;
 // PState instruction options.
 //===----------------------------------------------------------------------===//
 
-class PStateImm0_15<string name, bits<3> op1, bits<3> op2> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class PStateImm0_15<string name, bits<3> op1, bits<3> op2> {
   string Name = name;
   bits<6> Encoding;
   let Encoding{5-3} = op1;
@@ -424,16 +660,55 @@ class PStateImm0_15<string name, bits<3> op1, bits<3> op2> : SearchableTable {
   code Requires = [{ {} }];
 }
 
-class PStateImm0_1<string name, bits<3> op1, bits<3> op2, bits<3> crm_high> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
+def PStateImm0_15Values : GenericEnum {
+  let FilterClass = "PStateImm0_15";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
 
+def PStateImm0_15sList : GenericTable {
+  let FilterClass = "PStateImm0_15";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupPStateImm0_15ByName : SearchIndex {
+  let Table = PStateImm0_15sList;
+  let Key = ["Name"];
+}
+
+def lookupPStateImm0_15ByEncoding : SearchIndex {
+  let Table = PStateImm0_15sList;
+  let Key = ["Encoding"];
+}
+
+class PStateImm0_1<string name, bits<3> op1, bits<3> op2, bits<3> crm_high> {
   string Name = name;
   bits<9> Encoding;
   let Encoding{8-6} = crm_high;
   let Encoding{5-3} = op1;
   let Encoding{2-0} = op2;
   code Requires = [{ {} }];
+}
+
+def PStateImm0_1Values : GenericEnum {
+  let FilterClass = "PStateImm0_1";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def PStateImm0_1sList : GenericTable {
+  let FilterClass = "PStateImm0_1";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupPStateImm0_1ByName : SearchIndex {
+  let Table = PStateImm0_1sList;
+  let Key = ["Name"];
+}
+
+def lookupPStateImm0_1ByEncoding : SearchIndex {
+  let Table = PStateImm0_1sList;
+  let Key = ["Encoding"];
 }
 
 //                   Name,     Op1,   Op2
@@ -467,14 +742,32 @@ def : PStateImm0_1<"PM",       0b001, 0b000, 0b001>;
 // SVCR instruction options.
 //===----------------------------------------------------------------------===//
 
-class SVCR<string name, bits<3> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class SVCR<string name, bits<3> encoding> {
   string Name = name;
   bits<3> Encoding;
   let Encoding = encoding;
   code Requires = [{ {} }];
+}
+
+def SVCRValues : GenericEnum {
+  let FilterClass = "SVCR";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def SVCRsList : GenericTable {
+  let FilterClass = "SVCR";
+  let Fields = ["Name", "Encoding", "Requires"];
+}
+
+def lookupSVCRByName : SearchIndex {
+  let Table = SVCRsList;
+  let Key = ["Name"];
+}
+
+def lookupSVCRByEncoding : SearchIndex {
+  let Table = SVCRsList;
+  let Key = ["Encoding"];
 }
 
 let Requires = [{ {AArch64::FeatureSME} }] in {
@@ -487,13 +780,31 @@ def : SVCR<"SVCRSMZA", 0b011>;
 // PSB instruction options.
 //===----------------------------------------------------------------------===//
 
-class PSB<string name, bits<5> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class PSB<string name, bits<5> encoding> {
   string Name = name;
   bits<5> Encoding;
   let Encoding = encoding;
+}
+
+def PSBValues : GenericEnum {
+  let FilterClass = "PSB";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def PSBsList : GenericTable {
+  let FilterClass = "PSB";
+  let Fields = ["Name", "Encoding"];
+}
+
+def lookupPSBByName : SearchIndex {
+  let Table = PSBsList;
+  let Key = ["Name"];
+}
+
+def lookupPSBByEncoding : SearchIndex {
+  let Table = PSBsList;
+  let Key = ["Encoding"];
 }
 
 def : PSB<"csync", 0x11>;
@@ -502,13 +813,31 @@ def : PSB<"csync", 0x11>;
 // BTI instruction options.
 //===----------------------------------------------------------------------===//
 
-class BTI<string name, bits<3> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class BTI<string name, bits<3> encoding> {
   string Name = name;
   bits<3> Encoding;
   let Encoding = encoding;
+}
+
+def BTIValues : GenericEnum {
+  let FilterClass = "BTI";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def BTIsList : GenericTable {
+  let FilterClass = "BTI";
+  let Fields = ["Name", "Encoding"];
+}
+
+def lookupBTIByName : SearchIndex {
+  let Table = BTIsList;
+  let Key = ["Name"];
+}
+
+def lookupBTIByEncoding : SearchIndex {
+  let Table = BTIsList;
+  let Key = ["Encoding"];
 }
 
 def : BTI<"c",  0b010>;
@@ -667,10 +996,7 @@ defm : TLBI<"VMALLWS2E1OS",  0b100, 0b1000, 0b0101, 0b010, 0>;
 //===----------------------------------------------------------------------===//
 
 class SysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
-             bits<3> op2> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+             bits<3> op2> {
   string Name = name;
   string AltName = name;
   bits<16> Encoding;
@@ -682,6 +1008,28 @@ class SysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
   bit Readable = ?;
   bit Writeable = ?;
   code Requires = [{ {} }];
+}
+
+def SysRegValues : GenericEnum {
+  let FilterClass = "SysReg";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def SysRegsList : GenericTable {
+  let FilterClass = "SysReg";
+  let Fields = ["Name", "AltName", "Encoding", "Readable", "Writeable",
+                "Requires"];
+}
+
+def lookupSysRegByName : SearchIndex {
+  let Table = SysRegsList;
+  let Key = ["Name"];
+}
+
+def lookupSysRegByEncoding : SearchIndex {
+  let Table = SysRegsList;
+  let Key = ["Encoding"];
 }
 
 class RWSysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
@@ -2026,10 +2374,7 @@ def : RWSysReg<"ACTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b101>;
 //===----------------------------------------------------------------------===//
 
 class PHint<bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
-              bits<3> op2, string name> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+              bits<3> op2, string name> {
   string Name = name;
   string AltName = name;
   bits<16> Encoding;
@@ -2039,6 +2384,27 @@ class PHint<bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   code Requires = [{ {} }];
+}
+
+def PHintValues : GenericEnum {
+  let FilterClass = "PHint";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
+def PHintsList : GenericTable {
+  let FilterClass = "PHint";
+  let Fields = ["Name", "AltName", "Encoding", "Requires"];
+}
+
+def lookupPHintByName : SearchIndex {
+  let Table = PHintsList;
+  let Key = ["Name"];
+}
+
+def lookupPHintByEncoding : SearchIndex {
+  let Table = PHintsList;
+  let Key = ["Encoding"];
 }
 
 let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {

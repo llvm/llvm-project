@@ -1,4 +1,4 @@
-; RUN: llc -disable-lsr -march=hexagon < %s | FileCheck %s
+; RUN: llc -disable-lsr -mtriple=hexagon < %s | FileCheck %s
 
 ; Test for multiple phis with induction variables.
 

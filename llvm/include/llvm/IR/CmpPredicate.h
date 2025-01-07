@@ -71,13 +71,7 @@ public:
 
   /// Get the swapped predicate of a CmpInst.
   static CmpPredicate getSwapped(const CmpInst *Cmp);
-
-  /// Provided to facilitate storing a CmpPredicate in data structures that
-  /// require hashing.
-  friend hash_code hash_value(const CmpPredicate &Arg); // NOLINT
 };
-
-[[nodiscard]] hash_code hash_value(const CmpPredicate &Arg);
 } // namespace llvm
 
 #endif

@@ -225,13 +225,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
-  if (Triple.isRISCV64()) {
-    CmdArgs.push_back("-X");
-    if (Args.hasArg(options::OPT_mno_relax))
-      CmdArgs.push_back("--no-relax");
-  }
-
-  if (Triple.isLoongArch64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
@@ -297,9 +291,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
-  bool NeedsSanitizerDeps =
-      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -340,7 +332,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding

@@ -117,6 +117,12 @@ public:
   /// which is lower overhead and more direct than maintaining this metadata.
   /// Returns true if memprof metadata attached, false if not (attribute added).
   bool buildAndAttachMIBMetadata(CallBase *CI);
+
+  /// Add an attribute for the given allocation type to the call instruction.
+  /// If hinted by reporting is enabled, a message is emitted with the given
+  /// descriptor used to identify the category of single allocation type.
+  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                   StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and

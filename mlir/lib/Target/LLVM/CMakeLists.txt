@@ -119,6 +119,45 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   )
 endif()
 
+
+function(embed_binary_to_src file output_file symbol)
+    file(READ ${file} filedata HEX)
+    # Convert hex data for C compatibility
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," filedata ${filedata})
+    # Write data to output file
+    file(WRITE ${output_file} "const char ${symbol}[] = {${filedata}};\nconst int ${symbol}_size = sizeof(${symbol});\n")
+endfunction()
+
+set(MLIR_NVVM_EMBED_LIBDEVICE 0 CACHE BOOL "Embed CUDA libdevice.bc in the binary at build time instead of looking it up at runtime")
+if (MLIR_NVVM_EMBED_LIBDEVICE)
+  if (NOT MLIR_NVVM_LIBDEVICE_PATH)
+    if(CUDAToolkit_FOUND)
+      find_file(MLIR_NVVM_LIBDEVICE_PATH libdevice.10.bc
+                PATHS ${CUDAToolkit_LIBRARY_ROOT}
+                PATH_SUFFIXES "nvvm/libdevice" NO_DEFAULT_PATH REQUIRED)
+    else()
+      message(FATAL_ERROR
+              "Requested using the `nvptxcompiler` library backend but it couldn't be found.")
+    endif()
+  endif()
+  
+  embed_binary_to_src(${MLIR_NVVM_LIBDEVICE_PATH} ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c _mlir_embedded_libdevice)
+  add_mlir_library(MLIRNVVMLibdevice
+    ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c
+  )
+  target_link_libraries(MLIRNVVMTarget PRIVATE MLIRNVVMLibdevice)
+  target_compile_definitions(obj.MLIRNVVMTarget
+    PRIVATE
+    MLIR_NVVM_EMBED_LIBDEVICE=1
+  )
+else()
+  target_compile_definitions(obj.MLIRNVVMTarget
+    PRIVATE
+    MLIR_NVVM_EMBED_LIBDEVICE=0
+  )
+endif()
+
+
 if (MLIR_ENABLE_ROCM_CONVERSIONS)
   set(AMDGPU_LIBS
     AMDGPUAsmParser
@@ -169,3 +208,4 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
     __DEFAULT_ROCM_PATH__="${DEFAULT_ROCM_PATH}"
   )
 endif()
+

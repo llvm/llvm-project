@@ -839,13 +839,18 @@ def IsConstantContext: Opcode;
 def CheckAllocations : Opcode;
 
 def BitCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, IntAP, IntAPS, Bool, Float];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64,
+               IntAP, IntAPS, Bool, Float, Ptr];
 }
 
-def BitCast : Opcode {
+def BitCastPrim : Opcode {
   let Types = [BitCastTypeClass];
   let Args = [ArgBool, ArgUint32, ArgFltSemantics];
   let HasGroup = 1;
 }
 
-def BitCastPtr : Opcode;
+def BitCast : Opcode;
+
+def GetTypeid : Opcode { let Args = [ArgTypePtr, ArgTypePtr]; }
+def GetTypeidPtr : Opcode { let Args = [ArgTypePtr]; }
+def DiagTypeid : Opcode;

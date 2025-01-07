@@ -501,7 +501,8 @@ static Value *getTrueOrFalseValue(
   if (isa<ZExtInst>(AuxI) || isa<LShrOperator>(AuxI)) {
     CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
   } else {
-    assert(isa<AShrOperator>(AuxI) && "Unexpected opcode");
+    assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
+           "Unexpected opcode");
     CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
   }
 
@@ -761,6 +762,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   // Auxiliary instruction are instructions that depends on a condition and have
   // zero or some constant value on True/False branch, such as:
   // * ZExt(1bit)
+  // * SExt(1bit)
   // * Not(1bit)
   // * A(L)Shr(Val), ValBitSize - 1, where there is a condition like `Val <= 0`
   // earlier in the BB. For conditions that check the sign of the Val compiler
@@ -787,7 +789,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
     }
 
     Value *Cond;
-    if (match(I, m_OneUse(m_ZExt(m_Value(Cond)))) &&
+    if (match(I, m_OneUse(m_ZExtOrSExt(m_Value(Cond)))) &&
         Cond->getType()->isIntegerTy(1)) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
       return SelectInfo.insert({I, {Cond, true, Inverted, 0}}).first;
@@ -828,16 +830,17 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
     // An BinOp(Aux(X), Y) can also be treated like a select, with condition X
     // and values Y|1 and Y.
-    // `Aux` can be either `ZExt(1bit)` or `XShr(Val), ValBitSize - 1`
-    // `BinOp` can be Add, Sub, Or
+    // `Aux` can be either `ZExt(1bit)`, `SExt(1bit)` or `XShr(Val), ValBitSize
+    // - 1` `BinOp` can be Add, Sub, Or
     Value *X;
-    auto MatchZExtPattern = m_c_BinOp(m_Value(), m_OneUse(m_ZExt(m_Value(X))));
+    auto MatchZExtOrSExtPattern =
+        m_c_BinOp(m_Value(), m_OneUse(m_ZExtOrSExt(m_Value(X))));
     auto MatchShiftPattern =
         m_c_BinOp(m_Value(), m_OneUse(m_Shr(m_Value(X), m_ConstantInt(Shift))));
 
     // This check is unnecessary, but it prevents costly access to the
     // SelectInfo map.
-    if ((match(I, MatchZExtPattern) && X->getType()->isIntegerTy(1)) ||
+    if ((match(I, MatchZExtOrSExtPattern) && X->getType()->isIntegerTy(1)) ||
         (match(I, MatchShiftPattern) &&
          X->getType()->getIntegerBitWidth() == Shift->getZExtValue() + 1)) {
       if (I->getOpcode() != Instruction::Add &&
@@ -1037,6 +1040,18 @@ bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
   if (hasExpensiveColdOperand(ASI)) {
     ++NumSelectConvertedExpColdOperand;
     OR << "Converted to branch because of expensive cold operand.";
+    EmitAndPrintRemark(ORE, OR);
+    return true;
+  }
+
+  // If latch has a select group with several elements, it is usually profitable
+  // to convert it to branches. We let `optimizeSelectsInnerLoops` decide if
+  // conversion is profitable for innermost loops.
+  auto *BB = SI.getI()->getParent();
+  auto *L = LI->getLoopFor(BB);
+  if (L && !L->isInnermost() && L->getLoopLatch() == BB &&
+      ASI.Selects.size() >= 3) {
+    OR << "Converted to branch because select group in the latch block is big.";
     EmitAndPrintRemark(ORE, OR);
     return true;
   }
