@@ -16588,8 +16588,8 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     if (TInfo->getType()->isArrayType()) {
       DiagRuntimeBehavior(TInfo->getTypeLoc().getBeginLoc(), E,
                           PDiag(diag::warn_second_parameter_to_va_arg_array)
-                                  << TInfo->getType()
-                                  << TInfo->getTypeLoc().getSourceRange());
+                              << TInfo->getType()
+                              << TInfo->getTypeLoc().getSourceRange());
     }
 
     // Check for va_arg where arguments of the given type will be promoted
