@@ -2560,16 +2560,15 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
   }
 
   // Add default framework search paths
-  auto addFrameworkInclude = [&](auto ...Path) {
+  auto AddFrameworkInclude = [&](StringRef Flag, StringRef SearchPath) {
     SmallString<128> P(Sysroot);
-    llvm::sys::path::append(P, Path...);
-
-    CC1Args.push_back("-internal-iframework");
+    llvm::sys::path::append(P, SearchPath);
+    CC1Args.push_back(DriverArgs.MakeArgString(Flag));
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   };
-  addFrameworkInclude("System", "Library", "Frameworks");
-  addFrameworkInclude("System", "Library", "SubFrameworks");
-  addFrameworkInclude("Library", "Frameworks");
+  AddFrameworkInclude("-internal-iframework", "/System/Library/Frameworks");
+  AddFrameworkInclude("-internal-iframework", "/System/Library/SubFrameworks");
+  AddFrameworkInclude("-internal-iframework", "/Library/Frameworks");
 }
 
 bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
