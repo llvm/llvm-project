@@ -7105,19 +7105,18 @@ static bool isI128MovedToParts(LoadSDNode *LD, SDNode *&LoPart,
   LoPart = HiPart = nullptr;
 
   // Scan through all users.
-  for (SDNode::use_iterator UI = LD->use_begin(), UIEnd = LD->use_end();
-       UI != UIEnd; ++UI) {
+  for (SDUse &Use : LD->uses()) {
     // Skip the uses of the chain.
-    if (UI.getUse().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
     // Verify every user is a TRUNCATE to i64 of the low or high half.
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     bool IsLoPart = true;
     if (User->getOpcode() == ISD::SRL &&
         User->getOperand(1).getOpcode() == ISD::Constant &&
         User->getConstantOperandVal(1) == 64 && User->hasOneUse()) {
-      User = *User->use_begin();
+      User = *User->user_begin();
       IsLoPart = false;
     }
     if (User->getOpcode() != ISD::TRUNCATE || User->getValueType(0) != MVT::i64)
@@ -7141,14 +7140,13 @@ static bool isF128MovedToParts(LoadSDNode *LD, SDNode *&LoPart,
   LoPart = HiPart = nullptr;
 
   // Scan through all users.
-  for (SDNode::use_iterator UI = LD->use_begin(), UIEnd = LD->use_end();
-       UI != UIEnd; ++UI) {
+  for (SDUse &Use : LD->uses()) {
     // Skip the uses of the chain.
-    if (UI.getUse().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
     // Verify every user is an EXTRACT_SUBREG of the low or high half.
-    SDNode *User = *UI;
+    SDNode *User = Use.getUser();
     if (!User->hasOneUse() || !User->isMachineOpcode() ||
         User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return false;
@@ -7238,15 +7236,13 @@ SDValue SystemZTargetLowering::combineLOAD(
 
   SDValue Replicate;
   SmallVector<SDNode*, 8> OtherUses;
-  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
-       UI != UE; ++UI) {
-    if (UI->getOpcode() == SystemZISD::REPLICATE) {
+  for (SDUse &Use : N->uses()) {
+    if (Use.getUser()->getOpcode() == SystemZISD::REPLICATE) {
       if (Replicate)
         return SDValue(); // Should never happen
-      Replicate = SDValue(*UI, 0);
-    }
-    else if (UI.getUse().getResNo() == 0)
-      OtherUses.push_back(*UI);
+      Replicate = SDValue(Use.getUser(), 0);
+    } else if (Use.getResNo() == 0)
+      OtherUses.push_back(Use.getUser());
   }
   if (!Replicate || OtherUses.empty())
     return SDValue();
@@ -7674,7 +7670,7 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
           U->getConstantOperandVal(1) == 1) {
-        SDValue OtherRound = SDValue(*U->use_begin(), 0);
+        SDValue OtherRound = SDValue(*U->user_begin(), 0);
         if (OtherRound.getOpcode() == N->getOpcode() &&
             OtherRound.getOperand(OpNo) == SDValue(U, 0) &&
             OtherRound.getValueType() == MVT::f32) {
@@ -7738,7 +7734,7 @@ SDValue SystemZTargetLowering::combineFP_EXTEND(
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
           U->getConstantOperandVal(1) == 2) {
-        SDValue OtherExtend = SDValue(*U->use_begin(), 0);
+        SDValue OtherExtend = SDValue(*U->user_begin(), 0);
         if (OtherExtend.getOpcode() == N->getOpcode() &&
             OtherExtend.getOperand(OpNo) == SDValue(U, 0) &&
             OtherExtend.getValueType() == MVT::f64) {

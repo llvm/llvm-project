@@ -2136,8 +2136,8 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   // If the sole user is a token factor, we should make sure we have a
   // chance to merge them together. This prevents TF chains from inhibiting
   // optimizations.
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::TokenFactor)
-    AddToWorklist(*(N->use_begin()));
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::TokenFactor)
+    AddToWorklist(*(N->user_begin()));
 
   SmallVector<SDNode *, 8> TFs;     // List of token factors to visit.
   SmallVector<SDValue, 8> Ops;      // Ops for replacing token factor.
@@ -3948,6 +3948,23 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
         !TLI.isOperationLegalOrCustom(ISD::ABS, VT))
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
+
+    // Similar to the previous rule, but this time targeting an expanded abs.
+    // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+    // as well as
+    // (sub 0, (min X, (sub 0, X))) --> (max X, (sub 0, X))
+    // Note that these two are applicable to both signed and unsigned min/max.
+    SDValue X;
+    SDValue S0;
+    auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
+    if (sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
+                                      m_UMax(m_Value(X), NegPat),
+                                      m_SMin(m_Value(X), NegPat),
+                                      m_UMin(m_Value(X), NegPat))))) {
+      unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
+      if (hasOperation(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, X, S0);
+    }
 
     // Fold neg(splat(neg(x)) -> splat(x)
     if (VT.isVector()) {
@@ -10906,15 +10923,15 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // which we plan to do. This workaround can be removed once the DAG is
   // processed in topological order.
   if (N->hasOneUse()) {
-    SDNode *Use = *N->use_begin();
+    SDNode *User = *N->user_begin();
 
     // Look pass the truncate.
-    if (Use->getOpcode() == ISD::TRUNCATE && Use->hasOneUse())
-      Use = *Use->use_begin();
+    if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse())
+      User = *User->user_begin();
 
-    if (Use->getOpcode() == ISD::BRCOND || Use->getOpcode() == ISD::AND ||
-        Use->getOpcode() == ISD::OR || Use->getOpcode() == ISD::XOR)
-      AddToWorklist(Use);
+    if (User->getOpcode() == ISD::BRCOND || User->getOpcode() == ISD::AND ||
+        User->getOpcode() == ISD::OR || User->getOpcode() == ISD::XOR)
+      AddToWorklist(User);
   }
 
   // Try to transform this shift into a multiply-high if
@@ -12917,7 +12934,7 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   // also lend itself to numerous combines and, as a result, it is desired
   // we keep the argument to a brcond as a setcc as much as possible.
   bool PreferSetCC =
-      N->hasOneUse() && N->use_begin()->getOpcode() == ISD::BRCOND;
+      N->hasOneUse() && N->user_begin()->getOpcode() == ISD::BRCOND;
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
@@ -13229,12 +13246,11 @@ static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
                                     const TargetLowering &TLI) {
   bool HasCopyToRegUses = false;
   bool isTruncFree = TLI.isTruncateFree(VT, N0.getValueType());
-  for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end(); UI != UE;
-       ++UI) {
-    SDNode *User = *UI;
+  for (SDUse &Use : N0->uses()) {
+    SDNode *User = Use.getUser();
     if (User == N)
       continue;
-    if (UI.getUse().getResNo() != N0.getResNo())
+    if (Use.getResNo() != N0.getResNo())
       continue;
     // FIXME: Only extend SETCC N, N and SETCC N, c for now.
     if (ExtOpc != ISD::ANY_EXTEND && User->getOpcode() == ISD::SETCC) {
@@ -13266,9 +13282,7 @@ static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
 
   if (HasCopyToRegUses) {
     bool BothLiveOut = false;
-    for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
-         UI != UE; ++UI) {
-      SDUse &Use = UI.getUse();
+    for (SDUse &Use : N->uses()) {
       if (Use.getResNo() == 0 && Use.getUser()->getOpcode() == ISD::CopyToReg) {
         BothLiveOut = true;
         break;
@@ -13780,11 +13794,10 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
 
         // Non-chain users of this value must either be the setcc in this
         // sequence or extends that can be folded into the new {z/s}ext-load.
-        for (SDNode::use_iterator UI = V->use_begin(), UE = V->use_end();
-             UI != UE; ++UI) {
+        for (SDUse &Use : V->uses()) {
           // Skip uses of the chain and the setcc.
-          SDNode *User = *UI;
-          if (UI.getUse().getResNo() != 0 || User == N0.getNode())
+          SDNode *User = Use.getUser();
+          if (Use.getResNo() != 0 || User == N0.getNode())
             continue;
           // Extra users must have exactly the same cast we are about to create.
           // TODO: This restriction could be eased if ExtendUsesToFormExtLoad()
@@ -14825,7 +14838,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
 
     // If the SRL is only used by a masking AND, we may be able to adjust
     // the ExtVT to make the AND redundant.
-    SDNode *Mask = *(SRL->use_begin());
+    SDNode *Mask = *(SRL->user_begin());
     if (SRL.hasOneUse() && Mask->getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(Mask->getOperand(1))) {
       unsigned Offset, ActiveBits;
@@ -15364,7 +15377,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   }
 
   // If this is anyext(trunc), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ANY_EXTEND))
+  if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ANY_EXTEND))
     return SDValue();
 
   // Fold extract-and-trunc into a narrow extract. For example:
@@ -18370,7 +18383,7 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
       return FoldedVOp;
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::FP_ROUND)
     return SDValue();
 
   // fold (fp_extend c1fp) -> c1fp
@@ -18925,10 +18938,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   SmallVector<SDNode *, 16> OtherUses;
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
-    for (SDNode::use_iterator UI = BasePtr->use_begin(),
-                              UE = BasePtr->use_end();
-         UI != UE; ++UI) {
-      SDUse &Use = UI.getUse();
+    for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
       // node (important for nodes that return multiple results).
       if (Use.getUser() == Ptr.getNode() || Use != BasePtr)
@@ -18944,7 +18954,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
         break;
       }
 
-      SDValue Op1 = Use.getUser()->getOperand((UI.getOperandNo() + 1) & 1);
+      SDValue Op1 = Use.getUser()->getOperand((Use.getOperandNo() + 1) & 1);
       if (!isa<ConstantSDNode>(Op1)) {
         OtherUses.clear();
         break;
@@ -19847,17 +19857,17 @@ struct LoadedSlice {
   bool canMergeExpensiveCrossRegisterBankCopy() const {
     if (!Inst || !Inst->hasOneUse())
       return false;
-    SDNode *Use = *Inst->use_begin();
-    if (Use->getOpcode() != ISD::BITCAST)
+    SDNode *User = *Inst->user_begin();
+    if (User->getOpcode() != ISD::BITCAST)
       return false;
     assert(DAG && "Missing context");
     const TargetLowering &TLI = DAG->getTargetLoweringInfo();
-    EVT ResVT = Use->getValueType(0);
+    EVT ResVT = User->getValueType(0);
     const TargetRegisterClass *ResRC =
-        TLI.getRegClassFor(ResVT.getSimpleVT(), Use->isDivergent());
+        TLI.getRegClassFor(ResVT.getSimpleVT(), User->isDivergent());
     const TargetRegisterClass *ArgRC =
-        TLI.getRegClassFor(Use->getOperand(0).getValueType().getSimpleVT(),
-                           Use->getOperand(0)->isDivergent());
+        TLI.getRegClassFor(User->getOperand(0).getValueType().getSimpleVT(),
+                           User->getOperand(0)->isDivergent());
     if (ArgRC == ResRC || !TLI.isOperationLegal(ISD::LOAD, ResVT))
       return false;
 
@@ -20056,20 +20066,19 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
   // Check if this load is used as several smaller chunks of bits.
   // Basically, look for uses in trunc or trunc(lshr) and record a new chain
   // of computation for each trunc.
-  for (SDNode::use_iterator UI = LD->use_begin(), UIEnd = LD->use_end();
-       UI != UIEnd; ++UI) {
+  for (SDUse &U : LD->uses()) {
     // Skip the uses of the chain.
-    if (UI.getUse().getResNo() != 0)
+    if (U.getResNo() != 0)
       continue;
 
-    SDNode *User = *UI;
+    SDNode *User = U.getUser();
     unsigned Shift = 0;
 
     // Check if this is a trunc(lshr).
     if (User->getOpcode() == ISD::SRL && User->hasOneUse() &&
         isa<ConstantSDNode>(User->getOperand(1))) {
       Shift = User->getConstantOperandVal(1);
-      User = *User->use_begin();
+      User = *User->user_begin();
     }
 
     // At this point, User is a Truncate, iff we encountered, trunc or
@@ -20936,11 +20945,11 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
            RootCount->second.second > StoreMergeDependenceLimit;
   };
 
-  auto TryToAddCandidate = [&](SDNode::use_iterator UseIter) {
+  auto TryToAddCandidate = [&](SDUse &Use) {
     // This must be a chain use.
-    if (UseIter.getOperandNo() != 0)
+    if (Use.getOperandNo() != 0)
       return;
-    if (auto *OtherStore = dyn_cast<StoreSDNode>(*UseIter)) {
+    if (auto *OtherStore = dyn_cast<StoreSDNode>(Use.getUser())) {
       BaseIndexOffset Ptr;
       int64_t PtrDiff;
       if (CandidateMatch(OtherStore, Ptr, PtrDiff) &&
@@ -20958,19 +20967,20 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
       return nullptr;
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored) {
-      if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) { // walk down chain
-        for (auto I2 = (*I)->use_begin(), E2 = (*I)->use_end(); I2 != E2; ++I2)
-          TryToAddCandidate(I2);
+      SDNode *User = I->getUser();
+      if (I->getOperandNo() == 0 && isa<LoadSDNode>(User)) { // walk down chain
+        for (SDUse &U2 : User->uses())
+          TryToAddCandidate(U2);
       }
       // Check stores that depend on the root (e.g. Store 3 in the chart above).
-      if (I.getOperandNo() == 0 && isa<StoreSDNode>(*I)) {
-        TryToAddCandidate(I);
+      if (I->getOperandNo() == 0 && isa<StoreSDNode>(User)) {
+        TryToAddCandidate(*I);
       }
     }
   } else {
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored)
-      TryToAddCandidate(I);
+      TryToAddCandidate(*I);
   }
 
   return RootNode;
@@ -23095,8 +23105,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     if (ExtractIndex == BCTruncElt && BCSrc.getValueType().isScalarInteger())
       return DAG.getAnyExtOrTrunc(BCSrc, DL, ScalarVT);
 
+    // TODO: Add support for SCALAR_TO_VECTOR implicit truncation.
     if (LegalTypes && BCSrc.getValueType().isInteger() &&
-        BCSrc.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+        BCSrc.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+        BCSrc.getScalarValueSizeInBits() ==
+            BCSrc.getOperand(0).getScalarValueSizeInBits()) {
       // ext_elt (bitcast (scalar_to_vec i64 X to v2i64) to v4i32), TruncElt -->
       // trunc i64 X to i32
       SDValue X = BCSrc.getOperand(0);
@@ -24295,8 +24308,8 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   EVT SVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
 
   // Keep track of what we encounter.
-  bool AnyInteger = false;
-  bool AnyFP = false;
+  EVT AnyFPVT;
+
   for (const SDValue &Op : N->ops()) {
     if (ISD::BITCAST == Op.getOpcode() &&
         !Op.getOperand(0).getValueType().isVector())
@@ -24310,27 +24323,23 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
     // If it's neither, bail out, it could be something weird like x86mmx.
     EVT LastOpVT = Ops.back().getValueType();
     if (LastOpVT.isFloatingPoint())
-      AnyFP = true;
-    else if (LastOpVT.isInteger())
-      AnyInteger = true;
-    else
+      AnyFPVT = LastOpVT;
+    else if (!LastOpVT.isInteger())
       return SDValue();
   }
 
   // If any of the operands is a floating point scalar bitcast to a vector,
   // use floating point types throughout, and bitcast everything.
   // Replace UNDEFs by another scalar UNDEF node, of the final desired type.
-  if (AnyFP) {
-    SVT = EVT::getFloatingPointVT(OpVT.getSizeInBits());
-    if (AnyInteger) {
-      for (SDValue &Op : Ops) {
-        if (Op.getValueType() == SVT)
-          continue;
-        if (Op.isUndef())
-          Op = DAG.getNode(ISD::UNDEF, DL, SVT);
-        else
-          Op = DAG.getBitcast(SVT, Op);
-      }
+  if (AnyFPVT != EVT()) {
+    SVT = AnyFPVT;
+    for (SDValue &Op : Ops) {
+      if (Op.getValueType() == SVT)
+        continue;
+      if (Op.isUndef())
+        Op = DAG.getNode(ISD::UNDEF, DL, SVT);
+      else
+        Op = DAG.getBitcast(SVT, Op);
     }
   }
 
@@ -27320,8 +27329,7 @@ SDValue DAGCombiner::visitGET_FPENV_MEM(SDNode *N) {
 
   // Check if the loaded value is used only in a store operation.
   StoreSDNode *StNode = nullptr;
-  for (auto I = LdNode->use_begin(), E = LdNode->use_end(); I != E; ++I) {
-    SDUse &U = I.getUse();
+  for (SDUse &U : LdNode->uses()) {
     if (U.getResNo() == 0) {
       if (auto *St = dyn_cast<StoreSDNode>(U.getUser())) {
         if (StNode)

@@ -46,6 +46,8 @@ bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
 bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
   return OpenACCNumWorkersClause::classof(C) ||
          OpenACCVectorLengthClause::classof(C) ||
+         OpenACCDeviceNumClause::classof(C) ||
+         OpenACCDefaultAsyncClause::classof(C) ||
          OpenACCVectorClause::classof(C) || OpenACCWorkerClause::classof(C) ||
          OpenACCCollapseClause::classof(C) || OpenACCAsyncClause::classof(C);
 }
@@ -216,6 +218,47 @@ OpenACCAsyncClause *OpenACCAsyncClause::Create(const ASTContext &C,
   void *Mem =
       C.Allocate(sizeof(OpenACCAsyncClause), alignof(OpenACCAsyncClause));
   return new (Mem) OpenACCAsyncClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
+OpenACCDeviceNumClause::OpenACCDeviceNumClause(SourceLocation BeginLoc,
+                                       SourceLocation LParenLoc, Expr *IntExpr,
+                                       SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::DeviceNum, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "device_num expression type not scalar/dependent");
+}
+
+OpenACCDeviceNumClause *OpenACCDeviceNumClause::Create(const ASTContext &C,
+                                               SourceLocation BeginLoc,
+                                               SourceLocation LParenLoc,
+                                               Expr *IntExpr,
+                                               SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OpenACCDeviceNumClause), alignof(OpenACCDeviceNumClause));
+  return new (Mem) OpenACCDeviceNumClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
+OpenACCDefaultAsyncClause::OpenACCDefaultAsyncClause(SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     Expr *IntExpr,
+                                                     SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::DefaultAsync, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "default_async expression type not scalar/dependent");
+}
+
+OpenACCDefaultAsyncClause *
+OpenACCDefaultAsyncClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                                  SourceLocation LParenLoc, Expr *IntExpr,
+                                  SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCDefaultAsyncClause),
+                         alignof(OpenACCDefaultAsyncClause));
+  return new (Mem)
+      OpenACCDefaultAsyncClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
 OpenACCWaitClause *OpenACCWaitClause::Create(
@@ -543,6 +586,20 @@ void OpenACCClausePrinter::VisitNumWorkersClause(
 void OpenACCClausePrinter::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   OS << "vector_length(";
+  printExpr(C.getIntExpr());
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDeviceNumClause(
+    const OpenACCDeviceNumClause &C) {
+  OS << "device_num(";
+  printExpr(C.getIntExpr());
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
+  OS << "default_async(";
   printExpr(C.getIntExpr());
   OS << ")";
 }

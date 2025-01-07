@@ -1466,8 +1466,6 @@ module std [system] {
 
   module locale {
     header "locale"
-
-    module locale_guard   { header "__locale_dir/locale_guard.h" }
     module pad_and_output { header "__locale_dir/pad_and_output.h" }
 
     module support {

@@ -88,10 +88,9 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         if (I != ReplacedValues.end()) {
           Mapped |= 1;
           // Check that remapped values are only used by nodes marked NewNode.
-          for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
-               UI != UE; ++UI)
-            if (UI.getUse().getResNo() == i)
-              assert(UI->getNodeId() == NewNode &&
+          for (SDUse &U : Node.uses())
+            if (U.getResNo() == i)
+              assert(U.getUser()->getNodeId() == NewNode &&
                      "Remapped value has non-trivial use!");
 
           // Check that the final result of applying ReplacedValues is not

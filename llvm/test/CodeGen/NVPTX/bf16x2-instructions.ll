@@ -179,7 +179,7 @@ define <2 x bfloat> @test_fdiv(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 define <2 x bfloat> @test_fneg(<2 x bfloat> %a) #0 {
 ; CHECK-LABEL: test_fneg(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_fneg_param_0];
@@ -211,7 +211,7 @@ define void @test_ldst_v3bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_ldst_v3bf16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -529,7 +529,7 @@ define <2 x bfloat> @test_fmuladd(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat>
 define <2 x bfloat> @test_fabs(<2 x bfloat> %a) #0 {
 ; CHECK-LABEL: test_fabs(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_fabs_param_0];
@@ -805,7 +805,7 @@ define <2 x bfloat> @test_copysign(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-LABEL: test_copysign(
 ; SM80:       {
 ; SM80-NEXT:    .reg .pred %p<3>;
-; SM80-NEXT:    .reg .b16 %rs<17>;
+; SM80-NEXT:    .reg .b16 %rs<15>;
 ; SM80-NEXT:    .reg .b32 %r<4>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
@@ -815,31 +815,31 @@ define <2 x bfloat> @test_copysign(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-NEXT:    abs.bf16 %rs3, %rs2;
 ; SM80-NEXT:    neg.bf16 %rs4, %rs3;
 ; SM80-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; SM80-NEXT:    shr.u16 %rs8, %rs6, 15;
-; SM80-NEXT:    and.b16 %rs9, %rs8, 1;
-; SM80-NEXT:    setp.eq.b16 %p1, %rs9, 1;
-; SM80-NEXT:    selp.b16 %rs10, %rs4, %rs3, %p1;
-; SM80-NEXT:    abs.bf16 %rs11, %rs1;
-; SM80-NEXT:    neg.bf16 %rs12, %rs11;
-; SM80-NEXT:    shr.u16 %rs14, %rs5, 15;
-; SM80-NEXT:    and.b16 %rs15, %rs14, 1;
-; SM80-NEXT:    setp.eq.b16 %p2, %rs15, 1;
-; SM80-NEXT:    selp.b16 %rs16, %rs12, %rs11, %p2;
-; SM80-NEXT:    mov.b32 %r3, {%rs16, %rs10};
+; SM80-NEXT:    shr.u16 %rs7, %rs6, 15;
+; SM80-NEXT:    and.b16 %rs8, %rs7, 1;
+; SM80-NEXT:    setp.eq.b16 %p1, %rs8, 1;
+; SM80-NEXT:    selp.b16 %rs9, %rs4, %rs3, %p1;
+; SM80-NEXT:    abs.bf16 %rs10, %rs1;
+; SM80-NEXT:    neg.bf16 %rs11, %rs10;
+; SM80-NEXT:    shr.u16 %rs12, %rs5, 15;
+; SM80-NEXT:    and.b16 %rs13, %rs12, 1;
+; SM80-NEXT:    setp.eq.b16 %p2, %rs13, 1;
+; SM80-NEXT:    selp.b16 %rs14, %rs11, %rs10, %p2;
+; SM80-NEXT:    mov.b32 %r3, {%rs14, %rs9};
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_copysign(
 ; SM90:       {
-; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b32 %r<6>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
 ; SM90-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
-; SM90-NEXT:    and.b32 %r4, %r2, -2147450880;
-; SM90-NEXT:    and.b32 %r6, %r1, 2147450879;
-; SM90-NEXT:    or.b32 %r7, %r6, %r4;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r7;
+; SM90-NEXT:    and.b32 %r3, %r2, -2147450880;
+; SM90-NEXT:    and.b32 %r4, %r1, 2147450879;
+; SM90-NEXT:    or.b32 %r5, %r4, %r3;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r5;
 ; SM90-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.copysign.f16(<2 x bfloat> %a, <2 x bfloat> %b)
   ret <2 x bfloat> %r

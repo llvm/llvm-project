@@ -68,7 +68,8 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
         if (IsMaterializationTask)
           --NumMaterializationThreads;
         --Outstanding;
-        OutstandingCV.notify_all();
+        if (Outstanding == 0)
+          OutstandingCV.notify_all();
         return;
       }
     }

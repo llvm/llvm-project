@@ -113,7 +113,7 @@ exit:
   ret void
 }
 
-; FIXME: {0,+,3} implies {0,+,2}.
+; {0,+,3} [nssw] implies {0,+,2} [nssw].
 define void @wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order(i32 noundef %N, ptr %dst, ptr %src) {
 ; CHECK-LABEL: 'wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order'
 ; CHECK-NEXT:    loop:
@@ -135,7 +135,6 @@ define void @wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order(i3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
 ; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:

@@ -954,22 +954,22 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
   // Cannot use range-based for loop here as we need the actual use (i.e. we
   // need the operand number corresponding to the use). A range-based for
   // will unbox the use and provide an SDNode*.
-  for (SDNode::use_iterator Use = N->use_begin(), UseEnd = N->use_end();
-       Use != UseEnd; ++Use) {
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
     unsigned Opc =
-      Use->isMachineOpcode() ? Use->getMachineOpcode() : Use->getOpcode();
+        User->isMachineOpcode() ? User->getMachineOpcode() : User->getOpcode();
     switch (Opc) {
     default: return 0;
     case ISD::TRUNCATE:
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      MaxTruncation =
-        std::max(MaxTruncation, (unsigned)Use->getValueType(0).getSizeInBits());
+      MaxTruncation = std::max(MaxTruncation,
+                               (unsigned)User->getValueType(0).getSizeInBits());
       continue;
     case ISD::STORE: {
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      StoreSDNode *STN = cast<StoreSDNode>(*Use);
+      StoreSDNode *STN = cast<StoreSDNode>(User);
       unsigned MemVTSize = STN->getMemoryVT().getSizeInBits();
       if (MemVTSize == 64 || Use.getOperandNo() != 0)
         return 0;
@@ -5473,10 +5473,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // generate secure plt code for TLS symbols.
     getGlobalBaseReg();
   } break;
-  case PPCISD::CALL: {
-    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        !TM.isPositionIndependent() || !Subtarget->isSecurePlt() ||
-        !Subtarget->isTargetELF())
+  case PPCISD::CALL:
+  case PPCISD::CALL_RM: {
+    if (Subtarget->isPPC64() || !TM.isPositionIndependent() ||
+        !Subtarget->isSecurePlt() || !Subtarget->isTargetELF())
       break;
 
     SDValue Op = N->getOperand(1);
@@ -5489,8 +5489,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (ES->getTargetFlags() == PPCII::MO_PLT)
         getGlobalBaseReg();
     }
-  }
-    break;
+  } break;
 
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
@@ -6610,7 +6609,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
   SDValue ConstFalse = CurDAG->getConstant(0, dl, VT);
 
   do {
-    SDNode *User = *N->use_begin();
+    SDNode *User = *N->user_begin();
     if (User->getNumOperands() != 2)
       break;
 
@@ -7564,7 +7563,7 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
     while (V->isMachineOpcode() &&
            V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
       // All values in the chain should have single use.
-      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+      if (V->use_empty() || !V->user_begin()->isOnlyUserOf(V.getNode()))
         return SDValue();
       V = V->getOperand(0);
     }

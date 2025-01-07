@@ -1088,9 +1088,9 @@ bool AMDGPUTargetLowering::isDesirableToCommuteWithShift(
     return true;
 
   // If only user is a i32 right-shift, then don't destroy a BFE pattern.
-  if (N->getValueType(0) == MVT::i32 && N->use_size() == 1 &&
-      (N->use_begin()->getOpcode() == ISD::SRA ||
-       N->use_begin()->getOpcode() == ISD::SRL))
+  if (N->getValueType(0) == MVT::i32 && N->hasOneUse() &&
+      (N->user_begin()->getOpcode() == ISD::SRA ||
+       N->user_begin()->getOpcode() == ISD::SRL))
     return false;
 
   // Don't destroy or(shl(load_zext(),c), load_zext()) patterns.
@@ -5555,7 +5555,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(DUMMY_CHAIN)
-  case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)
   NODE_NAME_CASE(LOAD_D16_LO)
   NODE_NAME_CASE(LOAD_D16_HI_I8)

@@ -3055,8 +3055,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 #endif
 
     const Register ValReg = LdSt.getReg(0);
-    const LLT ValTy = MRI.getType(ValReg);
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
+    LLT ValTy = MRI.getType(ValReg);
 
     // The code below doesn't support truncating stores, so we need to split it
     // again.
@@ -3096,6 +3096,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB);
         RBI.constrainGenericRegister(OldDst, *SubRegRC, MRI);
         MIB.setInstr(LdSt);
+        ValTy = MemTy; // This is no longer an extending load.
       }
     }
 

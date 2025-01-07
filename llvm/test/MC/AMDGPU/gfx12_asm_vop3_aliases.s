@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 
 v_min3_f32 v5, v1, v2, v3
 // GFX12: v_min3_num_f32 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x29,0xd6,0x01,0x05,0x0e,0x04]
@@ -6,11 +6,11 @@ v_min3_f32 v5, v1, v2, v3
 v_max3_f32 v5, v1, v2, v3
 // GFX12: v_max3_num_f32 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x2a,0xd6,0x01,0x05,0x0e,0x04]
 
-v_min3_f16 v5, v1, v2, v3
-// GFX12: v_min3_num_f16 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x2b,0xd6,0x01,0x05,0x0e,0x04]
+v_min3_f16 v5.l, v1.l, v2.l, v3.l
+// GFX12: v_min3_num_f16 v5.l, v1.l, v2.l, v3.l   ; encoding: [0x05,0x00,0x2b,0xd6,0x01,0x05,0x0e,0x04]
 
-v_max3_f16 v5, v1, v2, v3
-// GFX12: v_max3_num_f16 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x2c,0xd6,0x01,0x05,0x0e,0x04]
+v_max3_f16 v5.l, v1.l, v2.l, v3.l
+// GFX12: v_max3_num_f16 v5.l, v1.l, v2.l, v3.l   ; encoding: [0x05,0x00,0x2c,0xd6,0x01,0x05,0x0e,0x04]
 
 v_med3_f32 v5, v1, v2, v3
 // GFX12: v_med3_num_f32 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x31,0xd6,0x01,0x05,0x0e,0x04]

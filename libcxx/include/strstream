@@ -129,8 +129,9 @@ private:
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/strstream>
+#else
 #  include <__config>
 #  include <__ostream/basic_ostream.h>
 #  include <istream>
@@ -350,6 +351,6 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM) || defined(_LIBCPP_BUILDING_LIBRARY)
-#endif   // 0
+#endif   // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STRSTREAM
