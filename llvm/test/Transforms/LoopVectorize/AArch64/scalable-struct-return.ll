@@ -1,5 +1,5 @@
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S | FileCheck %s
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -pass-remarks-analysis=loop-vectorize -disable-output -S 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S -pass-remarks-analysis=loop-vectorize 2>%t | FileCheck %s
+; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
 
 target triple = "aarch64-unknown-linux-gnu"
 

@@ -956,8 +956,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
       auto CanWidenInstruction = [this](Instruction const &Inst) {
         Type *InstTy = Inst.getType();
-        if (isa<CallInst>(Inst) && isa<StructType>(InstTy) &&
-            canWidenCallReturnType(InstTy)) {
+        if (isa<StructType>(InstTy)) {
+          if (!isa<CallInst>(Inst) || !canWidenCallReturnType(InstTy))
+            return false;
           // TODO: Remove the `StructVecCallFound` flag once vectorizing calls
           // with struct returns is supported.
           StructVecCallFound = true;
@@ -965,7 +966,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // all users are extractvalue as vectorizable.
           return all_of(Inst.users(), IsaPred<ExtractValueInst>);
         }
-        return VectorType::isValidElementType(InstTy) || InstTy->isVoidTy();
+        return canVectorizeTy(InstTy);
       };
 
       // Check that the instruction return type is vectorizable.

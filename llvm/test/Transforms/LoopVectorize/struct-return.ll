@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-width=2 -force-vector-interleave=1 -S | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-width=2 -force-vector-interleave=1 -pass-remarks-analysis=loop-vectorize  -disable-output -S 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S -pass-remarks-analysis=loop-vectorize 2>%t | FileCheck %s
+; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
