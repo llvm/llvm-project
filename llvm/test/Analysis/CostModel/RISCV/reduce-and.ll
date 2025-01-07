@@ -24,10 +24,10 @@ define i32 @reduce_i1(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV16 = call i1 @llvm.vector.reduce.and.nxv16i1(<vscale x 16 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV32 = call i1 @llvm.vector.reduce.and.nxv32i1(<vscale x 32 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV64 = call i1 @llvm.vector.reduce.and.nxv64i1(<vscale x 64 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV128 = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %NXV256 = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %NXV512 = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %NXV1024 = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV128 = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %NXV256 = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %NXV512 = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %NXV1024 = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SIZE-LABEL: 'reduce_i1'
@@ -49,10 +49,10 @@ define i32 @reduce_i1(i32 %arg) {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV16 = call i1 @llvm.vector.reduce.and.nxv16i1(<vscale x 16 x i1> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV32 = call i1 @llvm.vector.reduce.and.nxv32i1(<vscale x 32 x i1> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV64 = call i1 @llvm.vector.reduce.and.nxv64i1(<vscale x 64 x i1> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV128 = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %NXV256 = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %NXV512 = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %NXV1024 = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %NXV128 = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %NXV256 = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %NXV512 = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %NXV1024 = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %V1   = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)

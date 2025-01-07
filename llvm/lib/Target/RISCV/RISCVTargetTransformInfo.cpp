@@ -1551,17 +1551,13 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
       //   vcpop.m a0, v8
       //   seqz a0, a0
 
-      // Scalable VT: In nxv128i1 and larger vector elements,
+      // Scalable VT: In nxv256i1 and larger vector elements,
       // Fixed VT:    If getFixedSizeInBits() >= (4 * getRealMinVLen()),
-      //              the VMAND_MM instructions have started to be added.
+      //   the VMAND_MM instructions have started to be added.
       InstructionCost NumOfVMAND = 0;
-      if (LT.second.isScalableVector()) {
-        NumOfVMAND = (LT.first >= 2) ? (LT.first - 1) : 0;
-      } else {
-        bool IsOverflow =
-            LT.second.getFixedSizeInBits() == ST->getRealMinVLen();
-        NumOfVMAND = (IsOverflow && LT.first > 2) ? (LT.first - 2) : 0;
-      }
+      if (LT.second.isScalableVector() ||
+          LT.second.getFixedSizeInBits() == ST->getRealMinVLen())
+        NumOfVMAND = (LT.first > 2) ? (LT.first - 2) : 0;
       return NumOfVMAND *
                  getRISCVInstructionCost(RISCV::VMAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second, CostKind) +

@@ -204,7 +204,7 @@ define zeroext i1 @vreduce_and_nxv64i1(<vscale x 64 x i1> %v) {
 
 define zeroext i1 @vreduce_and_nxv128i1(<vscale x 128 x i1> %v) {
 ; THROUGHPUT-LABEL: 'vreduce_and_nxv128i1'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> %v)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> %v)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i1 %red
 ;
   %red = call i1 @llvm.vector.reduce.and.nxv128i1(<vscale x 128 x i1> %v)
@@ -213,7 +213,7 @@ define zeroext i1 @vreduce_and_nxv128i1(<vscale x 128 x i1> %v) {
 
 define zeroext i1 @vreduce_and_nxv256i1(<vscale x 256 x i1> %v) {
 ; THROUGHPUT-LABEL: 'vreduce_and_nxv256i1'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> %v)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> %v)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i1 %red
 ;
   %red = call i1 @llvm.vector.reduce.and.nxv256i1(<vscale x 256 x i1> %v)
@@ -222,7 +222,7 @@ define zeroext i1 @vreduce_and_nxv256i1(<vscale x 256 x i1> %v) {
 
 define zeroext i1 @vreduce_and_nxv512i1(<vscale x 512 x i1> %v) {
 ; THROUGHPUT-LABEL: 'vreduce_and_nxv512i1'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> %v)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> %v)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i1 %red
 ;
   %red = call i1 @llvm.vector.reduce.and.nxv512i1(<vscale x 512 x i1> %v)
@@ -231,7 +231,7 @@ define zeroext i1 @vreduce_and_nxv512i1(<vscale x 512 x i1> %v) {
 
 define zeroext i1 @vreduce_and_nxv1024i1(<vscale x 1024 x i1> %v) {
 ; THROUGHPUT-LABEL: 'vreduce_and_nxv1024i1'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> %v)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %red = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> %v)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i1 %red
 ;
   %red = call i1 @llvm.vector.reduce.and.nxv1024i1(<vscale x 1024 x i1> %v)
