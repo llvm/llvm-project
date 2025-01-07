@@ -160,7 +160,10 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved variables without explicit or default initializers are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized,
+  except for implicitly saved scalar variables from the main program that are
+  kept on the stack by flang and are not zero initialized. It is not advised to
+  rely on this extension in new code.
 * In a saved entity of a type with a default initializer, components without default
   values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
