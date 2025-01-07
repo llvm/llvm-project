@@ -857,7 +857,7 @@ func.func @select_tensor_encoding(
 // -----
 
 func.func @bitcast_index_0(%arg0 : i64) -> index {
-  // expected-error @+1 {{'arith.bitcast' op operand type 'i64' and result type 'index' are cast incompatible}}
+  // expected-error @+1 {{'arith.bitcast' op result #0 must be signless-integer-or-float-like or memref of signless-integer or float, but got 'index'}}
   %0 = arith.bitcast %arg0 : i64 to index
   return %0 : index
 }
@@ -865,7 +865,7 @@ func.func @bitcast_index_0(%arg0 : i64) -> index {
 // -----
 
 func.func @bitcast_index_1(%arg0 : index) -> i64 {
-  // expected-error @+1 {{'arith.bitcast' op operand type 'index' and result type 'i64' are cast incompatible}}
+  // expected-error @+1 {{'arith.bitcast' op operand #0 must be signless-integer-or-float-like or memref of signless-integer or float, but got 'index'}}
   %0 = arith.bitcast %arg0 : index to i64
   return %0 : i64
 }

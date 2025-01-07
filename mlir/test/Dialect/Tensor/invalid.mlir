@@ -811,7 +811,7 @@ func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
 // -----
 
 func.func @bitcast_index_0(%arg0 : tensor<?xi64>) -> tensor<?xindex> {
-  // expected-error @+1 {{'tensor.bitcast' op operand type 'tensor<?xi64>' and result type 'tensor<?xindex>' are cast incompatible}}
+  // expected-error @+1 {{'tensor.bitcast' op result #0 must be tensor of signless integer or unsigned integer or signed integer or floating-point values, but got 'tensor<?xindex>'}}
   %0 = tensor.bitcast %arg0 : tensor<?xi64> to tensor<?xindex>
   return %0 : tensor<?xindex>
 }
@@ -819,7 +819,7 @@ func.func @bitcast_index_0(%arg0 : tensor<?xi64>) -> tensor<?xindex> {
 // -----
 
 func.func @bitcast_index_1(%arg0 : tensor<?xindex>) -> tensor<?xi64> {
-  // expected-error @+1 {{'tensor.bitcast' op operand type 'tensor<?xindex>' and result type 'tensor<?xi64>' are cast incompatible}}
+  // expected-error @+1 {{'tensor.bitcast' op operand #0 must be tensor of signless integer or unsigned integer or signed integer or floating-point values, but got 'tensor<?xindex>'}}
   %0 = tensor.bitcast %arg0 : tensor<?xindex> to tensor<?xi64>
   return %0 : tensor<?xi64>
 }

@@ -908,6 +908,11 @@ def BoolLike : TypeOrContainer<I1, "bool-like">;
 
 def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
 
+// Type constraint for signless-integer-like types: signless integers, 
+// vectors of signless integers or tensors of signless integers.
+def SignlessInteger : TypeOrValueSemanticsContainer<
+    AnySignlessInteger, "signless-integer">;
+
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
 def SignlessIntegerLike : TypeOrValueSemanticsContainer<

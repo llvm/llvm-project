@@ -1394,7 +1394,7 @@ def Arith_IndexCastUIOp
 
 // Bitcast can convert between memrefs of signless integers and floats.
 def BitcastTypeConstraint : TypeConstraint<Or<[
-        SignlessIntegerOrFloatLike.predicate,
+        SignlessInteger.predicate, FloatLike.predicate,
         MemRefOf<[AnySignlessInteger, AnyFloat]>.predicate]>,
     "signless-integer-or-float-like or memref of signless-integer or float">;
 
