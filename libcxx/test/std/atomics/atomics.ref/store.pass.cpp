@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 template <typename T, typename U>
-concept has_store = requires { std::declval<T>().store(std::declval<U>()); };
+concept has_store = requires(T const& x, U v) { x.store(v); };
 
 template <typename U>
 struct TestStore {

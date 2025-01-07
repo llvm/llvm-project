@@ -26,16 +26,16 @@
 
 template <typename T, typename U>
 concept has_compare_exchange_strong_1 =
-    requires { std::declval<T>().compare_exchange_strong(std::declval<U&>(), std::declval<U>()); };
+    requires(T const& x, U& expected, U desired) { x.compare_exchange_strong(expected, desired); };
 template <typename T, typename U>
-concept has_compare_exchange_strong_2 = requires {
-  std::declval<T>().compare_exchange_strong(std::declval<U&>(), std::declval<U>(), std::declval<std::memory_order>());
+concept has_compare_exchange_strong_2 = requires(T const& x, U& expected, U desired, std::memory_order order) {
+  x.compare_exchange_strong(expected, desired, order);
 };
 template <typename T, typename U>
-concept has_compare_exchange_strong_3 = requires {
-  std::declval<T>().compare_exchange_strong(
-      std::declval<U&>(), std::declval<U>(), std::declval<std::memory_order>(), std::declval<std::memory_order>());
-};
+concept has_compare_exchange_strong_3 =
+    requires(T const& x, U& expected, U desired, std::memory_order success, std::memory_order failure) {
+      x.compare_exchange_strong(expected, desired, success, failure);
+    };
 
 template <typename T, typename U>
 concept has_compare_exchange_strong =
