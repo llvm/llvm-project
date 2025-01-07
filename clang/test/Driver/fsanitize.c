@@ -1185,10 +1185,26 @@
 // CHECK-TOP-HOT6-NOT: unsupported argument
 // CHECK-TOP-HOT6-NOT: "-fno-sanitize-top-hot"
 
-// Invalid sanitizer 'pot'
+// Invalid: bad sanitizer
 // RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot=pot=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT7
 // CHECK-TOP-HOT7: unsupported argument 'pot=0.0' to option '-fno-sanitize-top-hot='
 
-// -fno-sanitize-top without parameters is not valid
-// RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT8
-// CHECK-TOP-HOT8: unknown argument: '-fno-sanitize-top-hot'
+// Invalid: bad cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot=undefined=xyzzy %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT8
+// CHECK-TOP-HOT8: unsupported argument 'undefined=xyzzy' to option '-fno-sanitize-top-hot='
+
+// Invalid: -fno-sanitize-top without parameters
+// RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT9
+// CHECK-TOP-HOT9: unknown argument: '-fno-sanitize-top-hot'
+
+// Invalid: -fno-sanitize-top=undefined without cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT10
+// CHECK-TOP-HOT10: unsupported argument 'undefined' to option '-fno-sanitize-top-hot='
+
+// Invalid: -fno-sanitize-top=undefined= without cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot=undefined= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT11
+// CHECK-TOP-HOT11: unsupported argument 'undefined=' to option '-fno-sanitize-top-hot='
+
+// -fno-sanitize-top= without parameters is unusual but valid (no-op)
+// RUN: %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT12
+// CHECK-TOP-HOT12-NOT: "-fno-sanitize-top-hot"

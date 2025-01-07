@@ -59,10 +59,10 @@ bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
         for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
           if (ExpandedKind & SanitizerMask::bitPosToMask(i))
             Cutoffs[i] = arg;
+
+        return true;
       }
     }
-
-    return true;
   }
 
   return false;
