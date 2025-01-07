@@ -320,26 +320,16 @@ define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
   ret i64 %add
 }
 
-define ptr @add_shl_sext_inttoptr(ptr %0, i32 %1) {
-; RV64-LABEL: add_shl_sext_inttoptr:
+define i64 @add_shl_sext(ptr %0, i32 %1) {
+; RV64-LABEL: add_shl_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a2, a1, 3
-; RV64-NEXT:    sllw a1, a2, a1
-; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    addi a0, a1, 3
+; RV64-NEXT:    sllw a0, a0, a1
 ; RV64-NEXT:    ret
   %3 = add i32 %1, 3
   %4 = shl i32 %3, %1
   %5 = sext i32 %4 to i64
-  %6 = inttoptr i64 %5 to ptr
-  %7 = icmp ugt ptr %0, %6
-  br i1 %7, label %10, label %8
-
-8:
-  %9 = load i8, ptr null, align 1
-  br label %10
-
-10:
-  ret ptr null
+  ret i64 %5
 }
 
 define i64 @add_shl_moreOneUse_sh4add(i64 %x) {
