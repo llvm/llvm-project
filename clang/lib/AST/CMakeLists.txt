@@ -85,6 +85,7 @@ add_clang_library(clangAST
   ByteCode/InterpFrame.cpp
   ByteCode/InterpStack.cpp
   ByteCode/InterpState.cpp
+  ByteCode/InterpBuiltinConstantP.cpp
   ByteCode/Pointer.cpp
   ByteCode/PrimType.cpp
   ByteCode/Program.cpp

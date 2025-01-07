@@ -226,6 +226,14 @@ public:
     return ParamTypes[ParamIndex];
   }
 
+  std::optional<unsigned> findParam(const ValueDecl *D) const {
+    for (auto &[K, V] : Params) {
+      if (V.second->asValueDecl() == D)
+        return K;
+    }
+    return std::nullopt;
+  }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,

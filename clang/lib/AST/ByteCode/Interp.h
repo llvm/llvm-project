@@ -22,6 +22,7 @@
 #include "Function.h"
 #include "FunctionPointer.h"
 #include "InterpBuiltinBitCast.h"
+#include "InterpBuiltinConstantP.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -3039,6 +3040,16 @@ bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
                const Type *TypeInfoType);
 bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType);
 bool DiagTypeid(InterpState &S, CodePtr OpPC);
+
+/// __builtin_constant_p.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool BCP(InterpState &S, CodePtr OpPC, const Expr *E) {
+  BCPVisitor BV{S};
+  BV.VisitStmt(const_cast<Expr *>(E));
+
+  S.Stk.push<T>(T::from(BV.Result));
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // Read opcode arguments

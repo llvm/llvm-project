@@ -4538,6 +4538,9 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
+  if (BuiltinID == Builtin::BI__builtin_constant_p)
+    return this->emitBCP(classifyPrim(E), E->getArg(0), E);
+
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
     return false;
