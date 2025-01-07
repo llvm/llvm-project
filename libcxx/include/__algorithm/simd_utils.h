@@ -116,65 +116,42 @@ template <class _VecT, class _Iter>
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
-template <size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<bool, _Np> __vec) noexcept {
-  return __builtin_reduce_and(__vec);
+template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI auto __as_mask(__simd_vector<_Tp, _Np> __vec) noexcept {
-  static_assert(!is_same<_Tp, bool>::value, "vector type should not be a bool!");
-  return __builtin_convertvector(__vec, __simd_vector<bool, _Np>);
-}
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+  using __mask_vec = __simd_vector<bool, _Np>;
 
-// This uses __builtin_convertvector around the __builtin_shufflevector to work around #107981.
-template <size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI __simd_vector<bool, 8>
-__extend_vector(__simd_vector<bool, _Np> __vec) noexcept {
-  using _VecT = __simd_vector<bool, _Np>;
-  if constexpr (_Np == 4) {
-    return __builtin_convertvector(
-        __builtin_shufflevector(__vec, _VecT{}, 0, 1, 2, 3, 4, 5, 6, 7), __simd_vector<bool, 8>);
-  } else if constexpr (_Np == 2) {
-    return std::__extend_vector(
-        __builtin_convertvector(__builtin_shufflevector(__vec, _VecT{}, 0, 1, 2, 3), __simd_vector<bool, 4>));
-  } else if constexpr (_Np == 1) {
-    return std::__extend_vector(
-        __builtin_convertvector(__builtin_shufflevector(__vec, _VecT{}, 0, 1), __simd_vector<bool, 2>));
-  } else {
-    static_assert(sizeof(_VecT) == 0, "Unexpected vector size");
-  }
-}
+  // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
+  auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
+#  if defined(_LIBCPP_BIG_ENDIAN)
+    return std::min<size_t>(
+        _Np, std::__countl_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
+#  else
+    return std::min<size_t>(
+        _Np, std::__countr_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
+#  endif
+  };
 
-template <size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI auto __to_int_mask(__simd_vector<bool, _Np> __vec) {
-  if constexpr (_Np < 8) {
-    return std::__bit_cast<uint8_t>(std::__extend_vector(__vec));
-  } else if constexpr (_Np == 8) {
-    return std::__bit_cast<uint8_t>(__vec);
-  } else if constexpr (_Np == 16) {
-    return std::__bit_cast<uint16_t>(__vec);
-  } else if constexpr (_Np == 32) {
-    return std::__bit_cast<uint32_t>(__vec);
-  } else if constexpr (_Np == 64) {
-    return std::__bit_cast<uint64_t>(__vec);
+  if constexpr (sizeof(__mask_vec) == sizeof(uint8_t)) {
+    return __impl(uint8_t{});
+  } else if constexpr (sizeof(__mask_vec) == sizeof(uint16_t)) {
+    return __impl(uint16_t{});
+  } else if constexpr (sizeof(__mask_vec) == sizeof(uint32_t)) {
+    return __impl(uint32_t{});
+  } else if constexpr (sizeof(__mask_vec) == sizeof(uint64_t)) {
+    return __impl(uint64_t{});
   } else {
-    static_assert(sizeof(__simd_vector<bool, _Np>) == 0, "Unexpected vector size");
+    static_assert(sizeof(__mask_vec) == 0, "unexpected required size for mask integer type");
     return 0;
   }
 }
 
-template <size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<bool, _Np> __vec) noexcept {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  return std::min<size_t>(_Np, std::__countl_zero(std::__to_int_mask(__vec)));
-#  else
-  return std::min<size_t>(_Np, std::__countr_zero(std::__to_int_mask(__vec)));
-#  endif
-}
-
-template <size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<bool, _Np> __vec) noexcept {
+template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
 
