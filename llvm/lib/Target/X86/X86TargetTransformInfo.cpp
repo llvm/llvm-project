@@ -1650,6 +1650,13 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return MatchingTypes ? TTI::TCC_Free : SubLT.first;
     }
 
+    // Attempt to match MOVSS (Idx == 0) or INSERTPS pattern. This will have
+    // been matched by improveShuffleKindFromMask as a SK_InsertSubvector of
+    // v1f32 (legalised to f32) into a v4f32.
+    if (LT.first == 1 && LT.second == MVT::v4f32 && SubLT.first == 1 &&
+        SubLT.second == MVT::f32 && (Index == 0 || ST->hasSSE41()))
+      return 1;
+
     // If the insertion isn't aligned, treat it like a 2-op shuffle.
     Kind = TTI::SK_PermuteTwoSrc;
   }
