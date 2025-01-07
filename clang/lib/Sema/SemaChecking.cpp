@@ -3926,14 +3926,31 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     }
   }
 
-  // Pointer to object of size zero is not allowed.
-  if (RequireCompleteType(Ptr->getBeginLoc(), AtomTy,
-                          diag::err_incomplete_type))
-    return ExprError();
-  if (Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
-    Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
-        << Ptr->getType() << 1 << Ptr->getSourceRange();
-    return ExprError();
+  if (Form != TestAndSet && Form != Clear) {
+    // Pointer to object of size zero is not allowed.
+    if (RequireCompleteType(Ptr->getBeginLoc(), AtomTy,
+                            diag::err_incomplete_type))
+      return ExprError();
+
+    if (Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
+      Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
+          << Ptr->getType() << 1 << Ptr->getSourceRange();
+      return ExprError();
+    }
+  } else {
+    // The __atomic_clear and __atomic_test_and_set intrinsics accept any
+    // non-const pointer type, including void* and pointers to incomplete
+    // structs, but only access the first byte.
+    if (AtomTy.isVolatileQualified())
+      Ptr = ImpCastExprToType(
+                Ptr,
+                Context.getPointerType(Context.getVolatileType(Context.CharTy)),
+                CK_BitCast)
+                .get();
+    else
+      Ptr = ImpCastExprToType(Ptr, Context.getPointerType(Context.CharTy),
+                              CK_BitCast)
+                .get();
   }
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
@@ -3978,8 +3995,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     return ExprError();
   }
 
-  if (!IsC11 && !AtomTy.isTriviallyCopyableType(Context) &&
-      !AtomTy->isScalarType()) {
+  if (!IsC11 && Form != TestAndSet && Form != Clear &&
+      !AtomTy.isTriviallyCopyableType(Context) && !AtomTy->isScalarType()) {
     // For GNU atomics, require a trivially-copyable type. This is not part of
     // the GNU atomics specification but we enforce it for consistency with
     // other atomics which generally all require a trivially-copyable type. This

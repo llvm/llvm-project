@@ -235,16 +235,111 @@ void test_and_set_dynamic(char *ptr, int order) {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X:%.*]] = alloca [10 x i32], align 4
-// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [10 x i32], ptr [[X]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw volatile xchg ptr [[ARRAYDECAY]], i8 1 seq_cst, align 4
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP0]], 0
-// CHECK-NEXT:    store i1 [[TOBOOL]], ptr [[ATOMIC_TEMP]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ATOMIC_TEMP]], align 4
+// CHECK-NEXT:    store i1 [[TOBOOL]], ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ATOMIC_TEMP]], align 1
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP1]] to i1
 // CHECK-NEXT:    ret void
 //
 void test_and_set_array() {
   volatile int x[10];
   __atomic_test_and_set(x, memory_order_seq_cst);
+}
+
+// These intrinsics accept any pointer type, including void and incomplete
+// structs, and always access the first byte regardless of the actual type
+// size.
+
+struct incomplete;
+
+// CHECK-LABEL: define dso_local void @clear_int(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store atomic i8 0, ptr [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    ret void
+//
+void clear_int(int *ptr) {
+  __atomic_clear(ptr, memory_order_relaxed);
+}
+// CHECK-LABEL: define dso_local void @clear_void(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store atomic i8 0, ptr [[TMP0]] monotonic, align 1
+// CHECK-NEXT:    ret void
+//
+void clear_void(void *ptr) {
+  __atomic_clear(ptr, memory_order_relaxed);
+}
+// CHECK-LABEL: define dso_local void @clear_incomplete(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store atomic i8 0, ptr [[TMP0]] monotonic, align 1
+// CHECK-NEXT:    ret void
+//
+void clear_incomplete(struct incomplete *ptr) {
+  __atomic_clear(ptr, memory_order_relaxed);
+}
+
+// CHECK-LABEL: define dso_local void @test_and_set_int(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 1 monotonic, align 4
+// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK-NEXT:    store i1 [[TOBOOL]], ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK-NEXT:    ret void
+//
+void test_and_set_int(int *ptr) {
+  __atomic_test_and_set(ptr, memory_order_relaxed);
+}
+// CHECK-LABEL: define dso_local void @test_and_set_void(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 1 monotonic, align 1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK-NEXT:    store i1 [[TOBOOL]], ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK-NEXT:    ret void
+//
+void test_and_set_void(void *ptr) {
+  __atomic_test_and_set(ptr, memory_order_relaxed);
+}
+// CHECK-LABEL: define dso_local void @test_and_set_incomplete(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 1 monotonic, align 1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK-NEXT:    store i1 [[TOBOOL]], ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ATOMIC_TEMP]], align 1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK-NEXT:    ret void
+//
+void test_and_set_incomplete(struct incomplete *ptr) {
+  __atomic_test_and_set(ptr, memory_order_relaxed);
 }

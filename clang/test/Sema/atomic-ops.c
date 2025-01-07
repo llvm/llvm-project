@@ -294,6 +294,17 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_clear(&flag, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
   __atomic_clear(&flag, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
 
+  // These intrinsics accept any non-const pointer type (including
+  // pointer-to-incomplete), and access the first byte.
+  __atomic_test_and_set((void*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((char*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((int*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((struct incomplete*)0x8000, memory_order_seq_cst);
+  __atomic_clear((void*)0x8000, memory_order_seq_cst);
+  __atomic_clear((char*)0x8000, memory_order_seq_cst);
+  __atomic_clear((int*)0x8000, memory_order_seq_cst);
+  __atomic_clear((struct incomplete*)0x8000, memory_order_seq_cst);
+
   __c11_atomic_init(ci, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
   __c11_atomic_store(ci, 0, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
   __c11_atomic_load(ci, memory_order_acquire);
