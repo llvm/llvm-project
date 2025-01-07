@@ -2251,6 +2251,14 @@ TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
   EXPECT_TRUE(matches("template <typename T> struct S { static T foo(); };"
                       "template <typename T> void x() { S<T>::foo(); }",
                       dependentScopeDeclRefExpr(hasDependentName("foo"))));
+
+  EXPECT_TRUE(matches(
+      R"(
+        template <typename T> struct declToImport {
+          typedef typename T::type dependent_name;
+        };
+      )",
+      dependentNameType(hasDependentName(("type")))));
 }
 
 TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
