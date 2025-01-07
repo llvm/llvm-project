@@ -423,10 +423,11 @@ public:
       : GCNSchedStage(StageID, DAG) {}
 };
 
-/// Attempts to increase function occupancy with respect to VGPR usage by one by
-/// sinking trivially rematerializable instructions to their use. When the stage
-/// estimates increasing occupancy is possible, as few instructions as possible
-/// are rematerialized to reduce potential negative effects on function latency.
+/// Attempts to increase function occupancy with respect to VGPR usage by one
+/// and/or reduce function spilling by sinking trivially rematerializable
+/// instructions to their use. When the stage estimates increasing occupancy or
+/// reducing spilling is possible, as few instructions as possible are
+/// rematerialized to reduce potential negative effects on function latency.
 ///
 /// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
@@ -451,11 +452,11 @@ private:
         : RematMI(RematMI), UseMI(UseMI), DefRegion(DefRegion) {}
   };
 
-  /// Determines whether we can increase function occupancy by 1 or
-  /// reduce/eliminate spilling through rematerialization. If we can, returns
-  /// true and fill \p RematInstructions with a list of rematerializable
-  /// instructions whose sinking would result in increased occupancy and/or
-  /// reduced spilling; returns false otherwise.
+  /// Determines whether we can increase function occupancy by 1 and/or
+  /// reduce spilling through rematerialization. If we can, returns true and
+  /// fill \p RematInstructions with a list of rematerializable instructions
+  /// whose sinking would result in increased occupancy and/or reduced spilling;
+  /// returns false otherwise.
   bool canIncreaseOccupancyOrReduceSpill(
       SmallVectorImpl<RematInstruction> &RematInstructions);
 
