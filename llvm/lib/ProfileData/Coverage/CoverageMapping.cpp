@@ -221,6 +221,40 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
+// Find an independence pair for each condition:
+// - The condition is true in one test and false in the other.
+// - The decision outcome is true one test and false in the other.
+// - All other conditions' values must be equal or marked as "don't care".
+void MCDCRecord::findIndependencePairs() {
+  if (IndependencePairs)
+    return;
+
+  IndependencePairs.emplace();
+
+  unsigned NumTVs = TV.size();
+  // Will be replaced to shorter expr.
+  unsigned TVTrueIdx = std::distance(
+      TV.begin(),
+      std::find_if(TV.begin(), TV.end(),
+                   [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
+
+  );
+  for (unsigned I = TVTrueIdx; I < NumTVs; ++I) {
+    const auto &[A, ACond] = TV[I];
+    assert(ACond == MCDCRecord::MCDC_True);
+    for (unsigned J = 0; J < TVTrueIdx; ++J) {
+      const auto &[B, BCond] = TV[J];
+      assert(BCond == MCDCRecord::MCDC_False);
+      // If the two vectors differ in exactly one condition, ignoring DontCare
+      // conditions, we have found an independence pair.
+      auto AB = A.getDifferences(B);
+      if (AB.count() == 1)
+        IndependencePairs->insert(
+            {AB.find_first(), std::make_pair(J + 1, I + 1)});
+    }
+  }
+}
+
 mcdc::TVIdxBuilder::TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
                                  int Offset)
     : Indices(NextIDs.size()) {
@@ -375,9 +409,6 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors &ExecVectors;
 
-  /// Number of False items in ExecVectors
-  unsigned NumExecVectorsF;
-
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
 #endif
@@ -392,8 +423,9 @@ public:
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
-        Folded(NumConditions, false), IndependencePairs(NumConditions),
-        ExecVectors(ExecVectorsByCond[false]), IsVersion11(IsVersion11) {}
+        Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
+        IndependencePairs(NumConditions), ExecVectors(ExecVectorsByCond[false]),
+        IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -446,32 +478,9 @@ private:
     // Fill ExecVectors order by False items and True items.
     // ExecVectors is the alias of ExecVectorsByCond[false], so
     // Append ExecVectorsByCond[true] on it.
-    NumExecVectorsF = ExecVectors.size();
     auto &ExecVectorsT = ExecVectorsByCond[true];
     ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
                        std::make_move_iterator(ExecVectorsT.end()));
-  }
-
-  // Find an independence pair for each condition:
-  // - The condition is true in one test and false in the other.
-  // - The decision outcome is true one test and false in the other.
-  // - All other conditions' values must be equal or marked as "don't care".
-  void findIndependencePairs() {
-    unsigned NumTVs = ExecVectors.size();
-    for (unsigned I = NumExecVectorsF; I < NumTVs; ++I) {
-      const auto &[A, ACond] = ExecVectors[I];
-      assert(ACond == MCDCRecord::MCDC_True);
-      for (unsigned J = 0; J < NumExecVectorsF; ++J) {
-        const auto &[B, BCond] = ExecVectors[J];
-        assert(BCond == MCDCRecord::MCDC_False);
-        // If the two vectors differ in exactly one condition, ignoring DontCare
-        // conditions, we have found an independence pair.
-        auto AB = A.getDifferences(B);
-        if (AB.count() == 1)
-          IndependencePairs.insert(
-              {AB.find_first(), std::make_pair(J + 1, I + 1)});
-      }
-    }
   }
 
 public:
@@ -485,7 +494,6 @@ public:
   /// location is also tracked, as well as whether it is constant folded (in
   /// which case it is excuded from the metric).
   MCDCRecord processMCDCRecord() {
-    unsigned I = 0;
     MCDCRecord::CondIDMap PosToID;
     MCDCRecord::LineColPairMap CondLoc;
 
@@ -499,23 +507,19 @@ public:
     //   visualize where the condition is.
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
-    for (const auto *B : Branches) {
+    for (auto [I, B] : enumerate(Branches)) {
       const auto &BranchParams = B->getBranchParams();
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
-      Folded[I++] = (B->Count.isZero() || B->FalseCount.isZero());
+      Folded[false][I] = B->FalseCount.isZero();
+      Folded[true][I] = B->Count.isZero();
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
     findExecutedTestVectors();
 
-    // Compare executed test vectors against each other to find an independence
-    // pairs for each condition.  This processing takes the most time.
-    findIndependencePairs();
-
     // Record Test vectors, executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors),
-                      std::move(IndependencePairs), std::move(Folded),
+    return MCDCRecord(Region, std::move(ExecVectors), std::move(Folded),
                       std::move(PosToID), std::move(CondLoc));
   }
 };
