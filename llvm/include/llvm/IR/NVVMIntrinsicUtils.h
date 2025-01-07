@@ -38,9 +38,8 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
-inline bool IntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+inline bool FloatToIntIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
-  // Float to i32 / i64 conversion intrinsics:
   case Intrinsic::nvvm_f2i_rm_ftz:
   case Intrinsic::nvvm_f2i_rn_ftz:
   case Intrinsic::nvvm_f2i_rp_ftz:
@@ -169,6 +168,54 @@ IntrinsicGetRoundingMode(Intrinsic::ID IntrinsicID) {
   }
   llvm_unreachable("Invalid f2i/d2i rounding mode intrinsic");
   return APFloat::roundingMode::Invalid;
+}
+
+inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+    return true;
+  }
+  return false;
+}
+
+inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+    return true;
+  }
+  return false;
+}
+
+inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return true;
+  }
+  return false;
 }
 
 } // namespace nvvm
