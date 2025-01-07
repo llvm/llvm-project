@@ -1340,9 +1340,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (DstOperand.getSubReg() && !DstOperand.isUndef())
     return false;
 
-  // Only support subregister destinations when the def is read-undef, in the
-  // physical register case. We're widening the def and need to avoid clobbering
-  // other live values in the unused register pieces.
+  // In the physical register case, checking that the def is read-undef is not
+  // enough. We're widening the def and need to avoid clobbering other live
+  // values in the unused register pieces.
   //
   // TODO: Targets may support rewriting the rematerialized instruction to only
   // touch relevant lanes, in which case we don't need any liveness check.
