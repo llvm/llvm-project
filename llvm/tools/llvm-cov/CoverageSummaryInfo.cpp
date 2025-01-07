@@ -89,9 +89,8 @@ sumRegions(const CoverageData &CD) {
           LineCoverageInfo(CoveredLines, NumLines)};
 }
 
-CoverageDataSummary::CoverageDataSummary(const CoverageData &CD,
-                                         ArrayRef<CountedRegion> CodeRegions) {
-  std::tie(RegionCoverage, LineCoverage) = sumRegions(CodeRegions, CD);
+CoverageDataSummary::CoverageDataSummary(const CoverageData &CD) {
+  std::tie(RegionCoverage, LineCoverage) = sumRegions(CD);
   BranchCoverage = sumBranches(CD.getBranches());
   MCDCCoverage = sumMCDCPairs(CD.getMCDCRecords());
 }
@@ -104,7 +103,7 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   auto Summary =
       FunctionCoverageSummary(Function.Name, Function.ExecutionCount);
 
-  Summary += CoverageDataSummary(CD, Function.CountedRegions);
+  Summary += CoverageDataSummary(CD);
 
   // Compute the branch coverage, including branches from expansions.
   Summary.BranchCoverage += sumBranchExpansions(CM, CD.getExpansions());
