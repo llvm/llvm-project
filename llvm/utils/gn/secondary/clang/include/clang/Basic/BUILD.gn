@@ -95,6 +95,10 @@ clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsSPIRV") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsX86") {
   args = [ "-gen-clang-builtins" ]
 }
