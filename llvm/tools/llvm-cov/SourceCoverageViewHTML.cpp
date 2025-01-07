@@ -24,7 +24,7 @@ using namespace llvm;
 namespace {
 
 template <class SummaryTy>
-bool IsSummaryEmpty(const SummaryTy &Report, const CoverageViewOptions &Opts) {
+bool isSummaryEmpty(const SummaryTy &Report, const CoverageViewOptions &Opts) {
   return !(Report.FunctionCoverage.getNumFunctions() ||
            (Opts.ShowInstantiationSummary &&
             Report.InstantiationCoverage.getNumFunctions()) ||
@@ -676,7 +676,7 @@ Error CoveragePrinterHTML::createIndexFile(
       Coverage, Totals, SourceFiles, Opts, Filters);
   bool EmptyFiles = false;
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
-    if (!IsSummaryEmpty(FileReports[I], Opts))
+    if (!isSummaryEmpty(FileReports[I], Opts))
       emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
     else
       EmptyFiles = true;
@@ -744,7 +744,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
     // Make directories at the top of the table.
     for (auto &&SubDir : SubDirs) {
       auto &Report = SubDir.second.first;
-      if (IsSummaryEmpty(Report, Printer.Opts))
+      if (isSummaryEmpty(Report, Printer.Opts))
         EmptyFiles.push_back(&Report);
       else
         emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
@@ -753,7 +753,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
 
     for (auto &&SubFile : SubFiles) {
       auto &Report = SubFile.second;
-      if (IsSummaryEmpty(Report, Printer.Opts))
+      if (isSummaryEmpty(Report, Printer.Opts))
         EmptyFiles.push_back(&Report);
       else
         emitTableRow(OSRef, Options, buildRelLinkToFile(Report.Name), Report,
