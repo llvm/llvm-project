@@ -316,7 +316,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTy(Arg.getType())) {
+      if (isPointerTyOrWrapper(Arg.getType())) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0)
           buildOpDecorate(VRegs[i][0], MIRBuilder,
@@ -418,6 +418,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                .addImm(FuncControl)
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
+  GR->addGlobalObject(&F, &MIRBuilder.getMF(), FuncVReg);
 
   // Add OpFunctionParameter instructions
   int i = 0;
@@ -431,6 +432,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
       GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
+    GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
   // Name the function.

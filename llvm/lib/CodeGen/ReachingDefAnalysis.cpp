@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "reaching-deps-analysis"
+#define DEBUG_TYPE "reaching-defs-analysis"
 
 char ReachingDefAnalysis::ID = 0;
 INITIALIZE_PASS(ReachingDefAnalysis, DEBUG_TYPE, "ReachingDefAnalysis", false,

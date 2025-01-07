@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 ; The two loads based on %struct.0, loading two different data types

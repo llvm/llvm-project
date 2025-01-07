@@ -910,6 +910,56 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
   return loopNest;
 }
 
+llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
+    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+    bool isUnordered) {
+  assert(!extents.empty() && "must have at least one extent");
+  // Build loop nest from column to row.
+  auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
+  mlir::Type indexType = builder.getIndexType();
+  unsigned dim = extents.size() - 1;
+  fir::DoLoopOp outerLoop = nullptr;
+  fir::DoLoopOp parentLoop = nullptr;
+  llvm::SmallVector<mlir::Value> oneBasedIndices;
+  oneBasedIndices.resize(dim + 1);
+  for (auto extent : llvm::reverse(extents)) {
+    auto ub = builder.createConvert(loc, indexType, extent);
+
+    // The outermost loop takes reductionInits as the initial
+    // values of its iter-args.
+    // A child loop takes its iter-args from the region iter-args
+    // of its parent loop.
+    fir::DoLoopOp doLoop;
+    if (!parentLoop) {
+      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
+                                             /*finalCountValue=*/false,
+                                             reductionInits);
+    } else {
+      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
+                                             /*finalCountValue=*/false,
+                                             parentLoop.getRegionIterArgs());
+      // Return the results of the child loop from its parent loop.
+      builder.create<fir::ResultOp>(loc, doLoop.getResults());
+    }
+
+    builder.setInsertionPointToStart(doLoop.getBody());
+    // Reverse the indices so they are in column-major order.
+    oneBasedIndices[dim--] = doLoop.getInductionVar();
+    if (!outerLoop)
+      outerLoop = doLoop;
+    parentLoop = doLoop;
+  }
+
+  llvm::SmallVector<mlir::Value> reductionValues;
+  reductionValues =
+      genBody(loc, builder, oneBasedIndices, parentLoop.getRegionIterArgs());
+  builder.setInsertionPointToEnd(parentLoop.getBody());
+  builder.create<fir::ResultOp>(loc, reductionValues);
+  builder.setInsertionPointAfter(outerLoop);
+  return outerLoop->getResults();
+}
+
 static fir::ExtendedValue translateVariableToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
     bool forceHlfirBase = false, bool contiguousHint = false) {

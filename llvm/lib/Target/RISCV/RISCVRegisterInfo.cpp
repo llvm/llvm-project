@@ -162,7 +162,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                          MCRegister PhysReg) const {
-  return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
+  return !MF.getSubtarget().isRegisterReservedByUser(PhysReg);
 }
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {

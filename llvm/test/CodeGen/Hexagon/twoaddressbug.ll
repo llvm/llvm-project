@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s
+; RUN: llc -mtriple=hexagon -O2 < %s
 ; REQUIRES: asserts
 
 ; This file used to fail with an "UNREACHABLE executed!" in Post-RA pseudo

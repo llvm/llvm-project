@@ -228,7 +228,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE5:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
@@ -248,16 +248,16 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
-; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5]]
-; CHECK:       pred.store.if4:
+; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i32> [[WIDE_LOAD3]], i32 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP21]], align 4
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK:       pred.store.continue5:
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -265,8 +265,8 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IND:%.*]] = phi i8 [ [[IND_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

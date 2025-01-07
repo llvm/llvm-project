@@ -101,6 +101,7 @@ MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("livedebugvars", LiveDebugVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-intervals", LiveIntervalsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-reg-matrix", LiveRegMatrixAnalysis())
+MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
@@ -116,7 +117,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PI
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("spill-code-placement", SpillPlacementAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksPass())
 // MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
 // LazyMachineBlockFrequencyInfoAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
@@ -149,6 +149,7 @@ MACHINE_FUNCTION_PASS("phi-node-elimination", PHIEliminationPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
 MACHINE_FUNCTION_PASS("print<livedebugvars>", LiveDebugVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-intervals>", LiveIntervalsPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<live-stacks>", LiveStacksPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-vars>", LiveVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(errs()))
@@ -178,7 +179,7 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
                                           PARAMS)
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "regallocfast", "RegAllocFast",
+    "regallocfast", "RegAllocFastPass",
     [](RegAllocFastPassOptions Opts) { return RegAllocFastPass(Opts); },
     [PB = this](StringRef Params) {
       return parseRegAllocFastPassOptions(*PB, Params);

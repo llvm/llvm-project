@@ -502,19 +502,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpLinearClause &x) {
-    common::visit(common::visitors{
-                      [&](const parser::OmpLinearClause::WithoutModifier
-                              &linearWithoutModifier) {
-                        ResolveOmpNameList(linearWithoutModifier.names,
-                            Symbol::Flag::OmpLinear);
-                      },
-                      [&](const parser::OmpLinearClause::WithModifier
-                              &linearWithModifier) {
-                        ResolveOmpNameList(
-                            linearWithModifier.names, Symbol::Flag::OmpLinear);
-                      },
-                  },
-        x.u);
+    auto &objects{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
     return false;
   }
 

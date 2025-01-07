@@ -56,7 +56,7 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
   // files will be built with -ffunction-sections or /Gy, so most things worth
   // stripping will be in a comdat.
   if (file)
-    live = !file->ctx.config.doGC || !isCOMDAT();
+    live = !file->symtab.ctx.config.doGC || !isCOMDAT();
   else
     live = true;
 }
@@ -129,7 +129,7 @@ void SectionChunk::applyRelX64(uint8_t *off, uint16_t type, OutputSection *os,
   case IMAGE_REL_AMD64_REL32_4:  add32(off, s - p - 8); break;
   case IMAGE_REL_AMD64_REL32_5:  add32(off, s - p - 9); break;
   case IMAGE_REL_AMD64_SECTION:
-    applySecIdx(off, os, file->ctx.outputSections.size());
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
     break;
   case IMAGE_REL_AMD64_SECREL:   applySecRel(this, off, os, s); break;
   default:
@@ -149,7 +149,7 @@ void SectionChunk::applyRelX86(uint8_t *off, uint16_t type, OutputSection *os,
   case IMAGE_REL_I386_DIR32NB:  add32(off, s); break;
   case IMAGE_REL_I386_REL32:    add32(off, s - p - 4); break;
   case IMAGE_REL_I386_SECTION:
-    applySecIdx(off, os, file->ctx.outputSections.size());
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
     break;
   case IMAGE_REL_I386_SECREL:   applySecRel(this, off, os, s); break;
   default:
@@ -225,7 +225,7 @@ void SectionChunk::applyRelARM(uint8_t *off, uint16_t type, OutputSection *os,
   case IMAGE_REL_ARM_BRANCH24T: applyBranch24T(off, sx - p - 4); break;
   case IMAGE_REL_ARM_BLX23T:    applyBranch24T(off, sx - p - 4); break;
   case IMAGE_REL_ARM_SECTION:
-    applySecIdx(off, os, file->ctx.outputSections.size());
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
     break;
   case IMAGE_REL_ARM_SECREL:    applySecRel(this, off, os, s); break;
   case IMAGE_REL_ARM_REL32:     add32(off, sx - p - 4); break;
@@ -346,7 +346,7 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
   case IMAGE_REL_ARM64_SECREL_HIGH12A: applySecRelHigh12A(this, off, os, s); break;
   case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, off, os, s); break;
   case IMAGE_REL_ARM64_SECTION:
-    applySecIdx(off, os, file->ctx.outputSections.size());
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
     break;
   case IMAGE_REL_ARM64_REL32:          add32(off, s - p - 4); break;
   default:
@@ -369,13 +369,14 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
   // Get the name of the symbol. If it's null, it was discarded early, so we
   // have to go back to the object file.
   ObjFile *file = fromChunk->file;
-  StringRef name;
+  std::string name;
   if (sym) {
-    name = sym->getName();
+    name = toString(file->symtab.ctx, *sym);
   } else {
     COFFSymbolRef coffSym =
         check(file->getCOFFObj()->getSymbol(rel.SymbolTableIndex));
-    name = check(file->getCOFFObj()->getSymbolName(coffSym));
+    name = maybeDemangleSymbol(
+        file->symtab.ctx, check(file->getCOFFObj()->getSymbolName(coffSym)));
   }
 
   std::vector<std::string> symbolLocations =
@@ -427,7 +428,8 @@ void SectionChunk::applyRelocation(uint8_t *off,
   // section is needed to compute SECREL and SECTION relocations used in debug
   // info.
   Chunk *c = sym ? sym->getChunk() : nullptr;
-  OutputSection *os = c ? file->ctx.getOutputSection(c) : nullptr;
+  COFFLinkerContext &ctx = file->symtab.ctx;
+  OutputSection *os = c ? ctx.getOutputSection(c) : nullptr;
 
   // Skip the relocation if it refers to a discarded section, and diagnose it
   // as an error if appropriate. If a symbol was discarded early, it may be
@@ -435,7 +437,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
   // it was an absolute or synthetic symbol.
   if (!sym ||
       (!os && !isa<DefinedAbsolute>(sym) && !isa<DefinedSynthetic>(sym))) {
-    maybeReportRelocationToDiscarded(this, sym, rel, file->ctx.config.mingw);
+    maybeReportRelocationToDiscarded(this, sym, rel, ctx.config.mingw);
     return;
   }
 
@@ -443,7 +445,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
 
   // Compute the RVA of the relocation for relative relocations.
   uint64_t p = rva + rel.VirtualAddress;
-  uint64_t imageBase = file->ctx.config.imageBase;
+  uint64_t imageBase = ctx.config.imageBase;
   switch (getArch()) {
   case Triple::x86_64:
     applyRelX64(off, rel.Type, os, s, p, imageBase);
@@ -669,7 +671,7 @@ void SectionChunk::getRuntimePseudoRelocs(
             toString(file));
       continue;
     }
-    int addressSizeInBits = file->ctx.config.is64() ? 64 : 32;
+    int addressSizeInBits = file->symtab.ctx.config.is64() ? 64 : 32;
     if (sizeInBits < addressSizeInBits) {
       warn("runtime pseudo relocation in " + toString(file) + " against " +
            "symbol " + target->getName() + " is too narrow (only " +
@@ -1098,7 +1100,7 @@ void CHPERedirectionChunk::writeTo(uint8_t *buf) const {
 }
 
 ImportThunkChunkARM64EC::ImportThunkChunkARM64EC(ImportFile *file)
-    : ImportThunkChunk(file->ctx, file->impSym), file(file) {}
+    : ImportThunkChunk(file->symtab.ctx, file->impSym), file(file) {}
 
 size_t ImportThunkChunkARM64EC::getSize() const {
   if (!extended)
@@ -1122,7 +1124,7 @@ void ImportThunkChunkARM64EC::writeTo(uint8_t *buf) const {
   applyArm64Addr(buf + 8, exitThunkRVA, rva + 8, 12);
   applyArm64Imm(buf + 12, exitThunkRVA & 0xfff, 0);
 
-  Defined *helper = cast<Defined>(file->ctx.config.arm64ECIcallHelper);
+  Defined *helper = cast<Defined>(file->symtab.ctx.config.arm64ECIcallHelper);
   if (extended) {
     // Replace last instruction with an inline range extension thunk.
     memcpy(buf + 16, arm64Thunk, sizeof(arm64Thunk));
@@ -1136,7 +1138,7 @@ void ImportThunkChunkARM64EC::writeTo(uint8_t *buf) const {
 bool ImportThunkChunkARM64EC::verifyRanges() {
   if (extended)
     return true;
-  auto helper = cast<Defined>(file->ctx.config.arm64ECIcallHelper);
+  auto helper = cast<Defined>(file->symtab.ctx.config.arm64ECIcallHelper);
   return isInt<28>(helper->getRVA() - rva - 16);
 }
 

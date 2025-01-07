@@ -185,7 +185,7 @@ static std::string getDataLayoutString(const Triple &T) {
 
   // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
   if (is64Bit)
-    Ret += "-n32:64";
+    Ret += "-i128:128-n32:64";
   else
     Ret += "-n32";
 

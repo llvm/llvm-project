@@ -18,44 +18,18 @@ on:
       - '.github/workflows/containers/github-action-ci/**'
 
 jobs:
-  # TODO(boomanaiden154): Switch this back to a single stage build when we can
-  # run this on the self-hosted runners and don't have to do it this way to
-  # avoid timeouts.
-  build-ci-container-stage1:
+  build-ci-container:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04-16
+    outputs:
+      container-name: ${{ steps.vars.outputs.container-name }}
+      container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
+      container-filename: ${{ steps.vars.outputs.container-filename }}
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
           sparse-checkout: .github/workflows/containers/github-action-ci/
-      - name: Change podman Root Direcotry
-        run: |
-          mkdir -p ~/.config/containers
-          sudo mkdir -p /mnt/podman
-          sudo chown `whoami`:`whoami` /mnt/podman
-          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
-          podman info
-      - name: Build container stage1
-        working-directory: ./.github/workflows/containers/github-action-ci/
-        run: |
-          podman build -t stage1-toolchain --target stage1-toolchain -f stage1.Dockerfile .
-      - name: Save container image
-        run: |
-          podman save stage1-toolchain > stage1-toolchain.tar
-      - name: Upload container image
-        uses: actions/upload-artifact@v4
-        with:
-          name: stage1-toolchain
-          path: stage1-toolchain.tar
-          retention-days: 1
-  build-ci-container-stage2:
-    if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
-    needs: build-ci-container-stage1
-    permissions:
-      packages: write
-    steps:
       - name: Write Variables
         id: vars
         run: |
@@ -63,50 +37,52 @@ jobs:
           container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
-
-      - name: Checkout LLVM
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github/workflows/containers/github-action-ci/
-
-      - name: Change podman Root Direcotry
-        run: |
-          mkdir -p ~/.config/containers
-          sudo mkdir -p /mnt/podman
-          sudo chown `whoami`:`whoami` /mnt/podman
-          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
-          podman info
-
-        # Download the container image into /mnt/podman rather than
-        # $GITHUB_WORKSPACE to avoid space limitations on the default drive
-        # and use the permissions setup for /mnt/podman.
-      - name: Download stage1-toolchain
-        uses: actions/download-artifact@v4
-        with:
-          name: stage1-toolchain
-          path: /mnt/podman
-
-      - name: Load stage1-toolchain
-        run: |
-          podman load -i /mnt/podman/stage1-toolchain.tar
-
-      - name: Build Container
+          echo "container-filename=$(echo $container_name:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+      - name: Build container
         working-directory: ./.github/workflows/containers/github-action-ci/
         run: |
-          podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage2.Dockerfile .
-          podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
+          podman build -t ${{ steps.vars.outputs.container-name-tag }} .
+
+      # Save the container so we have it in case the push fails.  This also
+      # allows us to separate the push step into a different job so we can
+      # maintain minimal permissions while building the container.
+      - name: Save container image
+        run: |
+          podman save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
+
+      - name: Upload container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: container
+          path: ${{ steps.vars.outputs.container-filename }}
+          retention-days: 14
 
       - name: Test Container
         run: |
-          for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
-            podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+          for image in ${{ steps.vars.outputs.container-name-tag }}; do
+            # Use --pull=never to ensure we are testing the just built image.
+            podman run --pull=never --rm -it $image /usr/bin/bash -x -c 'cd $HOME && printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
           done
 
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download container
+        uses: actions/download-artifact@v4
+        with:
+          name: container
+
       - name: Push Container
-        if: github.event_name == 'push'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          podman load -i ${{ needs.build-ci-container.outputs.container-filename }}
+          podman tag ${{ needs.build-ci-container.outputs.container-name-tag }} ${{ needs.build-ci-container.outputs.container-name }}:latest
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
-          podman push ${{ steps.vars.outputs.container-name-tag }}
-          podman push ${{ steps.vars.outputs.container-name }}:latest
+          podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
+          podman push ${{ needs.build-ci-container.outputs.container-name }}:latest

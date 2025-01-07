@@ -173,7 +173,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
   // in all cases.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU implementer line.
   StringRef Implementer;
@@ -280,8 +280,9 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
     return StringSwitch<const char *>(Part)
-      .Case("0x001", "a64fx")
-      .Default("generic");
+        .Case("0x001", "a64fx")
+        .Case("0x003", "fujitsu-monaka")
+        .Default("generic");
   }
 
   if (Implementer == "0x4e") { // NVIDIA Corporation
@@ -344,6 +345,29 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     case 0x1003:
       return "exynos-m4";
     }
+  }
+
+  if (Implementer == "0x61") { // Apple
+    return StringSwitch<const char *>(Part)
+        .Case("0x020", "apple-m1")
+        .Case("0x021", "apple-m1")
+        .Case("0x022", "apple-m1")
+        .Case("0x023", "apple-m1")
+        .Case("0x024", "apple-m1")
+        .Case("0x025", "apple-m1")
+        .Case("0x028", "apple-m1")
+        .Case("0x029", "apple-m1")
+        .Case("0x030", "apple-m2")
+        .Case("0x031", "apple-m2")
+        .Case("0x032", "apple-m2")
+        .Case("0x033", "apple-m2")
+        .Case("0x034", "apple-m2")
+        .Case("0x035", "apple-m2")
+        .Case("0x038", "apple-m2")
+        .Case("0x039", "apple-m2")
+        .Case("0x049", "apple-m3")
+        .Case("0x048", "apple-m3")
+        .Default("generic");
   }
 
   if (Implementer == "0x63") { // Arm China.
@@ -412,7 +436,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // The "processor 0:" line comes after a fair amount of other information,
   // including a cache breakdown, but this should be plenty.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
@@ -454,7 +478,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   // There are 24 lines in /proc/cpuinfo
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
@@ -1606,7 +1630,7 @@ StringRef sys::getHostCPUName() {
 #if defined(__linux__)
 StringRef sys::detail::getHostCPUNameForSPARC(StringRef ProcCpuinfoContent) {
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for cpu line to determine cpu name
   StringRef Cpu;
@@ -1946,7 +1970,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
     return Features;
 
   SmallVector<StringRef, 32> Lines;
-  P->getBuffer().split(Lines, "\n");
+  P->getBuffer().split(Lines, '\n');
 
   SmallVector<StringRef, 32> CPUFeatures;
 

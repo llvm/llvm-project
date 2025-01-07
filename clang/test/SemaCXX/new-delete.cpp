@@ -545,6 +545,15 @@ enum GH99278_1 {
     zero = decltype(delete static_cast<GH99278_1*>(nullptr), 0){}
     // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
 };
+template <typename = void>
+struct GH99278_2 {
+  union b {};
+  struct c {
+    c() { delete d; }
+    b *d;
+  } f;
+};
+GH99278_2<void> e;
 #endif
 
 struct PlacementArg {};

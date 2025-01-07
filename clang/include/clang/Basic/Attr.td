@@ -2776,7 +2776,7 @@ def Ownership : InheritableAttr {
   let Args = [IdentifierArgument<"Module">,
               VariadicParamIdxArgument<"Args">];
   let Subjects = SubjectList<[HasFunctionProto]>;
-  let Documentation = [Undocumented];
+  let Documentation = [OwnershipDocs];
 }
 
 def Packed : InheritableAttr {
@@ -3763,7 +3763,7 @@ def AcquireCapability : InheritableAttr {
                    Clang<"acquire_shared_capability", 0>,
                    GNU<"exclusive_lock_function">,
                    GNU<"shared_lock_function">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, ParmVar]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3795,7 +3795,7 @@ def ReleaseCapability : InheritableAttr {
                    Clang<"release_shared_capability", 0>,
                    Clang<"release_generic_capability", 0>,
                    Clang<"unlock_function", 0>];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, ParmVar]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3819,7 +3819,7 @@ def RequiresCapability : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, ParmVar]>;
   let Accessors = [Accessor<"isShared", [Clang<"requires_shared_capability", 0>,
                                          Clang<"shared_locks_required", 0>]>];
   let Documentation = [Undocumented];
@@ -3941,7 +3941,7 @@ def LocksExcluded : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, ParmVar]>;
   let Documentation = [Undocumented];
 }
 
@@ -4335,6 +4335,16 @@ def HLSLLoopHint: StmtAttr {
   let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
 }
 
+def HLSLControlFlowHint: StmtAttr {
+  /// [branch]
+  /// [flatten]
+  let Spellings = [Microsoft<"branch">, Microsoft<"flatten">];
+  let Subjects = SubjectList<[IfStmt],
+                              ErrorDiag, "'if' statements">;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def CapturedRecord : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -4649,6 +4659,13 @@ def HLSLNumThreads: InheritableAttr {
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
   let Documentation = [NumThreadsDocs];
+}
+
+def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_GroupThreadIDDocs];
 }
 
 def HLSLSV_GroupID: HLSLAnnotationAttr {

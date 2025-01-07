@@ -1664,6 +1664,22 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   return Pairs;
 }
 
+memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
+  memprof::AllMemProfData AllMemProfData;
+  AllMemProfData.HeapProfileRecords.reserve(
+      MemProfRecordTable->getNumEntries());
+  for (uint64_t Key : MemProfRecordTable->keys()) {
+    auto Record = getMemProfRecord(Key);
+    if (Record.takeError())
+      continue;
+    memprof::GUIDMemProfRecordPair Pair;
+    Pair.GUID = Key;
+    Pair.Record = std::move(*Record);
+    AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+  }
+  return AllMemProfData;
+}
+
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 std::vector<uint64_t> &Counts) {

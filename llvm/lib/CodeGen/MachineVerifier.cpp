@@ -369,7 +369,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addUsedIfAvailable<LiveStacks>();
+    AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
@@ -491,7 +491,8 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
     auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
     if (!LiveInts)
       LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
-    LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
+    auto *LSWrapper = PASS->getAnalysisIfAvailable<LiveStacksWrapperLegacy>();
+    LiveStks = LSWrapper ? &LSWrapper->getLS() : nullptr;
     auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   }
@@ -1585,38 +1586,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
-  case TargetOpcode::G_ABDS:
-  case TargetOpcode::G_ABDU: {
-    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
-
-    if ((DstTy.isVector() != SrcTy.isVector()) ||
-        (DstTy.isVector() &&
-         DstTy.getElementCount() != SrcTy.getElementCount())) {
-      report("Generic vector abds/abdu must preserve number of lanes", MI);
-      break;
-    }
-
-    if (SrcTy != SrcTy2) {
-      report("Generic abds/abdu must have same input types", MI);
-      break;
-    }
-
-    if (DstTy != SrcTy) {
-      report("Generic abds/abdu must have same input and output types", MI);
-      break;
-    }
-
-    break;
-  }
   case TargetOpcode::G_SCMP:
   case TargetOpcode::G_UCMP: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
 
-    if (SrcTy.isPointerOrPointerVector() || SrcTy2.isPointerOrPointerVector()) {
+    if (SrcTy.isPointerOrPointerVector()) {
       report("Generic scmp/ucmp does not support pointers as operands", MI);
       break;
     }
@@ -1626,15 +1601,15 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    if (DstTy.getScalarSizeInBits() < 2) {
+      report("Result type must be at least 2 bits wide", MI);
+      break;
+    }
+
     if ((DstTy.isVector() != SrcTy.isVector()) ||
         (DstTy.isVector() &&
          DstTy.getElementCount() != SrcTy.getElementCount())) {
       report("Generic vector scmp/ucmp must preserve number of lanes", MI);
-      break;
-    }
-
-    if (SrcTy != SrcTy2) {
-      report("Generic scmp/ucmp must have same input types", MI);
       break;
     }
 

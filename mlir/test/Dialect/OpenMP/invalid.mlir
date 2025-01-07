@@ -1634,7 +1634,7 @@ func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
 // -----
 
 func.func @omp_task_depend(%data_var: memref<i32>) {
-  // expected-error @below {{op expected as many depend values as depend variables}}
+  // expected-error @below {{'omp.task' op operand count (1) does not match with the total size (0) specified in attribute 'operandSegmentSizes'}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
     }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
