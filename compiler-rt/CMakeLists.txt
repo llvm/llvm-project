@@ -540,7 +540,7 @@ append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 # sanitizers.
 # Disable PowerPC because of https://github.com/llvm/llvm-project/issues/84654.
 if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
-  append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+  #append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
 endif()
 
 # Set common link flags.
