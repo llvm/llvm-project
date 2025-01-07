@@ -207,7 +207,10 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
   //
   // TODO: Extract CASOptions.Path first if we need it later since it'll
   // disappear here.
-  Invocation.getCASOpts().freezeConfig(Diags);
+  Invocation.getCASOpts() = {};
+  // Set the CASPath to the hash schema to match CASOptions::freezeConfig.
+  Invocation.getCASOpts().CASPath =
+      CAS.getContext().getHashSchemaIdentifier().str();
 
   // TODO: Canonicalize DiagnosticOptions here to be "serialized" only. Pass in
   // a hook to mirror diagnostics to stderr (when writing there), and handle
@@ -223,47 +226,51 @@ clang::canonicalizeAndCreateCacheKeys(ObjectStore &CAS,
                                       DiagnosticsEngine &Diags,
                                       CompilerInvocation &CI,
                                       CompileJobCachingOptions &Opts) {
-  if (!CI.getFrontendOpts().CASInputFileCacheKey.empty()) {
-    Opts = canonicalizeForCaching(CAS, Diags, CI);
-    auto CacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CI);
-    if (!CacheKey)
-      return std::nullopt;
-
-    auto ID = CAS.parseID(CI.getFrontendOpts().CASInputFileCacheKey);
-    if (!ID) {
-      Diags.Report(diag::err_cas_cannot_parse_input_cache_key)
-          << CI.getFrontendOpts().CASInputFileCacheKey;
-      return std::nullopt;
-    }
-    auto Value = Cache.get(*ID);
-    if (!Value) {
-      Diags.Report(diag::err_cas_cannot_lookup_input_cache_key)
-          << Value.takeError();
-      return std::nullopt;
-    }
-    if (!*Value)  {
-      Diags.Report(diag::err_cas_missing_input_cache_entry)
-          << llvm::cas::ObjectStore::createUnknownObjectError(*ID);
-      return std::nullopt;
-    }
-
-    CI.getFrontendOpts().CASInputFileCASID = Value.get()->toString();
-    CI.getFrontendOpts().CASInputFileCacheKey.clear();
-
-    CompilerInvocation CICopy = CI;
-    (void)canonicalizeForCaching(CAS, Diags, CICopy);
-    auto CanonicalCacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CICopy);
-    if (!CanonicalCacheKey)
-      return std::nullopt;
-
-    return std::make_pair(*CacheKey, *CanonicalCacheKey);
-  }
+  // Preserve and freeze CASOptions so that we do not modify behaviour of
+  // Invocation.getCASOpts().getOrCreateDatabases().
+  CASOptions CASOpts(CI.getCASOpts());
+  CASOpts.freezeConfig(Diags);
 
   Opts = canonicalizeForCaching(CAS, Diags, CI);
   auto CacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CI);
   if (!CacheKey)
     return std::nullopt;
-  return std::make_pair(*CacheKey, *CacheKey);
+
+  assert(CI.getCASOpts().CASPath == CASOpts.CASPath &&
+         "cas instance has incompatible hash with cas options");
+  CI.getCASOpts() = std::move(CASOpts);
+
+  if (CI.getFrontendOpts().CASInputFileCacheKey.empty())
+    return std::make_pair(*CacheKey, *CacheKey);
+
+  auto ID = CAS.parseID(CI.getFrontendOpts().CASInputFileCacheKey);
+  if (!ID) {
+    Diags.Report(diag::err_cas_cannot_parse_input_cache_key)
+        << CI.getFrontendOpts().CASInputFileCacheKey;
+    return std::nullopt;
+  }
+  auto Value = Cache.get(*ID);
+  if (!Value) {
+    Diags.Report(diag::err_cas_cannot_lookup_input_cache_key)
+        << Value.takeError();
+    return std::nullopt;
+  }
+  if (!*Value)  {
+    Diags.Report(diag::err_cas_missing_input_cache_entry)
+        << llvm::cas::ObjectStore::createUnknownObjectError(*ID);
+    return std::nullopt;
+  }
+
+  CI.getFrontendOpts().CASInputFileCASID = Value.get()->toString();
+  CI.getFrontendOpts().CASInputFileCacheKey.clear();
+
+  CompilerInvocation CICopy = CI;
+  (void)canonicalizeForCaching(CAS, Diags, CICopy);
+  auto CanonicalCacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CICopy);
+  if (!CanonicalCacheKey)
+    return std::nullopt;
+
+  return std::make_pair(*CacheKey, *CanonicalCacheKey);
 }
 
 std::optional<llvm::cas::CASID>
