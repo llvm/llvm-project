@@ -47,9 +47,9 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  SymbolTable(COFFLinkerContext &c) : ctx(c) {}
-
-  void addFile(InputFile *file);
+  SymbolTable(COFFLinkerContext &c,
+              llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN)
+      : ctx(c), machine(machine) {}
 
   // Emit errors for symbols that cannot be resolved.
   void reportUnresolvable();
@@ -120,7 +120,7 @@ public:
                        uint32_t newSectionOffset = 0);
 
   COFFLinkerContext &ctx;
-  llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+  llvm::COFF::MachineTypes machine;
 
   bool isEC() const { return machine == ARM64EC; }
 
@@ -136,6 +136,10 @@ public:
       callback(pair.second);
   }
 
+  DefinedRegular *loadConfigSym = nullptr;
+  uint32_t loadConfigSize = 0;
+  void initializeLoadConfig();
+
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
   /// with the "__imp_" prefix, if it exists.
@@ -149,7 +153,6 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
-  bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
 };

@@ -68,7 +68,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop auto present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop auto use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -149,10 +149,10 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop auto num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop auto device_num(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop auto default_async(1)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop auto device_type(*)
@@ -202,7 +202,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop use_device(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -283,10 +283,10 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop num_workers(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop device_num(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop default_async(1) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop device_type(*) auto
@@ -337,7 +337,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop independent present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop independent use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -418,10 +418,10 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop independent num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop independent device_num(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop independent default_async(1)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop independent device_type(*)
@@ -471,7 +471,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop use_device(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -552,10 +552,10 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop num_workers(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop device_num(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop default_async(1) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop device_type(*) independent
@@ -614,7 +614,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop seq present_or_copy(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop seq use_device(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -695,10 +695,10 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop seq num_workers(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop seq device_num(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop seq default_async(1)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop seq device_type(*)
@@ -754,7 +754,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'loop' directive}}
 #pragma acc loop use_device(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'loop' directive}}
@@ -835,10 +835,10 @@ void uses() {
   // expected-error@+1{{OpenACC 'num_workers' clause is not valid on 'loop' directive}}
 #pragma acc loop num_workers(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_num' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop device_num(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop default_async(1) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop device_type(*) seq

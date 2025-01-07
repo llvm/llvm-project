@@ -42,7 +42,6 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // FullSmVersion.
   unsigned int SmVersion;
 
-  const NVPTXTargetMachine &TM;
   NVPTXInstrInfo InstrInfo;
   NVPTXTargetLowering TLInfo;
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
@@ -81,7 +80,6 @@ public:
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
-  bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool hasBF16Math() const { return SmVersion >= 80; }
   bool allowFP16Math() const;

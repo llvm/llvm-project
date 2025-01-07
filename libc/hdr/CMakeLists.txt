@@ -126,10 +126,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_stat_macros
 )
 
+add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros
   HDRS
     unistd_macros.h
+  DEPENDS
+    .unistd_overlay
   FULL_BUILD_DEPENDS
     libc.include.unistd
     libc.include.llvm-libc-macros.unistd_macros

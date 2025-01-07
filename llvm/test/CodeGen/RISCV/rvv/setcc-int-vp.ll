@@ -184,9 +184,8 @@ define <vscale x 1 x i1> @icmp_uge_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 
 define <vscale x 1 x i1> @icmp_uge_vx_nxv1i8(<vscale x 1 x i8> %va, i8 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsleu.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
@@ -348,9 +347,8 @@ define <vscale x 1 x i1> @icmp_sge_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 
 define <vscale x 1 x i1> @icmp_sge_vx_nxv1i8(<vscale x 1 x i8> %va, i8 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
@@ -470,9 +468,8 @@ define <vscale x 1 x i1> @icmp_sle_vx_nxv1i8(<vscale x 1 x i8> %va, i8 %b, <vsca
 define <vscale x 1 x i1> @icmp_sle_vx_swap_nxv1i8(<vscale x 1 x i8> %va, i8 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vx_swap_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
@@ -543,10 +540,9 @@ define <vscale x 8 x i1> @icmp_eq_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x
 ; CHECK-LABEL: icmp_eq_vv_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vand.vx v9, v9, a1
 ; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, metadata !"eq", <vscale x 8 x i1> %m, i32 %evl)
@@ -557,11 +553,10 @@ define <vscale x 8 x i1> @icmp_eq_vx_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscal
 ; CHECK-LABEL: icmp_eq_vx_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vand.vx v9, v9, a2
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -574,11 +569,10 @@ define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <
 ; CHECK-LABEL: icmp_eq_vx_swap_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vand.vx v9, v9, a2
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -764,9 +758,8 @@ define <vscale x 8 x i1> @icmp_uge_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 
 define <vscale x 8 x i1> @icmp_uge_vx_nxv8i8(<vscale x 8 x i8> %va, i8 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vx_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsleu.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
@@ -928,9 +921,8 @@ define <vscale x 8 x i1> @icmp_sge_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 
 define <vscale x 8 x i1> @icmp_sge_vx_nxv8i8(<vscale x 8 x i8> %va, i8 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vx_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
@@ -1050,9 +1042,8 @@ define <vscale x 8 x i1> @icmp_sle_vx_nxv8i8(<vscale x 8 x i8> %va, i8 %b, <vsca
 define <vscale x 8 x i1> @icmp_sle_vx_swap_nxv8i8(<vscale x 8 x i8> %va, i8 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vx_swap_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
@@ -1377,9 +1368,8 @@ define <vscale x 1 x i1> @icmp_uge_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 
 define <vscale x 1 x i1> @icmp_uge_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsleu.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
@@ -1541,9 +1531,8 @@ define <vscale x 1 x i1> @icmp_sge_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 
 define <vscale x 1 x i1> @icmp_sge_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
@@ -1663,9 +1652,8 @@ define <vscale x 1 x i1> @icmp_sle_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <v
 define <vscale x 1 x i1> @icmp_sle_vx_swap_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vx_swap_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
@@ -1887,9 +1875,8 @@ define <vscale x 8 x i1> @icmp_uge_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 
 define <vscale x 8 x i1> @icmp_uge_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsleu.vv v12, v16, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
@@ -2066,9 +2053,8 @@ define <vscale x 8 x i1> @icmp_sge_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 
 define <vscale x 8 x i1> @icmp_sge_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsle.vv v12, v16, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
@@ -2199,9 +2185,8 @@ define <vscale x 8 x i1> @icmp_sle_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <v
 define <vscale x 8 x i1> @icmp_sle_vx_swap_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vx_swap_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsle.vv v12, v16, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    ret
@@ -2644,9 +2629,8 @@ define <vscale x 1 x i1> @icmp_uge_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ;
 ; RV64-LABEL: icmp_uge_vx_nxv1i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v9, a0
 ; RV64-NEXT:    vmsleu.vv v0, v9, v8, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
@@ -2898,9 +2882,8 @@ define <vscale x 1 x i1> @icmp_sge_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <v
 ;
 ; RV64-LABEL: icmp_sge_vx_nxv1i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v9, a0
 ; RV64-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
@@ -3095,9 +3078,8 @@ define <vscale x 1 x i1> @icmp_sle_vx_swap_nxv1i64(<vscale x 1 x i64> %va, i64 %
 ;
 ; RV64-LABEL: icmp_sle_vx_swap_nxv1i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v9, a0
 ; RV64-NEXT:    vmsle.vv v0, v9, v8, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
@@ -3431,9 +3413,8 @@ define <vscale x 8 x i1> @icmp_uge_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ;
 ; RV64-LABEL: icmp_uge_vx_nxv8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v24, a0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.x v24, a0
 ; RV64-NEXT:    vmsleu.vv v16, v24, v8, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v16
 ; RV64-NEXT:    ret
@@ -3706,9 +3687,8 @@ define <vscale x 8 x i1> @icmp_sge_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <v
 ;
 ; RV64-LABEL: icmp_sge_vx_nxv8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v24, a0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.x v24, a0
 ; RV64-NEXT:    vmsle.vv v16, v24, v8, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v16
 ; RV64-NEXT:    ret
@@ -3919,9 +3899,8 @@ define <vscale x 8 x i1> @icmp_sle_vx_swap_nxv8i64(<vscale x 8 x i64> %va, i64 %
 ;
 ; RV64-LABEL: icmp_sle_vx_swap_nxv8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v24, a0
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vmv.v.x v24, a0
 ; RV64-NEXT:    vmsle.vv v16, v24, v8, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v16
 ; RV64-NEXT:    ret

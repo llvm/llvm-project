@@ -1618,9 +1618,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 std::pair<const NamedDecl *, const Attr *>
 CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   // If the callee is marked nodiscard, return that attribute
-  const Decl *D = getCalleeDecl();
-  if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
-    return {nullptr, A};
+  if (const Decl *D = getCalleeDecl())
+    if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+      return {nullptr, A};
 
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
@@ -2990,6 +2990,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  case OpaqueValueExprClass:
+    return cast<OpaqueValueExpr>(this)->getSourceExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx);
   }
 }
 

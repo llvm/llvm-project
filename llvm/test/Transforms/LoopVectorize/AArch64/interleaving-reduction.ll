@@ -79,8 +79,8 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[N]], [[N_VEC11]]
 ; INTERLEAVE-4-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; INTERLEAVE-4:       vec.epilog.scalar.ph:
-; INTERLEAVE-4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP17]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; INTERLEAVE-4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
+; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[TMP17]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; INTERLEAVE-4-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE-4:       loop:
 ; INTERLEAVE-4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

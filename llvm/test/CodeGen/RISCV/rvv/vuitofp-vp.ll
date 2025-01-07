@@ -8,9 +8,9 @@ define <vscale x 2 x bfloat> @vuitofp_nxv2bf16_nxv2i7(<vscale x 2 x i7> %va, <vs
 ; CHECK-LABEL: vuitofp_nxv2bf16_nxv2i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v9, v8, v0.t
 ; CHECK-NEXT:    vfwcvt.f.xu.v v10, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
@@ -124,18 +124,17 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i7(<vscale x 2 x i7> %va, <vscal
 ; ZVFH-LABEL: vuitofp_nxv2f16_nxv2i7:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    li a1, 127
-; ZVFH-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; ZVFH-NEXT:    vand.vx v9, v8, a1
 ; ZVFH-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; ZVFH-NEXT:    vand.vx v9, v8, a1
 ; ZVFH-NEXT:    vfwcvt.f.xu.v v8, v9, v0.t
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vuitofp_nxv2f16_nxv2i7:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    li a1, 127
-; ZVFHMIN-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vzext.vf2 v9, v8, v0.t
 ; ZVFHMIN-NEXT:    vfwcvt.f.xu.v v10, v9, v0.t
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma

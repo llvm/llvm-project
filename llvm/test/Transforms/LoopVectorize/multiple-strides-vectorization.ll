@@ -84,7 +84,7 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[DOTOUTER_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[DOTOUTER_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[DOTINNER:%.*]]
 ; CHECK:       .exit:
 ; CHECK-NEXT:    ret void
@@ -151,7 +151,7 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-HOIST-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
 ; CHECK-HOIST:       scalar.ph:
-; CHECK-HOIST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[DOTOUTER_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-HOIST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[DOTOUTER_PREHEADER]] ]
 ; CHECK-HOIST-NEXT:    br label [[DOTINNER:%.*]]
 ; CHECK-HOIST:       .exit:
 ; CHECK-HOIST-NEXT:    ret void

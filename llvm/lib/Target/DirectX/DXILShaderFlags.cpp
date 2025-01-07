@@ -14,16 +14,21 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static void updateFunctionFlags(ComputedShaderFlags &CSF,
-                                const Instruction &I) {
+static void updateFunctionFlags(ComputedShaderFlags &CSF, const Instruction &I,
+                                DXILResourceTypeMap &DRTM) {
   if (!CSF.Doubles)
     CSF.Doubles = I.getType()->isDoubleTy();
 
@@ -44,17 +49,34 @@ static void updateFunctionFlags(ComputedShaderFlags &CSF,
       break;
     }
   }
+
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::dx_resource_load_typedbuffer: {
+      dxil::ResourceTypeInfo &RTI =
+          DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
+      if (RTI.isTyped())
+        CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
+    }
+    }
+  }
 }
 
-void ModuleShaderFlags::initialize(const Module &M) {
+void ModuleShaderFlags::initialize(const Module &M, DXILResourceTypeMap &DRTM) {
+
   // Collect shader flags for each of the functions
   for (const auto &F : M.getFunctionList()) {
-    if (F.isDeclaration())
+    if (F.isDeclaration()) {
+      assert(!F.getName().starts_with("dx.op.") &&
+             "DXIL Shader Flag analysis should not be run post-lowering.");
       continue;
+    }
     ComputedShaderFlags CSF;
     for (const auto &BB : F)
       for (const auto &I : BB)
-        updateFunctionFlags(CSF, I);
+        updateFunctionFlags(CSF, I, DRTM);
     // Insert shader flag mask for function F
     FunctionFlags.push_back({&F, CSF});
     // Update combined shader flags mask
@@ -101,8 +123,11 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 
 ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                            ModuleAnalysisManager &AM) {
+  DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M);
+  MSFI.initialize(M, DRTM);
+
   return MSFI;
 }
 
@@ -129,11 +154,22 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 // ShaderFlagsAnalysis and ShaderFlagsAnalysisPrinterPass
 
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
-  MSFI.initialize(M);
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+
+  MSFI.initialize(M, DRTM);
   return false;
+}
+
+void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
 }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;
 
-INITIALIZE_PASS(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
-                "DXIL Shader Flag Analysis", true, true)
+INITIALIZE_PASS_BEGIN(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
+                      "DXIL Shader Flag Analysis", true, true)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_END(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
+                    "DXIL Shader Flag Analysis", true, true)

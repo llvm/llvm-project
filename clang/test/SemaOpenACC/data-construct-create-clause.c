@@ -63,8 +63,10 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc data create(invalid:(float)ArrayParam[2])
   ;
 
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
   // expected-error@+1{{OpenACC 'create' clause is not valid on 'exit data' directive}}
 #pragma acc exit data create(LocalInt)
+  // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
   // expected-error@+1{{OpenACC 'pcreate' clause is not valid on 'host_data' directive}}
 #pragma acc host_data pcreate(LocalInt)
   ;

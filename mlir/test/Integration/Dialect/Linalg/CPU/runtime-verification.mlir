@@ -8,6 +8,8 @@
 // RUN: -convert-index-to-llvm \
 // RUN: -finalize-memref-to-llvm \
 // RUN: -convert-func-to-llvm \
+// RUN: -convert-arith-to-llvm \
+// RUN: -convert-cf-to-llvm \
 // RUN: -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils \

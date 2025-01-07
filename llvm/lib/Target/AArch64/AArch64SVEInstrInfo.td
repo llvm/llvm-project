@@ -675,14 +675,6 @@ let Predicates = [HasSVEorSME] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
 
-  let Predicates = [HasSVEorSME, UseUnaryUndefPseudos] in {
-    defm FABS_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fabs_mt>;
-    defm FNEG_ZPmZ : sve_fp_un_pred_arit_hsd<AArch64fneg_mt>;
-
-    defm ABS_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64abs_mt>;
-    defm NEG_ZPmZ : sve_int_un_pred_arit_bhsd<AArch64neg_mt>;
-  }
-
   foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
     // No dedicated instruction, so just clear the sign bit.
     def : Pat<(VT (fabs VT:$op)),
@@ -2348,8 +2340,8 @@ let Predicates = [HasSVEorSME] in {
   defm FCVT_ZPmZ_HtoD   : sve_fp_2op_p_zd< 0b1101001, "fcvt",   ZPR16, ZPR64, int_aarch64_sve_fcvt_f64f16,   AArch64fcvte_mt,  nxv2f64, nxv2i1, nxv2f16, ElementSizeD>;
   defm FCVT_ZPmZ_DtoS   : sve_fp_2op_p_zdr<0b1101010, "fcvt",   ZPR64, ZPR32, int_aarch64_sve_fcvt_f32f64,   AArch64fcvtr_mt,  nxv2f32, nxv2i1, nxv2f64, ElementSizeD>;
   defm FCVT_ZPmZ_StoD   : sve_fp_2op_p_zd< 0b1101011, "fcvt",   ZPR32, ZPR64, int_aarch64_sve_fcvt_f64f32,   AArch64fcvte_mt,  nxv2f64, nxv2i1, nxv2f32, ElementSizeD>;
-  defm SCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110000, "scvtf",  ZPR32, ZPR64, int_aarch64_sve_scvtf_f64i32,  AArch64scvtf_mt,  nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
-  defm UCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110001, "ucvtf",  ZPR32, ZPR64, int_aarch64_sve_ucvtf_f64i32,  AArch64ucvtf_mt,  nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
+  defm SCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110000, "scvtf",  ZPR32, ZPR64, int_aarch64_sve_scvtf_f64i32,  null_frag,        nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
+  defm UCVTF_ZPmZ_StoD  : sve_fp_2op_p_zd< 0b1110001, "ucvtf",  ZPR32, ZPR64, int_aarch64_sve_ucvtf_f64i32,  null_frag,        nxv2f64, nxv2i1, nxv4i32, ElementSizeD>;
   defm UCVTF_ZPmZ_StoH  : sve_fp_2op_p_zd< 0b0110101, "ucvtf",  ZPR32, ZPR16, int_aarch64_sve_ucvtf_f16i32,  AArch64ucvtf_mt,  nxv4f16, nxv4i1, nxv4i32, ElementSizeS>;
   defm SCVTF_ZPmZ_DtoS  : sve_fp_2op_p_zd< 0b1110100, "scvtf",  ZPR64, ZPR32, int_aarch64_sve_scvtf_f32i64,  AArch64scvtf_mt,  nxv2f32, nxv2i1, nxv2i64, ElementSizeD>;
   defm SCVTF_ZPmZ_StoH  : sve_fp_2op_p_zd< 0b0110100, "scvtf",  ZPR32, ZPR16, int_aarch64_sve_scvtf_f16i32,  AArch64scvtf_mt,  nxv4f16, nxv4i1, nxv4i32, ElementSizeS>;
@@ -2455,8 +2447,9 @@ let Predicates = [HasBF16, HasSVEorSME] in {
   defm BFMLALT_ZZZ : sve2_fp_mla_long<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt>;
   defm BFMLALB_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b100, "bfmlalb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalb_lane_v2>;
   defm BFMLALT_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt_lane_v2>;
-  defm BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt",   int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
-  defm BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
+
+  defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
+  defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasSVEorSME] in {
@@ -4268,17 +4261,16 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt", "int_aarch64_sve_fcvt">;
 
   // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
-  defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
-  def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+  defm FCVTNT_ZPzZ : sve2_fp_convert_down_narrow_z<"fcvtnt">;
+  def FCVTXNT_ZPzZ : sve2_fp_convert_precision<0b0010, 0b0, "fcvtxnt", ZPR32, ZPR64, /*destructive*/ true>;
   // Placing even
-  defm FCVTX_ZPzZ       : sve_fp_z2op_p_zd<"fcvtx", int_aarch64_sve_fcvtx_f32f64>;
+  defm FCVTX_ZPzZ  : sve_fp_z2op_p_zd<"fcvtx", int_aarch64_sve_fcvtx_f32f64>;
 
   // SVE2p2 floating-point convert precision up, zeroing predicate
-  defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt", "int_aarch64_sve_fcvtlt">;
+  defm FCVTLT_ZPzZ : sve2_fp_convert_up_long_z<"fcvtlt", "int_aarch64_sve_fcvtlt">;
 
   // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
-  def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
-  // Placing corresponding
+  def BFCVTNT_ZPzZ      : sve2_fp_convert_precision<0b1010, 0b0, "bfcvtnt", ZPR16, ZPR32, /*destructive*/ true>;
   defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
 
   // Floating-point convert to integer, zeroing predicate

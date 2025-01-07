@@ -318,18 +318,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
-  // Make sure returned pointers are live. We might be trying to return a
-  // pointer or reference to a local variable.
-  // Just return false, since a diagnostic has already been emitted in Sema.
-  if constexpr (std::is_same_v<T, Pointer>) {
-    // FIXME: We could be calling isLive() here, but the emitted diagnostics
-    // seem a little weird, at least if the returned expression is of
-    // pointer type.
-    // Null pointers are considered live here.
-    if (!Ret.isZero() && !Ret.isLive())
-      return false;
-  }
-
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
@@ -1538,61 +1526,8 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 /// 1) Peeks a Pointer
 /// 2) Pushes Pointer.atField(Off) on the stack
-inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
-
-  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
-      !CheckNull(S, OpPC, Ptr, CSK_Field))
-    return false;
-
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
-    return false;
-  if (!CheckArray(S, OpPC, Ptr))
-    return false;
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
-    return false;
-
-  if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
-    return false;
-
-  if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
-    return true;
-  }
-
-  S.Stk.push<Pointer>(Ptr.atField(Off));
-  return true;
-}
-
-inline bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
-      !CheckNull(S, OpPC, Ptr, CSK_Field))
-    return false;
-
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
-    return false;
-  if (!CheckArray(S, OpPC, Ptr))
-    return false;
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
-    return false;
-
-  if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
-    return false;
-
-  if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
-    return true;
-  }
-
-  S.Stk.push<Pointer>(Ptr.atField(Off));
-  return true;
-}
+bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off);
+bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression())
@@ -3042,43 +2977,51 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
-                    uint32_t ResultBitWidth, const llvm::fltSemantics *Sem) {
+inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
+                        uint32_t ResultBitWidth,
+                        const llvm::fltSemantics *Sem) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;
 
-  size_t BuffSize = ResultBitWidth / 8;
-  llvm::SmallVector<std::byte> Buff(BuffSize);
-  bool HasIndeterminateBits = false;
-
-  Bits FullBitWidth(ResultBitWidth);
-  Bits BitWidth = FullBitWidth;
-
-  if constexpr (std::is_same_v<T, Floating>) {
-    assert(Sem);
-    BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
-  }
-
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
-                 HasIndeterminateBits))
-    return false;
-
-  if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
-    return false;
-
-  if constexpr (std::is_same_v<T, Floating>) {
-    assert(Sem);
-    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+  if constexpr (std::is_same_v<T, Pointer>) {
+    // The only pointer type we can validly bitcast to is nullptr_t.
+    S.Stk.push<Pointer>();
+    return true;
   } else {
-    assert(!Sem);
-    S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+
+    size_t BuffSize = ResultBitWidth / 8;
+    llvm::SmallVector<std::byte> Buff(BuffSize);
+    bool HasIndeterminateBits = false;
+
+    Bits FullBitWidth(ResultBitWidth);
+    Bits BitWidth = FullBitWidth;
+
+    if constexpr (std::is_same_v<T, Floating>) {
+      assert(Sem);
+      BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
+    }
+
+    if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
+                   HasIndeterminateBits))
+      return false;
+
+    if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
+      return false;
+
+    if constexpr (std::is_same_v<T, Floating>) {
+      assert(Sem);
+      S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+    } else {
+      assert(!Sem);
+      S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+    }
+    return true;
   }
-  return true;
 }
 
-inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
+inline bool BitCast(InterpState &S, CodePtr OpPC) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
 
@@ -3090,6 +3033,12 @@ inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
 
   return true;
 }
+
+/// Typeid support.
+bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
+               const Type *TypeInfoType);
+bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType);
+bool DiagTypeid(InterpState &S, CodePtr OpPC);
 
 //===----------------------------------------------------------------------===//
 // Read opcode arguments

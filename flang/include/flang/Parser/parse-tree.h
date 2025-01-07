@@ -657,6 +657,8 @@ struct KindSelector {
 // R705 integer-type-spec -> INTEGER [kind-selector]
 WRAPPER_CLASS(IntegerTypeSpec, std::optional<KindSelector>);
 
+WRAPPER_CLASS(UnsignedTypeSpec, std::optional<KindSelector>);
+
 // R723 char-length -> ( type-param-value ) | digit-string
 struct CharLength {
   UNION_CLASS_BOILERPLATE(CharLength);
@@ -694,7 +696,7 @@ struct CharSelector {
 //        integer-type-spec | REAL [kind-selector] | DOUBLE PRECISION |
 //        COMPLEX [kind-selector] | CHARACTER [char-selector] |
 //        LOGICAL [kind-selector]
-// Extensions: DOUBLE COMPLEX
+// Extensions: DOUBLE COMPLEX & UNSIGNED [kind-selector]
 struct IntrinsicTypeSpec {
   UNION_CLASS_BOILERPLATE(IntrinsicTypeSpec);
   struct Real {
@@ -719,13 +721,12 @@ struct IntrinsicTypeSpec {
     std::optional<KindSelector> kind;
   };
   EMPTY_CLASS(DoubleComplex);
-  std::variant<IntegerTypeSpec, Real, DoublePrecision, Complex, Character,
-      Logical, DoubleComplex>
+  std::variant<IntegerTypeSpec, UnsignedTypeSpec, Real, DoublePrecision,
+      Complex, Character, Logical, DoubleComplex>
       u;
 };
 
 // Extension: Vector type
-WRAPPER_CLASS(UnsignedTypeSpec, std::optional<KindSelector>);
 struct VectorElementType {
   UNION_CLASS_BOILERPLATE(VectorElementType);
   std::variant<IntegerTypeSpec, IntrinsicTypeSpec::Real, UnsignedTypeSpec> u;
@@ -800,6 +801,12 @@ struct SignedIntLiteralConstant {
 // R708 int-literal-constant -> digit-string [_ kind-param]
 struct IntLiteralConstant {
   TUPLE_CLASS_BOILERPLATE(IntLiteralConstant);
+  std::tuple<CharBlock, std::optional<KindParam>> t;
+};
+
+// extension: unsigned-literal-constant -> digit-string U [_ kind-param]
+struct UnsignedLiteralConstant {
+  TUPLE_CLASS_BOILERPLATE(UnsignedLiteralConstant);
   std::tuple<CharBlock, std::optional<KindParam>> t;
 };
 
@@ -894,7 +901,7 @@ struct LiteralConstant {
   UNION_CLASS_BOILERPLATE(LiteralConstant);
   std::variant<HollerithLiteralConstant, IntLiteralConstant,
       RealLiteralConstant, ComplexLiteralConstant, BOZLiteralConstant,
-      CharLiteralConstant, LogicalLiteralConstant>
+      CharLiteralConstant, LogicalLiteralConstant, UnsignedLiteralConstant>
       u;
 };
 
@@ -1481,9 +1488,10 @@ struct DataStmtConstant {
   UNION_CLASS_BOILERPLATE(DataStmtConstant);
   CharBlock source;
   mutable TypedExpr typedExpr;
-  std::variant<LiteralConstant, SignedIntLiteralConstant,
-      SignedRealLiteralConstant, SignedComplexLiteralConstant, NullInit,
-      common::Indirection<Designator>, StructureConstructor>
+  std::variant<common::Indirection<CharLiteralConstantSubstring>,
+      LiteralConstant, SignedIntLiteralConstant, SignedRealLiteralConstant,
+      SignedComplexLiteralConstant, NullInit, common::Indirection<Designator>,
+      StructureConstructor, UnsignedLiteralConstant>
       u;
 };
 
@@ -3752,6 +3760,11 @@ struct OmpAffinityClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
+// Ref: 5.2: [174]
+struct OmpAlignClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntExpr);
+};
+
 // Ref: [4.5:72-81], [5.0:110-119], [5.1:134-143], [5.2:169-170]
 //
 // aligned-clause ->
@@ -4174,6 +4187,30 @@ struct OmpClauseList {
 
 // --- Directives and constructs
 
+// Ref: [5.1:89-90], [5.2:216]
+//
+// nothing-directive ->
+//    NOTHING                                     // since 5.1
+struct OmpNothingDirective {
+  using EmptyTrait = std::true_type;
+  COPY_AND_ASSIGN_BOILERPLATE(OmpNothingDirective);
+  CharBlock source;
+};
+
+// Ref: OpenMP [5.2:216-218]
+// ERROR AT(compilation|execution) SEVERITY(fatal|warning) MESSAGE("msg-str)
+struct OmpErrorDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpErrorDirective);
+  CharBlock source;
+  std::tuple<Verbatim, OmpClauseList> t;
+};
+
+struct OpenMPUtilityConstruct {
+  UNION_CLASS_BOILERPLATE(OpenMPUtilityConstruct);
+  CharBlock source;
+  std::variant<OmpErrorDirective, OmpNothingDirective> u;
+};
+
 // 2.7.2 SECTIONS
 // 2.11.2 PARALLEL SECTIONS
 struct OmpSectionsDirective {
@@ -4310,7 +4347,7 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
       OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
       OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
-      OpenMPRequiresConstruct>
+      OpenMPRequiresConstruct, OpenMPUtilityConstruct>
       u;
 };
 
@@ -4498,14 +4535,6 @@ struct OpenMPDepobjConstruct {
   std::tuple<Verbatim, OmpObject, OmpClause> t;
 };
 
-// Ref: OpenMP [5.2:216-218]
-// ERROR AT(compilation|execution) SEVERITY(fatal|warning) MESSAGE("msg-str)
-struct OpenMPErrorConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPErrorConstruct);
-  CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
-};
-
 // 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
@@ -4578,7 +4607,7 @@ struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
-      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPErrorConstruct,
+      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPUtilityConstruct,
       OpenMPExecutableAllocate, OpenMPAllocatorsConstruct,
       OpenMPCriticalConstruct>
       u;

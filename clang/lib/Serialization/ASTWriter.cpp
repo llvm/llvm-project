@@ -7230,6 +7230,10 @@ void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
   if (!D->isFromASTFile())
     return; // Declaration not imported from PCH.
 
+  // The function definition may not have a body due to parsing errors.
+  if (!D->doesThisDeclarationHaveABody())
+    return;
+
   // Implicit function decl from a PCH was defined.
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
 }
@@ -7247,6 +7251,10 @@ void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
   if (!D->isFromASTFile())
+    return;
+
+  // The function definition may not have a body due to parsing errors.
+  if (!D->doesThisDeclarationHaveABody())
     return;
 
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
@@ -8326,6 +8334,18 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
       AddStmt(E);
     return;
   }
+  case OpenACCClauseKind::DeviceNum: {
+    const auto *DNC = cast<OpenACCDeviceNumClause>(C);
+    writeSourceLocation(DNC->getLParenLoc());
+    AddStmt(const_cast<Expr*>(DNC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::DefaultAsync: {
+    const auto *DAC = cast<OpenACCDefaultAsyncClause>(C);
+    writeSourceLocation(DAC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(DAC->getIntExpr()));
+    return;
+  }
   case OpenACCClauseKind::NumWorkers: {
     const auto *NWC = cast<OpenACCNumWorkersClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
@@ -8366,6 +8386,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *DC = cast<OpenACCDeleteClause>(C);
     writeSourceLocation(DC->getLParenLoc());
     writeOpenACCVarList(DC);
+    return;
+  }
+  case OpenACCClauseKind::UseDevice: {
+    const auto *UDC = cast<OpenACCUseDeviceClause>(C);
+    writeSourceLocation(UDC->getLParenLoc());
+    writeOpenACCVarList(UDC);
     return;
   }
   case OpenACCClauseKind::DevicePtr: {
@@ -8511,14 +8537,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::DeviceNum:
-  case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

@@ -13,6 +13,7 @@
   # CHECK-ASM: .text
   # CHECK-OBJ: <.text>:
 
+.text
   nop
   # CHECK-ASM: nop
   # CHECK-OBJ: addi zero, zero, 0x0

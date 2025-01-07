@@ -52,7 +52,7 @@ public:
 
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        if (CXXMD && CXXMD->isInstance())
+        if (CXXMD->isInstance())
           ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
       }
@@ -115,7 +115,7 @@ public:
             if (ArgIndex >= CE->getNumArgs())
               return true;
             auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
-            if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg)) {
+            if (auto *L = findLambdaInArg(Arg)) {
               LambdasToIgnore.insert(L);
               if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
                 Checker->visitLambdaExpr(L, shouldCheckThis());
@@ -124,6 +124,40 @@ public:
           }
         }
         return true;
+      }
+
+      LambdaExpr *findLambdaInArg(Expr *E) {
+        if (auto *Lambda = dyn_cast_or_null<LambdaExpr>(E))
+          return Lambda;
+        auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E);
+        if (!TempExpr)
+          return nullptr;
+        E = TempExpr->getSubExpr()->IgnoreParenCasts();
+        if (!E)
+          return nullptr;
+        if (auto *Lambda = dyn_cast<LambdaExpr>(E))
+          return Lambda;
+        auto *CE = dyn_cast_or_null<CXXConstructExpr>(E);
+        if (!CE || !CE->getNumArgs())
+          return nullptr;
+        auto *CtorArg = CE->getArg(0)->IgnoreParenCasts();
+        if (!CtorArg)
+          return nullptr;
+        if (auto *Lambda = dyn_cast<LambdaExpr>(CtorArg))
+          return Lambda;
+        auto *DRE = dyn_cast<DeclRefExpr>(CtorArg);
+        if (!DRE)
+          return nullptr;
+        auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
+        if (!VD)
+          return nullptr;
+        auto *Init = VD->getInit();
+        if (!Init)
+          return nullptr;
+        TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
+        if (!TempExpr)
+          return nullptr;
+        return dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
       }
 
       void checkCalleeLambda(CallExpr *CE) {
@@ -180,9 +214,51 @@ public:
       } else if (C.capturesThis() && shouldCheckThis) {
         if (ignoreParamVarDecl) // this is always a parameter to this function.
           continue;
-        reportBugOnThisPtr(C);
+        bool hasProtectThis = false;
+        for (const LambdaCapture &OtherCapture : L->captures()) {
+          if (!OtherCapture.capturesVariable())
+            continue;
+          if (auto *ValueDecl = OtherCapture.getCapturedVar()) {
+            if (protectThis(ValueDecl)) {
+              hasProtectThis = true;
+              break;
+            }
+          }
+        }
+        if (!hasProtectThis)
+          reportBugOnThisPtr(C);
       }
     }
+  }
+
+  bool protectThis(const ValueDecl *ValueDecl) const {
+    auto *VD = dyn_cast<VarDecl>(ValueDecl);
+    if (!VD)
+      return false;
+    auto *Init = VD->getInit()->IgnoreParenCasts();
+    if (!Init)
+      return false;
+    auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Init);
+    if (!BTE)
+      return false;
+    auto *CE = dyn_cast_or_null<CXXConstructExpr>(BTE->getSubExpr());
+    if (!CE)
+      return false;
+    auto *Ctor = CE->getConstructor();
+    if (!Ctor)
+      return false;
+    auto clsName = safeGetName(Ctor->getParent());
+    if (!isRefType(clsName) || !CE->getNumArgs())
+      return false;
+    auto *Arg = CE->getArg(0)->IgnoreParenCasts();
+    while (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
+      auto OpCode = UO->getOpcode();
+      if (OpCode == UO_Deref || OpCode == UO_AddrOf)
+        Arg = UO->getSubExpr();
+      else
+        break;
+    }
+    return isa<CXXThisExpr>(Arg);
   }
 
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
