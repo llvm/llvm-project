@@ -110,9 +110,10 @@ function(add_gen_header target_name)
   set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
   list(TRANSFORM entry_points PREPEND "--e=")
 
+  set(LIBC_HDRGEN "${LIBC_SOURCE_DIR}/utils/hdrgen/yaml_to_classes.py")
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/hdrgen/yaml_to_classes.py
+    COMMAND ${Python3_EXECUTABLE} ${LIBC_HDRGEN}
             ${yaml_file}
             --h_def_file ${def_file}
             ${entry_points}
@@ -126,7 +127,7 @@ function(add_gen_header target_name)
     set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
     add_custom_command(
       OUTPUT ${decl_out_file}
-      COMMAND ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/hdrgen/yaml_to_classes.py
+      COMMAND ${Python3_EXECUTABLE} ${LIBC_HDRGEN}
               ${yaml_file}
               --export-decls
               ${entry_points}

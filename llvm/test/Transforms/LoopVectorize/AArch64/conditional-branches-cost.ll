@@ -821,11 +821,11 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 257, [[TMP2]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
 ; PRED-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 8
 ; PRED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; PRED-NEXT:    [[IND_END1:%.*]] = mul i64 [[N_VEC]], 2
-; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 2
 ; PRED-NEXT:    [[TMP8:%.*]] = sub i64 257, [[TMP7]]
