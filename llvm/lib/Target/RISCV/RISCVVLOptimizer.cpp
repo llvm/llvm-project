@@ -1079,11 +1079,7 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
            "Expect LMUL 1 register class for vector as scalar operands!");
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
 
-    unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-    const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-    return VLOp.isReg() || (VLOp.isImm() && VLOp.getImm() != 0)
-               ? MachineOperand::CreateImm(1)
-               : VLOp;
+    return MachineOperand::CreateImm(1);
   }
 
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
