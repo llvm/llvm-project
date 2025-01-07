@@ -454,6 +454,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
+  case ISD::FMODF:
   case ISD::FSINCOS:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
@@ -1220,6 +1221,14 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     RTLIB::Libcall LC =
         RTLIB::getFSINCOS(Node->getValueType(0).getVectorElementType());
     if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
+      return;
+    break;
+  }
+  case ISD::FMODF: {
+    RTLIB::Libcall LC =
+        RTLIB::getMODF(Node->getValueType(0).getVectorElementType());
+    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+                                          /*CallRetResNo=*/0))
       return;
     break;
   }
