@@ -42,7 +42,7 @@ FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
   if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
-    auto write_result = platform_write(this, buf, write_size);
+    FileIOResult write_result = platform_write(this, buf, write_size);
     pos = 0; // Buffer is now empty so reset pos to the beginning.
     // If less bytes were written than expected, then an error occurred.
     if (write_result < write_size) {
@@ -52,7 +52,7 @@ FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
     }
   }
 
-  auto write_result = platform_write(this, data, len);
+  FileIOResult write_result = platform_write(this, data, len);
   if (write_result < len)
     err = true;
   return write_result;
@@ -99,7 +99,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // is full.
   const size_t write_size = pos;
 
-  auto buf_result = platform_write(this, buf, write_size);
+  FileIOResult buf_result = platform_write(this, buf, write_size);
   size_t bytes_written = buf_result.value;
 
   pos = 0; // Buffer is now empty so reset pos to the beginning.
@@ -121,7 +121,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
     pos = remainder.size();
   } else {
 
-    auto result = platform_write(this, remainder.data(), remainder.size());
+    FileIOResult result = platform_write(this, remainder.data(), remainder.size());
     size_t bytes_written = buf_result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
@@ -237,7 +237,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
                              to_fetch);
 
   if (to_fetch > bufsize) {
-    auto result = platform_read(this, dataref.data(), to_fetch);
+    FileIOResult result = platform_read(this, dataref.data(), to_fetch);
     size_t fetched_size = result.value;
     if (result.has_error() || fetched_size < to_fetch) {
       if (!result.has_error())
@@ -250,7 +250,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   }
 
   // Fetch and buffer another buffer worth of data.
-  auto result = platform_read(this, buf, bufsize);
+  FileIOResult result = platform_read(this, buf, bufsize);
   size_t fetched_size = result.value;
   read_limit += fetched_size;
   size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
@@ -275,7 +275,7 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
   // Directly copy the data into |data|.
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
                              len - available_data);
-  auto result = platform_read(this, dataref.data(), dataref.size());
+  FileIOResult result = platform_read(this, dataref.data(), dataref.size());
 
   if (result.has_error() || result < dataref.size()) {
     if (!result.has_error())
@@ -328,7 +328,7 @@ ErrorOr<int> File::seek(off_t offset, int whence) {
   FileLock lock(this);
   if (prev_op == FileOp::WRITE && pos > 0) {
 
-    auto buf_result = platform_write(this, buf, pos);
+    FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
       return Error(buf_result.error);
@@ -366,7 +366,7 @@ ErrorOr<off_t> File::tell() {
 
 int File::flush_unlocked() {
   if (prev_op == FileOp::WRITE && pos > 0) {
-    auto buf_result = platform_write(this, buf, pos);
+    FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
       return buf_result.error;
