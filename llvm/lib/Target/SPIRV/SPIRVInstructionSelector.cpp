@@ -3478,7 +3478,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
       ID = UnnamedGlobalIDs.size();
     GlobalIdent = "__unnamed_" + Twine(ID).str();
   } else {
-    GlobalIdent = GV->getGlobalIdentifier();
+    GlobalIdent = GV->getName();
   }
 
   // Behaviour of functions as operands depends on availability of the
@@ -3541,18 +3541,16 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   auto GlobalVar = cast<GlobalVariable>(GV);
   assert(GlobalVar->getName() != "llvm.global.annotations");
 
-  bool HasInit = GlobalVar->hasInitializer() &&
-                 !isa<UndefValue>(GlobalVar->getInitializer());
-  // Skip empty declaration for GVs with initilaizers till we get the decl with
+  // Skip empty declaration for GVs with initializers till we get the decl with
   // passed initializer.
-  if (HasInit && !Init)
+  if (hasInitializer(GlobalVar) && !Init)
     return true;
 
-  bool HasLnkTy = GV->getLinkage() != GlobalValue::InternalLinkage;
+  bool HasLnkTy = !GV->hasInternalLinkage() && !GV->hasPrivateLinkage();
   SPIRV::LinkageType::LinkageType LnkType =
-      (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
+      GV->isDeclarationForLinker()
           ? SPIRV::LinkageType::Import
-          : (GV->getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+          : (GV->hasLinkOnceODRLinkage() &&
                      STI.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr)
                  ? SPIRV::LinkageType::LinkOnceODR
                  : SPIRV::LinkageType::Export);
