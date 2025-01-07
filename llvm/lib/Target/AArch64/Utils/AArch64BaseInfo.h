@@ -602,7 +602,6 @@ namespace AArch64PSBHint {
 namespace AArch64PHint {
 struct PHint {
   const char *Name;
-  const char *AltName;
   unsigned Encoding;
   FeatureBitset FeaturesRequired;
 
