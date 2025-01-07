@@ -10154,7 +10154,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   case ISD::VP_REDUCE_AND: {
     // vcpop ~x == 0
     SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
-    Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    if (IsVP || VecVT.isFixedLengthVector())
+      Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    else
+      Vec = DAG.getNode(ISD::XOR, DL, ContainerVT, Vec, TrueMask);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
     break;
@@ -12663,8 +12666,7 @@ SDValue RISCVTargetLowering::lowerGET_ROUNDING(SDValue Op,
   const MVT XLenVT = Subtarget.getXLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(
-      RISCVSysReg::lookupSysRegByName("FRM")->Encoding, DL, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::frm, DL, XLenVT);
   SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
   SDValue RM = DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
 
@@ -12695,8 +12697,7 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
   SDValue RMValue = Op->getOperand(1);
-  SDValue SysRegNo = DAG.getTargetConstant(
-      RISCVSysReg::lookupSysRegByName("FRM")->Encoding, DL, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::frm, DL, XLenVT);
 
   // Encoding used for rounding mode in RISC-V differs from that used in
   // FLT_ROUNDS. To convert it the C rounding mode is used as an index in
@@ -12899,15 +12900,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue LoCounter, HiCounter;
     MVT XLenVT = Subtarget.getXLenVT();
     if (N->getOpcode() == ISD::READCYCLECOUNTER) {
-      LoCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding, DL, XLenVT);
+      LoCounter = DAG.getTargetConstant(RISCVSysReg::cycle, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(RISCVSysReg::cycleh, DL, XLenVT);
     } else {
-      LoCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("TIME")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("TIMEH")->Encoding, DL, XLenVT);
+      LoCounter = DAG.getTargetConstant(RISCVSysReg::time, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(RISCVSysReg::timeh, DL, XLenVT);
     }
     SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
     SDValue RCW = DAG.getNode(RISCVISD::READ_COUNTER_WIDE, DL, VTs,
