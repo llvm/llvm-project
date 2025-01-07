@@ -87,6 +87,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Radians, radians)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupThreadId, thread_id_in_group)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupId, group_id)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FDot, fdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
@@ -103,8 +104,9 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
-  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding, handle_fromBinding)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, bufferUpdateCounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
+                                   resource_handlefrombinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
 

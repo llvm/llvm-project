@@ -24,7 +24,9 @@ define void @test(ptr %p1, ptr %0, i32 %1, i1 %c1, ptr %p2) {
 ; CHECK:       [[L47]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x ptr> [[TMP5]], <4 x ptr> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x ptr> [[TMP5]], <4 x ptr> poison, <2 x i32> <i32 poison, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x ptr> [[TMP25]], <2 x ptr> [[TMP26]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <2 x ptr> [[TMP14]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> zeroinitializer, <2 x i32> [[TMP16]]

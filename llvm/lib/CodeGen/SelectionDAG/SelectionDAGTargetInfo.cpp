@@ -15,3 +15,9 @@
 using namespace llvm;
 
 SelectionDAGTargetInfo::~SelectionDAGTargetInfo() = default;
+
+bool SelectionDAGTargetInfo::mayRaiseFPException(unsigned Opcode) const {
+  // FIXME: All target memory opcodes are currently automatically considered
+  //  to possibly raise FP exceptions. See rev. 63336795.
+  return isTargetStrictFPOpcode(Opcode) || isTargetMemoryOpcode(Opcode);
+}

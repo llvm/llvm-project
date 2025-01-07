@@ -389,10 +389,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genIeeeSignalingCompare<mlir::arith::CmpFPredicate::UNE>},
     {"ieee_signbit", &I::genIeeeSignbit},
     {"ieee_support_flag",
-     &I::genIeeeSupportFlagOrHalting,
+     &I::genIeeeSupportFlag,
      {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"ieee_support_halting", &I::genIeeeSupportFlagOrHalting},
+    {"ieee_support_halting", &I::genIeeeSupportHalting},
     {"ieee_support_rounding", &I::genIeeeSupportRounding},
     {"ieee_unordered", &I::genIeeeUnordered},
     {"ieee_value", &I::genIeeeValue},
@@ -5259,14 +5259,14 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
   return builder.createConvert(loc, resultType, sign);
 }
 
-// IEEE_SUPPORT_FLAG, IEEE_SUPPORT_HALTING
-fir::ExtendedValue IntrinsicLibrary::genIeeeSupportFlagOrHalting(
-    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
-  // Check if a floating point exception or halting mode FLAG is supported.
-  // An IEEE_SUPPORT_FLAG flag is supported either for all type kinds or none.
-  // An optional kind argument X is therefore ignored.
-  // Standard flags are all supported.
-  // The nonstandard DENORM extension is not supported. (At least for now.)
+// IEEE_SUPPORT_FLAG
+fir::ExtendedValue
+IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Check if a floating point exception flag is supported. A flag is
+  // supported either for all type kinds or none. An optional kind argument X
+  // is therefore ignored. Standard flags are all supported. The nonstandard
+  // DENORM extension is not supported, at least for now.
   assert(args.size() == 1 || args.size() == 2);
   auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
@@ -5281,6 +5281,22 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportFlagOrHalting(
           loc, mlir::arith::CmpIPredicate::ne,
           builder.create<mlir::arith::AndIOp>(loc, flag, mask),
           builder.createIntegerConstant(loc, fieldTy, 0)));
+}
+
+// IEEE_SUPPORT_HALTING
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportHalting(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Check if halting is supported for a floating point exception flag.
+  // Standard flags are all supported. The nonstandard DENORM extension is
+  // not supported, at least for now.
+  assert(args.size() == 1);
+  mlir::Type i32Ty = builder.getIntegerType(32);
+  auto [fieldRef, ignore] = getFieldRef(builder, loc, getBase(args[0]));
+  mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSupportHalting(
+          builder, loc, {builder.create<fir::ConvertOp>(loc, i32Ty, field)}));
 }
 
 // IEEE_SUPPORT_ROUNDING

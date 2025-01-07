@@ -1030,6 +1030,27 @@ private:
   CallStackId hashCallStack(ArrayRef<FrameId> CS) const;
 };
 
+// A convenience wrapper around FrameIdConverter and CallStackIdConverter for
+// tests.
+struct IndexedCallstackIdConveter {
+  IndexedCallstackIdConveter() = delete;
+  IndexedCallstackIdConveter(IndexedMemProfData &MemProfData)
+      : FrameIdConv(MemProfData.Frames),
+        CSIdConv(MemProfData.CallStacks, FrameIdConv) {}
+
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of IndexedCallStackIdConverter gets an error in
+  // LastUnmappedId while the original instance doesn't.
+  IndexedCallstackIdConveter(const IndexedCallstackIdConveter &) = delete;
+  IndexedCallstackIdConveter &
+  operator=(const IndexedCallstackIdConveter &) = delete;
+
+  std::vector<Frame> operator()(CallStackId CSId) { return CSIdConv(CSId); }
+
+  FrameIdConverter<decltype(IndexedMemProfData::Frames)> FrameIdConv;
+  CallStackIdConverter<decltype(IndexedMemProfData::CallStacks)> CSIdConv;
+};
+
 struct FrameStat {
   // The number of occurrences of a given FrameId.
   uint64_t Count = 0;

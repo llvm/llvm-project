@@ -152,7 +152,7 @@ static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
 // override these hints anyway.
 static cl::opt<bool> ClMemProfMatchHotColdNew(
     "memprof-match-hot-cold-new",
- cl::desc(
+    cl::desc(
         "Match allocation profiles onto existing hot/cold operator new calls"),
     cl::Hidden, cl::init(false));
 
@@ -170,6 +170,15 @@ static cl::opt<std::string>
     MemprofRuntimeDefaultOptions("memprof-runtime-default-options",
                                  cl::desc("The default memprof options"),
                                  cl::Hidden, cl::init(""));
+
+static cl::opt<bool>
+    SalvageStaleProfile("memprof-salvage-stale-profile",
+                        cl::desc("Salvage stale MemProf profile"),
+                        cl::init(false), cl::Hidden);
+
+cl::opt<unsigned> MinClonedColdBytePercent(
+    "memprof-cloning-cold-threshold", cl::init(100), cl::Hidden,
+    cl::desc("Min percent of cold bytes to hint alloc cold during cloning"));
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 
@@ -750,7 +759,7 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
   std::vector<ContextTotalSize> ContextSizeInfo;
-  if (MemProfReportHintedSizes) {
+  if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
     auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
     assert(FullStackId != 0);
@@ -823,7 +832,8 @@ struct AllocMatchInfo {
 };
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
-memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
+memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
+                            function_ref<bool(uint64_t)> IsPresentInProfile) {
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   auto GetOffset = [](const DILocation *DIL) {
@@ -847,7 +857,12 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
           continue;
 
         StringRef CalleeName = CalledFunction->getName();
+        // True if we are calling a heap allocation function that supports
+        // hot/cold variants.
         bool IsAlloc = isAllocationWithHotColdVariant(CalledFunction, TLI);
+        // True for the first iteration below, indicating that we are looking at
+        // a leaf node.
+        bool IsLeaf = true;
         for (const DILocation *DIL = I.getDebugLoc(); DIL;
              DIL = DIL->getInlinedAt()) {
           StringRef CallerName = DIL->getSubprogramLinkageName();
@@ -856,16 +871,27 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
           uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
           uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
           // Pretend that we are calling a function with GUID == 0 if we are
-          // calling a heap allocation function.
-          if (IsAlloc)
-            CalleeGUID = 0;
+          // in the inline stack leading to a heap allocation function.
+          if (IsAlloc) {
+            if (IsLeaf) {
+              // For leaf nodes, set CalleeGUID to 0 without consulting
+              // IsPresentInProfile.
+              CalleeGUID = 0;
+            } else if (!IsPresentInProfile(CalleeGUID)) {
+              // In addition to the leaf case above, continue to set CalleeGUID
+              // to 0 as long as we don't see CalleeGUID in the profile.
+              CalleeGUID = 0;
+            } else {
+              // Once we encounter a callee that exists in the profile, stop
+              // setting CalleeGUID to 0.
+              IsAlloc = false;
+            }
+          }
+
           LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
           Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
           CalleeName = CallerName;
-          // FIXME: Recognize other frames that are associated with heap
-          // allocation functions.  It may be too early to reset IsAlloc to
-          // false here.
-          IsAlloc = false;
+          IsLeaf = false;
         }
       }
     }
@@ -888,7 +914,9 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromProfile =
       MemProfReader->getMemProfCallerCalleePairs();
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromIR =
-      extractCallsFromIR(M, TLI);
+      extractCallsFromIR(M, TLI, [&](uint64_t GUID) {
+        return CallsFromProfile.contains(GUID);
+      });
 
   // Compute an undrift map for each CallerGUID.
   for (const auto &[CallerGUID, IRAnchors] : CallsFromIR) {
@@ -911,10 +939,38 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
   return UndriftMaps;
 }
 
+// Given a MemProfRecord, undrift all the source locations present in the
+// record in place.
+static void
+undriftMemProfRecord(const DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
+                     memprof::MemProfRecord &MemProfRec) {
+  // Undrift a call stack in place.
+  auto UndriftCallStack = [&](std::vector<Frame> &CallStack) {
+    for (auto &F : CallStack) {
+      auto I = UndriftMaps.find(F.Function);
+      if (I == UndriftMaps.end())
+        continue;
+      auto J = I->second.find(LineLocation(F.LineOffset, F.Column));
+      if (J == I->second.end())
+        continue;
+      auto &NewLoc = J->second;
+      F.LineOffset = NewLoc.LineOffset;
+      F.Column = NewLoc.Column;
+    }
+  };
+
+  for (auto &AS : MemProfRec.AllocSites)
+    UndriftCallStack(AS.CallStack);
+
+  for (auto &CS : MemProfRec.CallSites)
+    UndriftCallStack(CS);
+}
+
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
-            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo) {
+            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
+            DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
@@ -961,6 +1017,11 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   }
 
   NumOfMemProfFunc++;
+
+  // If requested, undrfit MemProfRecord so that the source locations in it
+  // match those in the IR.
+  if (SalvageStaleProfile)
+    undriftMemProfRecord(UndriftMaps, *MemProfRec);
 
   // Detect if there are non-zero column numbers in the profile. If not,
   // treat all column numbers as 0 when matching (i.e. ignore any non-zero
@@ -1088,7 +1149,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
             uint64_t FullStackId = 0;
-            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
+            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes ||
+                MinClonedColdBytePercent < 100)
               FullStackId = computeFullStackId(AllocInfo->CallStack);
             auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             TotalSize += AllocInfo->Info.getTotalSize();
@@ -1195,6 +1257,11 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
+  TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(*M.begin());
+  DenseMap<uint64_t, LocToLocMap> UndriftMaps;
+  if (SalvageStaleProfile)
+    UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI);
+
   // Map from the stack has of each allocation context in the function profiles
   // to the total profiled size (bytes), allocation type, and whether we matched
   // it to an allocation in the IR.
@@ -1205,7 +1272,8 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
       continue;
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-    readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo);
+    readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
+                UndriftMaps);
   }
 
   if (ClPrintMemProfMatchInfo) {
