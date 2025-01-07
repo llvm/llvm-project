@@ -9,17 +9,39 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 #define LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 
+#include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <atomic>
+#include <functional>
+#include <thread>
 
 namespace lldb_dap {
 
-/// Redirects the output of a given file descriptor to a callback.
-///
-/// \return
-///     \a Error::success if the redirection was set up correctly, or an error
-///     otherwise.
-llvm::Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback);
+class OutputRedirector {
+public:
+  /// Creates writable file descriptor that will invoke the given callback on
+  /// each write in a background thread.
+  ///
+  /// \return
+  ///     \a Error::success if the redirection was set up correctly, or an error
+  ///     otherwise.
+  llvm::Error RedirectTo(std::function<void(llvm::StringRef)> callback);
+
+  llvm::Expected<int> GetWriteFileDescriptor();
+  void Stop();
+
+  ~OutputRedirector() { Stop(); }
+
+  OutputRedirector() = default;
+  OutputRedirector(const OutputRedirector &) = delete;
+  OutputRedirector &operator=(const OutputRedirector &) = delete;
+
+private:
+  std::atomic<bool> m_stopped = false;
+  lldb_private::Pipe m_pipe;
+  std::thread m_forwarder;
+};
 
 } // namespace lldb_dap
 
