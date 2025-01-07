@@ -742,8 +742,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeKinds &= Kinds;
 
   // Parse -fno-sanitize-top-hot flags
-  SanitizerMask TopHotMask =
-      parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, &TopHotCutoffs);
+  parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, &TopHotCutoffs);
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
@@ -1165,10 +1164,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   MergeHandlers.Mask |= MergeKinds;
 
-  TopHotMask &= Sanitizers.Mask;
-  TopHot.Mask = TopHotMask;
-
-  // Zero out TopHot for unused sanitizers
+  // Zero out TopHotCutoffs for unused sanitizers
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
     if (!(Sanitizers.Mask & SanitizerMask::bitPosToMask(i)))
       TopHotCutoffs[i] = 0;
@@ -1561,8 +1557,13 @@ SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
-    SanitizerMask Kind =
-        parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs);
+    parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs);
+
+    SanitizerMask Kind;
+    for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
+      if (Cutoffs[i])
+        Kind |= SanitizerMask::bitPosToMask(i);
+    }
 
     if (Kind)
       Kinds |= Kind;

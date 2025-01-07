@@ -36,7 +36,7 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
   return ParsedKind;
 }
 
-SanitizerMask
+bool
 clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
                                    SanitizerMaskCutoffs &Cutoffs) {
   SanitizerMask ParsedKind = llvm::StringSwitch<SanitizerMask>(Value)
@@ -62,9 +62,11 @@ clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
             Cutoffs[i] = arg;
       }
     }
+
+    return true;
   }
 
-  return ParsedKind;
+  return false;
 }
 
 void clang::serializeSanitizerSet(SanitizerSet Set,

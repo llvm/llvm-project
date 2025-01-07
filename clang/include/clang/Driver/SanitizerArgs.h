@@ -26,7 +26,6 @@ class SanitizerArgs {
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
   SanitizerSet MergeHandlers;
-  SanitizerSet TopHot;
   SanitizerMaskCutoffs TopHotCutoffs = {0};
 
   std::vector<std::string> UserIgnorelistFiles;
