@@ -377,13 +377,14 @@ private:
 class ValueRange final
     : public llvm::detail::indexed_accessor_range_base<
           ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
-          Value, Value, Value> {
+                             PointerUnion<const Value *, OpOperand *,
+                                          detail::OpResultImpl *, Value>,
+                             Value, Value, Value> {
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, or results.
+  /// values, operands, or results or a single value.
   using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
+      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *, Value>;
 
   using RangeBaseT::RangeBaseT;
 
@@ -392,7 +393,7 @@ public:
                 std::is_constructible<ArrayRef<Value>, Arg>::value &&
                 !std::is_convertible<Arg, Value>::value>>
   ValueRange(Arg &&arg) : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
-  ValueRange(const Value &value) : ValueRange(&value, /*count=*/1) {}
+  ValueRange(Value value) : ValueRange(value, /*count=*/1) {}
   ValueRange(const std::initializer_list<Value> &values)
       : ValueRange(ArrayRef<Value>(values)) {}
   ValueRange(iterator_range<OperandRange::iterator> values)
