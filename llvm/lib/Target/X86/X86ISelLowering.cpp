@@ -37230,8 +37230,6 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   // N.B. the order the invoke BBs are processed in doesn't matter here.
   SmallVector<MachineBasicBlock *, 64> MBBLPads;
   const MCPhysReg *SavedRegs = MF->getRegInfo().getCalleeSavedRegs();
-  // llvm::outs() << "Callee saved regs from isellowering " <<
-  // SavedRegs->
   for (MachineBasicBlock *MBB : InvokeBBs) {
     // Remove the landing pad successor from the invoke block and replace it
     // with the new dispatch block.

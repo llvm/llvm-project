@@ -339,8 +339,6 @@ public:
   bool isPositionIndependent() const;
 
   bool isCallingConvWin64(CallingConv::ID CC) const {
-    // llvm::outs() << "\nIn isCallingConvWin64 check calling
-    // convention******************* ";
     switch (CC) {
     // On Win64 and UEFI64, all these conventions just use the default
     // convention.
@@ -357,8 +355,6 @@ public:
       return isTargetWin64() || isTargetUEFI64();
     // This convention allows using the Win64 convention on other targets.
     case CallingConv::Win64:
-      // llvm::outs() << "\nReturning true for Win64 calling
-      // convention******************* ";
       return true;
     // This convention allows using the SysV convention on Windows targets.
     case CallingConv::X86_64_SysV:
