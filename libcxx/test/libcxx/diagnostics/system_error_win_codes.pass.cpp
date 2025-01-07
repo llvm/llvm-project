@@ -21,4 +21,5 @@
 int main(int, char**) {
   LIBCPP_ASSERT(std::error_code(ERROR_ACCESS_DENIED, std::system_category()) == std::errc::permission_denied);
   LIBCPP_ASSERT(std::error_code(ERROR_PATH_NOT_FOUND, std::system_category()) == std::errc::no_such_file_or_directory);
+  return 0;
 }
