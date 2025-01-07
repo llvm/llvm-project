@@ -384,9 +384,9 @@ public:
   /// the expense of debuggability).
   SanitizerSet SanitizeMergeHandlers;
 
-  /// Set of thresholds: the top hottest code responsible for the given
-  /// fraction of PGO counters will be excluded from sanitization
-  /// (0.0 [default] = skip none, 1.0 = skip all).
+  /// Set of thresholds in a range [0.0, 1.0]: the top hottest code responsible
+  /// for the given fraction of PGO counters will be excluded from sanitization
+  /// (0.0 [default] to skip none, 1.0 to skip all).
   SanitizerMaskCutoffs NoSanitizeTopHotCutoffs;
 
   /// List of backend command-line options for -fembed-bitcode.
