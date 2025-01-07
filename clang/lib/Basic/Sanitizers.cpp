@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/MathExtras.h"
+#include <algorithm>
 
 using namespace clang;
 
@@ -46,26 +47,20 @@ bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
 #include "clang/Basic/Sanitizers.def"
                                  .Default(SanitizerMask());
 
-  if (ParsedKind) {
-    size_t equalsIndex = Value.find_first_of('=');
-    if (equalsIndex != llvm::StringLiteral::npos) {
-      double arg;
-      if ((Value.size() > (equalsIndex + 1)) &&
-          !Value.substr(equalsIndex + 1).getAsDouble(arg)) {
-        // AllowGroups is already taken into account for ParsedKind,
-        // hence we unconditionally expandSanitizerGroups.
-        SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
-
-        for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
-          if (ExpandedKind & SanitizerMask::bitPosToMask(i))
-            Cutoffs[i] = arg;
-
-        return true;
-      }
-    }
-  }
-
-  return false;
+  if (!ParsedKind)
+    return false;
+  auto [N, W] = Value.split('=');
+  double A;
+  if (W.getAsDouble(A))
+    return false;
+  float C = std::clamp()(A, 0.0, 1.0);
+  // AllowGroups is already taken into account for ParsedKind,
+  // hence we unconditionally expandSanitizerGroups.
+  SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
+    if (ExpandedKind & SanitizerMask::bitPosToMask(i))
+      Cutoffs[i] = C;
+  return true;
 }
 
 void clang::serializeSanitizerSet(SanitizerSet Set,
