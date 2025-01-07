@@ -162,23 +162,35 @@ def parse_package_index(content):
     packages = {}
     aliases = {}
     entries = re.split(r'\n\n+', content)
+
     for entry in entries:
         fields = dict(re.findall(r'^(\S+): (.+)$', entry, re.MULTILINE))
         if "Package" in fields:
             package_name = fields["Package"]
-            packages[package_name] = {
-                "Version": fields.get("Version"),
-                "Filename": fields.get("Filename"),
-                "Depends": fields.get("Depends")
-            }
-            if "Provides" in fields:
-                provides_list = [x.strip() for x in fields["Provides"].split(",")]
-                for alias in provides_list:
-                    # strip version specifiers
-                    alias_name = re.sub(r'\s*\(=.*\)', '', alias)
-                    if alias_name not in aliases:
-                        aliases[alias_name] = []
-                    aliases[alias_name].append(package_name)
+            version = fields.get("Version")
+            filename = fields.get("Filename")
+            depends = fields.get("Depends")
+            provides = fields.get("Provides", None)
+
+            # Only update if package_name is not in packages or if the new version is higher
+            if package_name not in packages or compare_debian_versions(version, packages[package_name]["Version"]) > 0:
+                packages[package_name] = {
+                    "Version": version,
+                    "Filename": filename,
+                    "Depends": depends
+                }
+
+                # Update aliases if package provides any alternatives
+                if provides:
+                    provides_list = [x.strip() for x in provides.split(",")]
+                    for alias in provides_list:
+                        # Strip version specifiers
+                        alias_name = re.sub(r'\s*\(=.*\)', '', alias)
+                        if alias_name not in aliases:
+                            aliases[alias_name] = []
+                        if package_name not in aliases[alias_name]:
+                            aliases[alias_name].append(package_name)
+
     return packages, aliases
 
 def install_packages(mirror, packages_info, aliases, tmp_dir, extract_dir, ar_tool, desired_packages):
@@ -189,27 +201,13 @@ def install_packages(mirror, packages_info, aliases, tmp_dir, extract_dir, ar_to
     packages_to_download = {}
 
     for pkg in resolved_packages:
-        available_versions = [pkg]
+        if pkg in packages_info:
+            packages_to_download[pkg] = packages_info[pkg]
 
         if pkg in aliases:
-            available_versions.extend(aliases[pkg])
-
-        # Choose the package with the latest version
-        if available_versions:
-            best_package = max(
-                (p for p in available_versions if p in packages_info),
-                key=lambda p: (
-                    1 if p == pkg else 0,
-                    cmp_to_key(lambda p1, p2: compare_debian_versions(
-                        packages_info[p1]["Version"],
-                        packages_info[p2]["Version"]
-                    ))(p)
-                ),
-                default=None
-            )
-
-            if best_package:
-                packages_to_download[best_package] = packages_info[best_package]
+            for alias in aliases[pkg]:
+                if alias in packages_info:
+                    packages_to_download[alias] = packages_info[alias]
 
     asyncio.run(download_deb_files_parallel(mirror, packages_to_download, tmp_dir))
 
@@ -225,11 +223,11 @@ def install_packages(mirror, packages_info, aliases, tmp_dir, extract_dir, ar_to
     for pkg in reversed(resolved_packages):
         deb_file = package_to_deb_file_map.get(pkg)
         if deb_file and os.path.exists(deb_file):
-            extract_deb_file_using_dpkg(deb_file, tmp_dir, extract_dir, ar_tool)
+            extract_deb_file(deb_file, tmp_dir, extract_dir, ar_tool)
 
     print("All done!")
 
-def extract_deb_file_using_dpkg(deb_file, tmp_dir, extract_dir, ar_tool):
+def extract_deb_file(deb_file, tmp_dir, extract_dir, ar_tool):
     """Extract .deb file contents"""
 
     os.makedirs(extract_dir, exist_ok=True)
@@ -270,7 +268,7 @@ def extract_deb_file_using_dpkg(deb_file, tmp_dir, extract_dir, ar_tool):
             raise ValueError(f"Unsupported compression format: {file_extension}")
 
         with tarfile.open(tar_file_path, mode) as tar:
-            tar.extractall(path=extract_dir, filter=None)
+            tar.extractall(path=extract_dir, filter='fully_trusted')
 
 def finalize_setup(rootfsdir):
     lib_dir = os.path.join(rootfsdir, 'lib')

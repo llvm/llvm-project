@@ -44,6 +44,11 @@ parameters:
     displayName: Publish installers and checksums
     type: boolean
     default: true
+    
+  - name: requireDefaultChannels
+    displayName: Fail the build if there are no default channel(s) registrations for the current build
+    type: boolean
+    default: false
 
   - name: SDLValidationParameters
     type: object
@@ -312,5 +317,6 @@ stages:
               -PublishingInfraVersion ${{ parameters.publishingInfraVersion }}
               -AzdoToken '$(System.AccessToken)'
               -WaitPublishingFinish true
+              -RequireDefaultChannels ${{ parameters.requireDefaultChannels }}
               -ArtifactsPublishingAdditionalParameters '${{ parameters.artifactsPublishingAdditionalParameters }}'
               -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'

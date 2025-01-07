@@ -800,7 +800,7 @@ elif [[ -n "$__CodeName" ]]; then
         PYTHON=${PYTHON_EXECUTABLE:-python3}
 
         # shellcheck disable=SC2086,SC2046
-        echo running "$PYTHON" "$__CrossDir/install-debs.py" --arch "$__UbuntuArch" --rootfsdir "$__RootfsDir" --artool "$AR" \
+        echo running "$PYTHON" "$__CrossDir/install-debs.py" --arch "$__UbuntuArch" --mirror "$__UbuntuRepo" --rootfsdir "$__RootfsDir" --artool "$AR" \
             $(echo $suites | xargs -n 1 | xargs -I {} echo -n "--suite {} ") \
             $__UbuntuPackages
 
