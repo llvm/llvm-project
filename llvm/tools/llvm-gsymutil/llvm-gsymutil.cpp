@@ -508,11 +508,6 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
 }
 
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
-  auto logError = [Addr, &OS](Error E) {
-    OS << HEX64(Addr) << ": ";
-    logAllUnhandledErrors(std::move(E), OS, "error: ");
-  };
-
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
       OS << "Found " << Results->size() << " functions at address "
@@ -526,20 +521,23 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
     }
   } else { /* UseMergedFunctions == false */
     if (auto Result = Gsym.lookup(Addr)) {
+      // If verbose is enabled dump the full function info for the address.
+      if (Verbose) {
+        if (auto FI = Gsym.getFunctionInfo(Addr)) {
+          OS << "FunctionInfo for " << HEX64(Addr) << ":\n";
+          Gsym.dump(OS, *FI);
+          OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+        }
+      }
       OS << Result.get();
     } else {
-      logError(Result.takeError());
-      return;
+      if (Verbose)
+        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+      OS << HEX64(Addr) << ": ";
+      logAllUnhandledErrors(Result.takeError(), OS, "error: ");
     }
-  }
-
-  if (Verbose) {
-    if (auto FI = Gsym.getFunctionInfo(Addr)) {
-      OS << "FunctionInfo for " << HEX64(Addr) << ":\n";
-      Gsym.dump(OS, *FI);
-      OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
-    }
-    OS << "\n";
+    if (Verbose)
+      OS << "\n";
   }
 }
 

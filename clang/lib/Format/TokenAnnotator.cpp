@@ -137,8 +137,6 @@ public:
 private:
   ScopeType getScopeType(const FormatToken &Token) const {
     switch (Token.getType()) {
-    case TT_LambdaLBrace:
-      return ST_ChildBlock;
     case TT_ClassLBrace:
     case TT_StructLBrace:
     case TT_UnionLBrace:
@@ -3395,13 +3393,13 @@ private:
   /// Parse unary operator expressions and surround them with fake
   /// parentheses if appropriate.
   void parseUnaryOperator() {
-    llvm::SmallVector<FormatToken *, 2> Tokens;
+    SmallVector<FormatToken *, 2> Tokens;
     while (Current && Current->is(TT_UnaryOperator)) {
       Tokens.push_back(Current);
       next();
     }
     parse(PrecedenceArrowAndPeriod);
-    for (FormatToken *Token : llvm::reverse(Tokens)) {
+    for (FormatToken *Token : reverse(Tokens)) {
       // The actual precedence doesn't matter.
       addFakeParenthesis(Token, prec::Unknown);
     }
@@ -3579,7 +3577,7 @@ private:
 void TokenAnnotator::setCommentLineLevels(
     SmallVectorImpl<AnnotatedLine *> &Lines) const {
   const AnnotatedLine *NextNonCommentLine = nullptr;
-  for (AnnotatedLine *Line : llvm::reverse(Lines)) {
+  for (AnnotatedLine *Line : reverse(Lines)) {
     assert(Line->First);
 
     // If the comment is currently aligned with the line immediately following
@@ -3700,7 +3698,7 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   Line.Type = Parser.parseLine();
 
   if (!Line.Children.empty()) {
-    ScopeStack.push_back(ST_ChildBlock);
+    ScopeStack.push_back(ST_Other);
     const bool InRequiresExpression = Line.Type == LT_RequiresExpression;
     for (auto &Child : Line.Children) {
       if (InRequiresExpression &&
