@@ -60,7 +60,7 @@ def main():
     header = load_yaml_file(yaml_file, HeaderFile, args.entry_point)
 
     if not header.template_file:
-        sys.stderr.write(f"{yaml_file}: Missing header_template\n")
+        print(f"{yaml_file}: Missing header_template", sys.stderr)
         return 2
 
     # The header_template path is relative to the containing YAML file.
