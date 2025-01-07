@@ -78,7 +78,7 @@ namespace cwg1432 { // cwg1432: 16
 #endif
 } // namespace cwg1432
 
-namespace cwg1443 { // cwg1443: yes
+namespace cwg1443 { // cwg1443: 2.7
 struct A {
   int i;
   A() { void foo(int=i); }
@@ -93,7 +93,7 @@ struct A;
 void f() {
   constexpr A* a = nullptr;
   constexpr int p = &*a;
-  // expected-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
+  // since-cxx11-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
   constexpr A *p2 = &*a;
 }
 
@@ -108,27 +108,27 @@ namespace cwg1460 { // cwg1460: 3.5
   namespace DRExample {
     union A {
       union {};
-      // expected-error@-1 {{declaration does not declare anything}}
+      // since-cxx11-error@-1 {{declaration does not declare anything}}
       union {};
-      // expected-error@-1 {{declaration does not declare anything}}
+      // since-cxx11-error@-1 {{declaration does not declare anything}}
       constexpr A() {}
     };
     constexpr A a = A();
 
     union B {
       union {};
-      // expected-error@-1 {{declaration does not declare anything}}
+      // since-cxx11-error@-1 {{declaration does not declare anything}}
       union {};
-      // expected-error@-1 {{declaration does not declare anything}}
+      // since-cxx11-error@-1 {{declaration does not declare anything}}
       constexpr B() = default;
     };
     constexpr B b = B();
 
     union C {
       union {};
-      // expected-error@-1 {{declaration does not declare anything}}
+      // since-cxx11-error@-1 {{declaration does not declare anything}}
       union {};
-      // expected-error@-1 {{declaration does not declare anything}}
+      // since-cxx11-error@-1 {{declaration does not declare anything}}
     };
     constexpr C c = C();
 #if __cplusplus >= 201403L
@@ -141,7 +141,7 @@ namespace cwg1460 { // cwg1460: 3.5
   union B { int n; }; // #cwg1460-B
   union C { int n = 0; };
   struct D { union {}; };
-  // expected-error@-1 {{declaration does not declare anything}}
+  // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct E { union { int n; }; }; // #cwg1460-E
   struct F { union { int n = 0; }; };
 
@@ -173,7 +173,7 @@ namespace cwg1460 { // cwg1460: 3.5
     // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
     union C { int n = 0; constexpr C() = default; };
     struct D { union {}; constexpr D() = default; };
-    // expected-error@-1 {{declaration does not declare anything}}
+    // since-cxx11-error@-1 {{declaration does not declare anything}}
     struct E { union { int n; }; constexpr E() = default; };
     // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
     struct F { union { int n = 0; }; constexpr F() = default; };
@@ -222,8 +222,8 @@ namespace cwg1460 { // cwg1460: 3.5
   union G {
     int a = 0; // #cwg1460-G-a
     int b = 0;
-    // expected-error@-1 {{initializing multiple members of union}}
-    //   expected-note@#cwg1460-G-a {{previous initialization is here}}
+    // since-cxx11-error@-1 {{initializing multiple members of union}}
+    //   since-cxx11-note@#cwg1460-G-a {{previous initialization is here}}
   };
   union H {
     union {
@@ -231,16 +231,16 @@ namespace cwg1460 { // cwg1460: 3.5
     };
     union {
       int b = 0;
-      // expected-error@-1 {{initializing multiple members of union}}
-      //   expected-note@#cwg1460-H-a {{previous initialization is here}}
+      // since-cxx11-error@-1 {{initializing multiple members of union}}
+      //   since-cxx11-note@#cwg1460-H-a {{previous initialization is here}}
     };
   };
   struct I {
     union {
       int a = 0; // #cwg1460-I-a
       int b = 0;
-      // expected-error@-1 {{initializing multiple members of union}}
-      //   expected-note@#cwg1460-I-a {{previous initialization is here}}
+      // since-cxx11-error@-1 {{initializing multiple members of union}}
+      //   since-cxx11-note@#cwg1460-I-a {{previous initialization is here}}
     };
   };
   struct J {
@@ -264,23 +264,23 @@ namespace cwg1460 { // cwg1460: 3.5
     };
     static_assert(B().a == 1, "");
     static_assert(B().b == 2, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
     static_assert(B('x').a == 0, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(B('x').b == 4, "");
     static_assert(B(123).b == 2, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
     static_assert(B(123).c == 3, "");
     static_assert(B("").a == 1, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(B("").b == 2, "");
     static_assert(B("").c == 3, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
 
     struct C {
       union { int a, b = 2, c; };
@@ -294,54 +294,54 @@ namespace cwg1460 { // cwg1460: 3.5
 
     static_assert(C().a == 1, "");
     static_assert(C().b == 2, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
     static_assert(C().d == 4, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
     static_assert(C().e == 5, "");
 
     static_assert(C('x').b == 2, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
     static_assert(C('x').c == 3, "");
     static_assert(C('x').d == 4, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
     static_assert(C('x').e == 5, "");
 
     static_assert(C(1).b == 2, "");
     static_assert(C(1).c == 3, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(C(1).d == 4, "");
     static_assert(C(1).e == 5, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'e' of union with active member 'd' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'e' of union with active member 'd' is not allowed in a constant expression}}
 
     static_assert(C(1.f).b == 2, "");
     static_assert(C(1.f).c == 3, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(C(1.f).e == 5, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'e' of union with active member 'f' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'e' of union with active member 'f' is not allowed in a constant expression}}
     static_assert(C(1.f).f == 6, "");
 
     static_assert(C("").a == 1, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(C("").b == 2, "");
     static_assert(C("").c == 3, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(C("").d == 4, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
     static_assert(C("").e == 5, "");
     static_assert(C("").f == 6, "");
-    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
-    //   expected-note@-2 {{read of member 'f' of union with active member 'e' is not allowed in a constant expression}}
+    // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   since-cxx11-note@-2 {{read of member 'f' of union with active member 'e' is not allowed in a constant expression}}
 
     struct D;
     extern const D d;
