@@ -64,9 +64,11 @@ public:
   }
 };
 
-class DummyPriorityAdvisorProvider final : public RegAllocPriorityAdvisorProvider {
+class DummyPriorityAdvisorProvider final
+    : public RegAllocPriorityAdvisorProvider {
 public:
-  DummyPriorityAdvisorProvider() : RegAllocPriorityAdvisorProvider(AdvisorMode::Dummy) {}
+  DummyPriorityAdvisorProvider()
+      : RegAllocPriorityAdvisorProvider(AdvisorMode::Dummy) {}
 
   static bool classof(const RegAllocPriorityAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Dummy;
