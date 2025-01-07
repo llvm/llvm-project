@@ -1554,26 +1554,25 @@ SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
                               SanitizerMaskCutoffs &Cutoffs) {
   assert(A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ) &&
          "Invalid argument in parseArgCutoffs!");
-  SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
-    parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs);
 
-    SanitizerMask Kind;
-    for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
-      // Invoking bitPosToMask repeatedly is inefficient: we could simply
-      // repeatedly set the LSB then left-shift; however, we assume the
-      // compiler will optimize this (in any case, the runtime is negligible).
-      if (Cutoffs[i])
-        Kind |= SanitizerMask::bitPosToMask(i);
-    }
-
-    if (Kind)
-      Kinds |= Kind;
-    else if (DiagnoseErrors)
+    // We don't check the value of Cutoffs[i]: it's legal to specify
+    // -fsanitize-blah=value=0.0.
+    if (!parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs))
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Value;
   }
+
+  SanitizerMask Kinds;
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
+    // Invoking bitPosToMask repeatedly is inefficient: we could simply
+    // set the LSB then left-shift in a loop; however, we assume the compiler
+    // will optimize this (in any case, the runtime is negligible).
+    if (Cutoffs[i])
+      Kinds |= SanitizerMask::bitPosToMask(i);
+  }
+
   return Kinds;
 }
 
