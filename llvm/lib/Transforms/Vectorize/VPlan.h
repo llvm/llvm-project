@@ -1356,7 +1356,6 @@ public:
     if (Instruction::isBinaryOp(getOpcode()))
       return false;
     switch (getOpcode()) {
-    case Instruction::Or:
     case Instruction::ICmp:
     case Instruction::Select:
     case VPInstruction::AnyOf:
