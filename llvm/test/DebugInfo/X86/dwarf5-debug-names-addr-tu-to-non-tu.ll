@@ -2,7 +2,7 @@
 ; RUN:     | llvm-dwarfdump -debug-info -debug-names - \
 ; RUN:     | FileCheck %s
 
-;; Test that an entry in the debug names table gets created for a top level DIE when the creation of TU is aborted.
+;; Test that an entry in the debug names table gets created for a top level DIE when the creation of TU fails.
 
 ;; clang++ -O0 main.cpp -gdwarf-5 -fdebug-types-section -gpubnames -S -emit-llvm -glldb -o main.ll
 ;; int foo;
