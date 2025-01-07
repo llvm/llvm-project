@@ -154,11 +154,7 @@ define i1 @test4a(i32 %a) {
 
 define i1 @test4a_commuted(i32 %a) {
 ; CHECK-LABEL: @test4a_commuted(
-; CHECK-NEXT:    [[L:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[NA:%.*]] = sub i32 0, [[A]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[NA]], 31
-; CHECK-NEXT:    [[SIGNUM:%.*]] = or i32 [[R]], [[L]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[SIGNUM]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[SIGNUM:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = ashr i32 %a, 31
