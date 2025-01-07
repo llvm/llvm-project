@@ -323,8 +323,8 @@ define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
 define i64 @add_shl_sext(i32 %1) {
 ; RV64-LABEL: add_shl_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, a1, 3
-; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    addi a1, a0, 3
+; RV64-NEXT:    sllw a0, a1, a0
 ; RV64-NEXT:    ret
   %3 = add i32 %1, 3
   %4 = shl i32 %3, %1
