@@ -42,8 +42,7 @@ public:
         }
         return ABIArgInfo::getDirect(CoerceTy);
       } else {
-        return getNaturalAlignIndirect(
-            Ty, getTargetDefaultAS());
+        return getNaturalAlignIndirect(Ty, getTargetDefaultAS());
       }
     }
 

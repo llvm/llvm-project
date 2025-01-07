@@ -82,9 +82,9 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
-    return getNaturalAlignIndirect(
-        Ty, /*AddrSpace=*/getTargetDefaultAS(),
-        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
+                                   /*ByVal=*/RAA ==
+                                       CGCXXABI::RAA_DirectInMemory);
   }
 
   // Ignore empty structs/unions.

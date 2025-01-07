@@ -812,16 +812,16 @@ static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
 
 static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
-  unsigned IndirectAS = forReturn
-      ? CGM.getDataLayout().getAllocaAddrSpace()
-      : CGM.getContext().getTargetAddressSpace(LangAS::Default);
+  unsigned IndirectAS =
+      forReturn ? CGM.getDataLayout().getAllocaAddrSpace()
+                : CGM.getContext().getTargetAddressSpace(LangAS::Default);
   if (auto recordType = dyn_cast<RecordType>(type)) {
     auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
-      return ABIArgInfo::getIndirect(
-          layout.getAlignment(), /*AddrSpace=*/ IndirectAS, /*byval=*/ false);
+      return ABIArgInfo::getIndirect(layout.getAlignment(),
+                                     /*AddrSpace=*/IndirectAS, /*byval=*/false);
 
     SwiftAggLowering lowering(CGM);
     lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);

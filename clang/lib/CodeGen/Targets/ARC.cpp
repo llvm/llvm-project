@@ -69,9 +69,8 @@ public:
 
 
 ABIArgInfo ARCABIInfo::getIndirectByRef(QualType Ty, bool HasFreeRegs) const {
-  return HasFreeRegs
-             ? getNaturalAlignIndirectInReg(Ty)
-             : getNaturalAlignIndirect(Ty, getTargetDefaultAS(), false);
+  return HasFreeRegs ? getNaturalAlignIndirectInReg(Ty)
+                     : getNaturalAlignIndirect(Ty, getTargetDefaultAS(), false);
 }
 
 ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
