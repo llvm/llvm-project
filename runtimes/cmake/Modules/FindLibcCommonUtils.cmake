@@ -14,6 +14,6 @@ if(NOT TARGET llvm-libc-common-utilities)
     # adding the root "libc" directory to the include path.
     target_include_directories(llvm-libc-common-utilities INTERFACE ${libc_path})
     target_compile_definitions(llvm-libc-common-utilities INTERFACE LIBC_NAMESPACE=__llvm_libc_common_utils)
-    target_compile_features(llvm-libc-common-utilities INTERFACE cxx_std_17)
+#   target_compile_features(llvm-libc-common-utilities INTERFACE cxx_std_17)
   endif()
 endif()
