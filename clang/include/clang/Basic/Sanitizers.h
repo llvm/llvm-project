@@ -199,7 +199,7 @@ SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 /// The relevant weight(s) are updated in the passed Cutoffs parameter.
 /// Individual Cutoffs are never reset to zero unless explicitly set
 /// (e.g., 'null=0.0').
-/// Returns \c False if \p Value is not known or the weight is not valid.
+/// Returns \c false if \p Value is not known or the weight is not valid.
 bool parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
                                  SanitizerMaskCutoffs &Cutoffs);
 
