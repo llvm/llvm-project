@@ -155,6 +155,8 @@ public:
         if (!Init)
           return nullptr;
         TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
+        if (!TempExpr)
+          return nullptr;
         return dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
       }
 

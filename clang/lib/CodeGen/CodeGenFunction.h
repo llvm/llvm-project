@@ -315,7 +315,7 @@ public:
   SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
 
   /// Stack to track the controlled convergence tokens.
-  SmallVector<llvm::IntrinsicInst *, 4> ConvergenceTokenStack;
+  SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 
   /// Number of nested loop to be consumed by the last surrounding
   /// loop-associated directive.
@@ -614,6 +614,10 @@ public:
 
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
+
+  /// HLSL Branch attribute.
+  HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
+      HLSLControlFlowHintAttr::SpellingNotCalculated;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
@@ -4133,6 +4137,11 @@ public:
     // but in the future we will implement some sort of IR.
   }
 
+  void EmitOpenACCSetConstruct(const OpenACCSetConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//
@@ -4756,6 +4765,7 @@ public:
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                    ReturnValueSlot ReturnValue);
+  llvm::Value *EmitSPIRVBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -5234,29 +5244,20 @@ public:
   llvm::Value *emitBoolVecConversion(llvm::Value *SrcVec,
                                      unsigned NumElementsDst,
                                      const llvm::Twine &Name = "");
-  // Adds a convergence_ctrl token to |Input| and emits the required parent
-  // convergence instructions.
-  template <typename CallType>
-  CallType *addControlledConvergenceToken(CallType *Input) {
-    return cast<CallType>(
-        addConvergenceControlToken(Input, ConvergenceTokenStack.back()));
-  }
 
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
-  llvm::IntrinsicInst *emitConvergenceLoopToken(llvm::BasicBlock *BB,
-                                                llvm::Value *ParentToken);
+  llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
+
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
-  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input,
-                                             llvm::Value *ParentToken);
+  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
+
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.
-  llvm::IntrinsicInst *getOrEmitConvergenceEntryToken(llvm::Function *F);
-  // Find the convergence_loop instruction for the loop defined by |LI|, or
-  // emits one if none exists. Returns the convergence instruction.
-  llvm::IntrinsicInst *getOrEmitConvergenceLoopToken(const LoopInfo *LI);
+  llvm::ConvergenceControlInst *
+  getOrEmitConvergenceEntryToken(llvm::Function *F);
 
 private:
   llvm::MDNode *getRangeForLoadFromType(QualType Ty);
