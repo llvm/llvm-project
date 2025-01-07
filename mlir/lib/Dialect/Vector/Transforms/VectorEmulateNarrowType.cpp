@@ -1090,10 +1090,14 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   unsigned srcElemBitwidth = subByteVecType.getElementTypeBitWidth();
   unsigned dstElemBitwidth = dstType.getElementTypeBitWidth();
 
-  // Only {s}i4/i2 -> (size_of({{s}i/f}) >= 8) are supported for now.
-  if ((srcElemBitwidth != 4 && srcElemBitwidth != 2) || dstElemBitwidth < 8 ||
-      (dstElemBitwidth % srcElemBitwidth) != 0)
-    return rewriter.notifyMatchFailure(op, "Not a supported aligned case");
+  if (dstElemBitwidth < 8)
+    return rewriter.notifyMatchFailure(
+        op, "the bitwidth of dstType must be greater than or equal to 8");
+  if (dstElemBitwidth % srcElemBitwidth != 0)
+    return rewriter.notifyMatchFailure(op, "unaligned cases are not supported");
+  if (srcElemBitwidth != 2 && srcElemBitwidth != 4)
+    return rewriter.notifyMatchFailure(
+        op, "only src bitwidth of 2 or 4 is supported at this moment");
 
   const int numSrcElemsPerDestElem = dstElemBitwidth / srcElemBitwidth;
   if ((subByteVecType.getShape().back() % numSrcElemsPerDestElem) != 0)
@@ -1179,22 +1183,35 @@ Value BitCastRewriter::genericRewriteStep(
   return runningResult;
 }
 
-Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
-                               Value srcValue) {
-  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+/// takes a aligned subByte vector as Input and bitcasts it to a vector of i8.
+///
+/// Example:
+/// vector<16x16xi2> -> vector<16x2xi8>
+/// vector<16x16xi4> -> vector<16x4xi8>
+static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
+                                      Value srcValue) {
+  auto srcVecType = cast<VectorType>(srcValue.getType());
   int64_t srcBitwidth = srcVecType.getElementType().getIntOrFloatBitWidth();
-  assert(srcBitwidth % 8 != 0 && "Invalid source bitwidth");
+  assert(8 % srcBitwidth == 0 && "Invalid source bitwidth");
   int64_t bitwidthFactor = 8 / srcBitwidth;
-  SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
-  i8VecShape.back() = i8VecShape.back() / bitwidthFactor;
-  auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
+  SmallVector<int64_t> vecShape(srcVecType.getShape());
+  // adjust last dimension of the vector so the total size remains the same.
+  vecShape.back() = vecShape.back() / bitwidthFactor;
+  auto i8VecType = VectorType::get(vecShape, rewriter.getI8Type());
   return rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
 }
 
 /// Extracts a signed N-bit sequence from each element of an 8-bit vector,
 /// starting at the specified bit index.
-Value extractNBitsFromVectorSigned(PatternRewriter &rewriter, Location loc,
-                                   Value src, int bitIdx, int numBits) {
+///
+/// Example:
+/// extract numBits=2 starting at bitIdx=2
+/// src    =               [0101|11|10]
+/// shl    = src << 4    -> [11100000]
+/// result = shl >> 6    -> [11111111]
+static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
+                                          Location loc, Value src, int bitIdx,
+                                          int numBits) {
   assert(bitIdx >= 0 && bitIdx <= 8 - numBits && numBits > 0 && numBits <= 8 &&
          "Invalid bitIdx range");
   auto srcType = cast<VectorType>(src.getType());
@@ -1213,61 +1230,18 @@ Value extractNBitsFromVectorSigned(PatternRewriter &rewriter, Location loc,
   return shr;
 }
 
-/// Rewrite the i4 -> i8 signed extension into a sequence of shuffles and
-/// bitwise ops to avoid leaving LLVM to scramble with peephole optimizations.
-static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
-                                    Value srcValue) {
-  VectorType srcVecType = cast<VectorType>(srcValue.getType());
-  assert(srcVecType.getElementType().isSignlessInteger(4) &&
-         "Expected i4 type");
-
-  // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
-  Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
-
-  // 2. Extend i4 elements to i8 elements using shifts. Low i4 elemens of each
-  // byte are place in one vector and the high i4 elements in another vector.
-  Value low = extractNBitsFromVectorSigned(rewriter, loc, i8Vector, 0, 4);
-  Value high = extractNBitsFromVectorSigned(rewriter, loc, i8Vector, 4, 4);
-
-  // 3. Interleave low and high i8 elements.
-  return rewriter.create<vector::InterleaveOp>(loc, low, high);
-}
-
-/// Rewrite the i2 -> i8 signed extension into a sequence of shuffles and
-/// bitwise ops to avoid leaving LLVM to scramble with peephole optimizations.
-static Value rewriteI2ToI8SignedExt(PatternRewriter &rewriter, Location loc,
-                                    Value srcValue) {
-  VectorType srcVecType = cast<VectorType>(srcValue.getType());
-  assert(srcVecType.getElementType().isSignlessInteger(2) &&
-         "Expected i2 type");
-
-  // 1. Generate a bitcast vector<Xxi2> -> vector<X/2xi8>.
-  Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
-
-  // 2. Extract each i2 element using shifts
-  // Element 0 (bits 0-1)
-  Value elem0 = extractNBitsFromVectorSigned(rewriter, loc, i8Vector, 0, 2);
-  // Element 1 (bits 2-3)
-  Value elem1 = extractNBitsFromVectorSigned(rewriter, loc, i8Vector, 2, 2);
-  // Element 2 (bits 4-5)
-  Value elem2 = extractNBitsFromVectorSigned(rewriter, loc, i8Vector, 4, 2);
-  // Element 3 (bits 6-7)
-  Value elem3 = extractNBitsFromVectorSigned(rewriter, loc, i8Vector, 6, 2);
-
-  // 3. Interleave all 4 elements by first interleaving even elements and then
-  // odd elem0 = [0,0,0,0] elem1 = [1,1,1,1] elem2 = [2,2,2,2] elem3 = [3,3,3,3]
-  // 02    = [0,2,0,2]
-  // 13    = [1,3,1,3]
-  // 0213  = [0,1,2,3]
-  Value interleave02 = rewriter.create<vector::InterleaveOp>(loc, elem0, elem2);
-  Value interleave13 = rewriter.create<vector::InterleaveOp>(loc, elem1, elem3);
-  return rewriter.create<vector::InterleaveOp>(loc, interleave02, interleave13);
-}
-
 /// Extracts an unsigned N-bit sequence from each element of an 8-bit vector,
 /// starting at the specified bit index.
-Value extractNBitsFromVectorUnsinged(PatternRewriter &rewriter, Location loc,
-                                     Value src, int bitIdx, int numBits) {
+///
+/// Example:
+/// extract numBits=2 starting at bitIdx=2
+/// src                 = [0101|10|10]
+/// mask                = [00000011]
+/// shr    = src >> 6   = [00010110]
+/// result = shr & mask = [00000010]
+static Value extractNBitsFromVectorUnsinged(PatternRewriter &rewriter,
+                                            Location loc, Value src, int bitIdx,
+                                            int numBits) {
   assert(bitIdx >= 0 && bitIdx <= 8 - numBits && numBits > 0 && numBits <= 8 &&
          "Invalid bitIdx range");
   auto srcType = cast<VectorType>(src.getType());
@@ -1287,30 +1261,33 @@ Value extractNBitsFromVectorUnsinged(PatternRewriter &rewriter, Location loc,
   return rewriter.create<arith::AndIOp>(loc, shr, lowBitsMaskValues);
 }
 
-/// Rewrite the i4 -> i8 unsigned extension into a sequence of shuffles and
+using ExtractNBitsFn =
+    std::function<Value(PatternRewriter &, Location, Value, int, int)>;
+
+/// Rewrite the i4 -> i8  extension into a sequence of shuffles and
 /// bitwise ops to avoid leaving LLVM to scramble with peephole optimizations.
-static Value rewriteI4ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
-                                      Value srcValue) {
-  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+static Value rewriteI4ToI8Ext(PatternRewriter &rewriter, Location loc,
+                              Value srcValue, const ExtractNBitsFn &extFn) {
+  auto srcVecType = cast<VectorType>(srcValue.getType());
   assert(srcVecType.getElementType().isSignlessInteger(4) &&
          "Expected i4 type");
 
   // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
   Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
 
-  // 2 Extend the i4 elements using shifts & masking. Low i4 elements of each
-  //  byte are placed in one vector and the high i4 elements in another vector.
-  Value low = extractNBitsFromVectorUnsinged(rewriter, loc, i8Vector, 0, 4);
-  Value high = extractNBitsFromVectorUnsinged(rewriter, loc, i8Vector, 4, 4);
+  // 2. Extend i4 elements to i8 elements. Low i4 elemens of each
+  // byte are place in one vector and the high i4 elements in another vector.
+  Value low = extFn(rewriter, loc, i8Vector, 0, 4);
+  Value high = extFn(rewriter, loc, i8Vector, 4, 4);
 
   // 3. Interleave low and high i8 elements.
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
-/// Rewrite the i2 -> i8 unsigned extension into a sequence of shuffles and
+/// Rewrite the i2 -> i8  extension into a sequence of shuffles and
 /// bitwise ops to avoid leaving LLVM to scramble with peephole optimizations.
-static Value rewriteI2ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
-                                      Value srcValue) {
+static Value rewriteI2ToI8Ext(PatternRewriter &rewriter, Location loc,
+                              Value srcValue, const ExtractNBitsFn &extFn) {
   VectorType srcVecType = cast<VectorType>(srcValue.getType());
   assert(srcVecType.getElementType().isSignlessInteger(2) &&
          "Expected i2 type");
@@ -1318,18 +1295,22 @@ static Value rewriteI2ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
   // 1. Generate a bitcast vector<Xxi2> -> vector<X/2xi8>.
   Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
 
-  // 2. Extract each i2 element using shifts and masks
+  // 2. Extract each i2 element
   // Element 0 (bits 0-1)
-  Value elem0 = extractNBitsFromVectorUnsinged(rewriter, loc, i8Vector, 0, 2);
+  Value elem0 = extFn(rewriter, loc, i8Vector, 0, 2);
   // Element 1 (bits 2-3)
-  Value elem1 = extractNBitsFromVectorUnsinged(rewriter, loc, i8Vector, 2, 2);
+  Value elem1 = extFn(rewriter, loc, i8Vector, 2, 2);
   // Element 2 (bits 4-5)
-  Value elem2 = extractNBitsFromVectorUnsinged(rewriter, loc, i8Vector, 4, 2);
+  Value elem2 = extFn(rewriter, loc, i8Vector, 4, 2);
   // Element 3 (bits 6-7)
-  Value elem3 = extractNBitsFromVectorUnsinged(rewriter, loc, i8Vector, 6, 2);
+  Value elem3 = extFn(rewriter, loc, i8Vector, 6, 2);
 
-  // 3. Interleave all 4 elements by first interleaving even elements and then
-  // odd elem0 = [0,0,0,0] elem1 = [1,1,1,1] elem2 = [2,2,2,2] elem3 = [3,3,3,3]
+  // 3. Interleave all 4 elements by first interleaving
+  // even elements and then odd
+  // elem0 = [0,0,0,0]
+  // elem1 = [1,1,1,1]
+  // elem2 = [2,2,2,2]
+  // elem3 = [3,3,3,3]
   // 02    = [0,2,0,2]
   // 13    = [1,3,1,3]
   // 0213  = [0,1,2,3]
@@ -1540,33 +1521,19 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
       return failure();
 
     // Perform the rewrite.
+    Location loc = conversionOp.getLoc();
+    const auto &extFn = isSigned ? extractNBitsFromVectorSigned
+                                 : extractNBitsFromVectorUnsinged;
     Value subByteExt;
-    if (isSigned) {
-      switch (srcVecType.getElementType().getIntOrFloatBitWidth()) {
-      case 2:
-        subByteExt =
-            rewriteI2ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
-        break;
-      case 4:
-        subByteExt =
-            rewriteI4ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
-        break;
-      default:
-        return failure();
-      }
-    } else {
-      switch (srcVecType.getElementType().getIntOrFloatBitWidth()) {
-      case 2:
-        subByteExt =
-            rewriteI2ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
-        break;
-      case 4:
-        subByteExt =
-            rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
-        break;
-      default:
-        return failure();
-      }
+    switch (srcVecType.getElementType().getIntOrFloatBitWidth()) {
+    case 2:
+      subByteExt = rewriteI2ToI8Ext(rewriter, loc, srcValue, extFn);
+      break;
+    case 4:
+      subByteExt = rewriteI4ToI8Ext(rewriter, loc, srcValue, extFn);
+      break;
+    default:
+      return failure();
     }
 
     // Finalize the rewrite.
