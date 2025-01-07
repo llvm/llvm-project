@@ -467,6 +467,39 @@ define i1 @cmp_gep_same_base_same_type(ptr %ptr, i64 %idx1, i64 %idx2) {
   ret i1 %cmp
 }
 
+define i1 @cmp_gep_same_base_same_type_maywrap(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type_maywrap(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr i32, ptr %ptr, i64 %idx2
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @cmp_gep_same_base_same_type_nuw(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr nuw i32, ptr %ptr, i64 %idx2
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @cmp_gep_same_base_same_type_nusw(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type_nusw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nusw i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr nusw i32, ptr %ptr, i64 %idx2
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
 define i1 @cmp_gep_same_base_different_type(ptr %ptr, i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: @cmp_gep_same_base_different_type(
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[IDX1:%.*]], 2
