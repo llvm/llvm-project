@@ -31,5 +31,5 @@ int main() { return 0; }
 // INC:       "-internal-isystem" "[[SDKROOT]]/System/DriverKit/usr/local/include"
 // INC:       "-internal-isystem" "{{.+}}/lib{{(64)?}}/clang/{{[^/ ]+}}/include"
 // INC:       "-internal-externc-isystem" "[[SDKROOT]]/System/DriverKit/usr/include"
-// INC:       "-internal-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/Frameworks"
-// INC:       "-internal-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/SubFrameworks"
+// INC:       "-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/Frameworks"
+// INC:       "-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/SubFrameworks"

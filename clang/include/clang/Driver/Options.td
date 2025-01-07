@@ -3218,7 +3218,7 @@ def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
-def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">, 
+def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
@@ -7421,7 +7421,7 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">, 
+defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">,
 DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
@@ -8298,11 +8298,6 @@ def internal_externc_isystem : Separate<["-"], "internal-externc-isystem">,
            "implicit extern \"C\" semantics; these are assumed to not be "
            "user-provided and are used to model system and standard headers' "
            "paths.">;
-def internal_iframework : Separate<["-"], "internal-iframework">,
-  MetaVarName<"<directory>">,
-  HelpText<"Add directory to the internal system framework include search path; these "
-           "are assumed to not be user-provided and are used to model system "
-           "and standard frameworks' paths.">;
 
 } // let Visibility = [CC1Option]
 

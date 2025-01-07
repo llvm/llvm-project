@@ -3310,8 +3310,6 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
                            : OPT_internal_externc_isystem;
     GenerateArg(Consumer, Opt, It->Path);
   }
-  for (; It < End && Matches(*It, {frontend::System}, true, true); ++It)
-    GenerateArg(Consumer, OPT_internal_iframework, It->Path);
 
   assert(It == End && "Unhandled HeaderSearchOption::Entry.");
 
@@ -3438,14 +3436,11 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   // Add the internal paths from a driver that detects standard include paths.
   for (const auto *A :
-       Args.filtered(OPT_internal_isystem, OPT_internal_externc_isystem, OPT_internal_iframework)) {
+       Args.filtered(OPT_internal_isystem, OPT_internal_externc_isystem)) {
     frontend::IncludeDirGroup Group = frontend::System;
-    bool IsFramework = false;
     if (A->getOption().matches(OPT_internal_externc_isystem))
       Group = frontend::ExternCSystem;
-    if (A->getOption().matches(OPT_internal_iframework))
-      IsFramework = true;
-    Opts.AddPath(A->getValue(), Group, IsFramework, true);
+    Opts.AddPath(A->getValue(), Group, false, true);
   }
 
   // Add the path prefixes which are implicitly treated as being system headers.

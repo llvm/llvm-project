@@ -2566,9 +2566,9 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
     CC1Args.push_back(DriverArgs.MakeArgString(Flag));
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   };
-  AddFrameworkInclude("-internal-iframework", "/System/Library/Frameworks");
-  AddFrameworkInclude("-internal-iframework", "/System/Library/SubFrameworks");
-  AddFrameworkInclude("-internal-iframework", "/Library/Frameworks");
+  AddFrameworkInclude("-iframework", "/System/Library/Frameworks");
+  AddFrameworkInclude("-iframework", "/System/Library/SubFrameworks");
+  AddFrameworkInclude("-iframework", "/Library/Frameworks");
 }
 
 bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
