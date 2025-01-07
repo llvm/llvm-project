@@ -8415,22 +8415,27 @@ bool CheckScanfHandler::HandleScanfSpecifier(
 static void CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
                                     ArrayRef<EquatableFormatArgument> RefArgs,
                                     const StringLiteral *Fmt,
-                                    ArrayRef<EquatableFormatArgument> FmtArgs) {
+                                    ArrayRef<EquatableFormatArgument> FmtArgs,
+                                    const Expr *FmtExpr, bool InFunctionCall) {
   unsigned CommonArgs;
-  if (RefArgs.size() > FmtArgs.size()) {
-    CommonArgs = FmtArgs.size();
-    // "data argument not used by format string"
-    const auto &Arg = RefArgs[FmtArgs.size()];
-    S.Diag(Arg.getSourceLocation(), diag::warn_printf_data_arg_not_used)
-        << Arg.getSourceRange();
-    S.Diag(Fmt->getBeginLoc(), diag::note_format_cmp_with) << 1;
-  } else if (FmtArgs.size() > RefArgs.size()) {
+  if (FmtArgs.size() > RefArgs.size()) {
     CommonArgs = RefArgs.size();
-    // "more % conversions than data arguments"
-    const auto &Arg = FmtArgs[RefArgs.size()];
-    S.Diag(Fmt->getBeginLoc(), diag::warn_format_cmp_insufficient_specifiers)
-        << Arg.getSourceRange();
+    // "data argument not used by format string"
+    CheckFormatHandler::EmitFormatDiagnostic(
+        S, InFunctionCall, FmtExpr,
+        S.PDiag(diag::warn_format_cmp_specifier_arity) << 1,
+        FmtExpr->getBeginLoc(), false,
+        FmtArgs[RefArgs.size()].getSourceRange());
     S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with) << 1;
+  } else if (RefArgs.size() > FmtArgs.size()) {
+    CommonArgs = FmtArgs.size();
+    // "fewer specifiers in format string than expected"
+    CheckFormatHandler::EmitFormatDiagnostic(
+        S, InFunctionCall, FmtExpr,
+        S.PDiag(diag::warn_format_cmp_specifier_arity) << 0,
+        FmtExpr->getBeginLoc(), false, Fmt->getSourceRange());
+    S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with)
+        << 1 << RefArgs[FmtArgs.size()].getSourceRange();
   } else {
     CommonArgs = FmtArgs.size();
   }
@@ -8516,7 +8521,8 @@ static void CheckFormatString(
           DecomposePrintfHandler::GetSpecifiers(S, FExpr, Type, IsObjC,
                                                 inFunctionCall, FmtArgs)) {
         CompareFormatSpecifiers(S, ReferenceFormatString, RefArgs,
-                                FExpr->getFormatString(), FmtArgs);
+                                FExpr->getFormatString(), FmtArgs,
+                                Args[format_idx], inFunctionCall);
       }
     }
   } else if (Type == Sema::FST_Scanf) {

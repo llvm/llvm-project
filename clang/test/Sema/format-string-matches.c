@@ -41,11 +41,10 @@ void vformat(const char *fmt, ...) {
 // MARK: -
 // Calling a function with format_matches diagnoses for incompatible formats.
 
-void cvt_percent(const char *c) __attribute__((format_matches(printf, 1, "%%"))); // expected-note{{comparing with this format string}}
+void cvt_percent(const char *c) __attribute__((format_matches(printf, 1, "%%"))); // expected-note 2{{comparing with this format string}}
 void cvt_at(const char *c) __attribute__((format_matches(NSString, 1, "%@"))); // \
-    expected-warning{{data argument not used by format string}} \
     expected-note{{comparing with this specifier}} \
-    expected-note{{comparing with this format string}}
+    expected-note 3{{comparing with this format string}}
 void cvt_c(const char *c) __attribute__((format_matches(printf, 1, "%c"))); // expected-note{{comparing with this specifier}}
 void cvt_u(const char *c) __attribute__((format_matches(printf, 1, "%u"))); // expected-note{{comparing with this specifier}}
 void cvt_hhi(const char *c) __attribute__((format_matches(printf, 1, "%hhi")));  // expected-note 3{{comparing with this specifier}}
@@ -75,12 +74,18 @@ void test_compatibility(void) {
     cvt_at("%p"); // expected-warning{{format specifier 'p' is incompatible with '@'}}
 
     cvt_percent("hello");
-    cvt_percent("%c"); // expected-warning{{fewer specifiers in format string than expected}}
+    cvt_percent("%c"); // expected-warning{{more specifiers in format string than expected}}
+
+    const char *const too_many = "%c"; // expected-note{{format string is defined here}}
+    cvt_percent(too_many); // expected-warning{{more specifiers in format string than expected}}
 }
 
 void test_too_few_args(void) {
-    cvt_at("a"); // expected-note{{comparing with this format string}}
-    cvt_at("%@ %@"); // expected-warning{{fewer specifiers in format string than expected}}
+    cvt_at("a"); // expected-warning{{fewer specifiers in format string than expected}}
+    cvt_at("%@ %@"); // expected-warning{{more specifiers in format string than expected}}
+
+    const char *const too_few = "a"; // expected-note{{format string is defined here}}
+    cvt_at(too_few); // expected-warning{{fewer specifiers in format string than expected}}
 }
 
 void cvt_several(const char *c) __attribute__((format_matches(printf, 1, "%f %i %s"))); // expected-note{{comparing with this specifier}}

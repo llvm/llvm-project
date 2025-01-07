@@ -10067,8 +10067,8 @@ def note_previous_declaration_as : Note<
 
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
-def warn_format_cmp_insufficient_specifiers : Warning<
-  "fewer specifiers in format string than expected">, InGroup<FormatInsufficientArgs>;
+def warn_format_cmp_specifier_arity : Warning<
+  "%select{fewer|more}0 specifiers in format string than expected">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
   "data argument not used by format string">, InGroup<FormatExtraArgs>;
 def warn_format_invalid_conversion : Warning<
