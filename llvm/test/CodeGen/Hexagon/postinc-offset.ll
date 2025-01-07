@@ -1,4 +1,4 @@
-; RUN: llc -enable-aa-sched-mi -march=hexagon -mcpu=hexagonv5 -rdf-opt=0 -disable-cgp-delete-phis \
+; RUN: llc -enable-aa-sched-mi -mtriple=hexagon -mcpu=hexagonv5 -rdf-opt=0 -disable-cgp-delete-phis \
 ; RUN:      < %s | FileCheck %s
 
 ; CHECK: {

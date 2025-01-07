@@ -352,7 +352,8 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                            SDNPMemOperand]>;
 
 // Define X86-specific addressing mode.
-def addr      : ComplexPattern<iPTR, 5, "selectAddr", [], [SDNPWantParent]>;
+let WantsParent = true in
+def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
@@ -378,7 +379,8 @@ def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
-def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
+let WantsParent = true in
+def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr">;
 
 // A relocatable immediate is an operand that can be relocated by the linker to
 // an immediate, such as a regular symbol in non-PIC code.

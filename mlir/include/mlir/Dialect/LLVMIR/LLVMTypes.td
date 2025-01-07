@@ -233,7 +233,7 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     bool isIdentified() const;
 
     /// Checks if a struct is opaque.
-    bool isOpaque();
+    bool isOpaque() const;
 
     /// Checks if a struct is initialized.
     bool isInitialized();

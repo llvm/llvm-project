@@ -278,15 +278,15 @@ entry:
 define double @preserve_load_metadata_after_select_transform_metadata_missing_4(ptr %a, ptr %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform_metadata_missing_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
-; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP10:![0-9]+]]
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META3]], !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !alias.scope [[META10:![0-9]+]], !noalias [[META10]], !llvm.access.group [[ACC_GRP13:![0-9]+]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
 ; CHECK-NEXT:    ret double [[L_SEL]]
 ;
 entry:
-  %l.a = load double, ptr %a, align 8, !tbaa !0, !llvm.access.group !7
-  %l.b = load double, ptr %b, align 8, !tbaa !0, !llvm.access.group !12
+  %l.a = load double, ptr %a, align 8, !tbaa !0, !llvm.access.group !7, !alias.scope !3, !noalias !3
+  %l.b = load double, ptr %b, align 8, !tbaa !0, !llvm.access.group !12, !alias.scope !14, !noalias !14
   %cmp.i = fcmp fast olt double %l.a, %l.b
   %ptr.sel = select i1 %cmp.i, ptr %b, ptr %a
   %l.sel = load double, ptr %ptr.sel, align 8, !tbaa !0, !llvm.access.group !13
@@ -307,6 +307,10 @@ entry:
 !11 = !{i32 5, i32 6}
 !12 = distinct !{}
 !13 = distinct !{}
+!14 = !{!15}
+!15 = distinct !{!15, !16}
+!16 = distinct !{!16}
+
 ;.
 ; CHECK: [[TBAA0]] = !{[[LOOP1]], [[LOOP1]], i64 0}
 ; CHECK: [[LOOP1]] = !{!"scalar type", [[META2:![0-9]+]]}
@@ -318,5 +322,8 @@ entry:
 ; CHECK: [[META7]] = !{i32 1}
 ; CHECK: [[META8]] = !{i64 8}
 ; CHECK: [[ACC_GRP9]] = distinct !{}
-; CHECK: [[ACC_GRP10]] = distinct !{}
+; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]]}
+; CHECK: [[ACC_GRP13]] = distinct !{}
 ;.

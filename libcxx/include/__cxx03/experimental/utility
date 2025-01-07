@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_UTILITY
-#define _LIBCPP_EXPERIMENTAL_UTILITY
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL_UTILITY
+#define _LIBCPP___CXX03_EXPERIMENTAL_UTILITY
 
 /*
     experimental/utility synopsis
@@ -43,4 +43,4 @@ struct _LIBCPP_TEMPLATE_VIS erased_type {};
 
 _LIBCPP_END_NAMESPACE_LFTS
 
-#endif /* _LIBCPP_EXPERIMENTAL_UTILITY */
+#endif /* _LIBCPP___CXX03_EXPERIMENTAL_UTILITY */

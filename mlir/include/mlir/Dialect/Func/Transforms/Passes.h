@@ -18,10 +18,6 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace bufferization {
-class BufferizeTypeConverter;
-} // namespace bufferization
-
 class RewritePatternSet;
 
 namespace func {

@@ -21,7 +21,6 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -49,6 +48,9 @@ public:
   };
 
 private:
+  /// SelectionDAGISel related APIs.
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
+
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
   std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
@@ -257,7 +259,6 @@ protected:
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
-  SelectionDAGTargetInfo TSInfo;
 private:
   SIInstrInfo InstrInfo;
   SITargetLowering TLInfo;
@@ -291,6 +292,8 @@ public:
     return &InstrInfo.getRegisterInfo();
   }
 
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
+
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
@@ -313,11 +316,6 @@ public:
 
   const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
     return TargetID;
-  }
-
-  // Nothing implemented, just prevent crashes on use.
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
   }
 
   const InstrItineraryData *getInstrItineraryData() const override {
@@ -1263,6 +1261,8 @@ public:
   }
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
+
+  bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 

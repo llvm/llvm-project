@@ -2032,7 +2032,7 @@ define void @smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    ldr q2, [x1, #16]
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.8b, v2.8h
-; CHECK-GI-NEXT:    umlsl v1.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    smlsl v1.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
@@ -2067,7 +2067,7 @@ define void @umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    ldr q2, [x1, #16]
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.8b, v2.8h
-; CHECK-GI-NEXT:    smlsl v1.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    umlsl v1.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
@@ -2102,7 +2102,7 @@ define void @smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    ldr q2, [x1, #16]
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
-; CHECK-GI-NEXT:    umlsl v1.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    smlsl v1.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
@@ -2137,7 +2137,7 @@ define void @umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    ldr q2, [x1, #16]
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
-; CHECK-GI-NEXT:    smlsl v1.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    umlsl v1.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
@@ -2202,8 +2202,8 @@ define void @smlsl_smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.8b, v2.8h
 ; CHECK-GI-NEXT:    xtn v4.8b, v4.8h
-; CHECK-GI-NEXT:    umull v2.8h, v3.8b, v2.8b
-; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v4.8b
+; CHECK-GI-NEXT:    smull v2.8h, v3.8b, v2.8b
+; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v4.8b
 ; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -2248,8 +2248,8 @@ define void @umlsl_umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.8b, v2.8h
 ; CHECK-GI-NEXT:    xtn v4.8b, v4.8h
-; CHECK-GI-NEXT:    smull v2.8h, v3.8b, v2.8b
-; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v4.8b
+; CHECK-GI-NEXT:    umull v2.8h, v3.8b, v2.8b
+; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v4.8b
 ; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -2294,8 +2294,8 @@ define void @smlsl_smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-GI-NEXT:    xtn v4.4h, v4.4s
-; CHECK-GI-NEXT:    umull v2.4s, v3.4h, v2.4h
-; CHECK-GI-NEXT:    umlal v2.4s, v0.4h, v4.4h
+; CHECK-GI-NEXT:    smull v2.4s, v3.4h, v2.4h
+; CHECK-GI-NEXT:    smlal v2.4s, v0.4h, v4.4h
 ; CHECK-GI-NEXT:    sub v0.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -2340,8 +2340,8 @@ define void @umlsl_umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-GI-NEXT:    xtn v4.4h, v4.4s
-; CHECK-GI-NEXT:    smull v2.4s, v3.4h, v2.4h
-; CHECK-GI-NEXT:    smlal v2.4s, v0.4h, v4.4h
+; CHECK-GI-NEXT:    umull v2.4s, v3.4h, v2.4h
+; CHECK-GI-NEXT:    umlal v2.4s, v0.4h, v4.4h
 ; CHECK-GI-NEXT:    sub v0.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -2382,7 +2382,7 @@ define <2 x i32> @do_stuff(<2 x i64> %0, <2 x i64> %1) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    umull v0.2d, v2.2s, v0.2s
+; CHECK-GI-NEXT:    smull v0.2d, v2.2s, v0.2s
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret

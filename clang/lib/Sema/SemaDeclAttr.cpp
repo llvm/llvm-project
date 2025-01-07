@@ -271,6 +271,19 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
   return checkRecordDeclForAttr<CapabilityAttr>(RT->getDecl());
 }
 
+static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
+  const RecordType *RT = getRecordType(Ty);
+
+  if (!RT)
+    return false;
+
+  // Don't check for the capability if the class hasn't been defined yet.
+  if (RT->isIncompleteType())
+    return true;
+
+  return checkRecordDeclForAttr<ScopedLockableAttr>(RT->getDecl());
+}
+
 static bool checkTypedefTypeForCapability(QualType Ty) {
   const auto *TD = Ty->getAs<TypedefType>();
   if (!TD)
@@ -414,6 +427,19 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
     Args.push_back(ArgExp);
   }
+}
+
+static bool checkFunParamsAreScopedLockable(Sema &S,
+                                            const ParmVarDecl *ParamDecl,
+                                            const ParsedAttr &AL) {
+  QualType ParamType = ParamDecl->getType();
+  if (const auto *RefType = ParamType->getAs<ReferenceType>();
+      RefType &&
+      checkRecordTypeForScopedCapability(S, RefType->getPointeeType()))
+    return true;
+  S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_scoped_lockable_param)
+      << AL;
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -643,6 +669,10 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
@@ -776,9 +806,9 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
   auto DiagnoseType = [&](unsigned Index, AttributeArgumentNType T) {
     SourceLocation Loc = [&]() {
       auto Union = AL.getArg(Index - 1);
-      if (Union.is<Expr *>())
-        return Union.get<Expr *>()->getBeginLoc();
-      return Union.get<IdentifierLoc *>()->Loc;
+      if (auto *E = dyn_cast<Expr *>(Union))
+        return E->getBeginLoc();
+      return cast<IdentifierLoc *>(Union)->Loc;
     }();
 
     S.Diag(Loc, diag::err_attribute_argument_n_type) << AL << Index << T;
@@ -1210,6 +1240,14 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *TT = T->getAs<TypedefType>())
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
         << TT->getDecl();
+}
+
+static void handleNoSpecializations(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Message;
+  if (AL.getNumArgs() != 0)
+    S.checkStringLiteralArgumentAttr(AL, 0, Message);
+  D->getDescribedTemplate()->addAttr(
+      NoSpecializationsAttr::Create(S.Context, Message, AL));
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
@@ -5900,6 +5938,10 @@ static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   SmallVector<Expr*, 1> Args;
   if (!checkLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -5920,6 +5962,9 @@ static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
   // Check that all arguments are lockable objects.
   SmallVector<Expr *, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, true);
@@ -5930,6 +5975,10 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
 
 static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
@@ -6913,6 +6962,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreferredName:
     handlePreferredName(S, D, AL);
     break;
+  case ParsedAttr::AT_NoSpecializations:
+    handleNoSpecializations(S, D, AL);
+    break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
     break;
@@ -7102,6 +7154,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupThreadID:
+    S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupID:
+    S.HLSL().handleSV_GroupIDAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);

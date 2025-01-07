@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
-#define _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#ifndef _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H
+#define _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_integral.h>
@@ -87,4 +87,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __for_each_index_sequence(index_sequence<_I
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#endif // _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H

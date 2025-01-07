@@ -369,6 +369,15 @@ clause::DependenceType makeDepType(const parser::OmpTaskDependenceType &inp) {
   llvm_unreachable("Unexpected task dependence type");
 }
 
+clause::Prescriptiveness
+makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
+  switch (v) {
+  case parser::OmpPrescriptiveness::Value::Strict:
+    return clause::Prescriptiveness::Strict;
+  }
+  llvm_unreachable("Unexpected prescriptiveness");
+}
+
 // --------------------------------------------------------------------
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
@@ -384,11 +393,12 @@ Absent make(const parser::OmpClause::Absent &inp,
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAffinityClause
-  auto &t0 = std::get<std::optional<parser::OmpIterator>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
   auto &&maybeIter =
-      maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+      m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
 
   return Affinity{{/*Iterator=*/std::move(maybeIter),
                    /*LocatorList=*/makeObjects(t1, semaCtx)}};
@@ -403,11 +413,12 @@ Align make(const parser::OmpClause::Align &inp,
 Aligned make(const parser::OmpClause::Aligned &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAlignedClause
+  auto &mods = semantics::OmpGetModifiers(inp.v);
   auto &t0 = std::get<parser::OmpObjectList>(inp.v.t);
-  auto &t1 = std::get<std::optional<parser::ScalarIntConstantExpr>>(inp.v.t);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpAlignment>(mods);
 
   return Aligned{{
-      /*Alignment=*/maybeApply(makeExprFn(semaCtx), t1),
+      /*Alignment=*/maybeApplyToV(makeExprFn(semaCtx), m1),
       /*List=*/makeObjects(t0, semaCtx),
   }};
 }
@@ -415,47 +426,29 @@ Aligned make(const parser::OmpClause::Aligned &inp,
 Allocate make(const parser::OmpClause::Allocate &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAllocateClause
-  using wrapped = parser::OmpAllocateClause;
-  auto &t0 = std::get<std::optional<wrapped::AllocateModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAlignModifier>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(
+          mods);
+  auto *m2 =
+      semantics::OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  if (!t0) {
-    return Allocate{{/*AllocatorSimpleModifier=*/std::nullopt,
-                     /*AllocatorComplexModifier=*/std::nullopt,
-                     /*AlignModifier=*/std::nullopt,
-                     /*List=*/makeObjects(t1, semaCtx)}};
-  }
+  auto makeAllocator = [&](auto *mod) -> std::optional<Allocator> {
+    if (mod)
+      return Allocator{makeExpr(mod->v, semaCtx)};
+    return std::nullopt;
+  };
 
-  using Tuple = decltype(Allocate::t);
+  auto makeAlign = [&](const parser::ScalarIntExpr &expr) {
+    return Align{makeExpr(expr, semaCtx)};
+  };
 
-  return Allocate{Fortran::common::visit(
-      common::visitors{
-          // simple-modifier
-          [&](const wrapped::AllocateModifier::Allocator &v) -> Tuple {
-            return {/*AllocatorSimpleModifier=*/makeExpr(v.v, semaCtx),
-                    /*AllocatorComplexModifier=*/std::nullopt,
-                    /*AlignModifier=*/std::nullopt,
-                    /*List=*/makeObjects(t1, semaCtx)};
-          },
-          // complex-modifier + align-modifier
-          [&](const wrapped::AllocateModifier::ComplexModifier &v) -> Tuple {
-            auto &s0 = std::get<wrapped::AllocateModifier::Allocator>(v.t);
-            auto &s1 = std::get<wrapped::AllocateModifier::Align>(v.t);
-            return {
-                /*AllocatorSimpleModifier=*/std::nullopt,
-                /*AllocatorComplexModifier=*/Allocator{makeExpr(s0.v, semaCtx)},
-                /*AlignModifier=*/Align{makeExpr(s1.v, semaCtx)},
-                /*List=*/makeObjects(t1, semaCtx)};
-          },
-          // align-modifier
-          [&](const wrapped::AllocateModifier::Align &v) -> Tuple {
-            return {/*AllocatorSimpleModifier=*/std::nullopt,
-                    /*AllocatorComplexModifier=*/std::nullopt,
-                    /*AlignModifier=*/Align{makeExpr(v.v, semaCtx)},
-                    /*List=*/makeObjects(t1, semaCtx)};
-          },
-      },
-      t0->u)};
+  auto maybeAllocator = m1 ? makeAllocator(m1) : makeAllocator(m2);
+  return Allocate{{/*AllocatorComplexModifier=*/std::move(maybeAllocator),
+                   /*AlignModifier=*/maybeApplyToV(makeAlign, m0),
+                   /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Allocator make(const parser::OmpClause::Allocator &inp,
@@ -496,7 +489,7 @@ Bind make(const parser::OmpClause::Bind &inp,
   using wrapped = parser::OmpBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Bind::Binding,
+      convert, wrapped::Binding, Bind::Binding,
       // clang-format off
       MS(Teams, Teams)
       MS(Parallel, Parallel)
@@ -541,7 +534,7 @@ Default make(const parser::OmpClause::Default &inp,
   using wrapped = parser::OmpDefaultClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, Default::DataSharingAttribute,
+      convert, wrapped::DataSharingAttribute, Default::DataSharingAttribute,
       // clang-format off
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
@@ -631,15 +624,18 @@ Depend make(const parser::OmpClause::Depend &inp,
   using Variant = decltype(Depend::u);
 
   auto visitTaskDep = [&](const wrapped::TaskDep &s) -> Variant {
-    auto &t0 = std::get<std::optional<parser::OmpIterator>>(s.t);
-    auto &t1 = std::get<parser::OmpTaskDependenceType>(s.t);
-    auto &t2 = std::get<parser::OmpObjectList>(s.t);
+    auto &mods = semantics::OmpGetModifiers(s);
+    auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+    auto *m1 =
+        semantics::OmpGetUniqueModifier<parser::OmpTaskDependenceType>(mods);
+    auto &t1 = std::get<parser::OmpObjectList>(s.t);
+    assert(m1 && "expecting task dependence type");
 
     auto &&maybeIter =
-        maybeApply([&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
-    return Depend::TaskDep{{/*DependenceType=*/makeDepType(t1),
+        m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
+    return Depend::TaskDep{{/*DependenceType=*/makeDepType(*m1),
                             /*Iterator=*/std::move(maybeIter),
-                            /*LocatorList=*/makeObjects(t2, semaCtx)}};
+                            /*LocatorList=*/makeObjects(t1, semaCtx)}};
   };
 
   return Depend{common::visit( //
@@ -677,18 +673,18 @@ Detach make(const parser::OmpClause::Detach &inp,
 Device make(const parser::OmpClause::Device &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDeviceClause
-  using wrapped = parser::OmpDeviceClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpDeviceClause::DeviceModifier, Device::DeviceModifier,
+      convert, parser::OmpDeviceModifier::Value, Device::DeviceModifier,
       // clang-format off
       MS(Ancestor,   Ancestor)
       MS(Device_Num, DeviceNum)
       // clang-format on
   );
-  auto &t0 = std::get<std::optional<wrapped::DeviceModifier>>(inp.v.t);
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpDeviceModifier>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return Device{{/*DeviceModifier=*/maybeApply(convert, t0),
+  return Device{{/*DeviceModifier=*/maybeApplyToV(convert, m0),
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
 }
 
@@ -698,7 +694,8 @@ DeviceType make(const parser::OmpClause::DeviceType &inp,
   using wrapped = parser::OmpDeviceTypeClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, DeviceType::DeviceTypeDescription,
+      convert, wrapped::DeviceTypeDescription,
+      DeviceType::DeviceTypeDescription,
       // clang-format off
       MS(Any,    Any)
       MS(Host,   Host)
@@ -800,19 +797,12 @@ From make(const parser::OmpClause::From &inp,
 Grainsize make(const parser::OmpClause::Grainsize &inp,
                semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpGrainsizeClause
-  using wrapped = parser::OmpGrainsizeClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpGrainsizeClause::Prescriptiveness,
-      Grainsize::Prescriptiveness,
-      // clang-format off
-      MS(Strict,   Strict)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return Grainsize{{/*Prescriptiveness=*/maybeApply(convert, t0),
-                    /*Grainsize=*/makeExpr(t1, semaCtx)}};
+  return Grainsize{
+      {/*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m0),
+       /*Grainsize=*/makeExpr(t1, semaCtx)}};
 }
 
 HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
@@ -835,27 +825,13 @@ Holds make(const parser::OmpClause::Holds &inp,
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpIfClause
-  using wrapped = parser::OmpIfClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::DirectiveNameModifier, llvm::omp::Directive,
-      // clang-format off
-      MS(Parallel,         OMPD_parallel)
-      MS(Simd,             OMPD_simd)
-      MS(Target,           OMPD_target)
-      MS(TargetData,       OMPD_target_data)
-      MS(TargetEnterData,  OMPD_target_enter_data)
-      MS(TargetExitData,   OMPD_target_exit_data)
-      MS(TargetUpdate,     OMPD_target_update)
-      MS(Task,             OMPD_task)
-      MS(Taskloop,         OMPD_taskloop)
-      MS(Teams,            OMPD_teams)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::DirectiveNameModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(mods);
   auto &t1 = std::get<parser::ScalarLogicalExpr>(inp.v.t);
-  return If{{/*DirectiveNameModifier=*/maybeApply(convert, t0),
-             /*IfExpression=*/makeExpr(t1, semaCtx)}};
+  return If{
+      {/*DirectiveNameModifier=*/maybeApplyToV([](auto &&s) { return s; }, m0),
+       /*IfExpression=*/makeExpr(t1, semaCtx)}};
 }
 
 // Inbranch: empty
@@ -883,10 +859,14 @@ Init make(const parser::OmpClause::Init &inp,
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpInReductionClause
-  auto &t0 = std::get<parser::OmpReductionIdentifier>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(m0 && "OmpReductionIdentifier is required");
+
   return InReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*m0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 
@@ -899,28 +879,26 @@ IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
 Lastprivate make(const parser::OmpClause::Lastprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpLastprivateClause
-  using wrapped = parser::OmpLastprivateClause;
-
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpLastprivateClause::LastprivateModifier,
+      convert, parser::OmpLastprivateModifier::Value,
       Lastprivate::LastprivateModifier,
       // clang-format off
       MS(Conditional, Conditional)
       // clang-format on
   );
 
-  auto &t0 = std::get<std::optional<wrapped::LastprivateModifier>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpLastprivateModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  return Lastprivate{{/*LastprivateModifier=*/maybeApply(convert, t0),
+  return Lastprivate{{/*LastprivateModifier=*/maybeApplyToV(convert, m0),
                       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Linear make(const parser::OmpClause::Linear &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpLinearClause
-  using wrapped = parser::OmpLinearClause;
-
   CLAUSET_ENUM_CONVERT( //
       convert, parser::OmpLinearModifier::Value, Linear::LinearModifier,
       // clang-format off
@@ -930,26 +908,23 @@ Linear make(const parser::OmpClause::Linear &inp,
       // clang-format on
   );
 
-  using Tuple = decltype(Linear::t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpStepComplexModifier>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpStepSimpleModifier>(mods);
+  assert((!m0 || !m1) && "Simple and complex modifiers both present");
 
-  return Linear{Fortran::common::visit(
-      common::visitors{
-          [&](const wrapped::WithModifier &s) -> Tuple {
-            return {
-                /*StepSimpleModifier=*/std::nullopt,
-                /*StepComplexModifier=*/maybeApply(makeExprFn(semaCtx), s.step),
-                /*LinearModifier=*/convert(s.modifier.v),
-                /*List=*/makeList(s.names, makeObjectFn(semaCtx))};
-          },
-          [&](const wrapped::WithoutModifier &s) -> Tuple {
-            return {
-                /*StepSimpleModifier=*/maybeApply(makeExprFn(semaCtx), s.step),
-                /*StepComplexModifier=*/std::nullopt,
-                /*LinearModifier=*/std::nullopt,
-                /*List=*/makeList(s.names, makeObjectFn(semaCtx))};
-          },
-      },
-      inp.v.u)};
+  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto &&maybeStep = m0   ? maybeApplyToV(makeExprFn(semaCtx), m0)
+                     : m1 ? maybeApplyToV(makeExprFn(semaCtx), m1)
+                          : std::optional<Linear::StepComplexModifier>{};
+
+  return Linear{{/*StepComplexModifier=*/std::move(maybeStep),
+                 /*LinearModifier=*/maybeApplyToV(convert, m2),
+                 /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Link make(const parser::OmpClause::Link &inp,
@@ -1062,18 +1037,10 @@ Novariants make(const parser::OmpClause::Novariants &inp,
 NumTasks make(const parser::OmpClause::NumTasks &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpNumTasksClause
-  using wrapped = parser::OmpNumTasksClause;
-
-  CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpNumTasksClause::Prescriptiveness,
-      NumTasks::Prescriptiveness,
-      // clang-format off
-      MS(Strict,   Strict)
-      // clang-format on
-  );
-  auto &t0 = std::get<std::optional<wrapped::Prescriptiveness>>(inp.v.t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
-  return NumTasks{{/*Prescriptiveness=*/maybeApply(convert, t0),
+  return NumTasks{{/*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m0),
                    /*NumTasks=*/makeExpr(t1, semaCtx)}};
 }
 
@@ -1160,7 +1127,7 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
   using wrapped = parser::OmpProcBindClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::Type, ProcBind::AffinityPolicy,
+      convert, wrapped::AffinityPolicy, ProcBind::AffinityPolicy,
       // clang-format off
       MS(Close,    Close)
       MS(Master,   Master)
@@ -1187,17 +1154,17 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   );
 
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 =
+  auto *m0 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionModifier>(mods);
-  auto *t1 =
+  auto *m1 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
-  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
-  assert(t1 && "OmpReductionIdentifier is required");
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  assert(m1 && "OmpReductionIdentifier is required");
 
   return Reduction{
-      {/*ReductionModifier=*/maybeApplyToV(convert, t0),
-       /*ReductionIdentifiers=*/{makeReductionOperator(*t1, semaCtx)},
-       /*List=*/makeObjects(t2, semaCtx)}};
+      {/*ReductionModifier=*/maybeApplyToV(convert, m0),
+       /*ReductionIdentifiers=*/{makeReductionOperator(*m1, semaCtx)},
+       /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 // Relaxed: empty
@@ -1291,13 +1258,13 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 =
+  auto *m0 =
       semantics::OmpGetUniqueModifier<parser::OmpReductionIdentifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  assert(t0 && "OmpReductionIdentifier is required");
+  assert(m0 && "OmpReductionIdentifier is required");
 
   return TaskReduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(*t0, semaCtx)},
+      {/*ReductionIdentifiers=*/{makeReductionOperator(*m0, semaCtx)},
        /*List=*/makeObjects(t1, semaCtx)}};
 }
 

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-early-if %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-early-if %s -o - | FileCheck %s
 
 # Test that the LIFETIME_END instruction is not speculated and moved to a
 # different basic block.

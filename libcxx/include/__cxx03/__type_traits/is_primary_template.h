@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
-#define _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -28,4 +28,4 @@ using __is_primary_template = _IsValidExpansion<__test_for_primary_template, _Tp
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
