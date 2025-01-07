@@ -153,7 +153,7 @@ public:
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 RPC_ATTRS void sleep_briefly() {
 #if defined(__SPIRV__)
-  // It's unsupported and __has_builtin doesn't always work as we expect.
+  // FIXME: __has_builtin does not work on offloading targets.
 #elif defined(__NVPTX__) && defined(RPC_TARGET_IS_GPU)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
     asm("nanosleep.u32 64;" ::: "memory");
