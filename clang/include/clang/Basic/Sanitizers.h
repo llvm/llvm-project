@@ -154,7 +154,13 @@ struct SanitizerKind {
 #include "clang/Basic/Sanitizers.def"
 }; // SanitizerKind
 
-using SanitizerMaskCutoffs = std::array<float, SanitizerKind::SO_Count>;
+struct SanitizerMaskCutoffs {
+  std::array<float, SanitizerKind::SO_Count> data = {0};
+
+  float &operator[](int index) { return data[index]; }
+
+  const float &operator[](int index) const { return data[index]; }
+}; // SanitizerMaskCutoffs;
 
 struct SanitizerSet {
   /// Check if a certain (single) sanitizer is enabled.
