@@ -725,6 +725,23 @@ let hasSideEffects = false in {
 
   def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
   def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
+
+  // Float to TF32 conversions
+  multiclass CVT_TO_TF32<string Modifier, list<Predicate> Preds = [hasPTX<78>, hasSM<90>]> {
+    defvar Intr = !cast<Intrinsic>("int_nvvm_f2tf32_" # !subst(".", "_", Modifier));
+
+    def NAME : NVPTXInst<(outs Int32Regs:$dst), (ins Float32Regs:$src),
+               "cvt." # Modifier # ".tf32.f32 \t$dst, $src;",
+               [(set i32:$dst, (Intr f32:$src))]>,
+               Requires<Preds>;
+  }
+
+  defm CVT_to_tf32_rn : CVT_TO_TF32<"rn">;
+  defm CVT_to_tf32_rz : CVT_TO_TF32<"rz">;
+  defm CVT_to_tf32_rn_relu  : CVT_TO_TF32<"rn.relu">;
+  defm CVT_to_tf32_rz_relu  : CVT_TO_TF32<"rz.relu">;
+  defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [hasPTX<70>, hasSM<80>]>;
+  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<89>]>;
 }
 
 def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
