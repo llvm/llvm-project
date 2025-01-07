@@ -3826,15 +3826,6 @@ struct OmpExpectation {
 
 // REF: [5.1:217-220], [5.2:293-294]
 //
-// InteropType -> target || targetsync              // since 5.2
-// There can be at most only two interop-type.
-struct OmpInteropType {
-  ENUM_CLASS(Value, Target, TargetSync)
-  WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
-};
-
-// REF: [5.1:217-220], [5.2:293-294]
-//
 // OmpRuntimeIdentifier ->                          // since 5.2
 // CharLiteralConstant || ScalarIntConstantExpr
 struct OmpInteropRuntimeIdentifier {
@@ -3849,6 +3840,15 @@ struct OmpInteropRuntimeIdentifier {
 struct OmpInteropPreference {
   WRAPPER_CLASS_BOILERPLATE(
       OmpInteropPreference, std::list<OmpInteropRuntimeIdentifier>);
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// InteropType -> target || targetsync              // since 5.2
+// There can be at most only two interop-type.
+struct OmpInteropType {
+  ENUM_CLASS(Value, Target, TargetSync)
+  WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
 };
 
 // Ref: [5.0:47-49], [5.1:49-51], [5.2:67-69]
