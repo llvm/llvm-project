@@ -278,7 +278,6 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
       std::make_unique<DFGMMCallback>(*this, SkipUnusedModuleMaps));
 
-  DependencyCollector::attachToPreprocessor(PP);
   FS = PP.getFileManager().getVirtualFileSystemPtr();
 }
 
