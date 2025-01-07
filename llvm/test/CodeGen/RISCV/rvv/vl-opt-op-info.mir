@@ -609,7 +609,7 @@ body: |
     ; CHECK-LABEL: name: vlm_v
     ; CHECK: %x:vr = PseudoVLM_V_B8 $noreg, $noreg, 1, 0 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0 /* e8 */
-    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0
+    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0, 0
     %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0
 ...
 ---
@@ -619,7 +619,7 @@ body: |
     ; CHECK-LABEL: name: vlm_v_incompatible_eew
     ; CHECK: %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, $noreg, %x, 1, 4 /* e16 */, 0 /* tu, mu */
-    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0
+    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0, 0
     %y:vr = PseudoVADD_VV_M1 $noreg, $noreg, %x, 1, 4 /* e16 */, 0
 ...
 ---
@@ -629,7 +629,7 @@ body: |
     ; CHECK-LABEL: name: vlm_v_incompatible_emul
     ; CHECK: %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0 /* e8 */
-    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0
+    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0, 0
     %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0
 ...
 ---
