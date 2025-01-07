@@ -75,8 +75,8 @@ define <8 x half> @test_UINT_TO_FP_no_inf8(<8 x i32> %a) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-    %vec = uitofp <8 x i32> %a to <8 x half>
-    ret <8 x half> %vec
+  %vec = uitofp <8 x i32> %a to <8 x half>
+  ret <8 x half> %vec
 }
 
 define <8 x half> @test_STRICT_UINT_TO_FP_no_inf8(<8 x i32> %a) {
@@ -152,8 +152,8 @@ define <8 x half> @test_STRICT_UINT_TO_FP_no_inf8(<8 x i32> %a) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-    %vec = tail call <8 x half> @llvm.experimental.constrained.uitofp.f16.i32(<8 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
-    ret <8 x half> %vec
+  %vec = tail call <8 x half> @llvm.experimental.constrained.uitofp.f16.i32(<8 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <8 x half> %vec
 }
 
 define <16 x half> @test_UINT_TO_FP_no_inf16(<16 x i32> %a) {
@@ -289,8 +289,8 @@ define <16 x half> @test_UINT_TO_FP_no_inf16(<16 x i32> %a) {
 ; AVX512-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; AVX512-NEXT:    retq
 entry:
-    %vec = uitofp <16 x i32> %a to <16 x half>
-    ret <16 x half> %vec
+  %vec = uitofp <16 x i32> %a to <16 x half>
+  ret <16 x half> %vec
 }
 
 define <16 x half> @test_STRICT_UINT_TO_FP_no_inf16(<16 x i32> %a) {
@@ -426,6 +426,6 @@ define <16 x half> @test_STRICT_UINT_TO_FP_no_inf16(<16 x i32> %a) {
 ; AVX512-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
 ; AVX512-NEXT:    retq
 entry:
-    %vec = tail call <16 x half> @llvm.experimental.constrained.uitofp.f16.i32(<16 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
-    ret <16 x half> %vec
+  %vec = tail call <16 x half> @llvm.experimental.constrained.uitofp.f16.i32(<16 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <16 x half> %vec
 }
