@@ -126,9 +126,10 @@ static SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
 /// If Cutoffs is null, it assumes -fsanitize=<sanitizer1>...
 /// Othrewise, it assumes -fsanitize=<sanitizer1>=<value1>..., and cutoffs are
 /// stored in the passed parameter.
-static SanitizerMask parseArgValuesOrCutoffs(const Driver &D, const llvm::opt::Arg *A,
-                                    bool DiagnoseErrors,
-                                    SanitizerMaskCutoffs *Cutoffs);
+static SanitizerMask parseArgValuesOrCutoffs(const Driver &D,
+                                             const llvm::opt::Arg *A,
+                                             bool DiagnoseErrors,
+                                             SanitizerMaskCutoffs *Cutoffs);
 
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
@@ -288,7 +289,8 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
   SanitizerMask DiagnosedAlwaysOutViolations;
   for (const auto *Arg : Args) {
     if (Arg->getOption().matches(OptInID)) {
-      SanitizerMask Add = parseArgValuesOrCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+      SanitizerMask Add =
+          parseArgValuesOrCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
       // Report error if user explicitly tries to opt-in to an always-out
       // sanitizer.
       if (SanitizerMask KindsToDiagnose =
@@ -304,7 +306,8 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
       Output |= expandSanitizerGroups(Add);
       Arg->claim();
     } else if (Arg->getOption().matches(OptOutID)) {
-      SanitizerMask Remove = parseArgValuesOrCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+      SanitizerMask Remove =
+          parseArgValuesOrCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
       // Report error if user explicitly tries to opt-out of an always-in
       // sanitizer.
       if (SanitizerMask KindsToDiagnose =
@@ -1520,15 +1523,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                              bool DiagnoseErrors) {
-  assert((A->getOption().matches(options::OPT_fsanitize_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
-          A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
-          A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ)) &&
-         "Invalid argument in parseArgValues!");
+  assert(
+      (A->getOption().matches(options::OPT_fsanitize_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_recover_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_recover_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
+       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ)) &&
+      "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
@@ -1555,12 +1559,13 @@ SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
   assert(A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ) &&
          "Invalid argument in parseArgCutoffs!");
   assert(Cutoffs &&
-        "Null Cutoffs parameter provided for parsing fno_sanitize_top_hot!");
+         "Null Cutoffs parameter provided for parsing fno_sanitize_top_hot!");
 
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
-    SanitizerMask Kind = parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs);
+    SanitizerMask Kind =
+        parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs);
 
     if (Kind)
       Kinds |= Kind;
