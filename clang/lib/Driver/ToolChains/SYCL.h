@@ -22,9 +22,6 @@ public:
 
   void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const;
-
-private:
-  const Driver &D;
 };
 
 namespace toolchains {
