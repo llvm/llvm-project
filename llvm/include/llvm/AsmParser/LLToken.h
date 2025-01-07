@@ -502,9 +502,9 @@ enum Kind {
   // Type valued tokens (TyVal).
   Type,
 
-  FloatHexLiteral,  // f0x..., stored as APSInt
-  APFloat, // APFloatVal
-  APSInt   // APSInt
+  FloatHexLiteral, // f0x..., stored as APSInt
+  APFloat,         // APFloatVal
+  APSInt           // APSInt
 };
 } // end namespace lltok
 } // end namespace llvm
