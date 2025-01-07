@@ -27,9 +27,8 @@ define i1 @xor_logic_and_logic_or2(i1 %c, i1 %x, i1 %y) {
 
 define i1 @xor_logic_and_logic_or2_commuted(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or2_commuted(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C]], i1 [[X:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[O]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %y, i1 true, i1 %c
