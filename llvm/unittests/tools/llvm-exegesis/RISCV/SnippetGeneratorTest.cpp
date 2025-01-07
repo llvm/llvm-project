@@ -89,10 +89,8 @@ TEST_F(RISCVSerialSnippetGeneratorTest,
   const Instruction &Instr = State.getIC().getInstr(RISCV::XOR);
   auto AllRegisters = State.getRATC().emptyRegisters();
   AllRegisters.flip();
-  auto Error =
-      Generator.generateCodeTemplates(&Instr, AllRegisters).takeError();
-  EXPECT_TRUE((bool)Error);
-  consumeError(std::move(Error));
+  EXPECT_TRUE(errorToBool(
+      Generator.generateCodeTemplates(&Instr, AllRegisters).takeError()));
 }
 
 TEST_F(RISCVParallelSnippetGeneratorTest, MemoryUse) {
