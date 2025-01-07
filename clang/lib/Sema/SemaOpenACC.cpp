@@ -709,18 +709,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // constructs that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense. Prose DOES exist for 'data' and 'host_data', 'set', 'enter data' and
   // 'exit data' both don't, but other implmementations do this.  OpenACC issue
-  // 519 filed for the latter two.
+  // 519 filed for the latter two. Prose also exists for 'update'.
   // GCC allows this on init/shutdown, presumably for good reason, so we do too.
   if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Init &&
       Clause.getDirectiveKind() != OpenACCDirectiveKind::Shutdown &&
@@ -1744,8 +1737,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // There isn't anything to do here, this is only valid on one construct, and
   // has no associated rules.
   return OpenACCIfPresentClause::Create(Ctx, Clause.getBeginLoc(),
@@ -1936,6 +1927,7 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Update:
     llvm_unreachable("Doesn't have an associated stmt");
   default:
   case OpenACCDirectiveKind::Invalid:
@@ -2365,6 +2357,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Update:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -3713,6 +3706,9 @@ bool SemaOpenACC::ActOnStartStmtDirective(
                                 OpenACCClauseKind::DeviceType,
                                 OpenACCClauseKind::If});
 
+  // TODO: OpenACC: 'Update' construct needs to have one of 'self', 'host', or
+  // 'device'.  Implement here.
+
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -3779,6 +3775,10 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
   case OpenACCDirectiveKind::Set: {
     return OpenACCSetConstruct::Create(getASTContext(), StartLoc, DirLoc,
                                        EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::Update: {
+    return OpenACCUpdateConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                          EndLoc, Clauses);
   }
   }
   llvm_unreachable("Unhandled case in directive handling?");

@@ -1393,6 +1393,7 @@ def OwnershipDocs : Documentation {
   let Heading = "ownership_holds, ownership_returns, ownership_takes (Clang "
                 "Static Analyzer)";
   let Category = DocCatFunction;
+  let Label = "analyzer-ownership-attrs";
   let Content = [{
 
 .. note::
