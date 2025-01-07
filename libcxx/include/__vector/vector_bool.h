@@ -442,7 +442,6 @@ private:
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __append(size_type __n, const_reference __x);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference __make_ref(size_type __pos) _NOEXCEPT {
     return reference(__begin_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }

@@ -777,6 +777,11 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
+void Linux::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
+}
+
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
   return CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
          getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE();
