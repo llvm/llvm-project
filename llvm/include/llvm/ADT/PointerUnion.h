@@ -198,14 +198,14 @@ public:
   }
 };
 
-template <typename... PTs>
-bool operator==(PointerUnion<PTs...> LHS, PointerUnion<PTs...> RHS) {
-  return (!LHS && !RHS) || LHS.getOpaqueValue() == RHS.getOpaqueValue();
+template <typename ...PTs>
+bool operator==(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
+  return lhs.getOpaqueValue() == rhs.getOpaqueValue();
 }
 
-template <typename... PTs>
-bool operator!=(PointerUnion<PTs...> LHS, PointerUnion<PTs...> RHS) {
-  return !operator==(LHS, RHS);
+template <typename ...PTs>
+bool operator!=(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
+  return lhs.getOpaqueValue() != rhs.getOpaqueValue();
 }
 
 template <typename ...PTs>
@@ -257,6 +257,17 @@ template <typename To, typename... PTs>
 struct CastInfo<To, const PointerUnion<PTs...>>
     : public ConstStrippingForwardingCast<To, const PointerUnion<PTs...>,
                                           CastInfo<To, PointerUnion<PTs...>>> {
+};
+
+// The default implementation of isPresent() for nullable types returns true
+// if the active member is not the first one, even if its value is nullptr.
+// Override the default behavior to return false for all possible null values.
+template <typename... PTs>
+struct ValueIsPresent<PointerUnion<PTs...>,
+                      std::enable_if_t<IsNullable<PointerUnion<PTs...>>>> {
+  using Union = PointerUnion<PTs...>;
+  static bool isPresent(const Union &V) { return static_cast<bool>(V); }
+  static decltype(auto) unwrapValue(Union &V) { return V; }
 };
 
 // Teach SmallPtrSet that PointerUnion is "basically a pointer", that has

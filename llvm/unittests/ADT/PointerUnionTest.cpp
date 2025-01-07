@@ -53,16 +53,9 @@ TEST_F(PointerUnionTest, Comparison) {
   EXPECT_TRUE(i4 != l4);
   EXPECT_TRUE(f4 != l4);
   EXPECT_TRUE(l4 != d4);
-  EXPECT_TRUE(i4null == f4null);
-  EXPECT_FALSE(i4null != f4null);
-  EXPECT_TRUE(i4null == l4null);
-  EXPECT_FALSE(i4null != l4null);
-  EXPECT_TRUE(i4null == d4null);
-  EXPECT_FALSE(i4null != d4null);
-  EXPECT_FALSE(i4null == i4);
-  EXPECT_TRUE(i4null != i4);
-  EXPECT_FALSE(i4null == f4);
-  EXPECT_TRUE(i4null != f4);
+  EXPECT_TRUE(i4null != f4null);
+  EXPECT_TRUE(i4null != l4null);
+  EXPECT_TRUE(i4null != d4null);
 }
 
 TEST_F(PointerUnionTest, Null) {
@@ -214,6 +207,11 @@ TEST_F(PointerUnionTest, NewCastInfra) {
   EXPECT_FALSE(isa<int *>(d4null));
   EXPECT_FALSE(isa<float *>(d4null));
   EXPECT_FALSE(isa<long long *>(d4null));
+
+  EXPECT_FALSE(isa_and_present<int *>(i4null));
+  EXPECT_FALSE(isa_and_present<float *>(f4null));
+  EXPECT_FALSE(isa_and_present<long long *>(l4null));
+  EXPECT_FALSE(isa_and_present<double *>(d4null));
 
   // test cast<>
   EXPECT_EQ(cast<float *>(a), &f);
