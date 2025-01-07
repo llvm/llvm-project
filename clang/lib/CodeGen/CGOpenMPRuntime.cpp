@@ -9467,11 +9467,11 @@ static void emitTargetCallKernelLaunch(
     // array and `teams_done_ptr`.
     // 2. The Xteam Scan Reduction kernels require a third helper variable -
     // `scan_storage` array.
-    //    a. The segmented scan variant requires a fourth helper variable -
-    //    `segmented_vals`
+    //    a. The segmented scan variant(the default) requires a fourth helper
+    //    variable - `segmented_vals`
     size_t ExpectedNumArgs =
         CGF.CGM.isXteamScanKernel()
-            ? (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented ? 4 : 3)
+            ? (CGF.CGM.isXteamSegmentedScanKernel() ? 4 : 3)
             : 2;
     assert((CapturedVars.size() ==
             CapturedCount + ExpectedNumArgs * XteamRVM.size()) &&
@@ -9549,7 +9549,7 @@ static void emitTargetCallKernelLaunch(
           CGF, CombinedInfo, CGF.CGM.ReductionVars[1]); // teams_done_ptr
       addXTeamReductionComponentHelper(
           CGF, CombinedInfo, CGF.CGM.ReductionVars[2]); // scan_storage
-      if (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented)
+      if (CGF.CGM.isXteamSegmentedScanKernel())
         addXTeamReductionComponentHelper(
             CGF, CombinedInfo, CGF.CGM.ReductionVars[3]); // segment_vals
     } else {
@@ -9619,7 +9619,7 @@ static void emitTargetCallKernelLaunch(
                 OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                       OMPRTL_omp_target_alloc),
                 TgtAllocArgsScan, "d_scan_storage");
-            if (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+            if (CGF.CGM.isXteamSegmentedScanKernel()) {
               // Emit the lower and upper bounds
               const auto *LBDecl = cast<VarDecl>(
                   cast<DeclRefExpr>(
@@ -9711,7 +9711,7 @@ static void emitTargetCallKernelLaunch(
           ++ArgPos;
           CGF.CGM.ReductionVars.push_back(DScanStorageInst);
           addXTeamReductionComponentHelper(CGF, CombinedInfo, DScanStorageInst);
-          if (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+          if (CGF.CGM.isXteamSegmentedScanKernel()) {
             ++ArgPos;
             CGF.CGM.ReductionVars.push_back(DSegmentValsInst);
             addXTeamReductionComponentHelper(CGF, CombinedInfo,

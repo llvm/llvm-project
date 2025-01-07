@@ -1,14 +1,14 @@
 // clang-format off
 // This test verifies the output of inclusive scan and exclusive scan computed using
-// the Xteam Scan Kernel approach. It verifies that the reduction kernel is of 
+// the Xteam Scan No-Loop Kernel variant. It verifies that the reduction kernel is of 
 // Xteam-Scan type and is launched with 250x256 and 100x512 combinations for teamsXthrds. 
 // 
 
-// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-scan -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic
+// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-no-loop-scan -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic
 // RUN: env LIBOMPTARGET_KERNEL_TRACE=1 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 
-// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-scan -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic -DNUM_THREADS=512 -DNUM_TEAMS=100
+// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-no-loop-scan -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic -DNUM_THREADS=512 -DNUM_TEAMS=100
 // RUN: env LIBOMPTARGET_KERNEL_TRACE=1 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=CHECK-512WGSize
 

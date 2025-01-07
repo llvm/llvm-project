@@ -3748,20 +3748,20 @@ def fno_openmp_target_fast_reduction : Flag<["-"], "fno-openmp-target-fast-reduc
   MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
 def fopenmp_target_xteam_scan : Flag<["-"], "fopenmp-target-xteam-scan">, Group<f_Group>, 
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Use the cross-team scan code generation technique.">,
+  HelpText<"Use the cross-team specialized kernel code generation for 'scan' directive.">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
 def fno_openmp_target_xteam_scan : Flag<["-"], "fno-openmp-target-xteam-scan">, Group<f_Group>, 
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Do not use the cross-team scan code generation technique.">,
+  HelpText<"Do not use the cross-team specialized kernel code generation for 'scan' directive.">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
-def fopenmp_target_xteam_scan_segmented : Flag<["-"], "fopenmp-target-xteam-scan-segmented">, Group<f_Group>, 
+def fopenmp_target_xteam_no_loop_scan : Flag<["-"], "fopenmp-target-xteam-no-loop-scan">, Group<f_Group>, 
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Use the cross-team segmented scan code generation technique.">,
-  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScanSegmented">>;
-def fno_openmp_target_xteam_scan_segmented : Flag<["-"], "fno-openmp-target-xteam-scan-segmented">, Group<f_Group>, 
+  HelpText<"Use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamNoLoopScan">>;
+def fno_openmp_target_xteam_no_loop_scan : Flag<["-"], "fno-openmp-target-xteam-no-loop-scan">, Group<f_Group>, 
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Do not use the cross-team segmented scan code generation technique.">,
-  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScanSegmented">>;
+  HelpText<"Do not use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamNoLoopScan">>;
 def fopenmp_target_multi_device : Flag<["-"], "fopenmp-target-multi-device">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Enable code generation to emit support for multi device target region execution">,

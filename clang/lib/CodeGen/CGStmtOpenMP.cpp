@@ -423,7 +423,7 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
 
     assert(DScanStorageInst && "Device scan storage pointer cannot be null");
     CapturedVars.push_back(DScanStorageInst);
-    if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+    if (CGM.isXteamSegmentedScanKernel()) {
       // Placeholder for d_segment_vals initialized to nullptr
       llvm::Value *DSegmentValsInst =
           Builder.CreateAlloca(RedVarType, nullptr, "d_segment_vals");
@@ -776,7 +776,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
             Ctx, Ctx.VoidPtrTy, ImplicitParamKind::CapturedContext);
         Args.emplace_back(DScanStorageVD);
         TargetArgs.emplace_back(DScanStorageVD);
-        if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+        if (CGM.isXteamSegmentedScanKernel()) {
           VarDecl *DSegmentValsVD = ImplicitParamDecl::Create(
               Ctx, Ctx.VoidPtrTy, ImplicitParamKind::CapturedContext);
           Args.emplace_back(DSegmentValsVD);

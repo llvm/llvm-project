@@ -757,14 +757,29 @@ void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,
   EmitXteamLocalAggregator(CapturedForStmt);
 
   if (CGM.isXteamScanKernel()) {
-    if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+    // Note about the two Xteam Scan Kernel variants:
+    //
+    // 1. Segmented Scan Kernel: This is the default Xteam Scan kernel that will
+    //    be generated.
+    //
+    // 2. NoLoop Scan Kernel: This is a special case when the number of
+    //    iterations in the captured 'For' Stmt(i.e. total number of elements in
+    //    the input array that has to be scanned) is smaller than or equal to
+    //    the total number of parallel work-items available during the kernel
+    //    execution. This will generate a more time and space efficient kernel
+    //    for this case.
+    //
+    if (CGM.isXteamSegmentedScanKernel()) {
+      // Follow the Xteam Segmented Scan Kernel Codegen
       EmitForStmtWithArgs(cast<ForStmt>(*CapturedForStmt), Args);
       // Toggle the Phase number(1 or 2) after emitting any of the phases
       CGM.isXteamScanPhaseOne = !CGM.isXteamScanPhaseOne;
     } else if (CGM.isXteamScanPhaseOne) {
+      // Follow the Xteam NoLoop Scan Kernel Codegen - Phase 1
       EmitNoLoopXteamScanPhaseOneCode(D, CapturedForStmt, Loc, Args);
       CGM.isXteamScanPhaseOne = false;
     } else {
+      // Follow the Xteam NoLoop Scan Kernel Codegen - Phase 2
       EmitNoLoopXteamScanPhaseTwoCode(D, CapturedForStmt, Loc, Args);
       CGM.isXteamScanPhaseOne = true;
     }
@@ -2291,8 +2306,7 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
   llvm::BasicBlock *ExecBB = nullptr;
   llvm::BasicBlock *DoneBB = nullptr;
   clang::QualType RedVarType;
-  if (getLangOpts().OpenMPIsTargetDevice &&
-      getLangOpts().OpenMPTargetXteamScanSegmented) {
+  if (getLangOpts().OpenMPIsTargetDevice && CGM.isXteamSegmentedScanKernel()) {
     // Compute Loop trip-count (N) = GlobalUB - GlobalLB + 1
     const auto UBLValue = EmitLValue(
         cast<DeclRefExpr>(BigJumpLoopLD->getUpperBoundVariable())); // GlobalUB
@@ -2430,7 +2444,7 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
     llvm::BasicBlock *ForBody = createBasicBlock("for.body");
 
     if (getLangOpts().OpenMPIsTargetDevice &&
-        getLangOpts().OpenMPTargetXteamScanSegmented) {
+        CGM.isXteamSegmentedScanKernel()) {
       // Emit the Segment loop breaking condition
 
       llvm::Value *loopIterationVar = Builder.CreateLoad(BigJumpLoopIvAddr);
@@ -2495,7 +2509,7 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
                              getProfileCount(BigJumpLoopLD->getBody()));
         EmitBlock(NextBB);
       }
-      if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+      if (CGM.isXteamSegmentedScanKernel()) {
         if (!CGM.isXteamScanPhaseOne) {
           // SegmentVals contains the final scanned results computed for every
           // element in a segment.
@@ -2525,7 +2539,7 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
 
   if (CGM.getLangOpts().OpenMPIsTargetDevice &&
       (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
-    if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+    if (CGM.isXteamSegmentedScanKernel()) {
       EmitBlock(Continue.getBlock());
       Address SegmentValsGEP = Address(
           Builder.CreateGEP(Int32Ty, DSegmentVals,
@@ -2570,7 +2584,7 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
   EmitBlock(LoopExit.getBlock(), true);
 
   if (CGM.getLangOpts().OpenMPIsTargetDevice &&
-      CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+      CGM.isXteamSegmentedScanKernel()) {
     if (CGM.isXteamScanPhaseOne)
       EmitXteamScanSum(&S, *Args, CGM.getXteamRedBlockSize(*BigJumpLoopLD));
     EmitBranch(DoneBB);

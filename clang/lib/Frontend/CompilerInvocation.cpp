@@ -3836,10 +3836,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_openmp_target_xteam_scan);
 
-  if (Opts.OpenMPTargetXteamScanSegmented)
-    GenerateArg(Consumer, OPT_fopenmp_target_xteam_scan_segmented);
+  if (Opts.OpenMPTargetXteamNoLoopScan)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_no_loop_scan);
   else
-    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_scan_segmented);
+    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_no_loop_scan);
 
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_threads_oversubscription);
@@ -4377,9 +4377,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(options::OPT_fopenmp_target_xteam_scan,
                    options::OPT_fno_openmp_target_xteam_scan, false);
 
-  Opts.OpenMPTargetXteamScanSegmented =
-      Args.hasFlag(options::OPT_fopenmp_target_xteam_scan_segmented,
-                   options::OPT_fno_openmp_target_xteam_scan_segmented, false);
+  Opts.OpenMPTargetXteamNoLoopScan =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_no_loop_scan,
+                   options::OPT_fno_openmp_target_xteam_no_loop_scan, false);
 
   Opts.OpenMPKernelIO =
       Args.hasFlag(options::OPT_fopenmp_allow_kernel_io,

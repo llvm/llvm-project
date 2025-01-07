@@ -6,11 +6,11 @@
 // It also verifies the output without the num_teams() and num_threads() clauses.
 // 
 
-// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-scan -fopenmp-target-xteam-scan-segmented -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic
+// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-scan -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic
 // RUN: env LIBOMPTARGET_KERNEL_TRACE=1 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 
-// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-scan -fopenmp-target-xteam-scan-segmented -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic -DNUM_THREADS=512
+// RUN: %libomptarget-compile-generic -fopenmp-target-ignore-env-vars -fopenmp-target-xteam-scan -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -lm -latomic -DNUM_THREADS=512
 // RUN: env LIBOMPTARGET_KERNEL_TRACE=1 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=CHECK-512WGSize
 

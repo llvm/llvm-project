@@ -6988,12 +6988,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-fno-openmp-target-xteam-scan");
 
-      if (Args.hasFlag(options::OPT_fopenmp_target_xteam_scan_segmented,
-                       options::OPT_fno_openmp_target_xteam_scan_segmented,
+      if (Args.hasFlag(options::OPT_fopenmp_target_xteam_no_loop_scan,
+                       options::OPT_fno_openmp_target_xteam_no_loop_scan,
                        false))
-        CmdArgs.push_back("-fopenmp-target-xteam-scan-segmented");
+        CmdArgs.push_back("-fopenmp-target-xteam-no-loop-scan");
       else
-        CmdArgs.push_back("-fno-openmp-target-xteam-scan-segmented");
+        CmdArgs.push_back("-fno-openmp-target-xteam-no-loop-scan");
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
       if (Args.hasFlag(options::OPT_fopenmp_cuda_mode,

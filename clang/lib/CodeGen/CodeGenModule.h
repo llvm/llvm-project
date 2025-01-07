@@ -1899,7 +1899,13 @@ public:
   }
 
   bool isXteamScanKernel() {
-    return getLangOpts().OpenMPTargetXteamScan && isXteamScanCandidate;
+    return (getLangOpts().OpenMPTargetXteamScan ||
+            getLangOpts().OpenMPTargetXteamNoLoopScan) &&
+           isXteamScanCandidate;
+  }
+
+  bool isXteamSegmentedScanKernel() {
+    return isXteamScanKernel() && !getLangOpts().OpenMPTargetXteamNoLoopScan;
   }
 
   /// If we are able to generate a NoLoop kernel for this directive, return
