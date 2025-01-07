@@ -5400,6 +5400,13 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     Recommend = ShouldBeInTargetRegion;
   } else if (CurrentRegion == OMPD_scan) {
     if (SemaRef.LangOpts.OpenMP >= 50) {
+      // Make sure that the '-fopenmp-target-xteam-scan' flag is passed to
+      // enable the Xteam-Scan Codegen, if the 'scan' directive is found to be
+      // nested inside the 'target teams distribute parallel for' directive
+      if (ParentRegion == OMPD_target_teams_distribute_parallel_for &&
+          !SemaRef.getLangOpts().OpenMPTargetXteamScan)
+        SemaRef.Diag(StartLoc, diag::err_omp_xteam_scan_prohibited)
+            << getOpenMPDirectiveName(CurrentRegion) << Recommend;
       // OpenMP spec 5.0 and 5.1 require scan to be directly enclosed by for,
       // simd, or for simd. This has to take into account combined directives.
       // In 5.2 this seems to be implied by the fact that the specified
