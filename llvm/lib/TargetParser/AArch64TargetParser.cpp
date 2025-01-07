@@ -48,11 +48,11 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
   return {};
 }
 
-unsigned AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
-  unsigned Priority = 0;
+uint64_t AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
+  uint64_t Priority = 0;
   for (StringRef Feature : Features)
     if (std::optional<FMVInfo> Info = parseFMVExtension(Feature))
-      Priority = std::max(Priority, static_cast<unsigned>(Info->PriorityBit));
+      Priority |= (1ULL << Info->PriorityBit);
   return Priority;
 }
 
