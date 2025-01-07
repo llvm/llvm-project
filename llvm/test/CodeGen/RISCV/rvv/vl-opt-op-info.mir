@@ -573,6 +573,36 @@ body: |
     PseudoVSE8_V_MF2 %x, $noreg, 1, 3 /* e8 */
 ...
 ---
+name: vleN_v
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vleN_v
+    ; CHECK: %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vleN_v_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vleN_v_incompatible_eew
+    ; CHECK: %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0
+...
+---
+name: vleN_v_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vleN_v_incompatible_emul
+    ; CHECK: %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
+...
+---
 name: vsseN_v
 body: |
   bb.0:
@@ -703,6 +733,56 @@ body: |
     ; CHECK-NEXT: early-clobber %y:vr = PseudoVLUXEI8_V_MF2_M1 $noreg, $noreg, %x, 1, 4 /* e16 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vr = PseudoVLUXEI8_V_MF2_M1 $noreg, $noreg, %x, 1, 4 /* e16 */, 0
+...
+---
+name: vluxeiN_v_idx_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vluxeiN_v_idx_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %y:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vluxeiN_v_idx_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vluxeiN_v_idx_incompatible_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVLUXEI8_V_MF2_MF2 $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVLUXEI8_V_MF2_MF2 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vluxeiN_v_vd
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vluxeiN_v_vd
+    ; CHECK: %x:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vluxeiN_v_vd_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vluxeiN_v_vd_incompatible_eew
+    ; CHECK: %x:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0
+...
+---
+name: vluxeiN_vd_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vluxeiN_vd_incompatible_emul
+    ; CHECK: %x:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVLUXEI8_V_M1_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
 ...
 ---
 name: vmop_mm
