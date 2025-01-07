@@ -7,17 +7,16 @@ stack:
   - { id: 0, type: default, size: 8, alignment: 8 }
 body: |
   bb.0:
-    ; FIXME: This is a miscompilation.
     ; CHECK-LABEL: name: sink-store-load-dep
     ; CHECK:       bb.0:
     ; CHECK:         [[LDRi12_:%[0-9]+]]:gpr = LDRi12 %stack.0, 0, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT:    [[MOVi:%[0-9]+]]:gpr = MOVi 55296, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT:    [[ADDri1:%[0-9]+]]:gpr = ADDri [[LDRi12_:%[0-9]+]], 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT:    [[LDRH:%[0-9]+]]:gpr = LDRH killed [[ADDri1:%[0-9]+]], $noreg, 0, 14 /* CC::al */, $noreg :: (load (s16))
     ; CHECK-NEXT:    [[MOVi1:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT:    early-clobber %5:gpr = STRH_PRE [[MOVi:%[0-9]+]], [[LDRi12_:%[0-9]+]], [[MOVi1:%[0-9]+]], 0, 14 /* CC::al */, $noreg
-    ; CHECK-NEXT:    [[SUBri:%.*]]:gpr = SUBri [[LDRi12_:%[0-9]+]], 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT:    [[SUBri:%.*]]:gpr = SUBri killed [[LDRi12_:%[0-9]+]], 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK:       bb.2:
-    ; CHECK-NEXT:    [[ADDri1:%[0-9]+]]:gpr = ADDri [[LDRi12_:%[0-9]+]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK-NEXT:    [[LDRH:%[0-9]+]]:gpr = LDRH [[ADDri1:%[0-9]+]], $noreg, 0, 14 /* CC::al */, $noreg :: (load (s16))
     ; CHECK-NEXT:    [[MOVi2:%[0-9]+]]:gpr = MOVi [[LDRH:%[0-9]+]], 14 /* CC::al */, $noreg, $noreg
     %0:gpr = LDRi12 %stack.0, 0, 14, $noreg :: (load (s32))
     %1:gpr = MOVi 55296, 14, $noreg, $noreg
