@@ -292,10 +292,33 @@ INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
   return REAL(fputs)(s, stream);
 }
 
+INTERCEPTOR(int, fflush, FILE *stream) {
+  __rtsan_notify_intercepted_call("fflush");
+  return REAL(fflush)(stream);
+}
+
+#if SANITIZER_APPLE
+INTERCEPTOR(int, fpurge, FILE *stream) {
+  __rtsan_notify_intercepted_call("fpurge");
+  return REAL(fpurge)(stream);
+}
+#endif
+
 INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   __rtsan_notify_intercepted_call("fdopen");
   return REAL(fdopen)(fd, mode);
 }
+
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
+INTERCEPTOR(FILE *, fopencookie, void *cookie, const char *mode,
+            cookie_io_functions_t funcs) {
+  __rtsan_notify_intercepted_call("fopencookie");
+  return REAL(fopencookie)(cookie, mode, funcs);
+}
+#define RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE INTERCEPT_FUNCTION(fopencookie)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE
+#endif
 
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 INTERCEPTOR(FILE *, open_memstream, char **buf, size_t *size) {
@@ -970,8 +993,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(fflush);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
+  RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE;
   RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
   RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
   INTERCEPT_FUNCTION(lseek);

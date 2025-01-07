@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <iterator>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <vector>
 
@@ -32,11 +33,16 @@
 #  include <dirent.h>
 #  include <sys/stat.h>
 #  include <sys/statvfs.h>
+#  include <sys/types.h>
 #  include <unistd.h>
 #endif
 #include <fcntl.h> /* values for fchmodat */
 #include <time.h>
 
+// since Linux 4.5 and FreeBSD 13, but the Linux libc wrapper is only provided by glibc and musl
+#if (defined(__linux__) && (defined(__GLIBC__) || _LIBCPP_HAS_MUSL_LIBC)) || defined(__FreeBSD__)
+#  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#endif
 #if __has_include(<sys/sendfile.h>)
 #  include <sys/sendfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
@@ -44,8 +50,16 @@
 #  include <copyfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_COPYFILE
 #else
-#  include <fstream>
 #  define _LIBCPP_FILESYSTEM_USE_FSTREAM
+#endif
+
+// sendfile and copy_file_range need to fall back
+// to the fstream implementation for special files
+#if (defined(_LIBCPP_FILESYSTEM_USE_SENDFILE) || defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) ||                    \
+     defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)) &&                                                                       \
+    _LIBCPP_HAS_LOCALIZATION
+#  include <fstream>
+#  define _LIBCPP_FILESYSTEM_NEED_FSTREAM
 #endif
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_RT_LIB)
@@ -178,45 +192,8 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
 namespace detail {
 namespace {
 
-#if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
-  size_t count = read_fd.get_stat().st_size;
-  do {
-    ssize_t res;
-    if ((res = ::sendfile(write_fd.fd, read_fd.fd, nullptr, count)) == -1) {
-      ec = capture_errno();
-      return false;
-    }
-    count -= res;
-  } while (count > 0);
-
-  ec.clear();
-
-  return true;
-}
-#elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
-  struct CopyFileState {
-    copyfile_state_t state;
-    CopyFileState() { state = copyfile_state_alloc(); }
-    ~CopyFileState() { copyfile_state_free(state); }
-
-  private:
-    CopyFileState(CopyFileState const&)            = delete;
-    CopyFileState& operator=(CopyFileState const&) = delete;
-  };
-
-  CopyFileState cfs;
-  if (fcopyfile(read_fd.fd, write_fd.fd, cfs.state, COPYFILE_DATA) < 0) {
-    ec = capture_errno();
-    return false;
-  }
-
-  ec.clear();
-  return true;
-}
-#elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#if defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
+bool copy_file_impl_fstream(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   ifstream in;
   in.__open(read_fd.fd, ios::binary);
   if (!in.is_open()) {
@@ -248,6 +225,135 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
 
   ec.clear();
   return true;
+}
+#endif
+
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+bool copy_file_impl_copy_file_range(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  size_t count = read_fd.get_stat().st_size;
+  // a zero-length file is either empty, or not copyable by this syscall
+  // return early to avoid the syscall cost
+  if (count == 0) {
+    ec = {EINVAL, generic_category()};
+    return false;
+  }
+  // do not modify the fd positions as copy_file_impl_sendfile may be called after a partial copy
+  off_t off_in  = 0;
+  off_t off_out = 0;
+  do {
+    ssize_t res;
+
+    if ((res = ::copy_file_range(read_fd.fd, &off_in, write_fd.fd, &off_out, count, 0)) == -1) {
+      ec = capture_errno();
+      return false;
+    }
+    count -= res;
+  } while (count > 0);
+
+  ec.clear();
+
+  return true;
+}
+#endif
+
+#if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  size_t count = read_fd.get_stat().st_size;
+  // a zero-length file is either empty, or not copyable by this syscall
+  // return early to avoid the syscall cost
+  // however, we can't afford this luxury in the no-locale build,
+  // as we can't utilize the fstream impl to copy empty files
+#  if _LIBCPP_HAS_LOCALIZATION
+  if (count == 0) {
+    ec = {EINVAL, generic_category()};
+    return false;
+  }
+#  endif
+  do {
+    ssize_t res;
+    if ((res = ::sendfile(write_fd.fd, read_fd.fd, nullptr, count)) == -1) {
+      ec = capture_errno();
+      return false;
+    }
+    count -= res;
+  } while (count > 0);
+
+  ec.clear();
+
+  return true;
+}
+#endif
+
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) || defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+// If we have copy_file_range or sendfile, try both in succession (if available).
+// If both fail, fall back to using fstream.
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#  if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+  if (copy_file_impl_copy_file_range(read_fd, write_fd, ec)) {
+    return true;
+  }
+  // EINVAL: src and dst are the same file (this is not cheaply
+  // detectable from userspace)
+  // EINVAL: copy_file_range is unsupported for this file type by the
+  // underlying filesystem
+  // ENOTSUP: undocumented, can arise with old kernels and NFS
+  // EOPNOTSUPP: filesystem does not implement copy_file_range
+  // ETXTBSY: src or dst is an active swapfile (nonsensical, but allowed
+  // with normal copying)
+  // EXDEV: src and dst are on different filesystems that do not support
+  // cross-fs copy_file_range
+  // ENOENT: undocumented, can arise with CIFS
+  // ENOSYS: unsupported by kernel or blocked by seccomp
+  if (ec.value() != EINVAL && ec.value() != ENOTSUP && ec.value() != EOPNOTSUPP && ec.value() != ETXTBSY &&
+      ec.value() != EXDEV && ec.value() != ENOENT && ec.value() != ENOSYS) {
+    return false;
+  }
+  ec.clear();
+#  endif
+
+#  if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+  if (copy_file_impl_sendfile(read_fd, write_fd, ec)) {
+    return true;
+  }
+  // EINVAL: unsupported file type
+  if (ec.value() != EINVAL) {
+    return false;
+  }
+  ec.clear();
+#  endif
+
+#  if defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
+#  else
+  // since iostreams are unavailable in the no-locale build, just fail after a failed sendfile
+  ec.assign(EINVAL, std::system_category());
+  return false;
+#  endif
+}
+#elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  struct CopyFileState {
+    copyfile_state_t state;
+    CopyFileState() { state = copyfile_state_alloc(); }
+    ~CopyFileState() { copyfile_state_free(state); }
+
+  private:
+    CopyFileState(CopyFileState const&)            = delete;
+    CopyFileState& operator=(CopyFileState const&) = delete;
+  };
+
+  CopyFileState cfs;
+  if (fcopyfile(read_fd.fd, write_fd.fd, cfs.state, COPYFILE_DATA) < 0) {
+    ec = capture_errno();
+    return false;
+  }
+
+  ec.clear();
+  return true;
+}
+#elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
 }
 #else
 #  error "Unknown implementation for copy_file_impl"

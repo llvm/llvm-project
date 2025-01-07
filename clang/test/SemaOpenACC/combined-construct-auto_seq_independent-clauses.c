@@ -137,7 +137,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto device_num(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto default_async(1)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto device_type(*)
@@ -254,7 +254,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_num(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop default_async(1) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) auto
@@ -372,7 +372,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent device_num(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent default_async(1)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent device_type(*)
@@ -489,7 +489,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_num(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop default_async(1) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) independent
@@ -615,7 +615,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq device_num(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq default_async(1)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq device_type(*)
@@ -738,7 +738,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_num(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'default_async' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop default_async(1) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) seq
