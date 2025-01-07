@@ -1,13 +1,11 @@
-// Test/document all of the dependencies between possible AArch64 FMV extensions.
-// Also test the name mangling.
+// Test all of the AArch64 fmv-features metadata without any dependency expansion.
+// It is used to propagate the attribute string information from C/C++ source to LLVM IR.
 
 // RUN: %clang --target=aarch64-linux-gnu --rtlib=compiler-rt -emit-llvm -S -o - %s | FileCheck %s
 
 // CHECK: define dso_local i32 @fmv._Maes() #[[aes:[0-9]+]] {
-__attribute__((target_version("aes"))) int fmv(void) { return 0; }
-
 // CHECK: define dso_local i32 @fmv._Mbf16() #[[bf16:[0-9]+]] {
-__attribute__((target_version("bf16"))) int fmv(void) { return 0; }
+__attribute__((target_clones("aes", "bf16"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mbti() #[[bti:[0-9]+]] {
 __attribute__((target_version("bti"))) int fmv(void) { return 0; }
@@ -141,6 +139,9 @@ __attribute__((target_version("sve2-sm4"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mwfxt() #[[wfxt:[0-9]+]] {
 __attribute__((target_version("wfxt"))) int fmv(void) { return 0; }
 
+// CHECK: define dso_local i32 @fmv._MaesMbf16MbtiMcrc() #[[multiple_features:[0-9]+]] {
+__attribute__((target_version("aes+bf16+bti+crc"))) int fmv(void) { return 0; }
+
 // CHECK-NOT: define dso_local i32 @fmv._M{{.*}}
 __attribute__((target_version("non_existent_extension"))) int fmv(void);
 
@@ -150,49 +151,50 @@ int caller() {
   return fmv();
 }
 
-// CHECK: attributes #[[aes]] = { {{.*}} "target-features"="+aes,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[bf16]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[bti]] = { {{.*}} "target-features"="+bti,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[crc]] = { {{.*}} "target-features"="+crc,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[dit]] = { {{.*}} "target-features"="+dit,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[dotprod]] = { {{.*}} "target-features"="+dotprod,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[dpb]] = { {{.*}} "target-features"="+ccpp,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[dpb2]] = { {{.*}} "target-features"="+ccdp,+ccpp,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[f32mm]] = { {{.*}} "target-features"="+f32mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+v8a"
-// CHECK: attributes #[[f64mm]] = { {{.*}} "target-features"="+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+v8a"
-// CHECK: attributes #[[fcma]] = { {{.*}} "target-features"="+complxnum,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[flagm]] = { {{.*}} "target-features"="+flagm,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[flagm2]] = { {{.*}} "target-features"="+altnzcv,+flagm,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[fp]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[fp16]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[fp16fml]] = { {{.*}} "target-features"="+fp-armv8,+fp16fml,+fullfp16,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[frintts]] = { {{.*}} "target-features"="+fp-armv8,+fptoint,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[i8mm]] = { {{.*}} "target-features"="+fp-armv8,+i8mm,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[jscvt]] = { {{.*}} "target-features"="+fp-armv8,+jsconv,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[ls64]] = { {{.*}} "target-features"="+fp-armv8,+ls64,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[lse]] = { {{.*}} "target-features"="+fp-armv8,+lse,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[memtag]] = { {{.*}} "target-features"="+fp-armv8,+mte,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[mops]] = { {{.*}} "target-features"="+fp-armv8,+mops,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[predres]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+predres,+v8a"
-// CHECK: attributes #[[rcpc]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+rcpc,+v8a"
-// CHECK: attributes #[[rcpc2]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+rcpc,+rcpc-immo,+v8a"
-// CHECK: attributes #[[rcpc3]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+rcpc,+rcpc-immo,+rcpc3,+v8a"
-// CHECK: attributes #[[rdm]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+rdm,+v8a"
-// CHECK: attributes #[[rng]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+rand,+v8a"
-// CHECK: attributes #[[sb]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+sb,+v8a"
-// CHECK: attributes #[[sha2]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+sha2,+v8a"
-// CHECK: attributes #[[sha3]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+sha2,+sha3,+v8a"
-// CHECK: attributes #[[simd]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[sm4]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+sm4,+v8a"
-// CHECK: attributes #[[sme]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+v8a"
-// CHECK: attributes #[[sme_f64f64]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme-f64f64,+v8a"
-// CHECK: attributes #[[sme_i16i64]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme-i16i64,+v8a"
-// CHECK: attributes #[[sme2]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+v8a"
-// CHECK: attributes #[[ssbs]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+ssbs,+v8a"
-// CHECK: attributes #[[sve]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+v8a"
-// CHECK: attributes #[[sve2]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+v8a"
-// CHECK: attributes #[[sve2_aes]] = { {{.*}} "target-features"="+aes,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve-aes,+sve2,+sve2-aes,+v8a"
-// CHECK: attributes #[[sve2_bitperm]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2-bitperm,+v8a"
-// CHECK: attributes #[[sve2_sha3]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sha2,+sha3,+sve,+sve2,+sve2-sha3,+v8a"
-// CHECK: attributes #[[sve2_sm4]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sm4,+sve,+sve2,+sve2-sm4,+v8a"
-// CHECK: attributes #[[wfxt]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,+wfxt"
+// CHECK: attributes #[[aes]] = { {{.*}} "fmv-features"="+aes"
+// CHECK: attributes #[[bf16]] = { {{.*}} "fmv-features"="+bf16"
+// CHECK: attributes #[[bti]] = { {{.*}} "fmv-features"="+bti"
+// CHECK: attributes #[[crc]] = { {{.*}} "fmv-features"="+crc"
+// CHECK: attributes #[[dit]] = { {{.*}} "fmv-features"="+dit"
+// CHECK: attributes #[[dotprod]] = { {{.*}} "fmv-features"="+dotprod"
+// CHECK: attributes #[[dpb]] = { {{.*}} "fmv-features"="+dpb"
+// CHECK: attributes #[[dpb2]] = { {{.*}} "fmv-features"="+dpb2"
+// CHECK: attributes #[[f32mm]] = { {{.*}} "fmv-features"="+f32mm"
+// CHECK: attributes #[[f64mm]] = { {{.*}} "fmv-features"="+f64mm"
+// CHECK: attributes #[[fcma]] = { {{.*}} "fmv-features"="+fcma"
+// CHECK: attributes #[[flagm]] = { {{.*}} "fmv-features"="+flagm"
+// CHECK: attributes #[[flagm2]] = { {{.*}} "fmv-features"="+flagm2"
+// CHECK: attributes #[[fp]] = { {{.*}} "fmv-features"="+fp"
+// CHECK: attributes #[[fp16]] = { {{.*}} "fmv-features"="+fp16"
+// CHECK: attributes #[[fp16fml]] = { {{.*}} "fmv-features"="+fp16fml"
+// CHECK: attributes #[[frintts]] = { {{.*}} "fmv-features"="+frintts"
+// CHECK: attributes #[[i8mm]] = { {{.*}} "fmv-features"="+i8mm"
+// CHECK: attributes #[[jscvt]] = { {{.*}} "fmv-features"="+jscvt"
+// CHECK: attributes #[[ls64]] = { {{.*}} "fmv-features"="+ls64"
+// CHECK: attributes #[[lse]] = { {{.*}} "fmv-features"="+lse"
+// CHECK: attributes #[[memtag]] = { {{.*}} "fmv-features"="+memtag"
+// CHECK: attributes #[[mops]] = { {{.*}} "fmv-features"="+mops"
+// CHECK: attributes #[[predres]] = { {{.*}} "fmv-features"="+predres"
+// CHECK: attributes #[[rcpc]] = { {{.*}} "fmv-features"="+rcpc"
+// CHECK: attributes #[[rcpc2]] = { {{.*}} "fmv-features"="+rcpc2"
+// CHECK: attributes #[[rcpc3]] = { {{.*}} "fmv-features"="+rcpc3"
+// CHECK: attributes #[[rdm]] = { {{.*}} "fmv-features"="+rdm"
+// CHECK: attributes #[[rng]] = { {{.*}} "fmv-features"="+rng"
+// CHECK: attributes #[[sb]] = { {{.*}} "fmv-features"="+sb"
+// CHECK: attributes #[[sha2]] = { {{.*}} "fmv-features"="+sha2"
+// CHECK: attributes #[[sha3]] = { {{.*}} "fmv-features"="+sha3"
+// CHECK: attributes #[[simd]] = { {{.*}} "fmv-features"="+simd"
+// CHECK: attributes #[[sm4]] = { {{.*}} "fmv-features"="+sm4"
+// CHECK: attributes #[[sme]] = { {{.*}} "fmv-features"="+sme"
+// CHECK: attributes #[[sme_f64f64]] = { {{.*}} "fmv-features"="+sme-f64f64"
+// CHECK: attributes #[[sme_i16i64]] = { {{.*}} "fmv-features"="+sme-i16i64"
+// CHECK: attributes #[[sme2]] = { {{.*}} "fmv-features"="+sme2"
+// CHECK: attributes #[[ssbs]] = { {{.*}} "fmv-features"="+ssbs"
+// CHECK: attributes #[[sve]] = { {{.*}} "fmv-features"="+sve"
+// CHECK: attributes #[[sve2]] = { {{.*}} "fmv-features"="+sve2"
+// CHECK: attributes #[[sve2_aes]] = { {{.*}} "fmv-features"="+sve2-aes"
+// CHECK: attributes #[[sve2_bitperm]] = { {{.*}} "fmv-features"="+sve2-bitperm"
+// CHECK: attributes #[[sve2_sha3]] = { {{.*}} "fmv-features"="+sve2-sha3"
+// CHECK: attributes #[[sve2_sm4]] = { {{.*}} "fmv-features"="+sve2-sm4"
+// CHECK: attributes #[[wfxt]] = { {{.*}} "fmv-features"="+wfxt"
+// CHECK: attributes #[[multiple_features]] = { {{.*}} "fmv-features"="+aes,+bf16,+bti,+crc"
