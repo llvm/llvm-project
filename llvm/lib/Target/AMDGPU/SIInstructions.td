@@ -3318,12 +3318,14 @@ multiclass V_SAT_PK_Pat<Instruction inst> {
 
   def: GCNPatIgnoreCopies<
     (i16 (conc_lo_v2i16_i16 (clamp_v2i16_u8 v2i16:$src))),
-    (inst VGPR_32:$src)
+    (inst VRegSrc_32:$src)
   >;
 }
 
-let OtherPredicates = [NotHasTrue16BitInsts] in 
-defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
+let OtherPredicates = [NotHasTrue16BitInsts] in {
+  defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
+} // End OtherPredicates = [NotHasTrue16BitInsts]
+defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_fake16_e64>;
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
