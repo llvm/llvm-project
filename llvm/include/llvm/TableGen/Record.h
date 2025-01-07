@@ -834,13 +834,7 @@ public:
            I->getKind() <= IK_LastOpInit;
   }
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  virtual const OpInit *clone(ArrayRef<const Init *> Operands) const = 0;
-
-  virtual unsigned getNumOperands() const = 0;
-  virtual const Init *getOperand(unsigned i) const = 0;
-
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const final;
 };
 
 /// !op (X) - Transform an init.
@@ -880,20 +874,6 @@ public:
   static const UnOpInit *get(UnaryOp opc, const Init *lhs, const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
-
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 1 &&
-           "Wrong number of operands for unary operation");
-    return UnOpInit::get(getOpcode(), *Operands.begin(), getType());
-  }
-
-  unsigned getNumOperands() const override { return 1; }
-
-  const Init *getOperand(unsigned i) const override {
-    assert(i == 0 && "Invalid operand id for unary operator");
-    return getOperand();
-  }
 
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
@@ -962,22 +942,6 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 2 &&
-           "Wrong number of operands for binary operation");
-    return BinOpInit::get(getOpcode(), Operands[0], Operands[1], getType());
-  }
-
-  unsigned getNumOperands() const override { return 2; }
-  const Init *getOperand(unsigned i) const override {
-    switch (i) {
-    default: llvm_unreachable("Invalid operand id for binary operator");
-    case 0: return getLHS();
-    case 1: return getRHS();
-    }
-  }
-
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getRHS() const { return RHS; }
@@ -1029,24 +993,6 @@ public:
                                const Init *rhs, const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
-
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 3 &&
-           "Wrong number of operands for ternary operation");
-    return TernOpInit::get(getOpcode(), Operands[0], Operands[1], Operands[2],
-                           getType());
-  }
-
-  unsigned getNumOperands() const override { return 3; }
-  const Init *getOperand(unsigned i) const override {
-    switch (i) {
-    default: llvm_unreachable("Invalid operand id for ternary operator");
-    case 0: return getLHS();
-    case 1: return getMHS();
-    case 2: return getRHS();
-    }
-  }
 
   TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
