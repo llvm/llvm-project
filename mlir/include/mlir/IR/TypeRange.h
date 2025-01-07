@@ -29,8 +29,9 @@ namespace mlir {
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange : public llvm::detail::indexed_accessor_range_base<
-                      TypeRange,
+class TypeRange
+    : public llvm::detail::indexed_accessor_range_base<
+          TypeRange,
           llvm::PointerUnion<const Value *, const Type *, OpOperand *,
                              detail::OpResultImpl *, Type>,
           Type, Type, Type> {

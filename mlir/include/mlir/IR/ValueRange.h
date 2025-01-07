@@ -374,9 +374,8 @@ private:
 /// SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class ValueRange final
-    : public llvm::detail::indexed_accessor_range_base<
-          ValueRange,
+class ValueRange final : public llvm::detail::indexed_accessor_range_base<
+                             ValueRange,
                              PointerUnion<const Value *, OpOperand *,
                                           detail::OpResultImpl *, Value>,
                              Value, Value, Value> {
