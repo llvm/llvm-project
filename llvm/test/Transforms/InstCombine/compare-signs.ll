@@ -152,6 +152,23 @@ define i1 @test4a(i32 %a) {
   ret i1 %c
 }
 
+define i1 @test4a_commuted(i32 %a) {
+; CHECK-LABEL: @test4a_commuted(
+; CHECK-NEXT:    [[L:%.*]] = ashr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[NA:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[NA]], 31
+; CHECK-NEXT:    [[SIGNUM:%.*]] = or i32 [[R]], [[L]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[SIGNUM]], 1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = ashr i32 %a, 31
+  %na = sub i32 0, %a
+  %r = lshr i32 %na, 31
+  %signum = or i32 %r, %l
+  %c = icmp slt i32 %signum, 1
+  ret i1 %c
+}
+
 define <2 x i1> @test4a_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test4a_vec(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A:%.*]], splat (i32 1)
