@@ -42,11 +42,11 @@ void vformat(const char *fmt, ...) {
 // Calling a function with format_matches diagnoses for incompatible formats.
 
 void cvt_percent(const char *c) __attribute__((format_matches(printf, 1, "%%"))); // expected-note 2{{comparing with this format string}}
-void cvt_at(const char *c) __attribute__((format_matches(NSString, 1, "%@"))); // \
+void cvt_at(const char *c) __attribute__((format_matches(NSString, 1, "%@")));  // \
     expected-note{{comparing with this specifier}} \
     expected-note 3{{comparing with this format string}}
 void cvt_c(const char *c) __attribute__((format_matches(printf, 1, "%c"))); // expected-note{{comparing with this specifier}}
-void cvt_u(const char *c) __attribute__((format_matches(printf, 1, "%u"))); // expected-note{{comparing with this specifier}}
+void cvt_u(const char *c) __attribute__((format_matches(printf, 1, "%u"))); // expected-note 2{{comparing with this specifier}}
 void cvt_hhi(const char *c) __attribute__((format_matches(printf, 1, "%hhi")));  // expected-note 3{{comparing with this specifier}}
 void cvt_i(const char *c) __attribute__((format_matches(printf, 1, "%i"))); // expected-note 4{{comparing with this specifier}}
 void cvt_p(const char *c) __attribute__((format_matches(printf, 1, "%p")));
@@ -55,9 +55,15 @@ void cvt_n(const char *c) __attribute__((format_matches(printf, 1, "%n"))); // e
 
 void test_compatibility(void) {
     cvt_c("%i");
+    const char *const fmt_i = "%i";
+    cvt_c(fmt_i);
+
     cvt_i("%c");
     cvt_c("%u"); // expected-warning{{signedness of format specifier 'u' is incompatible with 'c'}}
     cvt_u("%c"); // expected-warning{{signedness of format specifier 'c' is incompatible with 'u'}}
+
+    const char *const fmt_c = "%c"; // expected-note{{format string is defined here}}
+    cvt_u(fmt_c); // expected-warning{{signedness of format specifier 'c' is incompatible with 'u'}}
 
     cvt_i("%hi"); // expected-warning{{format specifier 'hi' is incompatible with 'i'}}
     cvt_i("%hhi"); // expected-warning{{format specifier 'hhi' is incompatible with 'i'}}
@@ -106,6 +112,16 @@ void test_freebsd_specifiers(void) {
     cvt_freebsd_D("%s %i"); // expected-warning{{format argument is a value, but it should be an auxiliary value}}
 }
 
+// passing the wrong kind of string literal
+void takes_printf_string(const char *fmt) __attribute__((format_matches(printf, 1, "%s"))); // expected-note{{format string is defined here}}
+__attribute__((format_matches(freebsd_kprintf, 1, "%s")))
+void takes_freebsd_kprintf_string(const char *fmt) {
+    takes_printf_string(fmt); // expected-warning{{passing 'freebsd_kprintf' format string where 'printf' format string is expected}}
+
+    const char *const fmt2 = fmt;
+    takes_printf_string(fmt2); // expected-warning{{passing 'freebsd_kprintf' format string where 'printf' format string is expected}}
+}
+
 __attribute__((format_matches(printf, 1, "%s"))) // expected-note{{comparing with this specifier}}
 __attribute__((format_matches(os_log, 2, "%i"))) // expected-note{{comparing with this specifier}}
 void test_recv_multiple_format_strings(const char *fmt1, const char *fmt2);
@@ -120,4 +136,11 @@ void test_multiple_format_strings(const char *fmt1, const char *fmt2) {
     test_recv_multiple_format_strings(fmt1, fmt2);
     test_recv_multiple_format_strings("%.5s", fmt2);
     test_recv_multiple_format_strings(fmt1, "%04d");
+    
+    test_recv_multiple_format_strings("%s", fmt1); // expected-warning{{passing 'printf' format string where 'os_log' format string is expected}}
+    test_recv_multiple_format_strings(fmt2, "%d"); // expected-warning{{passing 'os_log' format string where 'printf' format string is expected}}
+
+    test_recv_multiple_format_strings(fmt2, fmt1); // \
+        expected-warning{{passing 'printf' format string where 'os_log' format string is expected}} \
+        expected-warning{{passing 'os_log' format string where 'printf' format string is expected}}
 }

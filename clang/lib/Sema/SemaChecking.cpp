@@ -6118,16 +6118,30 @@ tryAgain:
         if (const auto *D = dyn_cast<Decl>(PV->getDeclContext())) {
           for (const auto *PVFormatMatches :
                D->specific_attrs<FormatMatchesAttr>()) {
-            Sema::FormatStringInfo CallerFSI;
+            Sema::FormatStringInfo CalleeFSI;
             if (!Sema::getFormatStringInfo(D, PVFormatMatches->getFormatIdx(),
-                                           0, &CallerFSI))
+                                           0, &CalleeFSI))
               continue;
-            if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx)
+            if (PV->getFunctionScopeIndex() == CalleeFSI.FormatIdx) {
+              // If using the wrong type of format string, emit a diagnostic
+              // here and stop checking to avoid irrelevant diagnostics.
+              if (Type != S.GetFormatStringType(PVFormatMatches)) {
+                S.Diag(Args[format_idx]->getBeginLoc(),
+                       diag::warn_format_string_type_incompatible)
+                    << PVFormatMatches->getType()->getName()
+                    << S.GetFormatStringTypeName(Type);
+                if (!InFunctionCall) {
+                  S.Diag(PVFormatMatches->getFormatString()->getBeginLoc(),
+                         diag::note_format_string_defined);
+                }
+                return SLCT_UncheckedLiteral;
+              }
               return checkFormatStringExpr(
                   S, ReferenceFormatString, PVFormatMatches->getFormatString(),
                   Args, APK, format_idx, firstDataArg, Type, CallType,
                   /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg,
                   Offset, IgnoreStringsWithoutSpecifiers);
+            }
           }
 
           for (const auto *PVFormat : D->specific_attrs<FormatAttr>()) {
@@ -6137,8 +6151,16 @@ tryAgain:
               continue;
             // We also check if the formats are compatible.
             // We can't pass a 'scanf' string to a 'printf' function.
-            if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx &&
-                Type == S.GetFormatStringType(PVFormat)) {
+            if (Type != S.GetFormatStringType(PVFormat)) {
+              S.Diag(Args[format_idx]->getBeginLoc(),
+                     diag::warn_format_string_type_incompatible)
+                  << PVFormat->getType()->getName()
+                  << S.GetFormatStringTypeName(Type);
+              if (!InFunctionCall) {
+                S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+              }
+              return SLCT_UncheckedLiteral;
+            } else if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx) {
               // Lastly, check that argument passing kinds transition in a
               // way that makes sense:
               // from a caller with FAPK_VAList, allow FAPK_VAList
@@ -6322,6 +6344,29 @@ static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
       return LVE;
   }
   return nullptr;
+}
+
+StringRef Sema::GetFormatStringTypeName(Sema::FormatStringType FST) {
+  switch (FST) {
+  case FST_Scanf:
+    return "scanf";
+  case FST_Printf:
+    return "printf";
+  case FST_NSString:
+    return "NSString";
+  case FST_Strftime:
+    return "strftime";
+  case FST_Strfmon:
+    return "strfmon";
+  case FST_Kprintf:
+    return "kprintf";
+  case FST_FreeBSDKPrintf:
+    return "freebsd_kprintf";
+  case FST_OSLog:
+    return "os_log";
+  default:
+    return "<unknown>";
+  }
 }
 
 Sema::FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
@@ -7030,6 +7075,9 @@ private:
   unsigned Position : 14;
   unsigned ModifierFor : 14; // not set for FAR_Data
 
+  void EmitDiagnostic(Sema &S, PartialDiagnostic PDiag, const Expr *FmtExpr,
+                      bool InFunctionCall) const;
+
 public:
   EquatableFormatArgument(CharSourceRange Range, SourceLocation ElementLoc,
                           analyze_format_string::LengthModifier::Kind LengthMod,
@@ -7058,7 +7106,8 @@ public:
     return result;
   }
 
-  void VerifyCompatible(Sema &S, const EquatableFormatArgument &Other) const;
+  void VerifyCompatible(Sema &S, const EquatableFormatArgument &Other,
+                        const Expr *FmtExpr, bool InFunctionCall) const;
 };
 
 /// Turns format strings into lists of EquatableSpecifier objects.
@@ -7243,13 +7292,22 @@ void CheckPrintfHandler::HandleObjCFlagsWithNonObjCConversion(
                          FixItHint::CreateRemoval(Range));
 }
 
+void EquatableFormatArgument::EmitDiagnostic(Sema &S, PartialDiagnostic PDiag,
+                                             const Expr *FmtExpr,
+                                             bool InFunctionCall) const {
+  CheckFormatHandler::EmitFormatDiagnostic(S, InFunctionCall, FmtExpr, PDiag,
+                                           ElementLoc, true, Range);
+}
+
 void EquatableFormatArgument::VerifyCompatible(
-    Sema &S, const EquatableFormatArgument &Other) const {
+    Sema &S, const EquatableFormatArgument &Other, const Expr *FmtExpr,
+    bool InFunctionCall) const {
   using MK = analyze_format_string::ArgType::MatchKind;
   if (Role != Other.Role) {
     // diagnose and stop
-    S.Diag(ElementLoc, diag::warn_format_cmp_role_mismatch)
-        << Role << Other.Role << Range;
+    EmitDiagnostic(
+        S, S.PDiag(diag::warn_format_cmp_role_mismatch) << Role << Other.Role,
+        FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
     return;
   }
@@ -7257,8 +7315,10 @@ void EquatableFormatArgument::VerifyCompatible(
   if (Role != FAR_Data) {
     if (ModifierFor != Other.ModifierFor) {
       // diagnose and stop
-      S.Diag(ElementLoc, diag::warn_format_cmp_modifierfor_mismatch)
-          << (ModifierFor + 1) << (Other.ModifierFor + 1) << Range;
+      EmitDiagnostic(S,
+                     S.PDiag(diag::warn_format_cmp_modifierfor_mismatch)
+                         << (ModifierFor + 1) << (Other.ModifierFor + 1),
+                     FmtExpr, InFunctionCall);
       S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
     }
     return;
@@ -7266,8 +7326,10 @@ void EquatableFormatArgument::VerifyCompatible(
 
   if (Sensitivity != Other.Sensitivity) {
     // diagnose and continue
-    S.Diag(ElementLoc, diag::warn_format_cmp_sensitivity_mismatch)
-        << Sensitivity << Other.Sensitivity << Range;
+    EmitDiagnostic(S,
+                   S.PDiag(diag::warn_format_cmp_sensitivity_mismatch)
+                       << Sensitivity << Other.Sensitivity,
+                   FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
   }
 
@@ -7281,14 +7343,20 @@ void EquatableFormatArgument::VerifyCompatible(
   case MK::NoMatch:
   case MK::NoMatchTypeConfusion:
   case MK::NoMatchPromotionTypeConfusion:
-    S.Diag(ElementLoc, diag::warn_format_cmp_specifier_mismatch)
-        << buildFormatSpecifier() << Other.buildFormatSpecifier() << Range;
+    EmitDiagnostic(S,
+                   S.PDiag(diag::warn_format_cmp_specifier_mismatch)
+                       << buildFormatSpecifier()
+                       << Other.buildFormatSpecifier(),
+                   FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
     break;
 
   case MK::NoMatchPedantic:
-    S.Diag(ElementLoc, diag::warn_format_cmp_specifier_mismatch_pedantic)
-        << buildFormatSpecifier() << Other.buildFormatSpecifier() << Range;
+    EmitDiagnostic(S,
+                   S.PDiag(diag::warn_format_cmp_specifier_mismatch_pedantic)
+                       << buildFormatSpecifier()
+                       << Other.buildFormatSpecifier(),
+                   FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
     break;
 
@@ -7296,8 +7364,11 @@ void EquatableFormatArgument::VerifyCompatible(
     if (!S.getDiagnostics().isIgnored(
             diag::warn_format_conversion_argument_type_mismatch_signedness,
             ElementLoc)) {
-      S.Diag(ElementLoc, diag::warn_format_cmp_specifier_sign_mismatch)
-          << buildFormatSpecifier() << Other.buildFormatSpecifier() << Range;
+      EmitDiagnostic(S,
+                     S.PDiag(diag::warn_format_cmp_specifier_sign_mismatch)
+                         << buildFormatSpecifier()
+                         << Other.buildFormatSpecifier(),
+                     FmtExpr, InFunctionCall);
       S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
     }
     break;
@@ -8441,7 +8512,7 @@ static void CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
   }
 
   for (size_t I = 0; I < CommonArgs; ++I) {
-    FmtArgs[I].VerifyCompatible(S, RefArgs[I]);
+    FmtArgs[I].VerifyCompatible(S, RefArgs[I], FmtExpr, InFunctionCall);
   }
 }
 
@@ -8516,8 +8587,8 @@ static void CheckFormatString(
     } else {
       llvm::SmallVector<EquatableFormatArgument, 9> RefArgs, FmtArgs;
       FormatStringLiteral RefLit = ReferenceFormatString;
-      if (DecomposePrintfHandler::GetSpecifiers(S, &RefLit, Type, IsObjC,
-                                                inFunctionCall, RefArgs) &&
+      if (DecomposePrintfHandler::GetSpecifiers(S, &RefLit, Type, IsObjC, true,
+                                                RefArgs) &&
           DecomposePrintfHandler::GetSpecifiers(S, FExpr, Type, IsObjC,
                                                 inFunctionCall, FmtArgs)) {
         CompareFormatSpecifiers(S, ReferenceFormatString, RefArgs,

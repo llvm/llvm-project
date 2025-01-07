@@ -10186,6 +10186,9 @@ def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
 def note_printf_c_str: Note<"did you mean to call the %0 method?">;
 def note_format_security_fixit: Note<
   "treat the string as an argument to avoid this">;
+def warn_format_string_type_incompatible : Warning<
+  "passing '%0' format string where '%1' format string is expected">,
+  InGroup<Format>;
 def warn_format_cmp_role_mismatch : Warning<
   "format argument is %select{a value|an indirect field width|an indirect "
   "precision|an auxiliary value}0, but it should be %select{a value|an indirect "

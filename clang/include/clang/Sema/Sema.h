@@ -2219,6 +2219,7 @@ public:
     FST_Syslog,
     FST_Unknown
   };
+  static StringRef GetFormatStringTypeName(FormatStringType FST);
   static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
   static FormatStringType GetFormatStringType(const FormatMatchesAttr *Format);
