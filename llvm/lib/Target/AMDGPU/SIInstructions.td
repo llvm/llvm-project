@@ -3670,6 +3670,8 @@ defm : FPMed3Pat<f32, V_MED3_F32_e64>;
 let SubtargetPredicate = HasMed3_16 in {
 let True16Predicate = NotHasTrue16BitInsts in
 defm : FPMed3Pat<f16, V_MED3_F16_e64>;
+let True16Predicate = UseRealTrue16Insts in
+defm : FPMed3Pat<f16, V_MED3_F16_t16_e64>;
 let True16Predicate = UseFakeTrue16Insts in
 defm : FPMed3Pat<f16, V_MED3_F16_fake16_e64>;
 }
