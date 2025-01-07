@@ -1152,10 +1152,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeHandlers.Mask |= MergeKinds;
 
   // Zero out TopHotCutoffs for unused sanitizers
-  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
     if (!(Sanitizers.Mask & SanitizerMask::bitPosToMask(i)))
       TopHotCutoffs[i] = 0;
-  }
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {
