@@ -994,6 +994,10 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
 
+  // Update VPDominatorTree since VPBasicBlock may be removed after State wsa
+  // constucted.
+  State->VPDT->recalculate(*this);
+
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
