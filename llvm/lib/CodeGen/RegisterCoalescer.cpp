@@ -1325,11 +1325,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   const MCInstrDesc &MCID = DefMI->getDesc();
   if (MCID.getNumDefs() != 1)
     return false;
-  // Only support subregister destinations when the def is read-undef.
-  MachineOperand &DstOperand = CopyMI->getOperand(0);
-  Register CopyDstReg = DstOperand.getReg();
-  if (DstOperand.getSubReg() && !DstOperand.isUndef())
-    return false;
 
   // If both SrcIdx and DstIdx are set, correct rematerialization would widen
   // the register substantially (beyond both source and dest size). This is bad
@@ -1338,6 +1333,32 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // around after a few subreg copies).
   if (SrcIdx && DstIdx)
     return false;
+
+  // Only support subregister destinations when the def is read-undef.
+  MachineOperand &DstOperand = CopyMI->getOperand(0);
+  Register CopyDstReg = DstOperand.getReg();
+  if (DstOperand.getSubReg() && !DstOperand.isUndef())
+    return false;
+
+  // In the physical register case, checking that the def is read-undef is not
+  // enough. We're widening the def and need to avoid clobbering other live
+  // values in the unused register pieces.
+  //
+  // TODO: Targets may support rewriting the rematerialized instruction to only
+  // touch relevant lanes, in which case we don't need any liveness check.
+  if (CopyDstReg.isPhysical() && CP.isPartial()) {
+    for (MCRegUnit Unit : TRI->regunits(DstReg)) {
+      // Ignore the register units we are writing anyway.
+      if (is_contained(TRI->regunits(CopyDstReg), Unit))
+        continue;
+
+      // Check if the other lanes we are defining are live at the
+      // rematerialization point.
+      LiveRange &LR = LIS->getRegUnit(Unit);
+      if (LR.liveAt(CopyIdx))
+        return false;
+    }
+  }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
