@@ -2162,12 +2162,9 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
         SelectInst *&SI = InsertedSelects[std::make_pair(BB1V, BB2V)];
         if (!SI) {
           // Propagate fast-math-flags from phi node to its replacement select.
-          IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-          if (isa<FPMathOperator>(PN))
-            Builder.setFastMathFlags(PN.getFastMathFlags());
-
-          SI = cast<SelectInst>(Builder.CreateSelect(
+          SI = cast<SelectInst>(Builder.CreateSelectFMF(
               BI->getCondition(), BB1V, BB2V,
+              isa<FPMathOperator>(PN) ? &PN : nullptr,
               BB1V->getName() + "." + BB2V->getName(), BI));
         }
 
@@ -3907,16 +3904,14 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
-  IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
   while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
-    if (isa<FPMathOperator>(PN))
-      Builder.setFastMathFlags(PN->getFastMathFlags());
-
     // Change the PHI node into a select instruction.
     Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
     Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
 
-    Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
+    Value *Sel = Builder.CreateSelectFMF(IfCond, TrueVal, FalseVal,
+                                         isa<FPMathOperator>(PN) ? PN : nullptr,
+                                         "", DomBI);
     PN->replaceAllUsesWith(Sel);
     Sel->takeName(PN);
     PN->eraseFromParent();
