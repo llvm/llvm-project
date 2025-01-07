@@ -3726,6 +3726,10 @@ let True16Predicate = NotHasTrue16BitInsts in {
   defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax, VSrc_b16>;
   defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax, VSrc_b16>;
 }
+let True16Predicate = UseRealTrue16Insts in {
+  defm : Int16Med3Pat<V_MED3_I16_t16_e64, smin, smax, VSrcT_b16>;
+  defm : Int16Med3Pat<V_MED3_U16_t16_e64, umin, umax, VSrcT_b16>;
+}
 let True16Predicate = UseFakeTrue16Insts in {
   defm : Int16Med3Pat<V_MED3_I16_fake16_e64, smin, smax, VSrc_b16>;
   defm : Int16Med3Pat<V_MED3_U16_fake16_e64, umin, umax, VSrc_b16>;
