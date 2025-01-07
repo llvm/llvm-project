@@ -796,12 +796,13 @@ bool swiftcall::mustPassRecordIndirectly(CodeGenModule &CGM,
 
 static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
                                        bool forReturn,
-                                       CharUnits alignmentForIndirect) {
+                                       CharUnits alignmentForIndirect,
+                                       unsigned IndirectAS) {
   if (lowering.empty()) {
     return ABIArgInfo::getIgnore();
   } else if (lowering.shouldPassIndirectly(forReturn)) {
     return ABIArgInfo::getIndirect(alignmentForIndirect,
-                                   /*AddrSpace*/ 0,
+                                   /*AddrSpace*/ IndirectAS,
                                    /*byval*/ false);
   } else {
     auto types = lowering.getCoerceAndExpandTypes();
@@ -811,21 +812,23 @@ static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
 
 static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
+  unsigned IndirectAS = forReturn
+      ? CGM.getDataLayout().getAllocaAddrSpace()
+      : CGM.getContext().getTargetAddressSpace(LangAS::Default);
   if (auto recordType = dyn_cast<RecordType>(type)) {
     auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
       return ABIArgInfo::getIndirect(
-          layout.getAlignment(),
-          /*AddrSpace*/ CGM.getContext().getTargetAddressSpace(LangAS::Default),
-          /*byval*/ false);
+          layout.getAlignment(), /*AddrSpace=*/ IndirectAS, /*byval=*/ false);
 
     SwiftAggLowering lowering(CGM);
     lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);
     lowering.finish();
 
-    return classifyExpandedType(lowering, forReturn, layout.getAlignment());
+    return classifyExpandedType(lowering, forReturn, layout.getAlignment(),
+                                IndirectAS);
   }
 
   // Just assume that all of our target ABIs can support returning at least
@@ -841,7 +844,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
     lowering.finish();
 
     CharUnits alignment = CGM.getContext().getTypeAlignInChars(type);
-    return classifyExpandedType(lowering, forReturn, alignment);
+    return classifyExpandedType(lowering, forReturn, alignment, IndirectAS);
   }
 
   // Member pointer types need to be expanded, but it's a simple form of
