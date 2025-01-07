@@ -193,7 +193,7 @@ unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
 
 bool Builtin::Context::isAuxBuiltinIDAlwaysUnsupportedOnDefaultTarget(
     unsigned ID) const {
-  assert(isAuxTargetBuiltinID(ID) && "Expected aux target builtin ID");
+  assert(isAuxBuiltinID(ID) && "Expected aux target builtin ID");
   const auto &Record = getRecord(ID);
   for (const auto &MainTargetBuiltin : TSRecords)
     if (Record == MainTargetBuiltin)
