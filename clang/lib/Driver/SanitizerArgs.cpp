@@ -114,7 +114,7 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                                     bool DiagnoseErrors);
 
 /// Parse a -fsanitize=<sanitizer1>=<value1>... or -fno-sanitize= argument's
-/// values, diagnosing any invalid components. Returns a SanitizerMask.
+/// values, diagnosing any invalid components. Returns an EMPTY SanitizerMask.
 /// Cutoffs are stored in the passed parameter.
 static SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
                                      bool DiagnoseErrors,
@@ -123,9 +123,12 @@ static SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
 /// invalid components. Returns a SanitizerMask.
 ///
-/// If Cutoffs is null, it assumes -fsanitize=<sanitizer1>...
-/// Othrewise, it assumes -fsanitize=<sanitizer1>=<value1>..., and cutoffs are
-/// stored in the passed parameter.
+/// If Cutoffs is null, it assumes -fsanitize=<sanitizer1>,<sanitizer2>,...
+/// and returns the result in the SanitizerMask.
+///
+/// Otherwise, it assumes -fsanitize=<sanitizer1>=<value1>,<sanitizer2>=<value2>,...
+/// and returns an EMPTY SanitizerMask; results are stored in the passed
+/// Cutoffs.
 static SanitizerMask parseArgValuesOrCutoffs(const Driver &D,
                                              const llvm::opt::Arg *A,
                                              bool DiagnoseErrors,
@@ -1564,16 +1567,7 @@ SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
           << A->getSpelling() << Value;
   }
 
-  SanitizerMask Kinds;
-  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
-    // Invoking bitPosToMask repeatedly is inefficient: we could simply
-    // set the LSB then left-shift in a loop; however, we assume the compiler
-    // will optimize this (in any case, the runtime is negligible).
-    if (Cutoffs[i])
-      Kinds |= SanitizerMask::bitPosToMask(i);
-  }
-
-  return Kinds;
+  return {};
 }
 
 SanitizerMask parseArgValuesOrCutoffs(const Driver &D, const llvm::opt::Arg *A,
