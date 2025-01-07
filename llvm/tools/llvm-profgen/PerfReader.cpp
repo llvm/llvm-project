@@ -177,6 +177,10 @@ std::shared_ptr<AddrBasedCtxKey> AddressStack::getContextKey() {
   std::shared_ptr<AddrBasedCtxKey> KeyStr = std::make_shared<AddrBasedCtxKey>();
   KeyStr->Context = Stack;
   CSProfileGenerator::compressRecursionContext<uint64_t>(KeyStr->Context);
+  // Trim the context depth according to --csprof-max-unsymbolized-context-depth
+  // and --csprof-max-context-depth. If both are set, use the minimum.
+  // MaxContextDepth(--csprof-max-context-depth) is used to trim the final
+  // context, so here it applies to unsymbolized context trimming as well.
   int Depth = CSProfileGenerator::MaxContextDepth != -1
                   ? CSProfileGenerator::MaxContextDepth
                   : KeyStr->Context.size();
