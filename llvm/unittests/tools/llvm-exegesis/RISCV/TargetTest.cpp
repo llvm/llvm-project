@@ -42,6 +42,15 @@ TEST_F(RISCVTargetTest, SetRegToConstant) {
   EXPECT_THAT(Insts, Not(IsEmpty()));
 }
 
+TEST_F(RISCVTargetTest, DefaultPfmCounters) {
+  const std::string Expected = "CYCLES";
+  EXPECT_EQ(State.getExegesisTarget().getPfmCounters("").CycleCounter,
+            Expected);
+  EXPECT_EQ(
+      State.getExegesisTarget().getPfmCounters("unknown_cpu").CycleCounter,
+      Expected);
+}
+
 } // namespace
 } // namespace exegesis
 } // namespace llvm

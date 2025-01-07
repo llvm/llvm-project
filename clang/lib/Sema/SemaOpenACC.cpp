@@ -937,13 +937,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.
@@ -1178,13 +1171,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   return OpenACCWaitClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getDevNumExpr(),
       Clause.getQueuesLoc(), Clause.getQueueIdExprs(), Clause.getEndLoc());
