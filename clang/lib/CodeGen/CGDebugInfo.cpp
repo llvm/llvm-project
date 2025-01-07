@@ -3492,6 +3492,11 @@ llvm::DIType *CGDebugInfo::CreateType(const PipeType *Ty, llvm::DIFile *U) {
   return getOrCreateType(Ty->getElementType(), U);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const HLSLAttributedResourceType *Ty,
+                                      llvm::DIFile *U) {
+  return getOrCreateType(Ty->getWrappedType(), U);
+}
+
 llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl();
 
@@ -3834,12 +3839,13 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
+  case Type::HLSLAttributedResource:
+    return CreateType(cast<HLSLAttributedResourceType>(Ty), Unit);
 
   case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
-  case Type::HLSLAttributedResource:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:

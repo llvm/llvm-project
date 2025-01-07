@@ -306,7 +306,7 @@ def testUnrankedMemRefWithOffsetCallback():
         log(arr)
 
     with Context():
-        # The module takes a subview of the argument memref, casts it to an unranked memref and 
+        # The module takes a subview of the argument memref, casts it to an unranked memref and
         # calls the callback with it.
         module = Module.parse(
             r"""
