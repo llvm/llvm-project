@@ -265,3 +265,22 @@ OpenACCShutdownConstruct *OpenACCShutdownConstruct::Create(
       new (Mem) OpenACCShutdownConstruct(Start, DirectiveLoc, End, Clauses);
   return Inst;
 }
+
+OpenACCSetConstruct *OpenACCSetConstruct::CreateEmpty(const ASTContext &C,
+                                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCSetConstruct::totalSizeToAlloc<const OpenACCClause *>(NumClauses));
+  auto *Inst = new (Mem) OpenACCSetConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCSetConstruct *
+OpenACCSetConstruct::Create(const ASTContext &C, SourceLocation Start,
+                            SourceLocation DirectiveLoc, SourceLocation End,
+                            ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem =
+      C.Allocate(OpenACCSetConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem) OpenACCSetConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}

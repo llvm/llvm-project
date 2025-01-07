@@ -5302,10 +5302,11 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
   if (AlignedVars.size()) {
     InsertPointTy IP = Builder.saveIP();
-    Builder.SetInsertPoint(CanonicalLoop->getPreheader()->getTerminator());
     for (auto &AlignedItem : AlignedVars) {
       Value *AlignedPtr = AlignedItem.first;
       Value *Alignment = AlignedItem.second;
+      Instruction *loadInst = dyn_cast<Instruction>(AlignedPtr);
+      Builder.SetInsertPoint(loadInst->getNextNode());
       Builder.CreateAlignmentAssumption(F->getDataLayout(),
                                         AlignedPtr, Alignment);
     }
