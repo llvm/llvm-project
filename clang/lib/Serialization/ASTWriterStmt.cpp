@@ -3064,6 +3064,12 @@ void ASTStmtWriter::VisitOpenACCSetConstruct(OpenACCSetConstruct *S) {
   Code = serialization::STMT_OPENACC_SET_CONSTRUCT;
 }
 
+void ASTStmtWriter::VisitOpenACCUpdateConstruct(OpenACCUpdateConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_UPDATE_CONSTRUCT;
+}
+
 void ASTStmtWriter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);

@@ -1936,6 +1936,7 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Update:
     llvm_unreachable("Doesn't have an associated stmt");
   default:
   case OpenACCDirectiveKind::Invalid:
@@ -2365,6 +2366,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Update:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -3713,6 +3715,9 @@ bool SemaOpenACC::ActOnStartStmtDirective(
                                 OpenACCClauseKind::DeviceType,
                                 OpenACCClauseKind::If});
 
+  // TODO: OpenACC: 'Update' construct needs to have one of 'self', 'host', or
+  // 'device'.  Implement here.
+
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -3779,6 +3784,10 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
   case OpenACCDirectiveKind::Set: {
     return OpenACCSetConstruct::Create(getASTContext(), StartLoc, DirLoc,
                                        EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::Update: {
+    return OpenACCUpdateConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                          EndLoc, Clauses);
   }
   }
   llvm_unreachable("Unhandled case in directive handling?");
