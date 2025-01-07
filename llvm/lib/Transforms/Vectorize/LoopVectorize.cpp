@@ -6716,9 +6716,16 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // If we're speculating on the stride being 1, the multiplication may
     // fold away.  We can generalize this for all operations using the notion
     // of neutral elements.  (TODO)
+    auto IsAlwaysOne = [this, VF](Value *V) {
+      // Reduction phi SCEVs may be constant when scalar, but non-uniform when
+      // vectorized and unfoldable.
+      if (auto *I = dyn_cast<Instruction>(V);
+          I && !isUniformAfterVectorization(I, VF))
+        return false;
+      return PSE.getSCEV(V)->isOne();
+    };
     if (I->getOpcode() == Instruction::Mul &&
-        (PSE.getSCEV(I->getOperand(0))->isOne() ||
-         PSE.getSCEV(I->getOperand(1))->isOne()))
+        (IsAlwaysOne(I->getOperand(0)) || IsAlwaysOne(I->getOperand(1))))
       return 0;
 
     // Detect reduction patterns
@@ -8632,6 +8639,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       // to replace operands with constants.
       ScalarEvolution &SE = *PSE.getSE();
       auto GetConstantViaSCEV = [this, &SE](VPValue *Op) {
+        if (!vputils::isUniformAfterVectorization(Op))
+          return Op;
         Value *V = Op->getUnderlyingValue();
         if (isa<Constant>(V) || !SE.isSCEVable(V->getType()))
           return Op;
