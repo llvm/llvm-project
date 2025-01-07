@@ -825,7 +825,7 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
 def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
                                           "alias_scope_domain"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     OptionalParameter<"StringAttr">:$description
   );
 
@@ -853,7 +853,7 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
 
 def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     "AliasScopeDomainAttr":$domain,
     OptionalParameter<"StringAttr">:$description
   );
@@ -890,6 +890,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
         llvm.return
     }
     ```
+
+    The first attribute can either be a DistinctAttribute or a StringAttribute.
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
