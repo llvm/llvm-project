@@ -9,8 +9,8 @@
 #include "../Common/AssemblerUtils.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
-#include "RISCVInstrInfo.h"
 #include "ParallelSnippetGenerator.h"
+#include "RISCVInstrInfo.h"
 #include "RegisterAliasing.h"
 #include "SerialSnippetGenerator.h"
 #include "TestBase.h"
@@ -44,12 +44,14 @@ protected:
   SnippetGeneratorT Generator;
 };
 
-using RISCVSerialSnippetGeneratorTest = RISCVSnippetGeneratorTest<SerialSnippetGenerator>;
+using RISCVSerialSnippetGeneratorTest =
+    RISCVSnippetGeneratorTest<SerialSnippetGenerator>;
 
 using RISCVParallelSnippetGeneratorTest =
     RISCVSnippetGeneratorTest<ParallelSnippetGenerator>;
 
-TEST_F(RISCVSerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
+TEST_F(RISCVSerialSnippetGeneratorTest,
+       ImplicitSelfDependencyThroughExplicitRegs) {
   // - ADD
   // - Op0 Explicit Def RegClass(GPR)
   // - Op1 Explicit Use RegClass(GPR)

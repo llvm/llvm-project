@@ -17,23 +17,22 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace llvm{
+namespace llvm {
 namespace exegesis {
 
 void InitializeRISCVExegesisTarget();
 
 namespace {
 
-using testing::NotNull;
 using testing::IsEmpty;
 using testing::Not;
+using testing::NotNull;
 
 constexpr const char kTriple[] = "riscv64-unknown-linux";
 
 class RISCVTargetTest : public ::testing::Test {
 protected:
-  RISCVTargetTest()
-      : ExegesisTarget_(ExegesisTarget::lookup(Triple(kTriple))) {
+  RISCVTargetTest() : ExegesisTarget_(ExegesisTarget::lookup(Triple(kTriple))) {
     EXPECT_THAT(ExegesisTarget_, NotNull());
     std::string error;
     Target_ = TargetRegistry::lookupTarget(kTriple, error);

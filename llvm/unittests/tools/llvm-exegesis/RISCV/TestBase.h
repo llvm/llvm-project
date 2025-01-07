@@ -25,7 +25,8 @@ void InitializeRISCVExegesisTarget();
 class RISCVTestBase : public ::testing::Test {
 protected:
   RISCVTestBase()
-      : State(cantFail(LLVMState::Create("riscv64-unknown-linux", "generic-rv64"))) {}
+      : State(cantFail(
+            LLVMState::Create("riscv64-unknown-linux", "generic-rv64"))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeRISCVTargetInfo();
