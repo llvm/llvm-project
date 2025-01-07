@@ -1183,6 +1183,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setMaxDivRemBitWidthSupported(128);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  if (Subtarget->hasSME())
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
 
   if (Subtarget->isNeonAvailable()) {
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
@@ -27427,6 +27429,15 @@ void AArch64TargetLowering::ReplaceNodeResults(
       auto V = DAG.getNode(AArch64ISD::LASTB, DL, MVT::i32,
                            N->getOperand(1), N->getOperand(2));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+      return;
+    }
+    case Intrinsic::aarch64_sme_in_streaming_mode: {
+      SDLoc DL(N);
+      SDValue Chain = DAG.getEntryNode();
+      SDValue RuntimePStateSM =
+          getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
       return;
     }
     case Intrinsic::experimental_vector_match:
