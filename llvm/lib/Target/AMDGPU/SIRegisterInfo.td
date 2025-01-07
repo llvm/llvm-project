@@ -1227,12 +1227,14 @@ def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_S
 }
 } // End GeneratePressureSet = 0
 
-def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32, SReg_32, SReg_128)> {
+// TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
+def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_128)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
 
-def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32, SReg_32, SReg_256)> {
+// TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
+def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_256)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
