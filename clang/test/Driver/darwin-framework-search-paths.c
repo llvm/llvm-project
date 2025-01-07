@@ -9,18 +9,18 @@
 // RUN: mkdir -p %t/MacOSX15.1.sdk/System/Library/SubFrameworks
 // RUN: mkdir -p %t/MacOSX15.1.sdk/usr/include
 
-// RUN: %clang -xc %s -target arm64-apple-macosx15.1 -isysroot %t/MacOSX15.1.sdk -E -v 2>&1 | FileCheck --check-prefix=CHECK-C %s
+// RUN: %clang -xc %s -target arm64-apple-macosx15.1 -isysroot %t/MacOSX15.1.sdk -c -### 2>&1 \
+// RUN: | FileCheck -DSDKROOT=%t/MacOSX15.1.sdk --check-prefix=CHECK-C %s
 //
-// CHECK-C:    -isysroot [[PATH:[^ ]*/MacOSX15.1.sdk]]
-// CHECK-C:    #include <...> search starts here:
-// CHECK-C:    [[PATH]]/usr/include
-// CHECK-C:    [[PATH]]/System/Library/Frameworks (framework directory)
-// CHECK-C:    [[PATH]]/System/Library/SubFrameworks (framework directory)
+// CHECK-C:    "-isysroot" "[[SDKROOT]]"
+// CHECK-C:    "-internal-externc-isystem" "[[SDKROOT]]/usr/include"
+// CHECK-C:    "-internal-iframework" "[[SDKROOT]]/System/Library/Frameworks"
+// CHECK-C:    "-internal-iframework" "[[SDKROOT]]/System/Library/SubFrameworks"
 
-// RUN: %clang -xc++ %s -target arm64-apple-macosx15.1 -isysroot %t/MacOSX15.1.sdk -E -v 2>&1 | FileCheck --check-prefix=CHECK-CXX %s
+// RUN: %clang -xc++ %s -target arm64-apple-macosx15.1 -isysroot %t/MacOSX15.1.sdk -c -### 2>&1 \
+// RUN: | FileCheck -DSDKROOT=%t/MacOSX15.1.sdk --check-prefix=CHECK-CXX %s
 //
-// CHECK-CXX:    -isysroot [[PATH:[^ ]*/MacOSX15.1.sdk]]
-// CHECK-CXX:    #include <...> search starts here:
-// CHECK-CXX:    [[PATH]]/usr/include
-// CHECK-CXX:    [[PATH]]/System/Library/Frameworks (framework directory)
-// CHECK-CXX:    [[PATH]]/System/Library/SubFrameworks (framework directory)
+// CHECK-CXX:    "-isysroot" "[[SDKROOT]]"
+// CHECK-CXX:    "-internal-externc-isystem" "[[SDKROOT]]/usr/include"
+// CHECK-CXX:    "-internal-iframework" "[[SDKROOT]]/System/Library/Frameworks"
+// CHECK-CXX:    "-internal-iframework" "[[SDKROOT]]/System/Library/SubFrameworks"
