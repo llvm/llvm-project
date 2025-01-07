@@ -741,7 +741,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Parse -fno-sanitize-top-hot flags
   SanitizerMask TopHotMask =
       parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, &TopHotCutoffs);
-  (void)TopHotMask;
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
