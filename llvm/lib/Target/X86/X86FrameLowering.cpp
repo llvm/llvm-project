@@ -1533,16 +1533,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   assert(&STI == &MF.getSubtarget<X86Subtarget>() &&
          "MF used frame lowering for wrong subtarget");
-
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &Fn = MF.getFunction();
-
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
-
-  // errs() << "********** MaxAlign size " << MaxAlign;
-
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
   bool IsFunclet = MBB.isEHFuncletEntry();
   EHPersonality Personality = EHPersonality::Unknown;
@@ -1553,8 +1548,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
   bool IsWin64Prologue = isWin64Prologue(MF);
-
-    bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
+  bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
   bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
                      MF.getFunction().getParent()->getCodeViewFlag();
