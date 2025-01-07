@@ -1436,13 +1436,15 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
   return Values;
 }
 
-static void parseSanitizerWeightedKinds(
+static SanitizerMaskCutoffs parseSanitizerWeightedKinds(
     StringRef FlagName, const std::vector<std::string> &Sanitizers,
-    DiagnosticsEngine &Diags,  SanitizerMaskCutoffs &Cutoffs) {
+    DiagnosticsEngine &Diags) {
+  SanitizerMaskCutoffs Cutoffs;
   for (const auto &Sanitizer : Sanitizers) {
     if (!parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs))
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
   }
+  return Cutoffs;
 }
 
 static void parseXRayInstrumentationBundle(StringRef FlagName, StringRef Bundle,
@@ -2292,9 +2294,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                       Diags, Opts.SanitizeMergeHandlers);
 
   // Parse -fno-sanitize-top-hot= arguments.
-  parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
+  Opts.NoSanitizeTopHotCutoffs = parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
                               Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
-                              Diags, Opts.NoSanitizeTopHotCutoffs);
+                              Diags);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
