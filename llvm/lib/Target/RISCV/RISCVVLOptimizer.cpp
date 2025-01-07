@@ -1067,11 +1067,7 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
   }
 
   // Instructions like reductions may use a vector register as a scalar
-  // register. In this case, we should treat it like a scalar register which
-  // does not impact the decision on whether to optimize VL. But if there is
-  // another user of MI and it may have VL=0, we need to be sure not to reduce
-  // the VL of MI to zero when the VLOp of UserOp may be non-zero. The most
-  // we can reduce it to is one.
+  // register. In this case, we should treat it as only reading the first lane.
   if (isVectorOpUsedAsScalarOp(UserOp)) {
     [[maybe_unused]] Register R = UserOp.getReg();
     [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
