@@ -93,10 +93,12 @@ public:
                             &sectionToIdx) const override {
     constexpr unsigned windowSize = 4;
 
-    // Calculate content hashes
+    // Calculate content hashes: k-mers and the last k-1 bytes.
     ArrayRef<uint8_t> data = isec->data;
-    for (size_t i = 0; i <= data.size() - windowSize; i++)
+    for (size_t i = 0; i <= data.size() - windowSize; ++i)
       hashes.push_back(llvm::support::endian::read32le(data.data() + i));
+    for (uint8_t byte : data.take_back(windowSize - 1))
+      hashes.push_back(byte);
 
     // Calculate relocation hashes
     for (const auto &r : isec->relocs) {
