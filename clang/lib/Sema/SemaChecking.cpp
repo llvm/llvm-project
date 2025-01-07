@@ -14594,18 +14594,23 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
                      _2, _3, _4));
 }
 
-static ExprResult UsualUnaryConversionsNoPromoteInt(Sema &S, Expr *E) {
-  // Don't promote integer types
-  if (QualType Ty = E->getType(); S.getASTContext().isPromotableIntegerType(Ty))
-    return S.DefaultFunctionArrayLvalueConversion(E);
-  return S.UsualUnaryConversions(E);
+// Performs a similar job to Sema::UsualUnaryConversions, but without any
+// implicit promotion of integral/enumeration types.
+static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  return S.UsualUnaryFPConversions(Res.get());
 }
 
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   if (checkArgCount(TheCall, 1))
     return true;
 
-  ExprResult A = UsualUnaryConversionsNoPromoteInt(*this, TheCall->getArg(0));
+  ExprResult A = BuiltinVectorMathConversions(*this, TheCall->getArg(0));
   if (A.isInvalid())
     return true;
 
@@ -14651,7 +14656,7 @@ std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
   Expr *Args[2];
   for (int I = 0; I < 2; ++I) {
     ExprResult Converted =
-        UsualUnaryConversionsNoPromoteInt(*this, TheCall->getArg(I));
+        BuiltinVectorMathConversions(*this, TheCall->getArg(I));
     if (Converted.isInvalid())
       return std::nullopt;
     Args[I] = Converted.get();
@@ -14687,7 +14692,7 @@ bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
   Expr *Args[3];
   for (int I = 0; I < 3; ++I) {
     ExprResult Converted =
-        UsualUnaryConversionsNoPromoteInt(*this, TheCall->getArg(I));
+        BuiltinVectorMathConversions(*this, TheCall->getArg(I));
     if (Converted.isInvalid())
       return true;
     Args[I] = Converted.get();
