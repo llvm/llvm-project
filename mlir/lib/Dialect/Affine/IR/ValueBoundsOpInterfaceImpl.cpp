@@ -106,19 +106,17 @@ struct AffineDelinearizeIndexOpInterface
 
     SmallVector<OpFoldResult> basis = op.getPaddedBasis();
     AffineExpr divisor = cstr.getExpr(1);
-    for (OpFoldResult basisElem :
-         ArrayRef<OpFoldResult>(basis).drop_front(resIdx + 1))
+    for (OpFoldResult basisElem : llvm::drop_begin(basis, resIdx + 1))
       divisor = divisor * cstr.getExpr(basisElem);
 
-    auto resBound = cstr.bound(result);
     if (resIdx == 0) {
-      resBound == linearIdx.floorDiv(divisor);
+      cstr.bound(value) == linearIdx.floorDiv(divisor);
       if (!basis.front().isNull())
-        resBound < cstr.getExpr(basis.front());
+        cstr.bound(value) < cstr.getExpr(basis.front());
       return;
     }
     AffineExpr thisBasis = cstr.getExpr(basis[resIdx]);
-    resBound == (linearIdx % (thisBasis * divisor)).floorDiv(divisor);
+    cstr.bound(value) == (linearIdx % (thisBasis * divisor)).floorDiv(divisor);
   }
 };
 
@@ -135,8 +133,9 @@ struct AffineLinearizeIndexOpInterface
     AffineExpr stride = cstr.getExpr(1);
     SmallVector<OpFoldResult> basis = op.getPaddedBasis();
     OperandRange multiIndex = op.getMultiIndex();
+    unsigned numArgs = multiIndex.size();
     for (auto [revArgNum, length] : llvm::enumerate(llvm::reverse(basis))) {
-      unsigned argNum = multiIndex.size() - (revArgNum + 1);
+      unsigned argNum = numArgs - (revArgNum + 1);
       if (argNum == 0)
         break;
       OpFoldResult indexAsFoldRes = getAsOpFoldResult(multiIndex[argNum]);
@@ -144,10 +143,9 @@ struct AffineLinearizeIndexOpInterface
       stride = stride * cstr.getExpr(length);
     }
     bound = bound + cstr.getExpr(op.getMultiIndex().front()) * stride;
-    auto resBound = cstr.bound(value);
-    resBound == bound;
+    cstr.bound(value) == bound;
     if (op.getDisjoint() && !basis.front().isNull()) {
-      resBound <= stride *cstr.getExpr(basis.front());
+      cstr.bound(value) < stride *cstr.getExpr(basis.front());
     }
   }
 };
