@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
 #include "mlir/Dialect/Affine/Passes.h"
 
@@ -25,15 +26,21 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 #include <iomanip>
+#include <iostream>
 #include <optional>
 #include <sstream>
 
@@ -289,6 +296,61 @@ static void sinkSequentialLoops(MemRefDependenceGraph::Node *node) {
   node->op = newRootForOp;
 }
 
+static Value createPrivateVectorOpMemRef(
+    AffineForOp forOp, Operation *srcStoreOpInst, unsigned dstLoopDepth,
+    std::optional<unsigned> fastMemorySpace, uint64_t localBufSizeThreshold) {
+  Operation *forInst = forOp.getOperation();
+
+  // Create builder to insert alloc op just before 'forOp'.
+  OpBuilder b(forInst);
+  // Builder to create constants at the top level.
+  OpBuilder top(forInst->getParentRegion());
+  // Create new memref type based on slice bounds.
+  auto srcAffineOp = cast<AffineWriteOpInterface>(srcStoreOpInst);
+
+  auto oldMemRef = srcAffineOp.getMemRef();
+  auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
+  unsigned rank = oldMemRefType.getRank();
+
+  auto srcOpResult = srcAffineOp.getValueToStore();
+  auto shapedType = dyn_cast<ShapedType>(srcOpResult.getType());
+
+  // Create 'newMemRefType' using 'newShape' from MemRefRegion accessed
+  // by 'srcStoreOpInst'.
+  auto eltSize = getMemRefIntOrFloatEltSizeInBytes(oldMemRefType);
+  assert(eltSize && "memrefs with size elt types expected");
+  uint64_t bufSize = *eltSize * shapedType.getNumElements();
+  unsigned newMemSpace;
+  if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
+    newMemSpace = *fastMemorySpace;
+  } else {
+    newMemSpace = oldMemRefType.getMemorySpaceAsInt();
+  }
+
+  auto newMemRefType = MemRefType::get(
+      shapedType.getShape(), oldMemRefType.getElementType(), {}, newMemSpace);
+
+  // Create new private memref for fused loop 'forOp'. 'newShape' is always
+  // a constant shape.
+  // TODO: Create/move alloc ops for private memrefs closer to their
+  // consumer loop nests to reduce their live range. Currently they are
+  // added at the beginning of the block, because loop nests can be
+  // reordered during the fusion pass.
+  Value newMemRef = top.create<memref::AllocOp>(forOp.getLoc(), newMemRefType);
+
+  auto indexRemap = AffineMap::getMultiDimIdentityMap(rank, forOp.getContext());
+
+  // Replace all users of 'oldMemRef' with 'newMemRef'.
+  LogicalResult res =
+      replaceAllMemRefUsesWith(oldMemRef, newMemRef, {}, indexRemap,
+                               /*extraOperands=*/{},
+                               /*symbolOperands=*/{},
+                               /*domOpFilter=*/&*forOp.getBody()->begin());
+  assert(succeeded(res) &&
+         "replaceAllMemrefUsesWith should always succeed here");
+  return newMemRef;
+}
+
 // Creates and returns a private (single-user) memref for fused loop rooted
 // at 'forOp', with (potentially reduced) memref size based on the
 // MemRefRegion written to by 'srcStoreOpInst' at depth 'dstLoopDepth'.
@@ -358,9 +420,9 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   } else {
     newMemSpace = oldMemRefType.getMemorySpaceAsInt();
   }
+
   auto newMemRefType = MemRefType::get(newShape, oldMemRefType.getElementType(),
                                        {}, newMemSpace);
-
   // Create new private memref for fused loop 'forOp'. 'newShape' is always
   // a constant shape.
   // TODO: Create/move alloc ops for private memrefs closer to their
@@ -374,7 +436,6 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   remapExprs.reserve(rank);
   for (unsigned i = 0; i < rank; i++) {
     auto dimExpr = b.getAffineDimExpr(outerIVs.size() + i);
-
     auto remapExpr =
         simplifyAffineExpr(dimExpr - offsets[i], outerIVs.size() + rank, 0);
     remapExprs.push_back(remapExpr);
@@ -392,6 +453,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;
+
   return newMemRef;
 }
 
@@ -568,6 +630,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     // nest slice 'slice' were to be inserted into the dst loop nest at loop
     // depth 'i'.
     MemRefRegion sliceWriteRegion(srcStoreOpInst->getLoc());
+
     if (failed(sliceWriteRegion.compute(srcStoreOpInst, /*loopDepth=*/0,
                                         &slice))) {
       LLVM_DEBUG(llvm::dbgs()
@@ -850,7 +913,6 @@ public:
   /// No fusion is performed when producers with a user count greater than
   /// `maxSrcUserCount` for any of the memrefs involved.
   void performFusionsIntoDest(unsigned dstId, unsigned maxSrcUserCount) {
-    LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
     // Skip if this node was removed (fused into another node).
     if (mdg->nodes.count(dstId) == 0)
       return;
@@ -885,6 +947,8 @@ public:
       dstNodeChanged = false;
       SmallVector<unsigned, 16> srcIdCandidates;
       getProducerCandidates(dstId, mdg, srcIdCandidates);
+      LLVM_DEBUG(llvm::dbgs()
+                 << "dst loop producers " << srcIdCandidates.size() << "\n");
 
       for (unsigned srcId : llvm::reverse(srcIdCandidates)) {
         // Get 'srcNode' from which to attempt fusion into 'dstNode'.
@@ -966,7 +1030,6 @@ public:
             dstMemrefOps.push_back(op);
         unsigned dstLoopDepthTest =
             getInnermostCommonLoopDepth(dstMemrefOps) - numSurroundingLoops;
-
         // Check the feasibility of fusing src loop nest into dst loop nest
         // at loop depths in range [1, dstLoopDepthTest].
         unsigned maxLegalFusionDepth = 0;
@@ -1035,9 +1098,6 @@ public:
           if (canCreatePrivateMemRef(memref, srcEscapingMemRefs, srcId, dstId,
                                      removeSrcNode)) {
             // Create a private version of this memref.
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Creating private memref for " << memref << '\n');
-            // Create a private version of this memref.
             privateMemrefs.insert(memref);
           }
         }
@@ -1078,9 +1138,19 @@ public:
             // private memref footprint.
             SmallVector<Operation *, 4> &storesForMemref =
                 memrefToStoresPair.second;
-            Value newMemRef = createPrivateMemRef(
-                dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
-                fastMemorySpace, localBufSizeThreshold);
+            Operation *srcStoreOpInst = storesForMemref[0];
+            Value newMemRef;
+
+            if (isa<AffineVectorLoadOp, AffineVectorStoreOp>(srcStoreOpInst)) {
+              newMemRef = createPrivateVectorOpMemRef(
+                  dstAffineForOp, srcStoreOpInst, bestDstLoopDepth,
+                  fastMemorySpace, localBufSizeThreshold);
+            } else {
+              newMemRef = createPrivateMemRef(dstAffineForOp, srcStoreOpInst,
+                                              bestDstLoopDepth, fastMemorySpace,
+                                              localBufSizeThreshold);
+            }
+
             // Create new node in dependence graph for 'newMemRef' alloc op.
             unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
             // Add edge from 'newMemRef' node to dstNode.
