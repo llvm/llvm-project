@@ -274,6 +274,50 @@ Examples:
                @llvm.dx.handle.fromHeap.tdx.RawBuffer_v4f32_1_0(
                    i32 2, i1 false)
 
+Accessing Resources as Memory
+-----------------------------
+
+*relevant types: Buffers, CBuffer, and Textures*
+
+Loading and storing from resources is generally represented in LLVM using
+operations on memory that is only accessible via a handle object. Given a
+handle, `llvm.dx.resource.getpointer` gives a pointer that can be used to read
+and (depending on type) write to the resource.
+
+Accesses using `llvm.dx.resource.getpointer` are replaced with direct load and
+store operations in the `DXILResourceAccess` pass. These direct loads and
+stores are described later in this document.
+
+.. note:: Currently the pointers returned by `dx.resource.getpointer` are in
+          the default address space, but that will likely change in the future.
+
+.. list-table:: ``@llvm.dx.resource.getpointer``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - Pointer
+     - A pointer to an object in the buffer
+   * - ``%buffer``
+     - 0
+     - ``target(dx.TypedBuffer, ...)``
+     - The buffer to access
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ptr = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4f32_0_0_0t(
+       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
+
 16-byte Loads, Samples, and Gathers
 -----------------------------------
 
@@ -296,8 +340,8 @@ instead. That is, ``llvm.dx.resource.load.typedbuffer`` from a
 of 4 floats, and from ``Buffer<double2>`` a vector of two doubles, etc. The
 operations are then expanded out to match DXIL's format during lowering.
 
-In cases where we need ``CheckAccessFullyMapped``, we have a second intrinsic
-that returns an anonymous struct with element-0 being the contained type, and
+In order to support ``CheckAccessFullyMapped``, we need these intrinsics to
+return an anonymous struct with element-0 being the contained type, and
 element-1 being the ``i1`` result of a ``CheckAccessFullyMapped`` call. We
 don't have a separate call to ``CheckAccessFullyMapped`` at all, since that's
 the only operation that can possibly be done on this value. In practice this
@@ -317,8 +361,8 @@ HLSL source, but this actually matches DXC's behaviour in practice.
      - Description
    * - Return value
      -
-     - The contained type of the buffer
-     - The data loaded from the buffer
+     - A structure of the contained type and the check bit
+     - The data loaded from the buffer and the check bit
    * - ``%buffer``
      - 0
      - ``target(dx.TypedBuffer, ...)``
@@ -332,47 +376,21 @@ Examples:
 
 .. code-block:: llvm
 
-   %ret = call <4 x float>
+   %ret = call {<4 x float>, i1}
        @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
            target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
-   %ret = call float
+   %ret = call {float, i1}
        @llvm.dx.resource.load.typedbuffer.f32.tdx.TypedBuffer_f32_0_0_0t(
            target("dx.TypedBuffer", float, 0, 0, 0) %buffer, i32 %index)
-   %ret = call <4 x i32>
+   %ret = call {<4 x i32>, i1}
        @llvm.dx.resource.load.typedbuffer.v4i32.tdx.TypedBuffer_v4i32_0_0_0t(
            target("dx.TypedBuffer", <4 x i32>, 0, 0, 0) %buffer, i32 %index)
-   %ret = call <4 x half>
+   %ret = call {<4 x half>, i1}
        @llvm.dx.resource.load.typedbuffer.v4f16.tdx.TypedBuffer_v4f16_0_0_0t(
            target("dx.TypedBuffer", <4 x half>, 0, 0, 0) %buffer, i32 %index)
-   %ret = call <2 x double>
+   %ret = call {<2 x double>, i1}
        @llvm.dx.resource.load.typedbuffer.v2f64.tdx.TypedBuffer_v2f64_0_0t(
            target("dx.TypedBuffer", <2 x double>, 0, 0, 0) %buffer, i32 %index)
-
-.. list-table:: ``@llvm.dx.resource.loadchecked.typedbuffer``
-   :header-rows: 1
-
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A structure of the contained type and the check bit
-     - The data loaded from the buffer and the check bit
-   * - ``%buffer``
-     - 0
-     - ``target(dx.TypedBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-
-.. code-block:: llvm
-
-   %ret = call {<4 x float>, i1}
-       @llvm.dx.resource.loadchecked.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
-           target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
 
 Texture and Typed Buffer Stores
 -------------------------------

@@ -1204,6 +1204,12 @@ void StmtPrinter::VisitOpenACCInitConstruct(OpenACCInitConstruct *S) {
 void StmtPrinter::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
   PrintOpenACCConstruct(S);
 }
+void StmtPrinter::VisitOpenACCSetConstruct(OpenACCSetConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCUpdateConstruct(OpenACCUpdateConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
 
 void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
   Indent() << "#pragma acc wait";

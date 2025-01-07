@@ -547,6 +547,39 @@ struct BinaryOpc_match {
   }
 };
 
+/// Matching while capturing mask
+template <typename T0, typename T1, typename T2> struct SDShuffle_match {
+  T0 Op1;
+  T1 Op2;
+  T2 Mask;
+
+  SDShuffle_match(const T0 &Op1, const T1 &Op2, const T2 &Mask)
+      : Op1(Op1), Op2(Op2), Mask(Mask) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
+      return Op1.match(Ctx, I->getOperand(0)) &&
+             Op2.match(Ctx, I->getOperand(1)) && Mask.match(I->getMask());
+    }
+    return false;
+  }
+};
+struct m_Mask {
+  ArrayRef<int> &MaskRef;
+  m_Mask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
+  bool match(ArrayRef<int> Mask) {
+    MaskRef = Mask;
+    return true;
+  }
+};
+
+struct m_SpecificMask {
+  ArrayRef<int> MaskRef;
+  m_SpecificMask(ArrayRef<int> MaskRef) : MaskRef(MaskRef) {}
+  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+};
+
 template <typename LHS_P, typename RHS_P, typename Pred_t,
           bool Commutable = false, bool ExcludeChain = false>
 struct MaxMin_match {
@@ -795,6 +828,17 @@ inline BinaryOpc_match<LHS, RHS> m_FDiv(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_FRem(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::FREM, L, R);
+}
+
+template <typename V1_t, typename V2_t>
+inline BinaryOpc_match<V1_t, V2_t> m_Shuffle(const V1_t &v1, const V2_t &v2) {
+  return BinaryOpc_match<V1_t, V2_t>(ISD::VECTOR_SHUFFLE, v1, v2);
+}
+
+template <typename V1_t, typename V2_t, typename Mask_t>
+inline SDShuffle_match<V1_t, V2_t, Mask_t>
+m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
+  return SDShuffle_match<V1_t, V2_t, Mask_t>(v1, v2, mask);
 }
 
 template <typename LHS, typename RHS>
