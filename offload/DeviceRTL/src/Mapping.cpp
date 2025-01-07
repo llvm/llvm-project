@@ -10,10 +10,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mapping.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "State.h"
-#include "Types.h"
-#include "Utils.h"
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -25,7 +25,6 @@ namespace ompx {
 namespace impl {
 
 // Forward declarations defined to be defined for AMDGCN and NVPTX.
-const llvm::omp::GV &getGridValue();
 LaneMaskTy activemask();
 LaneMaskTy lanemaskLT();
 LaneMaskTy lanemaskGT();
@@ -37,15 +36,14 @@ uint32_t getBlockIdInKernel(int32_t Dim);
 uint32_t getNumberOfBlocksInKernel(int32_t Dim);
 uint32_t getWarpIdInBlock();
 uint32_t getNumberOfWarpsInBlock();
+uint32_t getWarpSize();
 
 /// AMDGCN Implementation
 ///
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-const llvm::omp::GV &getGridValue() {
-  return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
-}
+uint32_t getWarpSize() { return __builtin_amdgcn_wavefrontsize(); }
 
 uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
   switch (Dim) {
@@ -152,7 +150,7 @@ uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
   UNREACHABLE("Dim outside range!");
 }
 
-const llvm::omp::GV &getGridValue() { return llvm::omp::NVPTXGridValues; }
+uint32_t getWarpSize() { return __nvvm_read_ptx_sreg_warpsize(); }
 
 LaneMaskTy activemask() { return __nvvm_activemask(); }
 
@@ -218,8 +216,6 @@ uint32_t getNumberOfWarpsInBlock() {
 
 #pragma omp end declare variant
 ///}
-
-uint32_t getWarpSize() { return getGridValue().GV_Warp_Size; }
 
 } // namespace impl
 } // namespace ompx

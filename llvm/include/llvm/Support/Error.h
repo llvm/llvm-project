@@ -54,7 +54,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     log(OS);
-    return OS.str();
+    return Msg;
   }
 
   /// Convert this error to a std::error_code.
@@ -761,7 +761,7 @@ inline void cantFail(Error Err, const char *Msg = nullptr) {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << Msg << "\n" << Err;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -792,7 +792,7 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
     raw_string_ostream OS(Str);
     auto E = ValOrErr.takeError();
     OS << Msg << "\n" << E;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -823,7 +823,7 @@ T& cantFail(Expected<T&> ValOrErr, const char *Msg = nullptr) {
     raw_string_ostream OS(Str);
     auto E = ValOrErr.takeError();
     OS << Msg << "\n" << E;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -1129,10 +1129,15 @@ inline bool errorToBool(Error Err) {
 /// function.
 class ErrorAsOutParameter {
 public:
+
   ErrorAsOutParameter(Error *Err) : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
+  }
+
+  ErrorAsOutParameter(Error &Err) : Err(&Err) {
+    (void)!!Err;
   }
 
   ~ErrorAsOutParameter() {
@@ -1338,7 +1343,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     Err->log(OS);
-    return OS.str();
+    return Msg;
   }
 
   StringRef getFileName() const { return FileName; }

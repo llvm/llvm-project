@@ -15,7 +15,7 @@
 ; CHECK:     .max_flat_workgroup_size: 1024
 ; CHECK:     .name:           test
 ; CHECK:     .private_segment_fixed_size: 0
-; CHECK:     .sgpr_count:     6
+; CHECK:     .sgpr_count:     10
 ; CHECK:     .symbol:         test.kd
 ; CHECK:     .vgpr_count:     {{3|6}}
 ; WAVE64:    .wavefront_size: 64
@@ -23,7 +23,7 @@
 define amdgpu_kernel void @test(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) {
+    ptr addrspace(1) %b) "amdgpu-no-implicitarg-ptr" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -47,10 +47,10 @@ entry:
 }
 
 ; CHECK:   .name:       num_spilled_sgprs
-; GFX700:   .sgpr_spill_count: 12
-; GFX803:   .sgpr_spill_count: 12
-; GFX900:   .sgpr_spill_count: 48
-; GFX1010:  .sgpr_spill_count: 48
+; GFX700:   .sgpr_spill_count: 10
+; GFX803:   .sgpr_spill_count: 10
+; GFX900:   .sgpr_spill_count: 62
+; GFX1010:  .sgpr_spill_count: 60
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     ptr addrspace(1) %out0, ptr addrspace(1) %out1, [8 x i32],
@@ -61,27 +61,37 @@ define amdgpu_kernel void @num_spilled_sgprs(
     ptr addrspace(1) %outa, ptr addrspace(1) %outb, [8 x i32],
     ptr addrspace(1) %outc, ptr addrspace(1) %outd, [8 x i32],
     ptr addrspace(1) %oute, ptr addrspace(1) %outf, [8 x i32],
+    ptr addrspace(1) %outg, ptr addrspace(1) %outh, [8 x i32],
+    ptr addrspace(1) %outi, ptr addrspace(1) %outj, [8 x i32],
+    ptr addrspace(1) %outk, ptr addrspace(1) %outl, [8 x i32],
+    ptr addrspace(1) %outm, ptr addrspace(1) %outn, [8 x i32],
     i32 %in0, i32 %in1, i32 %in2, i32 %in3, [8 x i32],
     i32 %in4, i32 %in5, i32 %in6, i32 %in7, [8 x i32],
     i32 %in8, i32 %in9, i32 %ina, i32 %inb, [8 x i32],
-    i32 %inc, i32 %ind, i32 %ine, i32 %inf) #0 {
+    i32 %inc, i32 %ind, i32 %ine, i32 %inf, i32 %ing, i32 %inh,
+    i32 %ini, i32 %inj, i32 %ink) #0 {
 entry:
-  store i32 %in0, ptr addrspace(1) %out0
-  store i32 %in1, ptr addrspace(1) %out1
-  store i32 %in2, ptr addrspace(1) %out2
-  store i32 %in3, ptr addrspace(1) %out3
-  store i32 %in4, ptr addrspace(1) %out4
-  store i32 %in5, ptr addrspace(1) %out5
-  store i32 %in6, ptr addrspace(1) %out6
-  store i32 %in7, ptr addrspace(1) %out7
-  store i32 %in8, ptr addrspace(1) %out8
-  store i32 %in9, ptr addrspace(1) %out9
-  store i32 %ina, ptr addrspace(1) %outa
-  store i32 %inb, ptr addrspace(1) %outb
-  store i32 %inc, ptr addrspace(1) %outc
-  store i32 %ind, ptr addrspace(1) %outd
-  store i32 %ine, ptr addrspace(1) %oute
-  store i32 %inf, ptr addrspace(1) %outf
+  store volatile i32 %in0, ptr addrspace(1) %out0
+  store volatile i32 %in1, ptr addrspace(1) %out1
+  store volatile i32 %in2, ptr addrspace(1) %out2
+  store volatile i32 %in3, ptr addrspace(1) %out3
+  store volatile i32 %in4, ptr addrspace(1) %out4
+  store volatile i32 %in5, ptr addrspace(1) %out5
+  store volatile i32 %in6, ptr addrspace(1) %out6
+  store volatile i32 %in7, ptr addrspace(1) %out7
+  store volatile i32 %in8, ptr addrspace(1) %out8
+  store volatile i32 %in9, ptr addrspace(1) %out9
+  store volatile i32 %ina, ptr addrspace(1) %outa
+  store volatile i32 %inb, ptr addrspace(1) %outb
+  store volatile i32 %inc, ptr addrspace(1) %outc
+  store volatile i32 %ind, ptr addrspace(1) %outd
+  store volatile i32 %ine, ptr addrspace(1) %oute
+  store volatile i32 %inf, ptr addrspace(1) %outf
+  store volatile i32 %ing, ptr addrspace(1) %outg
+  store volatile i32 %inh, ptr addrspace(1) %outh
+  store volatile i32 %ini, ptr addrspace(1) %outi
+  store volatile i32 %inj, ptr addrspace(1) %outj
+  store volatile i32 %ink, ptr addrspace(1) %outk
   ret void
 }
 
@@ -160,7 +170,7 @@ define amdgpu_kernel void @num_spilled_vgprs() #1 {
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 1
 
-attributes #0 = { "amdgpu-num-sgpr"="14" }
+attributes #0 = { "amdgpu-num-sgpr"="20" }
 attributes #1 = { "amdgpu-num-vgpr"="20" }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }
 

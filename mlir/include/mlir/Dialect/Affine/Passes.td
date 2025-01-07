@@ -394,7 +394,7 @@ def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
   let constructor = "mlir::affine::createLoopCoalescingPass()";
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["affine::AffineDialect","arith::ArithDialect"];
 }
 
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
@@ -406,6 +406,11 @@ def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
+}
+
+def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
+  let summary = "Lower affine operations operating on indices into affine.apply operations";
+  let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
 }
 
 #endif // MLIR_DIALECT_AFFINE_PASSES

@@ -32,7 +32,7 @@ subroutine test(ptr1, ptr2)
 end
 
 ! CHECK-LABEL: func.func @test_callee_c_ptr(
-! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "ptr1"}) attributes {fir.bindc_name = "test_callee_c_ptr"} {
+! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_ptrElocal"}
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
@@ -56,7 +56,7 @@ subroutine test_callee_c_ptr(ptr1) bind(c)
 end subroutine
 
 ! CHECK-LABEL: func.func @test_callee_c_funptr(
-! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "ptr1"}) attributes {fir.bindc_name = "test_callee_c_funptr"} {
+! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_funptrElocal"}
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>

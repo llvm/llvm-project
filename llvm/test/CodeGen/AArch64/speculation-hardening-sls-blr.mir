@@ -1,12 +1,17 @@
 # RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening \
 # RUN:     -stop-after aarch64-sls-hardening -o - %s \
-# RUN:   | FileCheck %s --check-prefixes=CHECK
+# RUN:   | FileCheck %s --check-prefixes=CHECK \
+# RUN:                  --implicit-check-not=__llvm_slsblr_thunk_x7
+# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN:     -start-before aarch64-sls-hardening \
+# RUN:     -asm-verbose=0 -o - %s \
+# RUN:   | FileCheck %s --check-prefixes=ASM \
+# RUN:                  --implicit-check-not=__llvm_slsblr_thunk_x7
 
 # Check that the BLR SLS hardening transforms a BLR into a BL with operands as
 # expected.
 --- |
-  $__llvm_slsblr_thunk_x8 = comdat any
   @a = dso_local local_unnamed_addr global i32 (...)* null, align 8
   @b = dso_local local_unnamed_addr global i32 0, align 4
 
@@ -15,12 +20,6 @@
     %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @a to i32 ()**), align 8
     %call = tail call i32 %0() nounwind
     store i32 %call, i32* @b, align 4
-    ret void
-  }
-
-  ; Function Attrs: naked nounwind
-  define linkonce_odr hidden void @__llvm_slsblr_thunk_x8() naked nounwind comdat {
-  entry:
     ret void
   }
 ...
@@ -46,13 +45,15 @@ body:             |
 
 
 ...
----
-name:            __llvm_slsblr_thunk_x8
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x8
 
-    BR $x8
-    SpeculationBarrierISBDSBEndBB
-...
+# CHECK: name: __llvm_slsblr_thunk_x8
+#
+# CHECK:       $x16 = ORRXrs $xzr, $x8, 0
+# CHECK-NEXT:  BR $x16
+# CHECK-NEXT:  SpeculationBarrierISBDSBEndBB
+
+# ASM-LABEL: __llvm_slsblr_thunk_x8:
+# ASM-NEXT:    mov x16, x8
+# ASM-NEXT:    br  x16
+# ASM-NEXT:    dsb sy
+# ASM-NEXT:    isb

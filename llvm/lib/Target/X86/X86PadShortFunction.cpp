@@ -25,8 +25,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -132,9 +130,7 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *MBB = ReturnBB.first;
     unsigned Cycles = ReturnBB.second;
 
-    // Function::hasOptSize is already checked above.
-    bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI))
       continue;
 
     if (Cycles < Threshold) {

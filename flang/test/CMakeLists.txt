@@ -11,6 +11,16 @@ llvm_canonicalize_cmake_booleans(
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
 
+# Check if 128-bit float computations can be done via long double
+check_cxx_source_compiles(
+  "#include <cfloat>
+   #if LDBL_MANT_DIG != 113
+   #error LDBL_MANT_DIG != 113
+   #endif
+   int main() { return 0; }
+  "
+  HAVE_LDBL_MANT_DIG_113)
+
 # FIXME In out-of-tree builds, "SHLIBDIR" is undefined and passing it to
 # `configure_lit_site_cfg` leads to a configuration error. This is currently
 # only required by plugins/examples, which are not supported in out-of-tree
@@ -48,7 +58,7 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  flang-new
+  flang
   llvm-config
   FileCheck
   count

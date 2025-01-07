@@ -109,4 +109,9 @@ end subroutine
 
 end module
 
+subroutine craypointer()
+  real, device :: x(*); pointer(px, x)
+end
 
+! CHECK-LABEL: func.func @_QPcraypointer()
+! CHECK: %{{.*}} = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {data_attr = #cuf.cuda<device>} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

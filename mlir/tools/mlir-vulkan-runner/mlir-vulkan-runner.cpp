@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -29,8 +30,6 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/Pass/Pass.h"
@@ -42,34 +41,13 @@
 
 using namespace mlir;
 
-namespace {
-struct VulkanRunnerOptions {
-  llvm::cl::OptionCategory category{"mlir-vulkan-runner options"};
-  llvm::cl::opt<bool> spirvWebGPUPrepare{
-      "vulkan-runner-spirv-webgpu-prepare",
-      llvm::cl::desc("Run MLIR transforms used when targetting WebGPU"),
-      llvm::cl::cat(category)};
-};
-} // namespace
-
-static LogicalResult runMLIRPasses(Operation *op,
-                                   VulkanRunnerOptions &options) {
+static LogicalResult runMLIRPasses(Operation *op, JitRunnerOptions &) {
   auto module = dyn_cast<ModuleOp>(op);
   if (!module)
     return op->emitOpError("expected a 'builtin.module' op");
   PassManager passManager(module.getContext());
   if (failed(applyPassManagerCLOptions(passManager)))
     return failure();
-
-  passManager.addPass(createGpuKernelOutliningPass());
-  passManager.addPass(memref::createFoldMemRefAliasOpsPass());
-
-  passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
-  OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
-  modulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
-  modulePM.addPass(spirv::createSPIRVUpdateVCEPass());
-  if (options.spirvWebGPUPrepare)
-    modulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
   passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
@@ -79,6 +57,8 @@ static LogicalResult runMLIRPasses(Operation *op,
   funcToLLVMOptions.indexBitwidth =
       DataLayout(module).getTypeSizeInBits(IndexType::get(module.getContext()));
   passManager.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
+  passManager.addPass(createArithToLLVMConversionPass());
+  passManager.addPass(createConvertControlFlowToLLVMPass());
   passManager.addPass(createReconcileUnrealizedCastsPass());
   passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
 
@@ -93,15 +73,8 @@ int main(int argc, char **argv) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
-  // Initialize runner-specific CLI options. These will be parsed and
-  // initialzied in `JitRunnerMain`.
-  VulkanRunnerOptions options;
-  auto runPassesWithOptions = [&options](Operation *op, JitRunnerOptions &) {
-    return runMLIRPasses(op, options);
-  };
-
   mlir::JitRunnerConfig jitRunnerConfig;
-  jitRunnerConfig.mlirTransformer = runPassesWithOptions;
+  jitRunnerConfig.mlirTransformer = runMLIRPasses;
 
   mlir::DialectRegistry registry;
   registry.insert<mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,

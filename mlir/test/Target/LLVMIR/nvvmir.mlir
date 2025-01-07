@@ -62,7 +62,94 @@ llvm.func @nvvm_special_regs() -> i32 {
   %29 = nvvm.read.ptx.sreg.clock : i32
   // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
   %30 = nvvm.read.ptx.sreg.clock64 : i64
-  
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.globaltimer
+  %31 = nvvm.read.ptx.sreg.globaltimer : i64
+  // CHECK: %32 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %32 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.warpid
+  %33 = nvvm.read.ptx.sreg.warpid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nwarpid
+  %34 = nvvm.read.ptx.sreg.nwarpid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.smid
+  %35 = nvvm.read.ptx.sreg.smid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nsmid
+  %36 = nvvm.read.ptx.sreg.nsmid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.gridid
+  %37 = nvvm.read.ptx.sreg.gridid : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg0
+  %38 = nvvm.read.ptx.sreg.envreg0 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg1
+  %39 = nvvm.read.ptx.sreg.envreg1 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg2
+  %40 = nvvm.read.ptx.sreg.envreg2 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg3
+  %41 = nvvm.read.ptx.sreg.envreg3 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg4
+  %42 = nvvm.read.ptx.sreg.envreg4 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg5
+  %43 = nvvm.read.ptx.sreg.envreg5 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg6
+  %44 = nvvm.read.ptx.sreg.envreg6 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg7
+  %45 = nvvm.read.ptx.sreg.envreg7 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg8
+  %46 = nvvm.read.ptx.sreg.envreg8 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg9
+  %47 = nvvm.read.ptx.sreg.envreg9 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg10
+  %48 = nvvm.read.ptx.sreg.envreg10 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg11
+  %49 = nvvm.read.ptx.sreg.envreg11 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg12
+  %50 = nvvm.read.ptx.sreg.envreg12 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg13
+  %51 = nvvm.read.ptx.sreg.envreg13 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg14
+  %52 = nvvm.read.ptx.sreg.envreg14 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg15
+  %53 = nvvm.read.ptx.sreg.envreg15 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg16
+  %54 = nvvm.read.ptx.sreg.envreg16 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg17
+  %55 = nvvm.read.ptx.sreg.envreg17 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg18
+  %56 = nvvm.read.ptx.sreg.envreg18 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg19
+  %57 = nvvm.read.ptx.sreg.envreg19 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg20
+  %58 = nvvm.read.ptx.sreg.envreg20 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg21
+  %59 = nvvm.read.ptx.sreg.envreg21 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg22
+  %60 = nvvm.read.ptx.sreg.envreg22 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg23
+  %61 = nvvm.read.ptx.sreg.envreg23 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg24
+  %62 = nvvm.read.ptx.sreg.envreg24 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg25
+  %63 = nvvm.read.ptx.sreg.envreg25 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg26
+  %64 = nvvm.read.ptx.sreg.envreg26 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg27
+  %65 = nvvm.read.ptx.sreg.envreg27 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg28
+  %66 = nvvm.read.ptx.sreg.envreg28 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg29
+  %67 = nvvm.read.ptx.sreg.envreg29 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg30
+  %68 = nvvm.read.ptx.sreg.envreg30 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg31
+  %69 = nvvm.read.ptx.sreg.envreg31 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.eq
+  %70 = nvvm.read.ptx.sreg.lanemask.eq : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.le
+  %71 = nvvm.read.ptx.sreg.lanemask.le : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.lt
+  %72 = nvvm.read.ptx.sreg.lanemask.lt : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.ge
+  %73 = nvvm.read.ptx.sreg.lanemask.ge : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.gt
+  %74 = nvvm.read.ptx.sreg.lanemask.gt : i32
   llvm.return %1 : i32
 }
 
@@ -170,6 +257,15 @@ llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
   // CHECK: call i32 @llvm.nvvm.vote.ballot.sync(i32 %{{.*}}, i1 %{{.*}})
   %3 = nvvm.vote.ballot.sync %0, %1 : i32
   llvm.return %3 : i32
+}
+
+// CHECK-LABEL: @nvvm_elect_sync
+llvm.func @nvvm_elect_sync() -> i1 {
+  // CHECK: %[[RES:.*]] = call { i32, i1 } @llvm.nvvm.elect.sync(i32 -1)
+  // CHECK-NEXT: %[[PRED:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK-NEXT: ret i1 %[[PRED]]
+  %0 = nvvm.elect.sync -> i1
+  llvm.return %0 : i1
 }
 
 // CHECK-LABEL: @nvvm_mma_mn8n8k4_row_col_f32_f32
@@ -490,6 +586,28 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
 // -----
 
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// -----
+
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
@@ -525,39 +643,6 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
-
-llvm.func @kernel_func(%numberOfThreads : i32) {
-  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
-  nvvm.barrier number_of_threads = %numberOfThreads
-}
-
-// -----
-// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.minctasm = "foo"} {
-  llvm.return
-}
-
-
-// -----
-// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.maxnreg = "boo"} {
-  llvm.return
-}
-// -----
-// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 3, 4, 5, 6>} {
-  llvm.return
-}
-
-// -----
-// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4, 5, 6>} {
-  llvm.return
-}
-
-// -----
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1}
@@ -572,5 +657,86 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) 
 // CHECK: !2 = !{i32 1, i32 3}
 // CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+
+// -----
+// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_release
+llvm.func @nvvm_fence_proxy_tensormap_generic_release() {
+  %c128 = llvm.mlir.constant(128) : i32
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
+  nvvm.fence.proxy.release #nvvm.mem_scope<cta>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
+  nvvm.fence.proxy.release #nvvm.mem_scope<cluster>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
+  nvvm.fence.proxy.release #nvvm.mem_scope<gpu>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
+  nvvm.fence.proxy.release #nvvm.mem_scope<sys>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_acquire
+llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
+  %c128 = llvm.mlir.constant(128) : i32
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<cluster> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<gpu> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @nvvm_exit
+llvm.func @nvvm_exit() {
+  // CHECK: call void @llvm.nvvm.exit()
+  nvvm.exit
+  llvm.return
+}
+
+
+
+// -----
+// CHECK-LABEL: @nvvm_breakpoint
+llvm.func @nvvm_breakpoint() {
+  // CHECK: call void @llvm.debugtrap()
+  nvvm.breakpoint
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_fence_aligned
+llvm.func @nvvm_wgmma_fence_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.fence.sync.aligned()
+  nvvm.wgmma.fence.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_commit_group_aligned
+llvm.func @nvvm_wgmma_commit_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+  nvvm.wgmma.commit.group.sync.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_wait_group_aligned
+llvm.func @nvvm_wgmma_wait_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 0)
+  nvvm.wgmma.wait.group.sync.aligned 0
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
+  nvvm.wgmma.wait.group.sync.aligned 20
   llvm.return
 }

@@ -1,0 +1,32 @@
+---
+Name: Methods
+Tags:
+- Name: IntWrapper
+  Methods:
+  - Name: getIncremented
+    Availability: none
+    AvailabilityMsg: "oh no"
+  - Name: getDecremented
+    Availability: none
+    AvailabilityMsg: "this should have no effect"
+- Name: Outer
+  Tags:
+  - Name: Inner
+    Methods:
+    - Name: getDecremented
+      Availability: none
+      AvailabilityMsg: "nope"
+    - Name: getIncremented
+      Availability: none
+      AvailabilityMsg: "this should have no effect"
+  Methods:
+  - Name: getDecremented
+    Availability: none
+    AvailabilityMsg: "this should have no effect"  
+Functions:
+- Name: getIncremented
+  Availability: none
+  AvailabilityMsg: "this should have no effect"
+- Name: getDecremented
+  Availability: none
+  AvailabilityMsg: "this should have no effect"

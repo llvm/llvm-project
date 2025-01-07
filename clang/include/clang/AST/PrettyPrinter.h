@@ -55,15 +55,17 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
+  enum SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
+
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInlineNamespace(true), SuppressElaboration(false),
-        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
-        AnonymousTagLocations(true), SuppressStrongLifetime(false),
-        SuppressLifetimeQualifiers(false),
+        SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
+        SuppressElaboration(false), SuppressInitializers(false),
+        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
+        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
@@ -141,10 +143,12 @@ struct PrintingPolicy {
   unsigned SuppressUnwrittenScope : 1;
 
   /// Suppress printing parts of scope specifiers that correspond
-  /// to inline namespaces, where the name is unambiguous with the specifier
+  /// to inline namespaces.
+  /// If Redudant, where the name is unambiguous with the specifier removed.
+  /// If All, even if the name is ambiguous with the specifier
   /// removed.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressInlineNamespace : 1;
+  LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
+  unsigned SuppressInlineNamespace : 2;
 
   /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
   /// instead letting the underlying type print as normal.

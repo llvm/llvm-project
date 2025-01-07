@@ -253,7 +253,7 @@ define double @v_rcp_f64(double %x) {
 ; GFX6-NEXT:    v_div_scale_f64 v[8:9], s[4:5], 1.0, v[0:1], 1.0
 ; GFX6-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; GFX6-NEXT:    v_mov_b32_e32 v10, 0x3ff00000
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v10, v9
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
 ; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, v3
 ; GFX6-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
@@ -346,7 +346,7 @@ define double @v_rcp_f64_arcp(double %x) {
 ; GFX6-NEXT:    v_div_scale_f64 v[8:9], s[4:5], 1.0, v[0:1], 1.0
 ; GFX6-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; GFX6-NEXT:    v_mov_b32_e32 v10, 0x3ff00000
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v10, v9
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
 ; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, v3
 ; GFX6-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
@@ -483,7 +483,7 @@ define double @v_rcp_f64_ulp25(double %x) {
 ; GFX6-NEXT:    v_div_scale_f64 v[8:9], s[4:5], 1.0, v[0:1], 1.0
 ; GFX6-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; GFX6-NEXT:    v_mov_b32_e32 v10, 0x3ff00000
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v10, v9
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
 ; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, v3
 ; GFX6-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
@@ -1115,7 +1115,7 @@ define <2 x double> @v_rcp_v2f64(<2 x double> %x) {
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[6:7], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[14:15], v[14:15], v[16:17], v[14:15]
 ; GFX6-NEXT:    v_fma_f64 v[6:7], v[6:7], v[12:13], v[6:7]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v20, v9
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v20
 ; GFX6-NEXT:    v_mul_f64 v[12:13], v[8:9], v[6:7]
 ; GFX6-NEXT:    v_div_scale_f64 v[16:17], s[4:5], 1.0, v[2:3], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[18:19], -v[4:5], v[12:13], v[8:9]
@@ -1126,7 +1126,7 @@ define <2 x double> @v_rcp_v2f64(<2 x double> %x) {
 ; GFX6-NEXT:    v_mul_f64 v[8:9], v[16:17], v[4:5]
 ; GFX6-NEXT:    v_div_fmas_f64 v[6:7], v[18:19], v[6:7], v[12:13]
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[10:11], v[8:9], v[16:17]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v20, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v17, v20
 ; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v3, v11
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
 ; GFX6-NEXT:    v_div_fixup_f64 v[0:1], v[6:7], v[0:1], 1.0
@@ -1275,7 +1275,7 @@ define <2 x double> @v_rcp_v2f64_arcp(<2 x double> %x) {
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[6:7], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[14:15], v[14:15], v[16:17], v[14:15]
 ; GFX6-NEXT:    v_fma_f64 v[6:7], v[6:7], v[12:13], v[6:7]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v20, v9
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v20
 ; GFX6-NEXT:    v_mul_f64 v[12:13], v[8:9], v[6:7]
 ; GFX6-NEXT:    v_div_scale_f64 v[16:17], s[4:5], 1.0, v[2:3], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[18:19], -v[4:5], v[12:13], v[8:9]
@@ -1286,7 +1286,7 @@ define <2 x double> @v_rcp_v2f64_arcp(<2 x double> %x) {
 ; GFX6-NEXT:    v_mul_f64 v[8:9], v[16:17], v[4:5]
 ; GFX6-NEXT:    v_div_fmas_f64 v[6:7], v[18:19], v[6:7], v[12:13]
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[10:11], v[8:9], v[16:17]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v20, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v17, v20
 ; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v3, v11
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
 ; GFX6-NEXT:    v_div_fixup_f64 v[0:1], v[6:7], v[0:1], 1.0
@@ -1502,7 +1502,7 @@ define <2 x double> @v_rcp_v2f64_ulp25(<2 x double> %x) {
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[6:7], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[14:15], v[14:15], v[16:17], v[14:15]
 ; GFX6-NEXT:    v_fma_f64 v[6:7], v[6:7], v[12:13], v[6:7]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v20, v9
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v20
 ; GFX6-NEXT:    v_mul_f64 v[12:13], v[8:9], v[6:7]
 ; GFX6-NEXT:    v_div_scale_f64 v[16:17], s[4:5], 1.0, v[2:3], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[18:19], -v[4:5], v[12:13], v[8:9]
@@ -1513,7 +1513,7 @@ define <2 x double> @v_rcp_v2f64_ulp25(<2 x double> %x) {
 ; GFX6-NEXT:    v_mul_f64 v[8:9], v[16:17], v[4:5]
 ; GFX6-NEXT:    v_div_fmas_f64 v[6:7], v[18:19], v[6:7], v[12:13]
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[10:11], v[8:9], v[16:17]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v20, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v17, v20
 ; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], v3, v11
 ; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
 ; GFX6-NEXT:    v_div_fixup_f64 v[0:1], v[6:7], v[0:1], 1.0

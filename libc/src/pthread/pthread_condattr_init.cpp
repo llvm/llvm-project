@@ -9,11 +9,12 @@
 #include "pthread_condattr_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <pthread.h> // pthread_condattr_t, PTHREAD_PROCESS_PRIVATE
 #include <time.h>    // CLOCK_REALTIME
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_init, (pthread_condattr_t * attr)) {
   attr->clock = CLOCK_REALTIME;
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, pthread_condattr_init, (pthread_condattr_t * attr)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

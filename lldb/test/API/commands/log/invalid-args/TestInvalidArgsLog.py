@@ -25,7 +25,7 @@ class InvalidArgsLogTestCase(TestBase):
         )
 
     @no_debug_info_test
-    def test_enable_empty(self):
+    def test_enable_invalid_path(self):
         invalid_path = os.path.join("this", "is", "not", "a", "valid", "path")
         self.expect(
             "log enable lldb all -f " + invalid_path,

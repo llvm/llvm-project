@@ -22,7 +22,9 @@ using namespace gsym;
 enum InfoType : uint32_t {
   EndOfList = 0u,
   LineTableInfo = 1u,
-  InlineInfo = 2u
+  InlineInfo = 2u,
+  MergedFunctionsInfo = 3u,
+  CallSiteInfo = 4u,
 };
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
@@ -31,6 +33,8 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
     OS << FI.OptLineTable << '\n';
   if (FI.Inline)
     OS << FI.Inline << '\n';
+  if (FI.CallSites)
+    OS << *FI.CallSites << '\n';
   return OS;
 }
 
@@ -86,6 +90,22 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
           return II.takeError();
         break;
 
+      case InfoType::MergedFunctionsInfo:
+        if (Expected<MergedFunctionsInfo> MI =
+                MergedFunctionsInfo::decode(InfoData, BaseAddr))
+          FI.MergedFunctions = std::move(MI.get());
+        else
+          return MI.takeError();
+        break;
+
+      case InfoType::CallSiteInfo:
+        if (Expected<llvm::gsym::CallSiteInfoCollection> CI =
+                llvm::gsym::CallSiteInfoCollection::decode(InfoData))
+          FI.CallSites = std::move(CI.get());
+        else
+          return CI.takeError();
+        break;
+
       default:
         return createStringError(std::errc::io_error,
                                  "0x%8.8" PRIx64 ": unsupported InfoType %u",
@@ -111,12 +131,14 @@ uint64_t FunctionInfo::cacheEncoding() {
   return EncodingCache.size();
 }
 
-llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out) const {
+llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
+                                              bool NoPadding) const {
   if (!isValid())
     return createStringError(std::errc::invalid_argument,
         "attempted to encode invalid FunctionInfo object");
-  // Align FunctionInfo data to a 4 byte alignment.
-  Out.alignTo(4);
+  // Align FunctionInfo data to a 4 byte alignment, if padding is allowed
+  if (NoPadding == false)
+    Out.alignTo(4);
   const uint64_t FuncInfoOffset = Out.tell();
   // Check if we have already encoded this function info into EncodingCache.
   // This will be non empty when creating segmented GSYM files as we need to
@@ -170,17 +192,53 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out) const {
     Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
-  // Terminate the data chunks with and end of list with zero size
+  // Write out the merged functions info if we have any and if it is valid.
+  if (MergedFunctions) {
+    Out.writeU32(InfoType::MergedFunctionsInfo);
+    // Write a uint32_t length as zero for now, we will fix this up after
+    // writing the LineTable out with the number of bytes that were written.
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    llvm::Error err = MergedFunctions->encode(Out);
+    if (err)
+      return std::move(err);
+    const auto Length = Out.tell() - StartOffset;
+    if (Length > UINT32_MAX)
+      return createStringError(
+          std::errc::invalid_argument,
+          "MergedFunctionsInfo length is greater than UINT32_MAX");
+    // Fixup the size of the MergedFunctionsInfo data with the correct size.
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+  }
+
+  // Write out the call sites if we have any and if they are valid.
+  if (CallSites) {
+    Out.writeU32(InfoType::CallSiteInfo);
+    // Write a uint32_t length as zero for now, we will fix this up after
+    // writing the CallSites out with the number of bytes that were written.
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    Error Err = CallSites->encode(Out);
+    if (Err)
+      return std::move(Err);
+    const auto Length = Out.tell() - StartOffset;
+    if (Length > UINT32_MAX)
+      return createStringError(std::errc::invalid_argument,
+                               "CallSites length is greater than UINT32_MAX");
+    // Fixup the size of the CallSites data with the correct size.
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+  }
+
+  // Terminate the data chunks with an end of list with zero size.
   Out.writeU32(InfoType::EndOfList);
   Out.writeU32(0);
   return FuncInfoOffset;
 }
 
-
-llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
-                                                  const GsymReader &GR,
-                                                  uint64_t FuncAddr,
-                                                  uint64_t Addr) {
+llvm::Expected<LookupResult>
+FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
+                     uint64_t FuncAddr, uint64_t Addr,
+                     std::optional<DataExtractor> *MergedFuncsData) {
   LookupResult LR;
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
@@ -229,6 +287,12 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
           LineEntry = ExpectedLE.get();
         else
           return ExpectedLE.takeError();
+        break;
+
+      case InfoType::MergedFunctionsInfo:
+        // Store the merged functions data for later parsing, if needed.
+        if (MergedFuncsData)
+          *MergedFuncsData = InfoData;
         break;
 
       case InfoType::InlineInfo:

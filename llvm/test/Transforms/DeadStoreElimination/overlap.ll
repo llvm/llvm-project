@@ -29,14 +29,14 @@ define void @test1() {
   ret void
 }
 
-define void @test2() {
+define void @test2(i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[A]], i32 1
 ; CHECK-NEXT:    store i8 10, ptr [[A]], align 1
 ; CHECK-NEXT:    store i8 20, ptr [[PTR2]], align 1
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB1:%.*]], label [[END:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[LV:%.*]] = load i64, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[END]]
@@ -51,7 +51,7 @@ define void @test2() {
 
   store i8 10, ptr %a
   store i8 20, ptr %ptr2
-  br i1 undef, label %bb1, label %end
+  br i1 %arg, label %bb1, label %end
 
 bb1:
   %lv = load i64, ptr %a

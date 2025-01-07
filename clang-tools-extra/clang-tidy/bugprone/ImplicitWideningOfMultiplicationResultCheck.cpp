@@ -42,6 +42,7 @@ ImplicitWideningOfMultiplicationResultCheck::
       UseCXXStaticCastsInCppSources(
           Options.get("UseCXXStaticCastsInCppSources", true)),
       UseCXXHeadersInCppSources(Options.get("UseCXXHeadersInCppSources", true)),
+      IgnoreConstantIntExpr(Options.get("IgnoreConstantIntExpr", false)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {}
@@ -56,6 +57,7 @@ void ImplicitWideningOfMultiplicationResultCheck::storeOptions(
   Options.store(Opts, "UseCXXStaticCastsInCppSources",
                 UseCXXStaticCastsInCppSources);
   Options.store(Opts, "UseCXXHeadersInCppSources", UseCXXHeadersInCppSources);
+  Options.store(Opts, "IgnoreConstantIntExpr", IgnoreConstantIntExpr);
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
@@ -83,6 +85,19 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   unsigned TgtWidth = Context->getIntWidth(Ty);
   if (TgtWidth <= SrcWidth)
     return;
+
+  // Is the expression a compile-time constexpr that we know can fit in the
+  // source type?
+  if (IgnoreConstantIntExpr && ETy->isIntegerType() &&
+      !ETy->isUnsignedIntegerType()) {
+    if (const auto ConstExprResult = E->getIntegerConstantExpr(*Context)) {
+      const auto TypeSize = Context->getTypeSize(ETy);
+      llvm::APSInt WidenedResult = ConstExprResult->extOrTrunc(TypeSize);
+      if (WidenedResult <= llvm::APSInt::getMaxValue(TypeSize, false) &&
+          WidenedResult >= llvm::APSInt::getMinValue(TypeSize, false))
+        return;
+    }
+  }
 
   // Does the index expression look like it might be unintentionally computed
   // in a narrower-than-wanted type?

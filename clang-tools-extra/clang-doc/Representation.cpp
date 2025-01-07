@@ -221,7 +221,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
-      : Info(InfoType::IT_namespace, USR, Name, Path) {}
+    : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
@@ -368,11 +368,9 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
-                                 std::vector<std::string> UserStylesheets,
-                                 std::vector<std::string> JsScripts)
+                                 std::vector<std::string> UserStylesheets)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets),
-      JsScripts(JsScripts) {
+      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
@@ -386,5 +384,12 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
   }
 }
 
+void ScopeChildren::sort() {
+  llvm::sort(Namespaces.begin(), Namespaces.end());
+  llvm::sort(Records.begin(), Records.end());
+  llvm::sort(Functions.begin(), Functions.end());
+  llvm::sort(Enums.begin(), Enums.end());
+  llvm::sort(Typedefs.begin(), Typedefs.end());
+}
 } // namespace doc
 } // namespace clang

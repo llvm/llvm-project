@@ -134,7 +134,7 @@ public:
   RT_API_ATTRS bool OpenUnit(Fortran::common::optional<OpenStatus>,
       Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
       std::size_t pathLength, Convert, IoErrorHandler &);
-  RT_API_ATTRS void OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+  RT_API_ATTRS bool OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
       Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS void DestroyClosed();
@@ -166,6 +166,7 @@ public:
   RT_API_ATTRS bool Receive(
       char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS bool BeginReadingRecord(IoErrorHandler &);
   RT_API_ATTRS void FinishReadingRecord(IoErrorHandler &);
   RT_API_ATTRS bool AdvanceRecord(IoErrorHandler &);

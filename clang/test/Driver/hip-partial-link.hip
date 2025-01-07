@@ -35,7 +35,7 @@
 // LD-R: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
 // LD-R: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
 // LD-R: "{{.*}}/clang-offload-bundler"
-// LD-R: "{{.*}}/llvm-mc" -triple x86_64-unknown-linux-gnu
+// LD-R: "{{.*}}/clang{{.*}}" -target x86_64-unknown-linux-gnu
 // LD-R: "{{.*}}/ld.lld" {{.*}} -r
 
 // RUN: llvm-nm  %t.lib.o | FileCheck -check-prefix=OBJ %s
@@ -65,7 +65,7 @@
 // STATIC: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
 // STATIC: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
 // STATIC: "{{.*}}/clang-offload-bundler"
-// STATIC: "{{.*}}/llvm-mc" -triple x86_64-unknown-linux-gnu
+// STATIC: "{{.*}}/clang{{.*}}" -target x86_64-unknown-linux-gnu
 // STATIC: "{{.*}}/llvm-ar"
 
 // RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \

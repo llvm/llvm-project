@@ -23,7 +23,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ThreadList::ThreadList(Process *process)
+ThreadList::ThreadList(Process &process)
     : ThreadCollection(), m_process(process), m_stop_id(0),
       m_selected_tid(LLDB_INVALID_THREAD_ID) {}
 
@@ -36,14 +36,13 @@ ThreadList::ThreadList(const ThreadList &rhs)
 
 const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
   if (this != &rhs) {
-    // Lock both mutexes to make sure neither side changes anyone on us while
-    // the assignment occurs
-    std::lock(GetMutex(), rhs.GetMutex());
-    std::lock_guard<std::recursive_mutex> guard(GetMutex(), std::adopt_lock);
-    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex(), 
-                                                    std::adopt_lock);
+    // We only allow assignments between thread lists describing the same
+    // process. Same process implies same mutex, which means it's enough to lock
+    // just the current object.
+    assert(&m_process == &rhs.m_process);
+    assert(&GetMutex() == &rhs.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
-    m_process = rhs.m_process;
     m_stop_id = rhs.m_stop_id;
     m_threads = rhs.m_threads;
     m_selected_tid = rhs.m_selected_tid;
@@ -84,7 +83,7 @@ uint32_t ThreadList::GetSize(bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
   return m_threads.size();
 }
 
@@ -92,7 +91,7 @@ ThreadSP ThreadList::GetThreadAtIndex(uint32_t idx, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
 
   ThreadSP thread_sp;
   if (idx < m_threads.size())
@@ -104,7 +103,7 @@ ThreadSP ThreadList::FindThreadByID(lldb::tid_t tid, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
 
   ThreadSP thread_sp;
   uint32_t idx = 0;
@@ -122,7 +121,7 @@ ThreadSP ThreadList::FindThreadByProtocolID(lldb::tid_t tid, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
 
   ThreadSP thread_sp;
   uint32_t idx = 0;
@@ -140,7 +139,7 @@ ThreadSP ThreadList::RemoveThreadByID(lldb::tid_t tid, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
 
   ThreadSP thread_sp;
   uint32_t idx = 0;
@@ -160,7 +159,7 @@ ThreadSP ThreadList::RemoveThreadByProtocolID(lldb::tid_t tid,
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
 
   ThreadSP thread_sp;
   uint32_t idx = 0;
@@ -210,7 +209,7 @@ ThreadSP ThreadList::FindThreadByIndexID(uint32_t index_id, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   if (can_update)
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
 
   ThreadSP thread_sp;
   const uint32_t num_threads = m_threads.size();
@@ -241,7 +240,7 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     // Scope for locker
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
-    m_process->UpdateThreadListIfNeeded();
+    m_process.UpdateThreadListIfNeeded();
     for (lldb::ThreadSP thread_sp : m_threads) {
       // This is an optimization...  If we didn't let a thread run in between
       // the previous stop and this one, we shouldn't have to consult it for
@@ -377,7 +376,7 @@ Vote ThreadList::ShouldReportStop(Event *event_ptr) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   Vote result = eVoteNoOpinion;
-  m_process->UpdateThreadListIfNeeded();
+  m_process.UpdateThreadListIfNeeded();
   collection::iterator pos, end = m_threads.end();
 
   Log *log = GetLog(LLDBLog::Step);
@@ -425,7 +424,7 @@ Vote ThreadList::ShouldReportStop(Event *event_ptr) {
 void ThreadList::SetShouldReportStop(Vote vote) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
-  m_process->UpdateThreadListIfNeeded();
+  m_process.UpdateThreadListIfNeeded();
   collection::iterator pos, end = m_threads.end();
   for (pos = m_threads.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
@@ -438,7 +437,7 @@ Vote ThreadList::ShouldReportRun(Event *event_ptr) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   Vote result = eVoteNoOpinion;
-  m_process->UpdateThreadListIfNeeded();
+  m_process.UpdateThreadListIfNeeded();
   collection::iterator pos, end = m_threads.end();
 
   // Run through the threads and ask whether we should report this event. The
@@ -486,7 +485,7 @@ void ThreadList::Destroy() {
 void ThreadList::RefreshStateAfterStop() {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
-  m_process->UpdateThreadListIfNeeded();
+  m_process.UpdateThreadListIfNeeded();
 
   Log *log = GetLog(LLDBLog::Step);
   if (log && log->GetVerbose())
@@ -515,7 +514,7 @@ bool ThreadList::WillResume() {
   // they are.
 
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
-  m_process->UpdateThreadListIfNeeded();
+  m_process.UpdateThreadListIfNeeded();
 
   collection::iterator pos, end = m_threads.end();
 
@@ -546,13 +545,13 @@ bool ThreadList::WillResume() {
     if (log && log->GetVerbose())
       LLDB_LOGF(log, "Turning on notification of new threads while single "
                      "stepping a thread.");
-    m_process->StartNoticingNewThreads();
+    m_process.StartNoticingNewThreads();
   } else {
     Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log, "Turning off notification of new threads while single "
                      "stepping a thread.");
-    m_process->StopNoticingNewThreads();
+    m_process.StopNoticingNewThreads();
   }
 
   // Give all the threads that are likely to run a last chance to set up their
@@ -575,7 +574,7 @@ bool ThreadList::WillResume() {
 
   ThreadList run_me_only_list(m_process);
 
-  run_me_only_list.SetStopID(m_process->GetStopID());
+  run_me_only_list.SetStopID(m_process.GetStopID());
 
   // One or more threads might want to "Stop Others".  We want to handle all
   // those requests first.  And if there is a thread that wanted to "resume
@@ -736,11 +735,13 @@ void ThreadList::NotifySelectedThreadChanged(lldb::tid_t tid) {
 
 void ThreadList::Update(ThreadList &rhs) {
   if (this != &rhs) {
-    // Lock both mutexes to make sure neither side changes anyone on us while
-    // the assignment occurs
-    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> guard(GetMutex(), rhs.GetMutex());
+    // We only allow assignments between thread lists describing the same
+    // process. Same process implies same mutex, which means it's enough to lock
+    // just the current object.
+    assert(&m_process == &rhs.m_process);
+    assert(&GetMutex() == &rhs.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
-    m_process = rhs.m_process;
     m_stop_id = rhs.m_stop_id;
     m_threads.swap(rhs.m_threads);
     m_selected_tid = rhs.m_selected_tid;
@@ -784,7 +785,7 @@ void ThreadList::Flush() {
 }
 
 std::recursive_mutex &ThreadList::GetMutex() const {
-  return m_process->m_thread_mutex;
+  return m_process.m_thread_mutex;
 }
 
 ThreadList::ExpressionExecutionThreadPusher::ExpressionExecutionThreadPusher(

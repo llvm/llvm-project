@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+
 namespace mlir::vector {
 
 FailureOr<ConstantOrScalableBound::BoundSize>
@@ -74,6 +75,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     return p.first != scalableCstr.getVscaleValue() && !isStartingPoint;
   };
   scalableCstr.projectOut(projectOutFn);
+  scalableCstr.projectOutAnonymous(/*except=*/pos);
   // Also project out local variables (these are not tracked by the
   // ValueBoundsConstraintSet).
   for (unsigned i = 0, e = scalableCstr.cstr.getNumLocalVars(); i < e; ++i) {
@@ -105,7 +107,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   AffineMap bound = [&] {
     if (boundType == BoundType::EQ && !invalidBound(lowerBound) &&
-        lowerBound[0] == lowerBound[0]) {
+        lowerBound[0] == upperBound[0]) {
       return lowerBound[0];
     } else if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
       return lowerBound[0];

@@ -424,8 +424,7 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
       const uint32_t *RegMask = MO.getRegMask();
       std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
       return hash_combine(MO.getType(), MO.getTargetFlags(),
-                          stable_hash_combine_array(RegMaskHashes.data(),
-                                                    RegMaskHashes.size()));
+                          stable_hash_combine(RegMaskHashes));
     }
 
     assert(0 && "MachineOperand not associated with any MachineFunction");
@@ -495,7 +494,7 @@ static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
     return;
   }
 
-  if (std::optional<unsigned> Reg = TRI->getLLVMRegNum(DwarfReg, true))
+  if (std::optional<MCRegister> Reg = TRI->getLLVMRegNum(DwarfReg, true))
     OS << printReg(*Reg, TRI);
   else
     OS << "<badreg>";
@@ -769,6 +768,11 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    OS << "negate_ra_sign_state_with_pc ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    break;
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";
@@ -905,7 +909,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << printJumpTableEntryReference(getIndex());
     break;
   case MachineOperand::MO_GlobalAddress:
-    getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
+    if (auto *GV = getGlobal())
+      GV->printAsOperand(OS, /*PrintType=*/false, MST);
+    else // Invalid, but may appear in debugging scenarios.
+      OS << "globaladdress(null)";
+
     printOperandOffset(OS, getOffset());
     break;
   case MachineOperand::MO_ExternalSymbol: {
@@ -1048,7 +1056,8 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
     return false;
 
   return isDereferenceableAndAlignedPointer(
-      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL);
+      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL,
+      dyn_cast<Instruction>(BasePtr));
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the
@@ -1161,6 +1170,9 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (getFlags() & MachineMemOperand::MOTargetFlag3)
       OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag3)
          << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag4)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag4)
+         << "\" ";
   } else {
     if (getFlags() & MachineMemOperand::MOTargetFlag1)
       OS << "\"MOTargetFlag1\" ";
@@ -1168,6 +1180,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "\"MOTargetFlag2\" ";
     if (getFlags() & MachineMemOperand::MOTargetFlag3)
       OS << "\"MOTargetFlag3\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag4)
+      OS << "\"MOTargetFlag4\" ";
   }
 
   assert((isLoad() || isStore()) &&
@@ -1244,7 +1258,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (!getSize().hasValue() ||
-      getAlign() != getSize().getValue().getKnownMinValue())
+      (!getSize().isZero() &&
+       getAlign() != getSize().getValue().getKnownMinValue()))
     OS << ", align " << getAlign().value();
   if (getAlign() != getBaseAlign())
     OS << ", basealign " << getBaseAlign().value();

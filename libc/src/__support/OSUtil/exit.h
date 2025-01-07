@@ -9,10 +9,14 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_EXIT_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_EXIT_H
 
-namespace LIBC_NAMESPACE::internal {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 [[noreturn]] void exit(int status);
 
-}
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_EXIT_H

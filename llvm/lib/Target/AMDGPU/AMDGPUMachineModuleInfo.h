@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINEMODULEINFO_H
 
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/IR/LLVMContext.h"
 
 namespace llvm {
 

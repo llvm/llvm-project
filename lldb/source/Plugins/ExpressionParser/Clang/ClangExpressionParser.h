@@ -113,33 +113,11 @@ public:
   /// \return
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
-  Status
-  PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
-                      lldb::IRExecutionUnitSP &execution_unit_sp,
-                      ExecutionContext &exe_ctx, bool &can_interpret,
-                      lldb_private::ExecutionPolicy execution_policy) override;
-
-  /// Run all static initializers for an execution unit.
-  ///
-  /// \param[in] execution_unit_sp
-  ///     The execution unit.
-  ///
-  /// \param[in] exe_ctx
-  ///     The execution context to use when running them.  Thread can't be null.
-  ///
-  /// \return
-  ///     The error code indicating the
-  Status RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
-                               ExecutionContext &exe_ctx);
-
-  /// Returns a string representing current ABI.
-  ///
-  /// \param[in] target_arch
-  ///     The target architecture.
-  ///
-  /// \return
-  ///     A string representing target ABI for the current architecture.
-  std::string GetClangTargetABI(const ArchSpec &target_arch);
+  Status DoPrepareForExecution(
+      lldb::addr_t &func_addr, lldb::addr_t &func_end,
+      lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
+      bool &can_interpret,
+      lldb_private::ExecutionPolicy execution_policy) override;
 
 private:
   /// Parses the expression.

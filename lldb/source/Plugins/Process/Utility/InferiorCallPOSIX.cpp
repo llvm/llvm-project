@@ -9,7 +9,6 @@
 #include "InferiorCallPOSIX.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -19,6 +18,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #if LLDB_ENABLE_POSIX
 #include <sys/mman.h>

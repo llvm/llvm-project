@@ -38,6 +38,21 @@ define i64 @fold_strnlen_s3_s5_1(i1 %C) {
   ret i64 %len
 }
 
+; FIXME: Constants should be allowed for this optimization.
+define i64 @fold_strnlen_s3_s5_1_asan(i1 %C) sanitize_address {
+; CHECK-LABEL: @fold_strnlen_s3_s5_1_asan(
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr @s3, ptr @s6
+; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
+; CHECK-NEXT:    [[LEN:%.*]] = zext i1 [[STRNLEN_CHAR0CMP]] to i64
+; CHECK-NEXT:    ret i64 [[LEN]]
+;
+  %ptr = select i1 %C, ptr @s3, ptr @s6
+
+  %len = call i64 @strnlen(ptr %ptr, i64 1)
+  ret i64 %len
+}
+
 
 ; Fold strnlen (C ? s3 : s5, 3) to 3.
 

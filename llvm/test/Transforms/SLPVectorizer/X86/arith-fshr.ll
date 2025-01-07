@@ -575,21 +575,21 @@ define void @fshr_v64i8() {
 ; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @b8, align 1
 ; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @c8, align 1
 ; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]])
+; SSE-NEXT:    store <16 x i8> [[TMP4]], ptr @d8, align 1
 ; SSE-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 16), align 1
 ; SSE-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 16), align 1
 ; SSE-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 16), align 1
 ; SSE-NEXT:    [[TMP8:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP5]], <16 x i8> [[TMP6]], <16 x i8> [[TMP7]])
+; SSE-NEXT:    store <16 x i8> [[TMP8]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 16), align 1
 ; SSE-NEXT:    [[TMP9:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 32), align 1
 ; SSE-NEXT:    [[TMP10:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 32), align 1
-; SSE-NEXT:    [[TMP11:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 48), align 1
-; SSE-NEXT:    [[TMP12:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 48), align 1
-; SSE-NEXT:    [[TMP13:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 32), align 1
-; SSE-NEXT:    [[TMP14:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 48), align 1
-; SSE-NEXT:    [[TMP15:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP9]], <16 x i8> [[TMP10]], <16 x i8> [[TMP13]])
-; SSE-NEXT:    [[TMP16:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP11]], <16 x i8> [[TMP12]], <16 x i8> [[TMP14]])
-; SSE-NEXT:    store <16 x i8> [[TMP4]], ptr @d8, align 1
-; SSE-NEXT:    store <16 x i8> [[TMP8]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 16), align 1
-; SSE-NEXT:    store <16 x i8> [[TMP15]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 32), align 1
+; SSE-NEXT:    [[TMP11:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 32), align 1
+; SSE-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP9]], <16 x i8> [[TMP10]], <16 x i8> [[TMP11]])
+; SSE-NEXT:    store <16 x i8> [[TMP12]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 32), align 1
+; SSE-NEXT:    [[TMP13:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 48), align 1
+; SSE-NEXT:    [[TMP14:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 48), align 1
+; SSE-NEXT:    [[TMP15:%.*]] = load <16 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 48), align 1
+; SSE-NEXT:    [[TMP16:%.*]] = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> [[TMP13]], <16 x i8> [[TMP14]], <16 x i8> [[TMP15]])
 ; SSE-NEXT:    store <16 x i8> [[TMP16]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 48), align 1
 ; SSE-NEXT:    ret void
 ;
@@ -598,11 +598,11 @@ define void @fshr_v64i8() {
 ; AVX-NEXT:    [[TMP2:%.*]] = load <32 x i8>, ptr @b8, align 1
 ; AVX-NEXT:    [[TMP3:%.*]] = load <32 x i8>, ptr @c8, align 1
 ; AVX-NEXT:    [[TMP4:%.*]] = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> [[TMP1]], <32 x i8> [[TMP2]], <32 x i8> [[TMP3]])
+; AVX-NEXT:    store <32 x i8> [[TMP4]], ptr @d8, align 1
 ; AVX-NEXT:    [[TMP5:%.*]] = load <32 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @a8, i32 0, i64 32), align 1
 ; AVX-NEXT:    [[TMP6:%.*]] = load <32 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @b8, i32 0, i64 32), align 1
 ; AVX-NEXT:    [[TMP7:%.*]] = load <32 x i8>, ptr getelementptr inbounds ([64 x i8], ptr @c8, i32 0, i64 32), align 1
 ; AVX-NEXT:    [[TMP8:%.*]] = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> [[TMP5]], <32 x i8> [[TMP6]], <32 x i8> [[TMP7]])
-; AVX-NEXT:    store <32 x i8> [[TMP4]], ptr @d8, align 1
 ; AVX-NEXT:    store <32 x i8> [[TMP8]], ptr getelementptr inbounds ([64 x i8], ptr @d8, i32 0, i64 32), align 1
 ; AVX-NEXT:    ret void
 ;

@@ -6,8 +6,8 @@ declare i8 @llvm.smax.i8(i8 %a, i8 %b) readnone
 define arm_aapcs_vfpcc i8 @smaxi8(i8 %a, i8 %b) {
 ; CHECK-LABEL: smaxi8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sxtb r0, r0
 ; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    sxtb r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
@@ -20,8 +20,8 @@ declare i16 @llvm.smax.i16(i16 %a, i16 %b) readnone
 define arm_aapcs_vfpcc i16 @smaxi16(i16 %a, i16 %b) {
 ; CHECK-LABEL: smaxi16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
@@ -48,10 +48,8 @@ define arm_aapcs_vfpcc i64 @smaxi64(i64 %a, i64 %b) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    subs.w r12, r2, r0
 ; CHECK-NEXT:    sbcs.w r12, r3, r1
-; CHECK-NEXT:    cset r12, lt
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    csel r0, r0, r2, lt
+; CHECK-NEXT:    csel r1, r1, r3, lt
 ; CHECK-NEXT:    bx lr
   %c = call i64 @llvm.smax.i64(i64 %a, i64 %b)
   ret i64 %c
@@ -205,12 +203,8 @@ define arm_aapcs_vfpcc <1 x i64> @smax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    subs.w r12, r2, r0
 ; CHECK-NEXT:    sbcs.w r12, r3, r1
-; CHECK-NEXT:    cset r12, lt
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r0, r0, r2, lt
+; CHECK-NEXT:    csel r1, r1, r3, lt
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.smax.v1i64(<1 x i64> %a, <1 x i64> %b)
@@ -292,8 +286,8 @@ declare i8 @llvm.umax.i8(i8 %a, i8 %b) readnone
 define arm_aapcs_vfpcc i8 @umaxi8(i8 %a, i8 %b) {
 ; CHECK-LABEL: umaxi8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
@@ -306,8 +300,8 @@ declare i16 @llvm.umax.i16(i16 %a, i16 %b) readnone
 define arm_aapcs_vfpcc i16 @umaxi16(i16 %a, i16 %b) {
 ; CHECK-LABEL: umaxi16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
@@ -334,10 +328,8 @@ define arm_aapcs_vfpcc i64 @umaxi64(i64 %a, i64 %b) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    subs.w r12, r2, r0
 ; CHECK-NEXT:    sbcs.w r12, r3, r1
-; CHECK-NEXT:    cset r12, lo
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    csel r0, r0, r2, lo
+; CHECK-NEXT:    csel r1, r1, r3, lo
 ; CHECK-NEXT:    bx lr
   %c = call i64 @llvm.umax.i64(i64 %a, i64 %b)
   ret i64 %c
@@ -484,12 +476,8 @@ define arm_aapcs_vfpcc <1 x i64> @umax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    subs.w r12, r2, r0
 ; CHECK-NEXT:    sbcs.w r12, r3, r1
-; CHECK-NEXT:    cset r12, lo
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r0, r0, r2, lo
+; CHECK-NEXT:    csel r1, r1, r3, lo
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.umax.v1i64(<1 x i64> %a, <1 x i64> %b)
@@ -571,8 +559,8 @@ declare i8 @llvm.smin.i8(i8 %a, i8 %b) readnone
 define arm_aapcs_vfpcc i8 @smini8(i8 %a, i8 %b) {
 ; CHECK-LABEL: smini8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sxtb r0, r0
 ; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    sxtb r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
@@ -585,8 +573,8 @@ declare i16 @llvm.smin.i16(i16 %a, i16 %b) readnone
 define arm_aapcs_vfpcc i16 @smini16(i16 %a, i16 %b) {
 ; CHECK-LABEL: smini16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
@@ -613,10 +601,8 @@ define arm_aapcs_vfpcc i64 @smini64(i64 %a, i64 %b) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    subs.w r12, r0, r2
 ; CHECK-NEXT:    sbcs.w r12, r1, r3
-; CHECK-NEXT:    cset r12, lt
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    csel r0, r0, r2, lt
+; CHECK-NEXT:    csel r1, r1, r3, lt
 ; CHECK-NEXT:    bx lr
   %c = call i64 @llvm.smin.i64(i64 %a, i64 %b)
   ret i64 %c
@@ -770,12 +756,8 @@ define arm_aapcs_vfpcc <1 x i64> @smin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    subs.w r12, r0, r2
 ; CHECK-NEXT:    sbcs.w r12, r1, r3
-; CHECK-NEXT:    cset r12, lt
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r0, r0, r2, lt
+; CHECK-NEXT:    csel r1, r1, r3, lt
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.smin.v1i64(<1 x i64> %a, <1 x i64> %b)
@@ -857,8 +839,8 @@ declare i8 @llvm.umin.i8(i8 %a, i8 %b) readnone
 define arm_aapcs_vfpcc i8 @umini8(i8 %a, i8 %b) {
 ; CHECK-LABEL: umini8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
@@ -871,8 +853,8 @@ declare i16 @llvm.umin.i16(i16 %a, i16 %b) readnone
 define arm_aapcs_vfpcc i16 @umini16(i16 %a, i16 %b) {
 ; CHECK-LABEL: umini16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
@@ -899,10 +881,8 @@ define arm_aapcs_vfpcc i64 @umini64(i64 %a, i64 %b) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    subs.w r12, r0, r2
 ; CHECK-NEXT:    sbcs.w r12, r1, r3
-; CHECK-NEXT:    cset r12, lo
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    csel r0, r0, r2, lo
+; CHECK-NEXT:    csel r1, r1, r3, lo
 ; CHECK-NEXT:    bx lr
   %c = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   ret i64 %c
@@ -1049,12 +1029,8 @@ define arm_aapcs_vfpcc <1 x i64> @umin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    subs.w r12, r0, r2
 ; CHECK-NEXT:    sbcs.w r12, r1, r3
-; CHECK-NEXT:    cset r12, lo
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r1, r1, r3, ne
-; CHECK-NEXT:    csel r0, r0, r2, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    csel r0, r0, r2, lo
+; CHECK-NEXT:    csel r1, r1, r3, lo
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
   %c = call <1 x i64> @llvm.umin.v1i64(<1 x i64> %a, <1 x i64> %b)

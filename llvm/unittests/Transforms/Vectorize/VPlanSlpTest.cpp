@@ -16,7 +16,7 @@
 namespace llvm {
 namespace {
 
-class VPlanSlpTest : public VPlanTestBase {
+class VPlanSlpTest : public VPlanTestIRBase {
 protected:
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI;
@@ -99,7 +99,7 @@ TEST_F(VPlanSlpTest, testSlpSimple_2) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
@@ -171,7 +171,7 @@ TEST_F(VPlanSlpTest, testSlpSimple_3) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
@@ -243,7 +243,7 @@ TEST_F(VPlanSlpTest, testSlpReuse_1) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 8));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 10));
@@ -307,7 +307,7 @@ TEST_F(VPlanSlpTest, testSlpReuse_2) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 5));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 10));
@@ -444,7 +444,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_1) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
@@ -516,7 +516,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_2) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
@@ -588,7 +588,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_3) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
@@ -664,7 +664,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_4) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
@@ -725,7 +725,7 @@ TEST_F(VPlanSlpTest, testInstrsInDifferentBBs) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   VPBasicBlock *BB2 = Body->getSingleSuccessor()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(BB2->begin(), 3));
@@ -788,7 +788,7 @@ TEST_F(VPlanSlpTest, testInstrsInDifferentBBs2) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   VPBasicBlock *BB2 = Body->getSingleSuccessor()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(BB2->begin(), 1));
@@ -848,7 +848,7 @@ TEST_F(VPlanSlpTest, testSlpAtomicLoad) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
@@ -907,7 +907,7 @@ TEST_F(VPlanSlpTest, testSlpAtomicStore) {
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
-  VPBasicBlock *Body = Entry->getSingleSuccessor()->getEntryBasicBlock();
+  VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
   VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
   VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));

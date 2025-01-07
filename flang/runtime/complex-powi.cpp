@@ -7,11 +7,13 @@
  * ===-----------------------------------------------------------------------===
  */
 #include "flang/Common/float128.h"
+#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
 #include <cstdio>
 #include <limits>
 
+namespace Fortran::runtime {
 #ifdef __clang_major__
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
@@ -81,12 +83,12 @@ extern "C" double _Complex RTNAME(zpowk)(
   return tgpowi(base, exp);
 }
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 // Duplicate CFloat128ComplexType definition from flang/Common/float128.h.
 // float128.h does not define it for C++, because _Complex triggers
 // c99-extension warnings. We decided to disable warnings for this
 // particular file, so we can use _Complex here.
-#if LDBL_MANT_DIG == 113
+#if HAS_LDBL128
 typedef long double _Complex Qcomplex;
 #elif HAS_FLOAT128
 #if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
@@ -114,55 +116,56 @@ extern "C" Qcomplex RTNAME(cqpowk)(Qcomplex base, std::int64_t exp) {
 // MSVC doesn't allow including <ccomplex> or <complex.h> in C++17 mode to get
 // the Windows definitions of these structs so just redefine here.
 struct Fcomplex {
-  float re;
-  float im;
+  CppTypeFor<TypeCategory::Real, 4> re;
+  CppTypeFor<TypeCategory::Real, 4> im;
 };
 
 struct Dcomplex {
-  double re;
-  double im;
+  CppTypeFor<TypeCategory::Real, 8> re;
+  CppTypeFor<TypeCategory::Real, 8> im;
 };
 
 extern "C" Fcomplex RTNAME(cpowi)(Fcomplex base, std::int32_t exp) {
-  auto cppbase = *(std::complex<float> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 4> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Fcomplex *)(&cppres);
 }
 
 extern "C" Dcomplex RTNAME(zpowi)(Dcomplex base, std::int32_t exp) {
-  auto cppbase = *(std::complex<double> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 8> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Dcomplex *)(&cppres);
 }
 
 extern "C" Fcomplex RTNAME(cpowk)(Fcomplex base, std::int64_t exp) {
-  auto cppbase = *(std::complex<float> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 4> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Fcomplex *)(&cppres);
 }
 
 extern "C" Dcomplex RTNAME(zpowk)(Dcomplex base, std::int64_t exp) {
-  auto cppbase = *(std::complex<double> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 8> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Dcomplex *)(&cppres);
 }
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 struct Qcomplex {
   CFloat128Type re;
   CFloat128Type im;
 };
 
 extern "C" Dcomplex RTNAME(cqpowi)(Qcomplex base, std::int32_t exp) {
-  auto cppbase = *(std::complex<CFloat128Type> *)(&base);
+  auto cppbase = *(rtcmplx::complex<CFloat128Type> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Qcomplex *)(&cppres);
 }
 
 extern "C" Dcomplex RTNAME(cqpowk)(Qcomplex base, std::int64_t exp) {
-  auto cppbase = *(std::complex<CFloat128Type> *)(&base);
+  auto cppbase = *(rtcmplx::complex<CFloat128Type> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Qcomplex *)(&cppres);
 }
 #endif
 #endif
+} // namespace Fortran::runtime

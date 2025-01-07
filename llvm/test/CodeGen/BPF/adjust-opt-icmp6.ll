@@ -1,5 +1,5 @@
 ; RUN: opt -O2 -S -mtriple=bpf-pc-linux %s -o %t1
-; RUN: llc %t1 -o - | FileCheck -check-prefixes=CHECK,CHECK-V1 %s
+; RUN: llc %t1 -mcpu=v1 -o - | FileCheck -check-prefixes=CHECK,CHECK-V1 %s
 ; RUN: opt -O2 -S -mtriple=bpf-pc-linux %s -o %t1
 ; RUN: llc %t1 -mcpu=v3 -o - | FileCheck -check-prefixes=CHECK,CHECK-V3 %s
 ;

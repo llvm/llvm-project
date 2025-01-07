@@ -61,3 +61,38 @@ def FixAllFDIVSQRT : SubtargetFeature<
 def LeonCycleCounter
   : SubtargetFeature<"leoncyclecounter", "HasLeonCycleCounter", "true",
                      "Use the Leon cycle counter register">;
+
+def FixTN0009 : SubtargetFeature<
+  "fix-tn0009",
+  "FixTN0009",
+  "true",
+  "Enable workaround for errata described in GRLIB-TN-0009"
+>;
+
+def FixTN0010 : SubtargetFeature<
+  "fix-tn0010",
+  "FixTN0010",
+  "true",
+  "Enable workaround for errata described in GRLIB-TN-0010"
+>;
+
+def FixTN0011 : SubtargetFeature<
+  "fix-tn0011",
+  "FixTN0011",
+  "true",
+  "Enable workaround for errata described in GRLIB-TN-0011"
+>;
+
+def FixTN0012 : SubtargetFeature<
+  "fix-tn0012",
+  "FixTN0012",
+  "true",
+  "Enable workaround for errata described in GRLIB-TN-0012"
+>;
+
+def FixTN0013 : SubtargetFeature<
+  "fix-tn0013",
+  "FixTN0013",
+  "true",
+  "Enable workaround for errata described in GRLIB-TN-0013"
+>;

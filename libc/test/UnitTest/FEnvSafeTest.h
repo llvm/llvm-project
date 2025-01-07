@@ -11,9 +11,11 @@
 
 #include "hdr/types/fenv_t.h"
 #include "src/__support/CPP/utility.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE::testing {
+namespace LIBC_NAMESPACE_DECL {
+namespace testing {
 
 // This provides a test fixture (or base class for other test fixtures) that
 // asserts that each test does not leave the FPU state represented by `fenv_t`
@@ -96,6 +98,7 @@ private:
   bool should_be_unchanged = false;
 };
 
-} // namespace LIBC_NAMESPACE::testing
+} // namespace testing
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPENVSAFE_H

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s
 ; REQUIRES: asserts
 ; Check for successful compilation.
 

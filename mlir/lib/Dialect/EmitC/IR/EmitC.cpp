@@ -116,6 +116,11 @@ bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
+    case 16: {
+      if (llvm::isa<Float16Type, BFloat16Type>(type))
+        return true;
+      return false;
+    }
     case 32:
     case 64:
       return true;
@@ -145,6 +150,8 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
            << "string attributes are not supported, use #emitc.opaque instead";
 
   Type resultType = op->getResult(0).getType();
+  if (auto lType = dyn_cast<LValueType>(resultType))
+    resultType = lType.getValueType();
   Type attrType = cast<TypedAttr>(value).getType();
 
   if (isPointerWideType(resultType) && attrType.isIndex())
@@ -196,9 +203,17 @@ LogicalResult ApplyOp::verify() {
   if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
     return emitOpError("applicable operator is illegal");
 
-  Operation *op = getOperand().getDefiningOp();
-  if (op && dyn_cast<ConstantOp>(op))
-    return emitOpError("cannot apply to constant");
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  if (applicableOperatorStr == "&") {
+    if (!llvm::isa<emitc::LValueType>(operandType))
+      return emitOpError("operand type must be an lvalue when applying `&`");
+    if (!llvm::isa<emitc::PointerType>(resultType))
+      return emitOpError("result type must be a pointer when applying `&`");
+  } else {
+    if (!llvm::isa<emitc::PointerType>(operandType))
+      return emitOpError("operand type must be a pointer when applying `*`");
+  }
 
   return success();
 }
@@ -210,20 +225,18 @@ LogicalResult ApplyOp::verify() {
 /// The assign op requires that the assigned value's type matches the
 /// assigned-to variable type.
 LogicalResult emitc::AssignOp::verify() {
-  Value variable = getVar();
-  Operation *variableDef = variable.getDefiningOp();
-  if (!variableDef ||
-      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
-    return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable or subscript";
+  TypedValue<emitc::LValueType> variable = getVar();
 
-  Value value = getValue();
-  if (variable.getType() != value.getType())
-    return emitOpError() << "requires value's type (" << value.getType()
-                         << ") to match variable's type (" << variable.getType()
-                         << ")";
-  if (isa<ArrayType>(variable.getType()))
-    return emitOpError() << "cannot assign to array type";
+  if (!variable.getDefiningOp())
+    return emitOpError() << "cannot assign to block argument";
+
+  Type valueType = getValue().getType();
+  Type variableType = variable.getType().getValueType();
+  if (variableType != valueType)
+    return emitOpError() << "requires value's type (" << valueType
+                         << ") to match variable's type (" << variableType
+                         << ")\n  variable: " << variable
+                         << "\n  value: " << getValue() << "\n";
   return success();
 }
 
@@ -540,6 +553,10 @@ void FuncOp::print(OpAsmPrinter &p) {
 }
 
 LogicalResult FuncOp::verify() {
+  if (llvm::any_of(getArgumentTypes(), llvm::IsaPred<LValueType>)) {
+    return emitOpError("cannot have lvalue type as argument");
+  }
+
   if (getNumResults() > 1)
     return emitOpError("requires zero or exactly one result, but has ")
            << getNumResults();
@@ -796,9 +813,9 @@ LogicalResult SubOp::verify() {
                        "type if lhs is a pointer");
 
   if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
-      !isa<IntegerType, emitc::OpaqueType>(resultType))
-    return emitOpError("requires that the result is an integer or of opaque "
-                       "type if lhs and rhs are pointers");
+      !isa<IntegerType, emitc::PtrDiffTType, emitc::OpaqueType>(resultType))
+    return emitOpError("requires that the result is an integer, ptrdiff_t or "
+                       "of opaque type if lhs and rhs are pointers");
   return success();
 }
 
@@ -851,9 +868,10 @@ LogicalResult emitc::SubscriptOp::verify() {
     }
     // Check element type.
     Type elementType = arrayType.getElementType();
-    if (elementType != getType()) {
+    Type resultType = getType().getValueType();
+    if (elementType != resultType) {
       return emitOpError() << "on array operand requires element type ("
-                           << elementType << ") and result type (" << getType()
+                           << elementType << ") and result type (" << resultType
                            << ") to match";
     }
     return success();
@@ -877,9 +895,10 @@ LogicalResult emitc::SubscriptOp::verify() {
     }
     // Check pointee type.
     Type pointeeType = pointerType.getPointee();
-    if (pointeeType != getType()) {
+    Type resultType = getType().getValueType();
+    if (pointeeType != resultType) {
       return emitOpError() << "on pointer operand requires pointee type ("
-                           << pointeeType << ") and result type (" << getType()
+                           << pointeeType << ") and result type (" << resultType
                            << ") to match";
     }
     return success();
@@ -974,6 +993,25 @@ emitc::ArrayType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 }
 
 //===----------------------------------------------------------------------===//
+// LValueType
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::emitc::LValueType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type value) {
+  // Check that the wrapped type is valid. This especially forbids nested lvalue
+  // types.
+  if (!isSupportedEmitCType(value))
+    return emitError()
+           << "!emitc.lvalue must wrap supported emitc type, but got " << value;
+
+  if (llvm::isa<emitc::ArrayType>(value))
+    return emitError() << "!emitc.lvalue cannot wrap !emitc.array type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
@@ -987,6 +1025,18 @@ LogicalResult mlir::emitc::OpaqueType::verify(
     return emitError() << "pointer not allowed as outer type with "
                           "!emitc.opaque, use !emitc.ptr instead";
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PointerType
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::emitc::PointerType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, Type value) {
+  if (llvm::isa<emitc::LValueType>(value))
+    return emitError() << "pointers to lvalues are not allowed";
+
   return success();
 }
 
@@ -1087,11 +1137,156 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << getName() << "' does not reference a valid emitc.global";
 
   Type resultType = getResult().getType();
-  if (global.getType() != resultType)
-    return emitOpError("result type ")
-           << resultType << " does not match type " << global.getType()
+  Type globalType = global.getType();
+
+  // global has array type
+  if (llvm::isa<ArrayType>(globalType)) {
+    if (globalType != resultType)
+      return emitOpError("on array type expects result type ")
+             << resultType << " to match type " << globalType
+             << " of the global @" << getName();
+    return success();
+  }
+
+  // global has non-array type
+  auto lvalueType = dyn_cast<LValueType>(resultType);
+  if (!lvalueType || lvalueType.getValueType() != globalType)
+    return emitOpError("on non-array type expects result inner type ")
+           << lvalueType.getValueType() << " to match type " << globalType
            << " of the global @" << getName();
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+/// Parse the case regions and values.
+static ParseResult
+parseSwitchCases(OpAsmParser &parser, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions) {
+  SmallVector<int64_t> caseValues;
+  while (succeeded(parser.parseOptionalKeyword("case"))) {
+    int64_t value;
+    Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
+    if (parser.parseInteger(value) ||
+        parser.parseRegion(region, /*arguments=*/{}))
+      return failure();
+    caseValues.push_back(value);
+  }
+  cases = parser.getBuilder().getDenseI64ArrayAttr(caseValues);
+  return success();
+}
+
+/// Print the case regions and values.
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions) {
+  for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
+    p.printNewline();
+    p << "case " << value << ' ';
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+  }
+}
+
+static LogicalResult verifyRegion(emitc::SwitchOp op, Region &region,
+                                  const Twine &name) {
+  auto yield = dyn_cast<emitc::YieldOp>(region.front().back());
+  if (!yield)
+    return op.emitOpError("expected region to end with emitc.yield, but got ")
+           << region.front().back().getName();
+
+  if (yield.getNumOperands() != 0) {
+    return (op.emitOpError("expected each region to return ")
+            << "0 values, but " << name << " returns "
+            << yield.getNumOperands())
+               .attachNote(yield.getLoc())
+           << "see yield operation here";
+  }
+
+  return success();
+}
+
+LogicalResult emitc::SwitchOp::verify() {
+  if (!isIntegerIndexOrOpaqueType(getArg().getType()))
+    return emitOpError("unsupported type ") << getArg().getType();
+
+  if (getCases().size() != getCaseRegions().size()) {
+    return emitOpError("has ")
+           << getCaseRegions().size() << " case regions but "
+           << getCases().size() << " case values";
+  }
+
+  DenseSet<int64_t> valueSet;
+  for (int64_t value : getCases())
+    if (!valueSet.insert(value).second)
+      return emitOpError("has duplicate case value: ") << value;
+
+  if (failed(verifyRegion(*this, getDefaultRegion(), "default region")))
+    return failure();
+
+  for (auto [idx, caseRegion] : llvm::enumerate(getCaseRegions()))
+    if (failed(verifyRegion(*this, caseRegion, "case region #" + Twine(idx))))
+      return failure();
+
+  return success();
+}
+
+unsigned emitc::SwitchOp::getNumCases() { return getCases().size(); }
+
+Block &emitc::SwitchOp::getDefaultBlock() { return getDefaultRegion().front(); }
+
+Block &emitc::SwitchOp::getCaseBlock(unsigned idx) {
+  assert(idx < getNumCases() && "case index out-of-bounds");
+  return getCaseRegions()[idx].front();
+}
+
+void SwitchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
+  llvm::copy(getRegions(), std::back_inserter(successors));
+}
+
+void SwitchOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &successors) {
+  FoldAdaptor adaptor(operands, *this);
+
+  // If a constant was not provided, all regions are possible successors.
+  auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
+  if (!arg) {
+    llvm::copy(getRegions(), std::back_inserter(successors));
+    return;
+  }
+
+  // Otherwise, try to find a case with a matching value. If not, the
+  // default region is the only successor.
+  for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
+    if (caseValue == arg.getInt()) {
+      successors.emplace_back(&caseRegion);
+      return;
+    }
+  }
+  successors.emplace_back(&getDefaultRegion());
+}
+
+void SwitchOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  auto operandValue = llvm::dyn_cast_or_null<IntegerAttr>(operands.front());
+  if (!operandValue) {
+    // All regions are invoked at most once.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
+  unsigned liveIndex = getNumRegions() - 1;
+  const auto *iteratorToInt = llvm::find(getCases(), operandValue.getInt());
+
+  liveIndex = iteratorToInt != getCases().end()
+                  ? std::distance(getCases().begin(), iteratorToInt)
+                  : liveIndex;
+
+  for (unsigned regIndex = 0, regNum = getNumRegions(); regIndex < regNum;
+       ++regIndex)
+    bounds.emplace_back(/*lb=*/0, /*ub=*/regIndex == liveIndex);
 }
 
 //===----------------------------------------------------------------------===//

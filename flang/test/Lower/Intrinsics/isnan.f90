@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: flang -fc1 -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: isnan_f32
 subroutine isnan_f32(r)

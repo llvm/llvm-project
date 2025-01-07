@@ -1048,9 +1048,6 @@ void DXILBitcodeWriter::writeTypeTable() {
     case Type::MetadataTyID:
       Code = bitc::TYPE_CODE_METADATA;
       break;
-    case Type::X86_MMXTyID:
-      Code = bitc::TYPE_CODE_X86_MMX;
-      break;
     case Type::IntegerTyID:
       // INTEGER: [width]
       Code = bitc::TYPE_CODE_INTEGER;
@@ -1348,7 +1345,7 @@ void DXILBitcodeWriter::writeValueAsMetadata(
     Ty = TypedPointerType::get(F->getFunctionType(), F->getAddressSpace());
   else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
     Ty = TypedPointerType::get(GV->getValueType(), GV->getAddressSpace());
-  Record.push_back(getTypeID(Ty));
+  Record.push_back(getTypeID(Ty, V));
   Record.push_back(VE.getValueID(V));
   Stream.EmitRecord(bitc::METADATA_VALUE, Record, 0);
   Record.clear();

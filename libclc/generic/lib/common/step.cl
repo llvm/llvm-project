@@ -21,8 +21,7 @@
  */
 
 #include <clc/clc.h>
-
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF float step(float edge, float x) {
   return x < edge ? 0.0f : 1.0f;
@@ -45,7 +44,7 @@ STEP_DEF(double, double);
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, step, double, double);
 _CLC_V_S_V_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, step, double, double);
 
-#if !defined(CLC_SPIRV) && !defined(CLC_SPIRV64)
+#if !defined(CLC_SPIRV)
 STEP_DEF(float, double);
 STEP_DEF(double, float);
 

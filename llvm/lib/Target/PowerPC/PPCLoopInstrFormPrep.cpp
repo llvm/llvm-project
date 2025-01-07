@@ -93,7 +93,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -109,7 +108,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <utility>
 
 #define DEBUG_TYPE "ppc-loop-instr-form-prep"
@@ -557,7 +555,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
   BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
                      "loopprepare-chaincommon");
 
   for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
@@ -1025,7 +1023,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
     return MadeChange;
 
   BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
                      "loopprepare-formrewrite");
   if (!SCEVE.isSafeToExpand(BasePtrSCEV->getStart()))
     return MadeChange;

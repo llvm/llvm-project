@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s --passes=two-address-instruction -verify-each -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_v_wmma_f32_16x16x16_f16_twoaddr_w32
 # GCN: early-clobber %2:vreg_256 = V_WMMA_F32_16X16X16_F16_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, implicit $exec

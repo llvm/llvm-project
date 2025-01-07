@@ -176,13 +176,14 @@ public:
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
       const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
       unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
-      MCInst *&PCRelBaseOut) const override {
+      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
     MemLocInstr = nullptr;
     BaseRegNum = 0;
     IndexRegNum = 0;
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
+    FixedEntryLoadInst = nullptr;
 
     // Check for the following long tail call sequence:
     // 1: auipc xi, %pcrel_hi(sym)

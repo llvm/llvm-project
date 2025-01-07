@@ -98,7 +98,7 @@ void test_accepts_nonnull_null_pointer_literal(X *x) {
   accepts_nonnull_6(nullptr); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
 
-template<void FP(_Nonnull int*)> 
+template<void FP(_Nonnull int*)>
 void test_accepts_nonnull_null_pointer_literal_template() {
   FP(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
@@ -197,6 +197,6 @@ void testNullabilityCompletenessWithTemplate() {
 
 namespace GH60344 {
 class a;
-template <typename b> using c = b _Nullable; // expected-error {{'_Nullable' cannot be applied to non-pointer type 'GH60344::a'}}
+template <typename b> using c = b _Nullable; // expected-error {{'_Nullable' cannot be applied to non-pointer type 'a'}}
 c<a>;  // expected-note {{in instantiation of template type alias 'c' requested here}}
 }

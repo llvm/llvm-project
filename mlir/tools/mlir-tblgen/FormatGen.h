@@ -15,7 +15,6 @@
 #define MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"

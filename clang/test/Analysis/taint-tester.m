@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,debug.TaintTest %s -verify
+// RUN: %clang_analyze_cc1  -analyzer-checker=optin.taint,debug.TaintTest %s -verify
 // expected-no-diagnostics
 
 #import <stdarg.h>
@@ -14,8 +14,8 @@ void TestLog (NSString *format, ...) {
     va_list ap;
     va_start(ap, format);
     NSString *string = @"AAA: ";
-    
+
     NSLogv([string stringByAppendingString:format], ap);
-    
+
     va_end(ap);
 }

@@ -1048,10 +1048,8 @@ define internal void @naked(ptr dereferenceable(4) %a) naked {
 ; CHECK: Function Attrs: naked
 ; CHECK-LABEL: define {{[^@]+}}@naked
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture nofree noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @use_i32_ptr(ptr %a)
   ret void
 }
 ; Avoid nonnull as we do not touch optnone

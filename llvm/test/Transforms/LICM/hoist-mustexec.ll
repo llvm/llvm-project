@@ -218,7 +218,6 @@ fail:
 }
 
 ; Same as previous case, with commuted icmp.
-; FIXME: The load should get hoisted here as well.
 define i32 @test3_commuted(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test3_commuted(
 ; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
@@ -227,6 +226,7 @@ define i32 @test3_commuted(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[FAIL:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[INC:%.*]], [[CONTINUE:%.*]] ]
@@ -234,7 +234,6 @@ define i32 @test3_commuted(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-NEXT:    [[R_CHK:%.*]] = icmp uge i32 [[LEN]], [[IV]]
 ; CHECK-NEXT:    br i1 [[R_CHK]], label [[CONTINUE]], label [[FAIL_LOOPEXIT:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I1]], [[ACC]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000

@@ -276,7 +276,7 @@ def hasAnyLocale(config, locales):
     """
     program = """
     #include <stddef.h>
-    #if defined(_LIBCPP_HAS_NO_LOCALIZATION)
+    #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
       #include <locale.h>

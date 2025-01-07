@@ -21,10 +21,17 @@ class FirOpBuilder;
 
 namespace fir::runtime {
 
-/// Generate a runtime call to map an ieee_flag_type exception value to a
-/// libm fenv.h value.
-mlir::Value genMapException(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value except);
+/// Generate a runtime call to map a set of ieee_flag_type exceptions to a
+/// libm fenv.h excepts value.
+mlir::Value genMapExcept(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value excepts);
+
+mlir::Value genSupportHalting(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value excepts);
+
+mlir::Value genGetUnderflowMode(fir::FirOpBuilder &builder, mlir::Location loc);
+void genSetUnderflowMode(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value bit);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXCEPTIONS_H

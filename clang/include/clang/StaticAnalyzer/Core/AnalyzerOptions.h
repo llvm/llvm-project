@@ -124,6 +124,31 @@ enum UserModeKind {
 
 enum class CTUPhase1InliningKind { None, Small, All };
 
+class PositiveAnalyzerOption {
+public:
+  PositiveAnalyzerOption() = default;
+  PositiveAnalyzerOption(const PositiveAnalyzerOption &) = default;
+  PositiveAnalyzerOption &operator=(const PositiveAnalyzerOption &) = default;
+
+  static std::optional<PositiveAnalyzerOption> create(unsigned Val) {
+    if (Val == 0)
+      return std::nullopt;
+    return PositiveAnalyzerOption{Val};
+  }
+  static std::optional<PositiveAnalyzerOption> create(StringRef Str) {
+    unsigned Parsed = 0;
+    if (Str.getAsInteger(0, Parsed))
+      return std::nullopt;
+    return PositiveAnalyzerOption::create(Parsed);
+  }
+  operator unsigned() const { return Value; }
+
+private:
+  explicit constexpr PositiveAnalyzerOption(unsigned Value) : Value(Value) {}
+
+  unsigned Value = 1;
+};
+
 /// Stores options for the analyzer from the command line.
 ///
 /// Some options are frontend flags (e.g.: -analyzer-output), but some are
@@ -229,8 +254,6 @@ public:
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzerNoteAnalysisEntryPoints : 1;
 
-  unsigned eagerlyAssumeBinOpBifurcation : 1;
-
   unsigned TrimGraph : 1;
   unsigned visualizeExplodedGraphWithGraphViz : 1;
   unsigned UnoptimizedCFG : 1;
@@ -293,9 +316,9 @@ public:
         ShowConfigOptionsList(false),
         ShouldEmitErrorsOnInvalidConfigValue(false), AnalyzeAll(false),
         AnalyzerDisplayProgress(false), AnalyzerNoteAnalysisEntryPoints(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {}
+        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),
+        AnalyzerWerror(false) {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.

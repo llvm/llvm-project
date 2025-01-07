@@ -624,7 +624,10 @@ def ForeachOp : TransformDialectOp<"foreach",
     Each iteration gets executed by co-indexing the payloads of the arguments
     and mapping the body's arguments to these tuples, as though iterating over
     the zipped together `targets`. As such, in each iteration, the size of the
-    payload of each of the body's block arguments is exactly one.
+    payload of each of the body's block arguments is exactly one. The attribute
+    `zip_shortest` can be used if the targets vary in their number of payloads;
+    this will limit the iterations to only the number of payloads found in the
+    shortest target.
 
     This op always reads the target handles. Furthermore, it consumes a handle
     if there is a transform op in the body that consumes the corresponding
@@ -645,11 +648,13 @@ def ForeachOp : TransformDialectOp<"foreach",
     rollback capabilities.
   }];
 
-  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets);
+  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$targets,
+                       UnitAttr:$with_zip_shortest);
   let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
-    "$targets `:` type($targets) (`->` type($results)^)? $body attr-dict";
+    "$targets oilist(`with_zip_shortest` $with_zip_shortest) `:` "
+    "type($targets) (`->` type($results)^)? $body attr-dict";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -1057,36 +1062,37 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "Splits a handle of payload ops into handles with a single op";
+  let summary = "Splits a handle or parameter into multiple values";
   let description = [{
     Splits `handle` into one or multiple handles, as specified by the number
     of results of this operation. `handle` should be mapped to as many payload
-    ops as there are results. Otherwise, this transform will fail produces a
-    silenceable failure by default. Each result handle is mapped to exactly one
-    payload op. The order of the payload ops is preserved, i.e., the i-th
-    payload op is mapped to the i-th result handle.
+    ops, values or parameteres as there are results. Otherwise, this transform
+    will fail producing a silenceable failure by default. Each result handle
+    is mapped to exactly one payload unless specified otherwise by attributes
+    described below. The order of the payloads is preserved,  i.e., the i-th
+    payload is mapped to the i-th result handle.
 
     This operation is useful for ensuring a statically known number of
-    operations are tracked by the source `handle` and to extract them into
+    payloads are tracked by the source `handle` and to extract them into
     individual handles that can be further manipulated in isolation.
 
-    If there are more payload ops than results, the remaining ops are mapped to
+    If there are more payloads than results, the remaining payloads are mapped to
     the result with index `overflow_result`. If no `overflow_result` is
     specified, the transform produces a silenceable failure.
 
     If there are fewer payload ops than results, the transform produces a
     silenceable failure if `fail_on_payload_too_small` is set to "true".
     Otherwise, it succeeds and the remaining result handles are not mapped to
-    any op. It also succeeds if `handle` is empty and
+    anything. It also succeeds if `handle` is empty and
     `pass_through_empty_handle` is set to "true", regardless of
     `fail_on_payload_too_small`.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$handle,
+  let arguments = (ins Transform_AnyHandleOrParamType:$handle,
                        DefaultValuedAttr<BoolAttr, "true">:$pass_through_empty_handle,
                        DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_too_small,
                        OptionalAttr<I64Attr>:$overflow_result);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let hasVerifier = 1;
 
   let builders = [

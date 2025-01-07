@@ -12,7 +12,7 @@
 #ifndef OMPTARGET_DEVICERTL_SYNCHRONIZATION_H
 #define OMPTARGET_DEVICERTL_SYNCHRONIZATION_H
 
-#include "Types.h"
+#include "DeviceTypes.h"
 
 namespace ompx {
 
@@ -24,6 +24,14 @@ enum OrderingTy {
   release = __ATOMIC_RELEASE,
   acq_rel = __ATOMIC_ACQ_REL,
   seq_cst = __ATOMIC_SEQ_CST,
+};
+
+enum ScopeTy {
+  system = __MEMORY_SCOPE_SYSTEM,
+  device_ = __MEMORY_SCOPE_DEVICE,
+  workgroup = __MEMORY_SCOPE_WRKGRP,
+  wavefront = __MEMORY_SCOPE_WVFRNT,
+  single = __MEMORY_SCOPE_SINGLE,
 };
 
 enum MemScopeTy {

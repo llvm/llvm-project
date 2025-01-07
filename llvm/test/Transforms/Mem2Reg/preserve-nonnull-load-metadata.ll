@@ -140,11 +140,46 @@ fin:
   ret ptr null
 }
 
-define ptr @no_store_single_load() {
-; CHECK-LABEL: @no_store_single_load(
+define ptr @no_store_single_load_noundef() {
+; CHECK-LABEL: @no_store_single_load_noundef(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr undef, null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    ret ptr undef
+;
+entry:
+  %buf = alloca ptr
+  %buf.load = load ptr, ptr %buf, !noundef !0
+  ret ptr %buf.load
+}
+
+define ptr @no_store_multiple_loads_noundef(i1 %c) {
+; CHECK-LABEL: @no_store_multiple_loads_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    ret ptr undef
+; CHECK:       else:
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    ret ptr undef
+;
+entry:
+  %buf = alloca ptr
+  br i1 %c, label %if, label %else
+
+if:
+  %buf.load = load ptr, ptr %buf, !noundef !0
+  ret ptr %buf.load
+
+  else:
+  %buf.load2 = load ptr, ptr %buf, !noundef !0
+  ret ptr %buf.load2
+}
+
+define ptr @no_store_single_load_nonnull_noundef() {
+; CHECK-LABEL: @no_store_single_load_nonnull_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret ptr undef
 ;
 entry:
@@ -153,17 +188,15 @@ entry:
   ret ptr %buf.load
 }
 
-define ptr @no_store_multiple_loads(i1 %c) {
-; CHECK-LABEL: @no_store_multiple_loads(
+define ptr @no_store_multiple_loads_nonnull_noundef(i1 %c) {
+; CHECK-LABEL: @no_store_multiple_loads_nonnull_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr undef, null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret ptr undef
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr undef, null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret ptr undef
 ;
 entry:

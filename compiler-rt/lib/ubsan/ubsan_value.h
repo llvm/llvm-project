@@ -138,19 +138,18 @@ public:
   }
 
   const char *getBitIntBitCountPointer() const {
-    CHECK(isBitIntTy());
-    CHECK(isSignedBitIntTy());
+    DCHECK(isBitIntTy());
+    DCHECK(isSignedBitIntTy());
     // Scan Name for zero and return the next address
     const char *p = getTypeName();
-    while (*p != '\0') {
+    while (*p != '\0')
       ++p;
-    }
     // Return the next address
     return p + 1;
   }
 
   unsigned getIntegerBitCount() const {
-    CHECK(isIntegerTy());
+    DCHECK(isIntegerTy());
     if (isSignedBitIntTy())
       return *reinterpret_cast<const u32 *>(getBitIntBitCountPointer());
     else

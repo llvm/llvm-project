@@ -12,11 +12,12 @@
 #include "hdr/types/pid_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/mutex_common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: support shared/recursive/robust mutexes.
 class Mutex final : private RawMutex {
@@ -84,6 +85,6 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H

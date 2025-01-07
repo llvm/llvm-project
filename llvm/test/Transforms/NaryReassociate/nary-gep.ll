@@ -21,4 +21,44 @@ define void @no_sext_fat_pointer(ptr addrspace(2) %a, i32 %i, i32 %j) {
   ret void
 }
 
+define void @or_disjoint(ptr addrspace(2) %a, i32 %i, i32 %j, i32 %k) {
+; CHECK-LABEL: @or_disjoint(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[I:%.*]], [[J:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = getelementptr float, ptr addrspace(2) [[A:%.*]], i32 [[OR]]
+; CHECK-NEXT:    call void @foo(ptr addrspace(2) [[V2]])
+; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i32 [[I]], [[J]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ADD1]], [[K:%.*]]
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr float, ptr addrspace(2) [[A]], i32 [[ADD2]]
+; CHECK-NEXT:    call void @foo(ptr addrspace(2) [[V3]])
+; CHECK-NEXT:    ret void
+;
+  %or = or disjoint i32 %i, %j
+  %v2 = getelementptr float, ptr addrspace(2) %a, i32 %or
+  call void @foo(ptr addrspace(2) %v2)
+  %add1 = add nuw nsw i32 %i, %j
+  %add2 = add nuw nsw i32 %add1, %k
+  %v3 = getelementptr float, ptr addrspace(2) %a, i32 %add2
+  call void @foo(ptr addrspace(2) %v3)
+  ret void
+}
+
+define void @drop_nuw_nsw(ptr addrspace(2) %a, i32 %i, i32 %j, i32 %k) {
+; CHECK-LABEL: @drop_nuw_nsw(
+; CHECK-NEXT:    [[ADD0:%.*]] = add i32 [[I:%.*]], [[J:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = getelementptr float, ptr addrspace(2) [[A:%.*]], i32 [[ADD0]]
+; CHECK-NEXT:    call void @foo(ptr addrspace(2) [[V2]])
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr float, ptr addrspace(2) [[V2]], i32 [[K:%.*]]
+; CHECK-NEXT:    call void @foo(ptr addrspace(2) [[V3]])
+; CHECK-NEXT:    ret void
+;
+  %add0 = add nuw nsw i32 %i, %j
+  %v2 = getelementptr float, ptr addrspace(2) %a, i32 %add0
+  call void @foo(ptr addrspace(2) %v2)
+  %add1 = add i32 %i, %j
+  %add2 = add nuw nsw i32 %add1, %k
+  %v3 = getelementptr float, ptr addrspace(2) %a, i32 %add2
+  call void @foo(ptr addrspace(2) %v3)
+  ret void
+}
+
 declare void @foo(ptr addrspace(2))

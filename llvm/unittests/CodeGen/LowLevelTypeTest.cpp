@@ -20,7 +20,6 @@ namespace {
 
 TEST(LowLevelTypeTest, Token) {
   LLVMContext C;
-  DataLayout DL("");
 
   const LLT TTy = LLT::token();
 
@@ -38,7 +37,7 @@ TEST(LowLevelTypeTest, Token) {
 
 TEST(LowLevelTypeTest, Scalar) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL;
 
   for (unsigned S : {0U, 1U, 17U, 32U, 64U, 0xfffffU}) {
     const LLT Ty = LLT::scalar(S);
@@ -70,7 +69,7 @@ TEST(LowLevelTypeTest, Scalar) {
 
 TEST(LowLevelTypeTest, Vector) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL;
 
   for (unsigned S : {0U, 1U, 17U, 32U, 64U, 0xfffU}) {
     for (auto EC :

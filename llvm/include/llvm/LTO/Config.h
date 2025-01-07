@@ -88,6 +88,11 @@ struct Config {
   /// want to know a priori all possible output files.
   bool AlwaysEmitRegularLTOObj = false;
 
+  /// If true, the LTO instance creates copies of the symbol names for LTO::run.
+  /// The lld linker uses string saver to keep symbol names alive and doesn't
+  /// need to create copies, so it can set this field to false.
+  bool KeepSymbolNameCopies = true;
+
   /// Allows non-imported definitions to get the potentially more constraining
   /// visibility from the prevailing definition. FromPrevailing is the default
   /// because it works for many binary formats. ELF can use the more optimized

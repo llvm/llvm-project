@@ -27,12 +27,20 @@
 ; CHECK-NEXT: returnsVoid: true
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: workGroupIDX: { reg: '$sgpr6' }
-; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+; CHECK-NEXT: dispatchPtr: { reg: '$sgpr4_sgpr5' }
+; CHECK-NEXT: queuePtr: { reg: '$sgpr6_sgpr7' }
+; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: dispatchID: { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: workGroupIDX: { reg: '$sgpr12' }
+; CHECK-NEXT: workGroupIDY: { reg: '$sgpr13' }
+; CHECK-NEXT: workGroupIDZ: { reg: '$sgpr14' }
+; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr15' }
 ; CHECK-NEXT: workItemIDX: { reg: '$vgpr0' }
+; CHECK-NEXT: workItemIDY: { reg: '$vgpr1' }
+; CHECK-NEXT: workItemIDZ: { reg: '$vgpr2' }
 ; CHECK-NEXT: psInputAddr: 0
 ; CHECK-NEXT: psInputEnable: 0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -45,6 +53,7 @@
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
+; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
   %gep = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %arg0
@@ -78,6 +87,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: implicitBufferPtr: { reg: '$sgpr0_sgpr1' }
 ; CHECK-NEXT: psInputAddr: 1
 ; CHECK-NEXT: psInputEnable: 1
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: false
 ; CHECK-NEXT: dx10-clamp: true
@@ -90,6 +100,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
+; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
   %gep = getelementptr inbounds [128 x i32], ptr addrspace(2) @gds, i32 0, i32 %arg0
@@ -147,6 +158,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 ; CHECK-NEXT: psInputAddr: 0
 ; CHECK-NEXT: psInputEnable: 0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -159,6 +171,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
+; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:
 define void @function() {
   ret void
@@ -198,6 +211,7 @@ define void @function() {
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 ; CHECK-NEXT: psInputAddr: 0
 ; CHECK-NEXT: psInputEnable: 0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -210,6 +224,7 @@ define void @function() {
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
+; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:
 define void @function_nsz() #0 {
   ret void
@@ -267,12 +282,15 @@ define amdgpu_cs void @wwm_reserved_regs(ptr addrspace(1) %ptr, <4 x i32> inreg 
   %ld1 = load volatile i32, ptr addrspace(1) %ptr
   %inactive0 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld1, i32 0)
   %inactive1 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld0, i32 0)
-  store volatile i32 %inactive0, ptr addrspace(1) %ptr
-  store volatile i32 %inactive1, ptr addrspace(1) %ptr
+  %wwm0 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %inactive0)
+  %wwm1 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %inactive1)
+  store volatile i32 %wwm0, ptr addrspace(1) %ptr
+  store volatile i32 %wwm1, ptr addrspace(1) %ptr
   ret void
 }
 
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #6
+declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #6
 
 attributes #0 = { "no-signed-zeros-fp-math" = "true" }
 attributes #1 = { "amdgpu-dx10-clamp" = "false" }

@@ -523,14 +523,23 @@ define amdgpu_ps void @s_buffer_load_imm_mergex2(<4 x i32> inreg %desc) {
 ; GFX67-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
 ; GFX67-NEXT:    s_endpgm
 ;
-; GFX8910-LABEL: s_buffer_load_imm_mergex2:
-; GFX8910:       ; %bb.0: ; %main_body
-; GFX8910-NEXT:    s_buffer_load_dwordx2 s[0:1], s[0:3], 0x4
-; GFX8910-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8910-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8910-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8910-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
-; GFX8910-NEXT:    s_endpgm
+; GFX8-LABEL: s_buffer_load_imm_mergex2:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_buffer_load_dwordx2 s[0:1], s[0:3], 0x4
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
+; GFX8-NEXT:    s_endpgm
+;
+; GFX910-LABEL: s_buffer_load_imm_mergex2:
+; GFX910:       ; %bb.0: ; %main_body
+; GFX910-NEXT:    s_buffer_load_dwordx2 s[4:5], s[0:3], 0x4
+; GFX910-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX910-NEXT:    v_mov_b32_e32 v0, s4
+; GFX910-NEXT:    v_mov_b32_e32 v1, s5
+; GFX910-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
+; GFX910-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_buffer_load_imm_mergex2:
 ; GFX11:       ; %bb.0: ; %main_body
@@ -570,16 +579,27 @@ define amdgpu_ps void @s_buffer_load_imm_mergex4(<4 x i32> inreg %desc) {
 ; GFX67-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
 ; GFX67-NEXT:    s_endpgm
 ;
-; GFX8910-LABEL: s_buffer_load_imm_mergex4:
-; GFX8910:       ; %bb.0: ; %main_body
-; GFX8910-NEXT:    s_buffer_load_dwordx4 s[0:3], s[0:3], 0x8
-; GFX8910-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8910-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8910-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8910-NEXT:    v_mov_b32_e32 v2, s2
-; GFX8910-NEXT:    v_mov_b32_e32 v3, s3
-; GFX8910-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
-; GFX8910-NEXT:    s_endpgm
+; GFX8-LABEL: s_buffer_load_imm_mergex4:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_buffer_load_dwordx4 s[0:3], s[0:3], 0x8
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_mov_b32_e32 v3, s3
+; GFX8-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX8-NEXT:    s_endpgm
+;
+; GFX910-LABEL: s_buffer_load_imm_mergex4:
+; GFX910:       ; %bb.0: ; %main_body
+; GFX910-NEXT:    s_buffer_load_dwordx4 s[4:7], s[0:3], 0x8
+; GFX910-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX910-NEXT:    v_mov_b32_e32 v0, s4
+; GFX910-NEXT:    v_mov_b32_e32 v1, s5
+; GFX910-NEXT:    v_mov_b32_e32 v2, s6
+; GFX910-NEXT:    v_mov_b32_e32 v3, s7
+; GFX910-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX910-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_buffer_load_imm_mergex4:
 ; GFX11:       ; %bb.0: ; %main_body
@@ -716,8 +736,6 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: s_buffer_load_index_across_bb:
@@ -735,8 +753,6 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %tmp = shl i32 %index, 4

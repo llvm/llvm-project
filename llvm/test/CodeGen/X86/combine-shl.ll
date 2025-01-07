@@ -929,3 +929,169 @@ define <4 x i32> @combine_vec_add_shuffle_shl(<4 x i32> %a0)  {
   %3 = add <4 x i32> %2, <i32 3, i32 3, i32 3, i32 3>
   ret <4 x i32> %3
 }
+
+define <4 x i32> @combine_vec_shl_clamped1(<4 x i32> %sh, <4 x i32> %amt) {
+; SSE2-LABEL: combine_vec_shl_clamped1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pslld $23, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm3, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_shl_clamped1:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [31,31,31,31]
+; SSE41-NEXT:    pminud %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE41-NEXT:    pslld $23, %xmm1
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE41-NEXT:    pmulld %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_shl_clamped1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp.i = icmp ult <4 x i32> %amt, <i32 32, i32 32, i32 32, i32 32>
+  %shl = shl <4 x i32> %sh, %amt
+  %1 = select <4 x i1> %cmp.i, <4 x i32> %shl, <4 x i32> zeroinitializer
+  ret <4 x i32> %1
+}
+
+define <4 x i32> @combine_vec_shl_clamped2(<4 x i32> %sh, <4 x i32> %amt) {
+; SSE2-LABEL: combine_vec_shl_clamped2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pslld $23, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm3, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_shl_clamped2:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [31,31,31,31]
+; SSE41-NEXT:    pminud %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    pslld $23, %xmm1
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE41-NEXT:    pmulld %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_shl_clamped2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp.i = icmp ult <4 x i32> %amt, <i32 32, i32 32, i32 32, i32 32>
+  %1 = select <4 x i1> %cmp.i, <4 x i32> %sh, <4 x i32> zeroinitializer
+  %shl = shl <4 x i32> %1, %amt
+  ret <4 x i32> %shl
+}
+
+define <4 x i32> @combine_vec_shl_commuted_clamped(<4 x i32> %sh, <4 x i32> %amt) {
+; SSE2-LABEL: combine_vec_shl_commuted_clamped:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pslld $23, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm3, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_shl_commuted_clamped:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [31,31,31,31]
+; SSE41-NEXT:    pminud %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    pslld $23, %xmm1
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE41-NEXT:    pmulld %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_shl_commuted_clamped:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp.i = icmp uge <4 x i32> %amt, <i32 32, i32 32, i32 32, i32 32>
+  %1 = select <4 x i1> %cmp.i, <4 x i32> zeroinitializer, <4 x i32> %sh
+  %shl = shl <4 x i32> %1, %amt
+  ret <4 x i32> %shl
+}
+
+define <4 x i32> @combine_vec_shl_commuted_clamped1(<4 x i32> %sh, <4 x i32> %amt) {
+; SSE2-LABEL: combine_vec_shl_commuted_clamped1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pslld $23, %xmm2
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm3, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pandn %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_shl_commuted_clamped1:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm2 = [31,31,31,31]
+; SSE41-NEXT:    pminud %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE41-NEXT:    pslld $23, %xmm1
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE41-NEXT:    pmulld %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_shl_commuted_clamped1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp.i = icmp uge <4 x i32> %amt, <i32 32, i32 32, i32 32, i32 32>
+  %shl = shl <4 x i32> %sh, %amt
+  %1 = select <4 x i1> %cmp.i, <4 x i32> zeroinitializer, <4 x i32> %shl
+  ret <4 x i32> %1
+}

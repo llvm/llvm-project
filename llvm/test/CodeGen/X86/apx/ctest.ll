@@ -396,9 +396,8 @@ define void @ctest16ri_zf(i16 noundef %a, i16 noundef %b) {
 ;
 ; NDD-LABEL: ctest16ri_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andl $1234, %esi, %eax # imm = 0x4D2
 ; NDD-NEXT:    testw %di, %di
-; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
+; NDD-NEXT:    ctestnew {dfv=zf} $1234, %si # imm = 0x4D2
 ; NDD-NEXT:    jne .LBB10_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -704,10 +703,8 @@ define void @ctest16mi_zf(i16 noundef %a, ptr %ptr) {
 ;
 ; NDD-LABEL: ctest16mi_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax
-; NDD-NEXT:    andl $1234, %eax # imm = 0x4D2
 ; NDD-NEXT:    testw %di, %di
-; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
+; NDD-NEXT:    ctestnew {dfv=zf} $1234, (%rsi) # imm = 0x4D2
 ; NDD-NEXT:    jne .LBB18_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -746,10 +743,8 @@ define void @ctest32mi_zf(i32 noundef %a, ptr %ptr) {
 ;
 ; NDD-LABEL: ctest32mi_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax
-; NDD-NEXT:    andl $12345, %eax # imm = 0x3039
 ; NDD-NEXT:    testl %edi, %edi
-; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
+; NDD-NEXT:    ctestnew {dfv=zf} $12345, (%rsi) # imm = 0x3039
 ; NDD-NEXT:    jne .LBB19_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -900,6 +895,45 @@ entry:
   %or2 =  and i1 %or1, %cmp2
   %. = zext i1 %or2 to i32
   ret i32 %.
+}
+
+define void @ctest64ri64(i64 noundef %a, i64 noundef %b) {
+; CHECK-LABEL: ctest64ri64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
+; CHECK-NEXT:    ctestneq {dfv=zf} %rax, %rsi
+; CHECK-NEXT:    jne .LBB24_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp foo # TAILCALL
+; CHECK-NEXT:  .LBB24_1: # %if.end
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ctest64ri64:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testq %rdi, %rdi
+; NDD-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
+; NDD-NEXT:    ctestneq {dfv=zf} %rax, %rsi
+; NDD-NEXT:    jne .LBB24_1
+; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    jmp foo # TAILCALL
+; NDD-NEXT:  .LBB24_1: # %if.end
+; NDD-NEXT:    retq
+entry:
+  %cmp = icmp eq i64 %a, 0
+  %and = and i64 %b, 9992147483647
+  %cmp1 = icmp eq i64 %and, 0
+  %or.cond = or i1 %cmp, %cmp1
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void (...) @foo()
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
 }
 
 declare dso_local void @foo(...)

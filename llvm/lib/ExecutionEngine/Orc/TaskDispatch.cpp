@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
 namespace llvm {
@@ -67,7 +68,8 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
         if (IsMaterializationTask)
           --NumMaterializationThreads;
         --Outstanding;
-        OutstandingCV.notify_all();
+        if (Outstanding == 0)
+          OutstandingCV.notify_all();
         return;
       }
     }

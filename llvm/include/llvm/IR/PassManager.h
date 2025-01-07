@@ -28,9 +28,9 @@
 /// polymorphism as outlined in the "Value Semantics and Concept-based
 /// Polymorphism" talk (or its abbreviated sibling "Inheritance Is The Base
 /// Class of Evil") by Sean Parent:
-/// * http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations
+/// * https://sean-parent.stlab.cc/papers-and-presentations
 /// * http://www.youtube.com/watch?v=_BpMYeUFXv8
-/// * http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil
+/// * https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil
 ///
 //===----------------------------------------------------------------------===//
 
@@ -42,8 +42,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
@@ -57,6 +55,9 @@
 #include <vector>
 
 namespace llvm {
+
+class Function;
+class Module;
 
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -189,24 +190,27 @@ public:
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
                         ExtraArgTs... ExtraArgs);
 
-  // FIXME: Revert to enable_if style when gcc >= 11.1
-  template <typename PassT> LLVM_ATTRIBUTE_MINSIZE void addPass(PassT &&Pass) {
+  template <typename PassT>
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<!std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
-    if constexpr (!std::is_same_v<PassT, PassManager>) {
-      // Do not use make_unique or emplace_back, they cause too many template
-      // instantiations, causing terrible compile times.
-      Passes.push_back(std::unique_ptr<PassConceptT>(
-          new PassModelT(std::forward<PassT>(Pass))));
-    } else {
-      /// When adding a pass manager pass that has the same type as this pass
-      /// manager, simply move the passes over. This is because we don't have
-      /// use cases rely on executing nested pass managers. Doing this could
-      /// reduce implementation complexity and avoid potential invalidation
-      /// issues that may happen with nested pass managers of the same type.
-      for (auto &P : Pass.Passes)
-        Passes.push_back(std::move(P));
-    }
+    // Do not use make_unique or emplace_back, they cause too many template
+    // instantiations, causing terrible compile times.
+    Passes.push_back(std::unique_ptr<PassConceptT>(
+        new PassModelT(std::forward<PassT>(Pass))));
+  }
+
+  /// When adding a pass manager pass that has the same type as this pass
+  /// manager, simply move the passes over. This is because we don't have
+  /// use cases rely on executing nested pass managers. Doing this could
+  /// reduce implementation complexity and avoid potential invalidation
+  /// issues that may happen with nested pass managers of the same type.
+  template <typename PassT>
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
+    for (auto &P : Pass.Passes)
+      Passes.push_back(std::move(P));
   }
 
   /// Returns if the pass manager contains any passes.
@@ -221,10 +225,20 @@ protected:
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 };
 
+template <typename IRUnitT>
+void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
+
+template <>
+void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+
 extern template class PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
+
+template <>
+void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                            const Function &IR);
 
 extern template class PassManager<Function>;
 
@@ -384,6 +398,11 @@ public:
     AnalysisResultLists.clear();
   }
 
+  /// Returns true if the specified analysis pass is registered.
+  template <typename PassT> bool isPassRegistered() const {
+    return AnalysisPasses.count(PassT::ID());
+  }
+
   /// Get the result of an analysis pass for a given IR unit.
   ///
   /// Runs the analysis if a cached result is not available.
@@ -444,10 +463,9 @@ public:
   /// and this function returns true.
   ///
   /// (Note: Although the return value of this function indicates whether or not
-  /// an analysis was previously registered, there intentionally isn't a way to
-  /// query this directly.  Instead, you should just register all the analyses
-  /// you might want and let this class run them lazily.  This idiom lets us
-  /// minimize the number of times we have to look up analyses in our
+  /// an analysis was previously registered, you should just register all the
+  /// analyses you might want and let this class run them lazily.  This idiom
+  /// lets us minimize the number of times we have to look up analyses in our
   /// hashtable.)
   template <typename PassBuilderT>
   bool registerPass(PassBuilderT &&PassBuilder) {

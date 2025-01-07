@@ -50,10 +50,11 @@
 #define LLVM_IR_PASSINSTRUMENTATION_H
 
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 #include <vector>
 
@@ -61,6 +62,13 @@ namespace llvm {
 
 class PreservedAnalyses;
 class StringRef;
+class Module;
+class Loop;
+class Function;
+
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Module *>;
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Function *>;
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Loop *>;
 
 /// This class manages callbacks registration, as well as provides a way for
 /// PassInstrumentation to pass control to the registered callbacks.
@@ -149,6 +157,11 @@ public:
     AnalysesClearedCallbacks.emplace_back(std::move(C));
   }
 
+  template <typename CallableT>
+  void registerClassToPassNameCallback(CallableT C) {
+    ClassToPassNameCallbacks.emplace_back(std::move(C));
+  }
+
   /// Add a class name to pass name mapping for use by pass instrumentation.
   void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
@@ -169,7 +182,7 @@ private:
       BeforeNonSkippedPassCallbacks;
   /// These are run on passes that have just run.
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
-  /// These are run passes that have just run on invalidated IR.
+  /// These are run on passes that have just run on invalidated IR.
   SmallVector<llvm::unique_function<AfterPassInvalidatedFunc>, 4>
       AfterPassInvalidatedCallbacks;
   /// These are run on analyses that are about to be run.
@@ -185,7 +198,8 @@ private:
   SmallVector<llvm::unique_function<AnalysesClearedFunc>, 4>
       AnalysesClearedCallbacks;
 
-  StringMap<std::string> ClassToPassName;
+  SmallVector<llvm::unique_function<void ()>, 4> ClassToPassNameCallbacks;
+  DenseMap<StringRef, std::string> ClassToPassName;
 };
 
 /// This class provides instrumentation entry points for the Pass Manager,
@@ -325,6 +339,13 @@ public:
   void popBeforeNonSkippedPassCallback() {
     if (Callbacks)
       Callbacks->BeforeNonSkippedPassCallbacks.pop_back();
+  }
+
+  /// Get the pass name for a given pass class name.
+  StringRef getPassNameForClassName(StringRef ClassName) const {
+    if (Callbacks)
+      return Callbacks->getPassNameForClassName(ClassName);
+    return {};
   }
 };
 

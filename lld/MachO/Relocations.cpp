@@ -27,8 +27,33 @@ InputSection *Reloc::getReferentInputSection() const {
       return d->isec();
     return nullptr;
   } else {
-    return referent.get<InputSection *>();
+    return cast<InputSection *>(referent);
   }
+}
+
+StringRef Reloc::getReferentString() const {
+  if (auto *isec = referent.dyn_cast<InputSection *>()) {
+    const auto *cisec = dyn_cast<CStringInputSection>(isec);
+    assert(cisec && "referent must be a CStringInputSection");
+    return cisec->getStringRefAtOffset(addend);
+  }
+
+  auto *sym = dyn_cast<Defined>(cast<Symbol *>(referent));
+  assert(sym && "referent must be a Defined symbol");
+
+  auto *symIsec = sym->isec();
+  auto symOffset = sym->value + addend;
+
+  if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
+    return s->getStringRefAtOffset(symOffset);
+
+  if (isa<ConcatInputSection>(symIsec)) {
+    auto strData = symIsec->data.slice(symOffset);
+    const char *pszData = reinterpret_cast<const char *>(strData.data());
+    return StringRef(pszData, strnlen(pszData, strData.size()));
+  }
+
+  llvm_unreachable("unknown reference section in getReferentString");
 }
 
 bool macho::validateSymbolRelocation(const Symbol *sym,

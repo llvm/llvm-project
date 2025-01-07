@@ -20,6 +20,4 @@ if (LLVM_INCLUDE_UTILS)
     DEPENDS
       llvm-jitlink-executor
   )
-
-  export_executable_symbols(LLJITWithRemoteDebugging)
 endif()

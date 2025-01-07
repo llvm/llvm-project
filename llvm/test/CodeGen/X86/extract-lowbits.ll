@@ -4507,3 +4507,108 @@ define i64 @bzhi64_constant_mask8_load(ptr %val) nounwind {
   %masked = and i64 %val1, 127
   ret i64 %masked
 }
+
+; Ensure constant hoisting doesn't prevent BEXTR/BZHI instructions in both paths.
+define void @PR111323(ptr nocapture noundef writeonly %use, i64 noundef %x, i64 noundef %y) nounwind {
+; X86-LABEL: PR111323:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, 4(%ecx)
+; X86-NEXT:    movl %esi, (%ecx)
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    orl %eax, %esi
+; X86-NEXT:    je .LBB68_2
+; X86-NEXT:  # %bb.1: # %if.end
+; X86-NEXT:    andl $65535, %eax # imm = 0xFFFF
+; X86-NEXT:    andl $-1, %edx
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    movl %eax, 12(%ecx)
+; X86-NEXT:  .LBB68_2: # %return
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-NOBMI-LABEL: PR111323:
+; X64-NOBMI:       # %bb.0: # %entry
+; X64-NOBMI-NEXT:    movabsq $281474976710655, %rax # imm = 0xFFFFFFFFFFFF
+; X64-NOBMI-NEXT:    andq %rax, %rsi
+; X64-NOBMI-NEXT:    movq %rsi, (%rdi)
+; X64-NOBMI-NEXT:    testq %rdx, %rdx
+; X64-NOBMI-NEXT:    je .LBB68_2
+; X64-NOBMI-NEXT:  # %bb.1: # %if.end
+; X64-NOBMI-NEXT:    andq %rax, %rdx
+; X64-NOBMI-NEXT:    movq %rdx, 8(%rdi)
+; X64-NOBMI-NEXT:  .LBB68_2: # %return
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI1NOTBM-LABEL: PR111323:
+; X64-BMI1NOTBM:       # %bb.0: # %entry
+; X64-BMI1NOTBM-NEXT:    movl $12288, %eax # imm = 0x3000
+; X64-BMI1NOTBM-NEXT:    bextrq %rax, %rsi, %rax
+; X64-BMI1NOTBM-NEXT:    movq %rax, (%rdi)
+; X64-BMI1NOTBM-NEXT:    testq %rdx, %rdx
+; X64-BMI1NOTBM-NEXT:    je .LBB68_2
+; X64-BMI1NOTBM-NEXT:  # %bb.1: # %if.end
+; X64-BMI1NOTBM-NEXT:    movl $12288, %eax # imm = 0x3000
+; X64-BMI1NOTBM-NEXT:    bextrq %rax, %rdx, %rax
+; X64-BMI1NOTBM-NEXT:    movq %rax, 8(%rdi)
+; X64-BMI1NOTBM-NEXT:  .LBB68_2: # %return
+; X64-BMI1NOTBM-NEXT:    retq
+;
+; X64-BMI1TBM-LABEL: PR111323:
+; X64-BMI1TBM:       # %bb.0: # %entry
+; X64-BMI1TBM-NEXT:    bextrq $12288, %rsi, %rax # imm = 0x3000
+; X64-BMI1TBM-NEXT:    movq %rax, (%rdi)
+; X64-BMI1TBM-NEXT:    testq %rdx, %rdx
+; X64-BMI1TBM-NEXT:    je .LBB68_2
+; X64-BMI1TBM-NEXT:  # %bb.1: # %if.end
+; X64-BMI1TBM-NEXT:    bextrq $12288, %rdx, %rax # imm = 0x3000
+; X64-BMI1TBM-NEXT:    movq %rax, 8(%rdi)
+; X64-BMI1TBM-NEXT:  .LBB68_2: # %return
+; X64-BMI1TBM-NEXT:    retq
+;
+; X64-BMI2TBM-LABEL: PR111323:
+; X64-BMI2TBM:       # %bb.0: # %entry
+; X64-BMI2TBM-NEXT:    bextrq $12288, %rsi, %rax # imm = 0x3000
+; X64-BMI2TBM-NEXT:    movq %rax, (%rdi)
+; X64-BMI2TBM-NEXT:    testq %rdx, %rdx
+; X64-BMI2TBM-NEXT:    je .LBB68_2
+; X64-BMI2TBM-NEXT:  # %bb.1: # %if.end
+; X64-BMI2TBM-NEXT:    bextrq $12288, %rdx, %rax # imm = 0x3000
+; X64-BMI2TBM-NEXT:    movq %rax, 8(%rdi)
+; X64-BMI2TBM-NEXT:  .LBB68_2: # %return
+; X64-BMI2TBM-NEXT:    retq
+;
+; X64-BMI2NOTBM-LABEL: PR111323:
+; X64-BMI2NOTBM:       # %bb.0: # %entry
+; X64-BMI2NOTBM-NEXT:    movb $48, %al
+; X64-BMI2NOTBM-NEXT:    bzhiq %rax, %rsi, %rcx
+; X64-BMI2NOTBM-NEXT:    movq %rcx, (%rdi)
+; X64-BMI2NOTBM-NEXT:    testq %rdx, %rdx
+; X64-BMI2NOTBM-NEXT:    je .LBB68_2
+; X64-BMI2NOTBM-NEXT:  # %bb.1: # %if.end
+; X64-BMI2NOTBM-NEXT:    bzhiq %rax, %rdx, %rax
+; X64-BMI2NOTBM-NEXT:    movq %rax, 8(%rdi)
+; X64-BMI2NOTBM-NEXT:  .LBB68_2: # %return
+; X64-BMI2NOTBM-NEXT:    retq
+entry:
+  %and = and i64 %x, 281474976710655
+  store i64 %and, ptr %use, align 8
+  %cmp = icmp eq i64 %y, 0
+  br i1 %cmp, label %return, label %if.end
+
+if.end:
+  %and1 = and i64 %y, 281474976710655
+  %arrayidx2 = getelementptr inbounds i8, ptr %use, i64 8
+  store i64 %and1, ptr %arrayidx2, align 8
+  br label %return
+
+return:
+  ret void
+}

@@ -103,6 +103,7 @@ template <typename T> class ResourceTable {
 public:
   ResourceTable(StringRef Name) : MDName(Name) {}
   void collect(Module &M);
+  bool empty() const { return Data.empty(); }
   MDNode *write(Module &M) const;
   void print(raw_ostream &O) const;
 };
@@ -117,8 +118,12 @@ class Resources {
 
 public:
   void collect(Module &M);
-  void write(Module &M) const;
-  void print(raw_ostream &O) const;
+  bool hasUAVs() const { return !UAVs.empty(); }
+  Metadata *writeUAVs(Module &M) const;
+  void printUAVs(raw_ostream &OS) const;
+  bool hasCBuffers() const { return !CBuffers.empty(); }
+  Metadata *writeCBuffers(Module &M) const;
+  void printCBuffers(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 };
 

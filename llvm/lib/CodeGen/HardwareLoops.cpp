@@ -30,7 +30,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -240,7 +239,7 @@ bool HardwareLoopsLegacy::runOnFunction(Function &F) {
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   auto *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
@@ -275,7 +274,7 @@ PreservedAnalyses HardwareLoopsPass::run(Function &F,
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   HardwareLoopsImpl Impl(SE, LI, true, DT, DL, TTI, TLI, AC, ORE, Opts);
   bool Changed = Impl.run(F);
@@ -291,7 +290,7 @@ PreservedAnalyses HardwareLoopsPass::run(Function &F,
 }
 
 bool HardwareLoopsImpl::run(Function &F) {
-  LLVMContext &Ctx = F.getParent()->getContext();
+  LLVMContext &Ctx = F.getContext();
   for (Loop *L : LI)
     if (L->isOutermost())
       TryConvertLoop(L, Ctx);
@@ -512,8 +511,7 @@ Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
                                    : Intrinsic::test_set_loop_iterations)
                          : (UsePhi ? Intrinsic::start_loop_iterations
                                    : Intrinsic::set_loop_iterations);
-  Function *LoopIter = Intrinsic::getDeclaration(M, ID, Ty);
-  Value *LoopSetup = Builder.CreateCall(LoopIter, LoopCountInit);
+  Value *LoopSetup = Builder.CreateIntrinsic(ID, Ty, LoopCountInit);
 
   // Use the return value of the intrinsic to control the entry of the loop.
   if (UseLoopGuard) {
@@ -541,11 +539,9 @@ void HardwareLoop::InsertLoopDec() {
           Attribute::StrictFP))
     CondBuilder.setIsFPConstrained(true);
 
-  Function *DecFunc =
-    Intrinsic::getDeclaration(M, Intrinsic::loop_decrement,
-                              LoopDecrement->getType());
   Value *Ops[] = { LoopDecrement };
-  Value *NewCond = CondBuilder.CreateCall(DecFunc, Ops);
+  Value *NewCond = CondBuilder.CreateIntrinsic(Intrinsic::loop_decrement,
+                                               LoopDecrement->getType(), Ops);
   Value *OldCond = ExitBranch->getCondition();
   ExitBranch->setCondition(NewCond);
 
@@ -566,11 +562,9 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
           Attribute::StrictFP))
     CondBuilder.setIsFPConstrained(true);
 
-  Function *DecFunc =
-      Intrinsic::getDeclaration(M, Intrinsic::loop_decrement_reg,
-                                { EltsRem->getType() });
   Value *Ops[] = { EltsRem, LoopDecrement };
-  Value *Call = CondBuilder.CreateCall(DecFunc, Ops);
+  Value *Call = CondBuilder.CreateIntrinsic(Intrinsic::loop_decrement_reg,
+                                            {EltsRem->getType()}, Ops);
 
   LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop dec: " << *Call << "\n");
   return cast<Instruction>(Call);

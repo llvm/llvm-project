@@ -236,6 +236,8 @@ class FuncTransformDialectExtension
     : public transform::TransformDialectExtension<
           FuncTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FuncTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

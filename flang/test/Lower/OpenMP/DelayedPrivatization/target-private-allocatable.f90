@@ -18,22 +18,22 @@ end subroutine target_allocatable
 ! CHECK-SAME:    @[[VAR_PRIVATIZER_SYM:.*]] :
 ! CHECK-SAME:      [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]] alloc {
 ! CHECK:  ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! CHECK:    %[[PRIV_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "alloc_var", {{.*}}}
+! CHECK:    %[[PRIV_ALLOC:.*]] = fir.alloca [[DESC_TYPE:!fir.box<!fir.heap<i32>>]] {bindc_name = "alloc_var", {{.*}}}
 
-! CHECK-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]] : [[TYPE]]
+! CHECK-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : ([[DESC_TYPE]]) -> !fir.heap<i32>
 ! CHECK-NEXT:   %[[PRIV_ARG_ADDR:.*]] = fir.convert %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> i64
 ! CHECK-NEXT:   %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi ne, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CHECK-NEXT:   fir.if %[[ALLOC_COND]] {
 ! CHECK:          %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32 {fir.must_be_heap = true, {{.*}}}
-! CHECK-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK-NEXT:     fir.store %[[PRIV_ALLOCMEM_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
+! CHECK-NEXT:     fir.store %[[PRIV_ALLOCMEM_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
 ! CHECK-NEXT:   } else {
 ! CHECK-NEXT:     %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
-! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[ZERO_BITS]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[ZERO_BITS]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
+! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
 ! CHECK-NEXT:   }
 
 ! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
@@ -63,9 +63,11 @@ end subroutine target_allocatable
 
 ! CHECK-LABEL: func.func @_QPtarget_allocatable() {
 
-! CHECK:  %[[VAR_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
+! CHECK:  %[[VAR_ALLOC:.*]] = fir.alloca [[DESC_TYPE]]
 ! CHECK-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CHECK:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 
-! CHECK:  omp.target private(
+! CHECK: %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]])
+! CHECK-SAME: map_clauses(to) capture(ByRef) -> [[TYPE]]
+! CHECK:  omp.target map_entries(%[[MAP_VAR]] -> %arg0 : [[TYPE]]) private(
 ! CHECK-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} : [[TYPE]]) {

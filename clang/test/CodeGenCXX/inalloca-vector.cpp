@@ -28,17 +28,17 @@ void pass_vec_128() {
   receive_vec_128(NonTrivial(), z, z, z, z, z);
 }
 // CHECK-LABEL: define dso_local void @"?pass_vec_128@@YAXXZ"()
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 0
 // CHECK: call x86_thiscallcc noundef ptr @"??0NonTrivial@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
 
 // Store q, store temp alloca.
 // CHECK: store <4 x float> %{{[^,]*}}, ptr %{{[^,]*}}, align 16
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 1
 // CHECK: store ptr %{{[^,]*}}, ptr %{{[^,]*}}, align 4
 
 // Store w, store temp alloca.
 // CHECK: store <4 x float> %{{[^,]*}}, ptr %{{[^,]*}}, align 16
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 2
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 2
 // CHECK: store ptr %{{[^,]*}}, ptr %{{[^,]*}}, align 4
 
 // CHECK: call void @"?receive_vec_128@@YAXUNonTrivial@@T__m128@@1111@Z"

@@ -34,20 +34,14 @@ class MemprofThread;
 struct MemprofThreadContext final : public ThreadContextBase {
   explicit MemprofThreadContext(int tid)
       : ThreadContextBase(tid), announced(false),
-        destructor_iterations(GetPthreadDestructorIterations()), stack_id(0),
+        destructor_iterations(GetPthreadDestructorIterations()),
         thread(nullptr) {}
   bool announced;
   u8 destructor_iterations;
-  u32 stack_id;
   MemprofThread *thread;
 
   void OnCreated(void *arg) override;
   void OnFinished() override;
-
-  struct CreateThreadContextArgs {
-    MemprofThread *thread;
-    StackTrace *stack;
-  };
 };
 
 // MemprofThreadContext objects are never freed, so we need many of them.

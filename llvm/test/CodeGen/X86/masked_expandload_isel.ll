@@ -9,8 +9,8 @@ define <8 x i16> @_Z3fooiPiPs(<8 x i16> %src, <8 x i1> %mask) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr128x = COPY $xmm0
   ; CHECK-NEXT:   [[VPSLLWZ128ri:%[0-9]+]]:vr128x = VPSLLWZ128ri [[COPY]], 15
-  ; CHECK-NEXT:   [[VPMOVW2MZ128rr:%[0-9]+]]:vk16wm = VPMOVW2MZ128rr killed [[VPSLLWZ128ri]]
-  ; CHECK-NEXT:   [[VPEXPANDWZ128rmk:%[0-9]+]]:vr128x = VPEXPANDWZ128rmk [[COPY1]], killed [[VPMOVW2MZ128rr]], $noreg, 1, $noreg, 0, $noreg :: (load unknown-size from `ptr null`, align 1)
+  ; CHECK-NEXT:   [[VPMOVW2MZ128kr:%[0-9]+]]:vk16wm = VPMOVW2MZ128kr killed [[VPSLLWZ128ri]]
+  ; CHECK-NEXT:   [[VPEXPANDWZ128rmk:%[0-9]+]]:vr128x = VPEXPANDWZ128rmk [[COPY1]], killed [[VPMOVW2MZ128kr]], $noreg, 1, $noreg, 0, $noreg :: (load unknown-size from `ptr null`, align 1)
   ; CHECK-NEXT:   $xmm0 = COPY [[VPEXPANDWZ128rmk]]
   ; CHECK-NEXT:   RET 0, $xmm0
 entry:
@@ -26,8 +26,8 @@ define <8 x i16> @_Z3foo2iPiPs(<8 x i16> %src, <8 x i1> %mask) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr128x = COPY $xmm0
   ; CHECK-NEXT:   [[VPSLLWZ128ri:%[0-9]+]]:vr128x = VPSLLWZ128ri [[COPY]], 15
-  ; CHECK-NEXT:   [[VPMOVW2MZ128rr:%[0-9]+]]:vk16wm = VPMOVW2MZ128rr killed [[VPSLLWZ128ri]]
-  ; CHECK-NEXT:   [[VPEXPANDWZ128rmk:%[0-9]+]]:vr128x = VPEXPANDWZ128rmk [[COPY1]], killed [[VPMOVW2MZ128rr]], $noreg, 1, $noreg, 0, $noreg :: (load unknown-size from `ptr null`, align 16)
+  ; CHECK-NEXT:   [[VPMOVW2MZ128kr:%[0-9]+]]:vk16wm = VPMOVW2MZ128kr killed [[VPSLLWZ128ri]]
+  ; CHECK-NEXT:   [[VPEXPANDWZ128rmk:%[0-9]+]]:vr128x = VPEXPANDWZ128rmk [[COPY1]], killed [[VPMOVW2MZ128kr]], $noreg, 1, $noreg, 0, $noreg :: (load unknown-size from `ptr null`, align 16)
   ; CHECK-NEXT:   $xmm0 = COPY [[VPEXPANDWZ128rmk]]
   ; CHECK-NEXT:   RET 0, $xmm0
 entry:

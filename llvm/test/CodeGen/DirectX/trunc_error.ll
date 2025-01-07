@@ -1,7 +1,8 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation trunc does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload Type
+; CHECK: in function trunc_double
+; CHECK-SAME: Cannot create Trunc operation: Invalid overload type
 
 define noundef double @trunc_double(double noundef %a) {
 entry:

@@ -3,12 +3,12 @@
 
 // CHECK: define spir_func noundef i32 @_Z6test_1v() [[A0:#[0-9]+]] {
 // CHECK: %[[C1:[0-9]+]] = call token @llvm.experimental.convergence.entry()
-// CHECK: call i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %[[C1]]) ]
+// CHECK: call spir_func i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %[[C1]]) ]
 uint test_1() {
   return WaveGetLaneIndex();
 }
 
-// CHECK-DAG: declare i32 @__hlsl_wave_get_lane_index() [[A1:#[0-9]+]]
+// CHECK-DAG: declare spir_func i32 @__hlsl_wave_get_lane_index() [[A1:#[0-9]+]]
 
 // CHECK: define spir_func noundef i32 @_Z6test_2v() [[A0]] {
 // CHECK: %[[C2:[0-9]+]] = call token @llvm.experimental.convergence.entry()

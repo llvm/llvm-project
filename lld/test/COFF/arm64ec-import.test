@@ -1,0 +1,233 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test.s -o test.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows icall.s -o icall.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows hybmp.s -o hybmp.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows test.s -o test-x86_64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-lib -machine:arm64ec -def:test.def -out:test-arm64ec.lib
+RUN: llvm-lib -machine:arm64ec -def:test2.def -out:test2-arm64ec.lib
+RUN: llvm-lib -machine:x64 -def:test.def -out:test-x86_64.lib
+
+Link using ARM64EC import library:
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
+RUN:          test.obj test-arm64ec.lib test2-arm64ec.lib -map
+
+Link using x86_64 import library:
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
+RUN:          test.obj test-x86_64.lib test2-arm64ec.lib -map
+
+Link using x86_64 object file:
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out3.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
+RUN:          test-x86_64.obj test-arm64ec.lib test2-arm64ec.lib -map
+
+RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
+RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
+RUN: llvm-readobj --coff-imports out3.dll | FileCheck -check-prefix=IMPORTS %s
+IMPORTS:      Import {
+IMPORTS-NEXT:   Name: test.dll
+IMPORTS-NEXT:   ImportLookupTableRVA: 0x4218
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x3000
+IMPORTS-NEXT:   Symbol: data (0)
+IMPORTS-NEXT:   Symbol: func (0)
+IMPORTS-NEXT:   Symbol: func2 (0)
+IMPORTS-NEXT: }
+IMPORTS-NEXT: Import {
+IMPORTS-NEXT:   Name: test2.dll
+IMPORTS-NEXT:   ImportLookupTableRVA:
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x3020
+IMPORTS-NEXT:   Symbol: t2func (0)
+IMPORTS-NEXT: }
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-objdump -d out3.dll | FileCheck -check-prefix=DISASM %s
+
+DISASM:      180001000: 52800000     mov     w0, #0x0                // =0
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT: 180001008: 90000030     adrp    x16, 0x180005000
+DISASM-NEXT: 18000100c: f9400610     ldr     x16, [x16, #0x8]
+DISASM-NEXT: 180001010: d61f0200     br      x16
+DISASM-NEXT: 180001014: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 180001018: f940056b     ldr     x11, [x11, #0x8]
+DISASM-NEXT: 18000101c: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001020: 9101714a     add     x10, x10, #0x5c
+DISASM-NEXT: 180001024: 17fffff7     b       0x180001000 <.text>
+DISASM-NEXT: 180001028: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 18000102c: f940096b     ldr     x11, [x11, #0x10]
+DISASM-NEXT: 180001030: f0ffffea     adrp    x10, 0x180000000
+DISASM-NEXT: 180001034: 9100014a     add     x10, x10, #0x0
+DISASM-NEXT: 180001038: 17fffff2     b       0x180001000 <.text>
+DISASM-NEXT: 18000103c: 90000030     adrp    x16, 0x180005000
+DISASM-NEXT: 180001040: f9401210     ldr     x16, [x16, #0x20]
+DISASM-NEXT: 180001044: d61f0200     br      x16
+DISASM-NEXT: 180001048: d000000b     adrp    x11, 0x180003000
+DISASM-NEXT: 18000104c: f940116b     ldr     x11, [x11, #0x20]
+DISASM-NEXT: 180001050: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001054: 9101914a     add     x10, x10, #0x64
+DISASM-NEXT: 180001058: 17ffffea     b       0x180001000 <.text>
+DISASM-NEXT: 18000105c: 52800020     mov     w0, #0x1                // =1
+DISASM-NEXT: 180001060: d65f03c0     ret
+DISASM-NEXT: 180001064: 52800040     mov     w0, #0x2                // =2
+DISASM-NEXT: 180001068: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)           # 0x180003008
+
+RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
+RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %s
+TESTSEC:      0x180008000 08500000 00300000 10500000 20500000
+TESTSEC-NEXT: 0x180008010 08300000 00500000 10300000 20300000
+TESTSEC-NEXT: 0x180008020 14100000 28100000 00200000 08100000
+TESTSEC-NEXT: 0x180008030 3c100000 88420000
+
+RUN: llvm-readobj --hex-dump=.test out3.dll | FileCheck -check-prefix=TESTSEC-X64 %s
+TESTSEC-X64:      0x180008000 08300000 00300000 10300000 20300000
+TESTSEC-X64-NEXT: 0x180008010 08300000 00500000 10300000 20300000
+TESTSEC-X64-NEXT: 0x180008020 14100000 28100000 00200000 08100000
+TESTSEC-X64-NEXT: 0x180008030 3c100000 88420000
+
+RUN: FileCheck --check-prefix=MAP %s < out.map
+RUN: FileCheck --check-prefix=MAP %s < out2.map
+RUN: FileCheck --check-prefix=MAP %s < out3.map
+MAP:      0001:00000008       #func                      0000000180001008     test{{.*}}:test.dll
+MAP-NEXT: 0001:00000014       __impchk_func              0000000180001014     test{{.*}}:test.dll
+MAP-NEXT: 0001:00000028       __impchk_func2             0000000180001028     test{{.*}}:test.dll
+MAP-NEXT: 0001:0000003c       #t2func                    000000018000103c     test2{{.*}}:test2.dll
+MAP-NEXT: 0001:00000048       __impchk_t2func            0000000180001048     test2{{.*}}:test2.dll
+MAP:      0001:00001000       func                       0000000180002000     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000000       __imp_data                 0000000180003000     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000008       __imp_aux_func             0000000180003008     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000010       __imp_aux_func2            0000000180003010     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000020       __imp_aux_t2func           0000000180003020     test2{{.*}}:test2.dll
+MAP:      0002:00001280       __auximpcopy_data          0000000180004280     test{{.*}}:test.dll
+MAP-NEXT: 0002:00001288       __auximpcopy_func          0000000180004288     test{{.*}}:test.dll
+MAP-NEXT: 0002:00001290       __auximpcopy_func2         0000000180004290     test{{.*}}:test.dll
+MAP-NEXT: 0002:000012a0       __auximpcopy_t2func        00000001800042a0     test2{{.*}}:test2.dll
+MAP:      0002:00002000       __imp_aux_data             0000000180005000     test{{.*}}:test.dll
+MAP-NEXT: 0002:00002008       __imp_func                 0000000180005008     test{{.*}}:test.dll
+MAP-NEXT: 0002:00002010       __imp_func2                0000000180005010     test{{.*}}:test.dll
+MAP-NEXT: 0002:00002020       __imp_t2func               0000000180005020     test2{{.*}}:test2.dll
+
+RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
+RUN: llvm-readobj --headers out2.dll | FileCheck -check-prefix=HEADERS %s
+RUN: llvm-readobj --headers out3.dll | FileCheck -check-prefix=HEADERS %s
+HEADERS:  LoadConfigTableRVA: 0x4010
+HEADERS:  IATRVA: 0x3000
+HEADERS:  IATSize: 0x1000
+
+RUN: llvm-readobj --coff-load-config out.dll | FileCheck -check-prefix=LOADCONFIG %s
+RUN: llvm-readobj --coff-load-config out2.dll | FileCheck -check-prefix=LOADCONFIG %s
+RUN: llvm-readobj --coff-load-config out3.dll | FileCheck -check-prefix=LOADCONFIG %s
+LOADCONFIG: AuxiliaryIAT: 0x5000
+LOADCONFIG: AuxiliaryIATCopy: 0x4280
+
+RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck -check-prefix=RDATA %s
+RUN: llvm-readobj --hex-dump=.rdata out2.dll | FileCheck -check-prefix=RDATA %s
+RUN: llvm-readobj --hex-dump=.rdata out3.dll | FileCheck -check-prefix=RDATA %s
+RDATA:      0x180004280 00000000 00000000 14100080 01000000
+RDATA-NEXT: 0x180004290 28100080 01000000 00000000 00000000
+RDATA-NEXT: 0x1800042a0 48100080 01000000 00000000 00000000
+RDATA:      0x180005000 00000000 00000000 14100080 01000000
+RDATA-NEXT: 0x180005010 28100080 01000000 00000000 00000000
+RDATA-NEXT: 0x180005020 48100080 01000000 00000000 00000000
+
+RUN: llvm-readobj --coff-basereloc out.dll | FileCheck -check-prefix=BASERELOC %s
+RUN: llvm-readobj --coff-basereloc out2.dll | FileCheck -check-prefix=BASERELOC %s
+RUN: llvm-readobj --coff-basereloc out3.dll | FileCheck -check-prefix=BASERELOC %s
+BASERELOC:      BaseReloc [
+Aux IAT copy:
+BASERELOC:          Address: 0x4288
+BASERELOC-NEXT:   }
+BASERELOC-NEXT:   Entry {
+BASERELOC-NEXT:     Type: DIR64
+BASERELOC-NEXT:     Address: 0x4290
+BASERELOC-NEXT:   }
+BASERELOC-NEXT:   Entry {
+BASERELOC-NEXT:     Type: DIR64
+BASERELOC-NEXT:     Address: 0x42A0
+BASERELOC-NEXT:   }
+Aux IAT:
+BASERELOC-NOT:      Address: 0x5000
+BASERELOC:          Address: 0x5008
+BASERELOC-NEXT:   }
+BASERELOC-NEXT:   Entry {
+BASERELOC-NEXT:     Type: DIR64
+BASERELOC-NEXT:     Address: 0x5010
+BASERELOC-NEXT:   }
+BASERELOC-NEXT:   Entry {
+BASERELOC-NEXT:     Type: DIR64
+BASERELOC-NEXT:     Address: 0x5020
+BASERELOC-NEXT:   }
+
+#--- test.s
+    .section .test, "r"
+    .globl arm64ec_data_sym
+    .p2align 2, 0x0
+arm64ec_data_sym:
+    .rva __imp_func
+    .rva __imp_data
+    .rva __imp_func2
+    .rva __imp_t2func
+    .rva __imp_aux_func
+    .rva __imp_aux_data
+    .rva __imp_aux_func2
+    .rva __imp_aux_t2func
+    .rva __impchk_func
+    .rva __impchk_func2
+    .rva func
+    .rva "#func"
+    .rva "#t2func"
+    .rva __auximpcopy_func
+
+#--- icall.s
+    .text
+    .globl __icall_helper_arm64ec
+    .p2align 2, 0x0
+__icall_helper_arm64ec:
+    mov w0, #0
+    ret
+
+#--- hybmp.s
+    .section .hybmp$x, "yi"
+    // __imp_func exit thunk is ignored when func is defined as well
+    .symidx __imp_func
+    .symidx dead_exit_thunk
+    .word 4
+    .symidx func
+    .symidx func_exit_thunk
+    .word 4
+    .symidx __imp_t2func
+    .symidx t2func_exit_thunk
+    .word 4
+
+    .section .wowthk$aa,"xr",discard,func_exit_thunk
+    .globl func_exit_thunk
+func_exit_thunk:
+    mov w0, #1
+    ret
+
+    .section .wowthk$aa,"xr",discard,t2func_exit_thunk
+    .globl t2func_exit_thunk
+t2func_exit_thunk:
+    mov w0, #2
+    ret
+
+    .section .wowthk$aa,"xr",discard,dead_exit_thunk
+    .globl dead_exit_thunk
+dead_exit_thunk:
+    mov w0, #0xdead
+    ret
+
+#--- test.def
+NAME test.dll
+EXPORTS
+    data DATA
+    func
+    func2
+    unused_func
+
+#--- test2.def
+NAME test2.dll
+EXPORTS
+    t2func

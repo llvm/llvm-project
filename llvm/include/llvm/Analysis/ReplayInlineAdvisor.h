@@ -14,7 +14,6 @@
 
 namespace llvm {
 class CallBase;
-class Function;
 class LLVMContext;
 class Module;
 

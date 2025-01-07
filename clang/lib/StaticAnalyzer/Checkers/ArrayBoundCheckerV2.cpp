@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -241,26 +242,25 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
 static std::pair<NonLoc, nonloc::ConcreteInt>
 getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
                      SValBuilder &svalBuilder) {
+  const llvm::APSInt &extentVal = extent.getValue();
   std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
-      llvm::APSInt constant =
-          APSIntType(extent.getValue()).convert(SIE->getRHS());
+      llvm::APSInt constant = APSIntType(extentVal).convert(SIE->getRHS());
       switch (SIE->getOpcode()) {
       case BO_Mul:
         // The constant should never be 0 here, becasue multiplication by zero
         // is simplified by the engine.
-        if ((extent.getValue() % constant) != 0)
+        if ((extentVal % constant) != 0)
           return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
         else
           return getSimplifiedOffsets(
               nonloc::SymbolVal(SIE->getLHS()),
-              svalBuilder.makeIntVal(extent.getValue() / constant),
-              svalBuilder);
+              svalBuilder.makeIntVal(extentVal / constant), svalBuilder);
       case BO_Add:
         return getSimplifiedOffsets(
             nonloc::SymbolVal(SIE->getLHS()),
-            svalBuilder.makeIntVal(extent.getValue() - constant), svalBuilder);
+            svalBuilder.makeIntVal(extentVal - constant), svalBuilder);
       default:
         break;
       }
@@ -363,7 +363,7 @@ static std::string getRegionName(const SubRegion *Region) {
 
 static std::optional<int64_t> getConcreteValue(NonLoc SV) {
   if (auto ConcreteVal = SV.getAs<nonloc::ConcreteInt>()) {
-    return ConcreteVal->getValue().tryExtValue();
+    return ConcreteVal->getValue()->tryExtValue();
   }
   return std::nullopt;
 }
@@ -373,14 +373,14 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
 }
 
 static Messages getPrecedesMsgs(const SubRegion *Region, NonLoc Offset) {
-  std::string RegName = getRegionName(Region);
-  SmallString<128> Buf;
-  llvm::raw_svector_ostream Out(Buf);
-  Out << "Access of " << RegName << " at negative byte offset";
-  if (auto ConcreteIdx = Offset.getAs<nonloc::ConcreteInt>())
-    Out << ' ' << ConcreteIdx->getValue();
-  return {formatv("Out of bound access to memory preceding {0}", RegName),
-          std::string(Buf)};
+  std::string RegName = getRegionName(Region), OffsetStr = "";
+
+  if (auto ConcreteOffset = getConcreteValue(Offset))
+    OffsetStr = formatv(" {0}", ConcreteOffset);
+
+  return {
+      formatv("Out of bound access to memory preceding {0}", RegName),
+      formatv("Access of {0} at negative byte offset{1}", RegName, OffsetStr)};
 }
 
 /// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
@@ -609,7 +609,7 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
   // CHECK UPPER BOUND
   DefinedOrUnknownSVal Size = getDynamicExtent(State, Reg, SVB);
   if (auto KnownSize = Size.getAs<NonLoc>()) {
-    // In a situation where both overflow and overflow are possible (but the
+    // In a situation where both underflow and overflow are possible (but the
     // index is either tainted or known to be invalid), the logic of this
     // checker will first assume that the offset is non-negative, and then
     // (with this additional assumption) it will detect an overflow error.

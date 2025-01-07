@@ -57,6 +57,8 @@ public:
 
   static const char *GetBroadcasterClass();
 
+  static bool SupportsLanguage(lldb::LanguageType language);
+
   lldb::SBBroadcaster GetBroadcaster();
 
   /// Get progress data from a SBEvent whose type is eBroadcastBitProgress.
@@ -302,6 +304,8 @@ public:
 
   bool GetUseColor() const;
 
+  bool SetShowInlineDiagnostics(bool);
+
   bool SetUseSourceCache(bool use_source_cache);
 
   bool GetUseSourceCache() const;
@@ -378,6 +382,10 @@ public:
 
   void SetTerminalWidth(uint32_t term_width);
 
+  uint32_t GetTerminalHeight() const;
+
+  void SetTerminalHeight(uint32_t term_height);
+
   lldb::user_id_t GetID();
 
   const char *GetPrompt() const;
@@ -421,6 +429,11 @@ public:
   SBTypeFilter GetFilterForType(SBTypeNameSpecifier);
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
+
+  /// Clear collected statistics for targets belonging to this debugger. This
+  /// includes clearing symbol table and debug info parsing/index time for all
+  /// modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
 
 #ifndef SWIG
   /// Run the command interpreter.
