@@ -113,7 +113,7 @@ option(LIBCXX_ENABLE_MONOTONIC_CLOCK
 #
 # TODO TZDB make the default always ON when most platforms ship with the IANA
 # database.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux|Darwin")
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT ON)
 else()
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT OFF)
