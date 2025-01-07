@@ -39,7 +39,8 @@ class MClassSysReg<bits<1> UniqMask1,
 
 def MClassSysRegsList : GenericTable {
   let FilterClass = "MClassSysReg";
-  let Fields = ["Name", "M1Encoding12", "M2M3Encoding8", "Encoding", "Requires"];
+  let Fields = ["Name", "M1Encoding12", "M2M3Encoding8", "Encoding",
+                "Requires"];
 }
 
 def lookupMClassSysRegByName : SearchIndex {
