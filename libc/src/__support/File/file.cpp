@@ -195,12 +195,12 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
   } else if (bufmode == _IOFBF) { // fully buffered
     return read_unlocked_fbf(static_cast<uint8_t *>(data), len);
   } else /*if (bufmode == _IOLBF) */ { // line buffered
-    // There is no line buffered mode for read. Use fully buffer instead.
+    // There is no line buffered mode for read. Use fully buffered instead.
     return read_unlocked_fbf(static_cast<uint8_t *>(data), len);
   }
 }
 
-FileIOResult File::copy_data_from_buf(uint8_t *data, size_t len) {
+size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data), len);
 
@@ -244,7 +244,7 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
         eof = true;
       else
         err = true;
-      return {available_data + fetched_size, result.has_error()};
+      return {available_data + fetched_size, result.error};
     }
     return len;
   }
@@ -283,7 +283,7 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
     else
       err = true;
   }
-  return {result + available_data, result.has_error()};
+  return {result + available_data, result.error};
 }
 
 int File::ungetc_unlocked(int c) {
