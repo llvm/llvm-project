@@ -177,10 +177,12 @@ std::shared_ptr<AddrBasedCtxKey> AddressStack::getContextKey() {
   std::shared_ptr<AddrBasedCtxKey> KeyStr = std::make_shared<AddrBasedCtxKey>();
   KeyStr->Context = Stack;
   CSProfileGenerator::compressRecursionContext<uint64_t>(KeyStr->Context);
-  // Trim the context depth according to --csprof-max-unsymbolized-context-depth
-  // and --csprof-max-context-depth. If both are set, use the minimum.
-  // MaxContextDepth(--csprof-max-context-depth) is used to trim the final
-  // context, so here it applies to unsymbolized context trimming as well.
+  // MaxContextDepth(--csprof-max-context-depth) is used to trim both symbolized
+  // and unsymbolized profile context. Sometimes we want to at least preserve
+  // the inlinings for the leaf frame(the profiled binary inlining),
+  // --csprof-max-context-depth may not be flexible enough, in this case,
+  // --csprof-max-unsymbolized-context-depth is used to limit the context for
+  // unsymbolized profile. If both are set, use the minimum of them.
   int Depth = CSProfileGenerator::MaxContextDepth != -1
                   ? CSProfileGenerator::MaxContextDepth
                   : KeyStr->Context.size();
