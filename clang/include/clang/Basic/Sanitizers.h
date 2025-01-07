@@ -190,10 +190,10 @@ SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 
 /// Parse a single weighted value (e.g., 'undefined=0.05') from a -fsanitize= or
 /// -fno-sanitize= value list.
-/// The relevant weight(s) are updated in the passed array.
+/// The relevant weight(s) are updated in the passed Cutoffs parameter.
 /// Individual Cutoffs are never reset to zero unless explicitly set
 /// (e.g., 'null=0.0').
-/// Returns \c False if \p Value is not known.
+/// Returns \c False if \p Value is not known or the weight is not valid.
 bool parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
                                  SanitizerMaskCutoffs &Cutoffs);
 

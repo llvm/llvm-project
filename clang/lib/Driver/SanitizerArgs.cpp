@@ -114,11 +114,10 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                                     bool DiagnoseErrors);
 
 /// Parse a -fsanitize=<sanitizer1>=<value1>... or -fno-sanitize= argument's
-/// values, diagnosing any invalid components. Returns an EMPTY SanitizerMask.
+/// values, diagnosing any invalid components.
 /// Cutoffs are stored in the passed parameter.
-static SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
-                                     bool DiagnoseErrors,
-                                     SanitizerMaskCutoffs &Cutoffs);
+static void parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
+                            bool DiagnoseErrors, SanitizerMaskCutoffs &Cutoffs);
 
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
@@ -1537,31 +1536,20 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
   return Kinds;
 }
 
-SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
-                              bool DiagnoseErrors,
-                              SanitizerMaskCutoffs &Cutoffs) {
+void parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
+                     bool DiagnoseErrors, SanitizerMaskCutoffs &Cutoffs) {
   assert(A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ) &&
          "Invalid argument in parseArgCutoffs!");
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
 
     // We don't check the value of Cutoffs[i]: it's legal to specify
-    // -fsanitize-blah=value=0.0.
-    if (!parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs))
+    // a cutoff of 0.
+    if (!parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs) &&
+        DiagnoseErrors)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Value;
   }
-
-  return {};
-}
-
-SanitizerMask parseArgValuesOrCutoffs(const Driver &D, const llvm::opt::Arg *A,
-                                      bool DiagnoseErrors,
-                                      SanitizerMaskCutoffs *Cutoffs) {
-  if (Cutoffs)
-    return parseArgCutoffs(D, A, DiagnoseErrors, *Cutoffs);
-  else
-    return parseArgValues(D, A, DiagnoseErrors);
 }
 
 static int parseOverflowPatternExclusionValues(const Driver &D,
