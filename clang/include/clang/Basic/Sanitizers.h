@@ -195,7 +195,7 @@ SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 /// Individual Cutoffs are never reset to zero unless explicitly set
 /// (e.g., 'null=0.0').
 SanitizerMask parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
-                                          SanitizerMaskCutoffs *Cutoffs);
+                                          SanitizerMaskCutoffs &Cutoffs);
 
 /// Serialize a SanitizerSet into values for -fsanitize= or -fno-sanitize=.
 void serializeSanitizerSet(SanitizerSet Set,

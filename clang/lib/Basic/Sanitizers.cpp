@@ -38,7 +38,7 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
 
 SanitizerMask
 clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
-                                   SanitizerMaskCutoffs *Cutoffs) {
+                                   SanitizerMaskCutoffs &Cutoffs) {
   SanitizerMask ParsedKind = llvm::StringSwitch<SanitizerMask>(Value)
 #define SANITIZER(NAME, ID) .StartsWith(NAME "=", SanitizerKind::ID)
 #define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
@@ -47,7 +47,7 @@ clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
 #include "clang/Basic/Sanitizers.def"
                                  .Default(SanitizerMask());
 
-  if (ParsedKind && Cutoffs) {
+  if (ParsedKind) {
     size_t equalsIndex = Value.find_first_of('=');
     if (equalsIndex != llvm::StringLiteral::npos) {
       double arg;
@@ -59,7 +59,7 @@ clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
 
         for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
           if (ExpandedKind & SanitizerMask::bitPosToMask(i))
-            (*Cutoffs)[i] = arg;
+            Cutoffs[i] = arg;
       }
     }
   }

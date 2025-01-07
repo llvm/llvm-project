@@ -1438,7 +1438,7 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
 
 static void parseSanitizerWeightedKinds(
     StringRef FlagName, const std::vector<std::string> &Sanitizers,
-    DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskCutoffs *Cutoffs) {
+    DiagnosticsEngine &Diags, SanitizerSet &S, SanitizerMaskCutoffs &Cutoffs) {
   for (const auto &Sanitizer : Sanitizers) {
     SanitizerMask K =
         parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs);
@@ -2299,7 +2299,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
                               Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
                               Diags, Opts.NoSanitizeTopHot,
-                              &Opts.NoSanitizeTopHotCutoffs);
+                              Opts.NoSanitizeTopHotCutoffs);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

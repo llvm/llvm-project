@@ -118,7 +118,7 @@ static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 /// Cutoffs are stored in the passed parameter.
 static SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
                                      bool DiagnoseErrors,
-                                     SanitizerMaskCutoffs *Cutoffs);
+                                     SanitizerMaskCutoffs &Cutoffs);
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
 /// invalid components. Returns a SanitizerMask.
@@ -1555,12 +1555,9 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 
 SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
                               bool DiagnoseErrors,
-                              SanitizerMaskCutoffs *Cutoffs) {
+                              SanitizerMaskCutoffs &Cutoffs) {
   assert(A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ) &&
          "Invalid argument in parseArgCutoffs!");
-  assert(Cutoffs &&
-         "Null Cutoffs parameter provided for parsing fno_sanitize_top_hot!");
-
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
@@ -1580,7 +1577,7 @@ SanitizerMask parseArgValuesOrCutoffs(const Driver &D, const llvm::opt::Arg *A,
                                       bool DiagnoseErrors,
                                       SanitizerMaskCutoffs *Cutoffs) {
   if (Cutoffs)
-    return parseArgCutoffs(D, A, DiagnoseErrors, Cutoffs);
+    return parseArgCutoffs(D, A, DiagnoseErrors, *Cutoffs);
   else
     return parseArgValues(D, A, DiagnoseErrors);
 }
