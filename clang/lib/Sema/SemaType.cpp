@@ -7761,20 +7761,22 @@ static bool handleArmAgnosticAttribute(Sema &S,
     if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
       return true;
 
-    if (StateName == "sme_za_state") {
-      if (EPI.AArch64SMEAttributes &
-          (FunctionType::SME_ZAMask | FunctionType::SME_ZT0Mask)) {
-        S.Diag(Attr.getLoc(), diag::err_conflicting_attributes_arm_agnostic);
-        Attr.setInvalid();
-        return true;
-      }
-      EPI.setArmSMEAttribute(FunctionType::SME_AgnosticZAStateMask);
-    } else {
+    if (StateName != "sme_za_state") {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
       Attr.setInvalid();
       return true;
     }
+
+    if (EPI.AArch64SMEAttributes &
+        (FunctionType::SME_ZAMask | FunctionType::SME_ZT0Mask)) {
+      S.Diag(Attr.getLoc(), diag::err_conflicting_attributes_arm_agnostic);
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setArmSMEAttribute(FunctionType::SME_AgnosticZAStateMask);
   }
+
   return false;
 }
 

@@ -4598,7 +4598,7 @@ public:
     SME_AgnosticZAStateMask = 1 << SME_AgnosticZAStateShift,
 
     SME_AttributeMask =
-        0b1'111'111'11 // We can't support more than 16 bits because of
+        0b1'111'111'11 // We can't support more than 9 bits because of
                        // the bitmask in FunctionTypeArmAttributes
                        // and ExtProtoInfo.
   };

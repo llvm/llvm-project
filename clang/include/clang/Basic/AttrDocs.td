@@ -7648,7 +7648,7 @@ the function is agnostic about.  The supported states for S are:
 * ``"sme_za_state"`` for any state enabled by PSTATE.ZA (including the
   bit itself)
 
-The attributes ``__arm_agnostic("sme_za_state") cannot be used in conjunction
+The attributes ``__arm_agnostic("sme_za_state")`` cannot be used in conjunction
 with ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` or
 ``__arm_preserves(S)`` where state S describes state enabled by PSTATE.ZA,
 such as "za" or "zt0".

@@ -101,12 +101,12 @@ void sme_arm_agnostic_shared_za_za(void) __arm_agnostic("sme_za_state") __arm_in
 // expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
 void sme_arm_agnostic_shared_za_za_rev(void) __arm_inout("za") __arm_agnostic("sme_za_state") {}
 
-// expected-cpp-error@+2 {{support to handle __arm_agnostic("sme_za_state") together with __arm_new("za") or __arm_new("zt0") is not yet implemented}}
-// expected-error@+1 {{support to handle __arm_agnostic("sme_za_state") together with __arm_new("za") or __arm_new("zt0") is not yet implemented}}
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
 __arm_new("zt0") void sme_arm_agnostic_arm_new_zt0(void) __arm_agnostic("sme_za_state") {}
 
-// expected-cpp-error@+2 {{support to handle __arm_agnostic("sme_za_state") together with __arm_new("za") or __arm_new("zt0") is not yet implemented}}
-// expected-error@+1 {{support to handle __arm_agnostic("sme_za_state") together with __arm_new("za") or __arm_new("zt0") is not yet implemented}}
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
 __arm_new("za") void sme_arm_agnostic_arm_new_za(void) __arm_agnostic("sme_za_state") {}
 
 //
