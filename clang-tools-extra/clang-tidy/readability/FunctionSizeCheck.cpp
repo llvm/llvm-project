@@ -20,6 +20,8 @@ class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
   using Base = RecursiveASTVisitor<FunctionASTVisitor>;
 
 public:
+  FunctionASTVisitor(bool IgnoreMacros) : IgnoreMacros(IgnoreMacros) {}
+
   bool VisitVarDecl(VarDecl *VD) {
     // Do not count function params.
     // Do not count decomposition declarations (C++17's structured bindings).
@@ -38,6 +40,9 @@ public:
   bool TraverseStmt(Stmt *Node) {
     if (!Node)
       return Base::TraverseStmt(Node);
+
+    if (IgnoreMacros && Node->getBeginLoc().isMacroID())
+      return true;
 
     if (TrackedParent.back() && !isa<CompoundStmt>(Node))
       ++Info.Statements;
@@ -120,6 +125,9 @@ public:
   llvm::BitVector TrackedParent;
   unsigned StructNesting = 0;
   unsigned CurrentNestingLevel = 0;
+
+private:
+  const bool IgnoreMacros;
 };
 
 } // namespace
@@ -135,7 +143,9 @@ FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
       NestingThreshold(
           Options.get("NestingThreshold", DefaultNestingThreshold)),
       VariableThreshold(
-          Options.get("VariableThreshold", DefaultVariableThreshold)) {}
+          Options.get("VariableThreshold", DefaultVariableThreshold)),
+      IgnoreMacros(
+          Options.getLocalOrGlobal("IgnoreMacros", DefaultIgnoreMacros)) {}
 
 void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LineThreshold", LineThreshold);
@@ -144,6 +154,7 @@ void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ParameterThreshold", ParameterThreshold);
   Options.store(Opts, "NestingThreshold", NestingThreshold);
   Options.store(Opts, "VariableThreshold", VariableThreshold);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
@@ -158,7 +169,7 @@ void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
-  FunctionASTVisitor Visitor;
+  FunctionASTVisitor Visitor(IgnoreMacros);
   Visitor.Info.NestingThreshold = NestingThreshold.value_or(-1);
   Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func));
   auto &FI = Visitor.Info;

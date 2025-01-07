@@ -178,6 +178,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding the option
+  `IgnoreMacros` to allow ignoring code inside macros.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

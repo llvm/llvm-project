@@ -43,3 +43,10 @@ Options
    The default is `none` (ignore the number of variables).
    Please note that function parameters and variables declared in lambdas,
    GNU Statement Expressions, and nested class inline functions are not counted.
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will ignore code inside macros. Note, that also
+   any macro arguments are ignored, even if they should count to the complexity.
+   As this might change in the future, this option isn't guaranteed to be
+   forward-compatible. Default is `false`.
