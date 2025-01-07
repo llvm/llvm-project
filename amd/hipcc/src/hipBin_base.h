@@ -51,10 +51,7 @@ THE SOFTWARE.
 # define HIPCC_VERBOSE                  "HIPCC_VERBOSE"
 # define HCC_AMDGPU_TARGET              "HCC_AMDGPU_TARGET"
 
-# define HIP_BASE_VERSION_MAJOR     "6"
-# define HIP_BASE_VERSION_MINOR     "2"
-# define HIP_BASE_VERSION_PATCH     "0"
-# define HIP_BASE_VERSION_GITHASH   "0"
+# define HIP_BASE_VERSION_DEFAULT     "9999"
 
 enum PlatformType {
   amd = 0,
@@ -361,23 +358,29 @@ void HipBinBase::readHipVersion() {
     hipVersionPath /= "share/hip/version";
   map<string, string> hipVersionMap;
   hipVersionMap = hipBinUtilPtr_->parseConfigFile(hipVersionPath);
-  string hip_version_major, hip_version_minor,
-         hip_version_patch, hip_version_githash;
-  hip_version_major = hipBinUtilPtr_->readConfigMap(
-                      hipVersionMap, "HIP_VERSION_MAJOR",
-                      HIP_BASE_VERSION_MAJOR);
-  hip_version_minor = hipBinUtilPtr_->readConfigMap(
-                      hipVersionMap, "HIP_VERSION_MINOR",
-                      HIP_BASE_VERSION_MINOR);
-  hip_version_patch = hipBinUtilPtr_->readConfigMap(
-                      hipVersionMap, "HIP_VERSION_PATCH",
-                      HIP_BASE_VERSION_PATCH);
-  hip_version_githash = hipBinUtilPtr_->readConfigMap(
-                      hipVersionMap, "HIP_VERSION_GITHASH",
-                      HIP_BASE_VERSION_GITHASH);
-  hipVersion = hip_version_major + "." + hip_version_minor +
-               "." + hip_version_patch  + "-" + hip_version_githash;
-  hipVersion_ = hipVersion;
+
+  if (hipVersionMap.empty()) {
+    std::cerr << "Warning: HIP version file: " << hipVersionPath << " not found.  Cannot give HIP version information." << endl;
+    return;
+  } else {
+    string hip_version_major, hip_version_minor,
+           hip_version_patch, hip_version_githash;
+    hip_version_major = hipBinUtilPtr_->readConfigMap(
+                        hipVersionMap, "HIP_VERSION_MAJOR",
+                        HIP_BASE_VERSION_DEFAULT);
+    hip_version_minor = hipBinUtilPtr_->readConfigMap(
+                        hipVersionMap, "HIP_VERSION_MINOR",
+                        HIP_BASE_VERSION_DEFAULT);
+    hip_version_patch = hipBinUtilPtr_->readConfigMap(
+                        hipVersionMap, "HIP_VERSION_PATCH",
+                        HIP_BASE_VERSION_DEFAULT);
+    hip_version_githash = hipBinUtilPtr_->readConfigMap(
+                        hipVersionMap, "HIP_VERSION_GITHASH",
+                        HIP_BASE_VERSION_DEFAULT);
+    hipVersion = hip_version_major + "." + hip_version_minor +
+                 "." + hip_version_patch  + "-" + hip_version_githash;
+    hipVersion_ = hipVersion;
+  }
 }
 
 // prints system information
