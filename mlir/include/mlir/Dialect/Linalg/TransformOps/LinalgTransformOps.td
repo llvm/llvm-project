@@ -106,6 +106,17 @@ def ApplyFoldAddIntoDestPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyVectorContractToFMAPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.contract_to_fma",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+     Collects pattern to lower vector contraction operation (batch reduce matmul) for GEMM of size MxN to
+        sequence of vector FMAs.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.pad_vectorization",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
