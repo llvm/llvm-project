@@ -5695,11 +5695,6 @@ Value *ScalarExprEmitter::VisitChooseExpr(ChooseExpr *E) {
 }
 
 Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
-  QualType Ty = VE->getType();
-
-  if (Ty->isVariablyModifiedType())
-    CGF.EmitVariablyModifiedType(Ty);
-
   Address ArgValue = Address::invalid();
   RValue ArgPtr = CGF.EmitVAArg(VE, ArgValue);
 
