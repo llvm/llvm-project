@@ -219,10 +219,6 @@ bool BitcastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (!aT || !bT)
     return false;
 
-  if (isa<IndexType>(aT.getElementType()) ||
-      isa<IndexType>(bT.getElementType()))
-    return false;
-
   if (aT.getElementTypeBitWidth() != bT.getElementTypeBitWidth())
     return false;
 
