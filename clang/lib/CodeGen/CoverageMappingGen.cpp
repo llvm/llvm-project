@@ -948,20 +948,6 @@ struct CounterCoverageMappingBuilder
     return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
   }
 
-  /// Returns {TrueCnt,FalseCnt} for "implicit default".
-  /// FalseCnt is considered as the False count on SwitchStmt.
-  std::pair<Counter, Counter>
-  getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
-                                      Counter CaseCountSum) {
-    // Simplify is skipped while building the counters above: it can get
-    // really slow on top of switches with thousands of cases. Instead,
-    // trigger simplification by adding zero to the last counter.
-    CaseCountSum =
-        addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
-
-    return {CaseCountSum, Builder.subtract(ParentCount, CaseCountSum)};
-  }
-
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
     if (OutCount == ParentCount)
       return true;
@@ -1920,9 +1906,15 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      auto Counters = getSwitchImplicitDefaultCounterPair(
-          S->getCond(), ParentCount, CaseCountSum);
-      createBranchRegion(S->getCond(), Counters.first, Counters.second);
+      // Simplify is skipped while building the counters above: it can get
+      // really slow on top of switches with thousands of cases. Instead,
+      // trigger simplification by adding zero to the last counter.
+      CaseCountSum =
+          addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
+
+      // This is considered as the False count on SwitchStmt.
+      Counter SwitchFalse = subtractCounters(ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), CaseCountSum, SwitchFalse);
     }
   }
 
