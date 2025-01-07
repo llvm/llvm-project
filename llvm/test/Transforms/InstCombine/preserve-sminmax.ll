@@ -19,6 +19,19 @@ define i32 @foo(i32 %h) {
   ret i32 %r
 }
 
+define i32 @foo_commuted(i32 %h) {
+; CHECK-LABEL: @foo_commuted(
+; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[H:%.*]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp sgt i32 [[H]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 1, i32 [[SD]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sd = sdiv i32 %h, 2
+  %t = icmp sgt i32 %sd, 0
+  %r = select i1 %t, i32 1, i32 %sd
+  ret i32 %r
+}
+
 define i32 @bar(i32 %h) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[H:%.*]], 2
