@@ -11,18 +11,20 @@
 
 include "mlir/Pass/PassBase.td"
 
-def LegalizeDataInRegion : Pass<"openacc-legalize-data", "mlir::func::FuncOp"> {
-  let summary = "Legalize the data in the compute region";
+def LegalizeDataValuesInRegion : Pass<"openacc-legalize-data-values", "mlir::func::FuncOp"> {
+  let summary = "Legalizes SSA values in compute regions with results from data clause operations";
   let description = [{
-    This pass replace uses of varPtr in the compute region with their accPtr
-    gathered from the data clause operands.
+    This pass replace uses of the `varPtr` in compute regions (kernels,
+    parallel, serial) with the result of data clause operations (`accPtr`).
   }];
   let options = [
     Option<"hostToDevice", "host-to-device", "bool", "true",
            "Replace varPtr uses with accPtr if true. Replace accPtr uses with "
-           "varPtr if false">
+           "varPtr if false">,
+    Option<"applyToAccDataConstruct", "apply-to-acc-data-construct", "bool", "true",
+           "Replaces varPtr uses with accPtr for acc compute regions contained "
+           "within acc.data or acc.declare region.">
   ];
-  let constructor = "::mlir::acc::createLegalizeDataInRegion()";
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

@@ -223,6 +223,13 @@ enum OpenMPDoacrossClauseModifier {
   OMPC_DOACROSS_unknown
 };
 
+/// OpenMP modifiers for 'allocate' clause.
+enum OpenMPAllocateClauseModifier {
+#define OPENMP_ALLOCATE_MODIFIER(Name) OMPC_ALLOCATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ALLOCATE_unknown
+};
+
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
 struct OMPInteropInfo final {

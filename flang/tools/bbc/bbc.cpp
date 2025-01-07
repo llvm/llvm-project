@@ -19,6 +19,7 @@
 #include "flang/Common/OpenMP-features.h"
 #include "flang/Common/Version.h"
 #include "flang/Common/default-kinds.h"
+#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -228,10 +229,16 @@ static llvm::cl::opt<std::string>
                          llvm::cl::desc("Override host target triple"),
                          llvm::cl::init(""));
 
+static llvm::cl::opt<bool> integerWrapAround(
+    "fwrapv",
+    llvm::cl::desc("Treat signed integer overflow as two's complement"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
-    setNSW("integer-overflow",
-           llvm::cl::desc("add nsw flag to internal operations"),
-           llvm::cl::init(false));
+    reallocateLHS("frealloc-lhs",
+                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
+                                 "the LHS of the intrinsic assignment"),
+                  llvm::cl::init(true));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
@@ -373,14 +380,16 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
-  loweringOptions.setNSWOnLoopVarInc(setNSW);
+  loweringOptions.setIntegerWrapAround(integerWrapAround);
+  loweringOptions.setReallocateLHS(reallocateLHS);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
-  constexpr const char *tuneCPU = "";
+  Fortran::frontend::TargetOptions targetOpts;
+  Fortran::frontend::CodeGenOptions cgOpts;
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine, tuneCPU);
+      semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -443,7 +452,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
+      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
+                                        llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -458,7 +468,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
-    config.NSWOnLoopVarInc = setNSW;
+    if (enableOpenMP)
+      config.EnableOpenMP = true;
+    config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }

@@ -36,9 +36,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/SmallString.h"
 
 using namespace clang;
 using namespace sema;
@@ -746,11 +744,11 @@ ExprResult ObjCPropertyOpBuilder::buildGet() {
     assert(InstanceReceiver || RefExpr->isSuperReceiver());
     msg = S.ObjC().BuildInstanceMessageImplicit(
         InstanceReceiver, receiverType, GenericLoc, Getter->getSelector(),
-        Getter, std::nullopt);
+        Getter, {});
   } else {
     msg = S.ObjC().BuildClassMessageImplicit(
         receiverType, RefExpr->isSuperReceiver(), GenericLoc,
-        Getter->getSelector(), Getter, std::nullopt);
+        Getter->getSelector(), Getter, {});
   }
   return msg;
 }
@@ -1131,7 +1129,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
                                                 /*TInfo=*/nullptr,
                                                 SC_None,
                                                 nullptr);
-    AtIndexGetter->setMethodParams(S.Context, Argument, std::nullopt);
+    AtIndexGetter->setMethodParams(S.Context, Argument, {});
   }
 
   if (!AtIndexGetter) {
@@ -1243,7 +1241,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
                                                 SC_None,
                                                 nullptr);
     Params.push_back(key);
-    AtIndexSetter->setMethodParams(S.Context, Params, std::nullopt);
+    AtIndexSetter->setMethodParams(S.Context, Params, {});
   }
 
   if (!AtIndexSetter) {

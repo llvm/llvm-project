@@ -172,7 +172,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
     // declaration.
     if (!CurrentParam.getType().getCanonicalType().isConstQualified()) {
       if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-              CurrentParam, Context, DeclSpec::TQ::TQ_const))
+              CurrentParam, Context, Qualifiers::Const))
         Diag << *Fix;
     }
   }

@@ -43,7 +43,6 @@
 !CHECK: hlfir.assign %[[RES]] to %[[PRV_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.yield
 !CHECK: omp.terminator
-!CHECK: omp.terminator
 
 subroutine reduction_ieor(y)
   integer :: x, y(:)

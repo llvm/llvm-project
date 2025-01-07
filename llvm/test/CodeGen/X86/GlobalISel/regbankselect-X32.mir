@@ -14,11 +14,11 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 4, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 4, class: gpr, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

@@ -15,7 +15,7 @@ declare void @barrier()
 
 define <2 x i8> @umax_xor_Cpow2(<2 x i8> %x) {
 ; CHECK-LABEL: @umax_xor_Cpow2(
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x_xor = xor <2 x i8> %x, <i8 128, i8 128>
@@ -45,7 +45,7 @@ define i8 @smax_xor_Cpow2_pos(i8 %x) {
 
 define <2 x i8> @smin_xor_Cpow2_pos(<2 x i8> %x) {
 ; CHECK-LABEL: @smin_xor_Cpow2_pos(
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], <i8 -17, i8 -17>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -17)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x_xor = xor <2 x i8> %x, <i8 16, i8 16>
@@ -55,7 +55,7 @@ define <2 x i8> @smin_xor_Cpow2_pos(<2 x i8> %x) {
 
 define <2 x i8> @smax_xor_Cpow2_neg(<2 x i8> %x) {
 ; CHECK-LABEL: @smax_xor_Cpow2_neg(
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 127)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x_xor = xor <2 x i8> %x, <i8 128, i8 128>
@@ -91,7 +91,7 @@ define <2 x i8> @umin_xor_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @umin_xor_pow2(
 ; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
 ; CHECK-NEXT:    [[YP2:%.*]] = and <2 x i8> [[Y]], [[NY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[YP2]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[YP2]], splat (i8 -1)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;

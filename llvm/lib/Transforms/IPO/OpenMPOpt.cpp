@@ -1093,6 +1093,7 @@ private:
       CGStartBB->getTerminator()->setSuccessor(0, StartBB);
       assert(EndBB != nullptr && "EndBB should not be null");
       EndBB->getTerminator()->setSuccessor(0, CGEndBB);
+      return Error::success();
     };
 
     auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &,
@@ -1101,7 +1102,7 @@ private:
       return CodeGenIP;
     };
 
-    auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+    auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
     /// Create a sequential execution region within a merged parallel region,
     /// encapsulated in a master construct with a barrier for synchronization.
@@ -1132,8 +1133,9 @@ private:
         CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
         SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
+        return Error::success();
       };
-      auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+      auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
       // Find outputs from the sequential region to outside users and
       // broadcast their values to them.
@@ -1176,12 +1178,15 @@ private:
 
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
-      InsertPointTy SeqAfterIP =
+      OpenMPIRBuilder::InsertPointOrErrorTy SeqAfterIP =
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
+      assert(SeqAfterIP && "Unexpected error creating master");
 
-      OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel);
+      OpenMPIRBuilder::InsertPointOrErrorTy BarrierAfterIP =
+          OMPInfoCache.OMPBuilder.createBarrier(*SeqAfterIP, OMPD_parallel);
+      assert(BarrierAfterIP && "Unexpected error creating barrier");
 
-      BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+      BranchInst::Create(SeqAfterBB, SeqAfterIP->getBlock());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1251,10 +1256,12 @@ private:
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
-      InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.createParallel(
-          Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-          OMP_PROC_BIND_default, /* IsCancellable */ false);
-      BranchInst::Create(AfterBB, AfterIP.getBlock());
+      OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+          OMPInfoCache.OMPBuilder.createParallel(
+              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
+              OMP_PROC_BIND_default, /* IsCancellable */ false);
+      assert(AfterIP && "Unexpected error creating parallel");
+      BranchInst::Create(AfterBB, AfterIP->getBlock());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
@@ -1290,10 +1297,12 @@ private:
         if (CI != MergableCIs.back()) {
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
-          OMPInfoCache.OMPBuilder.createBarrier(
-              InsertPointTy(NewCI->getParent(),
-                            NewCI->getNextNode()->getIterator()),
-              OMPD_parallel);
+          OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+              OMPInfoCache.OMPBuilder.createBarrier(
+                  InsertPointTy(NewCI->getParent(),
+                                NewCI->getNextNode()->getIterator()),
+                  OMPD_parallel);
+          assert(AfterIP && "Unexpected error creating barrier");
         }
 
         CI->eraseFromParent();
@@ -1529,26 +1538,12 @@ private:
     // required an RPC server. If its users were all optimized out then we can
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
-    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
-      if (!GV->getType()->isPointerTy())
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
+      if (GV->getNumUses() >= 1)
         return false;
-
-      Constant *C = GV->getInitializer();
-      if (!C)
-        return false;
-
-      // Check to see if the only user of the RPC client is the external handle.
-      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
-      if (!Client || Client->getNumUses() > 1 ||
-          Client->user_back() != GV->getInitializer())
-        return false;
-
-      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
-      Client->eraseFromParent();
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->eraseFromParent();
-
       return true;
     }
     return false;
@@ -3536,8 +3531,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
           PoisonValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
           GlobalValue::NotThreadLocal,
           static_cast<unsigned>(AddressSpace::Shared));
-      auto *NewBuffer =
-          ConstantExpr::getPointerCast(SharedMem, Int8Ty->getPointerTo());
+      auto *NewBuffer = ConstantExpr::getPointerCast(
+          SharedMem, PointerType::getUnqual(M->getContext()));
 
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Replaced globalized variable with "

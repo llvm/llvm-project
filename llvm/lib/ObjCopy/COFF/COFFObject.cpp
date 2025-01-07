@@ -8,7 +8,6 @@
 
 #include "COFFObject.h"
 #include "llvm/ADT/DenseSet.h"
-#include <algorithm>
 
 namespace llvm {
 namespace objcopy {

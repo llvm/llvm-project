@@ -12,7 +12,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcLog10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -33,3 +32,29 @@ TEST_F(LlvmLibcLog10fTest, SpecialNumbers) {
     EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float>(i), LIBC_NAMESPACE::log10f(x));
   }
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcLog10fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(-0x1.66d3e7bd9a403p5f, LIBC_NAMESPACE::log10f(min_denormal));
+}
+
+TEST_F(LlvmLibcLog10fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::log10f(min_denormal));
+}
+
+TEST_F(LlvmLibcLog10fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::log10f(min_denormal));
+}
+
+#endif

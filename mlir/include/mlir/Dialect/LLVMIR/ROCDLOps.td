@@ -58,7 +58,12 @@ def ROCDL_Dialect : Dialect {
      "::mlir::StringAttr":$flat_work_group_size,
      "::mlir::IntegerAttr":$max_flat_work_group_size,
      "::mlir::IntegerAttr":$waves_per_eu,
-     "::mlir::BoolAttr":$unsafe_fp_atomics
+     "::mlir::BoolAttr":$unsafe_fp_atomics,
+     // Correspond to LLVM metadata of the same name
+     "::mlir::UnitAttr":$last_use,
+     "::mlir::UnitAttr":$no_remote_memory,
+     "::mlir::UnitAttr":$no_fine_grained_memory,
+     "::mlir::UnitAttr":$ignore_denormal_mode
   );
 
   let useDefaultAttributePrinterParser = 1;
@@ -88,12 +93,12 @@ class ROCDL_IntrPure1Op<string mnemonic> :
 
 class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
   list<int> overloadedOperands, list<Trait> traits, int numResults,
-  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0, list<int> immArgPositions = [], 
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0, list<int> immArgPositions = [],
   list<string> immArgAttrNames = []> :
   LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
     "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
     overloadedOperands, traits, numResults, requiresAccessGroup,
-    requiresAliasAnalysis, 0, immArgPositions, immArgAttrNames>;
+    requiresAliasAnalysis, 0, 0, immArgPositions, immArgAttrNames>;
 
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
@@ -190,6 +195,21 @@ def ROCDL_BallotOp :
   }];
 
   let assemblyFormat = "$pred attr-dict `:` type($res)";
+}
+
+def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
+  Arguments<(ins LLVM_Type:$src0,
+                 I32:$src1)> {
+  let results = (outs LLVM_Type:$res);
+  let summary = "Get the value in the specific lane.";
+
+  let description = [{
+    Get the value in lane `src1` from input `src0`.
+  }];
+
+  let assemblyFormat = [{
+    $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
+   }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -292,6 +312,24 @@ def ROCDL_SchedBarrier : ROCDL_IntrOp<"sched.barrier", [], [], [], 0>,
     "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_sched_barrier,builder.getInt32(op.getMask()));";
 }
 
+def ROCDL_SchedGroupBarrier : ROCDL_IntrOp<"sched.group.barrier", [], [], [], 0>,
+  Arguments<(ins I32Attr:$mask, I32Attr:$size, I32Attr:$groupId)> {
+  let results = (outs);
+  let assemblyFormat = "$mask `,` $size `,` $groupId attr-dict";
+  string llvmBuilder = [{
+    createIntrinsicCall(builder,
+      llvm::Intrinsic::amdgcn_sched_group_barrier,
+      {builder.getInt32(op.getMask()), builder.getInt32(op.getSize()), builder.getInt32(op.getGroupId())});
+  }];
+}
+
+def ROCDL_IglpOpt : ROCDL_IntrOp<"iglp.opt", [], [], [], 0>,
+  Arguments<(ins I32Attr:$variant)> {
+  let results = (outs);
+  let assemblyFormat = "$variant attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_iglp_opt,builder.getInt32(op.getVariant()));";
+}
 
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics

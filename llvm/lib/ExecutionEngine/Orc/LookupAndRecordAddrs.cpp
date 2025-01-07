@@ -60,8 +60,8 @@ Error lookupAndRecordAddrs(
   for (auto &KV : Pairs)
     Symbols.add(KV.first, LookupFlags);
 
-  ExecutorProcessControl::LookupRequest LR(H, Symbols);
-  auto Result = EPC.lookupSymbols(LR);
+  DylibManager::LookupRequest LR(H, Symbols);
+  auto Result = EPC.getDylibMgr().lookupSymbols(LR);
   if (!Result)
     return Result.takeError();
 

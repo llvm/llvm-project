@@ -85,13 +85,16 @@ public:
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
       : OpBuilder(other), OpBuilder::Listener(), kindMap{other.kindMap},
-        fastMathFlags{other.fastMathFlags}, symbolTable{other.symbolTable} {
+        fastMathFlags{other.fastMathFlags},
+        integerOverflowFlags{other.integerOverflowFlags},
+        symbolTable{other.symbolTable} {
     setListener(this);
   }
 
   FirOpBuilder(FirOpBuilder &&other)
       : OpBuilder(other), OpBuilder::Listener(),
         kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags},
+        integerOverflowFlags{other.integerOverflowFlags},
         symbolTable{other.symbolTable} {
     setListener(this);
   }
@@ -211,6 +214,11 @@ public:
                             llvm::ArrayRef<mlir::Value> shape,
                             llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
+
+  /// Create a two dimensional ArrayAttr containing integer data as
+  /// IntegerAttrs, effectively: ArrayAttr<ArrayAttr<IntegerAttr>>>.
+  mlir::ArrayAttr create2DI64ArrayAttr(
+      llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &intData);
 
   /// Create a temporary using `fir.alloca`. This function does not hoist.
   /// It is the callers responsibility to set the insertion point if
@@ -521,6 +529,18 @@ public:
     return fmfString;
   }
 
+  /// Set default IntegerOverflowFlags value for all operations
+  /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created
+  /// by this builder.
+  void setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags flags) {
+    integerOverflowFlags = flags;
+  }
+
+  /// Get current IntegerOverflowFlags value.
+  mlir::arith::IntegerOverflowFlags getIntegerOverflowFlags() const {
+    return integerOverflowFlags;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -536,6 +556,31 @@ public:
   /// Construct a data layout on demand and return it
   mlir::DataLayout &getDataLayout();
 
+  /// Convert operands &/or result from/to unsigned so that the operation
+  /// only receives/produces signless operands.
+  template <typename OpTy>
+  mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
+                             mlir::Value left, mlir::Value right) {
+    if (!resultType.isIntOrFloat())
+      return create<OpTy>(loc, resultType, left, right);
+    mlir::Type signlessType = mlir::IntegerType::get(
+        getContext(), resultType.getIntOrFloatBitWidth(),
+        mlir::IntegerType::SignednessSemantics::Signless);
+    mlir::Type opResType = resultType;
+    if (left.getType().isUnsignedInteger()) {
+      left = createConvert(loc, signlessType, left);
+      opResType = signlessType;
+    }
+    if (right.getType().isUnsignedInteger()) {
+      right = createConvert(loc, signlessType, right);
+      opResType = signlessType;
+    }
+    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    if (resultType.isUnsignedInteger())
+      result = createConvert(loc, resultType, result);
+    return result;
+  }
+
 private:
   /// Set attributes (e.g. FastMathAttr) to \p op operation
   /// based on the current attributes setting.
@@ -546,6 +591,10 @@ private:
   /// FastMathFlags that need to be set for operations that support
   /// mlir::arith::FastMathAttr.
   mlir::arith::FastMathFlags fastMathFlags{};
+
+  /// IntegerOverflowFlags that need to be set for operations that support
+  /// mlir::arith::IntegerOverflowFlagsAttr.
+  mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
 
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.

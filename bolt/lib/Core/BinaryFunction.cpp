@@ -385,16 +385,7 @@ bool BinaryFunction::isForwardCall(const MCSymbol *CalleeSymbol) const {
   if (CalleeBF) {
     if (CalleeBF->isInjected())
       return true;
-
-    if (hasValidIndex() && CalleeBF->hasValidIndex()) {
-      return getIndex() < CalleeBF->getIndex();
-    } else if (hasValidIndex() && !CalleeBF->hasValidIndex()) {
-      return true;
-    } else if (!hasValidIndex() && CalleeBF->hasValidIndex()) {
-      return false;
-    } else {
-      return getAddress() < CalleeBF->getAddress();
-    }
+    return compareBinaryFunctionByIndex(this, CalleeBF);
   } else {
     // Absolute symbol.
     ErrorOr<uint64_t> CalleeAddressOrError = BC.getSymbolValue(*CalleeSymbol);
@@ -1513,6 +1504,20 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
+void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
+  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
+    if (!Op.isExpr())
+      continue;
+    const MCExpr &Expr = *Op.getExpr();
+    if (Expr.getKind() != MCExpr::SymbolRef)
+      continue;
+    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+    // Set HasAddressTaken for a function regardless of the ICF level.
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+      BF->setHasAddressTaken(true);
+  }
+}
+
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1633,6 +1638,8 @@ bool BinaryFunction::scanExternalRefs() {
                              [](const MCOperand &Op) { return Op.isExpr(); })) {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
+    } else {
+      analyzeInstructionForFuncReference(Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -2577,8 +2584,10 @@ private:
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
+    case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
@@ -2715,8 +2724,10 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
+    case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       return false;
     case MCCFIInstruction::OpRememberState:
@@ -2864,8 +2875,10 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
+    case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3684,9 +3697,8 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
     BinaryBasicBlock *BB = Stack.top();
     Stack.pop();
 
-    if (Visited.find(BB) != Visited.end())
+    if (!Visited.insert(BB).second)
       continue;
-    Visited.insert(BB);
     DFS.push_back(BB);
 
     for (BinaryBasicBlock *SuccBB : BB->landing_pads()) {
@@ -3879,11 +3891,8 @@ void BinaryFunction::disambiguateJumpTables(
       JumpTable *JT = getJumpTable(Inst);
       if (!JT)
         continue;
-      auto Iter = JumpTables.find(JT);
-      if (Iter == JumpTables.end()) {
-        JumpTables.insert(JT);
+      if (JumpTables.insert(JT).second)
         continue;
-      }
       // This instruction is an indirect jump using a jump table, but it is
       // using the same jump table of another jump. Try all our tricks to
       // extract the jump table symbol and make it point to a new, duplicated JT

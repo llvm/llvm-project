@@ -108,7 +108,7 @@ public:
 
   template <class _Err2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const unexpected& __x, const unexpected<_Err2>& __y) {
-    return __x.__unex_ == __y.__unex_;
+    return __x.__unex_ == __y.error();
   }
 
 private:

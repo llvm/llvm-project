@@ -22,6 +22,7 @@
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -334,12 +335,10 @@ public:
   /// chain of loads or stores within same block) operations set when lowered.
   /// \p AccessTy is the type of the loads/stores that will ultimately use the
   /// \p Ptrs.
-  InstructionCost
-  getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
-                       const PointersChainInfo &Info, Type *AccessTy,
-                       TargetCostKind CostKind = TTI::TCK_RecipThroughput
-
-  ) const;
+  InstructionCost getPointersChainCost(
+      ArrayRef<const Value *> Ptrs, const Value *Base,
+      const PointersChainInfo &Info, Type *AccessTy,
+      TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
@@ -351,6 +350,9 @@ public:
 
   unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const;
   unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const;
+
+  /// \returns The bonus of inlining the last call to a static function.
+  int getInliningLastCallToStaticBonus() const;
 
   /// \returns A value to be added to the inlining threshold.
   unsigned adjustInliningThreshold(const CallBase *CB) const;
@@ -611,6 +613,9 @@ public:
     unsigned MaxIterationsCountToAnalyze;
     /// Don't disable runtime unroll for the loops which were vectorized.
     bool UnrollVectorizedLoop = false;
+    /// Don't allow runtime unrolling if expanding the trip count takes more
+    /// than SCEVExpansionBudget.
+    unsigned SCEVExpansionBudget;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
@@ -625,6 +630,10 @@ public:
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
+
+  // Query the target for which minimum vectorization factor epilogue
+  // vectorization should be considered.
+  unsigned getEpilogueVectorizationMinVF() const;
 
   /// Query the target whether it would be prefered to create a predicated
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
@@ -800,6 +809,12 @@ public:
   /// Return true if the target supports strided load.
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
+  /// Return true is the target supports interleaved access for the given vector
+  /// type \p VTy, interleave factor \p Factor, alignment \p Alignment and
+  /// address space \p AddrSpace.
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) const;
+
   // Return true if the target supports masked vector histograms.
   bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) const;
 
@@ -884,13 +899,30 @@ public:
 
   bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
+  /// Identifies if the vector form of the intrinsic has a scalar operand.
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const;
+
+  /// Identifies if the vector form of the intrinsic is overloaded on the type
+  /// of the operand at index \p OpdIdx, or on the return type if \p OpdIdx is
+  /// -1.
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const;
+
+  /// Identifies if the vector form of the intrinsic that returns a struct is
+  /// overloaded at the struct element index \p RetIdx.
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const;
+
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
-  /// extracted from vectors.
+  /// extracted from vectors.  The involved values may be passed in VL if
+  /// Insert is true.
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind) const;
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
@@ -1393,6 +1425,20 @@ public:
                                      Value *Op1 = nullptr) const;
 
   /// \return The expected cost of vector Insert and Extract.
+  /// Use -1 to indicate that there is no information on the index value.
+  /// This is used when the instruction is not available; a typical use
+  /// case is to provision the cost of vectorization/scalarization in
+  /// vectorizer passes.
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const;
+
+  /// \return The expected cost of vector Insert and Extract.
   /// This is used when instruction is available, and implementation
   /// asserts 'I' is not nullptr.
   ///
@@ -1744,6 +1790,21 @@ public:
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                              Align Alignment) const;
 
+  /// Return true if sinking I's operands to the same basic block as I is
+  /// profitable, e.g. because the operands can be folded into a target
+  /// instruction during instruction selection. After calling the function
+  /// \p Ops contains the Uses to sink ordered by dominance (dominating users
+  /// come first).
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  /// Return true if it's significantly cheaper to shift a vector by a uniform
+  /// scalar than by an amount which will vary across each lane. On x86 before
+  /// AVX2 for example, there is a "psllw" instruction for the former case, but
+  /// no simple instruction for a general "a << b" operation on vectors.
+  /// This should also apply to lowering for vector funnel shifts (rotates).
+  bool isVectorShiftByScalarCheap(Type *Ty) const;
+
   struct VPLegalization {
     enum VPTransform {
       // keep the predicating parameter
@@ -1792,6 +1853,10 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  /// \return For an array of given Size, return alignment boundary to
+  /// pad to. Default is no padding.
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
+
   /// @}
 
 private:
@@ -1822,6 +1887,7 @@ public:
   virtual unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const = 0;
   virtual unsigned
   getInliningCostBenefitAnalysisProfitableMultiplier() const = 0;
+  virtual int getInliningLastCallToStaticBonus() const = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() const = 0;
   virtual unsigned getCallerAllocaCost(const CallBase *CB,
@@ -1865,6 +1931,7 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
+  virtual unsigned getEpilogueVectorizationMinVF() = 0;
   virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) = 0;
   virtual TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) = 0;
@@ -1912,6 +1979,10 @@ public:
   virtual bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                            Align Alignment,
+                                            unsigned AddrSpace) = 0;
+
   virtual bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) = 0;
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
@@ -1935,10 +2006,17 @@ public:
   virtual bool shouldBuildRelLookupTables() = 0;
   virtual bool useColdCCForColdCall(Function &F) = 0;
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) = 0;
-  virtual InstructionCost getScalarizationOverhead(VectorType *Ty,
-                                                   const APInt &DemandedElts,
-                                                   bool Insert, bool Extract,
-                                                   TargetCostKind CostKind) = 0;
+  virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                                  unsigned ScalarOpdIdx) = 0;
+  virtual bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                      int OpdIdx) = 0;
+  virtual bool
+  isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                   int RetIdx) = 0;
+  virtual InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract, TargetCostKind CostKind,
+                           ArrayRef<Value *> VL = {}) = 0;
   virtual InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    ArrayRef<Type *> Tys,
@@ -2062,6 +2140,16 @@ public:
                                              TTI::TargetCostKind CostKind,
                                              unsigned Index, Value *Op0,
                                              Value *Op1) = 0;
+
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  virtual InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) = 0;
+
   virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                              TTI::TargetCostKind CostKind,
                                              unsigned Index) = 0;
@@ -2182,10 +2270,17 @@ public:
   virtual bool supportsScalableVectors() const = 0;
   virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                                      Align Alignment) const = 0;
+  virtual bool
+  isProfitableToSinkOperands(Instruction *I,
+                             SmallVectorImpl<Use *> &OpsToSink) const = 0;
+
+  virtual bool isVectorShiftByScalarCheap(Type *Ty) const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
+                                               Type *ArrayType) const = 0;
 };
 
 template <typename T>
@@ -2224,6 +2319,9 @@ public:
   }
   unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const override {
     return Impl.getInliningCostBenefitAnalysisProfitableMultiplier();
+  }
+  int getInliningLastCallToStaticBonus() const override {
+    return Impl.getInliningLastCallToStaticBonus();
   }
   int getInlinerVectorBonusPercent() const override {
     return Impl.getInlinerVectorBonusPercent();
@@ -2318,6 +2416,9 @@ public:
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
+  }
+  unsigned getEpilogueVectorizationMinVF() override {
+    return Impl.getEpilogueVectorizationMinVF();
   }
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) override {
     return Impl.preferPredicateOverEpilogue(TFI);
@@ -2424,6 +2525,11 @@ public:
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalStridedLoadStore(DataType, Alignment);
   }
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment,
+                                    unsigned AddrSpace) override {
+    return Impl.isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace);
+  }
   bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) override {
     return Impl.isLegalMaskedVectorHistogram(AddrType, DataType);
   }
@@ -2477,12 +2583,29 @@ public:
   bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) override {
     return Impl.isTargetIntrinsicTriviallyScalarizable(ID);
   }
+
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) override {
+    return Impl.isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+  }
+
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) override {
+    return Impl.isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) override {
+    return Impl.isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
+  }
+
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TargetCostKind CostKind) override {
+                                           TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) override {
     return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                         CostKind);
+                                         CostKind, VL);
   }
   InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
@@ -2726,6 +2849,13 @@ public:
                                      Value *Op1) override {
     return Impl.getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
   }
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) override {
+    return Impl.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
+                                   ScalarUserAndIdx);
+  }
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index) override {
@@ -2952,6 +3082,15 @@ public:
     return Impl.hasActiveVectorLength(Opcode, DataType, Alignment);
   }
 
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const override {
+    return Impl.isProfitableToSinkOperands(I, Ops);
+  };
+
+  bool isVectorShiftByScalarCheap(Type *Ty) const override {
+    return Impl.isVectorShiftByScalarCheap(Ty);
+  }
+
   VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
     return Impl.getVPLegalizationStrategy(PI);
@@ -2963,6 +3102,11 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  unsigned getNumBytesToPadGlobalArray(unsigned Size,
+                                       Type *ArrayType) const override {
+    return Impl.getNumBytesToPadGlobalArray(Size, ArrayType);
   }
 };
 

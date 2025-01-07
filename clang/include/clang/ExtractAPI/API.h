@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <iterator>
@@ -615,7 +616,24 @@ struct TagRecord : APIRecord, RecordContext {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union || K == RK_Enum;
+    switch (K) {
+    case RK_Enum:
+      LLVM_FALLTHROUGH;
+    case RK_Struct:
+      LLVM_FALLTHROUGH;
+    case RK_Union:
+      LLVM_FALLTHROUGH;
+    case RK_CXXClass:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplate:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplateSpecialization:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool IsEmbeddedInVarDeclarator;
@@ -684,7 +702,22 @@ struct RecordRecord : TagRecord {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union;
+    switch (K) {
+    case RK_Struct:
+      LLVM_FALLTHROUGH;
+    case RK_Union:
+      LLVM_FALLTHROUGH;
+    case RK_CXXClass:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplate:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplateSpecialization:
+      LLVM_FALLTHROUGH;
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isAnonymousWithNoTypedef() { return Name.empty(); }

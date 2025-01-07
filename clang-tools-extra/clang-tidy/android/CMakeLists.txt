@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-add_clang_library(clangTidyAndroidModule
+add_clang_library(clangTidyAndroidModule STATIC
   AndroidTidyModule.cpp
   CloexecAccept4Check.cpp
   CloexecAcceptCheck.cpp

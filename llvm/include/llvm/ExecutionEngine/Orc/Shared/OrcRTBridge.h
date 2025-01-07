@@ -42,6 +42,7 @@ extern const char *MemoryWriteUInt16sWrapperName;
 extern const char *MemoryWriteUInt32sWrapperName;
 extern const char *MemoryWriteUInt64sWrapperName;
 extern const char *MemoryWriteBuffersWrapperName;
+extern const char *MemoryWritePointersWrapperName;
 
 extern const char *RegisterEHFrameSectionWrapperName;
 extern const char *DeregisterEHFrameSectionWrapperName;

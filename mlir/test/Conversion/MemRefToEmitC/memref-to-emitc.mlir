@@ -1,28 +1,35 @@
 // RUN: mlir-opt -convert-memref-to-emitc %s -split-input-file | FileCheck %s
 
-// CHECK-LABEL: memref_store
-// CHECK-SAME:  %[[v:.*]]: f32, %[[i:.*]]: index, %[[j:.*]]: index
-func.func @memref_store(%v : f32, %i: index, %j: index) {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4x8xf32>
-  %0 = memref.alloca() : memref<4x8xf32>
+// CHECK-LABEL: alloca()
+func.func @alloca() {
+  // CHECK-NEXT: %[[ALLOCA:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<2xf32>
+  %0 = memref.alloca() : memref<2xf32>
+  return
+}
 
-  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[ALLOCA]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
+// -----
+
+// CHECK-LABEL: memref_store
+// CHECK-SAME:  %[[buff:.*]]: memref<4x8xf32>, %[[v:.*]]: f32, %[[i:.*]]: index, %[[j:.*]]: index
+func.func @memref_store(%buff : memref<4x8xf32>, %v : f32, %i: index, %j: index) {
+  // CHECK-NEXT: %[[BUFFER:.*]] = builtin.unrealized_conversion_cast %[[buff]] : memref<4x8xf32> to !emitc.array<4x8xf32>
+  
+  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[BUFFER]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
   // CHECK-NEXT: emitc.assign %[[v]] : f32 to %[[SUBSCRIPT]] : <f32>
-  memref.store %v, %0[%i, %j] : memref<4x8xf32>
+  memref.store %v, %buff[%i, %j] : memref<4x8xf32>
   return
 }
 
 // -----
 
 // CHECK-LABEL: memref_load
-// CHECK-SAME:  %[[i:.*]]: index, %[[j:.*]]: index
-func.func @memref_load(%i: index, %j: index) -> f32 {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4x8xf32>
-  %0 = memref.alloca() : memref<4x8xf32>
-
-  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[ALLOCA]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
+// CHECK-SAME:  %[[buff:.*]]: memref<4x8xf32>, %[[i:.*]]: index, %[[j:.*]]: index
+func.func @memref_load(%buff : memref<4x8xf32>, %i: index, %j: index) -> f32 {
+  // CHECK-NEXT: %[[BUFFER:.*]] = builtin.unrealized_conversion_cast %[[buff]] : memref<4x8xf32> to !emitc.array<4x8xf32>
+  
+  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[BUFFER]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
   // CHECK-NEXT: %[[LOAD:.*]] = emitc.load %[[SUBSCRIPT]] : <f32>
-  %1 = memref.load %0[%i, %j] : memref<4x8xf32>
+  %1 = memref.load %buff[%i, %j] : memref<4x8xf32>
   // CHECK-NEXT: return %[[LOAD]] : f32
   return %1 : f32
 }

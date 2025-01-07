@@ -73,7 +73,7 @@ define void @test_half_copysign(half %a0, half %a1, ptr %p0) nounwind {
 ; FP16-LABEL: test_half_copysign:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; FP16-NEXT:    vpternlogd $202, %xmm1, %xmm0, %xmm2
+; FP16-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm1 ^ (xmm2 & (xmm0 ^ xmm1))
 ; FP16-NEXT:    vmovsh %xmm2, (%rdi)
 ; FP16-NEXT:    retq
 ;
@@ -379,22 +379,10 @@ define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fabs:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movd %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
+; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
   %res = call half @llvm.fabs.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -584,22 +572,10 @@ define void @test_half_fneg(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fneg:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movd %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $32768, %ecx # imm = 0x8000
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
   %res = fneg half %a0
   store half %res, ptr %p0, align 2

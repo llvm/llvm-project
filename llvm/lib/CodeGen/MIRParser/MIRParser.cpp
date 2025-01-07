@@ -314,7 +314,7 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
 
-  const LLVMTargetMachine &TM = MMI.getTarget();
+  const TargetMachine &TM = MMI.getTarget();
   YamlMF.MachineFuncInfo = std::unique_ptr<yaml::MachineFunctionInfo>(
       TM.createDefaultFuncInfoYAML());
 
@@ -380,6 +380,7 @@ bool MIRParserImpl::computeFunctionProperties(
 
   bool HasPHI = false;
   bool HasInlineAsm = false;
+  bool HasFakeUses = false;
   bool AllTiedOpsRewritten = true, HasTiedOps = false;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -387,6 +388,8 @@ bool MIRParserImpl::computeFunctionProperties(
         HasPHI = true;
       if (MI.isInlineAsm())
         HasInlineAsm = true;
+      if (MI.isFakeUse())
+        HasFakeUses = true;
       for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
         const MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg() || !MO.getReg())
@@ -441,6 +444,16 @@ bool MIRParserImpl::computeFunctionProperties(
         " has explicit property NoVRegs, but contains virtual registers");
   }
 
+  // For hasFakeUses we follow similar logic to the ComputedPropertyHelper,
+  // except for caring about the inverse case only, i.e. when the property is
+  // explicitly set to false and Fake Uses are present; having HasFakeUses=true
+  // on a function without fake uses is harmless.
+  if (YamlMF.HasFakeUses && !*YamlMF.HasFakeUses && HasFakeUses)
+    return error(
+        MF.getName() +
+        " has explicit property hasFakeUses=false, but contains fake uses");
+  MF.setHasFakeUses(YamlMF.HasFakeUses.value_or(HasFakeUses));
+
   return false;
 }
 
@@ -448,7 +461,7 @@ bool MIRParserImpl::initializeCallSiteInfo(
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
   SMDiagnostic Error;
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
   for (auto &YamlCSInfo : YamlMF.CallSitesInfo) {
     yaml::CallSiteInfo::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
     if (MILoc.BlockNum >= MF.size())
@@ -602,7 +615,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     return true;
 
   if (YamlMF.MachineFuncInfo) {
-    const LLVMTargetMachine &TM = MF.getTarget();
+    const TargetMachine &TM = MF.getTarget();
     // Note this is called after the initial constructor of the
     // MachineFunctionInfo based on the MachineFunction, which may depend on the
     // IR.
@@ -683,6 +696,16 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                                  VReg.PreferredRegister.Value, Error))
         return error(Error, VReg.PreferredRegister.SourceRange);
     }
+
+    for (const auto &FlagStringValue : VReg.RegisterFlags) {
+      uint8_t FlagValue;
+      if (Target->getVRegFlagValue(FlagStringValue.Value, FlagValue))
+        return error(FlagStringValue.SourceRange.Start,
+                     Twine("use of undefined register flag '") +
+                         FlagStringValue.Value + "'");
+      Info.Flags |= FlagValue;
+    }
+    RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
   // Parse the liveins.

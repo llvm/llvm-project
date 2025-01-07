@@ -12,10 +12,62 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace llvm;
+
+TEST(SmallSetTest, ConstructorIteratorPair) {
+  std::initializer_list<int> L = {1, 2, 3, 4, 5};
+  SmallSet<int, 4> S(std::begin(L), std::end(L));
+  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
+}
+
+TEST(SmallSet, ConstructorRange) {
+  std::initializer_list<int> L = {1, 2, 3, 4, 5};
+
+  SmallSet<int, 4> S(llvm::make_range(std::begin(L), std::end(L)));
+  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
+}
+
+TEST(SmallSet, ConstructorInitializerList) {
+  std::initializer_list<int> L = {1, 2, 3, 4, 5};
+  SmallSet<int, 4> S = {1, 2, 3, 4, 5};
+  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
+}
+
+TEST(SmallSet, CopyConstructor) {
+  SmallSet<int, 4> S = {1, 2, 3};
+  SmallSet<int, 4> T = S;
+
+  EXPECT_THAT(S, testing::ContainerEq(T));
+}
+
+TEST(SmallSet, MoveConstructor) {
+  std::initializer_list<int> L = {1, 2, 3};
+  SmallSet<int, 4> S = L;
+  SmallSet<int, 4> T = std::move(S);
+
+  EXPECT_THAT(T, testing::UnorderedElementsAreArray(L));
+}
+
+TEST(SmallSet, CopyAssignment) {
+  SmallSet<int, 4> S = {1, 2, 3};
+  SmallSet<int, 4> T;
+  T = S;
+
+  EXPECT_THAT(S, testing::ContainerEq(T));
+}
+
+TEST(SmallSet, MoveAssignment) {
+  std::initializer_list<int> L = {1, 2, 3};
+  SmallSet<int, 4> S = L;
+  SmallSet<int, 4> T;
+  T = std::move(S);
+
+  EXPECT_THAT(T, testing::UnorderedElementsAreArray(L));
+}
 
 TEST(SmallSetTest, Insert) {
 

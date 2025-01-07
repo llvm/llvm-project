@@ -159,10 +159,8 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 /// `t` is not a memory reference or box type, then returns a null `Type`.
 mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t);
 
-/// Is `t` a FIR Real or MLIR Float type?
-inline bool isa_real(mlir::Type t) {
-  return mlir::isa<fir::RealType, mlir::FloatType>(t);
-}
+/// Is `t` a real type?
+inline bool isa_real(mlir::Type t) { return mlir::isa<mlir::FloatType>(t); }
 
 /// Is `t` an integral type?
 inline bool isa_integer(mlir::Type t) {
@@ -182,9 +180,11 @@ void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
 /// Index, or FIR Int). Aborts execution if condition is false.
 void verifyIntegralType(mlir::Type type);
 
-/// Is `t` a FIR or MLIR Complex type?
+/// Is `t` a floating point complex type?
 inline bool isa_complex(mlir::Type t) {
-  return mlir::isa<fir::ComplexType, mlir::ComplexType>(t);
+  return mlir::isa<mlir::ComplexType>(t) &&
+         mlir::isa<mlir::FloatType>(
+             mlir::cast<mlir::ComplexType>(t).getElementType());
 }
 
 /// Is `t` a CHARACTER type? Does not check the length.

@@ -10,21 +10,13 @@
 
 #define DEBUG_TYPE "mask"
 
-#include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 

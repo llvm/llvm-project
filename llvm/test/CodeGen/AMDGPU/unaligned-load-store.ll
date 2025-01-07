@@ -607,7 +607,14 @@ define amdgpu_kernel void @local_store_align1_v16i8(ptr addrspace(3) %out) #0 {
 ; MUBUF: buffer_load_ubyte
 ; MUBUF: buffer_load_ubyte
 ; MUBUF: buffer_load_ubyte
-; FLATSCR: scratch_load_dwordx2
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
+; FLATSCR: scratch_load_ubyte
 define double @private_load_align1_f64(ptr addrspace(5) %in) {
   %x = load double, ptr addrspace(5) %in, align 1
   ret double %x
@@ -622,7 +629,14 @@ define double @private_load_align1_f64(ptr addrspace(5) %in) {
 ; MUBUF: buffer_store_byte
 ; MUBUF: buffer_store_byte
 ; MUBUF: buffer_store_byte
-; FLATSCR: scratch_store_dwordx2
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
+; FLATSCR: scratch_store_byte
 define void @private_store_align1_f64(ptr addrspace(5) %out, double %x) #0 {
   store double %x, ptr addrspace(5) %out, align 1
   ret void
@@ -651,7 +665,10 @@ define void @private_store_align4_f64(ptr addrspace(5) %out, double %x) #0 {
 ; MUBUF: buffer_load_ushort
 ; MUBUF: buffer_load_ushort
 ; MUBUF: buffer_load_ushort
-; FLATSCR: scratch_load_dwordx2
+; FLATSCR: scratch_load_ushort
+; FLATSCR: scratch_load_ushort
+; FLATSCR: scratch_load_ushort
+; FLATSCR: scratch_load_ushort
 define double @private_load_align2_f64(ptr addrspace(5) %in) {
   %x = load double, ptr addrspace(5) %in, align 2
   ret double %x
@@ -662,7 +679,10 @@ define double @private_load_align2_f64(ptr addrspace(5) %in) {
 ; MUBUF: buffer_store_short
 ; MUBUF: buffer_store_short
 ; MUBUF: buffer_store_short
-; FLATSCR: scratch_store_dwordx2
+; FLATSCR: scratch_store_short
+; FLATSCR: scratch_store_short
+; FLATSCR: scratch_store_short
+; FLATSCR: scratch_store_short
 define void @private_store_align2_f64(ptr addrspace(5) %out, double %x) #0 {
   store double %x, ptr addrspace(5) %out, align 2
   ret void

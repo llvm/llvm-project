@@ -38,12 +38,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[I]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 256
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 128
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP7]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 132
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[OBJ]], i64 0, i32 1, i64 [[I]]
@@ -84,7 +84,7 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[DOTOUTER_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[DOTOUTER_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[DOTINNER:%.*]]
 ; CHECK:       .exit:
 ; CHECK-NEXT:    ret void
@@ -107,12 +107,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP11:![0-9]+]]
 ;
 ; CHECK-HOIST-LABEL: @Test(
-; CHECK-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OBJ:%.*]], i64 256
+; CHECK-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ:%.*]], i64 256
 ; CHECK-HOIST-NEXT:    [[TMP1:%.*]] = shl i64 [[Z:%.*]], 2
 ; CHECK-HOIST-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4224
 ; CHECK-HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP2]]
 ; CHECK-HOIST-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP1]]
-; CHECK-HOIST-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[OBJ]], i64 128
+; CHECK-HOIST-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 128
 ; CHECK-HOIST-NEXT:    br label [[DOTOUTER_PREHEADER:%.*]]
 ; CHECK-HOIST:       .outer.preheader:
 ; CHECK-HOIST-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
@@ -151,7 +151,7 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-HOIST-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
 ; CHECK-HOIST:       scalar.ph:
-; CHECK-HOIST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[DOTOUTER_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-HOIST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[DOTOUTER_PREHEADER]] ]
 ; CHECK-HOIST-NEXT:    br label [[DOTINNER:%.*]]
 ; CHECK-HOIST:       .exit:
 ; CHECK-HOIST-NEXT:    ret void

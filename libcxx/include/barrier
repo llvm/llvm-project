@@ -45,30 +45,33 @@ namespace std
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/barrier>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
 
-#  include <__assert>
-#  include <__atomic/atomic_base.h>
-#  include <__atomic/memory_order.h>
-#  include <__memory/unique_ptr.h>
-#  include <__thread/poll_with_backoff.h>
-#  include <__thread/timed_backoff_policy.h>
-#  include <__utility/move.h>
-#  include <cstddef>
-#  include <cstdint>
-#  include <limits>
-#  include <version>
+#    include <__assert>
+#    include <__atomic/atomic.h>
+#    include <__atomic/memory_order.h>
+#    include <__cstddef/ptrdiff_t.h>
+#    include <__memory/unique_ptr.h>
+#    include <__thread/poll_with_backoff.h>
+#    include <__thread/timed_backoff_policy.h>
+#    include <__utility/move.h>
+#    include <cstdint>
+#    include <limits>
+#    include <version>
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#    include <__undef_macros>
 
-#  if _LIBCPP_STD_VER >= 20
+#    if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -76,7 +79,7 @@ struct __empty_completion {
   inline _LIBCPP_HIDE_FROM_ABI void operator()() noexcept {}
 };
 
-#    ifndef _LIBCPP_HAS_NO_TREE_BARRIER
+#      ifndef _LIBCPP_HAS_NO_TREE_BARRIER
 
 /*
 
@@ -109,9 +112,9 @@ template <class _CompletionF>
 class __barrier_base {
   ptrdiff_t __expected_;
   unique_ptr<__barrier_algorithm_base, void (*)(__barrier_algorithm_base*)> __base_;
-  __atomic_base<ptrdiff_t> __expected_adjustment_;
+  atomic<ptrdiff_t> __expected_adjustment_;
   _CompletionF __completion_;
-  __atomic_base<__barrier_phase_t> __phase_;
+  atomic<__barrier_phase_t> __phase_;
 
 public:
   using arrival_token = __barrier_phase_t;
@@ -150,7 +153,7 @@ public:
   }
 };
 
-#    else
+#      else
 
 /*
 
@@ -167,10 +170,10 @@ Two versions of this algorithm are provided:
 
 template <class _CompletionF>
 class __barrier_base {
-  __atomic_base<ptrdiff_t> __expected;
-  __atomic_base<ptrdiff_t> __arrived;
+  atomic<ptrdiff_t> __expected;
+  atomic<ptrdiff_t> __arrived;
   _CompletionF __completion;
-  __atomic_base<bool> __phase;
+  atomic<bool> __phase;
 
 public:
   using arrival_token = bool;
@@ -212,7 +215,7 @@ class __barrier_base<__empty_completion> {
   static constexpr uint64_t __phase_bit     = 1ull << 63;
   static constexpr uint64_t __arrived_mask  = (__phase_bit - 1) & ~__expected_mask;
 
-  __atomic_base<uint64_t> __phase_arrived_expected;
+  atomic<uint64_t> __phase_arrived_expected;
 
   static _LIBCPP_HIDE_FROM_ABI constexpr uint64_t __init(ptrdiff_t __count) _NOEXCEPT {
     return ((uint64_t(1u << 31) - __count) << 32) | (uint64_t(1u << 31) - __count);
@@ -251,7 +254,7 @@ public:
   }
 };
 
-#    endif // !_LIBCPP_HAS_NO_TREE_BARRIER
+#      endif // !_LIBCPP_HAS_NO_TREE_BARRIER
 
 template <class _CompletionF = __empty_completion>
 class barrier {
@@ -290,19 +293,20 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  endif // _LIBCPP_STD_VER >= 20
+#    endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#  endif // _LIBCPP_HAS_THREADS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <atomic>
-#  include <concepts>
-#  include <iterator>
-#  include <memory>
-#  include <stdexcept>
-#  include <variant>
-#endif
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <atomic>
+#    include <concepts>
+#    include <iterator>
+#    include <memory>
+#    include <stdexcept>
+#    include <variant>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_BARRIER

@@ -11,6 +11,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -18,6 +19,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace acc;
@@ -188,6 +190,48 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
       return op.emitError("wait attribute cannot appear with waitOperands");
   }
   return success();
+}
+
+static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
+                                   mlir::Type &varPtrType,
+                                   mlir::TypeAttr &varTypeAttr) {
+  if (failed(parser.parseType(varPtrType)))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("varType"))) {
+    if (failed(parser.parseLParen()))
+      return failure();
+    mlir::Type varType;
+    if (failed(parser.parseType(varType)))
+      return failure();
+    varTypeAttr = mlir::TypeAttr::get(varType);
+    if (failed(parser.parseRParen()))
+      return failure();
+  } else {
+    // Set `varType` from the element type of the type of `varPtr`.
+    varTypeAttr = mlir::TypeAttr::get(
+        mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
+  }
+
+  return success();
+}
+
+static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                            mlir::Type varPtrType, mlir::TypeAttr varTypeAttr) {
+  p.printType(varPtrType);
+  p << ")";
+
+  // Print the `varType` only if it differs from the element type of
+  // `varPtr`'s type.
+  mlir::Type varType = varTypeAttr.getValue();
+  if (mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType() !=
+      varType) {
+    p << " varType(";
+    p.printType(varType);
+    p << ")";
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -730,8 +774,8 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
 }
 
 unsigned ParallelOp::getNumDataOperands() {
-  return getReductionOperands().size() + getGangPrivateOperands().size() +
-         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value ParallelOp::getDataOperand(unsigned i) {
@@ -759,20 +803,23 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
     Op op, OperandRange operands, DenseI32ArrayAttr segments,
     ArrayAttr deviceTypes, llvm::StringRef keyword, int32_t maxInSegment = 0) {
   std::size_t numOperandsInSegments = 0;
+  std::size_t nbOfSegments = 0;
 
-  if (!segments)
-    return success();
-
-  for (auto segCount : segments.asArrayRef()) {
-    if (maxInSegment != 0 && segCount > maxInSegment)
-      return op.emitOpError() << keyword << " expects a maximum of "
-                              << maxInSegment << " values per segment";
-    numOperandsInSegments += segCount;
+  if (segments) {
+    for (auto segCount : segments.asArrayRef()) {
+      if (maxInSegment != 0 && segCount > maxInSegment)
+        return op.emitOpError() << keyword << " expects a maximum of "
+                                << maxInSegment << " values per segment";
+      numOperandsInSegments += segCount;
+      ++nbOfSegments;
+    }
   }
-  if (numOperandsInSegments != operands.size())
+
+  if ((numOperandsInSegments != operands.size()) ||
+      (!deviceTypes && !operands.empty()))
     return op.emitOpError()
            << keyword << " operand count does not match count in segments";
-  if (deviceTypes.getValue().size() != (size_t)segments.size())
+  if (deviceTypes && deviceTypes.getValue().size() != nbOfSegments)
     return op.emitOpError()
            << keyword << " segment count does not match device_type count";
   return success();
@@ -780,8 +827,12 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getGangPrivateOperands(), "private",
+          *this, getPrivatizations(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
+    return failure();
+  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
@@ -1358,8 +1409,8 @@ printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
 //===----------------------------------------------------------------------===//
 
 unsigned SerialOp::getNumDataOperands() {
-  return getReductionOperands().size() + getGangPrivateOperands().size() +
-         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value SerialOp::getDataOperand(unsigned i) {
@@ -1417,8 +1468,12 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 
 LogicalResult acc::SerialOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getGangPrivateOperands(), "private",
+          *this, getPrivatizations(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
+    return failure();
+  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",

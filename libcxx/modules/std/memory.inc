@@ -154,9 +154,9 @@ export namespace std {
   using std::reinterpret_pointer_cast;
   using std::static_pointer_cast;
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   using std::get_deleter;
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
   // [util.smartptr.shared.io], shared_ptr I/O
 
@@ -191,7 +191,7 @@ export namespace std {
   using std::inout_ptr;
 #endif // _LIBCPP_STD_VER >= 23
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
   // [depr.util.smartptr.shared.atomic]
   using std::atomic_is_lock_free;
 
@@ -208,5 +208,5 @@ export namespace std {
   using std::atomic_compare_exchange_strong_explicit;
   using std::atomic_compare_exchange_weak;
   using std::atomic_compare_exchange_weak_explicit;
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 } // namespace std

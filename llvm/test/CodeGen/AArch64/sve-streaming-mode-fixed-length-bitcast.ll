@@ -91,19 +91,12 @@ define void @bitcast_v32i8(ptr %a, ptr %b) {
 define void @bitcast_v2i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: bitcast_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str w8, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitcast_v2i16:

@@ -9,10 +9,17 @@
 #include "Watchpoint.h"
 #include "DAP.h"
 #include "JSONUtils.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
+#include <cstdint>
+#include <string>
 
 namespace lldb_dap {
-Watchpoint::Watchpoint(const llvm::json::Object &obj) : BreakpointBase(obj) {
+Watchpoint::Watchpoint(DAP &d, const llvm::json::Object &obj)
+    : BreakpointBase(d, obj) {
   llvm::StringRef dataId = GetString(obj, "dataId");
   std::string accessType = GetString(obj, "accessType").str();
   auto [addr_str, size_str] = dataId.split('/');
@@ -42,7 +49,7 @@ void Watchpoint::CreateJsonObject(llvm::json::Object &object) {
 }
 
 void Watchpoint::SetWatchpoint() {
-  wp = g_dap.target.WatchpointCreateByAddress(addr, size, options, error);
+  wp = dap.target.WatchpointCreateByAddress(addr, size, options, error);
   if (!condition.empty())
     SetCondition();
   if (!hitCondition.empty())

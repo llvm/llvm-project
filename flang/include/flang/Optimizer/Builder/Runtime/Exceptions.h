@@ -26,5 +26,12 @@ namespace fir::runtime {
 mlir::Value genMapExcept(fir::FirOpBuilder &builder, mlir::Location loc,
                          mlir::Value excepts);
 
+mlir::Value genSupportHalting(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value excepts);
+
+mlir::Value genGetUnderflowMode(fir::FirOpBuilder &builder, mlir::Location loc);
+void genSetUnderflowMode(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value bit);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXCEPTIONS_H

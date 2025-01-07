@@ -30,7 +30,7 @@
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<4x4xf32, #sparse> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<4x4xf32, #sparse> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<4x4xf32, #sparse> to memref<?xf32>
-// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_10]] : memref<8x8xf32>
+// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_10]] :
 // CHECK-DAG:       linalg.fill ins(%[[VAL_8]] : f32) outs(%[[VAL_14]] : memref<8x8xf32>)
 // CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_5]] {
 // CHECK:             %[[VAL_16:.*]] = arith.subi %[[VAL_15]], %[[VAL_7]] : index
@@ -54,7 +54,7 @@
 // CHECK:               memref.store %[[VAL_30]], %[[VAL_14]]{{\[}}%[[VAL_15]], %[[VAL_27]]] : memref<8x8xf32>
 // CHECK:             } {"Emitted from" = "linalg.generic"}
 // CHECK:           } {"Emitted from" = "linalg.generic"}
-// CHECK:           %[[VAL_31:.*]] = bufferization.to_tensor %[[VAL_14]] : memref<8x8xf32>
+// CHECK:           %[[VAL_31:.*]] = bufferization.to_tensor %[[VAL_14]] :
 // CHECK:           return %[[VAL_31]] : tensor<8x8xf32>
 // CHECK:         }
 func.func @padded_mul(%arg0: tensor<4x4xf32, #CSR>, %arg1: tensor<8x8xf32>) -> tensor<8x8xf32> {

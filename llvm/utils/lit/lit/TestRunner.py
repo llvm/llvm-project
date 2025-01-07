@@ -1394,10 +1394,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions = []
     substitutions.extend(test.config.substitutions)
     tmpName = tmpBase + ".tmp"
-    baseName = os.path.basename(tmpBase)
+    tmpBaseName = os.path.basename(tmpBase)
+    sourceBaseName = os.path.basename(sourcepath)
 
     substitutions.append(("%{pathsep}", os.pathsep))
-    substitutions.append(("%basename_t", baseName))
+    substitutions.append(("%basename_t", tmpBaseName))
+
+    substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{t:stem}", tmpBaseName))
 
     substitutions.extend(
         [

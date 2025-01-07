@@ -80,6 +80,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
+  clang-sycl-linker
   diagtool
   hmaptool
   )
@@ -127,6 +128,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dwarfdump
     llvm-ifs
     llvm-lto2
+    llvm-mc
     llvm-modextract
     llvm-nm
     llvm-objcopy

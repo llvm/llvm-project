@@ -1,3 +1,4 @@
+
 // RUN: %clang -O0 %s -o %t && %run %t
 
 #include <assert.h>
@@ -18,7 +19,8 @@ int main(int argc, char **argv) {
 
   int fd;
   char readlink_path[PATH_MAX];
-  fd = open(symlink_path, O_RDONLY);
+  fd = open(symlink_path, O_RDONLY | O_SYMLINK);
+  assert(fd > 0);
   ssize_t res2 = freadlink(fd, readlink_path, sizeof(readlink_path));
   assert(res2 >= 0);
   readlink_path[res2] = '\0';

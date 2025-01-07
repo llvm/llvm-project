@@ -15,6 +15,8 @@
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -1320,6 +1323,67 @@ public:
     return 3;
   }
 
+  /// Match the following pattern:
+  ///
+  ///   LDR x16, .L1
+  ///   BR  x16
+  /// L1:
+  ///   .quad Target
+  ///
+  /// Populate \p TargetAddress with the Target value on successful match.
+  bool matchAbsLongVeneer(const BinaryFunction &BF,
+                          uint64_t &TargetAddress) const override {
+    if (BF.size() != 1 || BF.getMaxSize() < 16)
+      return false;
+
+    if (!BF.hasConstantIsland())
+      return false;
+
+    const BinaryBasicBlock &BB = BF.front();
+    if (BB.size() != 2)
+      return false;
+
+    const MCInst &LDRInst = BB.getInstructionAtIndex(0);
+    if (LDRInst.getOpcode() != AArch64::LDRXl)
+      return false;
+
+    if (!LDRInst.getOperand(0).isReg() ||
+        LDRInst.getOperand(0).getReg() != AArch64::X16)
+      return false;
+
+    const MCSymbol *TargetSym = getTargetSymbol(LDRInst, 1);
+    if (!TargetSym)
+      return false;
+
+    const MCInst &BRInst = BB.getInstructionAtIndex(1);
+    if (BRInst.getOpcode() != AArch64::BR)
+      return false;
+    if (!BRInst.getOperand(0).isReg() ||
+        BRInst.getOperand(0).getReg() != AArch64::X16)
+      return false;
+
+    const BinaryFunction::IslandInfo &IInfo = BF.getIslandInfo();
+    if (IInfo.HasDynamicRelocations)
+      return false;
+
+    auto Iter = IInfo.Offsets.find(8);
+    if (Iter == IInfo.Offsets.end() || Iter->second != TargetSym)
+      return false;
+
+    // Extract the absolute value stored inside the island.
+    StringRef SectionContents = BF.getOriginSection()->getContents();
+    StringRef FunctionContents = SectionContents.substr(
+        BF.getAddress() - BF.getOriginSection()->getAddress(), BF.getMaxSize());
+
+    const BinaryContext &BC = BF.getBinaryContext();
+    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian(),
+                     BC.AsmInfo->getCodePointerSize());
+    uint64_t Offset = 8;
+    TargetAddress = DE.getAddress(&Offset);
+
+    return true;
+  }
+
   bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const override {
     if (!isADRP(Adrp) || !isAddXri(Add))
       return false;
@@ -1385,6 +1449,8 @@ public:
     case ELF::R_AARCH64_TLSDESC_LD64_LO12:
     case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+    case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
     case ELF::R_AARCH64_MOVW_UABS_G0:
     case ELF::R_AARCH64_MOVW_UABS_G0_NC:
     case ELF::R_AARCH64_MOVW_UABS_G1:

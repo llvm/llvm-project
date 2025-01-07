@@ -54,7 +54,7 @@ class DILocation;
 class Function;
 class GISelChangeObserver;
 class GlobalValue;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
@@ -186,6 +186,7 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
+    FailedRegAlloc,
     TracksDebugUserValues,
     LastProperty = TracksDebugUserValues,
   };
@@ -256,7 +257,7 @@ struct LandingPadInfo {
 
 class LLVM_ABI MachineFunction {
   Function &F;
-  const LLVMTargetMachine &Target;
+  const TargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
 
@@ -376,6 +377,7 @@ class LLVM_ABI MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -467,7 +469,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
@@ -633,7 +634,7 @@ public:
   /// for instructions that have a stack spill fused into them.
   const static unsigned int DebugOperandMemNumber;
 
-  MachineFunction(Function &F, const LLVMTargetMachine &Target,
+  MachineFunction(Function &F, const TargetMachine &Target,
                   const TargetSubtargetInfo &STI, MCContext &Ctx,
                   unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
@@ -706,7 +707,7 @@ public:
   void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
-  const LLVMTargetMachine &getTarget() const { return Target; }
+  const TargetMachine &getTarget() const { return Target; }
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
@@ -867,6 +868,10 @@ public:
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
 
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
+
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
   void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
@@ -1006,7 +1011,7 @@ public:
   /// into \p MBB before \p InsertBefore.
   ///
   /// Note: Does not perform target specific adjustments; consider using
-  /// TargetInstrInfo::duplicate() intead.
+  /// TargetInstrInfo::duplicate() instead.
   MachineInstr &
   cloneMachineInstrBundle(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertBefore,
@@ -1194,6 +1199,9 @@ public:
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
 
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }

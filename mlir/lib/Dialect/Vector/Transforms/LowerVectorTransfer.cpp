@@ -358,31 +358,10 @@ struct TransferOpReduceRank
           op, "map is not a minor identity with broadcasting");
     }
 
-    // TODO: support zero-dimension vectors natively.  See:
-    // https://llvm.discourse.group/t/should-we-have-0-d-vectors/3097.
-    // In the meantime, lower these to a scalar load when they pop up.
-    if (reducedShapeRank == 0) {
-      Value newRead;
-      if (isa<TensorType>(op.getShapedType())) {
-        newRead = rewriter.create<tensor::ExtractOp>(
-            op.getLoc(), op.getSource(), op.getIndices());
-      } else {
-        newRead = rewriter.create<memref::LoadOp>(
-            op.getLoc(), originalVecType.getElementType(), op.getSource(),
-            op.getIndices());
-      }
-      return rewriter
-          .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
-          .getVector();
-    }
-
     SmallVector<int64_t> newShape(
         originalVecType.getShape().take_back(reducedShapeRank));
     SmallVector<bool> newScalableDims(
         originalVecType.getScalableDims().take_back(reducedShapeRank));
-    // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
-    if (newShape.empty())
-      return rewriter.notifyMatchFailure(op, "rank-reduced vector is 0-d");
 
     VectorType newReadType = VectorType::get(
         newShape, originalVecType.getElementType(), newScalableDims);

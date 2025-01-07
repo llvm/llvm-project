@@ -167,27 +167,25 @@ define void @v4i8(ptr %p1, ptr %p2) {
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    fmov s1, w9
 ; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov v3.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b4, v1.b[1]
-; CHECK-GI-NEXT:    mov v5.b[0], v1.b[0]
-; CHECK-GI-NEXT:    mov v3.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v5.b[1], v4.b[0]
-; CHECK-GI-NEXT:    mov b4, v1.b[2]
-; CHECK-GI-NEXT:    mov b1, v1.b[3]
-; CHECK-GI-NEXT:    mov v3.b[2], v2.b[0]
-; CHECK-GI-NEXT:    mov v5.b[2], v4.b[0]
-; CHECK-GI-NEXT:    mov v3.b[3], v0.b[0]
-; CHECK-GI-NEXT:    mov v5.b[3], v1.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v3.8b, #0
-; CHECK-GI-NEXT:    ushll v1.8h, v5.8b, #0
+; CHECK-GI-NEXT:    mov b3, v1.b[1]
+; CHECK-GI-NEXT:    mov b4, v0.b[2]
+; CHECK-GI-NEXT:    mov b5, v0.b[3]
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    mov b2, v1.b[2]
+; CHECK-GI-NEXT:    fmov w9, s3
+; CHECK-GI-NEXT:    mov b3, v1.b[3]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    fmov w8, s4
+; CHECK-GI-NEXT:    fmov w9, s2
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    mov v1.h[2], w9
+; CHECK-GI-NEXT:    fmov w8, s5
+; CHECK-GI-NEXT:    fmov w9, s3
+; CHECK-GI-NEXT:    mov v0.h[3], w8
+; CHECK-GI-NEXT:    mov v1.h[3], w9
 ; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-GI-NEXT:    xtn v0.8b, v1.8h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    str w8, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -254,14 +252,12 @@ define void @v2i16(ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-LABEL: v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    ldr h1, [x1]
-; CHECK-GI-NEXT:    add x8, x0, #2
-; CHECK-GI-NEXT:    add x9, x1, #2
-; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
-; CHECK-GI-NEXT:    ld1 { v1.h }[1], [x9]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-GI-NEXT:    ld1 { v1.h }[0], [x1]
+; CHECK-GI-NEXT:    ldr h2, [x0, #2]
+; CHECK-GI-NEXT:    ldr h3, [x1, #2]
+; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v3.s[0]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    str h0, [x0]

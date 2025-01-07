@@ -129,3 +129,21 @@ TEST(AffineExprTest, d0PlusD0FloorDivNeg2) {
   auto sum = d0 + d0.floorDiv(-2) * 2;
   ASSERT_EQ(toString(sum), "d0 + (d0 floordiv -2) * 2");
 }
+
+TEST(AffineExprTest, simpleAffineExprFlattenerRegression) {
+
+  // Regression test for a bug where mod simplification was not handled
+  // properly when `lhs % rhs` was happened to have the property that `lhs
+  // floordiv rhs = lhs`.
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+
+  auto d0 = b.getAffineDimExpr(0);
+
+  // Manually replace variables by constants to avoid constant folding.
+  AffineExpr expr = (d0 - (d0 + 2)).floorDiv(8) % 8;
+  AffineExpr result = mlir::simplifyAffineExpr(expr, 1, 0);
+
+  ASSERT_TRUE(isa<AffineConstantExpr>(result));
+  ASSERT_EQ(cast<AffineConstantExpr>(result).getValue(), 7);
+}

@@ -349,7 +349,8 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
                 if (!portabilityWarning &&
                     scope.context().languageFeatures().ShouldWarn(
                         common::UsageWarning::VectorSubscriptFinalization)) {
-                  portabilityWarning = parser::Message{at,
+                  portabilityWarning = parser::Message{
+                      common::UsageWarning::VectorSubscriptFinalization, at,
                       "Variable '%s' has a vector subscript and will be finalized by non-elemental subroutine '%s'"_port_en_US,
                       expr.AsFortran(), anyRankMatch->name()};
                 }

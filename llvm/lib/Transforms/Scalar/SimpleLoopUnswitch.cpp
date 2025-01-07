@@ -1248,8 +1248,9 @@ static BasicBlock *buildClonedLoopBlocks(
       assert(VMap.lookup(&I) == &ClonedI && "Mismatch in the value map!");
 
       // Forget SCEVs based on exit phis in case SCEV looked through the phi.
-      if (SE && isa<PHINode>(I))
-        SE->forgetValue(&I);
+      if (SE)
+        if (auto *PN = dyn_cast<PHINode>(&I))
+          SE->forgetLcssaPhiWithNewPredecessor(&L, PN);
 
       BasicBlock::iterator InsertPt = MergeBB->getFirstInsertionPt();
 
@@ -2920,8 +2921,8 @@ static bool collectUnswitchCandidates(
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
-    auto *GuardDecl = L.getHeader()->getParent()->getParent()->getFunction(
-        Intrinsic::getName(Intrinsic::experimental_guard));
+    auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+        L.getHeader()->getParent()->getParent(), Intrinsic::experimental_guard);
     if (GuardDecl && !GuardDecl->use_empty())
       CollectGuards = true;
   }
@@ -2989,9 +2990,11 @@ static bool collectUnswitchCandidates(
 /// into its equivalent where `Pred` is something that we support for injected
 /// invariants (so far it is limited to ult), LHS in canonicalized form is
 /// non-invariant and RHS is an invariant.
-static void canonicalizeForInvariantConditionInjection(
-    ICmpInst::Predicate &Pred, Value *&LHS, Value *&RHS, BasicBlock *&IfTrue,
-    BasicBlock *&IfFalse, const Loop &L) {
+static void canonicalizeForInvariantConditionInjection(CmpPredicate &Pred,
+                                                       Value *&LHS, Value *&RHS,
+                                                       BasicBlock *&IfTrue,
+                                                       BasicBlock *&IfFalse,
+                                                       const Loop &L) {
   if (!L.contains(IfTrue)) {
     Pred = ICmpInst::getInversePredicate(Pred);
     std::swap(IfTrue, IfFalse);
@@ -3234,7 +3237,7 @@ static bool collectUnswitchCandidatesWithInjections(
   // other).
   for (auto *DTN = DT.getNode(Latch); L.contains(DTN->getBlock());
        DTN = DTN->getIDom()) {
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *LHS = nullptr, *RHS = nullptr;
     BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
     auto *BB = DTN->getBlock();

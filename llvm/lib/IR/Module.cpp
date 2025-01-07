@@ -44,7 +44,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/VersionTuple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -78,6 +77,41 @@ Module::Module(StringRef MID, LLVMContext &C)
   Context.addModule(this);
 }
 
+Module &Module::operator=(Module &&Other) {
+  assert(&Context == &Other.Context && "Module must be in the same Context");
+
+  dropAllReferences();
+
+  ModuleID = std::move(Other.ModuleID);
+  SourceFileName = std::move(Other.SourceFileName);
+  IsNewDbgInfoFormat = std::move(Other.IsNewDbgInfoFormat);
+
+  GlobalList.clear();
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+
+  FunctionList.clear();
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+
+  AliasList.clear();
+  AliasList.splice(AliasList.begin(), Other.AliasList);
+
+  IFuncList.clear();
+  IFuncList.splice(IFuncList.begin(), Other.IFuncList);
+
+  NamedMDList.clear();
+  NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
+  OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
+  Materializer = std::move(Other.Materializer);
+  TargetTriple = std::move(Other.TargetTriple);
+  DL = std::move(Other.DL);
+  CurrentIntrinsicIds = std::move(Other.CurrentIntrinsicIds);
+  UniquedIntrinsicNames = std::move(Other.UniquedIntrinsicNames);
+  ModuleFlags = std::move(Other.ModuleFlags);
+  Context.addModule(this);
+  return *this;
+}
+
 Module::~Module() {
   Context.removeModule(this);
   dropAllReferences();
@@ -89,21 +123,22 @@ Module::~Module() {
 
 void Module::removeDebugIntrinsicDeclarations() {
   auto *DeclareIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
   assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
          "Debug declare intrinsic should have had uses removed.");
   DeclareIntrinsicFn->eraseFromParent();
   auto *ValueIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
   assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
          "Debug value intrinsic should have had uses removed.");
   ValueIntrinsicFn->eraseFromParent();
   auto *AssignIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
   assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
          "Debug assign intrinsic should have had uses removed.");
   AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  auto *LabelntrinsicFn =
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
   assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
          "Debug label intrinsic should have had uses removed.");
   LabelntrinsicFn->eraseFromParent();

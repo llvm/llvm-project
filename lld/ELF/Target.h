@@ -20,15 +20,16 @@
 #include <array>
 
 namespace lld {
-std::string toString(elf::RelType type);
-
 namespace elf {
 class Defined;
 class InputFile;
 class Symbol;
 
+std::string toStr(Ctx &, RelType type);
+
 class TargetInfo {
 public:
+  TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
@@ -113,6 +114,7 @@ public:
     return false;
   }
 
+  Ctx &ctx;
   unsigned defaultCommonPageSize = 4096;
   unsigned defaultMaxPageSize = 4096;
 
@@ -122,20 +124,20 @@ public:
   bool gotBaseSymInGotPlt = false;
 
   static constexpr RelType noneRel = 0;
-  RelType copyRel;
-  RelType gotRel;
-  RelType pltRel;
-  RelType relativeRel;
-  RelType iRelativeRel;
-  RelType symbolicRel;
-  RelType tlsDescRel;
-  RelType tlsGotRel;
-  RelType tlsModuleIndexRel;
-  RelType tlsOffsetRel;
+  RelType copyRel = 0;
+  RelType gotRel = 0;
+  RelType pltRel = 0;
+  RelType relativeRel = 0;
+  RelType iRelativeRel = 0;
+  RelType symbolicRel = 0;
+  RelType tlsDescRel = 0;
+  RelType tlsGotRel = 0;
+  RelType tlsModuleIndexRel = 0;
+  RelType tlsOffsetRel = 0;
   unsigned gotEntrySize = ctx.arg.wordsize;
-  unsigned pltEntrySize;
-  unsigned pltHeaderSize;
-  unsigned ipltEntrySize;
+  unsigned pltEntrySize = 0;
+  unsigned pltHeaderSize = 0;
+  unsigned ipltEntrySize = 0;
 
   // At least on x86_64 positions 1 and 2 are used by the first plt entry
   // to support lazy loading.
@@ -154,7 +156,7 @@ public:
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
-  std::array<uint8_t, 4> trapInstr;
+  std::array<uint8_t, 4> trapInstr = {};
 
   // Stores the NOP instructions of different sizes for the target and is used
   // to pad sections that are relaxed.
@@ -177,21 +179,21 @@ protected:
   uint64_t defaultImageBase = 0x10000;
 };
 
-TargetInfo *getAArch64TargetInfo();
-TargetInfo *getAMDGPUTargetInfo();
-TargetInfo *getARMTargetInfo();
-TargetInfo *getAVRTargetInfo();
-TargetInfo *getHexagonTargetInfo();
-TargetInfo *getLoongArchTargetInfo();
-TargetInfo *getMSP430TargetInfo();
-TargetInfo *getPPC64TargetInfo();
-TargetInfo *getPPCTargetInfo();
-TargetInfo *getRISCVTargetInfo();
-TargetInfo *getSPARCV9TargetInfo();
-TargetInfo *getSystemZTargetInfo();
-TargetInfo *getX86TargetInfo();
-TargetInfo *getX86_64TargetInfo();
-template <class ELFT> TargetInfo *getMipsTargetInfo();
+void setAArch64TargetInfo(Ctx &);
+void setAMDGPUTargetInfo(Ctx &);
+void setARMTargetInfo(Ctx &);
+void setAVRTargetInfo(Ctx &);
+void setHexagonTargetInfo(Ctx &);
+void setLoongArchTargetInfo(Ctx &);
+void setMSP430TargetInfo(Ctx &);
+void setMipsTargetInfo(Ctx &);
+void setPPC64TargetInfo(Ctx &);
+void setPPCTargetInfo(Ctx &);
+void setRISCVTargetInfo(Ctx &);
+void setSPARCV9TargetInfo(Ctx &);
+void setSystemZTargetInfo(Ctx &);
+void setX86TargetInfo(Ctx &);
+void setX86_64TargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -200,15 +202,22 @@ struct ErrorPlace {
 };
 
 // Returns input section and corresponding source string for the given location.
-ErrorPlace getErrorPlace(const uint8_t *loc);
+ErrorPlace getErrorPlace(Ctx &ctx, const uint8_t *loc);
 
-static inline std::string getErrorLocation(const uint8_t *loc) {
-  return getErrorPlace(loc).loc;
+static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
+  return getErrorPlace(ctx, loc).loc;
 }
 
-void processArmCmseSymbols();
+void processArmCmseSymbols(Ctx &);
 
-void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
+template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
+uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
+                         uint8_t newFlag);
+bool isMipsN32Abi(Ctx &, const InputFile &f);
+bool isMicroMips(Ctx &);
+bool isMipsR6(Ctx &);
+
+void writePPC32GlinkSection(Ctx &, uint8_t *buf, size_t numEntries);
 
 unsigned getPPCDFormOp(unsigned secondaryOp);
 unsigned getPPCDSFormOp(unsigned secondaryOp);
@@ -220,88 +229,94 @@ unsigned getPPCDSFormOp(unsigned secondaryOp);
 // offset between GEP and LEP is encoded in a function's st_other flags.
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
+unsigned getPPC64GlobalEntryToLocalEntryOffset(Ctx &, uint8_t stOther);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
 // lower memory than the instruction.
-void writePrefixedInstruction(uint8_t *loc, uint64_t insn);
+void writePrefixedInst(Ctx &, uint8_t *loc, uint64_t insn);
 
-void addPPC64SaveRestore();
-uint64_t getPPC64TocBase();
+void addPPC64SaveRestore(Ctx &);
+uint64_t getPPC64TocBase(Ctx &ctx);
 uint64_t getAArch64Page(uint64_t expr);
-template <typename ELFT> void writeARMCmseImportLib();
+bool isAArch64BTILandingPad(Ctx &, Symbol &s, int64_t a);
+template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
-void mergeRISCVAttributesSections();
-void addArmInputSectionMappingSymbols();
+void mergeRISCVAttributesSections(Ctx &);
+void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
-void sortArmMappingSymbols();
-void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
-void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
-void initSymbolAnchors();
+void sortArmMappingSymbols(Ctx &);
+void convertArmInstructionstoBE8(Ctx &, InputSection *sec, uint8_t *buf);
+void createTaggedSymbols(Ctx &);
+void initSymbolAnchors(Ctx &);
 
-TargetInfo *getTarget();
+void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
-void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
-                      int64_t min, uint64_t max);
-void reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
-                      const Twine &msg);
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
+
+void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
+                      const Twine &v, int64_t min, uint64_t max);
+void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                      const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
-inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
+inline void checkInt(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                     const Relocation &rel) {
   if (v != llvm::SignExtend64(v, n))
-    reportRangeError(loc, rel, Twine(v), llvm::minIntN(n), llvm::maxIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), llvm::minIntN(n),
+                     llvm::maxIntN(n));
 }
 
 // Make sure that V can be represented as an N bit unsigned integer.
-inline void checkUInt(uint8_t *loc, uint64_t v, int n, const Relocation &rel) {
+inline void checkUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
+                      const Relocation &rel) {
   if ((v >> n) != 0)
-    reportRangeError(loc, rel, Twine(v), 0, llvm::maxUIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), 0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.
-inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
+inline void checkIntUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                          const Relocation &rel) {
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
   if (v != (uint64_t)llvm::SignExtend64(v, n) && (v >> n) != 0)
-    reportRangeError(loc, rel, Twine((int64_t)v), llvm::minIntN(n),
+    reportRangeError(ctx, loc, rel, Twine((int64_t)v), llvm::minIntN(n),
                      llvm::maxUIntN(n));
 }
 
-inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
+inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
-    error(getErrorLocation(loc) + "improper alignment for relocation " +
-          lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
-          " is not aligned to " + Twine(n) + " bytes");
+    Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
+             << rel.type << ": 0x" << llvm::utohexstr(v)
+             << " is not aligned to " << n << " bytes";
 }
 
 // Endianness-aware read/write.
-inline uint16_t read16(const void *p) {
+inline uint16_t read16(Ctx &ctx, const void *p) {
   return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
-inline uint32_t read32(const void *p) {
+inline uint32_t read32(Ctx &ctx, const void *p) {
   return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
-inline uint64_t read64(const void *p) {
+inline uint64_t read64(Ctx &ctx, const void *p) {
   return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
-inline void write16(void *p, uint16_t v) {
+inline void write16(Ctx &ctx, void *p, uint16_t v) {
   llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
-inline void write32(void *p, uint32_t v) {
+inline void write32(Ctx &ctx, void *p, uint32_t v) {
   llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
-inline void write64(void *p, uint64_t v) {
+inline void write64(Ctx &ctx, void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 

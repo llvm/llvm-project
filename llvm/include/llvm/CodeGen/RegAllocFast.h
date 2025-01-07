@@ -27,12 +27,12 @@ public:
   RegAllocFastPass(RegAllocFastPassOptions Opts = RegAllocFastPassOptions())
       : Opts(Opts) {}
 
-  MachineFunctionProperties getRequiredProperties() {
+  MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoPHIs);
   }
 
-  MachineFunctionProperties getSetProperties() {
+  MachineFunctionProperties getSetProperties() const {
     if (Opts.ClearVRegs) {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
@@ -41,7 +41,7 @@ public:
     return MachineFunctionProperties();
   }
 
-  MachineFunctionProperties getClearedProperties() {
+  MachineFunctionProperties getClearedProperties() const {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);
   }
@@ -50,6 +50,8 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

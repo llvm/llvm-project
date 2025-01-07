@@ -195,7 +195,7 @@ Ret:
 }
 
 ; CHECK-LABEL: define {{.*}} @loop2(
-define i8 @loop2(ptr %p) {
+define i8 @loop2(ptr %p, i1 %arg) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8
@@ -207,7 +207,7 @@ entry:
 ; CHECK: 3 = MemoryDef(2)
 ; CHECK-NEXT: %after = call ptr @llvm.launder.invariant.group.p0(ptr %p)
   %after = call ptr @llvm.launder.invariant.group.p0(ptr %p)
-  br i1 undef, label %Loop.Body, label %Loop.End
+  br i1 %arg, label %Loop.Body, label %Loop.End
 
 Loop.Body:
 ; CHECK: MemoryUse(6)
@@ -221,7 +221,7 @@ Loop.Body:
 ; CHECK: 4 = MemoryDef(6)
   store i8 4, ptr %after, !invariant.group !0
 
-  br i1 undef, label %Loop.End, label %Loop.Body
+  br i1 %arg, label %Loop.End, label %Loop.Body
 
 Loop.End:
 ; CHECK: MemoryUse(5)
@@ -231,7 +231,7 @@ Loop.End:
 ; CHECK: MemoryUse(5) {{.*}} clobbered by 1
 ; CHECK-NEXT: %3 = load
   %3 = load i8, ptr %p, align 4, !invariant.group !0
-  br i1 undef, label %Ret, label %Loop.Body
+  br i1 %arg, label %Ret, label %Loop.Body
 
 Ret:
   ret i8 %3
@@ -239,7 +239,7 @@ Ret:
 
 
 ; CHECK-LABEL: define {{.*}} @loop3(
-define i8 @loop3(ptr %p) {
+define i8 @loop3(ptr %p, i1 %arg) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8
@@ -251,7 +251,7 @@ entry:
 ; CHECK: 3 = MemoryDef(2)
 ; CHECK-NEXT: %after = call ptr @llvm.launder.invariant.group.p0(ptr %p)
   %after = call ptr @llvm.launder.invariant.group.p0(ptr %p)
-  br i1 undef, label %Loop.Body, label %Loop.End
+  br i1 %arg, label %Loop.Body, label %Loop.End
 
 Loop.Body:
 ; CHECK: MemoryUse(8)
@@ -266,7 +266,7 @@ Loop.Body:
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, ptr %after, !invariant.group !0
 
-  br i1 undef, label %Loop.next, label %Loop.Body
+  br i1 %arg, label %Loop.next, label %Loop.Body
 Loop.next:
 ; CHECK: 5 = MemoryDef(4)
 ; CHECK-NEXT: call void @clobber8
@@ -276,7 +276,7 @@ Loop.next:
 ; CHECK-NEXT: %2 = load i8
   %2 = load i8, ptr %after, !invariant.group !0
 
-  br i1 undef, label %Loop.End, label %Loop.Body
+  br i1 %arg, label %Loop.End, label %Loop.Body
 
 Loop.End:
 ; CHECK: MemoryUse(7)
@@ -290,14 +290,14 @@ Loop.End:
 ; CHECK: MemoryUse(6) {{.*}} clobbered by 7
 ; CHECK-NEXT: %4 = load
   %4 = load i8, ptr %after, align 4, !invariant.group !0
-  br i1 undef, label %Ret, label %Loop.Body
+  br i1 %arg, label %Ret, label %Loop.Body
 
 Ret:
   ret i8 %3
 }
 
 ; CHECK-LABEL: define {{.*}} @loop4(
-define i8 @loop4(ptr %p) {
+define i8 @loop4(ptr %p, i1 %arg) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8
@@ -308,7 +308,7 @@ entry:
 ; CHECK: 3 = MemoryDef(2)
 ; CHECK-NEXT: %after = call ptr @llvm.launder.invariant.group.p0(ptr %p)
   %after = call ptr @llvm.launder.invariant.group.p0(ptr %p)
-  br i1 undef, label %Loop.Pre, label %Loop.End
+  br i1 %arg, label %Loop.Pre, label %Loop.End
 
 Loop.Pre:
 ; CHECK: MemoryUse(2)
@@ -326,7 +326,7 @@ Loop.Body:
 
 ; CHECK: 4 = MemoryDef(6)
   store i8 4, ptr %after, !invariant.group !0
-  br i1 undef, label %Loop.End, label %Loop.Body
+  br i1 %arg, label %Loop.End, label %Loop.Body
 
 Loop.End:
 ; CHECK: MemoryUse(5)
@@ -336,7 +336,7 @@ Loop.End:
 ; CHECK: MemoryUse(5) {{.*}} clobbered by 1
 ; CHECK-NEXT: %4 = load
   %4 = load i8, ptr %p, align 4, !invariant.group !0
-  br i1 undef, label %Ret, label %Loop.Body
+  br i1 %arg, label %Ret, label %Loop.Body
 
 Ret:
   ret i8 %3

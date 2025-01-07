@@ -1,5 +1,4 @@
 RUN: llvm-profdata merge --sample --extbinary --split-layout %p/Inputs/sample-profile.proftext -o %t-output
-RUN: diff %t-output %p/Inputs/split-layout.profdata
 
 RUN: llvm-profdata merge --sample --text --split-layout %t-output | FileCheck %s
 CHECK: main:184019:0

@@ -13,8 +13,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
   %0 = llvm.mlir.constant(2.000000e+00 : f32) : f32
   %1 = llvm.mlir.constant(1.000000e+00 : f32) : f32
   omp.parallel {
-    omp.sections reduction(@add_reduction_f32 -> %arg0 : !llvm.ptr) {
-    ^bb0(%arg1: !llvm.ptr):
+    omp.sections reduction(@add_reduction_f32 %arg0 -> %arg1 : !llvm.ptr) {
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         %2 = llvm.load %arg2 : !llvm.ptr -> f32
@@ -52,11 +51,11 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_21:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_22:.*]]
 // CHECK:       omp.reduction.init:                               ; preds = %[[VAL_23:.*]]
+// CHECK:         store float 0.000000e+00, ptr %[[VAL_20]], align 4
 // CHECK:         br label %[[VAL_24:.*]]
 // CHECK:       omp.par.region:                                   ; preds = %[[VAL_22]]
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp.par.region1:                                  ; preds = %[[VAL_24]]
-// CHECK:         store float 0.000000e+00, ptr %[[VAL_20]], align 4
 // CHECK:         br label %[[VAL_26:.*]]
 // CHECK:       omp_section_loop.preheader:                       ; preds = %[[VAL_25]]
 // CHECK:         store i32 0, ptr %[[VAL_13]], align 4

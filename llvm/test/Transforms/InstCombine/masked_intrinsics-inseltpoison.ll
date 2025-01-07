@@ -191,7 +191,7 @@ define <2 x double> @gather_zeromask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 
 define <2 x double> @gather_onemask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 ; CHECK-LABEL: @gather_onemask(
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS:%.*]], i32 4, <2 x i1> <i1 true, i1 true>, <2 x double> poison)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS:%.*]], i32 4, <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> <i1 true, i1 true>, <2 x double> %passthru)

@@ -95,8 +95,8 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
       default:
         llvm_unreachable("Unsupported call!");
       case Intrinsic::vscale: {
-        Function *Fn =
-            Intrinsic::getDeclaration(I->getModule(), Intrinsic::vscale, {Ty});
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), Intrinsic::vscale, {Ty});
         Res = CallInst::Create(Fn->getFunctionType(), Fn);
         break;
       }
@@ -436,6 +436,71 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc,
   return ExtractElementInst::Create(VecInput, IC.Builder.getInt32(Elt));
 }
 
+/// Whenever an element is extracted from a vector, optionally shifted down, and
+/// then truncated, canonicalize by converting it to a bitcast followed by an
+/// extractelement.
+///
+/// Examples (little endian):
+///   trunc (extractelement <4 x i64> %X, 0) to i32
+///   --->
+///   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
+///
+///   trunc (lshr (extractelement <4 x i32> %X, 0), 8) to i8
+///   --->
+///   extractelement <16 x i8> (bitcast <4 x i32> %X to <16 x i8>), i32 1
+static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
+                                            InstCombinerImpl &IC) {
+  Value *Src = Trunc.getOperand(0);
+  Type *SrcType = Src->getType();
+  Type *DstType = Trunc.getType();
+
+  // Only attempt this if we have simple aliasing of the vector elements.
+  // A badly fit destination size would result in an invalid cast.
+  unsigned SrcBits = SrcType->getScalarSizeInBits();
+  unsigned DstBits = DstType->getScalarSizeInBits();
+  unsigned TruncRatio = SrcBits / DstBits;
+  if ((SrcBits % DstBits) != 0)
+    return nullptr;
+
+  Value *VecOp;
+  ConstantInt *Cst;
+  const APInt *ShiftAmount = nullptr;
+  if (!match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst)))) &&
+      !match(Src,
+             m_OneUse(m_LShr(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst)),
+                             m_APInt(ShiftAmount)))))
+    return nullptr;
+
+  auto *VecOpTy = cast<VectorType>(VecOp->getType());
+  auto VecElts = VecOpTy->getElementCount();
+
+  uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
+  uint64_t VecOpIdx = Cst->getZExtValue();
+  uint64_t NewIdx = IC.getDataLayout().isBigEndian()
+                        ? (VecOpIdx + 1) * TruncRatio - 1
+                        : VecOpIdx * TruncRatio;
+
+  // Adjust index by the whole number of truncated elements.
+  if (ShiftAmount) {
+    // Check shift amount is in range and shifts a whole number of truncated
+    // elements.
+    if (ShiftAmount->uge(SrcBits) || ShiftAmount->urem(DstBits) != 0)
+      return nullptr;
+
+    uint64_t IdxOfs = ShiftAmount->udiv(DstBits).getZExtValue();
+    NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
+                                              : (NewIdx + IdxOfs);
+  }
+
+  assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
+         NewIdx <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
+
+  auto *BitCastTo =
+      VectorType::get(DstType, BitCastNumElts, VecElts.isScalable());
+  Value *BitCast = IC.Builder.CreateBitCast(VecOp, BitCastTo);
+  return ExtractElementInst::Create(BitCast, IC.Builder.getInt32(NewIdx));
+}
+
 /// Funnel/Rotate left/right may occur in a wider type than necessary because of
 /// type promotion rules. Try to narrow the inputs and convert to funnel shift.
 Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
@@ -535,7 +600,8 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   if (ShVal0 != ShVal1)
     Y = Builder.CreateTrunc(ShVal1, DestTy);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
-  Function *F = Intrinsic::getDeclaration(Trunc.getModule(), IID, DestTy);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(Trunc.getModule(), IID, DestTy);
   return CallInst::Create(F, {X, Y, NarrowShAmt});
 }
 
@@ -720,15 +786,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
-  // Test if the trunc is the user of a select which is part of a
-  // minimum or maximum operation. If so, don't do any more simplification.
-  // Even simplifying demanded bits can break the canonical form of a
-  // min/max.
-  Value *LHS, *RHS;
-  if (SelectInst *Sel = dyn_cast<SelectInst>(Src))
-    if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
-      return nullptr;
-
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(Trunc))
@@ -848,36 +905,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (Instruction *I = foldVecTruncToExtElt(Trunc, *this))
     return I;
 
-  // Whenever an element is extracted from a vector, and then truncated,
-  // canonicalize by converting it to a bitcast followed by an
-  // extractelement.
-  //
-  // Example (little endian):
-  //   trunc (extractelement <4 x i64> %X, 0) to i32
-  //   --->
-  //   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
-  Value *VecOp;
-  ConstantInt *Cst;
-  if (match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst))))) {
-    auto *VecOpTy = cast<VectorType>(VecOp->getType());
-    auto VecElts = VecOpTy->getElementCount();
-
-    // A badly fit destination size would result in an invalid cast.
-    if (SrcWidth % DestWidth == 0) {
-      uint64_t TruncRatio = SrcWidth / DestWidth;
-      uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
-      uint64_t VecOpIdx = Cst->getZExtValue();
-      uint64_t NewIdx = DL.isBigEndian() ? (VecOpIdx + 1) * TruncRatio - 1
-                                         : VecOpIdx * TruncRatio;
-      assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
-             "overflow 32-bits");
-
-      auto *BitCastTo =
-          VectorType::get(DestTy, BitCastNumElts, VecElts.isScalable());
-      Value *BitCast = Builder.CreateBitCast(VecOp, BitCastTo);
-      return ExtractElementInst::Create(BitCast, Builder.getInt32(NewIdx));
-    }
-  }
+  if (Instruction *I = foldVecExtTruncToExtElt(Trunc, *this))
+    return I;
 
   // trunc (ctlz_i32(zext(A), B) --> add(ctlz_i16(A, B), C)
   if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(m_ZExt(m_Value(A)),
@@ -904,6 +933,11 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       }
     }
   }
+
+  if (DestWidth == 1 &&
+      (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
+      isKnownNonZero(Src, SQ.getWithInstruction(&Trunc)))
+    return replaceInstUsesWith(Trunc, ConstantInt::getTrue(DestTy));
 
   bool Changed = false;
   if (!Trunc.hasNoSignedWrap() &&
@@ -1818,15 +1852,14 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Value *X;
   Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
   if (Op && Op->hasOneUse()) {
-    // FIXME: The FMF should propagate from the fptrunc, not the source op.
-    IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-    if (isa<FPMathOperator>(Op))
-      Builder.setFastMathFlags(Op->getFastMathFlags());
+    FastMathFlags FMF = FPT.getFastMathFlags();
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
+      FMF &= FPMO->getFastMathFlags();
 
     if (match(Op, m_FNeg(m_Value(X)))) {
-      Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
-
-      return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
+      Value *InnerTrunc = Builder.CreateFPTruncFMF(X, Ty, FMF);
+      Value *Neg = Builder.CreateFNegFMF(InnerTrunc, FMF);
+      return replaceInstUsesWith(FPT, Neg);
     }
 
     // If we are truncating a select that has an extended operand, we can
@@ -1835,15 +1868,17 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     if (match(Op, m_Select(m_Value(Cond), m_FPExt(m_Value(X)), m_Value(Y))) &&
         X->getType() == Ty) {
       // fptrunc (select Cond, (fpext X), Y --> select Cond, X, (fptrunc Y)
-      Value *NarrowY = Builder.CreateFPTrunc(Y, Ty);
-      Value *Sel = Builder.CreateSelect(Cond, X, NarrowY, "narrow.sel", Op);
+      Value *NarrowY = Builder.CreateFPTruncFMF(Y, Ty, FMF);
+      Value *Sel =
+          Builder.CreateSelectFMF(Cond, X, NarrowY, FMF, "narrow.sel", Op);
       return replaceInstUsesWith(FPT, Sel);
     }
     if (match(Op, m_Select(m_Value(Cond), m_Value(Y), m_FPExt(m_Value(X)))) &&
         X->getType() == Ty) {
       // fptrunc (select Cond, Y, (fpext X) --> select Cond, (fptrunc Y), X
-      Value *NarrowY = Builder.CreateFPTrunc(Y, Ty);
-      Value *Sel = Builder.CreateSelect(Cond, NarrowY, X, "narrow.sel", Op);
+      Value *NarrowY = Builder.CreateFPTruncFMF(Y, Ty, FMF);
+      Value *Sel =
+          Builder.CreateSelectFMF(Cond, NarrowY, X, FMF, "narrow.sel", Op);
       return replaceInstUsesWith(FPT, Sel);
     }
   }
@@ -1875,8 +1910,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       // Do unary FP operation on smaller type.
       // (fptrunc (fabs x)) -> (fabs (fptrunc x))
       Value *InnerTrunc = Builder.CreateFPTrunc(Src, Ty);
-      Function *Overload = Intrinsic::getDeclaration(FPT.getModule(),
-                                                     II->getIntrinsicID(), Ty);
+      Function *Overload = Intrinsic::getOrInsertDeclaration(
+          FPT.getModule(), II->getIntrinsicID(), Ty);
       SmallVector<OperandBundleDef, 1> OpBundles;
       II->getOperandBundlesAsDefs(OpBundles);
       CallInst *NewCI =
@@ -2077,10 +2112,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
         Base->getType() == Ty) {
       Value *Offset = EmitGEPOffset(GEP);
       auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-      if (GEP->hasNoUnsignedWrap() ||
-          (GEP->hasNoUnsignedSignedWrap() &&
-           isKnownNonNegative(Offset, SQ.getWithInstruction(&CI))))
-        NewOp->setHasNoUnsignedWrap(true);
+      NewOp->setHasNoUnsignedWrap(GEP->hasNoUnsignedWrap());
       return NewOp;
     }
   }
@@ -2818,8 +2850,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       if (IntrinsicNum != 0) {
         assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
         assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
-        Function *BswapOrBitreverse =
-            Intrinsic::getDeclaration(CI.getModule(), IntrinsicNum, DestTy);
+        Function *BswapOrBitreverse = Intrinsic::getOrInsertDeclaration(
+            CI.getModule(), IntrinsicNum, DestTy);
         Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);
         return CallInst::Create(BswapOrBitreverse, {ScalarX});
       }

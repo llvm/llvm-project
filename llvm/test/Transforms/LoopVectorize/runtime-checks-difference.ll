@@ -183,7 +183,7 @@ define void @nested_loop_outer_iv_addrec_invariant_in_inner1(ptr %a, ptr %b, i64
 
 ; CHECK:       outer.header:
 ; CHECK:         [[OUTER_IV_SHL_2:%.]] = shl i64 %outer.iv, 2
-; CHECK-NEXT:    [[A_GEP_UPPER:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_SHL_2]]
+; CHECK-NEXT:    [[A_GEP_UPPER:%.*]] = getelementptr nuw i8, ptr %a, i64 [[OUTER_IV_SHL_2]]
 ; CHECK-NEXT:    [[OUTER_IV_4:%.]] = add i64 [[OUTER_IV_SHL_2]], 4
 ; CHECK-NEXT:    [[A_GEP_UPPER_4:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_4]]
 ; CHECK:         [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
@@ -233,7 +233,7 @@ define void @nested_loop_outer_iv_addrec_invariant_in_inner2(ptr %a, ptr %b, i64
 
 ; CHECK:       outer.header:
 ; CHECK:         [[OUTER_IV_SHL_2:%.]] = shl i64 %outer.iv, 2
-; CHECK-NEXT:    [[A_GEP_UPPER:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_SHL_2]]
+; CHECK-NEXT:    [[A_GEP_UPPER:%.*]] = getelementptr nuw i8, ptr %a, i64 [[OUTER_IV_SHL_2]]
 ; CHECK-NEXT:    [[OUTER_IV_4:%.]] = add i64 [[OUTER_IV_SHL_2]], 4
 ; CHECK-NEXT:    [[A_GEP_UPPER_4:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_4]]
 ; CHECK:         [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4

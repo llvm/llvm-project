@@ -48,6 +48,8 @@ public:
   ArrayRef<Chunk *> getCodeChunks() { return thunks; }
   ArrayRef<Chunk *> getCodePData() { return pdata; }
   ArrayRef<Chunk *> getCodeUnwindInfo() { return unwindinfo; }
+  ArrayRef<Chunk *> getAuxIat() { return auxIat; }
+  ArrayRef<Chunk *> getAuxIatCopy() { return auxIatCopy; }
 
   uint64_t getDirRVA() { return dirs[0]->getRVA(); }
   uint64_t getDirSize();
@@ -69,6 +71,8 @@ private:
   std::vector<Chunk *> pdata;
   std::vector<Chunk *> unwindinfo;
   std::vector<Chunk *> dllNames;
+  std::vector<Chunk *> auxIat;
+  std::vector<Chunk *> auxIatCopy;
 
   COFFLinkerContext &ctx;
 };

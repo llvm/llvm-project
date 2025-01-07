@@ -161,6 +161,7 @@ struct SanitizerCoverageOptions {
   bool TraceLoads = false;
   bool TraceStores = false;
   bool CollectControlFlow = false;
+  bool GatedCallbacks = false;
 
   SanitizerCoverageOptions() = default;
 };

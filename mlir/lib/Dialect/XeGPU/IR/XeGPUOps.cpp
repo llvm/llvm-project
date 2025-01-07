@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
@@ -90,6 +91,33 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         ValueRange({}) /* empty dynamic strides */,
         staticOffsets /* const offsets */, {} /* empty const shape*/,
         {} /* empty const strides*/);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source,
+                           llvm::ArrayRef<OpFoldResult> offsets,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && offsets.size() && strides.size() &&
+         shape.size() == strides.size() && shape.size() == offsets.size());
+
+  llvm::SmallVector<int64_t> staticOffsets;
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
+        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
@@ -308,6 +336,24 @@ LogicalResult UpdateNdOffsetOp::verify() {
 // XeGPU_CreateDescOp
 //===----------------------------------------------------------------------===//
 
+void CreateDescOp::build(OpBuilder &builder, OperationState &state,
+                         TensorDescType TensorDesc, Value source,
+                         llvm::ArrayRef<OpFoldResult> offsets) {
+  auto loc = source.getLoc();
+  int64_t size = static_cast<int64_t>(offsets.size());
+  auto type = VectorType::get(size, builder.getIndexType());
+  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
+  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  build(builder, state, TensorDesc, source, offset);
+}
+
+void CreateDescOp::build(OpBuilder &builder, OperationState &state,
+                         TensorDescType TensorDesc, Value source,
+                         llvm::ArrayRef<int64_t> offsets) {
+  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
+  build(builder, state, TensorDesc, source, ofrs);
+}
+
 LogicalResult CreateDescOp::verify() {
   auto tdescTy = getTensorDescType();
 
@@ -473,6 +519,29 @@ LogicalResult StoreScatterOp::verify() {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// XeGPU_UpdateOffsetOp
+//===----------------------------------------------------------------------===//
+void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value tensorDesc,
+                           llvm::ArrayRef<OpFoldResult> offsets) {
+  auto tdescTy = mlir::dyn_cast<TensorDescType>(tensorDesc.getType());
+  assert(tdescTy && "Expecting the source is a TensorDescType value.");
+  auto loc = tensorDesc.getLoc();
+  int64_t size = static_cast<int64_t>(offsets.size());
+  auto type = VectorType::get({size}, builder.getIndexType());
+  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
+  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  build(builder, state, tdescTy, tensorDesc, offset);
+}
+
+void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
+                           Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
+  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
+  build(builder, state, tensorDesc, ofrs);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//

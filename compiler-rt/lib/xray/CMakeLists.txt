@@ -10,6 +10,10 @@ set(XRAY_SOURCES
   xray_utils.cpp
   )
 
+set(XRAY_DSO_SOURCES
+  xray_dso_init.cpp
+  )
+
 # Implementation files for all XRay modes.
 set(XRAY_FDR_MODE_SOURCES
   xray_fdr_flags.cpp
@@ -33,6 +37,11 @@ set(x86_64_SOURCES
   xray_trampoline_x86_64.S
   )
 
+set(x86_64_DSO_SOURCES
+   xray_trampoline_x86_64.S
+   )
+
+
 set(arm_SOURCES
   xray_arm.cpp
   xray_trampoline_arm.S
@@ -44,6 +53,10 @@ set(armhf_SOURCES
 
 set(aarch64_SOURCES
   xray_AArch64.cpp
+  xray_trampoline_AArch64.S
+  )
+
+set(aarch64_DSO_SOURCES
   xray_trampoline_AArch64.S
   )
 
@@ -81,6 +94,16 @@ set(powerpc64le_SOURCES
 set(hexagon_SOURCES
   xray_hexagon.cpp
   xray_trampoline_hexagon.S
+  )
+
+set(riscv32_SOURCES
+  xray_riscv.cpp
+  xray_trampoline_riscv32.S
+  )
+
+set(riscv64_SOURCES
+  xray_riscv.cpp
+  xray_trampoline_riscv64.S
   )
 
 set(XRAY_SOURCE_ARCHS
@@ -128,10 +151,12 @@ set(XRAY_IMPL_HEADERS
 # consumption by tests.
 set(XRAY_ALL_SOURCE_FILES
   ${XRAY_SOURCES}
+  ${XRAY_DSO_SOURCES}
   ${XRAY_FDR_MODE_SOURCES}
   ${XRAY_BASIC_MODE_SOURCES}
   ${XRAY_PROFILING_MODE_SOURCES}
   ${x86_64_SOURCES}
+  ${x86_64_DSO_SOURCES}
   ${arm_SOURCES}
   ${armhf_SOURCES}
   ${hexagon_SOURCES}
@@ -141,6 +166,8 @@ set(XRAY_ALL_SOURCE_FILES
   ${mips64_SOURCES}
   ${mips64el_SOURCES}
   ${powerpc64le_SOURCES}
+  ${riscv32_SOURCES}
+  ${riscv64_SOURCES}
   ${XRAY_IMPL_HEADERS}
   )
 list(REMOVE_DUPLICATES XRAY_ALL_SOURCE_FILES)
@@ -161,6 +188,9 @@ set(XRAY_CFLAGS
   ${COMPILER_RT_COMMON_CFLAGS}
   ${COMPILER_RT_CXX_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS SANITIZER_COMMON_NO_REDEFINE_BUILTINS XRAY_HAS_EXCEPTIONS=1)
+
+# DSO trampolines need to be compiled with GOT addressing
+set(XRAY_COMMON_DEFINITIONS_DSO ${XRAY_COMMON_DEFINITIONS} XRAY_PIC)
 
 # Too many existing bugs, needs cleanup.
 append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format XRAY_CFLAGS)
@@ -201,7 +231,16 @@ if (APPLE)
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
+  add_compiler_rt_object_libraries(RTXrayDSO
+    OS ${XRAY_SUPPORTED_OS}
+    ARCHS ${XRAY_DSO_SUPPORTED_ARCH}
+    SOURCES ${XRAY_DSO_SOURCES}
+    ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+    CFLAGS ${XRAY_CFLAGS}
+    DEFS ${XRAY_COMMON_DEFINITIONS_DSO}
+    DEPS ${XRAY_DEPS})
   set(XRAY_RTXRAY_ARCH_LIBS "")
+  set(XRAY_DSO_RTXRAY_ARCH_LIBS "")
   foreach(arch ${XRAY_SUPPORTED_ARCH})
     if(NOT ${arch} IN_LIST XRAY_SOURCE_ARCHS)
       continue()
@@ -215,6 +254,17 @@ if (APPLE)
       DEFS ${XRAY_COMMON_DEFINITIONS}
       DEPS ${XRAY_DEPS})
     list(APPEND XRAY_RTXRAY_ARCH_LIBS RTXray_${arch})
+    if (${arch} IN_LIST XRAY_DSO_SUPPORTED_ARCH)
+      add_compiler_rt_object_libraries(RTXrayDSO_${arch}
+        OS ${XRAY_SUPPORTED_OS}
+        ARCHS ${arch}
+        SOURCES ${${arch}_DSO_SOURCES}
+        ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+        CFLAGS ${XRAY_CFLAGS}
+        DEFS ${XRAY_COMMON_DEFINITIONS_DSO}
+        DEPS ${XRAY_DEPS})
+      list(APPEND XRAY_DSO_RTXRAY_ARCH_LIBS RTXrayDSO_${arch})
+    endif()
   endforeach()
   add_compiler_rt_object_libraries(RTXrayFDR
     OS ${XRAY_SUPPORTED_OS}
@@ -252,6 +302,17 @@ if (APPLE)
     LINK_FLAGS ${XRAY_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
     LINK_LIBS ${XRAY_LINK_LIBS}
     PARENT_TARGET xray)
+  add_compiler_rt_runtime(clang_rt.xray-dso
+    STATIC
+    OS ${XRAY_SUPPORTED_OS}
+    ARCHS ${XRAY_DSO_SUPPORTED_ARCH}
+    OBJECT_LIBS RTXrayDSO ${XRAY_DSO_RTXRAY_ARCH_LIBS}
+    CFLAGS ${XRAY_CFLAGS}
+    DEFS ${XRAY_COMMON_DEFINITIONS}
+    LINK_FLAGS ${XRAY_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
+    LINK_LIBS ${XRAY_LINK_LIBS}
+    PARENT_TARGET xray)
+
   add_compiler_rt_runtime(clang_rt.xray-fdr
     STATIC
     OS ${XRAY_SUPPORTED_OS}
@@ -346,16 +407,36 @@ else() # not Apple
       DEFS ${XRAY_COMMON_DEFINITIONS}
       OBJECT_LIBS RTXrayBASIC
       PARENT_TARGET xray)
-   # Profiler Mode runtime
-   add_compiler_rt_runtime(clang_rt.xray-profiling
-     STATIC
-     ARCHS ${arch}
-     CFLAGS ${XRAY_CFLAGS}
-     LINK_FLAGS ${XRAY_LINK_FLAGS}
-     LINK_LIBS ${XRAY_LINK_LIBS}
-     DEFS ${XRAY_COMMON_DEFINITIONS}
-     OBJECT_LIBS RTXrayPROFILING
-     PARENT_TARGET xray)
+    # Profiler Mode runtime
+    add_compiler_rt_runtime(clang_rt.xray-profiling
+      STATIC
+      ARCHS ${arch}
+      CFLAGS ${XRAY_CFLAGS}
+      LINK_FLAGS ${XRAY_LINK_FLAGS}
+      LINK_LIBS ${XRAY_LINK_LIBS}
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      OBJECT_LIBS RTXrayPROFILING
+      PARENT_TARGET xray)
+
+    if (${arch} IN_LIST XRAY_DSO_SUPPORTED_ARCH)
+      add_compiler_rt_object_libraries(RTXrayDSO
+        ARCHS ${arch}
+        SOURCES ${XRAY_DSO_SOURCES} ${${arch}_DSO_SOURCES} 
+        ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+        CFLAGS ${XRAY_CFLAGS}
+        DEFS ${XRAY_COMMON_DEFINITIONS_DSO}
+        DEPS ${XRAY_DEPS})
+      # DSO runtime archive
+      add_compiler_rt_runtime(clang_rt.xray-dso
+        STATIC
+        ARCHS ${arch}
+        CFLAGS ${XRAY_CFLAGS}
+        LINK_FLAGS ${XRAY_LINK_FLAGS}
+        LINK_LIBS ${XRAY_LINK_LIBS}
+        DEFS ${XRAY_COMMON_DEFINITIONS}
+        OBJECT_LIBS RTXrayDSO
+        PARENT_TARGET xray)
+    endif()
   endforeach()
 endif() # not Apple
 

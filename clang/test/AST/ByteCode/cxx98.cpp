@@ -54,3 +54,8 @@ _Static_assert(a == 0, ""); // both-error {{static assertion expression is not a
 struct SelfReference { SelfReference &r; };
 extern SelfReference self_reference_1;
 SelfReference self_reference_2 = {self_reference_1};
+
+struct PR65784s{
+  int *ptr;
+} const PR65784[] = {(int *)""};
+PR65784s PR65784f() { return *PR65784; }

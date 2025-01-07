@@ -411,10 +411,10 @@ enum class TemplateSubstitutionKind : char {
     /// lookup will search our outer scope.
     bool CombineWithOuterScope;
 
-    /// Whether this scope is being used to instantiate a lambda expression,
-    /// in which case it should be reused for instantiating the lambda's
-    /// FunctionProtoType.
-    bool InstantiatingLambda = false;
+    /// Whether this scope is being used to instantiate a lambda or block
+    /// expression, in which case it should be reused for instantiating the
+    /// lambda's FunctionProtoType.
+    bool InstantiatingLambdaOrBlock = false;
 
     /// If non-NULL, the template parameter pack that has been
     /// partially substituted per C++0x [temp.arg.explicit]p9.
@@ -431,10 +431,10 @@ enum class TemplateSubstitutionKind : char {
 
   public:
     LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false,
-                            bool InstantiatingLambda = false)
+                            bool InstantiatingLambdaOrBlock = false)
         : SemaRef(SemaRef), Outer(SemaRef.CurrentInstantiationScope),
           CombineWithOuterScope(CombineWithOuterScope),
-          InstantiatingLambda(InstantiatingLambda) {
+          InstantiatingLambdaOrBlock(InstantiatingLambdaOrBlock) {
       SemaRef.CurrentInstantiationScope = this;
     }
 
@@ -486,10 +486,10 @@ enum class TemplateSubstitutionKind : char {
         const Decl *D = I->first;
         llvm::PointerUnion<Decl *, DeclArgumentPack *> &Stored =
           newScope->LocalDecls[D];
-        if (I->second.is<Decl *>()) {
-          Stored = I->second.get<Decl *>();
+        if (auto *D2 = dyn_cast<Decl *>(I->second)) {
+          Stored = D2;
         } else {
-          DeclArgumentPack *OldPack = I->second.get<DeclArgumentPack *>();
+          DeclArgumentPack *OldPack = cast<DeclArgumentPack *>(I->second);
           DeclArgumentPack *NewPack = new DeclArgumentPack(*OldPack);
           Stored = NewPack;
           newScope->ArgumentPacks.push_back(NewPack);
@@ -521,6 +521,12 @@ enum class TemplateSubstitutionKind : char {
     /// returns NULL.
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     findInstantiationOf(const Decl *D);
+
+    /// Similar to \p findInstantiationOf(), but it wouldn't assert if the
+    /// instantiation was not found within the current instantiation scope. This
+    /// is helpful for on-demand declaration instantiation.
+    llvm::PointerUnion<Decl *, DeclArgumentPack *> *
+    findInstantiationUnsafe(const Decl *D);
 
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
@@ -561,8 +567,8 @@ enum class TemplateSubstitutionKind : char {
     /// Determine whether D is a pack expansion created in this scope.
     bool isLocalPackExpansion(const Decl *D);
 
-    /// Determine whether this scope is for instantiating a lambda.
-    bool isLambda() const { return InstantiatingLambda; }
+    /// Determine whether this scope is for instantiating a lambda or block.
+    bool isLambdaOrBlock() const { return InstantiatingLambdaOrBlock; }
   };
 
   class TemplateDeclInstantiator

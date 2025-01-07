@@ -411,3 +411,7 @@ fir::NameUniquer::dropTypeConversionMarkers(llvm::StringRef mangledTypeName) {
 std::string fir::NameUniquer::replaceSpecialSymbols(const std::string &name) {
   return std::regex_replace(name, std::regex{"\\."}, "X");
 }
+
+bool fir::NameUniquer::isSpecialSymbol(llvm::StringRef name) {
+  return !name.empty() && (name[0] == '.' || name[0] == 'X');
+}

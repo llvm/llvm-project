@@ -75,7 +75,6 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 1
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    addi a1, sp, 16
@@ -90,7 +89,6 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
 ; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    add sp, sp, a0
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -103,7 +101,6 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 1
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    addi a1, sp, 16
@@ -118,7 +115,6 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload

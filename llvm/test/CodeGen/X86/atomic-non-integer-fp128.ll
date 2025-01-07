@@ -16,7 +16,7 @@ define void @store_fp128(ptr %fptr, fp128 %v) {
 ; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; X64-SSE-NEXT:    movq (%rdi), %rax
 ; X64-SSE-NEXT:    movq 8(%rdi), %rdx
-; X64-SSE-NEXT:    .p2align 4, 0x90
+; X64-SSE-NEXT:    .p2align 4
 ; X64-SSE-NEXT:  .LBB0_1: # %atomicrmw.start
 ; X64-SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-SSE-NEXT:    lock cmpxchg16b (%rdi)
@@ -73,7 +73,7 @@ define fp128 @exchange_fp128(ptr %fptr, fp128 %x) {
 ; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; X64-SSE-NEXT:    movq (%rdi), %rax
 ; X64-SSE-NEXT:    movq 8(%rdi), %rdx
-; X64-SSE-NEXT:    .p2align 4, 0x90
+; X64-SSE-NEXT:    .p2align 4
 ; X64-SSE-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X64-SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-SSE-NEXT:    lock cmpxchg16b (%rdi)
@@ -96,7 +96,7 @@ define fp128 @exchange_fp128(ptr %fptr, fp128 %x) {
 ; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; X64-AVX-NEXT:    movq (%rdi), %rax
 ; X64-AVX-NEXT:    movq 8(%rdi), %rdx
-; X64-AVX-NEXT:    .p2align 4, 0x90
+; X64-AVX-NEXT:    .p2align 4
 ; X64-AVX-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X64-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-AVX-NEXT:    lock cmpxchg16b (%rdi)

@@ -19,7 +19,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include <optional>
 
@@ -1206,14 +1205,12 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
   if (llvm::EnableSingleByteCoverage)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
-  else {
-    if (!StepV)
-      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                         ArrayRef(Args, 4));
-    else
-      Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
-  }
+  else if (!StepV)
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
+                       ArrayRef(Args, 4));
+  else
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
 }
 
 bool CodeGenPGO::canEmitMCDCCoverage(const CGBuilderTy &Builder) {

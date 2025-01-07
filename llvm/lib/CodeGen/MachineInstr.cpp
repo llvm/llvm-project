@@ -596,6 +596,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
+  // Copy the samesign flag.
+  if (const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I))
+    if (ICmp->hasSameSign())
+      MIFlags |= MachineInstr::MIFlag::SameSign;
+
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -1535,19 +1540,16 @@ bool MachineInstr::isDereferenceableInvariantLoad() const {
   return true;
 }
 
-/// isConstantValuePHI - If the specified instruction is a PHI that always
-/// merges together the same virtual register, return the register, otherwise
-/// return 0.
-unsigned MachineInstr::isConstantValuePHI() const {
+Register MachineInstr::isConstantValuePHI() const {
   if (!isPHI())
-    return 0;
+    return {};
   assert(getNumOperands() >= 3 &&
          "It's illegal to have a PHI without source operands");
 
   Register Reg = getOperand(1).getReg();
   for (unsigned i = 3, e = getNumOperands(); i < e; i += 2)
     if (getOperand(i).getReg() != Reg)
-      return 0;
+      return {};
   return Reg;
 }
 
@@ -1773,6 +1775,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   // Print the opcode name.
   if (TII)
@@ -2215,26 +2219,36 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
   return hash_combine_range(HashComponents.begin(), HashComponents.end());
 }
 
-void MachineInstr::emitError(StringRef Msg) const {
+const MDNode *MachineInstr::getLocCookieMD() const {
   // Find the source location cookie.
-  uint64_t LocCookie = 0;
   const MDNode *LocMD = nullptr;
   for (unsigned i = getNumOperands(); i != 0; --i) {
     if (getOperand(i-1).isMetadata() &&
         (LocMD = getOperand(i-1).getMetadata()) &&
         LocMD->getNumOperands() != 0) {
-      if (const ConstantInt *CI =
-              mdconst::dyn_extract<ConstantInt>(LocMD->getOperand(0))) {
-        LocCookie = CI->getZExtValue();
-        break;
-      }
+      if (mdconst::hasa<ConstantInt>(LocMD->getOperand(0)))
+        return LocMD;
     }
   }
 
-  if (const MachineBasicBlock *MBB = getParent())
-    if (const MachineFunction *MF = MBB->getParent())
-      return MF->getFunction().getContext().emitError(LocCookie, Msg);
-  report_fatal_error(Msg);
+  return nullptr;
+}
+
+void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
+  assert(isInlineAsm());
+  const MDNode *LocMD = getLocCookieMD();
+  uint64_t LocCookie =
+      LocMD
+          ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue()
+          : 0;
+  LLVMContext &Ctx = getMF()->getFunction().getContext();
+  Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg));
+}
+
+void MachineInstr::emitGenericError(const Twine &Msg) const {
+  const Function &Fn = getMF()->getFunction();
+  Fn.getContext().diagnose(
+      DiagnosticInfoGenericWithLoc(Msg, Fn, getDebugLoc()));
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,

@@ -76,7 +76,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
       return mlir::IntegerType::get(context, getIntegerBits<16>(), signedness);
     }
   }
-  llvm_unreachable("INTEGER kind not translated");
+  llvm_unreachable("INTEGER or UNSIGNED kind not translated");
 }
 
 static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
@@ -96,10 +96,7 @@ static mlir::Type genCharacterType(
 }
 
 static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Complex, KIND))
-    return fir::ComplexType::get(context, KIND);
-  return {};
+  return mlir::ComplexType::get(genRealType(context, KIND));
 }
 
 static mlir::Type
@@ -110,7 +107,9 @@ genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
   case Fortran::common::TypeCategory::Real:
     return genRealType(context, kind);
   case Fortran::common::TypeCategory::Integer:
-    return genIntegerType(context, kind);
+    return genIntegerType(context, kind, false);
+  case Fortran::common::TypeCategory::Unsigned:
+    return genIntegerType(context, kind, true);
   case Fortran::common::TypeCategory::Complex:
     return genComplexType(context, kind);
   case Fortran::common::TypeCategory::Logical:
@@ -159,7 +158,7 @@ struct TypeBuilderImpl {
     } else if (category == Fortran::common::TypeCategory::Derived) {
       baseType = genDerivedType(dynamicType->GetDerivedTypeSpec());
     } else {
-      // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
+      // INTEGER, UNSIGNED, REAL, COMPLEX, CHARACTER, LOGICAL
       llvm::SmallVector<Fortran::lower::LenParameterTy> params;
       translateLenParameters(params, category, expr);
       baseType = genFIRType(context, category, dynamicType->kind(), params);

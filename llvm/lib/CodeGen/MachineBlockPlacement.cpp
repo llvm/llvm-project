@@ -218,6 +218,11 @@ static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
              "block placement."),
     cl::init(UINT_MAX), cl::Hidden);
 
+// Apply the ext-tsp algorithm minimizing the size of a binary.
+static cl::opt<bool>
+    ApplyExtTspForSize("apply-ext-tsp-for-size", cl::init(false), cl::Hidden,
+                       cl::desc("Use ext-tsp for size-aware block placement."));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -595,7 +600,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void precomputeTriangleChains();
 
   /// Apply a post-processing step optimizing block placement.
-  void applyExtTsp();
+  void applyExtTsp(bool OptForSize);
 
   /// Modify the existing block placement in the function and adjust all jumps.
   void assignBlockOrder(const std::vector<const MachineBasicBlock *> &NewOrder);
@@ -2184,9 +2189,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  bool OptForSize = F->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get());
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get()))
     return L.getHeader();
 
   MachineBasicBlock *OldTop = nullptr;
@@ -2903,7 +2906,7 @@ void MachineBlockPlacement::buildCFGChains() {
 
 void MachineBlockPlacement::optimizeBranches() {
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
-  SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
+  SmallVector<MachineOperand, 4> Cond;
 
   // Now that all the basic blocks in the chain have the proper layout,
   // make a final call to analyzeBranch with AllowModify set.
@@ -2913,24 +2916,30 @@ void MachineBlockPlacement::optimizeBranches() {
   // a fallthrough when it occurs after predicated terminators.
   for (MachineBasicBlock *ChainBB : FunctionChain) {
     Cond.clear();
-    MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
-    if (!TII->analyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true)) {
-      // If PrevBB has a two-way branch, try to re-order the branches
-      // such that we branch to the successor with higher probability first.
-      if (TBB && !Cond.empty() && FBB &&
-          MBPI->getEdgeProbability(ChainBB, FBB) >
-              MBPI->getEdgeProbability(ChainBB, TBB) &&
-          !TII->reverseBranchCondition(Cond)) {
-        LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
-                          << getBlockName(ChainBB) << "\n");
-        LLVM_DEBUG(dbgs() << "    Edge probability: "
-                          << MBPI->getEdgeProbability(ChainBB, FBB) << " vs "
-                          << MBPI->getEdgeProbability(ChainBB, TBB) << "\n");
-        DebugLoc dl; // FIXME: this is nowhere
-        TII->removeBranch(*ChainBB);
-        TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
-      }
-    }
+    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+    if (TII->analyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true))
+      continue;
+    if (!TBB || !FBB || Cond.empty())
+      continue;
+    // If we are optimizing for size we do not consider the runtime performance.
+    // Instead, we retain the original branch condition so we have more uniform
+    // instructions which will benefit ICF.
+    if (llvm::shouldOptimizeForSize(ChainBB, PSI, MBFI.get()))
+      continue;
+    // If ChainBB has a two-way branch, try to re-order the branches
+    // such that we branch to the successor with higher probability first.
+    if (MBPI->getEdgeProbability(ChainBB, TBB) >=
+        MBPI->getEdgeProbability(ChainBB, FBB))
+      continue;
+    if (TII->reverseBranchCondition(Cond))
+      continue;
+    LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
+                      << getBlockName(ChainBB) << "\n");
+    LLVM_DEBUG(dbgs() << "  " << getBlockName(TBB) << " < " << getBlockName(FBB)
+                      << "\n");
+    auto Dl = ChainBB->findBranchDebugLoc();
+    TII->removeBranch(*ChainBB);
+    TII->insertBranch(*ChainBB, FBB, TBB, Cond, Dl);
   }
 }
 
@@ -3505,20 +3514,35 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // Initialize tail duplication thresholds.
   initTailDupThreshold();
 
+  const bool OptForSize =
+      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
+  // Determine whether to use ext-tsp for perf/size optimization. The method
+  // is beneficial only for instances with at least 3 basic blocks and it can be
+  // disabled for huge functions (exceeding a certain size).
+  bool UseExtTspForPerf = false;
+  bool UseExtTspForSize = false;
+  if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
+    UseExtTspForPerf =
+        EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
+    UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+  }
+
   // Apply tail duplication.
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-    bool OptForSize = MF.getFunction().hasOptSize() ||
-                      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
     if (OptForSize)
       TailDupSize = 1;
     const bool PreRegAlloc = false;
     TailDup.initMF(MF, PreRegAlloc, MBPI, MBFI.get(), PSI,
                    /* LayoutMode */ true, TailDupSize);
-    precomputeTriangleChains();
+    if (!UseExtTspForSize)
+      precomputeTriangleChains();
   }
 
-  buildCFGChains();
+  // Run the main block placement.
+  if (!UseExtTspForSize)
+    buildCFGChains();
 
   // Changing the layout can create new tail merging opportunities.
   // TailMerge can create jump into if branches that make CFG irreducible for
@@ -3534,25 +3558,27 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(), MLI,
                             /*AfterPlacement=*/true)) {
-      // Redo the layout if tail merging creates/removes/moves blocks.
-      BlockToChain.clear();
-      ComputedEdges.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->recalculate(MF);
-      ChainAllocator.DestroyAll();
-      buildCFGChains();
+      if (!UseExtTspForSize) {
+        // Redo the layout if tail merging creates/removes/moves blocks.
+        BlockToChain.clear();
+        ComputedEdges.clear();
+        ChainAllocator.DestroyAll();
+        buildCFGChains();
+      }
     }
   }
 
-  // Apply a post-processing optimizing block placement.
-  if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
-      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    // Find a new placement and modify the layout of the blocks in the function.
-    applyExtTsp();
-
-    // Re-create CFG chain so that we can optimizeBranches and alignBlocks.
+  // Apply a post-processing optimizing block placement:
+  // - find a new placement and modify the layout of the blocks in the function;
+  // - re-create CFG chains so that we can optimizeBranches and alignBlocks.
+  if (UseExtTspForPerf || UseExtTspForSize) {
+    assert(
+        !(UseExtTspForPerf && UseExtTspForSize) &&
+        "UseExtTspForPerf and UseExtTspForSize can not be set simultaneously");
+    applyExtTsp(/*OptForSize=*/UseExtTspForSize);
     createCFGChainExtTsp();
   }
 
@@ -3577,7 +3603,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-void MachineBlockPlacement::applyExtTsp() {
+void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
   // Prepare data; blocks are indexed by their index in the current ordering.
   DenseMap<const MachineBasicBlock *, uint64_t> BlockIndex;
   BlockIndex.reserve(F->size());
@@ -3589,13 +3615,15 @@ void MachineBlockPlacement::applyExtTsp() {
     CurrentBlockOrder.push_back(&MBB);
   }
 
-  auto BlockSizes = std::vector<uint64_t>(F->size());
-  auto BlockCounts = std::vector<uint64_t>(F->size());
-  std::vector<codelayout::EdgeCount> JumpCounts;
+  SmallVector<uint64_t, 0> BlockCounts(F->size());
+  SmallVector<uint64_t, 0> BlockSizes(F->size());
+  SmallVector<codelayout::EdgeCount, 0> JumpCounts;
+  SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
+  SmallVector<const MachineBasicBlock *, 4> Succs;
   for (MachineBasicBlock &MBB : *F) {
     // Getting the block frequency.
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);
-    BlockCounts[BlockIndex[&MBB]] = BlockFreq.getFrequency();
+    BlockCounts[BlockIndex[&MBB]] = OptForSize ? 1 : BlockFreq.getFrequency();
     // Getting the block size:
     // - approximate the size of an instruction by 4 bytes, and
     // - ignore debug instructions.
@@ -3604,23 +3632,49 @@ void MachineBlockPlacement::applyExtTsp() {
     // not see a perf improvement with the exact block sizes.
     auto NonDbgInsts =
         instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end());
-    int NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
+    size_t NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
     BlockSizes[BlockIndex[&MBB]] = 4 * NumInsts;
+
     // Getting jump frequencies.
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      auto EP = MBPI->getEdgeProbability(&MBB, Succ);
-      BlockFrequency JumpFreq = BlockFreq * EP;
-      JumpCounts.push_back(
-          {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
+    if (OptForSize) {
+      Cond.clear();
+      MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
+      if (TII->analyzeBranch(MBB, TBB, FBB, Cond))
+        continue;
+
+      const MachineBasicBlock *FTB = MBB.getFallThrough();
+      // Succs is a collection of distinct destinations of the block reachable
+      // from MBB via a jump instruction; initialize the list using the three
+      // (non-necessarily distinct) blocks, FTB, TBB, and FBB.
+      Succs.clear();
+      if (TBB && TBB != FTB)
+        Succs.push_back(TBB);
+      if (FBB && FBB != FTB)
+        Succs.push_back(FBB);
+      if (FTB)
+        Succs.push_back(FTB);
+      // Absolute magnitude of non-zero counts does not matter for the
+      // optimization; prioritize slightly jumps with a single successor, since
+      // the corresponding jump instruction will be removed from the binary.
+      const uint64_t Freq = Succs.size() == 1 ? 110 : 100;
+      for (const MachineBasicBlock *Succ : Succs)
+        JumpCounts.push_back({BlockIndex[&MBB], BlockIndex[Succ], Freq});
+    } else {
+      for (MachineBasicBlock *Succ : MBB.successors()) {
+        auto EP = MBPI->getEdgeProbability(&MBB, Succ);
+        BlockFrequency JumpFreq = BlockFreq * EP;
+        JumpCounts.push_back(
+            {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
+      }
     }
   }
 
   LLVM_DEBUG(dbgs() << "Applying ext-tsp layout for |V| = " << F->size()
                     << " with profile = " << F->getFunction().hasProfileData()
-                    << " (" << F->getName().str() << ")"
-                    << "\n");
-  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n",
-                              calcExtTspScore(BlockSizes, JumpCounts)));
+                    << " (" << F->getName() << ")" << "\n");
+
+  const double OrgScore = calcExtTspScore(BlockSizes, JumpCounts);
+  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n", OrgScore));
 
   // Run the layout algorithm.
   auto NewOrder = computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
@@ -3629,12 +3683,14 @@ void MachineBlockPlacement::applyExtTsp() {
   for (uint64_t Node : NewOrder) {
     NewBlockOrder.push_back(CurrentBlockOrder[Node]);
   }
-  LLVM_DEBUG(
-      dbgs() << format("  optimized layout score: %0.2f\n",
-                       calcExtTspScore(NewOrder, BlockSizes, JumpCounts)));
+  const double OptScore = calcExtTspScore(NewOrder, BlockSizes, JumpCounts);
+  LLVM_DEBUG(dbgs() << format("  optimized layout score: %0.2f\n", OptScore));
 
-  // Assign new block order.
-  assignBlockOrder(NewBlockOrder);
+  // If the optimization is unsuccessful, fall back to the original block order.
+  if (OptForSize && OrgScore > OptScore)
+    assignBlockOrder(CurrentBlockOrder);
+  else
+    assignBlockOrder(NewBlockOrder);
 }
 
 void MachineBlockPlacement::assignBlockOrder(
@@ -3694,11 +3750,6 @@ void MachineBlockPlacement::assignBlockOrder(
       continue;
     MBB.updateTerminator(FTMBB);
   }
-
-#ifndef NDEBUG
-  // Make sure we correctly constructed all branches.
-  F->verify(this, "After optimized block reordering", &errs());
-#endif
 }
 
 void MachineBlockPlacement::createCFGChainExtTsp() {

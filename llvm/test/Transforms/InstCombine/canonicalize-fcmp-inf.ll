@@ -180,7 +180,7 @@ define i1 @oge_pinf_fmf(half %x) {
 define <2 x i1> @olt_pinf_vec(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x i1> @olt_pinf_vec(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x half> [[X]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x half> [[X]], splat (half 0xH7C00)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %cmp = fcmp olt <2 x half> %x, <half 0xH7c00, half 0xH7c00>

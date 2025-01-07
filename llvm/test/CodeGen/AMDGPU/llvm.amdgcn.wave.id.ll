@@ -23,8 +23,6 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %waveid = call i32 @llvm.amdgcn.wave.id()
   store i32 %waveid, ptr addrspace(1) %out

@@ -20,8 +20,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -659,9 +657,9 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   // Return early if VD is inside a non-instantiated template function since
   // the implicit constructor is not defined yet.
   if (const FunctionDecl *FD =
-          dyn_cast_or_null<FunctionDecl>(VD->getDeclContext()))
-    if (FD->isDependentContext())
-      return;
+          dyn_cast_or_null<FunctionDecl>(VD->getDeclContext());
+      FD && FD->isDependentContext())
+    return;
 
   // Do not check dependent variables since the ctor/dtor/initializer are not
   // determined. Do it after instantiation.

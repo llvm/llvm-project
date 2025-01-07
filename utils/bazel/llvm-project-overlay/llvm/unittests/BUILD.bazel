@@ -334,6 +334,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
         "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:Core",
@@ -633,6 +634,24 @@ cc_test(
 )
 
 cc_test(
+    name = "sandboxir_tests",
+    size = "small",
+    srcs = glob(
+        ["SandboxIR/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:SandboxIR",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_test(
     name = "profile_data_tests",
     size = "small",
     srcs = glob(
@@ -678,7 +697,7 @@ cc_test(
     ],
     linkstatic = 1,
     tags = [
-        "local",  # Not compatible with the sandbox on MacOS
+        "no-sandbox",  # FileSystemTest.permissions not compatible with the sandbox on MacOS
     ],
     deps = [
         "//llvm:AllTargetsCodeGens",

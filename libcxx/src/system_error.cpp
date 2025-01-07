@@ -8,6 +8,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__system_error/throw_system_error.h>
 #include <__verbose_abort>
 #include <cerrno>
 #include <cstdio>
@@ -142,7 +143,7 @@ std::optional<errc> __win_err_to_errc(int err) {
 #endif
 
 namespace {
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 //  GLIBC also uses 1024 as the maximum buffer size internally.
 constexpr size_t strerror_buff_size = 1024;
@@ -208,7 +209,7 @@ string do_strerror_r(int ev) {
 }
 #  endif
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 string make_error_str(const error_code& ec, string what_arg) {
   if (ec) {
@@ -229,7 +230,7 @@ string make_error_str(const error_code& ec) {
 } // namespace
 
 string __do_message::message(int ev) const {
-#if defined(_LIBCPP_HAS_NO_THREADS)
+#if !_LIBCPP_HAS_THREADS
   return string(::strerror(ev));
 #else
   return do_strerror_r(ev);
@@ -360,7 +361,7 @@ system_error::system_error(int ev, const error_category& ecat)
 system_error::~system_error() noexcept {}
 
 void __throw_system_error(int ev, const char* what_arg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   std::__throw_system_error(error_code(ev, generic_category()), what_arg);
 #else
   // The above could also handle the no-exception case, but for size, avoid referencing system_category() unnecessarily.

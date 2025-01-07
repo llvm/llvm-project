@@ -52,6 +52,7 @@ static_library("IR") {
     "Instruction.cpp",
     "Instructions.cpp",
     "IntrinsicInst.cpp",
+    "Intrinsics.cpp",
     "LLVMContext.cpp",
     "LLVMContextImpl.cpp",
     "LLVMRemarkStreamer.cpp",
@@ -88,6 +89,7 @@ static_library("IR") {
     "Value.cpp",
     "ValueSymbolTable.cpp",
     "VectorBuilder.cpp",
+    "VectorTypeUtils.cpp",
     "Verifier.cpp",
   ]
 }

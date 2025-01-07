@@ -366,8 +366,8 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
 
       // Find next predecessor to process
       unsigned Idx = NextPredIdx;
-      auto PI = MBB->pred_begin() + Idx;
-      auto PE = MBB->pred_end();
+      const auto *PI = MBB->pred_begin() + Idx;
+      const auto *PE = MBB->pred_end();
       for (; PI != PE && !NextValue; ++PI, ++Idx) {
         if (const VNInfo *VN = LR.getVNInfoBefore(LIS->getMBBEndIdx(*PI))) {
           if (!Visited.count(VisitKey(VN, DefinedLanes)))
@@ -786,7 +786,7 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     }
     DTUpdates.push_back({DomTreeT::Insert, BB, SplitBB});
     if (MDT)
-      MDT->getBase().applyUpdates(DTUpdates);
+      MDT->applyUpdates(DTUpdates);
     if (PDT)
       PDT->applyUpdates(DTUpdates);
 
@@ -1036,7 +1036,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
 // This can only happen once all the live mask registers have been created
 // and the execute state (WQM/StrictWWM/Exact) of instructions is known.
 void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
-  auto BII = Blocks.find(&MBB);
+  auto *BII = Blocks.find(&MBB);
   if (BII == Blocks.end())
     return;
 
@@ -1261,7 +1261,7 @@ void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
 }
 
 void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
-  auto BII = Blocks.find(&MBB);
+  auto *BII = Blocks.find(&MBB);
   if (BII == Blocks.end())
     return;
 

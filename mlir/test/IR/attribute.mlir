@@ -77,6 +77,10 @@ func.func @float_attrs_pass() {
     float_attr = 2. : f8E3M4
   } : () -> ()
   "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f8E8M0FNU
+    float_attr = 2. : f8E8M0FNU
+  } : () -> ()
+  "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f16
     float_attr = 2. : f16
   } : () -> ()
@@ -557,6 +561,14 @@ func.func @correct_type_pass() {
 
 // -----
 
+func.func @tf32_elements_attr() {
+  // CHECK: "foo"() {attr = dense<4.000000e+00> : tensor<tf32>} : () -> ()
+  "foo"() {attr = dense<4.0> : tensor<tf32>} : () -> ()
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test StringElementsAttr
 //===----------------------------------------------------------------------===//
@@ -666,6 +678,14 @@ func.func @dense_array_attr() attributes {
     x7_f16 = array<f16: 1., 3.>
   }: () -> ()
 
+  return
+}
+
+// -----
+
+func.func @test_invalid_bitwidth_type() {
+  // expected-error @below{{element type bitwidth must be a multiple of 8}}
+  "foo"() {tf32attr = array<tf32: 1024.0>} : () -> ()
   return
 }
 

@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -830,6 +828,14 @@ bool llvm::isIdentifiedFunctionLocal(const Value *V) {
   return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasOrByValArgument(V);
 }
 
+bool llvm::isBaseOfObject(const Value *V) {
+  // TODO: We can handle other cases here
+  // 1) For GC languages, arguments to functions are often required to be
+  //    base pointers.
+  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
+  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
+}
+
 bool llvm::isEscapeSource(const Value *V) {
   if (auto *CB = dyn_cast<CallBase>(V))
     return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
@@ -892,7 +898,10 @@ bool llvm::isWritableObject(const Value *Object,
     return true;
 
   if (auto *A = dyn_cast<Argument>(Object)) {
-    if (A->hasAttribute(Attribute::Writable)) {
+    // Also require noalias, otherwise writability at function entry cannot be
+    // generalized to writability at other program points, even if the pointer
+    // does not escape.
+    if (A->hasAttribute(Attribute::Writable) && A->hasNoAliasAttr()) {
       ExplicitlyDereferenceableOnly = true;
       return true;
     }

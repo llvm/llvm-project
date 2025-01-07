@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -24,9 +22,12 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 using namespace lldb_private;
 
@@ -338,6 +339,10 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
     DiagnosticManager &diagnostic_manager, Value &results) {
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
 
+  Debugger *debugger =
+      exe_ctx.GetTargetPtr() ? &exe_ctx.GetTargetPtr()->GetDebugger() : nullptr;
+  Progress progress("Calling function", FunctionName(), {}, debugger);
+
   // FunctionCaller::ExecuteFunction execution is always just to get the
   // result. Unless explicitly asked for, ignore breakpoints and unwind on
   // error.
@@ -390,7 +395,7 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
       LLDB_LOGF(log,
                 "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
                 "completed abnormally: %s ==",
-                m_name.c_str(), ExpressionResultAsCString(return_value));
+                m_name.c_str(), toString(return_value).c_str());
     } else {
       LLDB_LOGF(log,
                 "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "

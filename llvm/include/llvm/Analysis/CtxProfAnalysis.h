@@ -35,7 +35,7 @@ class PGOContextualProfile {
     uint32_t NextCounterIndex = 0;
     uint32_t NextCallsiteIndex = 0;
     const std::string Name;
-
+    PGOCtxProfContext Index;
     FunctionInfo(StringRef Name) : Name(Name) {}
   };
   std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
@@ -49,6 +49,8 @@ class PGOContextualProfile {
   // This is meant to be constructed from CtxProfAnalysis, which will also set
   // its state piecemeal.
   PGOContextualProfile() = default;
+
+  void initIndex();
 
 public:
   PGOContextualProfile(const PGOContextualProfile &) = delete;
@@ -94,7 +96,7 @@ public:
   using ConstVisitor = function_ref<void(const PGOCtxProfContext &)>;
   using Visitor = function_ref<void(PGOCtxProfContext &)>;
 
-  void update(Visitor, const Function *F = nullptr);
+  void update(Visitor, const Function &F);
   void visit(ConstVisitor, const Function *F = nullptr) const;
 
   const CtxProfFlatProfile flatten() const;

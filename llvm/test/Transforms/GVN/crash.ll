@@ -5,9 +5,9 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0"
 
-define ptr @test1(ptr %name, i32 %namelen, ptr %o, i32 %expected_type) nounwind ssp {
+define ptr @test1(ptr %name, i32 %namelen, ptr %o, i32 %expected_type, i1 %arg) nounwind ssp {
 entry:
-  br i1 undef, label %if.end13, label %while.body.preheader
+  br i1 %arg, label %if.end13, label %while.body.preheader
 
 
 if.end13:                                         ; preds = %if.then6
@@ -22,25 +22,25 @@ while.body:                                       ; preds = %while.body.backedge
 
 lor.lhs.false:                                    ; preds = %while.body
   %tmp22 = load i32, ptr %o.addr.0                       ; <i32> [#uses=0]
-  br i1 undef, label %land.lhs.true24, label %if.end31
+  br i1 %arg, label %land.lhs.true24, label %if.end31
 
 land.lhs.true24:                                  ; preds = %lor.lhs.false
   %call28 = call ptr @parse_object(ptr undef) nounwind ; <ptr> [#uses=0]
-  br i1 undef, label %return.loopexit, label %if.end31
+  br i1 %arg, label %return.loopexit, label %if.end31
 
 if.end31:                                         ; preds = %land.lhs.true24, %lor.lhs.false
-  br i1 undef, label %return.loopexit, label %if.end41
+  br i1 %arg, label %return.loopexit, label %if.end41
 
 if.end41:                                         ; preds = %if.end31
   %tmp45 = load i32, ptr %o.addr.0                       ; <i32> [#uses=0]
-  br i1 undef, label %if.then50, label %if.else
+  br i1 %arg, label %if.then50, label %if.else
 
 if.then50:                                        ; preds = %if.end41
   %tmp53 = load ptr, ptr undef                       ; <ptr> [#uses=1]
   br label %while.body.backedge
 
 if.else:                                          ; preds = %if.end41
-  br i1 undef, label %if.then62, label %if.else67
+  br i1 %arg, label %if.then62, label %if.else67
 
 if.then62:                                        ; preds = %if.else
   br label %while.body.backedge
@@ -97,10 +97,10 @@ bb66.i:                                           ; Unreachable
 
 @g = external global i64, align 8
 
-define ptr @test3() {
+define ptr @test3(i1 %arg) {
 do.end17.i:
   %tmp18.i = load ptr, ptr undef
-  br i1 undef, label %do.body36.i, label %if.then21.i
+  br i1 %arg, label %do.body36.i, label %if.then21.i
 
 if.then21.i:
   ret ptr undef
@@ -110,7 +110,7 @@ do.body36.i:
   %add.ptr39.sum.i = add i64 %ivar38.i, 8
   %tmp40.i = getelementptr inbounds i8, ptr %tmp18.i, i64 %add.ptr39.sum.i
   %tmp41.i = load i64, ptr %tmp40.i
-  br i1 undef, label %if.then48.i, label %do.body57.i
+  br i1 %arg, label %if.then48.i, label %do.body57.i
 
 if.then48.i:
   %call54.i = call i32 @foo2()
@@ -163,7 +163,7 @@ entry:
 
 %struct.type = type { i64, i32, i32 }
 
-define fastcc void @func() nounwind uwtable ssp align 2 {
+define fastcc void @func(i1 %arg) nounwind uwtable ssp align 2 {
 entry:
   br label %reachable.bb
 
@@ -171,7 +171,7 @@ entry:
 
 unreachable.bb:
   %gep.val = getelementptr inbounds %struct.type, ptr %gep.val, i64 1
-  br i1 undef, label %u2.bb, label %u1.bb
+  br i1 %arg, label %u2.bb, label %u1.bb
 
 u1.bb:
   store i64 -1, ptr %gep.val, align 8

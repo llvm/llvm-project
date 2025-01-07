@@ -4,110 +4,230 @@
 
 ; ===== Legal Scalars =====
 
-define i8 @load_i8(ptr %ptr){
+define i8 @load_i8(ptr %ptr) {
 ; CHECK-LABEL: load_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load i8 , ptr %ptr
-    ret i8 %a
+  %a = load i8, ptr %ptr
+  ret i8 %a
 }
 
-define i16 @load_i16(ptr %ptr){
+define i16 @load_i8_s16(ptr %ptr) {
+; CHECK-LABEL: load_i8_s16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsb w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i8, ptr %ptr
+  %s = sext i8 %a to i16
+  ret i16 %s
+}
+
+define i16 @load_i8_u16(ptr %ptr) {
+; CHECK-LABEL: load_i8_u16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrb w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i8, ptr %ptr
+  %s = zext i8 %a to i16
+  ret i16 %s
+}
+
+define i32 @load_i8_s32(ptr %ptr) {
+; CHECK-LABEL: load_i8_s32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsb w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i8, ptr %ptr
+  %s = sext i8 %a to i32
+  ret i32 %s
+}
+
+define i32 @load_i8_u32(ptr %ptr) {
+; CHECK-LABEL: load_i8_u32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrb w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i8, ptr %ptr
+  %s = zext i8 %a to i32
+  ret i32 %s
+}
+
+define i64 @load_i8_s64(ptr %ptr) {
+; CHECK-LABEL: load_i8_s64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsb x0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i8, ptr %ptr
+  %s = sext i8 %a to i64
+  ret i64 %s
+}
+
+define i64 @load_i8_u64(ptr %ptr) {
+; CHECK-LABEL: load_i8_u64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrb w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i8, ptr %ptr
+  %s = zext i8 %a to i64
+  ret i64 %s
+}
+
+define i16 @load_i16(ptr %ptr) {
 ; CHECK-LABEL: load_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load i16 , ptr %ptr
-    ret i16 %a
+  %a = load i16, ptr %ptr
+  ret i16 %a
 }
 
-define i32 @load_i32(ptr %ptr){
+define i32 @load_i16_s32(ptr %ptr) {
+; CHECK-LABEL: load_i16_s32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsh w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i16, ptr %ptr
+  %s = sext i16 %a to i32
+  ret i32 %s
+}
+
+define i32 @load_i16_u32(ptr %ptr) {
+; CHECK-LABEL: load_i16_u32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrh w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i16, ptr %ptr
+  %s = zext i16 %a to i32
+  ret i32 %s
+}
+
+define i64 @load_i16_s64(ptr %ptr) {
+; CHECK-LABEL: load_i16_s64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsh x0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i16, ptr %ptr
+  %s = sext i16 %a to i64
+  ret i64 %s
+}
+
+define i64 @load_i16_u64(ptr %ptr) {
+; CHECK-LABEL: load_i16_u64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrh w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i16, ptr %ptr
+  %s = zext i16 %a to i64
+  ret i64 %s
+}
+
+define i32 @load_i32(ptr %ptr) {
 ; CHECK-LABEL: load_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load i32 , ptr %ptr
-    ret i32 %a
+  %a = load i32, ptr %ptr
+  ret i32 %a
 }
 
-define i64 @load_i64(ptr %ptr){
+define i64 @load_i32_s64(ptr %ptr) {
+; CHECK-LABEL: load_i32_s64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrsw x0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i32, ptr %ptr
+  %s = sext i32 %a to i64
+  ret i64 %s
+}
+
+define i64 @load_i32_u64(ptr %ptr) {
+; CHECK-LABEL: load_i32_u64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w0, [x0]
+; CHECK-NEXT:    ret
+  %a = load i32, ptr %ptr
+  %s = zext i32 %a to i64
+  ret i64 %s
+}
+
+define i64 @load_i64(ptr %ptr) {
 ; CHECK-LABEL: load_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load i64 , ptr %ptr
-    ret i64 %a
+  %a = load i64, ptr %ptr
+  ret i64 %a
 }
 
 ; ===== Legal Vector Types =====
 
-define <8 x i8> @load_v8i8(ptr %ptr){
+define <8 x i8> @load_v8i8(ptr %ptr) {
 ; CHECK-LABEL: load_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <8 x i8>, ptr %ptr
-    ret <8 x i8> %a
+  %a = load <8 x i8>, ptr %ptr
+  ret <8 x i8> %a
 }
 
-define <16 x i8> @load_v16i8(ptr %ptr){
+define <16 x i8> @load_v16i8(ptr %ptr) {
 ; CHECK-LABEL: load_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <16 x i8>, ptr %ptr
-    ret <16 x i8> %a
+  %a = load <16 x i8>, ptr %ptr
+  ret <16 x i8> %a
 }
 
-define <4 x i16> @load_v4i16(ptr %ptr){
+define <4 x i16> @load_v4i16(ptr %ptr) {
 ; CHECK-LABEL: load_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <4 x i16>, ptr %ptr
-    ret <4 x i16> %a
+  %a = load <4 x i16>, ptr %ptr
+  ret <4 x i16> %a
 }
 
-define <8 x i16> @load_v8i16(ptr %ptr){
+define <8 x i16> @load_v8i16(ptr %ptr) {
 ; CHECK-LABEL: load_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <8 x i16>, ptr %ptr
-    ret <8 x i16> %a
+  %a = load <8 x i16>, ptr %ptr
+  ret <8 x i16> %a
 }
 
-define <2 x i32> @load_v2i32(ptr %ptr){
+define <2 x i32> @load_v2i32(ptr %ptr) {
 ; CHECK-LABEL: load_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <2 x i32>, ptr %ptr
-    ret <2 x i32> %a
+  %a = load <2 x i32>, ptr %ptr
+  ret <2 x i32> %a
 }
 
-define <4 x i32> @load_v4i32(ptr %ptr){
+define <4 x i32> @load_v4i32(ptr %ptr) {
 ; CHECK-LABEL: load_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <4 x i32>, ptr %ptr
-    ret <4 x i32> %a
+  %a = load <4 x i32>, ptr %ptr
+  ret <4 x i32> %a
 }
 
-define <2 x i64> @load_v2i64(ptr %ptr){
+define <2 x i64> @load_v2i64(ptr %ptr) {
 ; CHECK-LABEL: load_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <2 x i64>, ptr %ptr
-    ret <2 x i64> %a
+  %a = load <2 x i64>, ptr %ptr
+  ret <2 x i64> %a
 }
 
 ; ===== Smaller/Larger Width Vectors with Legal Element Sizes =====
 
-define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b){
+define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b) {
 ; CHECK-SD-LABEL: load_v2i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
@@ -123,30 +243,30 @@ define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b){
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
-    %a = load <2 x i8>, ptr %ptr
-    ret <2 x i8> %a
+  %a = load <2 x i8>, ptr %ptr
+  ret <2 x i8> %a
 }
 
-define i32 @load_v4i8(ptr %ptr, <4 x i8> %b){
+define i32 @load_v4i8(ptr %ptr, <4 x i8> %b) {
 ; CHECK-LABEL: load_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <4 x i8>, ptr %ptr
-    %c = bitcast <4 x i8> %a to i32
-    ret i32 %c
+  %a = load <4 x i8>, ptr %ptr
+  %c = bitcast <4 x i8> %a to i32
+  ret i32 %c
 }
 
-define <32 x i8> @load_v32i8(ptr %ptr){
+define <32 x i8> @load_v32i8(ptr %ptr) {
 ; CHECK-LABEL: load_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <32 x i8>, ptr %ptr
-    ret <32 x i8> %a
+  %a = load <32 x i8>, ptr %ptr
+  ret <32 x i8> %a
 }
 
-define <2 x i16> @load_v2i16(ptr %ptr){
+define <2 x i16> @load_v2i16(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v2i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
@@ -157,55 +277,54 @@ define <2 x i16> @load_v2i16(ptr %ptr){
 ;
 ; CHECK-GI-LABEL: load_v2i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    add x8, x0, #2
-; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-GI-NEXT:    ldr h1, [x0, #2]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
-    %a = load <2 x i16>, ptr %ptr
-    ret <2 x i16> %a
+  %a = load <2 x i16>, ptr %ptr
+  ret <2 x i16> %a
 }
 
-define <16 x i16> @load_v16i16(ptr %ptr){
+define <16 x i16> @load_v16i16(ptr %ptr) {
 ; CHECK-LABEL: load_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <16 x i16>, ptr %ptr
-    ret <16 x i16> %a
+  %a = load <16 x i16>, ptr %ptr
+  ret <16 x i16> %a
 }
 
-define <1 x i32> @load_v1i32(ptr %ptr){
+define <1 x i32> @load_v1i32(ptr %ptr) {
 ; CHECK-LABEL: load_v1i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <1 x i32>, ptr %ptr
-    ret <1 x i32> %a
+  %a = load <1 x i32>, ptr %ptr
+  ret <1 x i32> %a
 }
 
-define <8 x i32> @load_v8i32(ptr %ptr){
+define <8 x i32> @load_v8i32(ptr %ptr) {
 ; CHECK-LABEL: load_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <8 x i32>, ptr %ptr
-    ret <8 x i32> %a
+  %a = load <8 x i32>, ptr %ptr
+  ret <8 x i32> %a
 }
 
-define <4 x i64> @load_v4i64(ptr %ptr){
+define <4 x i64> @load_v4i64(ptr %ptr) {
 ; CHECK-LABEL: load_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-    %a = load <4 x i64>, ptr %ptr
-    ret <4 x i64> %a
+  %a = load <4 x i64>, ptr %ptr
+  ret <4 x i64> %a
 }
 
 ; ===== Vectors with Non-Pow 2 Widths =====
 
-define <3 x i8> @load_v3i8(ptr %ptr){
+define <3 x i8> @load_v3i8(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v3i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr s0, [x0]
@@ -221,11 +340,11 @@ define <3 x i8> @load_v3i8(ptr %ptr){
 ; CHECK-GI-NEXT:    ldrb w2, [x0, #2]
 ; CHECK-GI-NEXT:    mov w0, w8
 ; CHECK-GI-NEXT:    ret
-    %a = load <3 x i8>, ptr %ptr
-    ret <3 x i8> %a
+  %a = load <3 x i8>, ptr %ptr
+  ret <3 x i8> %a
 }
 
-define <7 x i8> @load_v7i8(ptr %ptr){
+define <7 x i8> @load_v7i8(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v7i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr d0, [x0]
@@ -249,11 +368,11 @@ define <7 x i8> @load_v7i8(ptr %ptr){
 ; CHECK-GI-NEXT:    mov v0.b[6], v1.b[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
-    %a = load <7 x i8>, ptr %ptr
-    ret <7 x i8> %a
+  %a = load <7 x i8>, ptr %ptr
+  ret <7 x i8> %a
 }
 
-define <3 x i16> @load_v3i16(ptr %ptr){
+define <3 x i16> @load_v3i16(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v3i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr d0, [x0]
@@ -268,11 +387,11 @@ define <3 x i16> @load_v3i16(ptr %ptr){
 ; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
-    %a = load <3 x i16>, ptr %ptr
-    ret <3 x i16> %a
+  %a = load <3 x i16>, ptr %ptr
+  ret <3 x i16> %a
 }
 
-define <7 x i16> @load_v7i16(ptr %ptr){
+define <7 x i16> @load_v7i16(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v7i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q0, [x0]
@@ -294,11 +413,11 @@ define <7 x i16> @load_v7i16(ptr %ptr){
 ; CHECK-GI-NEXT:    add x8, x0, #12
 ; CHECK-GI-NEXT:    ld1 { v0.h }[6], [x8]
 ; CHECK-GI-NEXT:    ret
-    %a = load <7 x i16>, ptr %ptr
-    ret <7 x i16> %a
+  %a = load <7 x i16>, ptr %ptr
+  ret <7 x i16> %a
 }
 
-define <3 x i32> @load_v3i32(ptr %ptr){
+define <3 x i32> @load_v3i32(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v3i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q0, [x0]
@@ -312,6 +431,51 @@ define <3 x i32> @load_v3i32(ptr %ptr){
 ; CHECK-GI-NEXT:    add x8, x0, #8
 ; CHECK-GI-NEXT:    ld1 { v0.s }[2], [x8]
 ; CHECK-GI-NEXT:    ret
-    %a = load <3 x i32>, ptr %ptr
-    ret <3 x i32> %a
+  %a = load <3 x i32>, ptr %ptr
+  ret <3 x i32> %a
+}
+
+define <2 x i128> @load_v2i128(ptr %p) {
+; CHECK-SD-LABEL: load_v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x1, [x0]
+; CHECK-SD-NEXT:    ldp x2, x3, [x0, #16]
+; CHECK-SD-NEXT:    mov x0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d1
+; CHECK-GI-NEXT:    fmov x1, d2
+; CHECK-GI-NEXT:    fmov x3, d3
+; CHECK-GI-NEXT:    ret
+  %a = load <2 x i128>, ptr %p
+  ret <2 x i128> %a
+}
+
+define <2 x fp128> @load_v2f128(ptr %p) {
+; CHECK-LABEL: load_v2f128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ret
+  %a = load <2 x fp128>, ptr %p
+  ret <2 x fp128> %a
+}
+
+define i32 @load_i8_s16_extrasuse(ptr %ptr, ptr %ptr2) {
+; CHECK-LABEL: load_i8_s16_extrasuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    sxtb w0, w8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %a = load i32, ptr %ptr
+  %s = shl i32 %a, 24
+  %b = ashr i32 %s, 24
+  store i32 %a, ptr %ptr2
+  ret i32 %b
 }

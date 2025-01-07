@@ -196,7 +196,7 @@ struct Foo {
 
 template <int K>
 using Bar = Foo<double, K>; // expected-note {{constraints not satisfied for class template 'Foo'}}
-// expected-note@-1 {{candidate template ignored: could not match}}
+// expected-note@-1 {{candidate template ignored: could not match}} expected-note@-1 {{candidate template ignored: constraints not satisfied}}
 // expected-note@-2 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, Foo<double, K>) Bar(Foo<double, K>) -> Foo<double, K>'}}
 // expected-note@-3 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, Foo<double, K>) Bar(const double (&)[K]) -> Foo<double, K>'}}
 double abc[3];
@@ -481,3 +481,35 @@ struct Out {
 Out<float>::B out(100); // deduced to Out<float>::A<float>;
 static_assert(__is_same(decltype(out), Out<float>::A<float>));
 }
+
+namespace GH111508 {
+
+template <typename V> struct S {
+  using T = V;
+  T Data;
+};
+
+template <typename V> using Alias = S<V>;
+
+Alias A(42);
+
+} // namespace GH111508
+
+namespace GH113518 {
+
+template <class T, unsigned N> struct array {
+  T value[N];
+};
+
+template <typename Tp, typename... Up>
+array(Tp, Up...) -> array<Tp, 1 + sizeof...(Up)>;
+
+template <typename T> struct ArrayType {
+  template <unsigned size> using Array = array<T, size>;
+};
+
+template <ArrayType<int>::Array array> void test() {}
+
+void foo() { test<{1, 2, 3}>(); }
+
+} // namespace GH113518

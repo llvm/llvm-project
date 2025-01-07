@@ -13,6 +13,7 @@
 #include "Boolean.h"
 #include "Context.h"
 #include "EvaluationResult.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
@@ -32,7 +33,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
+template <typename T> inline static T ReadArg(Program &P, CodePtr &OpPC) {
   if constexpr (std::is_pointer_v<T>) {
     uint32_t ID = OpPC.read<uint32_t>();
     return reinterpret_cast<T>(P.getNativePointer(ID));
@@ -126,6 +127,8 @@ static const char *primTypeToString(PrimType T) {
     return "FnPtr";
   case PT_MemberPtr:
     return "MemberPtr";
+  case PT_FixedPoint:
+    return "FixedPoint";
   }
   llvm_unreachable("Unhandled PrimType");
 }
