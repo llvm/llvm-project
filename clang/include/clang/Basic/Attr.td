@@ -2776,7 +2776,7 @@ def Ownership : InheritableAttr {
   let Args = [IdentifierArgument<"Module">,
               VariadicParamIdxArgument<"Args">];
   let Subjects = SubjectList<[HasFunctionProto]>;
-  let Documentation = [Undocumented];
+  let Documentation = [OwnershipDocs];
 }
 
 def Packed : InheritableAttr {
@@ -4333,6 +4333,16 @@ def HLSLLoopHint: StmtAttr {
                               ErrorDiag, "'for', 'while', and 'do' statements">;
   let LangOpts = [HLSL];
   let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
+}
+
+def HLSLControlFlowHint: StmtAttr {
+  /// [branch]
+  /// [flatten]
+  let Spellings = [Microsoft<"branch">, Microsoft<"flatten">];
+  let Subjects = SubjectList<[IfStmt],
+                              ErrorDiag, "'if' statements">;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
 }
 
 def CapturedRecord : InheritableAttr {

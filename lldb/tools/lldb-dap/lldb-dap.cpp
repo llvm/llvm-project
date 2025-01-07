@@ -10,10 +10,10 @@
 #include "FifoFiles.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
-#include "OutputRedirector.h"
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
@@ -41,9 +41,11 @@
 #include <cassert>
 #include <climits>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <map>
 #include <memory>
 #include <optional>
@@ -140,15 +142,14 @@ lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   }
 }
 
-SOCKET AcceptConnection(DAP &dap, int portno) {
+SOCKET AcceptConnection(std::ofstream *log, int portno) {
   // Accept a socket connection from any host on "portno".
   SOCKET newsockfd = -1;
   struct sockaddr_in serv_addr, cli_addr;
   SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
-    if (dap.log)
-      *dap.log << "error: opening socket (" << strerror(errno) << ")"
-               << std::endl;
+    if (log)
+      *log << "error: opening socket (" << strerror(errno) << ")" << std::endl;
   } else {
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -156,9 +157,9 @@ SOCKET AcceptConnection(DAP &dap, int portno) {
     serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      if (dap.log)
-        *dap.log << "error: binding socket (" << strerror(errno) << ")"
-                 << std::endl;
+      if (log)
+        *log << "error: binding socket (" << strerror(errno) << ")"
+             << std::endl;
     } else {
       listen(sockfd, 5);
       socklen_t clilen = sizeof(cli_addr);
@@ -166,8 +167,8 @@ SOCKET AcceptConnection(DAP &dap, int portno) {
           llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
                                       (struct sockaddr *)&cli_addr, &clilen);
       if (newsockfd < 0)
-        if (dap.log)
-          *dap.log << "error: accept (" << strerror(errno) << ")" << std::endl;
+        if (log)
+          *log << "error: accept (" << strerror(errno) << ")" << std::endl;
     }
 #if defined(_WIN32)
     closesocket(sockfd);
@@ -1102,6 +1103,7 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
     dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
     dap.progress_event_thread.join();
   }
+  dap.StopIO();
   dap.disconnecting = true;
 }
 
@@ -1871,7 +1873,36 @@ void request_initialize(DAP &dap, const llvm::json::Object &request) {
   // which may affect the outcome of tests.
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
-  dap.debugger = lldb::SBDebugger::Create(source_init_file);
+  // Do not source init files until in/out/err are configured.
+  dap.debugger = lldb::SBDebugger::Create(false);
+  dap.debugger.SetInputFile(dap.in);
+  auto out_fd = dap.out.GetWriteFileDescriptor();
+  if (llvm::Error err = out_fd.takeError()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  dap.debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
+  auto err_fd = dap.err.GetWriteFileDescriptor();
+  if (llvm::Error err = err_fd.takeError()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  dap.debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
+
+  auto interp = dap.debugger.GetCommandInterpreter();
+
+  if (source_init_file) {
+    dap.debugger.SkipLLDBInitFiles(false);
+    dap.debugger.SkipAppInitFiles(false);
+    lldb::SBCommandReturnObject init;
+    interp.SourceInitFileInGlobalDirectory(init);
+    interp.SourceInitFileInHomeDirectory(init);
+  }
+
   if (llvm::Error err = dap.RunPreInitCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
@@ -4910,36 +4941,14 @@ static void redirection_test() {
   fflush(stderr);
 }
 
-/// Redirect stdout and stderr fo the IDE's console output.
-///
-/// Errors in this operation will be printed to the log file and the IDE's
-/// console output as well.
-///
-/// \return
-///     A fd pointing to the original stdout.
-static int SetupStdoutStderrRedirection(DAP &dap) {
-  int stdoutfd = fileno(stdout);
-  int new_stdout_fd = dup(stdoutfd);
-  auto output_callback_stderr = [&dap](llvm::StringRef data) {
-    dap.SendOutput(OutputType::Stderr, data);
-  };
-  auto output_callback_stdout = [&dap](llvm::StringRef data) {
-    dap.SendOutput(OutputType::Stdout, data);
-  };
-  if (llvm::Error err = RedirectFd(stdoutfd, output_callback_stdout)) {
-    std::string error_message = llvm::toString(std::move(err));
-    if (dap.log)
-      *dap.log << error_message << std::endl;
-    output_callback_stderr(error_message);
-  }
-  if (llvm::Error err = RedirectFd(fileno(stderr), output_callback_stderr)) {
-    std::string error_message = llvm::toString(std::move(err));
-    if (dap.log)
-      *dap.log << error_message << std::endl;
-    output_callback_stderr(error_message);
-  }
-
-  return new_stdout_fd;
+/// Duplicates a file descriptor, setting FD_CLOEXEC if applicable.
+static int DuplicateFileDescriptor(int fd) {
+#if defined(F_DUPFD_CLOEXEC)
+  // Ensure FD_CLOEXEC is set.
+  return ::fcntl(fd, F_DUPFD_CLOEXEC, 0);
+#else
+  return ::dup(fd);
+#endif
 }
 
 int main(int argc, char *argv[]) {
@@ -5030,47 +5039,88 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
+  std::unique_ptr<std::ofstream> log = nullptr;
+  const char *log_file_path = getenv("LLDBDAP_LOG");
+  if (log_file_path)
+    log = std::make_unique<std::ofstream>(log_file_path);
+
   // Initialize LLDB first before we do anything.
-  lldb::SBDebugger::Initialize();
+  lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();
+  if (error.Fail()) {
+    lldb::SBStream os;
+    error.GetDescription(os);
+    llvm::errs() << "lldb initialize failed: " << os.GetData() << "\n";
+    return EXIT_FAILURE;
+  }
 
   // Terminate the debugger before the C++ destructor chain kicks in.
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  DAP dap = DAP(program_path.str(), default_repl_mode);
-
-  RegisterRequestCallbacks(dap);
-
-  // stdout/stderr redirection to the IDE's console
-  int new_stdout_fd = SetupStdoutStderrRedirection(dap);
-
+  StreamDescriptor input;
+  StreamDescriptor output;
+  std::FILE *redirectOut = nullptr;
+  std::FILE *redirectErr = nullptr;
   if (portno != -1) {
     printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(dap, portno);
-    if (socket_fd >= 0) {
-      dap.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
-      dap.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
-    } else {
+    SOCKET socket_fd = AcceptConnection(log.get(), portno);
+    if (socket_fd < 0)
+      return EXIT_FAILURE;
+
+    input = StreamDescriptor::from_socket(socket_fd, true);
+    output = StreamDescriptor::from_socket(socket_fd, false);
+  } else {
+#if defined(_WIN32)
+    // Windows opens stdout and stdin in text mode which converts \n to 13,10
+    // while the value is just 10 on Darwin/Linux. Setting the file mode to
+    // binary fixes this.
+    int result = _setmode(fileno(stdout), _O_BINARY);
+    assert(result);
+    result = _setmode(fileno(stdin), _O_BINARY);
+    UNUSED_IF_ASSERT_DISABLED(result);
+    assert(result);
+#endif
+
+    int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
+    if (stdout_fd == -1) {
+      llvm::logAllUnhandledErrors(
+          llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
+          "Failed to configure stdout redirect: ");
       return EXIT_FAILURE;
     }
-  } else {
-    dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
-    dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
 
-    /// used only by TestVSCode_redirection_to_console.py
-    if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
-      redirection_test();
+    redirectOut = stdout;
+    redirectErr = stderr;
+
+    input = StreamDescriptor::from_file(fileno(stdin), false);
+    output = StreamDescriptor::from_file(stdout_fd, false);
   }
+
+  DAP dap = DAP(program_path.str(), log.get(), default_repl_mode,
+                std::move(input), std::move(output));
+
+  // stdout/stderr redirection to the IDE's console
+  if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "Failed to configure lldb-dap IO operations: ");
+    return EXIT_FAILURE;
+  }
+
+  RegisterRequestCallbacks(dap);
 
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
     dap.pre_init_commands.push_back(arg);
   }
 
+  // used only by TestVSCode_redirection_to_console.py
+  if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+    redirection_test();
+
   bool CleanExit = true;
   if (auto Err = dap.Loop()) {
-    if (dap.log)
-      *dap.log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
+    if (log)
+      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
     CleanExit = false;
   }
 
