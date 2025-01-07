@@ -836,8 +836,8 @@ namespace cwg450 { // cwg450: yes
   void h() {
     f1(A{});
     f2(A{});
-    // expected-error@-1 {{no matching function for call to 'f2'}}}
-    //   expected-note@#cwg450-f2 {{candidate function not viable: expects an lvalue for 1st argument}}
+    // since-cxx11-error@-1 {{no matching function for call to 'f2'}}}
+    //   since-cxx11-note@#cwg450-f2 {{candidate function not viable: expects an lvalue for 1st argument}}
   }
 #endif
 } // namespace cwg450
@@ -1274,7 +1274,7 @@ namespace cwg482 { // cwg482: 3.5
 #if __cplusplus >= 201103L
     enum class C;
     enum class A::C {};
-    // expected-error@-1 {{extra qualification on member 'C'}}
+    // since-cxx11-error@-1 {{extra qualification on member 'C'}}
 #endif
   };
 } // namespace cwg482
