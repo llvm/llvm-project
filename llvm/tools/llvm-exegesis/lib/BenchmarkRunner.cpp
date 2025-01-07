@@ -53,6 +53,12 @@
 namespace llvm {
 namespace exegesis {
 
+static cl::opt<bool>
+    DryRunMeasurement("dry-run-measurement",
+                      cl::desc("Run every steps in the measurement phase "
+                               "except executing the snippet."),
+                      cl::init(false), cl::Hidden);
+
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
                                  ExecutionModeE ExecutionMode,
@@ -140,13 +146,21 @@ private:
     Scratch->clear();
     {
       auto PS = ET.withSavedState();
+      // We can't directly capture DryRunMeasurement in the lambda below.
+      bool DryRun = DryRunMeasurement;
       CrashRecoveryContext CRC;
       CrashRecoveryContext::Enable();
-      const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
-        Counter->start();
-        this->Function(ScratchPtr);
-        Counter->stop();
-      });
+      const bool Crashed =
+          !CRC.RunSafely([this, Counter, ScratchPtr, DryRun]() {
+            if (DryRun) {
+              Counter->start();
+              Counter->stop();
+            } else {
+              Counter->start();
+              this->Function(ScratchPtr);
+              Counter->stop();
+            }
+          });
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {

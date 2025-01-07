@@ -449,6 +449,11 @@ OPTIONS
  crash when hardware performance counters are unavailable and for
  debugging :program:`llvm-exegesis` itself.
 
+.. option:: --dry-run-measurement
+  If set, llvm-exegesis runs everything except the actual snippet execution.
+  This is useful if we want to test some part of the code without actually
+  running on native platforms.
+
 .. option:: --execution-mode=[inprocess,subprocess]
 
   This option specifies what execution mode to use. The `inprocess` execution
