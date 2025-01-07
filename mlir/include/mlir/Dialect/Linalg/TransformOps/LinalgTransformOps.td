@@ -106,25 +106,12 @@ def ApplyFoldAddIntoDestPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-
 def ApplyHoistVectorTransferPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.hoist_vector_transfer",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Finds pattern to hoist the  possible vector transfer reads/writes outside the reduction and k-loop
  for a batch reduce matmul operation.
-  }];
-
-  let assemblyFormat = "attr-dict";
-}
-
-
-def ApplyVectorContractToFMAPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.contract_to_fma",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-     Collects pattern to lower vector contraction operation (batch reduce matmul) for GEMM of size MxN to
-        sequence of vector FMAs.
   }];
 
   let assemblyFormat = "attr-dict";

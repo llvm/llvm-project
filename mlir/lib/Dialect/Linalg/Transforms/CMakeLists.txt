@@ -42,7 +42,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Vectorization.cpp
   WinogradConv2D.cpp
   HoistVectorTransfers.cpp
-  VectorContractToFMA.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
