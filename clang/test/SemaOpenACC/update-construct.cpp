@@ -8,8 +8,7 @@ void uses() {
 #pragma acc update async self(Var)
   // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update wait self(Var)
-  // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I)
   // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update if(true) self(Var)
@@ -22,46 +21,41 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
-  // TODO: OpenACC: These all should diagnose as they aren't allowed after
-  // device_type.
-    // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
-#pragma acc update self(Var) device_type(I) device_type(I)
-    // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+  // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'update' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc update self(Var) device_type(I) if(true)
-    // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+  // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'update' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc update self(Var) device_type(I) if_present
-    // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'self' may not follow a 'device_type' clause in a 'update' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc update device_type(I) self(Var)
-    // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'host' may not follow a 'device_type' clause in a 'update' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc update device_type(I) host(Var)
-    // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'update' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc update device_type(I) device(Var)
   // These 2 are OK.
-    // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I) async
-    // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I) wait
+  // Unless otherwise specified, we assume 'device_type' can happen after itself.
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
+#pragma acc update self(Var) device_type(I) device_type(I)
 
   // TODO: OpenACC: These should diagnose because there isn't at least 1 of
   // 'self', 'host', or 'device'.
 #pragma acc update async
 #pragma acc update wait
-    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc update device_type(I)
 #pragma acc update if(true)
 #pragma acc update if_present
 
-  // expected-error@+2{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+  // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc update if (NC) device_type(I)
 
   // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'update' directive}}
