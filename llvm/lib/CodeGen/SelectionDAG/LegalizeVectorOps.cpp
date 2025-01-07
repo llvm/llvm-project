@@ -1787,17 +1787,16 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
     SDValue UIToFP;
     SDValue Result;
     SDValue TargetZero = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+    EVT FloatVecVT = SrcVT.changeVectorElementType(FPVT);
     if (IsStrict) {
-      UIToFP = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL,
-                           {SrcVT.changeVectorElementType(FPVT), MVT::Other},
+      UIToFP = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL, {FloatVecVT, MVT::Other},
                            {Node->getOperand(0), Src});
       Result = DAG.getNode(ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
                            {Node->getOperand(0), UIToFP, TargetZero});
       Results.push_back(Result);
       Results.push_back(Result.getValue(1));
     } else {
-      UIToFP = DAG.getNode(ISD::UINT_TO_FP, DL,
-                           SrcVT.changeVectorElementType(FPVT), Src);
+      UIToFP = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVecVT, Src);
       Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, UIToFP, TargetZero);
       Results.push_back(Result);
     }
