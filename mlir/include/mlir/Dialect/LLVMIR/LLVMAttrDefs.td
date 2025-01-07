@@ -891,7 +891,7 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     }
     ```
 
-    The first attribute can either be a DistinctAttribute or a StringAttribute.
+    The first attribute can either be a DistinctAttr or a StringAttr.
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
