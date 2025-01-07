@@ -1571,18 +1571,11 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
         Enum->setIntegerType(SemaRef.Context.IntTy);
       else
         Enum->setIntegerTypeSourceInfo(NewTI);
-
-      // The following lines are relevant for opaque-enum-declarations.
-      // If users declare a full enum-specifier, the promotion type is reset
-      // again when parsing the (potentially empty) enumerator-list.
-      // We implement the same logic from C++11 [conv.prom] p4 here but only
-      // after template specialization [temp.spec.general] because it requires
-      // the concrete type.
-      // Note that (1) this also correctly handles the non-dependent case,
-      // (2) we set the promotion type for scoped enumerations to ensure
-      // consistency with declarations outside of templates, (3) we guarantee a
-      // valid promotion even if the user provided an invalid underlying type
-      // (fallback to "default int").
+      // C++23 [conv.prom]p4
+      // if integral promotion can be applied to its underlying type, a prvalue of an unscoped enumeration type 
+      // whose underlying type is fixed can also be converted to a prvalue of the promoted underlying type.
+      // 
+      // FIXME: that logic is already implemented in ActOnEnumBody, factor out into (Re)BuildEnumBody. 
       QualType UnderlyingType = Enum->getIntegerType();
       Enum->setPromotionType(
           SemaRef.Context.isPromotableIntegerType(UnderlyingType)
