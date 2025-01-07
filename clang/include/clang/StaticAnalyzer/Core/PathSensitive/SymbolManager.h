@@ -527,13 +527,17 @@ public:
 
   static bool canSymbolicate(QualType T);
 
-  template <typename T, typename... Args> const T *get(Args &&...args);
+  /// Create or retrieve a SymExpr of type \p SymExprT for the given arguments.
+  /// Use the arguments to check for an existing SymExpr and return it,
+  /// otherwise, create a new one and keep a pointer to it to avoid duplicates.
+  template <typename SymExprT, typename... Args>
+  const SymExprT *acquire(Args &&...args);
 
   const SymbolConjured *conjureSymbol(const Stmt *E,
                                       const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
-    return get<SymbolConjured>(E, LCtx, T, VisitCount, SymbolTag);
+    return acquire<SymbolConjured>(E, LCtx, T, VisitCount, SymbolTag);
   }
 
   const SymbolConjured* conjureSymbol(const Expr *E,
@@ -675,7 +679,7 @@ public:
 };
 
 template <typename T, typename... Args>
-const T *SymbolManager::get(Args &&...args) {
+const T *SymbolManager::acquire(Args &&...args) {
   llvm::FoldingSetNodeID profile;
   T::Profile(profile, std::forward<Args>(args)...);
   void *InsertPos;

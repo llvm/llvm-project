@@ -328,16 +328,16 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
     // FIXME: Maybe it'd be better to have consistency in
     // "$x - $y" vs. "$y - $x" because those are solver's keys.
     if (LInt > RInt) {
-      ResultSym = SymMgr.get<SymSymExpr>(RSym, BO_Sub, LSym, SymTy);
+      ResultSym = SymMgr.acquire<SymSymExpr>(RSym, BO_Sub, LSym, SymTy);
       ResultOp = BinaryOperator::reverseComparisonOp(Op);
       ResultInt = LInt - RInt; // Opposite order!
     } else {
-      ResultSym = SymMgr.get<SymSymExpr>(LSym, BO_Sub, RSym, SymTy);
+      ResultSym = SymMgr.acquire<SymSymExpr>(LSym, BO_Sub, RSym, SymTy);
       ResultOp = Op;
       ResultInt = RInt - LInt; // Opposite order!
     }
   } else {
-    ResultSym = SymMgr.get<SymSymExpr>(LSym, Op, RSym, SymTy);
+    ResultSym = SymMgr.acquire<SymSymExpr>(LSym, Op, RSym, SymTy);
     ResultInt = (Op == BO_Add) ? (LInt + RInt) : (LInt - RInt);
     ResultOp = BO_Add;
     // Bring back the cosmetic difference.
@@ -350,7 +350,7 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
     }
   }
   APSIntPtr PersistentResultInt = BV.getValue(ResultInt);
-  return nonloc::SymbolVal(SymMgr.get<SymIntExpr>(
+  return nonloc::SymbolVal(SymMgr.acquire<SymIntExpr>(
       ResultSym, ResultOp, PersistentResultInt, ResultTy));
 }
 
