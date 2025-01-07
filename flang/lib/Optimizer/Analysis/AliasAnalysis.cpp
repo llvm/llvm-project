@@ -543,6 +543,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   bool isBoxRef{fir::isa_ref_type(v.getType()) &&
                 mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(v.getType()))};
   bool followingData = !isBoxRef;
+  // C1
   // "fir.alloca !fir.ptr<...>" returns the address *of* a pointer and is thus
   // non-data, and yet there's no box.  Don't treat it like data, or it will
   // appear to alias like the address *in* a pointer.  TODO: That case occurs in
@@ -551,9 +552,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   // (AliasAnalysis::Source::SourceOrigin::isData) and debug output
   // (AliasAnalysis::Source::print) for isData as the current wording implies
   // !isData requires a box.
-  if (mlir::isa_and_nonnull<fir::AllocaOp, fir::AllocMemOp>(defOp) &&
-      isPointerReference(v.getType()))
-    followingData = false;
+  //if (mlir::isa_and_nonnull<fir::AllocaOp, fir::AllocMemOp>(defOp) &&
+  //    isPointerReference(v.getType()))
+  //  followingData = false;
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   mlir::Operation *instantiationPoint{nullptr};
@@ -567,6 +568,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;
+          // C2
           // If there's no DeclareOp, then we need to get the pointer attribute
           // from the type.  TODO: That case occurs in our test suite
           // (alias-analysis-2.fir), but does flang currently generate such
@@ -583,6 +585,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
         .Case<fir::BoxAddrOp>([&](auto op) {
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
+          // C3
+          if (fir::isPointerType(v.getType()))
+            attributes.set(Attribute::Pointer);
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
             followBoxData = true;
         })

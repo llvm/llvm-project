@@ -1,12 +1,12 @@
 // Use --mlir-disable-threading so that the AA queries are serialized
 // as well as its diagnostic output.
-// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt -debug %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "_QFPtest"
 
 // p1.addr and p2.addr result from 2 different allocas
 // They cannot physically alias
-// CHECK-DAG: p1.addr#0 <-> p2.addr#0: NoAlias
+// T1: CHECK-DAG: p1.addr#0 <-> p2.addr#0: NoAlias
 
 // p1.addr is the address returned by an alloca.  It does not have a target
 // attribute, and it is not the address retrieved from a pointer.  It cannot
@@ -31,7 +31,7 @@
 // All arguments are either pointers or targets
 // The address *in* a local pointer may alias the address of a target
 // argument, but it does not alias the address *of* a pointer argument.
-// CHECK-DAG: boxp1.addr#0 <-> func.region0#0: MayAlias
+// T2: CHECK-DAG: boxp1.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#1: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#2: NoAlias
 
