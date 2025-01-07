@@ -76,8 +76,9 @@ ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall();
 const FunctionDecl *
 getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE);
 
-/// A transfer function for `operator*` (and `value`) calls
-/// that can be cached.
+/// A transfer function for `operator*` (and `value`) calls that can be
+/// cached. Runs the `InitializeLoc` callback to initialize any new
+/// StorageLocations.
 ///
 /// Requirements:
 ///
@@ -88,8 +89,8 @@ void transferSmartPointerLikeCachedDeref(
     TransferState<LatticeT> &State,
     llvm::function_ref<void(StorageLocation &)> InitializeLoc);
 
-/// A transfer function for `operator->` (and `get`) calls
-/// that can be cached.
+/// A transfer function for `operator->` (and `get`) calls that can be cached.
+/// Runs the `InitializeLoc` callback to initialize any new StorageLocations.
 ///
 /// Requirements:
 ///
