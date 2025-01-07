@@ -1,52 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-replace-with-std-copy %t -- \
 // RUN:   -config='{CheckOptions: {modernize-replace-with-std-copy.FlagMemcpy: true}}'
 
-// possible call scenarios, infeasible to cover all
-// [X] all free
-// source:
-//   type:
-//   [ ] c-array
-//     std::data:
-//     [ ] free
-//     [ ] N/A
-//   [ ] container
-//     std::data:
-//     [ ] free
-//     [ ] member
-//     type:
-//       [ ] std::vector<T>
-//       [ ] std::span<T>
-//       [ ] std::deque<T>
-//       [ ] std::array<T, _>
-//       [ ] std::string
-//       [ ] std::string_view
-// dest:
-//   type:
-//   [ ] T[]
-//     std::data:
-//     [ ] free
-//     [ ] N/A
-//   [ ] container
-//     std::data:
-//     [ ] free
-//     [ ] member
-//     type:
-//       [ ] std::vector<T>
-//       [ ] std::span<T>
-//       [ ] std::deque<T>
-//       [ ] std::array<T, _>
-//       [ ] std::string
-//       [ ] std::string_view
-// callee:
-//   name:
-//   [ ] memmove
-//   [ ] memcpy
-//   [ ] wmemmove
-//   [ ] wmemcpy
-//   qualified:
-//   [ ] y
-//   [ ] n
-
 namespace std {
 using size_t = decltype(sizeof(int));
 
@@ -62,6 +16,7 @@ class char_traits {};
 template <typename C, typename T, typename A>
 struct basic_string {
   typedef basic_string<C, T, A> _Type;
+  using value_type = C;
   basic_string();
   basic_string(const C* p, const A& a = A());
 
@@ -140,25 +95,25 @@ typename Container::value_type* data(Container& Arg)  {
     return Arg.data();
 }
 
-template<typename T>
-T* data(T Arg[]);
-
 template<typename Container>
 const typename Container::value_type* data(const Container& Arg) {
     return Arg.data();
 }
 
-template<typename T>
-const T* data(const T[]);
+template<typename T, size_t N>
+constexpr T* data(T (&arr)[N]) {
+  return arr;
+}
 
-size_t size(void *);
+template< class T, std::size_t N >
+constexpr std::size_t size( const T (&array)[N] ) {
+  return N;
+}
 
 template<typename Container>
 size_t size(const Container& c) {
   return c.size();
 }
-
-size_t strlen(const char *);
 
 wchar_t* wmemcpy( wchar_t* dest, const wchar_t* src, size_t count );
 wchar_t* wmemmove( wchar_t* dest, const wchar_t* src, size_t count );
@@ -166,12 +121,7 @@ wchar_t* wmemmove( wchar_t* dest, const wchar_t* src, size_t count );
 template <typename T>
 struct unique_ptr {
   unique_ptr(T);
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
   T &operator*() const;
-  T *operator->() const;
-  T& operator[](size_t i) const;
 };
 } // namespace std
 
@@ -236,7 +186,7 @@ void notSupportedEx() {
     const char *Src = "once upon a daydream...";
     char *Dst = new char[64];
 
-    std::memcpy(Dst, Src, std::strlen(Src));
+    std::memcpy(Dst, Src, 24);
   }
 }
 
@@ -245,19 +195,19 @@ void supportedEx() {
     wchar_t Src[] = L"once upon a daydream...";
     wchar_t Dst[4];
 
-    std::wmemcpy(Dst, Src, sizeof Dst);
+    std::wmemcpy(Dst, Src, sizeof(Dst) / sizeof(wchar_t));
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));
 
-    std::wmemcpy(Dst, Src, sizeof(Dst));
+    std::wmemcpy(Dst, Src, sizeof(Dst) / sizeof(wchar_t));
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));
 
-    wmemcpy(Dst, Src, sizeof Src);
+    wmemcpy(Dst, Src, std::size(Src));
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Src), std::begin(Dst));
 
-    wmemmove(Dst, Src, sizeof(Src));
+    wmemmove(Dst, Src, std::size(Src));
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemmove'
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Src), std::begin(Dst));
   }
@@ -280,11 +230,21 @@ void supportedEx() {
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), Src.size(), std::begin(Dst));
   }
 
+  { // reference to const c-array
+    const char Src[] = "once upon a daydream...";
+    char Dst[7];
+    decltype(Dst)& RefDst = Dst;
+
+    memcpy(RefDst, Src, sizeof(RefDst));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(RefDst), std::begin(RefDst));
+  }
+
   { // std::wstring + std::unique_ptr
     std::wstring Src = L"once upon a daydream...";
-    std::unique_ptr<wchar_t[16]> Dst(new wchar_t[16]);
+    std::unique_ptr<wchar_t[7]> Dst(new wchar_t[7]);
 
-    std::wmemcpy(*Dst, Src.data(), sizeof(*Dst));
+    std::wmemcpy(*Dst, Src.data(), sizeof(*Dst) / sizeof(wchar_t));
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(*Dst), std::begin(*Dst));
   }
@@ -308,7 +268,7 @@ void supportedEx() {
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), Src.size() - 2, std::begin(Dst));
   }
 
-  { // NSizeOfExpr cases
+  { // various size arg cases
     std::int32_t Data[] = {1, 2, 3, 4, 1, 2, 3, 4};
     std::span<std::int32_t> Src{Data};
     std::vector<std::int32_t> Dst(8);
@@ -318,8 +278,68 @@ void supportedEx() {
     // CHECK-FIXES: std::copy_n(std::cbegin(Src), Dst.size(), std::begin(Dst));
 
     memmove(std::data(Dst), std::data(Src), sizeof(int) * std::size(Dst));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));  
+
+    // If both arguments of the product match sizeOfExpr then the right one is lifted
+    std::memcpy(std::data(Dst), std::data(Src), sizeof(int) * sizeof(std::int32_t));
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
-    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Dst), std::begin(Dst));
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), sizeof(int), std::begin(Dst));
+
+    std::memcpy(std::data(Dst), std::data(Src), sizeof(decltype(Dst)::value_type) * 3);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), 3, std::begin(Dst));
+  }
+
+  { // default sizearg path
+    std::vector<std::int32_t> Src(64);
+    std::u32string Dst = U"once upon a daydream...";
+
+    // Don't factor out sizeof expressions that are unlikely to be related to the value type,
+    // this might lose semantic info
+    memmove(std::data(Dst), std::data(Src), sizeof(float) * 3);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), (sizeof(float) * 3) / sizeof(char32_t), std::begin(Dst));
+  
+    // the sizeof(value_type) is nested too deep in the product expression,
+    // so currently the check will leave it as is
+    memmove(Dst.data(), Src.data(), 1 * 2 * sizeof(char32_t) * 4);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memmove'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), (1 * 2 * sizeof(char32_t) * 4) / sizeof(char32_t), std::begin(Dst));
+
+    std::memcpy(Dst.data(), Src.data(), sizeof(char32_t) + sizeof(int));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), (sizeof(char32_t) + sizeof(int)) / sizeof(char32_t), std::begin(Dst));
+  }
+
+  { // SizeOfDivSizeOf - width = char
+    const char Src[] = "once upon a daydream...";
+    std::string DstStr = "    ";
+
+    // superfluous, can be simplified
+    std::memcpy(DstStr.data(), std::data(Src), sizeof(Src) / sizeof(char));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Src), std::begin(DstStr));
+  }
+
+  { // SizeOfDivSizeOf - width = int
+    const int Src[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int> DstVec(8);
+
+    // this is probably a bug, but the check prefers not to change behaviour
+    std::memcpy(DstVec.data(), std::data(Src), sizeof(Src) / sizeof(int));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'memcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), (sizeof(Src) / sizeof(int)) / sizeof(int), std::begin(DstVec));
+  }
+
+  { // SizeOfDivSizeOf - width = wchar_t
+    const wchar_t Src[] = L"once upon a daydream...";
+    std::wstring DstStr = L"    ";
+
+    // simplifies
+    std::wmemcpy(DstStr.data(), std::data(Src), sizeof(Src) / sizeof(wchar_t));
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: prefer std::copy_n to 'wmemcpy'
+    // CHECK-FIXES: std::copy_n(std::cbegin(Src), std::size(Src), std::begin(DstStr));
   }
 }
 } // namespace
