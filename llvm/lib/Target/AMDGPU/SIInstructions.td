@@ -3055,7 +3055,7 @@ def : GCNPat<
    (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0))), sub1)>;
 
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
-let AddedComplexity = 1000 in {
+let AddedComplexity = 8 in {
 foreach vt = [f16, v2f16, f32, v2f32, f64] in {
   def : GCNPat<
     (fcanonicalize (vt is_canonicalized:$src)),
@@ -3710,12 +3710,15 @@ def : IntMinMaxPat<V_MAXMIN_U32_e64, umin, umax_oneuse>;
 def : IntMinMaxPat<V_MINMAX_U32_e64, umax, umin_oneuse>;
 def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinCanonMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinCanonMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
+let True16Predicate = UseFakeTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 }
 
 let SubtargetPredicate = isGFX9Plus in {
