@@ -311,7 +311,10 @@ ABI configuration.
 ABI options
 -----------
 
-Vendors can use the following ABI options to enable additional hardening checks:
+Vendors can use some ABI options at CMake configuration time (when building libc++
+itself) to enable additional hardening checks. This is done by passing these
+macros as ``-DLIBCXX_ABI_DEFINES="_LIBCPP_ABI_FOO;_LIBCPP_ABI_BAR;etc"`` at
+CMake configuration time. The available options are:
 
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- changes the iterator type of select
   containers (see below) to a bounded iterator that keeps track of whether it's
