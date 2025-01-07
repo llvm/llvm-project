@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -o - %s -fsanitize=signed-integer-overflow,integer-divide-by-zero,null -mllvm -ubsan-guard-checks -fsanitize-trap=signed-integer-overflow,integer-divide-by-zero,null | FileCheck %s --check-prefixes=TRAP
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -o - %s -fsanitize=signed-integer-overflow,integer-divide-by-zero,null -mllvm -ubsan-guard-checks -fsanitize-recover=signed-integer-overflow,integer-divide-by-zero,null | FileCheck %s --check-prefixes=RECOVER
 
+
 // CHECK-LABEL: define dso_local i32 @div(
 // CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
