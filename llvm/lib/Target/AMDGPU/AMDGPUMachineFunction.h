@@ -70,6 +70,8 @@ protected:
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;
 
+  uint32_t NumNamedBarriers = 0;
+
   // Kernels + shaders. i.e. functions called by the hardware and not called
   // by other functions.
   bool IsEntryFunction = false;
@@ -109,6 +111,12 @@ public:
 
   uint32_t getLaneSharedScratchSize() const { return LaneSharedScratchSize; }
   uint32_t getLaneSharedVGPRSize() const { return LaneSharedVGPRSize; }
+
+  void recordNumNamedBarriers(uint32_t GVAddr, unsigned BarCnt) {
+    NumNamedBarriers =
+        std::max(NumNamedBarriers, ((GVAddr & 0x1ff) >> 4) + BarCnt - 1);
+  }
+  uint32_t getNumNamedBarriers() const { return NumNamedBarriers; }
 
   bool isEntryFunction() const {
     return IsEntryFunction;

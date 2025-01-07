@@ -55,7 +55,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LdsSize = 0;
   EXCPEnable = 0;
 
-  ComputePGMRSrc3GFX90A = ZeroExpr;
+  ComputePGMRSrc3 = ZeroExpr;
 
   NumVGPR = ZeroExpr;
   NumArchVGPR = ZeroExpr;
@@ -71,6 +71,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LaneSharedSegmentSize = ZeroExpr;
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
+  NamedBarCnt = ZeroExpr;
   Occupancy = ZeroExpr;
   DynamicCallStack = ZeroExpr;
   VCCUsed = ZeroExpr;
