@@ -469,7 +469,9 @@ define i1 @cmp_gep_same_base_same_type(ptr %ptr, i64 %idx1, i64 %idx2) {
 
 define i1 @cmp_gep_same_base_same_type_maywrap(ptr %ptr, i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: @cmp_gep_same_base_same_type_maywrap(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP_UNSHIFTED:%.*]] = xor i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP_MASK:%.*]] = and i64 [[CMP_UNSHIFTED]], 4611686018427387903
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CMP_MASK]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr %ptr, i64 %idx1
