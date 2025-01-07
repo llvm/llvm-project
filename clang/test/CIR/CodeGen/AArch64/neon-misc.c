@@ -1751,3 +1751,51 @@ uint64_t test_vaddlvq_u32(uint32x4_t a) {
   // LLVM-NEXT:    [[VADDLVQ_U32_I:%.*]] = call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> [[A]])
   // LLVM-NEXT:    ret i64 [[VADDLVQ_U32_I]]
 }
+
+int8_t test_vmaxv_s8(int8x8_t a) {
+  return vmaxv_s8(a);
+
+  // CIR-LABEL: vmaxv_s8
+  // CIR: cir.llvm.intrinsic "aarch64.neon.smaxv" {{%.*}} : (!cir.vector<!s8i x 8>) -> !s8i
+
+  // LLVM-LABEL: @test_vmaxv_s8
+  // LLVM-SAME: (<8 x i8> [[a:%.*]])
+  // LLVM: [[res:%.*]] = call i8 @llvm.aarch64.neon.smaxv.i8.v8i8(<8 x i8> [[a]])
+  // LLVM: ret i8 [[res]]
+}
+
+int8_t test_vmaxv_u8(uint8x8_t a) {
+  return vmaxv_u8(a);
+
+  // CIR-LABEL: vmaxv_u8
+  // CIR: cir.llvm.intrinsic "aarch64.neon.umaxv" {{%.*}} : (!cir.vector<!u8i x 8>) -> !u8i
+
+  // LLVM-LABEL: @test_vmaxv_u8
+  // LLVM-SAME: (<8 x i8> [[a:%.*]])
+  // LLVM: [[res:%.*]] = call i8 @llvm.aarch64.neon.umaxv.i8.v8i8(<8 x i8> [[a]])
+  // LLVM: ret i8 [[res]]
+}
+
+int8_t test_vmaxvq_s8(int8x16_t a) {
+  return vmaxvq_s8(a);
+
+  // CIR-LABEL: vmaxvq_s8
+  // CIR: cir.llvm.intrinsic "aarch64.neon.smaxv" {{%.*}} : (!cir.vector<!s8i x 16>) -> !s8i
+
+  // LLVM-LABEL: @test_vmaxvq_s8
+  // LLVM-SAME: (<16 x i8> [[a:%.*]])
+  // LLVM: [[res:%.*]] = call i8 @llvm.aarch64.neon.smaxv.i8.v16i8(<16 x i8> [[a]])
+  // LLVM: ret i8 [[res]]
+}
+
+int8_t test_vmaxvq_u8(uint8x16_t a) {
+  return vmaxvq_u8(a);
+
+  // CIR-LABEL: vmaxvq_u8
+  // CIR: cir.llvm.intrinsic "aarch64.neon.umaxv" {{%.*}} : (!cir.vector<!u8i x 16>) -> !u8i
+
+  // LLVM-LABEL: @test_vmaxvq_u8
+  // LLVM-SAME: (<16 x i8> [[a:%.*]])
+  // LLVM: [[res:%.*]] = call i8 @llvm.aarch64.neon.umaxv.i8.v16i8(<16 x i8> [[a]])
+  // LLVM: ret i8 [[res]]
+}

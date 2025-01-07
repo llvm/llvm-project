@@ -2349,6 +2349,26 @@ emitCommonNeonCallPattern0(CIRGenFunction &cgf, llvm::StringRef intrincsName,
   return builder.createBitcast(res, resultType);
 }
 
+/// The function `emitCommonNeonVecAcrossCall` implements a common way
+/// to implement neon intrinsic which has the following pattern:
+///  1. There is only one argument which is of vector type
+///  2. The result of the neon intrinsic is the element type of the input.
+/// This type of intrinsic usually is for across operations of the input vector.
+
+static mlir::Value emitCommonNeonVecAcrossCall(CIRGenFunction &cgf,
+                                               llvm::StringRef intrincsName,
+                                               mlir::Type eltTy,
+                                               unsigned vecLen,
+                                               const clang::CallExpr *e) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value op = cgf.emitScalarExpr(e->getArg(0));
+  cir::VectorType vTy =
+      cir::VectorType::get(&cgf.getMLIRContext(), eltTy, vecLen);
+  llvm::SmallVector<mlir::Value, 1> args{op};
+  return emitNeonCall(builder, {vTy}, args, intrincsName, eltTy,
+                      cgf.getLoc(e->getExprLoc()));
+}
+
 mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
     unsigned builtinID, unsigned llvmIntrinsic, unsigned altLLVMIntrinsic,
     const char *nameHint, unsigned modifier, const CallExpr *e,
@@ -4274,25 +4294,29 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NEON::BI__builtin_neon_vaddvq_s16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_u8: {
-    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_u8 NYI");
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.umaxv", UInt8Ty, 8,
+                                       E);
   }
   case NEON::BI__builtin_neon_vmaxv_u16: {
     llvm_unreachable("NEON::BI__builtin_neon_vmaxv_u16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_u8: {
-    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_u8 NYI");
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.umaxv", UInt8Ty, 16,
+                                       E);
   }
   case NEON::BI__builtin_neon_vmaxvq_u16: {
     llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_u16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxv_s8: {
-    llvm_unreachable("NEON::BI__builtin_neon_vmaxv_s8 NYI");
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.smaxv", SInt8Ty, 8,
+                                       E);
   }
   case NEON::BI__builtin_neon_vmaxv_s16: {
     llvm_unreachable("NEON::BI__builtin_neon_vmaxv_s16 NYI");
   }
   case NEON::BI__builtin_neon_vmaxvq_s8: {
-    llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_s8 NYI");
+    return emitCommonNeonVecAcrossCall(*this, "aarch64.neon.smaxv", SInt8Ty, 16,
+                                       E);
   }
   case NEON::BI__builtin_neon_vmaxvq_s16: {
     llvm_unreachable("NEON::BI__builtin_neon_vmaxvq_s16 NYI");
