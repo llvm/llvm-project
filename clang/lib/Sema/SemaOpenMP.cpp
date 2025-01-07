@@ -5285,7 +5285,6 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
   }
   for (OMPClause *C : AllocateRange) {
     auto *AC = cast<OMPAllocateClause>(C);
-    // TODO: Check alignment?
     if (S.getLangOpts().OpenMP >= 50 &&
         !Stack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>() &&
         isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()) &&

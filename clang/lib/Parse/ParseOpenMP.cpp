@@ -4577,7 +4577,8 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
         Tail = P.ParseAssignmentExpression();
         AllocateT.consumeClose();
         AllocatorSeen = true;
-      } break;
+        break;
+      }
       case OMPC_ALLOCATE_align: {
         if (AlignSeen) {
           P.Diag(Tok, diag::err_omp_duplicate_modifier)
@@ -4591,7 +4592,8 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
         if (Val.isUsable())
           Data.AllocateAlignment = Val.get();
         AlignSeen = true;
-      } break;
+        break;
+      }
       default:
         assert(false && "Unexpected allocate modifier");
         break;
