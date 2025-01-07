@@ -57,6 +57,7 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
@@ -218,6 +219,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.UnrollAndJam = false;
   UP.UnrollAndJamInnerLoopThreshold = 60;
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
+  UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -1349,6 +1351,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.Runtime = UP.Runtime;
   ULO.ForgetAllSCEV = ForgetAllSCEV;
   ULO.Heart = getLoopConvergenceHeart(L);
+  ULO.SCEVExpansionBudget = UP.SCEVExpansionBudget;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
   if (UnrollResult == LoopUnrollResult::Unmodified)

@@ -1166,15 +1166,15 @@ define void @main.45() #0 {
 ;
 ; BWON-F16C-LABEL: main.45:
 ; BWON-F16C:       # %bb.0: # %entry
-; BWON-F16C-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,0,0,4,5,6,7]
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    xorl %eax, %eax
-; BWON-F16C-NEXT:    vucomiss %xmm0, %xmm0
-; BWON-F16C-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; BWON-F16C-NEXT:    cmovnpl %eax, %ecx
-; BWON-F16C-NEXT:    vmovd %ecx, %xmm0
+; BWON-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
 ; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; BWON-F16C-NEXT:    vmovd %eax, %xmm1
+; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; BWON-F16C-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; BWON-F16C-NEXT:    vcmpunordps %xmm2, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; BWON-F16C-NEXT:    vmovq %xmm0, (%rax)
 ; BWON-F16C-NEXT:    retq

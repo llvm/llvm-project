@@ -43,8 +43,7 @@ TEST(ArrayConstructor, Basic) {
   result.GetDimension(0).SetBounds(1, 0);
 
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/false,
-      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
+  (*acVector, result, /*useValueLengthParameters=*/false);
   for (std::int32_t i{0}; i <= 99; ++i) {
     RTNAME(PushArrayConstructorSimpleScalar)(*acVector, &i);
     RTNAME(PushArrayConstructorValue)(*acVector, *x);
@@ -71,8 +70,7 @@ TEST(ArrayConstructor, Basic) {
   // and is allocated when the first value is pushed.
   result.GetDimension(0).SetBounds(1, 1234);
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/false,
-      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
+  (*acVector, result, /*useValueLengthParameters=*/false);
   EXPECT_EQ(0, acVector->actualAllocationSize);
   std::int32_t i{42};
   RTNAME(PushArrayConstructorSimpleScalar)(*acVector, &i);
@@ -109,8 +107,7 @@ TEST(ArrayConstructor, Character) {
   static constexpr std::size_t expectedElements{10 * (1 + 4 + 2 * 3)};
   result.GetDimension(0).SetBounds(1, 0);
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/true,
-      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
+  (*acVector, result, /*useValueLengthParameters=*/true);
   for (std::int32_t i{1}; i <= 10; ++i) {
     RTNAME(PushArrayConstructorValue)(*acVector, *c);
     RTNAME(PushArrayConstructorValue)(*acVector, *x);
@@ -130,6 +127,9 @@ TEST(ArrayConstructor, Character) {
       0);
   result.Deallocate();
   cookieAllocator.deallocate(acVector, 1);
+  x->Deallocate();
+  y->Deallocate();
+  c->Deallocate();
 }
 
 TEST(ArrayConstructor, CharacterRuntimeCheck) {
@@ -151,8 +151,7 @@ TEST(ArrayConstructor, CharacterRuntimeCheck) {
 
   result.GetDimension(0).SetBounds(1, 0);
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/true,
-      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
+  (*acVector, result, /*useValueLengthParameters=*/true);
   RTNAME(PushArrayConstructorValue)(*acVector, *c2);
   ASSERT_DEATH(RTNAME(PushArrayConstructorValue)(*acVector, *c3),
       "Array constructor: mismatched character lengths");

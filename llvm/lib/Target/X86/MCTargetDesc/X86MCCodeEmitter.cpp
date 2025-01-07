@@ -572,7 +572,8 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex2) ||
-      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel)) {
+      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_evex)) {
     ImmOffset -= 4;
     // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
     // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
@@ -580,6 +581,7 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
     if (startsWithGlobalOffsetTable(Expr) != GOT_None)
       FixupKind = MCFixupKind(X86::reloc_global_offset_table);
   }
+
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
   if (FixupKind == FK_PCRel_1)
@@ -670,6 +672,12 @@ void X86MCCodeEmitter::emitMemModRMByte(
         return Kind == REX2  ? X86::reloc_riprel_4byte_relax_rex2
                : Kind == REX ? X86::reloc_riprel_4byte_relax_rex
                              : X86::reloc_riprel_4byte_relax;
+      case X86::ADD64rm_NF:
+      case X86::ADD64rm_ND:
+      case X86::ADD64mr_ND:
+      case X86::ADD64mr_NF_ND:
+      case X86::ADD64rm_NF_ND:
+        return X86::reloc_riprel_4byte_relax_evex;
       }
     }();
 

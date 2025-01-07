@@ -456,7 +456,7 @@ public:
   bool isReachableFromEntry(const NodeT *A) const {
     assert(!this->isPostDominator() &&
            "This is not implemented for post dominators");
-    return isReachableFromEntry(getNode(const_cast<NodeT *>(A)));
+    return isReachableFromEntry(getNode(A));
   }
 
   bool isReachableFromEntry(const DomTreeNodeBase<NodeT> *A) const { return A; }
@@ -1014,11 +1014,7 @@ bool DominatorTreeBase<NodeT, IsPostDom>::dominates(const NodeT *A,
   if (A == B)
     return true;
 
-  // Cast away the const qualifiers here. This is ok since
-  // this function doesn't actually return the values returned
-  // from getNode.
-  return dominates(getNode(const_cast<NodeT *>(A)),
-                   getNode(const_cast<NodeT *>(B)));
+  return dominates(getNode(A), getNode(B));
 }
 template <typename NodeT, bool IsPostDom>
 bool DominatorTreeBase<NodeT, IsPostDom>::properlyDominates(
@@ -1026,11 +1022,7 @@ bool DominatorTreeBase<NodeT, IsPostDom>::properlyDominates(
   if (A == B)
     return false;
 
-  // Cast away the const qualifiers here. This is ok since
-  // this function doesn't actually return the values returned
-  // from getNode.
-  return dominates(getNode(const_cast<NodeT *>(A)),
-                   getNode(const_cast<NodeT *>(B)));
+  return dominates(getNode(A), getNode(B));
 }
 
 } // end namespace llvm

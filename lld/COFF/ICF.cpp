@@ -314,16 +314,16 @@ void ICF::run() {
         [&](size_t begin, size_t end) { segregate(begin, end, false); });
   } while (repeat);
 
-  log("ICF needed " + Twine(cnt) + " iterations");
+  Log(ctx) << "ICF needed " << Twine(cnt) << " iterations";
 
   // Merge sections in the same classes.
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
 
-    log("Selected " + chunks[begin]->getDebugName());
+    Log(ctx) << "Selected " << chunks[begin]->getDebugName();
     for (size_t i = begin + 1; i < end; ++i) {
-      log("  Removed " + chunks[i]->getDebugName());
+      Log(ctx) << "  Removed " << chunks[i]->getDebugName();
       chunks[begin]->replace(chunks[i]);
     }
   });

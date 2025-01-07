@@ -18,11 +18,11 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Ompx_Hold
-!PARSE-TREE: | | TypeModifier = Always
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | TypeModifier = Close
-!PARSE-TREE: | | Type = To
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
 
@@ -43,10 +43,10 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Ompx_Hold
-!PARSE-TREE: | | TypeModifier = Always
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | TypeModifier = Close
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
 
@@ -67,7 +67,7 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | Type = From
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = From
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
 
@@ -108,11 +108,11 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Ompx_Hold
-!PARSE-TREE: | | TypeModifier = Always
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | TypeModifier = Close
-!PARSE-TREE: | | Type = To
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'false'
 
@@ -133,10 +133,10 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Ompx_Hold
-!PARSE-TREE: | | TypeModifier = Always
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | TypeModifier = Close
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
 !PARSE-TREE: | | bool = 'true'
@@ -158,8 +158,8 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -169,7 +169,7 @@ end
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr = '10_4'
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '10'
-!PARSE-TREE: | | Type = To
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | DataRef -> Name = 'x'
 !PARSE-TREE: | | | SectionSubscript -> Integer -> Expr = 'i'
@@ -193,8 +193,8 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -204,7 +204,7 @@ end
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr = '10_4'
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '10'
-!PARSE-TREE: | | Type = To
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | DataRef -> Name = 'x'
 !PARSE-TREE: | | | SectionSubscript -> Integer -> Expr = 'i'
@@ -228,8 +228,8 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -239,17 +239,17 @@ end
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr = '10_4'
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '10'
-!PARSE-TREE: | | OmpIteratorSpecifier
-!PARSE-TREE: | | | TypeDeclarationStmt
-!PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
-!PARSE-TREE: | | | | EntityDecl
-!PARSE-TREE: | | | | | Name = 'j'
-!PARSE-TREE: | | | SubscriptTriplet
-!PARSE-TREE: | | | | Scalar -> Integer -> Expr = '1_4'
-!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | | | | Scalar -> Integer -> Expr = '10_4'
-!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '10'
-!PARSE-TREE: | | Type = To
+!PARSE-TREE: | | | OmpIteratorSpecifier
+!PARSE-TREE: | | | | TypeDeclarationStmt
+!PARSE-TREE: | | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!PARSE-TREE: | | | | | EntityDecl
+!PARSE-TREE: | | | | | | Name = 'j'
+!PARSE-TREE: | | | | SubscriptTriplet
+!PARSE-TREE: | | | | | Scalar -> Integer -> Expr = '1_4'
+!PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!PARSE-TREE: | | | | | Scalar -> Integer -> Expr = '10_4'
+!PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '10'
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | DataRef -> Name = 'x'
 !PARSE-TREE: | | | SectionSubscript -> Integer -> Expr = '(i+j)/2_4'
@@ -265,7 +265,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | | bool = 'true'
 
-subroutine f90(x, y)
+subroutine f20(x, y)
   integer :: x(10)
   integer :: y
   integer, parameter :: p = 23
@@ -274,7 +274,7 @@ subroutine f90(x, y)
   !$omp end target
 end
 
-!UNPARSE: SUBROUTINE f90 (x, y)
+!UNPARSE: SUBROUTINE f20 (x, y)
 !UNPARSE:  INTEGER x(10_4)
 !UNPARSE:  INTEGER y
 !UNPARSE:  INTEGER, PARAMETER :: p = 23_4
@@ -286,8 +286,8 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | TypeModifier = Present
-!PARSE-TREE: | | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl
@@ -299,24 +299,24 @@ end
 !PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr = '23_4'
 !PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'p'
-!PARSE-TREE: | | OmpIteratorSpecifier
-!PARSE-TREE: | | | TypeDeclarationStmt
-!PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
-!PARSE-TREE: | | | | EntityDecl
-!PARSE-TREE: | | | | | Name = 'k'
-!PARSE-TREE: | | | SubscriptTriplet
-!PARSE-TREE: | | | | Scalar -> Integer -> Expr = 'i'
-!PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'i'
-!PARSE-TREE: | | | | Scalar -> Integer -> Expr = 'j'
-!PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'j'
-!PARSE-TREE: | | Type = To
+!PARSE-TREE: | | | OmpIteratorSpecifier
+!PARSE-TREE: | | | | TypeDeclarationStmt
+!PARSE-TREE: | | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!PARSE-TREE: | | | | | EntityDecl
+!PARSE-TREE: | | | | | | Name = 'k'
+!PARSE-TREE: | | | | SubscriptTriplet
+!PARSE-TREE: | | | | | Scalar -> Integer -> Expr = 'i'
+!PARSE-TREE: | | | | | | Designator -> DataRef -> Name = 'i'
+!PARSE-TREE: | | | | | Scalar -> Integer -> Expr = 'j'
+!PARSE-TREE: | | | | | | Designator -> DataRef -> Name = 'j'
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | DataRef -> Name = 'x'
 !PARSE-TREE: | | | SectionSubscript -> Integer -> Expr = 'k'
 !PARSE-TREE: | | | | Designator -> DataRef -> Name = 'k'
 !PARSE-TREE: | | bool = 'true'
 
-subroutine f100(x, y)
+subroutine f21(x, y)
   integer :: x(10)
   integer :: y
   integer, parameter :: p = 23
@@ -325,7 +325,7 @@ subroutine f100(x, y)
   !$omp end target
 end
 
-!UNPARSE: SUBROUTINE f100 (x, y)
+!UNPARSE: SUBROUTINE f21 (x, y)
 !UNPARSE:  INTEGER x(10_4)
 !UNPARSE:  INTEGER y
 !UNPARSE:  INTEGER, PARAMETER :: p = 23_4
@@ -337,7 +337,42 @@ end
 !PARSE-TREE: OmpBeginBlockDirective
 !PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | OmpMapperIdentifier -> Name = 'xx'
-!PARSE-TREE: | | Type = From
+!PARSE-TREE: | | Modifier -> OmpMapper -> Name = 'xx'
+!PARSE-TREE: | | Modifier -> OmpMapType -> Value = From
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
+
+subroutine f22(x)
+  integer :: x(10)
+  !$omp target map(present, iterator(i = 1:10), always, from: x(i))
+  x = x + 1
+  !$omp end target
+end
+
+!UNPARSE: SUBROUTINE f22 (x)
+!UNPARSE:  INTEGER x(10_4)
+!UNPARSE: !$OMP TARGET  MAP(PRESENT, ITERATOR(INTEGER i = 1_4:10_4), ALWAYS, FROM: x(i))
+!UNPARSE:   x=x+1_4
+!UNPARSE: !$OMP END TARGET
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpClauseList -> OmpClause -> Map -> OmpMapClause
+!PARSE-TREE: | Modifier -> OmpMapTypeModifier -> Value = Present
+!PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | | TypeDeclarationStmt
+!PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!PARSE-TREE: | | | EntityDecl
+!PARSE-TREE: | | | | Name = 'i'
+!PARSE-TREE: | | SubscriptTriplet
+!PARSE-TREE: | | | Scalar -> Integer -> Expr = '1_4'
+!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '1'
+!PARSE-TREE: | | | Scalar -> Integer -> Expr = '10_4'
+!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '10'
+!PARSE-TREE: | Modifier -> OmpMapTypeModifier -> Value = Always
+!PARSE-TREE: | Modifier -> OmpMapType -> Value = From
+!PARSE-TREE: | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
+!PARSE-TREE: | | DataRef -> Name = 'x'
+!PARSE-TREE: | | SectionSubscript -> Integer -> Expr = 'i'
+!PARSE-TREE: | | | Designator -> DataRef -> Name = 'i'
+!PARSE-TREE: | bool = 'true'
 

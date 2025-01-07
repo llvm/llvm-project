@@ -10,6 +10,8 @@
 
 // template <size_t I, class T, size_t N> T& get(array<T, N>& a);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // Prevent -Warray-bounds from issuing a diagnostic when testing with clang verify.
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-array-bounds
 

@@ -666,7 +666,6 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   // Check whether we are able to set up outer loop induction.
   if (!setupOuterLoopInductions()) {
     reportVectorizationFailure("Unsupported outer loop Phi(s)",
-                               "Unsupported outer loop Phi(s)",
                                "UnsupportedPhi", ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
@@ -927,7 +926,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         auto *SE = PSE.getSE();
         Intrinsic::ID IntrinID = getVectorIntrinsicIDForCall(CI, TLI);
         for (unsigned Idx = 0; Idx < CI->arg_size(); ++Idx)
-          if (isVectorIntrinsicWithScalarOpAtArg(IntrinID, Idx)) {
+          if (isVectorIntrinsicWithScalarOpAtArg(IntrinID, Idx, TTI)) {
             if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(Idx)),
                                      TheLoop)) {
               reportVectorizationFailure("Found unvectorizable intrinsic",
@@ -962,7 +961,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         Type *T = ST->getValueOperand()->getType();
         if (!VectorType::isValidElementType(T)) {
           reportVectorizationFailure("Store instruction cannot be vectorized",
-                                     "store instruction cannot be vectorized",
                                      "CantVectorizeStore", ORE, TheLoop, ST);
           return false;
         }
@@ -975,7 +973,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           assert(VecTy && "did not find vectorized version of stored type");
           if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
             reportVectorizationFailure(
-                "nontemporal store instruction cannot be vectorized",
                 "nontemporal store instruction cannot be vectorized",
                 "CantVectorizeNontemporalStore", ORE, TheLoop, ST);
             return false;
@@ -990,7 +987,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           assert(VecTy && "did not find vectorized version of load type");
           if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
             reportVectorizationFailure(
-                "nontemporal load instruction cannot be vectorized",
                 "nontemporal load instruction cannot be vectorized",
                 "CantVectorizeNontemporalLoad", ORE, TheLoop, LD);
             return false;
@@ -1020,7 +1016,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
         reportVectorizationFailure("Value cannot be used outside the loop",
-                                   "value cannot be used outside the loop",
                                    "ValueUsedOutsideLoop", ORE, TheLoop, &I);
         return false;
       }
@@ -1375,6 +1370,16 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
+  // When vectorizing early exits, create predicates for the latch block only.
+  // The early exiting block must be a direct predecessor of the latch at the
+  // moment.
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  if (hasUncountableEarlyExit()) {
+    assert(
+        is_contained(predecessors(Latch), getUncountableEarlyExitingBlock()) &&
+        "Uncountable exiting block must be a direct predecessor of latch");
+    return BB == Latch;
+  }
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
 
@@ -1432,9 +1437,7 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   if (!EnableIfConversion) {
     reportVectorizationFailure("If-conversion is disabled",
-                               "if-conversion is disabled",
-                               "IfConversionDisabled",
-                               ORE, TheLoop);
+                               "IfConversionDisabled", ORE, TheLoop);
     return false;
   }
 
@@ -1483,14 +1486,12 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     if (isa<SwitchInst>(BB->getTerminator())) {
       if (TheLoop->isLoopExiting(BB)) {
         reportVectorizationFailure("Loop contains an unsupported switch",
-                                   "loop contains an unsupported switch",
                                    "LoopContainsUnsupportedSwitch", ORE,
                                    TheLoop, BB->getTerminator());
         return false;
       }
     } else if (!isa<BranchInst>(BB->getTerminator())) {
       reportVectorizationFailure("Loop contains an unsupported terminator",
-                                 "loop contains an unsupported terminator",
                                  "LoopContainsUnsupportedTerminator", ORE,
                                  TheLoop, BB->getTerminator());
       return false;
@@ -1500,8 +1501,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     if (blockNeedsPredication(BB) &&
         !blockCanBePredicated(BB, SafePointers, MaskedOp)) {
       reportVectorizationFailure(
-          "Control flow cannot be substituted for a select",
-          "control flow cannot be substituted for a select", "NoCFGForSelect",
+          "Control flow cannot be substituted for a select", "NoCFGForSelect",
           ORE, TheLoop, BB->getTerminator());
       return false;
     }
@@ -1691,8 +1691,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
       } else if (!IsSafeOperation(&I)) {
         reportVectorizationFailure("Early exit loop contains operations that "
                                    "cannot be speculatively executed",
-                                   "Early exit loop contains operations that "
-                                   "cannot be speculatively executed",
                                    "UnsafeOperationsEarlyExitLoop", ORE,
                                    TheLoop);
         return false;
@@ -1754,9 +1752,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
     if (!canVectorizeOuterLoop()) {
       reportVectorizationFailure("Unsupported outer loop",
-                                 "unsupported outer loop",
-                                 "UnsupportedOuterLoop",
-                                 ORE, TheLoop);
+                                 "UnsupportedOuterLoop", ORE, TheLoop);
       // TODO: Implement DoExtraAnalysis when subsequent legal checks support
       // outer loops.
       return false;
@@ -1788,13 +1784,15 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
+    HasUncountableEarlyExit = true;
     if (!isVectorizableEarlyExitLoop()) {
+      UncountableExitingBlocks.clear();
+      HasUncountableEarlyExit = false;
       if (DoExtraAnalysis)
         Result = false;
       else
         return false;
-    } else
-      HasUncountableEarlyExit = true;
+    }
   }
 
   // Go over each instruction and look at memory deps.

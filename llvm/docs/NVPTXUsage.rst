@@ -633,7 +633,7 @@ specified by the ``i32 %d0 ... i32 %d4`` arguments.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
 
-'``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[1-5]d``'
+'``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -648,7 +648,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[1-5]d``' intrinsics
+The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``' intrinsics
 correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
 of PTX instructions. These instructions initiate an asynchronous prefetch
 of tensor data from global memory to the L2 cache. In im2col mode, some
@@ -662,6 +662,166 @@ the same functionality as described in the ``tile`` mode intrinsics above.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.min.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.max.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.inc.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.dec.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.and.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.or.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.xor.tile.1d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.[1-5]d``' intrinsics
+correspond to the ``cp.reduce.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous reduction operation of tensor data
+in global memory with the tensor data in shared{::cta} memory, using ``tile`` mode.
+The dimension of the tensor data ranges from 1d to 5d with the coordinates
+specified by the ``i32 %d0 ... i32 %d4`` arguments. The supported reduction
+operations are {add, min, max, inc, dec, and, or, xor} as described in the
+``tile.1d`` intrinsics.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].im2col.[3-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.3d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.[3-5]d``' intrinsics
+correspond to the ``cp.reduce.async.bulk.tensor.[3-5]d.*`` set of PTX instructions.
+These instructions initiate an asynchronous reduction operation of tensor data
+in global memory with the tensor data in shared{::cta} memory, using ``im2col`` mode.
+In this mode, the tensor has to be at least three-dimensional. The supported reduction
+operations supported are the same as the ones in the tile mode. The last argument to
+these intrinsics is a boolean flag, with the same functionality as described in the
+``tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+
+Warp Group Intrinsics
+---------------------
+
+'``llvm.nvvm.wgmma.fence.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.fence.sync.aligned()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.fence.sync.aligned``' intrinsic generates the
+``wgmma.fence.sync.aligned`` PTX instruction, which establishes an ordering
+between prior accesses to any warpgroup registers and subsequent accesses to
+the same registers by a ``wgmma.mma_async`` instruction.
+
+The ``wgmma.fence`` instruction must be issued by all warps of the warpgroup in
+the following locations:
+
+* Before the first ``wgmma.mma_async`` operation in a warpgroup.
+* Between a register access by a thread in the warpgroup and any
+  ``wgmma.mma_async`` instruction that accesses the same registers, except when
+  these are accumulator register accesses across multiple ``wgmma.mma_async``
+  instructions of the same shape in which case an ordering guarantee is
+  provided by default.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`_.
+
+'``llvm.nvvm.wgmma.commit_group.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.commit_group.sync.aligned``' intrinsic generates the
+``wgmma.commit_group.sync.aligned`` PTX instruction, which creates a new
+wgmma-group per warpgroup and batches all prior ``wgmma.mma_async``
+instructions initiated by the executing warp but not committed to any
+wgmma-group into the new wgmma-group. If there are no uncommitted ``wgmma
+mma_async`` instructions then, ``wgmma.commit_group`` results in an empty
+wgmma-group.
+
+An executing thread can wait for the completion of all ``wgmma.mma_async``
+operations in a wgmma-group by using ``wgmma.wait_group``.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`_.
+
+'``llvm.nvvm.wgmma.wait_group.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 immarg N)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.wait_group.sync.aligned``' intrinsic generates the
+``wgmma.commit_group.sync.aligned N`` PTX instruction, which will cause the
+executing thread to wait until only ``N`` or fewer of the most recent
+wgmma-groups are pending and all the prior wgmma-groups committed by the
+executing threads are complete. For example, when ``N`` is 0, the executing
+thread waits on all the prior wgmma-groups to complete. Operand ``N`` is an
+integer constant.
+
+Accessing the accumulator register or the input register containing the
+fragments of matrix A of a ``wgmma.mma_async`` instruction without first
+performing a ``wgmma.wait_group`` instruction that waits on a wgmma-group
+including that ``wgmma.mma_async`` instruction is undefined behavior.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
 
 Other Intrinsics
 ----------------

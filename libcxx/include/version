@@ -269,11 +269,14 @@ __cpp_lib_void_t                                        201411L <type_traits>
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/version>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 // clang-format off
 
@@ -580,6 +583,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_variant
 # define __cpp_lib_variant                              202306L
 #endif
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 // clang-format on
 

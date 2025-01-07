@@ -262,6 +262,7 @@ DECODE_OPERAND_REG_8(VGPR_32_Lo128)
 DECODE_OPERAND_REG_8(VReg_64)
 DECODE_OPERAND_REG_8(VReg_96)
 DECODE_OPERAND_REG_8(VReg_128)
+DECODE_OPERAND_REG_8(VReg_192)
 DECODE_OPERAND_REG_8(VReg_256)
 DECODE_OPERAND_REG_8(VReg_288)
 DECODE_OPERAND_REG_8(VReg_352)
@@ -278,7 +279,9 @@ DECODE_OPERAND_REG_7(SReg_64_XEXEC, OPW64)
 DECODE_OPERAND_REG_7(SReg_64_XEXEC_XNULL, OPW64)
 DECODE_OPERAND_REG_7(SReg_96, OPW96)
 DECODE_OPERAND_REG_7(SReg_128, OPW128)
+DECODE_OPERAND_REG_7(SReg_128_XNULL, OPW128)
 DECODE_OPERAND_REG_7(SReg_256, OPW256)
+DECODE_OPERAND_REG_7(SReg_256_XNULL, OPW256)
 DECODE_OPERAND_REG_7(SReg_512, OPW512)
 
 DECODE_OPERAND_REG_8(AGPR_32)
@@ -565,6 +568,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS))
         break;
 
+      if (STI.hasFeature(AMDGPU::FeatureGFX950Insts) &&
+          tryDecodeInst(DecoderTableGFX95064, MI, QW, Address, CS))
+        break;
+
       // Some GFX9 subtargets repurposed the v_mad_mix_f32, v_mad_mixlo_f16 and
       // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
       // table first so we print the correct name.
@@ -624,6 +631,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX9() && tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS))
+        break;
+
+      if (STI.hasFeature(AMDGPU::FeatureGFX950Insts) &&
+          tryDecodeInst(DecoderTableGFX95032, MI, DW, Address, CS))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
@@ -1530,6 +1541,7 @@ unsigned AMDGPUDisassembler::getVgprClassId(const OpWidthTy Width) const {
   case OPWV232: return VReg_64RegClassID;
   case OPW96: return VReg_96RegClassID;
   case OPW128: return VReg_128RegClassID;
+  case OPW192: return VReg_192RegClassID;
   case OPW160: return VReg_160RegClassID;
   case OPW256: return VReg_256RegClassID;
   case OPW288: return VReg_288RegClassID;
@@ -1682,6 +1694,11 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
   case OPW64:
   case OPWV232:
     return decodeSpecialReg64(Val);
+  case OPW96:
+  case OPW128:
+  case OPW256:
+  case OPW512:
+    return decodeSpecialReg96Plus(Val);
   default:
     llvm_unreachable("unexpected immediate type");
   }
@@ -1764,6 +1781,24 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 252: return createRegOperand(SRC_EXECZ);
   case 253: return createRegOperand(SRC_SCC);
   default: break;
+  }
+  return errOperand(Val, "unknown operand encoding " + Twine(Val));
+}
+
+MCOperand AMDGPUDisassembler::decodeSpecialReg96Plus(unsigned Val) const {
+  using namespace AMDGPU;
+
+  switch (Val) {
+  case 124:
+    if (isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
+  case 125:
+    if (!isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
+  default:
+    break;
   }
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
 }

@@ -835,6 +835,42 @@ public:
   Defined *target;
 };
 
+// ARM64X entry for dynamic relocations.
+class Arm64XDynamicRelocEntry {
+public:
+  Arm64XDynamicRelocEntry(llvm::COFF::Arm64XFixupType type, uint8_t size,
+                          uint32_t offset, uint64_t value)
+      : offset(offset), value(value), type(type), size(size) {}
+
+  size_t getSize() const;
+  void writeTo(uint8_t *buf) const;
+
+  uint32_t offset;
+  uint64_t value;
+
+private:
+  llvm::COFF::Arm64XFixupType type;
+  uint8_t size;
+};
+
+// Dynamic relocation chunk containing ARM64X relocations for the hybrid image.
+class DynamicRelocsChunk : public NonSectionChunk {
+public:
+  DynamicRelocsChunk() {}
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) const override;
+  void finalize();
+
+  void add(llvm::COFF::Arm64XFixupType type, uint8_t size, uint32_t offset,
+           uint64_t value) {
+    arm64xRelocs.emplace_back(type, size, offset, value);
+  }
+
+private:
+  std::vector<Arm64XDynamicRelocEntry> arm64xRelocs;
+  size_t size;
+};
+
 // MinGW specific, for the "automatic import of variables from DLLs" feature.
 // This provides the table of runtime pseudo relocations, for variable
 // references that turned out to need to be imported from a DLL even though

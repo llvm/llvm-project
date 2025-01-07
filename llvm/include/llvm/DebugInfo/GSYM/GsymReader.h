@@ -127,10 +127,29 @@ public:
   /// is much faster for lookups.
   ///
   /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
+  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
   /// \returns An expected LookupResult that contains only the information
   /// needed for the current address, or an error object that indicates reason
   /// for failing to lookup the address.
-  llvm::Expected<LookupResult> lookup(uint64_t Addr) const;
+  llvm::Expected<LookupResult>
+  lookup(uint64_t Addr,
+         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+
+  /// Lookup all merged functions for a given address.
+  ///
+  /// This function performs a lookup for the specified address and then
+  /// retrieves additional LookupResults from any merged functions associated
+  /// with the primary LookupResult.
+  ///
+  /// \param Addr The address to lookup.
+  ///
+  /// \returns A vector of LookupResult objects, where the first element is the
+  /// primary result, followed by results for any merged functions
+  llvm::Expected<std::vector<LookupResult>> lookupAll(uint64_t Addr) const;
 
   /// Get a string from the string table.
   ///
@@ -180,6 +199,30 @@ public:
   ///
   /// \param MFI The object to dump.
   void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+
+  /// Dump a CallSiteInfo object.
+  ///
+  /// This function will output the details of a CallSiteInfo object in a
+  /// human-readable format.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSI The CallSiteInfo object to dump.
+  void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+
+  /// Dump a CallSiteInfoCollection object.
+  ///
+  /// This function will iterate over a collection of CallSiteInfo objects and
+  /// dump each one.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSIC The CallSiteInfoCollection object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+            uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///

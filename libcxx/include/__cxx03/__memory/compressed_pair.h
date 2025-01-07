@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_COMPRESSED_PAIR_H
-#define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
+#ifndef _LIBCPP___CXX03___MEMORY_COMPRESSED_PAIR_H
+#define _LIBCPP___CXX03___MEMORY_COMPRESSED_PAIR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/tuple.h>
@@ -168,4 +168,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_COMPRESSED_PAIR_H
+#endif // _LIBCPP___CXX03___MEMORY_COMPRESSED_PAIR_H

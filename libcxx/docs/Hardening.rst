@@ -407,7 +407,7 @@ Hardened containers status
       - ✅
       - ❌
     * - ``forward_list``
-      - ❌
+      - ✅
       - ❌
     * - ``deque``
       - ✅
@@ -458,7 +458,7 @@ Hardened containers status
       - Partial
       - N/A
     * - ``bitset``
-      - ❌
+      - ✅
       - N/A
 
 Note: for ``vector`` and ``string``, the iterator does not check for

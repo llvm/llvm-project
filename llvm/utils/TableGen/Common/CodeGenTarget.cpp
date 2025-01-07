@@ -163,7 +163,7 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
   return *RegBank;
 }
 
-std::optional<CodeGenRegisterClass *> CodeGenTarget::getSuperRegForSubReg(
+const CodeGenRegisterClass *CodeGenTarget::getSuperRegForSubReg(
     const ValueTypeByHwMode &ValueTy, CodeGenRegBank &RegBank,
     const CodeGenSubRegIndex *SubIdx, bool MustBeAllocatable) const {
   std::vector<CodeGenRegisterClass *> Candidates;
@@ -192,7 +192,7 @@ std::optional<CodeGenRegisterClass *> CodeGenTarget::getSuperRegForSubReg(
 
   // If we didn't find anything, we're done.
   if (Candidates.empty())
-    return std::nullopt;
+    return nullptr;
 
   // Find and return the largest of our candidate classes.
   llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
@@ -424,14 +424,13 @@ ComplexPattern::ComplexPattern(const Record *R) {
       Properties |= 1 << SDNPMemOperand;
     } else if (Prop->getName() == "SDNPVariadic") {
       Properties |= 1 << SDNPVariadic;
-    } else if (Prop->getName() == "SDNPWantRoot") {
-      Properties |= 1 << SDNPWantRoot;
-    } else if (Prop->getName() == "SDNPWantParent") {
-      Properties |= 1 << SDNPWantParent;
     } else {
       PrintFatalError(R->getLoc(),
                       "Unsupported SD Node property '" + Prop->getName() +
                           "' on ComplexPattern '" + R->getName() + "'!");
     }
   }
+
+  WantsRoot = R->getValueAsBit("WantsRoot");
+  WantsParent = R->getValueAsBit("WantsParent");
 }

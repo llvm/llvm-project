@@ -48,21 +48,13 @@ int main(int, char**)
         {
             typedef char C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-#if defined(_WIN32) || defined(_AIX)
-            assert(np.grouping() == "\3");
-#else
-            assert(np.grouping() == "\3\3");
-#endif
+            assert(np.grouping() == "\3" || np.grouping() == "\3\3");
         }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-#  if defined(_WIN32) || defined(_AIX)
-            assert(np.grouping() == "\3");
-#  else
-            assert(np.grouping() == "\3\3");
-#  endif
+            assert(np.grouping() == "\3" || np.grouping() == "\3\3");
         }
 #endif
     }

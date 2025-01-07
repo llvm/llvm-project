@@ -53,6 +53,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for round_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for roundeven_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for trunc_f16
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ldexp_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_olt_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ole_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmp_ogt_f16
@@ -830,6 +831,21 @@ define half @trunc_f16(half %x) #0 {
 ; CHECK-FP16-NEXT:    frintz h0, h0
 ; CHECK-FP16-NEXT:    ret
   %val = call half @llvm.experimental.constrained.trunc.f16(half %x, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @ldexp_f16(half %x, i32 %y) #0 {
+; CHECK-LABEL: ldexp_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl ldexpf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.ldexp.f16.i32(half %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
 }
 

@@ -275,6 +275,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("-lam-bh");
   }
 
+  // Select lamcas feature determined by -m[no-]lamcas.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mlamcas, options::OPT_mno_lamcas)) {
+    if (A->getOption().matches(options::OPT_mlamcas))
+      Features.push_back("+lamcas");
+    else
+      Features.push_back("-lamcas");
+  }
+
   // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
   if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
                                      options::OPT_mno_ld_seq_sa)) {
@@ -282,6 +291,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("+ld-seq-sa");
     else
       Features.push_back("-ld-seq-sa");
+  }
+
+  // Select div32 feature determined by -m[no-]div32.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mdiv32, options::OPT_mno_div32)) {
+    if (A->getOption().matches(options::OPT_mdiv32))
+      Features.push_back("+div32");
+    else
+      Features.push_back("-div32");
   }
 }
 

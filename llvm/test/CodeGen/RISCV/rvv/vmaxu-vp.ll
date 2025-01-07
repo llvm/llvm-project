@@ -10,9 +10,8 @@ define <vscale x 8 x i7> @vmaxu_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <
 ; CHECK-LABEL: vmaxu_vx_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vand.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    vand.vx v9, v9, a2, v0.t
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9, v0.t
@@ -410,8 +409,8 @@ declare <vscale x 128 x i8> @llvm.vp.umax.nxv128i8(<vscale x 128 x i8>, <vscale 
 define <vscale x 128 x i8> @vmaxu_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmaxu_vx_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -972,11 +971,11 @@ declare <vscale x 32 x i32> @llvm.vp.umax.nxv32i32(<vscale x 32 x i32>, <vscale 
 define <vscale x 32 x i32> @vmaxu_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmaxu_vx_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a3, a2, 2
 ; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    sub a3, a1, a2
 ; CHECK-NEXT:    sltu a4, a1, a3
@@ -1032,11 +1031,11 @@ declare i32 @llvm.vscale.i32()
 define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; CHECK-LABEL: vmaxu_vx_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a3, a1, 2
 ; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    sub a3, a1, a2
 ; CHECK-NEXT:    sltu a4, a1, a3

@@ -136,7 +136,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // GOT(S) + A - P
     return R_GOT_PC;
   case R_ARM_SBREL32:
-    return R_ARM_SBREL;
+    return RE_ARM_SBREL;
   case R_ARM_TARGET1:
     return ctx.arg.target1Rel ? R_PC : R_ABS;
   case R_ARM_TARGET2:
@@ -176,14 +176,14 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_THM_ALU_PREL_11_0:
   case R_ARM_THM_PC8:
   case R_ARM_THM_PC12:
-    return R_ARM_PCA;
+    return RE_ARM_PCA;
   case R_ARM_MOVW_BREL_NC:
   case R_ARM_MOVW_BREL:
   case R_ARM_MOVT_BREL:
   case R_ARM_THM_MOVW_BREL_NC:
   case R_ARM_THM_MOVW_BREL:
   case R_ARM_THM_MOVT_BREL:
-    return R_ARM_SBREL;
+    return RE_ARM_SBREL;
   case R_ARM_NONE:
     return R_NONE;
   case R_ARM_TLS_LE32:
