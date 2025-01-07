@@ -60,11 +60,27 @@ define i32 @neg_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
 ; Compare if not positive and select the same variable as being compared:
 ; smin(a, 0).
 define i32 @not_pos_sel_same_variable(i32 signext %a) {
-; CHECK-LABEL: not_pos_sel_same_variable:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a0, 31
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: not_pos_sel_same_variable:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srai a1, a0, 31
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_pos_sel_same_variable:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srai a1, a0, 31
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: not_pos_sel_same_variable:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    min a0, a0, zero
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: not_pos_sel_same_variable:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    min a0, a0, zero
+; RV64ZBB-NEXT:    ret
   %tmp = icmp slt i32 %a, 1
   %min = select i1 %tmp, i32 %a, i32 0
   ret i32 %min

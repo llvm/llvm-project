@@ -8517,6 +8517,20 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   LHS = TrueVal;
   RHS = FalseVal;
 
+  // Handle constant RHS cases like X < 3 ? 2 : X -> max(X, 2)
+  auto *CmpRHSC = dyn_cast<ConstantInt>(CmpRHS);
+  if (ICmpInst::isRelational(Pred) && CmpRHSC) {
+    if (auto Flipped =
+            getFlippedStrictnessPredicateAndConstant(Pred, CmpRHSC)) {
+      // icmp Pred X, C ? X : C
+      if (TrueVal == CmpLHS && Flipped->second == FalseVal)
+        return getSelectPattern(Flipped->first);
+      // icmp Pred X, C ? C : X --> icmp InversePred X, C ? X : C
+      if (FalseVal == CmpLHS && Flipped->second == TrueVal)
+        return getSelectPattern(ICmpInst::getInversePredicate(Flipped->first));
+    }
+  }
+
   SelectPatternResult SPR = matchClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal);
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;

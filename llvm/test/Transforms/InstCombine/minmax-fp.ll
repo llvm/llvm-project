@@ -267,9 +267,8 @@ define double @t17(i32 %x) {
 
 define double @t17_commuted1(i32 %x) {
 ; CHECK-LABEL: @t17_commuted1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[CST:%.*]] = sitofp i32 [[X]] to double
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double 2.000000e+00, double [[CST]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 2)
+; CHECK-NEXT:    [[SEL:%.*]] = uitofp nneg i32 [[SEL1]] to double
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = icmp slt i32 %x, 3
@@ -292,10 +291,9 @@ define double @t17_commuted2(i32 %x) {
 
 define double @t17_commuted3(i32 %x) {
 ; CHECK-LABEL: @t17_commuted3(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.smin.i32(i32 [[X1:%.*]], i32 2)
 ; CHECK-NEXT:    [[CST:%.*]] = sitofp i32 [[X]] to double
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[CST]], double 2.000000e+00
-; CHECK-NEXT:    ret double [[SEL]]
+; CHECK-NEXT:    ret double [[CST]]
 ;
   %cmp = icmp slt i32 %x, 3
   %cst = sitofp i32 %x to double

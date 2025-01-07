@@ -22,8 +22,7 @@ define i32 @foo(i32 %h) {
 define i32 @foo_commuted(i32 %h) {
 ; CHECK-LABEL: @foo_commuted(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[H:%.*]], 2
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i32 [[H]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T]], i32 1, i32 [[SD]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smin.i32(i32 [[SD]], i32 1)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sd = sdiv i32 %h, 2
