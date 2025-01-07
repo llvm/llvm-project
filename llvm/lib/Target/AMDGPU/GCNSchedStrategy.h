@@ -275,12 +275,15 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
 
-  // Update region boundaries when removing MI or inserting NewMI before MI.
+  /// If necessary, updates a region's boundaries following insertion ( \p NewMI
+  /// != nullptr) or removal ( \p NewMI == nullptr) of a \p MI in the region.
+  /// For an MI removal, this must be called before the MI is actually erased
+  /// from its parent MBB. If a region is left empty by a removal, both
+  /// boundaries are set to the last removed MI's MBB's end.
   void updateRegionBoundaries(
       SmallVectorImpl<std::pair<MachineBasicBlock::iterator,
                                 MachineBasicBlock::iterator>> &RegionBoundaries,
-      MachineBasicBlock::iterator MI, MachineInstr *NewMI,
-      bool Removing = false);
+      MachineBasicBlock::iterator MI, MachineInstr *NewMI);
 
   void runSchedStages();
 
@@ -448,12 +451,13 @@ private:
         : RematMI(RematMI), UseMI(UseMI), DefRegion(DefRegion) {}
   };
 
-  /// Determines whether we can increase function occupancy by 1 through
-  /// rematerialization. If we can, returns true and fill \p RematInstructions
-  /// with a list of rematerializable instructions whose sinking would result in
-  /// increased occupancy; returns false otherwise.
-  bool
-  canIncreaseOccupancy(SmallVectorImpl<RematInstruction> &RematInstructions);
+  /// Determines whether we can increase function occupancy by 1 or
+  /// reduce/eliminate spilling through rematerialization. If we can, returns
+  /// true and fill \p RematInstructions with a list of rematerializable
+  /// instructions whose sinking would result in increased occupancy and/or
+  /// reduced spilling; returns false otherwise.
+  bool canIncreaseOccupancyOrReduceSpill(
+      SmallVectorImpl<RematInstruction> &RematInstructions);
 
   /// Whether the MI is trivially rematerializable and does not have any virtual
   /// register use.

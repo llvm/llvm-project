@@ -1198,6 +1198,15 @@ unsigned getVGPRReductionToIncreaseWavesPerEU(const MCSubtargetInfo *STI,
   return NumVGPRs - alignDown(TotalNumVGPRs / (NumWaves + 1), Granule);
 }
 
+unsigned getVGPRReductionToEliminateSpilling(const MCSubtargetInfo *STI,
+                                             unsigned NumVGPRs) {
+  unsigned Granule = getVGPRAllocGranule(STI);
+  unsigned TotalNumVGPRs = getTotalNumVGPRs(STI);
+  if (alignTo(NumVGPRs, Granule) < TotalNumVGPRs)
+    return 0;
+  return NumVGPRs - alignDown(TotalNumVGPRs, Granule);
+}
+
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   AMDGPUSubtarget::Generation Gen) {
   if (Gen >= AMDGPUSubtarget::GFX10)

@@ -328,9 +328,14 @@ unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
 /// to increase the achievable number of waves per EU for this subtarget by 1.
 /// Returns 0 when using \p VGPRs VGPRs already results in maximum number of
 /// waves per EU.
-
 unsigned getVGPRReductionToIncreaseWavesPerEU(const MCSubtargetInfo *STI,
                                               unsigned NumVGPRs);
+
+/// Returns the necessary reduction in number of VGPRs from using \p VGPRs VGPRs
+/// to eliminate spilling for this subtarget. Returns 0 when using \p VGPRs
+/// VGPRs does not cause any spilling to happen.
+unsigned getVGPRReductionToEliminateSpilling(const MCSubtargetInfo *STI,
+                                             unsigned NumVGPRs);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
 /// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
