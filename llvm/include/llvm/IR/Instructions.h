@@ -1888,76 +1888,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 
 constexpr int PoisonMaskElem = -1;
 
-/// Attributes of a shufflevector mask.
-struct ShuffleMaskAttrs {
-  /// If the shuffle chooses elements from exactly one source vector without
-  /// changing the length of that vector.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
-  /// TODO: Optionally allow length-changing shuffles.
-  bool SingleSource : 1;
-
-  /// If the shuffle chooses elements from exactly one source vector without
-  /// lane crossings and does not change the number of elements from its input
-  /// vectors.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
-  bool Identity : 1;
-
-  /// If the shuffle lengthens exactly one source vector with undefs in the
-  /// high elements.
-  bool IdentityWithPadding : 1;
-
-  /// If the shuffle extracts the first N elements of exactly one source
-  /// vector.
-  bool IdentityWithExtract : 1;
-
-  /// If the shuffle concatenates the two source vectors. This is false if
-  /// either input is undefined. In that case, the shuffle is better classified
-  /// as an identity with padding operation.
-  bool Concat : 1;
-
-  /// If the shuffle swaps the order of elements from exactly one source vector.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
-  /// TODO: Optionally allow length-changing shuffles.
-  bool Reverse : 1;
-
-  /// If all elements of the shuffle are the same value as the first element of
-  /// exactly one source vector without changing the length of that vector.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,0,undef,0>
-  /// TODO: Optionally allow length-changing shuffles.
-  /// TODO: Optionally allow splats from other elements.
-  bool ZeroEltSplat : 1;
-
-  /// Return true if this shuffle chooses elements from its source vectors
-  /// without lane crossings and all operands have the same number of elements.
-  /// In other words, this shuffle is equivalent to a vector select with a
-  /// constant condition operand.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,1,6,3>
-  /// This returns false if the mask does not choose from both input vectors.
-  /// In that case, the shuffle is better classified as an identity shuffle.
-  /// TODO: Optionally allow length-changing shuffles.
-  bool Select : 1;
-
-  /// If the shuffle transposes the elements of its inputs without changing the
-  /// length of the vectors. This operation may also be known as a merge or
-  /// interleave. See the description for isTransposeMask() for the exact
-  /// specification.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
-  bool Transpose : 1;
-
-  /// If the shuffle splices two inputs without changing the length of the
-  /// vectors. This operation concatenates the two inputs together and then
-  /// extracts an original width vector starting from the splice index.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
-  bool Splice : 1;
-
-  /// The starting index of the splice.
-  /// Example: 1, from the previous example
-  int SpliceIndex;
-};
-
-static_assert(sizeof(ShuffleMaskAttrs) <= sizeof(uint64_t),
-              "ShuffleMaskAttrs is too large!");
-
 /// This instruction constructs a fixed permutation of two
 /// input vectors.
 ///
@@ -1973,7 +1903,6 @@ class ShuffleVectorInst : public Instruction {
 
   SmallVector<int, 4> ShuffleMask;
   Constant *ShuffleMaskForBitcode;
-  ShuffleMaskAttrs MaskAttrs;
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1999,12 +1928,6 @@ public:
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
   void commute();
-
-  // Analyze mask of fixed vector. NumOpElts is number of known elements in
-  // operand1/operand2. Scalable is set if any operands are scalable vectors.
-  // HasUndefOp is set if there are any undef operands.
-  static ShuffleMaskAttrs analyzeMask(ArrayRef<int> Mask, int NumOpElts,
-                                      bool Scalable, bool HasUndefOp);
 
   /// Return true if a shufflevector instruction can be
   /// formed with the specified operands.
@@ -2086,7 +2009,14 @@ public:
     return isSingleSourceMask(MaskAsInts, NumSrcElts);
   }
 
-  bool isSingleSource() const { return MaskAttrs.SingleSource; }
+  /// Return true if this shuffle chooses elements from exactly one source
+  /// vector without changing the length of that vector.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
+  /// TODO: Optionally allow length-changing shuffles.
+  bool isSingleSource() const {
+    return !changesLength() &&
+           isSingleSourceMask(ShuffleMask, ShuffleMask.size());
+  }
 
   /// Return true if this shuffle mask chooses elements from exactly one source
   /// vector without lane crossings. A shuffle using this mask is not
@@ -2107,13 +2037,31 @@ public:
     return isIdentityMask(MaskAsInts, NumSrcElts);
   }
 
-  bool isIdentity() const { return MaskAttrs.Identity; }
+  /// Return true if this shuffle chooses elements from exactly one source
+  /// vector without lane crossings and does not change the number of elements
+  /// from its input vectors.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
+  bool isIdentity() const {
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(getType()))
+      return false;
 
-  bool isIdentityWithPadding() const { return MaskAttrs.IdentityWithPadding; }
+    return !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
+  }
 
-  bool isIdentityWithExtract() const { return MaskAttrs.IdentityWithExtract; }
+  /// Return true if this shuffle lengthens exactly one source vector with
+  /// undefs in the high elements.
+  bool isIdentityWithPadding() const;
 
-  bool isConcat() const { return MaskAttrs.Concat; }
+  /// Return true if this shuffle extracts the first N elements of exactly one
+  /// source vector.
+  bool isIdentityWithExtract() const;
+
+  /// Return true if this shuffle concatenates its 2 source vectors. This
+  /// returns false if either input is undefined. In that case, the shuffle is
+  /// is better classified as an identity with padding operation.
+  bool isConcat() const;
 
   /// Return true if this shuffle mask chooses elements from its source vectors
   /// without lane crossings. A shuffle using this mask would be
@@ -2131,7 +2079,17 @@ public:
     return isSelectMask(MaskAsInts, NumSrcElts);
   }
 
-  bool isSelect() const { return MaskAttrs.Select; }
+  /// Return true if this shuffle chooses elements from its source vectors
+  /// without lane crossings and all operands have the same number of elements.
+  /// In other words, this shuffle is equivalent to a vector select with a
+  /// constant condition operand.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,1,6,3>
+  /// This returns false if the mask does not choose from both input vectors.
+  /// In that case, the shuffle is better classified as an identity shuffle.
+  /// TODO: Optionally allow length-changing shuffles.
+  bool isSelect() const {
+    return !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
+  }
 
   /// Return true if this shuffle mask swaps the order of elements from exactly
   /// one source vector.
@@ -2146,7 +2104,13 @@ public:
     return isReverseMask(MaskAsInts, NumSrcElts);
   }
 
-  bool isReverse() const { return MaskAttrs.Reverse; }
+  /// Return true if this shuffle swaps the order of elements from exactly
+  /// one source vector.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
+  /// TODO: Optionally allow length-changing shuffles.
+  bool isReverse() const {
+    return !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
+  }
 
   /// Return true if this shuffle mask chooses all elements with the same value
   /// as the first element of exactly one source vector.
@@ -2161,7 +2125,16 @@ public:
     return isZeroEltSplatMask(MaskAsInts, NumSrcElts);
   }
 
-  bool isZeroEltSplat() const { return MaskAttrs.ZeroEltSplat; }
+  /// Return true if all elements of this shuffle are the same value as the
+  /// first element of exactly one source vector without changing the length
+  /// of that vector.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,0,undef,0>
+  /// TODO: Optionally allow length-changing shuffles.
+  /// TODO: Optionally allow splats from other elements.
+  bool isZeroEltSplat() const {
+    return !changesLength() &&
+           isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
+  }
 
   /// Return true if this shuffle mask is a transpose mask.
   /// Transpose vector masks transpose a 2xn matrix. They read corresponding
@@ -2203,7 +2176,14 @@ public:
     return isTransposeMask(MaskAsInts, NumSrcElts);
   }
 
-  bool isTranspose() const { return MaskAttrs.Transpose; }
+  /// Return true if this shuffle transposes the elements of its inputs without
+  /// changing the length of the vectors. This operation may also be known as a
+  /// merge or interleave. See the description for isTransposeMask() for the
+  /// exact specification.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
+  bool isTranspose() const {
+    return !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
+  }
 
   /// Return true if this shuffle mask is a splice mask, concatenating the two
   /// inputs together and then extracts an original width vector starting from
@@ -2219,9 +2199,13 @@ public:
     return isSpliceMask(MaskAsInts, NumSrcElts, Index);
   }
 
+  /// Return true if this shuffle splices two inputs without changing the length
+  /// of the vectors. This operation concatenates the two inputs together and
+  /// then extracts an original width vector starting from the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   bool isSplice(int &Index) const {
-    Index = MaskAttrs.SpliceIndex;
-    return MaskAttrs.Splice;
+    return !changesLength() &&
+           isSpliceMask(ShuffleMask, ShuffleMask.size(), Index);
   }
 
   /// Return true if this shuffle mask is an extract subvector mask.

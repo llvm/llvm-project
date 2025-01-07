@@ -1822,14 +1822,6 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
 void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
   ShuffleMask.assign(Mask.begin(), Mask.end());
   ShuffleMaskForBitcode = convertShuffleMaskForBitcode(Mask, getType());
-
-  bool HasUndef = isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>());
-  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Op<0>()->getType())) {
-    int NumOpElts = FixedVecTy->getNumElements();
-    MaskAttrs = analyzeMask(Mask, NumOpElts, false, HasUndef);
-  } else {
-    MaskAttrs = analyzeMask(Mask, Mask.size(), true, HasUndef);
-  }
 }
 
 Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
@@ -1850,106 +1842,6 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
       MaskConst.push_back(ConstantInt::get(Int32Ty, Elem));
   }
   return ConstantVector::get(MaskConst);
-}
-
-ShuffleMaskAttrs ShuffleVectorInst::analyzeMask(ArrayRef<int> Mask,
-                                                int NumOpElts, bool Scalable,
-                                                bool HasUndefOp) {
-  assert(!Mask.empty() && "Shuffle mask must contain elements");
-
-  using SizeTy = decltype(Mask.size());
-  bool UsesLHS = false;
-  bool UsesRHS = false;
-  bool ExtendsWithPadding = Mask.size() > static_cast<SizeTy>(NumOpElts);
-  const bool Extracts = Mask.size() < static_cast<SizeTy>(NumOpElts);
-  const bool PreservesLength = Mask.size() == static_cast<SizeTy>(NumOpElts);
-  bool CrossesLanes = false;
-  bool ReversesLanes = NumOpElts >= 2;
-  bool FirstLaneOnly = true;
-  bool HasTransposeInterleaving = true;
-  std::optional<int> SpliceIndex;
-  bool Splices = true;
-
-  for (int Idx = 0, NumMaskElts = Mask.size(); Idx < NumMaskElts; ++Idx) {
-    const auto I = Mask[Idx];
-    if (I == -1) {
-      HasTransposeInterleaving = false;
-      continue;
-    }
-    assert(I >= 0 && I < (NumOpElts * 2) &&
-           "Out-of-bounds shuffle mask element");
-    UsesLHS |= (I < NumOpElts);
-    UsesRHS |= (I >= NumOpElts);
-    CrossesLanes |= I != Idx && I != (NumOpElts + Idx);
-    ReversesLanes &=
-        I == (NumOpElts - 1 - Idx) || I == (NumOpElts + NumOpElts - 1 - Idx);
-    FirstLaneOnly &= I == 0 || I == NumOpElts;
-
-    if (Idx >= 2)
-      HasTransposeInterleaving &= Mask[Idx] - Mask[Idx - 2] == 2;
-    else if (Idx == 1)
-      HasTransposeInterleaving &= Mask[Idx] - Mask[0] == NumOpElts;
-    else // Idx == 0
-      HasTransposeInterleaving &= I == 0 || I == 1;
-
-    if (!SpliceIndex) {
-      Splices &= I >= Idx && I - Idx < NumOpElts;
-      if (Splices)
-        SpliceIndex = I - Idx;
-    } else {
-      Splices &= I == *SpliceIndex + Idx;
-    }
-
-    // Padding occurs when the mask size is >= operand size (see above) and all
-    // remaining elements must be undef.
-    ExtendsWithPadding &= Idx < NumOpElts;
-  }
-
-  ShuffleMaskAttrs MaskAttrs = {};
-
-  // Single-source if uses either LHS or RHS but not both.
-  MaskAttrs.SingleSource = (UsesLHS ^ UsesRHS) && PreservesLength;
-
-  // Identity if chooses elements without lane-crossings from either LHS or RHS.
-  MaskAttrs.Identity = !Scalable && MaskAttrs.SingleSource && !CrossesLanes;
-
-  // Identity with padding if mask size > operand size and all extra mask
-  // elements are undef/-1.
-  MaskAttrs.IdentityWithPadding =
-      !Scalable && (UsesLHS ^ UsesRHS) && !CrossesLanes && ExtendsWithPadding;
-
-  // Identity with extract if mask size < operand size.
-  MaskAttrs.IdentityWithExtract =
-      !Scalable && (UsesLHS ^ UsesRHS) && !CrossesLanes && Extracts;
-
-  // Concat if chooses elements without lane-crossings from both LHS and RHS.
-  MaskAttrs.Concat = !Scalable && !HasUndefOp && UsesLHS && UsesRHS &&
-                     Mask.size() == 2 * static_cast<SizeTy>(NumOpElts) &&
-                     !CrossesLanes;
-
-  // Reverse if chooses lanes in reverse order from either LHS or RHS.
-  MaskAttrs.Reverse = MaskAttrs.SingleSource && ReversesLanes;
-
-  // Splat of 0th elt if only picks first lane (or undef) of either LHS or RHS.
-  MaskAttrs.ZeroEltSplat = MaskAttrs.SingleSource && FirstLaneOnly;
-
-  // Select if chooses elements without lane-crossings from both LHS and RHS.
-  MaskAttrs.Select = UsesLHS && UsesRHS && PreservesLength && !CrossesLanes;
-
-  // Transpose if (1) number of elements is >= 2 and a power of 2, (2) first
-  // element is 0 or 1, (3) difference between first 2 elements == mask length,
-  // and (4) difference between consecutive even/odd elements == 2.
-  MaskAttrs.Transpose = PreservesLength && Mask.size() >= 2 &&
-                        isPowerOf2_32(Mask.size()) && HasTransposeInterleaving;
-
-  // Splice if (1) the starting index is >= 0, and (2) we have a contiguous
-  // sub-range spanning the 1st and 2nd vectors (or just the 1st).
-  if (PreservesLength && Splices && SpliceIndex) {
-    MaskAttrs.Splice = true;
-    MaskAttrs.SpliceIndex = *SpliceIndex;
-  }
-
-  return MaskAttrs;
 }
 
 static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
@@ -2086,7 +1978,6 @@ bool ShuffleVectorInst::isSpliceMask(ArrayRef<int> Mask, int NumSrcElts,
   if (Mask.size() != static_cast<unsigned>(NumSrcElts))
     return false;
   // Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
-  // Counter: shufflevector <4 x n> A, <4 x n> B, <.,0,1,2>
   int StartIndex = -1;
   for (int I = 0, E = Mask.size(); I != E; ++I) {
     int MaskEltVal = Mask[I];
@@ -2216,6 +2107,66 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
   }
 
   return false;
+}
+
+bool ShuffleVectorInst::isIdentityWithPadding() const {
+  // FIXME: Not currently possible to express a shuffle mask for a scalable
+  // vector for this case.
+  if (isa<ScalableVectorType>(getType()))
+    return false;
+
+  int NumOpElts = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
+  int NumMaskElts = cast<FixedVectorType>(getType())->getNumElements();
+  if (NumMaskElts <= NumOpElts)
+    return false;
+
+  // The first part of the mask must choose elements from exactly 1 source op.
+  ArrayRef<int> Mask = getShuffleMask();
+  if (!isIdentityMaskImpl(Mask, NumOpElts))
+    return false;
+
+  // All extending must be with undef elements.
+  for (int i = NumOpElts; i < NumMaskElts; ++i)
+    if (Mask[i] != -1)
+      return false;
+
+  return true;
+}
+
+bool ShuffleVectorInst::isIdentityWithExtract() const {
+  // FIXME: Not currently possible to express a shuffle mask for a scalable
+  // vector for this case.
+  if (isa<ScalableVectorType>(getType()))
+    return false;
+
+  int NumOpElts = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
+  int NumMaskElts = cast<FixedVectorType>(getType())->getNumElements();
+  if (NumMaskElts >= NumOpElts)
+    return false;
+
+  return isIdentityMaskImpl(getShuffleMask(), NumOpElts);
+}
+
+bool ShuffleVectorInst::isConcat() const {
+  // Vector concatenation is differentiated from identity with padding.
+  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()))
+    return false;
+
+  // FIXME: Not currently possible to express a shuffle mask for a scalable
+  // vector for this case.
+  if (isa<ScalableVectorType>(getType()))
+    return false;
+
+  int NumOpElts = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
+  int NumMaskElts = cast<FixedVectorType>(getType())->getNumElements();
+  if (NumMaskElts != NumOpElts * 2)
+    return false;
+
+  // Use the mask length rather than the operands' vector lengths here. We
+  // already know that the shuffle returns a vector twice as long as the inputs,
+  // and neither of the inputs are undef vectors. If the mask picks consecutive
+  // elements from both inputs, then this is a concatenation of the inputs.
+  return isIdentityMaskImpl(getShuffleMask(), NumMaskElts);
 }
 
 static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
