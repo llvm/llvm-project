@@ -16730,20 +16730,19 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     // Even if this check fails don't return early to allow the best
     // possible error recovery and to allow any subsequent diagnostics to
     // work.
+    const ValueDecl *Assignee = nullptr;
+    bool ShowFullyQualifiedAssigneeName = false;
+    // In simple cases describe what is being assigned to
+    if (auto *DR = dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenCasts())) {
+      Assignee = DR->getDecl();
+    } else if (auto *ME = dyn_cast<MemberExpr>(LHSExpr->IgnoreParenCasts())) {
+      Assignee = ME->getMemberDecl();
+      ShowFullyQualifiedAssigneeName = true;
+    }
+
     (void)BoundsSafetyCheckAssignmentToCountAttrPtr(
-        LHSType, RHS.get(), AssignmentAction::Assigning, Loc,
-        [&LHSExpr]() -> std::string {
-          // In simple cases describe what is being assigned to
-          if (auto *DR = dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenCasts())) {
-            auto *II = DR->getDecl()->getDeclName().getAsIdentifierInfo();
-            if (II)
-              return II->getName().str();
-          } else if (auto *ME =
-                         dyn_cast<MemberExpr>(LHSExpr->IgnoreParenCasts())) {
-            return ME->getMemberDecl()->getQualifiedNameAsString();
-          }
-          return "";
-        });
+        LHSType, RHS.get(), AssignmentAction::Assigning, Loc, Assignee,
+        ShowFullyQualifiedAssigneeName);
   }
 /* TO_UPSTREAM(BoundsSafety) OFF */
 

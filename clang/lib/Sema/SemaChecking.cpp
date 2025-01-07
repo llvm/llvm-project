@@ -9503,8 +9503,8 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
   BoundsSafetyCheckAssignmentToCountAttrPtr(
-      lhsType, RetValExp, AssignmentAction::Returning,
-      RetValExp->getBeginLoc());
+      lhsType, RetValExp, AssignmentAction::Returning, RetValExp->getBeginLoc(),
+      /*Assignee=*/nullptr, /*ShowFullQualifiedAssigneeName=*/false);
 
   // For a count-attributed return type, its dependent count variables can be
   // assigned in arbitrary places. Don't try to find the assigned values, just

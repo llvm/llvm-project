@@ -463,8 +463,8 @@ HasCountedByAttrOnIncompletePointee(QualType Ty, NamedDecl **ND,
 }
 
 bool Sema::BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
-    QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
-    SourceLocation Loc, std::function<std::string()> ComputeAssignee) {
+    QualType LHSTy, Expr *RHSExpr, AssignmentAction Action, SourceLocation Loc,
+    const ValueDecl *Assignee, bool ShowFullyQualifiedAssigneeName) {
   NamedDecl *IncompleteTyDecl = nullptr;
   const CountAttributedType *CATy = nullptr;
   QualType PointeeTy;
@@ -481,13 +481,20 @@ bool Sema::BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
          Action != AssignmentAction::Casting &&
          Action != AssignmentAction::Passing_CFAudited);
 
-  // By having users provide a function we only pay the cost of allocation the
-  // string and computing when a diagnostic is emitted.
-  std::string Assignee = ComputeAssignee ? ComputeAssignee() : "";
+  std::string AssigneeStr;
+  if (Assignee) {
+    if (ShowFullyQualifiedAssigneeName) {
+      AssigneeStr = Assignee->getQualifiedNameAsString();
+    } else {
+      AssigneeStr = Assignee->getNameAsString();
+    }
+  }
   {
     auto D =
-        Diag(Loc, diag::err_bounds_safety_counted_by_on_incomplete_type_on_assign)
-        << /*0*/ (int)Action << /*1*/ Assignee << /*2*/ (Assignee.size() > 0)
+        Diag(Loc,
+             diag::err_bounds_safety_counted_by_on_incomplete_type_on_assign)
+        << /*0*/ (int)Action << /*1*/ AssigneeStr
+        << /*2*/ (AssigneeStr.size() > 0)
         << /*3*/ isa<ImplicitValueInitExpr>(RHSExpr) << /*4*/ LHSTy
         << /*5*/ CATy->GetAttributeName(/*WithMacroPrefix=*/true)
         << /*6*/ PointeeTy << /*7*/ CATy->isOrNull();
@@ -501,13 +508,13 @@ bool Sema::BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
 }
 
 bool Sema::BoundsSafetyCheckAssignmentToCountAttrPtr(
-    QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
-    SourceLocation Loc, std::function<std::string()> ComputeAssignee) {
+    QualType LHSTy, Expr *RHSExpr, AssignmentAction Action, SourceLocation Loc,
+    const ValueDecl *Assignee, bool ShowFullyQualifiedAssigneeName) {
   if (!getLangOpts().hasBoundsSafety())
     return true;
 
   return BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
-      LHSTy, RHSExpr, Action, Loc, ComputeAssignee);
+      LHSTy, RHSExpr, Action, Loc, Assignee, ShowFullyQualifiedAssigneeName);
 }
 
 bool Sema::BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
@@ -531,13 +538,10 @@ bool Sema::BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
       Entity.getKind() != InitializedEntity::EK_Variable) {
 
     if (!BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
-            LHSType, RHSExpr, Action, SL, [&Entity]() -> std::string {
-              if (const auto *VD =
-                      dyn_cast_or_null<ValueDecl>(Entity.getDecl())) {
-                return VD->getQualifiedNameAsString();
-              }
-              return "";
-            })) {
+            LHSType, RHSExpr, Action, SL,
+            dyn_cast_or_null<ValueDecl>(Entity.getDecl()),
+            /*ShowFullQualifiedAssigneeName=*/true)) {
+
       ChecksPassed = false;
 
       // It's not necessarily bad if this assert fails but we should catch
@@ -629,13 +633,12 @@ bool Sema::BoundsSafetyCheckResolvedCall(FunctionDecl *FDecl, CallExpr *Call,
 
   for (size_t ArgIdx = 0; ArgIdx < MinNumArgs; ++ArgIdx) {
     Expr *CallArg = Call->getArg(ArgIdx); // FIXME: IgnoreImpCast()?
-    StringRef ParamName;
+    const ValueDecl *ParamVarDecl = nullptr;
     QualType ParamTy;
     if (FDecl) {
       // Direct call
-      auto *ParamVarDecl = FDecl->getParamDecl(ArgIdx);
+      ParamVarDecl = FDecl->getParamDecl(ArgIdx);
       ParamTy = ParamVarDecl->getType();
-      ParamName = ParamVarDecl->getName();
     } else {
       // Indirect call. The parameter name isn't known
       ParamTy = ProtoType->getParamType(ArgIdx);
@@ -644,7 +647,7 @@ bool Sema::BoundsSafetyCheckResolvedCall(FunctionDecl *FDecl, CallExpr *Call,
     // Assigning to the parameter type is treated as a "use" of the type.
     if (!BoundsSafetyCheckAssignmentToCountAttrPtr(
             ParamTy, CallArg, AssignmentAction::Passing, CallArg->getBeginLoc(),
-            [&ParamName]() { return ParamName.str(); }))
+            ParamVarDecl, /*ShowFullQualifiedAssigneeName=*/false))
       ChecksPassed = false;
   }
   return ChecksPassed;
