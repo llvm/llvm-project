@@ -203,7 +203,7 @@ void serializeSanitizerSet(SanitizerSet Set,
 
 /// Serialize a SanitizerMaskCutoffs into values for -fsanitize= or
 /// -fno-sanitize=.
-void serializeSanitizerMaskCutoffs(const SanitizerMaskCutoffs Cutoffs,
+void serializeSanitizerMaskCutoffs(const SanitizerMaskCutoffs &Cutoffs,
                                    SmallVectorImpl<std::string> &Values);
 
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers

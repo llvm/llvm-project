@@ -76,7 +76,7 @@ void clang::serializeSanitizerSet(SanitizerSet Set,
 }
 
 void clang::serializeSanitizerMaskCutoffs(
-    const SanitizerMaskCutoffs Cutoffs, SmallVectorImpl<std::string> &Values) {
+    const SanitizerMaskCutoffs &Cutoffs, SmallVectorImpl<std::string> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
   if (Cutoffs[SanitizerKind::SO_##ID])                                         \
     Values.push_back(std::string(NAME "=") +                                   \

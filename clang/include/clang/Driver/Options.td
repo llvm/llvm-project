@@ -2655,7 +2655,7 @@ def fno_sanitize_top_hot_EQ
       HelpText<"Exclude sanitization for the top hottest code responsible for "
                "the given fraction of PGO counters "
                "(0.0 [default] = skip none; 1.0 = skip all). "
-               "Argument format: <sanitizer1>=,<sanitizer2>=,...">;
+               "Argument format: <sanitizer1>=<value1>,<sanitizer2>=<value2>,...">;
 
 } // end -f[no-]sanitize* flags
 
