@@ -198,8 +198,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) device_num(1)
   while(1);
-  // expected-error@+2{{OpenACC clause 'default_async' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) default_async(1)
   while(1);
 #pragma acc kernels device_type(*) async
