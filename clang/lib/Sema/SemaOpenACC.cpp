@@ -709,18 +709,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // constructs that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense. Prose DOES exist for 'data' and 'host_data', 'set', 'enter data' and
   // 'exit data' both don't, but other implmementations do this.  OpenACC issue
-  // 519 filed for the latter two.
+  // 519 filed for the latter two. Prose also exists for 'update'.
   // GCC allows this on init/shutdown, presumably for good reason, so we do too.
   if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Init &&
       Clause.getDirectiveKind() != OpenACCDirectiveKind::Shutdown &&
@@ -1744,8 +1737,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // There isn't anything to do here, this is only valid on one construct, and
   // has no associated rules.
   return OpenACCIfPresentClause::Create(Ctx, Clause.getBeginLoc(),
