@@ -3812,7 +3812,6 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
   }
   CU.addDIETypeSignature(RefDie, Signature);
-  return;
 }
 
 // Add the Name along with its companion DIE to the appropriate accelerator
