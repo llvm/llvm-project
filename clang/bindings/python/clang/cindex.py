@@ -2125,11 +2125,25 @@ class Cursor(Structure):
 
     def is_anonymous(self):
         """
-        Check if the record is anonymous.
+        Check whether this is a record type without a name, or a field where
+        the type is a record type without a name.
+
+        Use is_anonymous_record_decl to check whether a record is an
+        "anonymous union" as defined in the C/C++ standard.
         """
         if self.kind == CursorKind.FIELD_DECL:
             return self.type.get_declaration().is_anonymous()
         return conf.lib.clang_Cursor_isAnonymous(self)  # type: ignore [no-any-return]
+
+    def is_anonymous_record_decl(self):
+        """
+        Check if the record is an anonymous union as defined in the C/C++ standard
+        (or an "anonymous struct", the corresponding non-standard extension for
+        structs).
+        """
+        if self.kind == CursorKind.FIELD_DECL:
+            return self.type.get_declaration().is_anonymous_record_decl()
+        return conf.lib.clang_Cursor_isAnonymousRecordDecl(self)  # type: ignore [no-any-return]
 
     def is_bitfield(self):
         """
@@ -3902,12 +3916,13 @@ functionList: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentType", [Cursor, c_uint], Type),
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
-    ("clang_Cursor_isAnonymous", [Cursor], bool),
-    ("clang_Cursor_isBitField", [Cursor], bool),
     ("clang_Cursor_getBinaryOpcode", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
+    ("clang_Cursor_isAnonymous", [Cursor], bool),
+    ("clang_Cursor_isAnonymousRecordDecl", [Cursor], bool),
+    ("clang_Cursor_isBitField", [Cursor], bool),
     ("clang_Location_isInSystemHeader", [SourceLocation], bool),
     ("clang_Type_getAlignOf", [Type], c_longlong),
     ("clang_Type_getClassType", [Type], Type),

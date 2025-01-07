@@ -376,7 +376,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
-    # FIXME: Broken on NVPTX.
+    # FIXME: Broken.
     # libc.src.math.fromfp
     # libc.src.math.fromfpf
     # libc.src.math.fromfpl
@@ -506,7 +506,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
-    # FIXME: Broken on NVPTX.
+    # FIXME: Broken.
     # libc.src.math.ufromfp
     # libc.src.math.ufromfpf
     # libc.src.math.ufromfpl
