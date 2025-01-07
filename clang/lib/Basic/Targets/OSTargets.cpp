@@ -114,6 +114,9 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     assert(OsVersion.getMinor().value_or(0) < 100 &&
            OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
     Builder.defineMacro("__ENVIRONMENT_OS_VERSION_MIN_REQUIRED__", Str);
+
+    // Tell users about the kernel if there is one.
+    Builder.defineMacro("__MACH__");
   }
 
   PlatformMinVersion = OsVersion;
