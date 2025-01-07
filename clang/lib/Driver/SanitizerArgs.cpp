@@ -1561,6 +1561,9 @@ SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
 
     SanitizerMask Kind;
     for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++) {
+      // Invoking bitPosToMask repeatedly is inefficient: we could simply
+      // repeatedly set the LSB then left-shift; however, we assume the
+      // compiler will optimize this (in any case, the runtime is negligible).
       if (Cutoffs[i])
         Kind |= SanitizerMask::bitPosToMask(i);
     }

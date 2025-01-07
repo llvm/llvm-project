@@ -1439,7 +1439,7 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
 static SanitizerMaskCutoffs parseSanitizerWeightedKinds(
     StringRef FlagName, const std::vector<std::string> &Sanitizers,
     DiagnosticsEngine &Diags) {
-  SanitizerMaskCutoffs Cutoffs;
+  SanitizerMaskCutoffs Cutoffs = {0};
   for (const auto &Sanitizer : Sanitizers) {
     if (!parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs))
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
