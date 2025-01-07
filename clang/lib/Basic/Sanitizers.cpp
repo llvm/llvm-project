@@ -53,7 +53,7 @@ bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
   double A;
   if (W.getAsDouble(A))
     return false;
-  float C = std::clamp()(A, 0.0, 1.0);
+  float C = std::clamp(A, 0.0, 1.0);
   // AllowGroups is already taken into account for ParsedKind,
   // hence we unconditionally expandSanitizerGroups.
   SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
