@@ -70,12 +70,12 @@ struct ExtensionInfo {
 
 struct FMVInfo {
   StringRef Name;                // The target_version/target_clones spelling.
-  CPUFeatures Bit;               // Index of the bit in the FMV feature bitset.
+  CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
-  unsigned Priority;             // FMV priority.
-  FMVInfo(StringRef Name, CPUFeatures Bit, std::optional<ArchExtKind> ID,
-          unsigned Priority)
-      : Name(Name), Bit(Bit), ID(ID), Priority(Priority) {};
+  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
+          std::optional<ArchExtKind> ID)
+      : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
