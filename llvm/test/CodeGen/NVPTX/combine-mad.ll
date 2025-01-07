@@ -194,7 +194,7 @@ define i32 @test_mad_fold(i32 %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_mad_fold_param_0];
 ; CHECK-NEXT:    mul.hi.s32 %r2, %r1, -2147221471;
-; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
 ; CHECK-NEXT:    shr.u32 %r4, %r3, 31;
 ; CHECK-NEXT:    shr.s32 %r5, %r3, 12;
 ; CHECK-NEXT:    add.s32 %r6, %r5, %r4;

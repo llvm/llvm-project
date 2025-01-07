@@ -153,13 +153,6 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
     "combiner-vector-fcopysign-extend-round", cl::Hidden, cl::init(false),
     cl::desc(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
-
-static cl::opt<bool>
-    EnableGenericCombines("combiner-generic-combines", cl::Hidden,
-                          cl::init(true),
-                          cl::desc("Enable generic DAGCombine patterns. Useful "
-                                   "for testing target-specific combines."));
-
 namespace {
 
   class DAGCombiner {
@@ -258,8 +251,7 @@ namespace {
         : DAG(D), TLI(D.getTargetLoweringInfo()),
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL), AA(AA) {
       ForCodeSize = DAG.shouldOptForSize();
-      DisableGenericCombines = !EnableGenericCombines ||
-                               (STI && STI->disableGenericCombines(OptLevel));
+      DisableGenericCombines = STI && STI->disableGenericCombines(OptLevel);
 
       MaximumLegalStoreInBits = 0;
       // We use the minimum store size here, since that's all we can guarantee
