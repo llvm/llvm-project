@@ -27,7 +27,6 @@
 #include "AMDGPUIGroupLP.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/CodeGen/ScheduleDAGInstrs.h"
 
 #define DEBUG_TYPE "machine-scheduler"
 
@@ -187,6 +186,12 @@ static void getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
       NewPressure.getArchVGPRNum();
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
+}
+
+// Return true if the instruction is mutually exclusive with all non-IGLP DAG
+// mutations, requiring all other mutations to be disabled.
+static bool isIGLPMutationOnly(unsigned Opcode) {
+  return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -1153,8 +1158,7 @@ bool GCNSchedStage::initGCNRegion() {
       StageID == GCNSchedStageID::ILPInitialSchedule) {
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (I.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
-          I.getOpcode() == AMDGPU::IGLP_OPT)
+      if (isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -1893,42 +1897,16 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
   }
 }
 
-static bool isIGLPInstr(MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  case AMDGPU::IGLP_OPT:
-  case AMDGPU::SCHED_BARRIER:
-  case AMDGPU::SCHED_GROUP_BARRIER:
-    return true;
-  default:
-    return false;
-  }
-}
-
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
   return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    unsigned Opc = MI->getOpcode();
-    return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+    return isIGLPMutationOnly(MI->getOpcode());
   });
-}
-
-bool GCNScheduleDAGMILive::isGlobalMemoryObject(MachineInstr *MI) {
-  if (isIGLPInstr(MI))
-    return false;
-
-  return ScheduleDAGInstrs::isGlobalMemoryObject(MI);
 }
 
 GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
     MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
     bool RemoveKillFlags)
     : ScheduleDAGMI(C, std::move(S), RemoveKillFlags) {}
-
-bool GCNPostScheduleDAGMILive::isGlobalMemoryObject(MachineInstr *MI) {
-  if (isIGLPInstr(MI))
-    return false;
-
-  return ScheduleDAGInstrs::isGlobalMemoryObject(MI);
-}
 
 void GCNPostScheduleDAGMILive::schedule() {
   HasIGLPInstrs = hasIGLPInstrs(this);

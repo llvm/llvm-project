@@ -288,7 +288,7 @@ entry:
 define amdgpu_kernel void @test_iglp_opt_asm_sideeffect(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_iglp_opt_asm_sideeffect:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0xffc, v0
 ; GCN-NEXT:    ; iglp_opt mask(0x00000000)
