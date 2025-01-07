@@ -2823,9 +2823,9 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (match(TrueVal, m_Add(m_Specific(RemRes), m_Value(Remainder))) &&
+  if (match(TrueVal, m_c_Add(m_Specific(RemRes), m_Value(Remainder))) &&
       match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
-      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero=*/true) &&
       FalseVal == RemRes)
     return FoldToBitwiseAnd(Remainder);
 
