@@ -798,7 +798,6 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -819,9 +818,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK1-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB3]], ptr [[DOTCAPTURE_EXPR_1]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK1-NEXT:    store i8 [[TMP3]], ptr [[I]], align 1
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK1-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP4]] to i32
+// CHECK1-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP3]] to i32
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV4]], 10
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK1:       omp.precond.then:
@@ -1707,7 +1704,6 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1728,9 +1724,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK3-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB3]], ptr [[DOTCAPTURE_EXPR_1]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK3-NEXT:    store i8 [[TMP3]], ptr [[I]], align 1
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK3-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP4]] to i32
+// CHECK3-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP3]] to i32
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV4]], 10
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK3:       omp.precond.then:
@@ -2317,7 +2311,6 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK17-NEXT:    [[TMP:%.*]] = alloca i8, align 1
 // CHECK17-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK17-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK17-NEXT:    [[I:%.*]] = alloca i8, align 1
 // CHECK17-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK17-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK17-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2338,9 +2331,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK17-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK17-NEXT:    store i32 [[SUB3]], ptr [[DOTCAPTURE_EXPR_1]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK17-NEXT:    store i8 [[TMP3]], ptr [[I]], align 1
-// CHECK17-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK17-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP4]] to i32
+// CHECK17-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP3]] to i32
 // CHECK17-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV4]], 10
 // CHECK17-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK17:       omp.precond.then:
@@ -2852,7 +2843,6 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK19-NEXT:    [[TMP:%.*]] = alloca i8, align 1
 // CHECK19-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK19-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK19-NEXT:    [[I:%.*]] = alloca i8, align 1
 // CHECK19-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK19-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK19-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2873,9 +2863,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK19-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK19-NEXT:    store i32 [[SUB3]], ptr [[DOTCAPTURE_EXPR_1]], align 4
 // CHECK19-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK19-NEXT:    store i8 [[TMP3]], ptr [[I]], align 1
-// CHECK19-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK19-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP4]] to i32
+// CHECK19-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP3]] to i32
 // CHECK19-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV4]], 10
 // CHECK19-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK19:       omp.precond.then:

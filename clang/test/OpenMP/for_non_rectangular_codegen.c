@@ -37,9 +37,6 @@ void collapsed(int mp) {
 // CHECK-NEXT:    [[DOTUPPER:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTLOWER:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i64, align 8
-// CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[I0:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[_TMP15:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
@@ -98,10 +95,6 @@ void collapsed(int mp) {
 // CHECK-NEXT:    [[MUL13:%.*]] = mul nsw i64 [[MUL12]], 10
 // CHECK-NEXT:    [[SUB14:%.*]] = sub nsw i64 [[MUL13]], 1
 // CHECK-NEXT:    store i64 [[SUB14]], ptr [[DOTCAPTURE_EXPR_3]], align 8
-// CHECK-NEXT:    store i32 0, ptr [[J]], align 4
-// CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[J]], align 4
-// CHECK-NEXT:    store i32 [[TMP14]], ptr [[I]], align 4
-// CHECK-NEXT:    store i32 0, ptr [[I0]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[_TMP15]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK-NEXT:    [[CMP16:%.*]] = icmp slt i32 0, [[TMP15]]
@@ -117,13 +110,13 @@ void collapsed(int mp) {
 // CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_3]], align 8
 // CHECK-NEXT:    [[CMP22:%.*]] = icmp sgt i64 [[TMP17]], [[TMP18]]
 // CHECK-NEXT:    br i1 [[CMP22]], label [[COND_TRUE24:%.*]], label [[COND_FALSE25:%.*]]
-// CHECK:       cond.true24:
+// CHECK:       cond.true
 // CHECK-NEXT:    [[TMP19:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_3]], align 8
 // CHECK-NEXT:    br label [[COND_END26:%.*]]
-// CHECK:       cond.false25:
+// CHECK:       cond.false
 // CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
 // CHECK-NEXT:    br label [[COND_END26]]
-// CHECK:       cond.end26:
+// CHECK:       cond.end
 // CHECK-NEXT:    [[COND27:%.*]] = phi i64 [ [[TMP19]], [[COND_TRUE24]] ], [ [[TMP20]], [[COND_FALSE25]] ]
 // CHECK-NEXT:    store i64 [[COND27]], ptr [[DOTOMP_UB]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTOMP_LB]], align 8

@@ -31,7 +31,6 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[DOTCAPTURE_EXPR_2:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTCAPTURE_EXPR_5:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTCAPTURE_EXPR_7:.+]] = alloca i32, align 4
-// IR-NEXT:    %[[DOTFLOOR_0_IV_I:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTOMP_LB:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTOMP_UB:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTOMP_STRIDE:.+]] = alloca i32, align 4
@@ -68,7 +67,6 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[DIV9:.+]] = udiv i32 %[[SUB8]], 4
 // IR-NEXT:    %[[SUB10:.+]] = sub i32 %[[DIV9]], 1
 // IR-NEXT:    store i32 %[[SUB10]], ptr %[[DOTCAPTURE_EXPR_7]], align 4
-// IR-NEXT:    store i32 0, ptr %[[DOTFLOOR_0_IV_I]], align 4
 // IR-NEXT:    %[[TMP11:.+]] = load i32, ptr %[[DOTCAPTURE_EXPR_5]], align 4
 // IR-NEXT:    %[[CMP:.+]] = icmp ult i32 0, %[[TMP11]]
 // IR-NEXT:    br i1 %[[CMP]], label %[[OMP_PRECOND_THEN:.+]], label %[[OMP_PRECOND_END:.+]]

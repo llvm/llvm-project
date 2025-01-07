@@ -31,8 +31,6 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[DOTCAPTURE_EXPR_7:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTCAPTURE_EXPR_10:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTCAPTURE_EXPR_12:.+]] = alloca i64, align 8
-// IR-NEXT:    %[[I:.+]] = alloca i32, align 4
-// IR-NEXT:    %[[DOTUNROLLED_IV_J:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[DOTOMP_LB:.+]] = alloca i64, align 8
 // IR-NEXT:    %[[DOTOMP_UB:.+]] = alloca i64, align 8
 // IR-NEXT:    %[[DOTOMP_STRIDE:.+]] = alloca i64, align 8
@@ -88,11 +86,8 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[SUB20:.+]] = sub nsw i64 %[[MUL]], 1
 // IR-NEXT:    store i64 %[[SUB20]], ptr %[[DOTCAPTURE_EXPR_12]], align 8
 // IR-NEXT:    %[[TMP18:.+]] = load i32, ptr %[[DOTCAPTURE_EXPR_]], align 4
-// IR-NEXT:    store i32 %[[TMP18]], ptr %[[I]], align 4
-// IR-NEXT:    store i32 0, ptr %[[DOTUNROLLED_IV_J]], align 4
-// IR-NEXT:    %[[TMP19:.+]] = load i32, ptr %[[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    %[[TMP20:.+]] = load i32, ptr %[[DOTCAPTURE_EXPR_2]], align 4
-// IR-NEXT:    %[[CMP:.+]] = icmp slt i32 %[[TMP19]], %[[TMP20]]
+// IR-NEXT:    %[[CMP:.+]] = icmp slt i32 %[[TMP18]], %[[TMP20]]
 // IR-NEXT:    br i1 %[[CMP]], label %[[LAND_LHS_TRUE:.+]], label %[[OMP_PRECOND_END:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_LHS_TRUE]]:

@@ -133,7 +133,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
@@ -152,7 +151,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_3]] to ptr
-// IR-GPU-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_COMB_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_LB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_COMB_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_UB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -178,7 +176,6 @@ int main()
 // IR-GPU-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-GPU-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-GPU-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -262,13 +259,13 @@ int main()
 // IR-GPU-NEXT:    [[TMP44:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[TMP43]], [[TMP44]]
 // IR-GPU-NEXT:    br i1 [[CMP11]], label [[COND_TRUE12:%.*]], label [[COND_FALSE13:%.*]]
-// IR-GPU:       cond.true12:
+// IR-GPU:       cond.true
 // IR-GPU-NEXT:    [[TMP45:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
 // IR-GPU-NEXT:    br label [[COND_END14:%.*]]
-// IR-GPU:       cond.false13:
+// IR-GPU:       cond.false
 // IR-GPU-NEXT:    [[TMP46:%.*]] = load i32, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    br label [[COND_END14]]
-// IR-GPU:       cond.end14:
+// IR-GPU:       cond.end
 // IR-GPU-NEXT:    [[COND15:%.*]] = phi i32 [ [[TMP45]], [[COND_TRUE12]] ], [ [[TMP46]], [[COND_FALSE13]] ]
 // IR-GPU-NEXT:    store i32 [[COND15]], ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP47:%.*]] = load i32, ptr [[DOTOMP_COMB_LB_ASCAST]], align 4
@@ -301,7 +298,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
@@ -320,7 +316,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_3]] to ptr
-// IR-GPU-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -346,7 +341,6 @@ int main()
 // IR-GPU-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-GPU-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-GPU-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -471,8 +465,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8, addrspace(5)
-// IR-GPU-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8, addrspace(5)
@@ -494,8 +486,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_4_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_4]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_5]] to ptr
-// IR-GPU-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
-// IR-GPU-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_COMB_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_LB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_COMB_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_UB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -530,8 +520,6 @@ int main()
 // IR-GPU-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-GPU-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-GPU-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
-// IR-GPU-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -618,13 +606,13 @@ int main()
 // IR-GPU-NEXT:    [[TMP45:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
 // IR-GPU-NEXT:    [[CMP19:%.*]] = icmp sgt i64 [[TMP44]], [[TMP45]]
 // IR-GPU-NEXT:    br i1 [[CMP19]], label [[COND_TRUE20:%.*]], label [[COND_FALSE21:%.*]]
-// IR-GPU:       cond.true20:
+// IR-GPU:       cond.true
 // IR-GPU-NEXT:    [[TMP46:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
 // IR-GPU-NEXT:    br label [[COND_END22:%.*]]
-// IR-GPU:       cond.false21:
+// IR-GPU:       cond.false
 // IR-GPU-NEXT:    [[TMP47:%.*]] = load i64, ptr [[DOTOMP_COMB_UB_ASCAST]], align 8
 // IR-GPU-NEXT:    br label [[COND_END22]]
-// IR-GPU:       cond.end22:
+// IR-GPU:       cond.end
 // IR-GPU-NEXT:    [[COND23:%.*]] = phi i64 [ [[TMP46]], [[COND_TRUE20]] ], [ [[TMP47]], [[COND_FALSE21]] ]
 // IR-GPU-NEXT:    store i64 [[COND23]], ptr [[DOTOMP_COMB_UB_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP48:%.*]] = load i64, ptr [[DOTOMP_COMB_LB_ASCAST]], align 8
@@ -659,8 +647,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8, addrspace(5)
-// IR-GPU-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8, addrspace(5)
@@ -682,8 +668,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_4_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_4]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_5]] to ptr
-// IR-GPU-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
-// IR-GPU-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -718,8 +702,6 @@ int main()
 // IR-GPU-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-GPU-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-GPU-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
-// IR-GPU-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -882,7 +864,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
@@ -903,7 +884,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_3]] to ptr
-// IR-GPU-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_COMB_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_LB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_COMB_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_UB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -931,7 +911,6 @@ int main()
 // IR-GPU-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-GPU-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-GPU-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1021,13 +1000,13 @@ int main()
 // IR-GPU-NEXT:    [[TMP48:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[TMP47]], [[TMP48]]
 // IR-GPU-NEXT:    br i1 [[CMP11]], label [[COND_TRUE12:%.*]], label [[COND_FALSE13:%.*]]
-// IR-GPU:       cond.true12:
+// IR-GPU:       cond.true
 // IR-GPU-NEXT:    [[TMP49:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
 // IR-GPU-NEXT:    br label [[COND_END14:%.*]]
-// IR-GPU:       cond.false13:
+// IR-GPU:       cond.false
 // IR-GPU-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    br label [[COND_END14]]
-// IR-GPU:       cond.end14:
+// IR-GPU:       cond.end
 // IR-GPU-NEXT:    [[COND15:%.*]] = phi i32 [ [[TMP49]], [[COND_TRUE12]] ], [ [[TMP50]], [[COND_FALSE13]] ]
 // IR-GPU-NEXT:    store i32 [[COND15]], ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP51:%.*]] = load i32, ptr [[DOTOMP_COMB_LB_ASCAST]], align 4
@@ -1061,7 +1040,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
@@ -1082,7 +1060,6 @@ int main()
 // IR-GPU-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NEXT:    [[DOTCAPTURE_EXPR_3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_3]] to ptr
-// IR-GPU-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -1110,7 +1087,6 @@ int main()
 // IR-GPU-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-GPU-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-GPU-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1283,7 +1259,6 @@ int main()
 // IR-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1308,7 +1283,6 @@ int main()
 // IR-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1385,7 +1359,6 @@ int main()
 // IR-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1411,7 +1384,6 @@ int main()
 // IR-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1524,8 +1496,6 @@ int main()
 // IR-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -1559,8 +1529,6 @@ int main()
 // IR-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1641,8 +1609,6 @@ int main()
 // IR-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -1677,8 +1643,6 @@ int main()
 // IR-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1830,7 +1794,6 @@ int main()
 // IR-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1857,7 +1820,6 @@ int main()
 // IR-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-NEXT:    store i32 0, ptr [[I]], align 4
 // IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1938,7 +1900,6 @@ int main()
 // IR-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1966,7 +1927,6 @@ int main()
 // IR-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-NEXT:    store i32 0, ptr [[I]], align 4
 // IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2150,7 +2110,6 @@ int main()
 // IR-PCH-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2175,7 +2134,6 @@ int main()
 // IR-PCH-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-PCH-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-PCH-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2252,7 +2210,6 @@ int main()
 // IR-PCH-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2278,7 +2235,6 @@ int main()
 // IR-PCH-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-PCH-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-PCH-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2391,8 +2347,6 @@ int main()
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-PCH-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -2426,8 +2380,6 @@ int main()
 // IR-PCH-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-PCH-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-PCH-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-PCH-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-PCH-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2508,8 +2460,6 @@ int main()
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-PCH-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -2544,8 +2494,6 @@ int main()
 // IR-PCH-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-PCH-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-PCH-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-PCH-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-PCH-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2697,7 +2645,6 @@ int main()
 // IR-PCH-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[I:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2724,7 +2671,6 @@ int main()
 // IR-PCH-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-PCH-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-PCH-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[I]], align 4
 // IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2805,7 +2751,6 @@ int main()
 // IR-PCH-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[I:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2833,7 +2778,6 @@ int main()
 // IR-PCH-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // IR-PCH-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // IR-PCH-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[I]], align 4
 // IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2996,8 +2940,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8, addrspace(5)
-// IR-GPU-NESTED-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NESTED-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8, addrspace(5)
@@ -3019,8 +2961,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_4]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_5]] to ptr
-// IR-GPU-NESTED-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
-// IR-GPU-NESTED-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_COMB_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_LB]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_COMB_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_UB]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -3055,8 +2995,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-GPU-NESTED-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-GPU-NESTED-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-GPU-NESTED-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3143,13 +3081,13 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[TMP45:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[CMP19:%.*]] = icmp sgt i64 [[TMP44]], [[TMP45]]
 // IR-GPU-NESTED-NEXT:    br i1 [[CMP19]], label [[COND_TRUE20:%.*]], label [[COND_FALSE21:%.*]]
-// IR-GPU-NESTED:       cond.true20:
+// IR-GPU-NESTED:       cond.true
 // IR-GPU-NESTED-NEXT:    [[TMP46:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    br label [[COND_END22:%.*]]
-// IR-GPU-NESTED:       cond.false21:
+// IR-GPU-NESTED:       cond.false
 // IR-GPU-NESTED-NEXT:    [[TMP47:%.*]] = load i64, ptr [[DOTOMP_COMB_UB_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    br label [[COND_END22]]
-// IR-GPU-NESTED:       cond.end22:
+// IR-GPU-NESTED:       cond.end
 // IR-GPU-NESTED-NEXT:    [[COND23:%.*]] = phi i64 [ [[TMP46]], [[COND_TRUE20]] ], [ [[TMP47]], [[COND_FALSE21]] ]
 // IR-GPU-NESTED-NEXT:    store i64 [[COND23]], ptr [[DOTOMP_COMB_UB_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP48:%.*]] = load i64, ptr [[DOTOMP_COMB_LB_ASCAST]], align 8
@@ -3184,8 +3122,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8, addrspace(5)
-// IR-GPU-NESTED-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NESTED-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8, addrspace(5)
@@ -3207,8 +3143,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_4]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_5]] to ptr
-// IR-GPU-NESTED-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
-// IR-GPU-NESTED-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -3243,8 +3177,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-GPU-NESTED-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-GPU-NESTED-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-GPU-NESTED-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3408,8 +3340,6 @@ int main()
 // IR-NESTED-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-NESTED-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-NESTED-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NESTED-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -3443,8 +3373,6 @@ int main()
 // IR-NESTED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-NESTED-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-NESTED-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-NESTED-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-NESTED-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-NESTED-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NESTED-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-NESTED-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3525,8 +3453,6 @@ int main()
 // IR-NESTED-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-NESTED-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-NESTED-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NESTED-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -3561,8 +3487,6 @@ int main()
 // IR-NESTED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-NESTED-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-NESTED-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-NESTED-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-NESTED-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-NESTED-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NESTED-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-NESTED-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3738,8 +3662,6 @@ int main()
 // IR-PCH-NESTED-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-PCH-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-PCH-NESTED-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-PCH-NESTED-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NESTED-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -3773,8 +3695,6 @@ int main()
 // IR-PCH-NESTED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-PCH-NESTED-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-PCH-NESTED-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-PCH-NESTED-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-PCH-NESTED-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NESTED-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-PCH-NESTED-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3855,8 +3775,6 @@ int main()
 // IR-PCH-NESTED-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // IR-PCH-NESTED-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // IR-PCH-NESTED-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// IR-PCH-NESTED-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-PCH-NESTED-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NESTED-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -3891,8 +3809,6 @@ int main()
 // IR-PCH-NESTED-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // IR-PCH-NESTED-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // IR-PCH-NESTED-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// IR-PCH-NESTED-NEXT:    store i32 0, ptr [[I]], align 4
-// IR-PCH-NESTED-NEXT:    store i32 0, ptr [[J]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NESTED-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP8]]
 // IR-PCH-NESTED-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]

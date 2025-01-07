@@ -1142,7 +1142,6 @@ int main()
 // CHECK2-NEXT:    [[_TMP2:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1172,7 +1171,6 @@ int main()
 // CHECK2-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK2-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK2-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
-// CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP9]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1268,7 +1266,6 @@ int main()
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1291,7 +1288,6 @@ int main()
 // CHECK2-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK2-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK2-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP2]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1466,7 +1462,6 @@ int main()
 // CHECK2-NEXT:    [[_TMP3:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1508,7 +1503,6 @@ int main()
 // CHECK2-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK2-NEXT:    [[SUB5:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK2-NEXT:    store i32 [[SUB5]], ptr [[DOTCAPTURE_EXPR_4]], align 4
-// CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP11]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1590,14 +1584,14 @@ int main()
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE12:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT11]], [[TMP36]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE12]], label [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done13:
+// CHECK2:       omp.arraycpy.done
 // CHECK2-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP34]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK2:       .omp.reduction.case2:
+// CHECK2:       .omp.reduction.case
 // CHECK2-NEXT:    [[TMP39:%.*]] = getelementptr i32, ptr [[ARRAYIDX]], i32 3
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY14:%.*]] = icmp eq ptr [[ARRAYIDX]], [[TMP39]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY14]], label [[OMP_ARRAYCPY_DONE21:%.*]], label [[OMP_ARRAYCPY_BODY15:%.*]]
-// CHECK2:       omp.arraycpy.body15:
+// CHECK2:       omp.arraycpy.body
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST16:%.*]] = phi ptr [ [[OUTPUT2]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT19:%.*]], [[OMP_ARRAYCPY_BODY15]] ]
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST17:%.*]] = phi ptr [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT18:%.*]], [[OMP_ARRAYCPY_BODY15]] ]
 // CHECK2-NEXT:    [[TMP40:%.*]] = load i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST16]], align 4
@@ -1606,7 +1600,7 @@ int main()
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT19]] = getelementptr i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST16]], i32 1
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE20:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT18]], [[TMP39]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE20]], label [[OMP_ARRAYCPY_DONE21]], label [[OMP_ARRAYCPY_BODY15]]
-// CHECK2:       omp.arraycpy.done21:
+// CHECK2:       omp.arraycpy.done
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
 // CHECK2-NEXT:    ret void
@@ -1626,7 +1620,6 @@ int main()
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1649,7 +1642,6 @@ int main()
 // CHECK2-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK2-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK2-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP2]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1761,14 +1753,14 @@ int main()
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP37]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done17:
+// CHECK2:       omp.arraycpy.done
 // CHECK2-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP35]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
-// CHECK2:       .omp.reduction.case2:
+// CHECK2:       .omp.reduction.case
 // CHECK2-NEXT:    [[TMP40:%.*]] = getelementptr i32, ptr [[ARRAYIDX]], i32 3
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY18:%.*]] = icmp eq ptr [[ARRAYIDX]], [[TMP40]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY18]], label [[OMP_ARRAYCPY_DONE25:%.*]], label [[OMP_ARRAYCPY_BODY19:%.*]]
-// CHECK2:       omp.arraycpy.body19:
+// CHECK2:       omp.arraycpy.body
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST20:%.*]] = phi ptr [ [[OUTPUT4]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT23:%.*]], [[OMP_ARRAYCPY_BODY19]] ]
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST21:%.*]] = phi ptr [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY19]] ]
 // CHECK2-NEXT:    [[TMP41:%.*]] = load i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST20]], align 4
@@ -1777,7 +1769,7 @@ int main()
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT23]] = getelementptr i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST20]], i32 1
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE24:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT22]], [[TMP40]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_BODY19]]
-// CHECK2:       omp.arraycpy.done25:
+// CHECK2:       omp.arraycpy.done
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]

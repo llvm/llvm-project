@@ -1247,7 +1247,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1268,7 +1267,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1357,7 +1355,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1378,7 +1375,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1475,7 +1471,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1497,7 +1492,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2269,7 +2263,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2290,7 +2283,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2378,7 +2370,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2399,7 +2390,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2495,7 +2485,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2517,7 +2506,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]

@@ -267,7 +267,6 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[I:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -286,7 +285,6 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    [[CONV:%.*]] = fptoui double [[DIV]] to i64
 // CHECK1-NEXT:    [[SUB3:%.*]] = sub i64 [[CONV]], 1
 // CHECK1-NEXT:    store i64 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 8
-// CHECK1-NEXT:    store i64 1, ptr [[I]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load double, ptr [[DOTCAPTURE_EXPR_1]], align 8
 // CHECK1-NEXT:    [[CMP:%.*]] = fcmp olt double 1.000000e+00, [[TMP2]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -949,8 +947,6 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[I:%.*]] = alloca i8, align 1
-// CHECK1-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -982,10 +978,7 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    [[SUB5:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK1-NEXT:    store i64 [[SUB5]], ptr [[DOTCAPTURE_EXPR_2]], align 8
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK1-NEXT:    store i8 [[TMP7]], ptr [[I]], align 1
-// CHECK1-NEXT:    store i32 11, ptr [[X]], align 4
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK1-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP8]] to i32
+// CHECK1-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CONV6]], 57
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK1:       omp.precond.then:
@@ -1383,7 +1376,6 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca double, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[I:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -1402,7 +1394,6 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    [[CONV:%.*]] = fptoui double [[DIV]] to i64
 // CHECK2-NEXT:    [[SUB3:%.*]] = sub i64 [[CONV]], 1
 // CHECK2-NEXT:    store i64 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 8
-// CHECK2-NEXT:    store i64 1, ptr [[I]], align 8
 // CHECK2-NEXT:    [[TMP2:%.*]] = load double, ptr [[DOTCAPTURE_EXPR_1]], align 8
 // CHECK2-NEXT:    [[CMP:%.*]] = fcmp olt double 1.000000e+00, [[TMP2]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2065,8 +2056,6 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[I:%.*]] = alloca i8, align 1
-// CHECK2-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -2098,10 +2087,7 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    [[SUB5:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK2-NEXT:    store i64 [[SUB5]], ptr [[DOTCAPTURE_EXPR_2]], align 8
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK2-NEXT:    store i8 [[TMP7]], ptr [[I]], align 1
-// CHECK2-NEXT:    store i32 11, ptr [[X]], align 4
-// CHECK2-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK2-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP8]] to i32
+// CHECK2-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CONV6]], 57
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK2:       omp.precond.then:
@@ -2499,7 +2485,6 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca double, align 8
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK5-NEXT:    [[I:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -2518,7 +2503,6 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[CONV:%.*]] = fptoui double [[DIV]] to i64, !dbg [[DBG14]]
 // CHECK5-NEXT:    [[SUB3:%.*]] = sub i64 [[CONV]], 1, !dbg [[DBG14]]
 // CHECK5-NEXT:    store i64 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 8, !dbg [[DBG14]]
-// CHECK5-NEXT:    store i64 1, ptr [[I]], align 8, !dbg [[DBG14]]
 // CHECK5-NEXT:    [[TMP2:%.*]] = load double, ptr [[DOTCAPTURE_EXPR_1]], align 8, !dbg [[DBG14]]
 // CHECK5-NEXT:    [[CMP:%.*]] = fcmp olt double 1.000000e+00, [[TMP2]], !dbg [[DBG14]]
 // CHECK5-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]], !dbg [[DBG15:![0-9]+]]
@@ -3181,8 +3165,6 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK5-NEXT:    [[I:%.*]] = alloca i8, align 1
-// CHECK5-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -3214,10 +3196,7 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[SUB5:%.*]] = sub nsw i64 [[MUL]], 1, !dbg [[DBG81]]
 // CHECK5-NEXT:    store i64 [[SUB5]], ptr [[DOTCAPTURE_EXPR_2]], align 8, !dbg [[DBG80]]
 // CHECK5-NEXT:    [[TMP7:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1, !dbg [[DBG80]]
-// CHECK5-NEXT:    store i8 [[TMP7]], ptr [[I]], align 1, !dbg [[DBG80]]
-// CHECK5-NEXT:    store i32 11, ptr [[X]], align 4, !dbg [[DBG81]]
-// CHECK5-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1, !dbg [[DBG80]]
-// CHECK5-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP8]] to i32, !dbg [[DBG80]]
+// CHECK5-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP7]] to i32, !dbg [[DBG80]]
 // CHECK5-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CONV6]], 57, !dbg [[DBG80]]
 // CHECK5-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]], !dbg [[DBG79]]
 // CHECK5:       omp.precond.then:
@@ -3615,7 +3594,6 @@ void range_for_collapsed() {
 // CHECK6-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca double, align 8
 // CHECK6-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK6-NEXT:    [[I:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -3634,7 +3612,6 @@ void range_for_collapsed() {
 // CHECK6-NEXT:    [[CONV:%.*]] = fptoui double [[DIV]] to i64
 // CHECK6-NEXT:    [[SUB3:%.*]] = sub i64 [[CONV]], 1
 // CHECK6-NEXT:    store i64 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 8
-// CHECK6-NEXT:    store i64 1, ptr [[I]], align 8
 // CHECK6-NEXT:    [[TMP2:%.*]] = load double, ptr [[DOTCAPTURE_EXPR_1]], align 8
 // CHECK6-NEXT:    [[CMP:%.*]] = fcmp olt double 1.000000e+00, [[TMP2]]
 // CHECK6-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -4297,8 +4274,6 @@ void range_for_collapsed() {
 // CHECK6-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
 // CHECK6-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK6-NEXT:    [[I:%.*]] = alloca i8, align 1
-// CHECK6-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -4330,10 +4305,7 @@ void range_for_collapsed() {
 // CHECK6-NEXT:    [[SUB5:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK6-NEXT:    store i64 [[SUB5]], ptr [[DOTCAPTURE_EXPR_2]], align 8
 // CHECK6-NEXT:    [[TMP7:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK6-NEXT:    store i8 [[TMP7]], ptr [[I]], align 1
-// CHECK6-NEXT:    store i32 11, ptr [[X]], align 4
-// CHECK6-NEXT:    [[TMP8:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
-// CHECK6-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP8]] to i32
+// CHECK6-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK6-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CONV6]], 57
 // CHECK6-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK6:       omp.precond.then:
@@ -4822,7 +4794,6 @@ void range_for_collapsed() {
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i64, align 8
-// CHECK11-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -4855,10 +4826,8 @@ void range_for_collapsed() {
 // CHECK11-NEXT:    [[SUB4:%.*]] = sub nsw i64 [[DIV]], 1
 // CHECK11-NEXT:    store i64 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 8
 // CHECK11-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK11-NEXT:    store ptr [[TMP6]], ptr [[__BEGIN1]], align 8
-// CHECK11-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
 // CHECK11-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_2]], align 8
-// CHECK11-NEXT:    [[CMP:%.*]] = icmp ult ptr [[TMP7]], [[TMP8]]
+// CHECK11-NEXT:    [[CMP:%.*]] = icmp ult ptr [[TMP6]], [[TMP8]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK11:       omp.precond.then:
 // CHECK11-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
@@ -4945,8 +4914,6 @@ void range_for_collapsed() {
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_6:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_8:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_9:%.*]] = alloca i64, align 8
-// CHECK11-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
-// CHECK11-NEXT:    [[__BEGIN2:%.*]] = alloca ptr, align 8
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -5001,12 +4968,8 @@ void range_for_collapsed() {
 // CHECK11-NEXT:    [[SUB17:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK11-NEXT:    store i64 [[SUB17]], ptr [[DOTCAPTURE_EXPR_9]], align 8
 // CHECK11-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK11-NEXT:    store ptr [[TMP11]], ptr [[__BEGIN1]], align 8
-// CHECK11-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_6]], align 8
-// CHECK11-NEXT:    store ptr [[TMP12]], ptr [[__BEGIN2]], align 8
-// CHECK11-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
 // CHECK11-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_5]], align 8
-// CHECK11-NEXT:    [[CMP:%.*]] = icmp ult ptr [[TMP13]], [[TMP14]]
+// CHECK11-NEXT:    [[CMP:%.*]] = icmp ult ptr [[TMP11]], [[TMP14]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK11:       land.lhs.true:
 // CHECK11-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_6]], align 8
