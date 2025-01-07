@@ -35,9 +35,10 @@ void NVPTXSubtarget::anchor() {}
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
     // Provide the default CPU if we don't have one.
-    TargetName = std::string(CPU.empty() ? "sm_30" : CPU);
+    TargetName = std::string(CPU);
 
-    ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
+    ParseSubtargetFeatures(CPU.empty() ? "sm_30" : CPU,
+                           /*TuneCPU=*/CPU.empty() ? "sm_30" : CPU, FS);
 
     // Re-map SM version numbers, SmVersion carries the regular SMs which do
     // have relative order, while FullSmVersion allows distinguishing sm_90 from
