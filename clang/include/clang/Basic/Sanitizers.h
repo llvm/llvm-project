@@ -155,11 +155,11 @@ struct SanitizerKind {
 }; // SanitizerKind
 
 struct SanitizerMaskCutoffs {
-  std::array<float, SanitizerKind::SO_Count> data = {0};
+  std::array<float, SanitizerKind::SO_Count> cutoffs = {0};
 
-  float &operator[](int index) { return data[index]; }
+  float &operator[](int index) { return cutoffs[index]; }
 
-  const float &operator[](int index) const { return data[index]; }
+  const float &operator[](int index) const { return cutoffs[index]; }
 }; // SanitizerMaskCutoffs;
 
 struct SanitizerSet {
