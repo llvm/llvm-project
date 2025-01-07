@@ -2022,11 +2022,12 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *IR,
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   using namespace llvm::VPlanPatternMatch;
-  if (VF.isScalable())
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  if (VF.isScalable() || !VectorLoop)
     return;
 
   SmallVector<VPInterleaveRecipe *> StoreGroups;
-  for (auto &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
+  for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
         match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
       continue;
