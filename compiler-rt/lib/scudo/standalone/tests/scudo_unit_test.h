@@ -8,7 +8,7 @@
 
 #include "platform.h"
 
-#if SCUDO_FUCHSIA
+#ifdef LIBC_COPT_TEST_USE_ZXTEST
 #include <zxtest/zxtest.h>
 using Test = ::zxtest::Test;
 #define TEST_SKIP(message) ZXTEST_SKIP(message)
