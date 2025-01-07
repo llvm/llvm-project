@@ -1,9 +1,6 @@
 ; RUN: opt -debug -S -march=hexagon -O2  < %s | FileCheck %s
 ; REQUIRES: asserts
 ; CHECK: define dso_local void @complexMultAccum
-; ModuleID = 'loopIdiom.c'
-source_filename = "loopIdiom.c"
-target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
 ; Function Attrs: noinline nounwind
@@ -71,7 +68,7 @@ attributes #0 = { noinline nounwind "approx-func-fp-math"="true" "frame-pointer"
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"frame-pointer", i32 2}
-!2 = !{!"QuIC LLVM Hexagon Clang version 19.0 Private Release: hexagon-clang-190"}
+!2 = !{!"LLVM Clang"}
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.mustprogress"}
 !5 = distinct !{!5, !4}
