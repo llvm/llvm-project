@@ -4,6 +4,19 @@
 
 ;; Test that an entry in the debug names table gets created for a top level DIE when the creation of TU is aborted.
 
+;; clang++ -O0 main.cpp -gdwarf-5 -fdebug-types-section -gpubnames -S -emit-llvm -glldb -o main.ll
+;; int foo;
+;; namespace {
+;; struct t1 {};
+;; } // namespace
+;; template <int *> struct t2 {
+;;   t1 v1;
+;; };
+;; struct t3 {
+;;   t2<&foo> v1;
+;; };
+;; t3 v1;
+
 ; CHECK: [[OFFSET:0x[0-9a-f]*]]:   DW_TAG_structure_type
 ; CHECK: [[OFFSET1:0x[0-9a-f]*]]:   DW_TAG_structure_type
 
@@ -25,19 +38,6 @@
 ; CHECK-NEXT:        Tag: DW_TAG_structure_type
 ; CHECK-NEXT:        DW_IDX_die_offset: [[OFFSET1]]
 ; CHECK-NEXT:        DW_IDX_parent: <parent not indexed>
-
-;; clang++ -O0 main.cpp -gdwarf-5 -fdebug-types-section -gpubnames -S -emit-llvm -glldb -o main.ll
-;; int foo;
-;; namespace {
-;; struct t1 {};
-;; } // namespace
-;; template <int *> struct t2 {
-;;   t1 v1;
-;; };
-;; struct t3 {
-;;   t2<&foo> v1;
-;; };
-;; t3 v1;
 
 ; ModuleID = 'main.cpp'
 source_filename = "main.cpp"
