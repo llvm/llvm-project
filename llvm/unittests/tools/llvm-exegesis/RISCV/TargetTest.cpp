@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -28,31 +29,16 @@ using testing::IsEmpty;
 using testing::Not;
 using testing::NotNull;
 
-constexpr const char kTriple[] = "riscv64-unknown-linux";
-
-class RISCVTargetTest : public ::testing::Test {
+class RISCVTargetTest : public RISCVTestBase {
 protected:
-  RISCVTargetTest() : ExegesisTarget_(ExegesisTarget::lookup(Triple(kTriple))) {
-    EXPECT_THAT(ExegesisTarget_, NotNull());
-    std::string error;
-    Target_ = TargetRegistry::lookupTarget(kTriple, error);
-    EXPECT_THAT(Target_, NotNull());
+  std::vector<MCInst> setRegTo(unsigned Reg, const APInt &Value) {
+    return State.getExegesisTarget().setRegTo(State.getSubtargetInfo(), Reg,
+                                              Value);
   }
-  static void SetUpTestCase() {
-    LLVMInitializeRISCVTargetInfo();
-    LLVMInitializeRISCVTarget();
-    LLVMInitializeRISCVTargetMC();
-    InitializeRISCVExegesisTarget();
-  }
-
-  const Target *Target_;
-  const ExegesisTarget *const ExegesisTarget_;
 };
 
 TEST_F(RISCVTargetTest, SetRegToConstant) {
-  const std::unique_ptr<MCSubtargetInfo> STI(
-      Target_->createMCSubtargetInfo(kTriple, "generic", ""));
-  const auto Insts = ExegesisTarget_->setRegTo(*STI, RISCV::X10, APInt());
+  const auto Insts = setRegTo(RISCV::X10, APInt());
   EXPECT_THAT(Insts, Not(IsEmpty()));
 }
 
