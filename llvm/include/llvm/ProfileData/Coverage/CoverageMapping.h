@@ -891,6 +891,7 @@ public:
 class CoverageData {
   friend class CoverageMapping;
 
+protected:
   std::string Filename;
   std::vector<CoverageSegment> Segments;
   std::vector<ExpansionRecord> Expansions;
@@ -904,6 +905,8 @@ public:
 
   CoverageData(bool Single, StringRef Filename)
       : Filename(Filename), SingleByteCoverage(Single) {}
+
+  CoverageData(CoverageData &&RHS) = default;
 
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
