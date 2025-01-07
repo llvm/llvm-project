@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
+struct NotConvertible{} NC;
 void uses() {
   int Var;
   // expected-warning@+2{{OpenACC clause 'async' not yet implemented}}
@@ -11,10 +12,8 @@ void uses() {
   // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc update self(Var) device_type(I)
-  // expected-warning@+2{{OpenACC clause 'if' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update if(true) self(Var)
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update if_present self(Var)
   // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
@@ -30,13 +29,11 @@ void uses() {
     // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
     // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc update self(Var) device_type(I) device_type(I)
-    // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+    // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
+    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc update self(Var) device_type(I) if(true)
-    // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
-    // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+    // expected-warning@+2{{OpenACC clause 'self' not yet implemented}}
+    // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc update self(Var) device_type(I) if_present
     // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
     // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
@@ -65,14 +62,15 @@ void uses() {
 #pragma acc update wait
     // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc update device_type(I)
-    // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc update if(true)
-    // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc update if_present
 
-  // TODO: OpenACC: There should only be a max of 1 'if'.
-    // expected-warning@+2{{OpenACC clause 'if' not yet implemented}}
-    // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  // expected-error@+2{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
+#pragma acc update if (NC) device_type(I)
+
+  // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'update' directive}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc update if(true) if (false)
 
   // TODO: OpenACC: There is restrictions on the contents of a 'varlist', so
