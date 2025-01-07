@@ -3704,19 +3704,19 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
   return Result.high();
 }
 
-bool DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
+void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
-    return false;
+    return;
 
   auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
   if (!Ins.second) {
     CU.addDIETypeSignature(RefDie, Ins.first->second);
-    return false;
+    return;
   }
 
   setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
@@ -3789,7 +3789,8 @@ bool DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // they depend on addresses, throwing them out and rebuilding them.
       setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
       CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
-      return true;
+      CU.updateAcceleratorTables(CTy->getScope(), CTy, RefDie);
+      return;
     }
 
     // If the type wasn't dependent on fission addresses, finish adding the type
@@ -3811,7 +3812,7 @@ bool DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
   }
   CU.addDIETypeSignature(RefDie, Signature);
-  return false;
+  return;
 }
 
 // Add the Name along with its companion DIE to the appropriate accelerator

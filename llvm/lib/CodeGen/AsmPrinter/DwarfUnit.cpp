@@ -589,8 +589,7 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
       // Skip updating the accelerator tables since this is not the full type.
       if (MDString *TypeId = CTy->getRawIdentifier()) {
         addGlobalType(Ty, TyDIE, Context);
-        if (DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy))
-          updateAcceleratorTables(Context, Ty, TyDIE);
+        DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
       } else {
         updateAcceleratorTables(Context, Ty, TyDIE);
         finishNonUnitTypeDIE(TyDIE, CTy);
