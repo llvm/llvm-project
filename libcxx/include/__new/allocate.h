@@ -29,7 +29,7 @@ _LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI bool __is_overaligned_for_new(siz
 #endif
 }
 
-template <class _Tp, class... _Args>
+template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void* __libcpp_operator_new(_Args... __args) {
 #if __has_builtin(__builtin_operator_new) && __has_builtin(__builtin_operator_delete)
   return __builtin_operator_new(__args...);
@@ -38,7 +38,7 @@ _LIBCPP_HIDE_FROM_ABI void* __libcpp_operator_new(_Args... __args) {
 #endif
 }
 
-template <class _Tp, class... _Args>
+template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void __libcpp_operator_delete(_Args... __args) _NOEXCEPT {
 #if __has_builtin(__builtin_operator_new) && __has_builtin(__builtin_operator_delete)
   __builtin_operator_delete(__args...);
@@ -52,12 +52,12 @@ inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_allocate(size_t __size, size_t __ali
 #if _LIBCPP_HAS_ALIGNED_ALLOCATION
   if (__is_overaligned_for_new(__align)) {
     const align_val_t __align_val = static_cast<align_val_t>(__align);
-    return std::__libcpp_operator_new<_Tp>(__size, __align_val);
+    return std::__libcpp_operator_new(__size, __align_val);
   }
 #endif
 
   (void)__align;
-  return std::__libcpp_operator_new<_Tp>(__size);
+  return std::__libcpp_operator_new(__size);
 }
 
 #if _LIBCPP_HAS_SIZED_DEALLOCATION
@@ -71,13 +71,13 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_deallocate(void* __ptr, size_t __size
   (void)__size;
 #if !_LIBCPP_HAS_ALIGNED_ALLOCATION
   (void)__align;
-  return std::__libcpp_operator_delete<_Tp>(__ptr _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __size));
+  return std::__libcpp_operator_delete(__ptr _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __size));
 #else
   if (__is_overaligned_for_new(__align)) {
     const align_val_t __align_val = static_cast<align_val_t>(__align);
-    return std::__libcpp_operator_delete<_Tp>(__ptr _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __size), __align_val);
+    return std::__libcpp_operator_delete(__ptr _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __size), __align_val);
   } else {
-    return std::__libcpp_operator_delete<_Tp>(__ptr _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __size));
+    return std::__libcpp_operator_delete(__ptr _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __size));
   }
 #endif
 }
@@ -95,13 +95,13 @@ template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI void __libcpp_deallocate_unsized(void* __ptr, size_t __align) _NOEXCEPT {
 #if !_LIBCPP_HAS_ALIGNED_ALLOCATION
   (void)__align;
-  return std::__libcpp_operator_delete<_Tp>(__ptr);
+  return std::__libcpp_operator_delete(__ptr);
 #else
   if (__is_overaligned_for_new(__align)) {
     const align_val_t __align_val = static_cast<align_val_t>(__align);
-    return std::__libcpp_operator_delete<_Tp>(__ptr, __align_val);
+    return std::__libcpp_operator_delete(__ptr, __align_val);
   } else {
-    return std::__libcpp_operator_delete<_Tp>(__ptr);
+    return std::__libcpp_operator_delete(__ptr);
   }
 #endif
 }
