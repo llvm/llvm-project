@@ -274,6 +274,50 @@ Examples:
                @llvm.dx.handle.fromHeap.tdx.RawBuffer_v4f32_1_0(
                    i32 2, i1 false)
 
+Accessing Resources as Memory
+-----------------------------
+
+*relevant types: Buffers, CBuffer, and Textures*
+
+Loading and storing from resources is generally represented in LLVM using
+operations on memory that is only accessible via a handle object. Given a
+handle, `llvm.dx.resource.getpointer` gives a pointer that can be used to read
+and (depending on type) write to the resource.
+
+Accesses using `llvm.dx.resource.getpointer` are replaced with direct load and
+store operations in the `DXILResourceAccess` pass. These direct loads and
+stores are described later in this document.
+
+.. note:: Currently the pointers returned by `dx.resource.getpointer` are in
+          the default address space, but that will likely change in the future.
+
+.. list-table:: ``@llvm.dx.resource.getpointer``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - Pointer
+     - A pointer to an object in the buffer
+   * - ``%buffer``
+     - 0
+     - ``target(dx.TypedBuffer, ...)``
+     - The buffer to access
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ptr = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4f32_0_0_0t(
+       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
+
 16-byte Loads, Samples, and Gathers
 -----------------------------------
 
