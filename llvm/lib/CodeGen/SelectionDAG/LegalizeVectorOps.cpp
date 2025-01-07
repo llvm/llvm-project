@@ -1784,16 +1784,24 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
       (IsStrict && TLI.getOperationAction(ISD::STRICT_FMUL, DstVT) ==
                        TargetLowering::Expand)) {
     EVT FPVT = BW == 32 ? MVT::f32 : MVT::f64;
-    SDLoc DL(Node);
-    unsigned Round = IsStrict ? ISD::STRICT_FP_ROUND : ISD::FP_ROUND;
-    unsigned UIToFP = IsStrict ? ISD::STRICT_UINT_TO_FP : ISD::UINT_TO_FP;
-    SDValue Result = DAG.getNode(
-        Round, DL, DstVT,
-        DAG.getNode(UIToFP, DL, SrcVT.changeVectorElementType(FPVT), Src),
-        DAG.getTargetConstant(
-            0, DL,
-            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout())));
-    Results.push_back(Result);
+    SDValue UIToFP;
+    SDValue Result;
+    SDValue TargetZero = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+    if (IsStrict) {
+      UIToFP = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL,
+                           {SrcVT.changeVectorElementType(FPVT), MVT::Other},
+                           {Node->getOperand(0), Src});
+      Result = DAG.getNode(ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+                           {Node->getOperand(0), UIToFP, TargetZero});
+      Results.push_back(Result);
+      Results.push_back(Result.getValue(1));
+    } else {
+      UIToFP = DAG.getNode(ISD::UINT_TO_FP, DL,
+                           SrcVT.changeVectorElementType(FPVT), Src);
+      Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, UIToFP, TargetZero);
+      Results.push_back(Result);
+    }
+
     return;
   }
 
