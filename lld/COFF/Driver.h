@@ -80,12 +80,9 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  void setMachine(llvm::COFF::MachineTypes machine);
+  void addFile(InputFile *file);
 
   void addClangLibSearchPaths(const std::string &argv0);
-
-  // Used by the resolver to parse .drectve section contents.
-  void parseDirectives(InputFile *file);
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
@@ -121,6 +118,7 @@ private:
   // Symbol names are mangled by prepending "_" on x86.
   StringRef mangle(StringRef sym);
 
+  void setMachine(llvm::COFF::MachineTypes machine);
   llvm::Triple::ArchType getArch();
 
   uint64_t getDefaultImageBase();
@@ -143,6 +141,9 @@ private:
   std::string getImportName(bool asLib);
 
   void createImportLibrary(bool asLib);
+
+  // Used by the resolver to parse .drectve section contents.
+  void parseDirectives(InputFile *file);
 
   void parseModuleDefs(StringRef path);
 
@@ -279,6 +280,8 @@ private:
   // Create export thunks for exported and patchable Arm64EC function symbols.
   void createECExportThunks();
   void maybeCreateECExportThunk(StringRef name, Symbol *&sym);
+
+  bool ltoCompilationDone = false;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td
