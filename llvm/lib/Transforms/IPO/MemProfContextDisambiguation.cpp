@@ -123,9 +123,9 @@ static cl::opt<unsigned>
                                  "frames through tail calls."));
 
 // By default enable cloning of callsites involved with recursive cycles
-static cl::opt<bool> SkipRecursiveCallsites(
-    "memprof-skip-recursive-callsites", cl::init(false), cl::Hidden,
-    cl::desc("Prevent cloning of callsites involved in recursive cycles"));
+static cl::opt<bool> AllowRecursiveCallsites(
+    "memprof-allow-recursive-callsites", cl::init(true), cl::Hidden,
+    cl::desc("Allow cloning of callsites involved in recursive cycles"));
 
 // When enabled, try to detect and prevent cloning of recursive contexts.
 // This is only necessary until we support cloning through recursive cycles.
@@ -1252,7 +1252,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     }
     // Marking a node recursive will prevent its cloning completely, even for
     // non-recursive contexts flowing through it.
-    if (SkipRecursiveCallsites) {
+    if (!AllowRecursiveCallsites) {
       auto Ins = StackIdSet.insert(StackId);
       if (!Ins.second)
         StackNode->Recursive = true;
@@ -1393,10 +1393,10 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
       set_union(CallerEdgeContextIds, Edge->ContextIds);
     }
     // Node can have more context ids than callers if some contexts terminate at
-    // node and some are longer. If we are not skipping recursive callsites but
+    // node and some are longer. If we are allowing recursive callsites but
     // haven't enabled skipping of recursive contexts, this will be violated for
     // incompletely cloned recursive cycles, so skip the checking in that case.
-    assert(!(SkipRecursiveCallsites || SkipRecursiveContexts) ||
+    assert((AllowRecursiveCallsites && !SkipRecursiveContexts) ||
            NodeContextIds == CallerEdgeContextIds ||
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
   }
@@ -3392,12 +3392,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
   DenseSet<uint32_t> RecursiveContextIds;
-  // If we are not skipping recursive callsites, and have also enabled
+  // If we are allowing recursive callsites, and have also enabled
   // skipping of recursive contexts, look for context ids that show up in
   // multiple caller edges.
-  if (!SkipRecursiveCallsites && SkipRecursiveContexts) {
+  if (AllowRecursiveCallsites && SkipRecursiveContexts) {
     DenseSet<uint32_t> AllCallerContextIds;
     for (auto &CE : Node->CallerEdges) {
+      // Resize to the largest set of caller context ids, since we know the
+      // final set will be at least that large.
       AllCallerContextIds.reserve(CE->getContextIds().size());
       for (auto Id : CE->getContextIds())
         if (!AllCallerContextIds.insert(Id).second)

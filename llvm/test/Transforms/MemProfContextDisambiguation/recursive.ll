@@ -49,7 +49,7 @@
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
-; RUN:	-memprof-skip-recursive-callsites \
+; RUN:	-memprof-allow-recursive-callsites=false \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
 ; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --implicit-check-not="created clone" \
