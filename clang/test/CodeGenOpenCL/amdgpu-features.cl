@@ -59,6 +59,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1300 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1300 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1301 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1301 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1302 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1302 %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx130E -emit-llvm -o - %s | FileCheck --check-prefix=GFX130E %s
 
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1103 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck --check-prefix=GFX1103-W64 %s
 
@@ -121,6 +122,7 @@
 // GFX1300: "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+wavefrontsize32"
 // GFX1301: "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+wavefrontsize32"
 // GFX1302: "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+wavefrontsize32"
+// GFX130E: "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+wavefrontsize32"
 
 // GFX1103-W64: "target-features"="+16-bit-insts,+atomic-fadd-rtn-insts,+ci-insts,+dl-insts,+dot10-insts,+dot12-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize64"
 

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1300 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1301 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1302 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx130E -emit-llvm -o - %s | FileCheck %s
 
 // REQUIRES: amdgpu-registered-target
 
