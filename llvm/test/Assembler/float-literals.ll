@@ -27,14 +27,14 @@
 
 ; CHECK: @0 = global double 0x7FF0000000000000
 @0 = global double +inf
-; CHECK: @1 = global ppc_fp128 f0x0000000000000000FFF0000000000000
+; CHECK: @1 = global ppc_fp128 0xMFFF00000000000000000000000000000
 @1 = global ppc_fp128 -inf
-; CHECK: @2 = global half f0xFE00
+; CHECK: @2 = global half 0xHFE00
 @2 = global half -qnan
-; CHECK: @3 = global bfloat f0x7FC0
+; CHECK: @3 = global bfloat 0xR7FC0
 @3 = global bfloat +qnan
-; CHECK: @4 = global fp128 f0x7FFF80000000000000000000DEADBEEF
+; CHECK: @4 = global fp128 0xL00000000DEADBEEF7FFF800000000000
 @4 = global fp128 +nan(0xdeadbeef)
-; CHECK: @5 = global x86_fp80 f0x0001FFFF000000000000
+; CHECK: @5 = global x86_fp80 0xK0001FFFF000000000000
 @5 = global x86_fp80 f0x0000ffff000000000000
 
