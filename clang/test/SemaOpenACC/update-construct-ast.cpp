@@ -27,11 +27,13 @@ void NormalFunc() {
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_long' 'long ()'
 
-#pragma acc update wait async
+#pragma acc update wait async device_type(A) dtype(B)
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: async clause
+  // CHECK-NEXT: device_type(A)
+  // CHECK-NEXT: dtype(B)
 #pragma acc update wait(some_int(), some_long()) async(some_int())
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: wait clause
@@ -87,11 +89,13 @@ void TemplFunc(T t) {
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: DeclRefExpr{{.*}}'t' 'T'
 
-#pragma acc update wait async
+#pragma acc update wait async device_type(T) dtype(U)
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: async clause
+  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: dtype(U)
 #pragma acc update wait(T::value, t) async(T::value)
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: wait clause
@@ -144,6 +148,8 @@ void TemplFunc(T t) {
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: async clause
+  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: dtype(U)
 
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: wait clause

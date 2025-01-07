@@ -29,4 +29,10 @@ void uses(bool cond) {
 
 // CHECK: #pragma acc update wait(devnum: I : queues: *iPtr, I) if(I == array[I]) async(I)
 #pragma acc update wait(devnum:I:queues:*iPtr, I) if(I == array[I]) async(I)
+
+// CHECK: #pragma acc update device_type(I) dtype(H)
+#pragma acc update device_type(I) dtype(H)
+
+// CHECK: #pragma acc update device_type(J) dtype(K)
+#pragma acc update device_type(J) dtype(K)
 }
