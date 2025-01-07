@@ -939,7 +939,7 @@ Miscellaneous Clang Crashes Fixed
   module is found through ADL. (GH#109879)
 
 - Fixed a crash when an unscoped enumeration declared by an opaque-enum-declaration within a class template
-  with a dependent underlying type is subject to integral promotion. (GH#117960)
+  with a dependent underlying type is subject to integral promotion. (#GH117960)
 
 OpenACC Specific Changes
 ------------------------
