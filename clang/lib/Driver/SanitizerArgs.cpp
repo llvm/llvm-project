@@ -120,20 +120,6 @@ static SanitizerMask parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
                                      bool DiagnoseErrors,
                                      SanitizerMaskCutoffs &Cutoffs);
 
-/// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
-/// invalid components. Returns a SanitizerMask.
-///
-/// If Cutoffs is null, it assumes -fsanitize=<sanitizer1>,<sanitizer2>,...
-/// and returns the result in the SanitizerMask.
-///
-/// Otherwise, it assumes -fsanitize=<sanitizer1>=<value1>,<sanitizer2>=<value2>,...
-/// and returns an EMPTY SanitizerMask; results are stored in the passed
-/// Cutoffs.
-static SanitizerMask parseArgValuesOrCutoffs(const Driver &D,
-                                             const llvm::opt::Arg *A,
-                                             bool DiagnoseErrors,
-                                             SanitizerMaskCutoffs *Cutoffs);
-
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
 static int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
@@ -281,7 +267,7 @@ static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
                   SanitizerMask AlwaysIn, SanitizerMask AlwaysOut, int OptInID,
-                  int OptOutID, SanitizerMaskCutoffs *Cutoffs) {
+                  int OptOutID) {
   assert(!(AlwaysIn & AlwaysOut) &&
          "parseSanitizeArgs called with contradictory in/out requirements");
 
@@ -292,8 +278,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
   SanitizerMask DiagnosedAlwaysOutViolations;
   for (const auto *Arg : Args) {
     if (Arg->getOption().matches(OptInID)) {
-      SanitizerMask Add =
-          parseArgValuesOrCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+      SanitizerMask Add = parseArgValues(D, Arg, DiagnoseErrors);
       // Report error if user explicitly tries to opt-in to an always-out
       // sanitizer.
       if (SanitizerMask KindsToDiagnose =
@@ -309,8 +294,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
       Output |= expandSanitizerGroups(Add);
       Arg->claim();
     } else if (Arg->getOption().matches(OptOutID)) {
-      SanitizerMask Remove =
-          parseArgValuesOrCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+      SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
       // Report error if user explicitly tries to opt-out of an always-in
       // sanitizer.
       if (SanitizerMask KindsToDiagnose =
@@ -343,15 +327,16 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   // (not even in recover mode) in order to avoid the need for a ubsan runtime.
   return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
                            NeverTrap, options::OPT_fsanitize_trap_EQ,
-                           options::OPT_fno_sanitize_trap_EQ, nullptr);
+                           options::OPT_fno_sanitize_trap_EQ);
 }
 
-static SanitizerMask parseNoSanitizeHotArgs(const Driver &D,
-                                            const llvm::opt::ArgList &Args,
-                                            bool DiagnoseErrors,
-                                            SanitizerMaskCutoffs *Cutoffs) {
-  return parseSanitizeArgs(D, Args, DiagnoseErrors, {}, {}, {},
-                           options::OPT_fno_sanitize_top_hot_EQ, -1, Cutoffs);
+static void parseNoSanitizeHotArgs(const Driver &D,
+                                   const llvm::opt::ArgList &Args,
+                                   bool DiagnoseErrors,
+                                   SanitizerMaskCutoffs *Cutoffs) {
+  for (const auto *Arg : Args)
+    if (Arg->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ))
+      parseArgCutoffs(D, Arg, DiagnoseErrors, *Cutoffs);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -729,7 +714,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask RecoverableKinds = parseSanitizeArgs(
       D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
       Unrecoverable, options::OPT_fsanitize_recover_EQ,
-      options::OPT_fno_sanitize_recover_EQ, nullptr);
+      options::OPT_fno_sanitize_recover_EQ);
   RecoverableKinds |= AlwaysRecoverable;
   RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
@@ -741,7 +726,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask MergeKinds =
       parseSanitizeArgs(D, Args, DiagnoseErrors, MergeDefault, {}, {},
                         options::OPT_fsanitize_merge_handlers_EQ,
-                        options::OPT_fno_sanitize_merge_handlers_EQ, nullptr);
+                        options::OPT_fno_sanitize_merge_handlers_EQ);
   MergeKinds &= Kinds;
 
   // Parse -fno-sanitize-top-hot flags
