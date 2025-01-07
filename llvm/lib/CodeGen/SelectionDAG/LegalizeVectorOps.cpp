@@ -1780,9 +1780,12 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
   // If STRICT_/FMUL is not supported by the target (in case of f16) replace the
   // UINT_TO_FP with a larger float and round to the smaller type
   if ((!IsStrict &&
-       TLI.getOperationAction(ISD::FMUL, DstVT) == TargetLowering::Expand) ||
-      (IsStrict && TLI.getOperationAction(ISD::STRICT_FMUL, DstVT) ==
-                       TargetLowering::Expand)) {
+       (TLI.getOperationAction(ISD::FMUL, DstVT) == TargetLowering::Expand ||
+        TLI.getOperationAction(ISD::FMUL, DstVT) == TargetLowering::Promote)) ||
+      (IsStrict && (TLI.getOperationAction(ISD::STRICT_FMUL, DstVT) ==
+                        TargetLowering::Expand ||
+                    TLI.getOperationAction(ISD::STRICT_FMUL, DstVT) ==
+                        TargetLowering::Promote))) {
     EVT FPVT = BW == 32 ? MVT::f32 : MVT::f64;
     SDValue UIToFP;
     SDValue Result;

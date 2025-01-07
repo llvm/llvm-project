@@ -10,15 +10,9 @@ define <8 x half> @test_UINT_TO_FP_no_inf8(<8 x i32> %a) {
 ; AVX-NEXT:    vpsrld $16, %xmm2, %xmm2
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
-; AVX-NEXT:    vcvtph2ps %xmm1, %ymm1
 ; AVX-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
-; AVX-NEXT:    vcvtph2ps %xmm1, %ymm1
 ; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -65,39 +59,27 @@ entry:
 define <16 x half> @test_UINT_TO_FP_no_inf16(<16 x i32> %a) {
 ; AVX-LABEL: test_UINT_TO_FP_no_inf16:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [65535,65535,65535,65535,65535,65535,65535,65535]
-; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm3
-; AVX-NEXT:    vcvtdq2ps %ymm3, %ymm3
-; AVX-NEXT:    vcvtps2ph $4, %ymm3, %xmm3
-; AVX-NEXT:    vcvtph2ps %xmm3, %ymm3
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm4
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
-; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX-NEXT:    vbroadcastss {{.*#+}} ymm4 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
-; AVX-NEXT:    vmulps %ymm4, %ymm0, %ymm0
-; AVX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX-NEXT:    vaddps %ymm3, %ymm0, %ymm0
-; AVX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; AVX-NEXT:    vandps %ymm2, %ymm1, %ymm2
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm2
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX-NEXT:    vpsrld $16, %xmm3, %xmm3
+; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; AVX-NEXT:    vcvtps2ph $4, %ymm2, %xmm2
-; AVX-NEXT:    vcvtph2ps %xmm2, %ymm2
-; AVX-NEXT:    vpsrld $16, %xmm1, %xmm3
-; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; AVX-NEXT:    vbroadcastss {{.*#+}} ymm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
+; AVX-NEXT:    vmulps %ymm3, %ymm2, %ymm2
+; AVX-NEXT:    vbroadcastss {{.*#+}} ymm4 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX-NEXT:    vandps %ymm4, %ymm0, %ymm0
+; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; AVX-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX-NEXT:    vpsrld $16, %xmm5, %xmm5
+; AVX-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
+; AVX-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; AVX-NEXT:    vmulps %ymm3, %ymm2, %ymm2
+; AVX-NEXT:    vandps %ymm4, %ymm1, %ymm1
 ; AVX-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
-; AVX-NEXT:    vcvtph2ps %xmm1, %ymm1
-; AVX-NEXT:    vmulps %ymm4, %ymm1, %ymm1
-; AVX-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
-; AVX-NEXT:    vcvtph2ps %xmm1, %ymm1
-; AVX-NEXT:    vaddps %ymm2, %ymm1, %ymm1
+; AVX-NEXT:    vaddps %ymm1, %ymm2, %ymm1
 ; AVX-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
