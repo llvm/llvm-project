@@ -206,13 +206,11 @@ public:
   static char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
-  std::unique_ptr<RegAllocEvictionAdvisorProvider> &getProvider() {
-    return Provider;
-  }
+  RegAllocEvictionAdvisorProvider &getProvider() { return *Provider; }
 
   AdvisorMode getAdvisorMode() const { return Mode; }
   virtual void logRewardIfNeeded(const MachineFunction &MF,
-                                 llvm::function_ref<float()> GetReward) {};
+                                 function_ref<float()> GetReward) {};
 
 protected:
   // This analysis preserves everything, and subclasses may have additional

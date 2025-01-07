@@ -2768,7 +2768,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   auto &EvictAdvisorProvider =
       getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider();
-  EvictAdvisor = EvictAdvisorProvider->getAdvisor(*MF, *this, MBFI, Loops);
+  EvictAdvisor = EvictAdvisorProvider.getAdvisor(*MF, *this, MBFI, Loops);
 
   PriorityAdvisor =
       getAnalysis<RegAllocPriorityAdvisorAnalysis>().getAdvisor(*MF, *this);
