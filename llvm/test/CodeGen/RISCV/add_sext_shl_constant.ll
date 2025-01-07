@@ -320,7 +320,7 @@ define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
   ret i64 %add
 }
 
-define i64 @add_shl_sext(ptr %0, i32 %1) {
+define i64 @add_shl_sext(i32 %1) {
 ; RV64-LABEL: add_shl_sext:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a0, a1, 3
