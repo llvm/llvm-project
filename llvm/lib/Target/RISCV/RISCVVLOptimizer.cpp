@@ -139,28 +139,6 @@ static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
 
 namespace llvm {
 namespace RISCVVType {
-/// Return the RISCVII::VLMUL that is two times VLMul.
-/// Precondition: VLMul is not LMUL_RESERVED or LMUL_8.
-static RISCVII::VLMUL twoTimesVLMUL(RISCVII::VLMUL VLMul) {
-  switch (VLMul) {
-  case RISCVII::VLMUL::LMUL_F8:
-    return RISCVII::VLMUL::LMUL_F4;
-  case RISCVII::VLMUL::LMUL_F4:
-    return RISCVII::VLMUL::LMUL_F2;
-  case RISCVII::VLMUL::LMUL_F2:
-    return RISCVII::VLMUL::LMUL_1;
-  case RISCVII::VLMUL::LMUL_1:
-    return RISCVII::VLMUL::LMUL_2;
-  case RISCVII::VLMUL::LMUL_2:
-    return RISCVII::VLMUL::LMUL_4;
-  case RISCVII::VLMUL::LMUL_4:
-    return RISCVII::VLMUL::LMUL_8;
-  case RISCVII::VLMUL::LMUL_8:
-  default:
-    llvm_unreachable("Could not multiply VLMul by 2");
-  }
-}
-
 /// Return EMUL = (EEW / SEW) * LMUL where EEW comes from Log2EEW and LMUL and
 /// SEW are from the TSFlags of MI.
 static std::pair<unsigned, bool>
@@ -577,9 +555,8 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VFWCVT_F_X_V:
   case RISCV::VFWCVT_F_F_V: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL =
-        IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
-    return OperandInfo(EMUL, Log2EEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI),
+                       Log2EEW);
   }
 
   // Def and Op1 uses EEW=2*SEW and EMUL=2*LMUL. Op2 uses EEW=SEW and EMUL=LMUL
@@ -599,9 +576,8 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL =
-        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
-    return OperandInfo(EMUL, Log2EEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI),
+                       Log2EEW);
   }
 
   // Vector Integer Extension
@@ -644,9 +620,8 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    RISCVII::VLMUL EMUL =
-        TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
-    return OperandInfo(EMUL, Log2EEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI),
+                       Log2EEW);
   }
 
   // Vector Mask Instructions
