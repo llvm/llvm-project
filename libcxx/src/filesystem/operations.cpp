@@ -238,8 +238,14 @@ bool copy_file_impl_copy_file_range(FileDescriptor& read_fd, FileDescriptor& wri
     return false;
   }
   // do not modify the fd positions as copy_file_impl_sendfile may be called after a partial copy
+#  if defined(__linux__)
+  loff_t off_in  = 0;
+  loff_t off_out = 0;
+#  else
   off_t off_in  = 0;
   off_t off_out = 0;
+#  endif
+
   do {
     ssize_t res;
 
