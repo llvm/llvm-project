@@ -4453,11 +4453,8 @@ define i32 @src_no_trans_select_or_eq0_or_and(i32 %x, i32 %y) {
 
 define i32 @src_no_trans_select_or_eq0_or_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_no_trans_select_or_eq0_or_xor(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR0:%.*]] = icmp eq i32 [[OR]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[OR0]], i32 0, i32 [[XOR]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %or = or i32 %x, %y
   %or0 = icmp eq i32 %or, 0
@@ -4492,11 +4489,8 @@ define i32 @src_no_trans_select_or_eq0_xor_or(i32 %x, i32 %y) {
 
 define i32 @src_no_trans_select_and_ne0_xor_or(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_no_trans_select_and_ne0_xor_or(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR0_NOT:%.*]] = icmp eq i32 [[OR]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[OR0_NOT]], i32 0, i32 [[XOR]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %or = or i32 %x, %y
   %or0 = icmp ne i32 %or, 0
