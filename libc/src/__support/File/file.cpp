@@ -121,7 +121,8 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
     pos = remainder.size();
   } else {
 
-    FileIOResult result = platform_write(this, remainder.data(), remainder.size());
+    FileIOResult result =
+        platform_write(this, remainder.data(), remainder.size());
     size_t bytes_written = buf_result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
