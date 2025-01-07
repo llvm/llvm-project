@@ -1411,7 +1411,7 @@ All 3 attributes' first parameter of type string is the type of the allocation:
 <unix-MismatchedDeallocator>` bugs. The allocation type can be any string, e.g.
 a function annotated with
 returning a piece of memory of type ``lasagna`` but freed with a function
-annoteted to release ``cheese`` typed memory will result in mismatched
+annotated to release ``cheese`` typed memory will result in mismatched
 deallocation warning.
 
 The (currently) only allocation type having special meaning is ``malloc`` --
@@ -1461,7 +1461,7 @@ some extent.
 
 Further reading for other annotations:
 `Source Annotations in the Clang Static Analyzer <https://clang-analyzer.llvm.org/annotations.html>`_.
-}];
+  }];
 }
 
 def ObjCMethodFamilyDocs : Documentation {
