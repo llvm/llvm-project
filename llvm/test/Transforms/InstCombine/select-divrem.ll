@@ -324,11 +324,9 @@ define i8 @rem_euclid_non_const_pow2(i8 %0, i8 %1) {
 
 define i8 @rem_euclid_non_const_pow2_commuted(i8 %0, i8 %1) {
 ; CHECK-LABEL: @rem_euclid_non_const_pow2_commuted(
-; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[TMP0:%.*]]
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[TMP1:%.*]], [[POW2]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[REM]], 0
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[COND]], i8 [[POW2]], i8 0
-; CHECK-NEXT:    [[SEL:%.*]] = add i8 [[REM]], [[ADD]]
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NOTMASK]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[TMP1:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %pow2 = shl i8 1, %0
