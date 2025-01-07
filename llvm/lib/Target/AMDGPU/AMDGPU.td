@@ -2035,7 +2035,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport
 ]>;
 
-def FeatureISAVersion12_10 : FeatureSet<
+def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize327680,
@@ -2091,8 +2091,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureGloballyAddressableScratch,
 ]>;
 
-def FeatureISAVersion12_11 : FeatureSet<
-  !listconcat(FeatureISAVersion12_10.Features,
+def FeatureISAVersion12_51 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
   [FullRate64Ops,
    FeatureDPALU_DPP,
    FeatureGFX1251GEMMInsts])>;
@@ -2101,8 +2101,8 @@ def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
     [FeatureRequiresCOV6])>;
 
-def FeatureISAVersion12_1_Generic: FeatureSet<
-  !listconcat(FeatureISAVersion12_10.Features,
+def FeatureISAVersion12_5_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2481,7 +2481,7 @@ def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
-def isGFX12PlusNot1250 :
+def isGFX12PlusNot12_50 :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
   AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 

@@ -1308,7 +1308,7 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 } // End SubtargetPredicate = isGFX12Plus
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1250 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
   let Mnemonic = "global_load_tr_b128" in
   defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
   let Mnemonic = "global_load_tr_b64" in
@@ -2138,7 +2138,7 @@ let OtherPredicates = [isGFX12Plus] in {
   }
 }
 
-let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot1250] in {
+let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
   foreach vt = [v4i16, v4f16, v4bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
