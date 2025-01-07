@@ -1436,9 +1436,10 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
   return Values;
 }
 
-static SanitizerMaskCutoffs parseSanitizerWeightedKinds(
-    StringRef FlagName, const std::vector<std::string> &Sanitizers,
-    DiagnosticsEngine &Diags) {
+static SanitizerMaskCutoffs
+parseSanitizerWeightedKinds(StringRef FlagName,
+                            const std::vector<std::string> &Sanitizers,
+                            DiagnosticsEngine &Diags) {
   SanitizerMaskCutoffs Cutoffs = {0};
   for (const auto &Sanitizer : Sanitizers) {
     if (!parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs))
@@ -2294,9 +2295,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                       Diags, Opts.SanitizeMergeHandlers);
 
   // Parse -fno-sanitize-top-hot= arguments.
-  Opts.NoSanitizeTopHotCutoffs = parseSanitizerWeightedKinds("-fno-sanitize-top-hot=",
-                              Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ),
-                              Diags);
+  Opts.NoSanitizeTopHotCutoffs = parseSanitizerWeightedKinds(
+      "-fno-sanitize-top-hot=",
+      Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ), Diags);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
