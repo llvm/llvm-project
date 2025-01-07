@@ -259,7 +259,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
   }
 
-  if (CalleeAttrs.isNewZA())
+  if (CalleeAttrs.isNewZA() || CalleeAttrs.isNewZT0())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
@@ -5290,11 +5290,17 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
   }
 
-  // Sink vscales closer to uses for better isel
+  auto ShouldSinkCondition = [](Value *Cond) -> bool {
+    auto *II = dyn_cast<IntrinsicInst>(Cond);
+    return II && II->getIntrinsicID() == Intrinsic::vector_reduce_or &&
+           isa<ScalableVectorType>(II->getOperand(0)->getType());
+  };
+
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:
+    // Sink vscales closer to uses for better isel
     for (unsigned Op = 0; Op < I->getNumOperands(); ++Op) {
       if (shouldSinkVScale(I->getOperand(Op), Ops)) {
         Ops.push_back(&I->getOperandUse(Op));
@@ -5302,6 +5308,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
       }
     }
     break;
+  case Instruction::Select: {
+    if (!ShouldSinkCondition(I->getOperand(0)))
+      return false;
+
+    Ops.push_back(&I->getOperandUse(0));
+    return true;
+  }
+  case Instruction::Br: {
+    if (cast<BranchInst>(I)->isUnconditional())
+      return false;
+
+    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition()))
+      return false;
+
+    Ops.push_back(&I->getOperandUse(0));
+    return true;
+  }
   default:
     break;
   }
