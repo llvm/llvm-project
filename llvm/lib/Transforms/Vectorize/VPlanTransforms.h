@@ -139,8 +139,7 @@ struct VPlanTransforms {
   static void convertToConcreteRecipes(VPlan &Plan);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
-  /// with the
-  /// the interleave groups replaced by wide loads and stores processing VF
+  /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements. This effectively is a very simple form of loop-aware SLP, where
   /// we use interleave groups to identify candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF);
