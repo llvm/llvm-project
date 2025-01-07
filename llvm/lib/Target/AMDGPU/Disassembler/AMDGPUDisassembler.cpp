@@ -279,7 +279,9 @@ DECODE_OPERAND_REG_7(SReg_64_XEXEC, OPW64)
 DECODE_OPERAND_REG_7(SReg_64_XEXEC_XNULL, OPW64)
 DECODE_OPERAND_REG_7(SReg_96, OPW96)
 DECODE_OPERAND_REG_7(SReg_128, OPW128)
+DECODE_OPERAND_REG_7(SReg_128_XNULL, OPW128)
 DECODE_OPERAND_REG_7(SReg_256, OPW256)
+DECODE_OPERAND_REG_7(SReg_256_XNULL, OPW256)
 DECODE_OPERAND_REG_7(SReg_512, OPW512)
 
 DECODE_OPERAND_REG_8(AGPR_32)
@@ -1692,6 +1694,11 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
   case OPW64:
   case OPWV232:
     return decodeSpecialReg64(Val);
+  case OPW96:
+  case OPW128:
+  case OPW256:
+  case OPW512:
+    return decodeSpecialReg96Plus(Val);
   default:
     llvm_unreachable("unexpected immediate type");
   }
@@ -1774,6 +1781,24 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 252: return createRegOperand(SRC_EXECZ);
   case 253: return createRegOperand(SRC_SCC);
   default: break;
+  }
+  return errOperand(Val, "unknown operand encoding " + Twine(Val));
+}
+
+MCOperand AMDGPUDisassembler::decodeSpecialReg96Plus(unsigned Val) const {
+  using namespace AMDGPU;
+
+  switch (Val) {
+  case 124:
+    if (isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
+  case 125:
+    if (!isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
+  default:
+    break;
   }
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
 }

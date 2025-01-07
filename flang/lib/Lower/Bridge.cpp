@@ -34,6 +34,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
@@ -3952,6 +3953,7 @@ private:
       } else {
         fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
         fir::factory::disassociateMutableBox(*builder, loc, box);
+        cuf::genPointerSync(box.getAddr(), *builder);
       }
     }
   }
