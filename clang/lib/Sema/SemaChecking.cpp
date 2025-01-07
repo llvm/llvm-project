@@ -6124,8 +6124,8 @@ tryAgain:
               continue;
             if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx)
               return checkFormatStringExpr(
-                  S, nullptr, PVFormatMatches->getFormatString(), Args, APK,
-                  format_idx, firstDataArg, Type, CallType,
+                  S, ReferenceFormatString, PVFormatMatches->getFormatString(),
+                  Args, APK, format_idx, firstDataArg, Type, CallType,
                   /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg,
                   Offset, IgnoreStringsWithoutSpecifiers);
           }

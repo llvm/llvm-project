@@ -105,3 +105,19 @@ void test_freebsd_specifiers(void) {
     cvt_freebsd_D("%b");
     cvt_freebsd_D("%s %i"); // expected-warning{{format argument is a value, but it should be an auxiliary value}}
 }
+
+__attribute__((format_matches(printf, 1, "%s"))) // expected-note{{comparing with this specifier}}
+__attribute__((format_matches(os_log, 2, "%i"))) // expected-note{{comparing with this specifier}}
+void test_recv_multiple_format_strings(const char *fmt1, const char *fmt2);
+
+__attribute__((format_matches(printf, 1, "%s")))
+__attribute__((format_matches(os_log, 2, "%i")))
+void test_multiple_format_strings(const char *fmt1, const char *fmt2) {
+    test_recv_multiple_format_strings("%s", "%i");
+    test_recv_multiple_format_strings("%s", "%s"); // expected-warning{{format specifier 's' is incompatible with 'i'}}
+    test_recv_multiple_format_strings("%i", "%i"); // expected-warning{{format specifier 'i' is incompatible with 's'}}
+
+    test_recv_multiple_format_strings(fmt1, fmt2);
+    test_recv_multiple_format_strings("%.5s", fmt2);
+    test_recv_multiple_format_strings(fmt1, "%04d");
+}
