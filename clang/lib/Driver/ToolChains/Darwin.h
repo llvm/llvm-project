@@ -291,52 +291,8 @@ public:
   /// }
 };
 
-/// Apple specific MachO extensions
-class LLVM_LIBRARY_VISIBILITY AppleMachO : public MachO {
-public:
-  AppleMachO(const Driver &D, const llvm::Triple &Triple,
-             const llvm::opt::ArgList &Args);
-  ~AppleMachO() override;
-
-  /// }
-  /// @name Apple Specific ToolChain Implementation
-  /// {
-  void
-  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                            llvm::opt::ArgStringList &CC1Args) const override;
-
-  void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                          llvm::opt::ArgStringList &CC1Args) const override;
-  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CC1Args) const override;
-  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                          llvm::opt::ArgStringList &CC1Args) const override;
-
-  void AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
-  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs) const override;
-
-  void printVerboseInfo(raw_ostream &OS) const override;
-  /// }
-
-  LazyDetector<CudaInstallationDetector> CudaInstallation;
-  LazyDetector<RocmInstallationDetector> RocmInstallation;
-  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
-
-protected:
-  llvm::SmallString<128>
-  GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const;
-
-private:
-  virtual void
-  AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                              llvm::opt::ArgStringList &CC1Args) const;
-};
-
 /// Darwin - The base Darwin tool chain.
-class LLVM_LIBRARY_VISIBILITY Darwin : public AppleMachO {
+class LLVM_LIBRARY_VISIBILITY Darwin : public MachO {
 public:
   /// Whether the information on the target has been initialized.
   //
@@ -374,6 +330,10 @@ public:
   /// The target variant triple that was specified (if any).
   mutable std::optional<llvm::Triple> TargetVariantTriple;
 
+  LazyDetector<CudaInstallationDetector> CudaInstallation;
+  LazyDetector<RocmInstallationDetector> RocmInstallation;
+  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
+
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
 
@@ -385,7 +345,7 @@ public:
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
                                           types::ID InputType) const override;
 
-  /// @name Darwin Specific Toolchain Implementation
+  /// @name Apple Specific Toolchain Implementation
   /// {
 
   void addMinVersionArgs(const llvm::opt::ArgList &Args,
@@ -601,6 +561,13 @@ public:
   ObjCRuntime getDefaultObjCRuntime(bool isNonFragile) const override;
   bool hasBlocksRuntime() const override;
 
+  void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
+
   bool UseObjCMixedDispatch() const override {
     // This is only used with the non-fragile ABI and non-legacy dispatch.
 
@@ -631,6 +598,8 @@ public:
   bool SupportsEmbeddedBitcode() const override;
 
   SanitizerMask getSupportedSanitizers() const override;
+
+  void printVerboseInfo(raw_ostream &OS) const override;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.
@@ -647,6 +616,16 @@ public:
   void AddLinkRuntimeLibArgs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs,
                              bool ForceLinkBuiltinRT = false) const override;
+
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                 llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const override;
 
   void AddCCKextLibArgs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
@@ -672,16 +651,15 @@ private:
                                StringRef Sanitizer,
                                bool shared = true) const;
 
-  void
-  AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                              llvm::opt::ArgStringList &CC1Args) const override;
-
   bool AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args,
                                    llvm::SmallString<128> Base,
                                    llvm::StringRef Version,
                                    llvm::StringRef ArchDir,
                                    llvm::StringRef BitDir) const;
+
+  llvm::SmallString<128>
+  GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const;
 };
 
 } // end namespace toolchains
