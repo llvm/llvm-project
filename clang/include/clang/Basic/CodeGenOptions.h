@@ -387,10 +387,10 @@ public:
   /// Set of thresholds: the top hottest code responsible for the given
   /// fraction of PGO counters will be excluded from sanitization
   /// (0.0 [default] = skip none, 1.0 = skip all).
-  SanitizerSet NoSanitizeTopHot;
+  SanitizerMaskCutoffs NoSanitizeTopHotCutoffs = {0};
   /// N.B. The cutoffs contain strictly more information than the SanitizerSet,
   /// but the SanitizerSet is more efficient for some calculations.
-  SanitizerMaskCutoffs NoSanitizeTopHotCutoffs = {0};
+  SanitizerSet NoSanitizeTopHot;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
