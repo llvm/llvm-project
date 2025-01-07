@@ -1028,18 +1028,18 @@ lltok::Kind LLLexer::LexIdentifier() {
       TokStart[1] == '0' && TokStart[2] == 'x' &&
       isxdigit(static_cast<unsigned char>(TokStart[3]))) {
     bool IsFloatConst = TokStart[0] == 'f';
-    int len = CurPtr - TokStart - 3;
-    uint32_t bits = len * 4;
-    StringRef HexStr(TokStart + 3, len);
+    size_t Len = CurPtr - TokStart - 3;
+    uint32_t Bits = Len * 4;
+    StringRef HexStr(TokStart + 3, Len);
     if (!all_of(HexStr, isxdigit)) {
       // Bad token, return it as an error.
-      CurPtr = TokStart+3;
+      CurPtr = TokStart + 3;
       return lltok::Error;
     }
-    APInt Tmp(bits, HexStr, 16);
-    uint32_t activeBits = Tmp.getActiveBits();
-    if (!IsFloatConst && activeBits > 0 && activeBits < bits)
-      Tmp = Tmp.trunc(activeBits);
+    APInt Tmp(Bits, HexStr, 16);
+    uint32_t ActiveBits = Tmp.getActiveBits();
+    if (!IsFloatConst && ActiveBits > 0 && ActiveBits < Bits)
+      Tmp = Tmp.trunc(ActiveBits);
     APSIntVal = APSInt(Tmp, TokStart[0] != 's');
     return IsFloatConst ? lltok::FloatHexLiteral : lltok::APSInt;
   }

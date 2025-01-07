@@ -3916,7 +3916,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   case lltok::FloatHexLiteral: {
     assert(ExpectedTy && "Need type to parse float values");
-    auto &Semantics = ExpectedTy->getFltSemantics();
+    const auto &Semantics = ExpectedTy->getFltSemantics();
     const APInt &Bits = Lex.getAPSIntVal();
     if (APFloat::getSizeInBits(Semantics) != Bits.getBitWidth())
       return error(ID.Loc, "float hex literal has incorrect number of bits");
