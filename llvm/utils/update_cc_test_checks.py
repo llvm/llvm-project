@@ -125,7 +125,7 @@ def get_line2func_list(args, clang_args, global_underscores):
         # Strip leading underscore from globals, so the name matches the LLVM one
         if global_underscores:
             storage = node.get("storageClass", None)
-            if storage != "static" and mangled[0] == '_':
+            if storage != "static" and mangled[0] == "_":
                 mangled = mangled[1:]
         ret[int(line) - 1].append((spell, mangled, search))
 
@@ -254,7 +254,9 @@ def config():
     return args, parser
 
 
-def get_function_body(builder, args, filename, clang_args, extra_commands, prefixes, raw_tool_output):
+def get_function_body(
+    builder, args, filename, clang_args, extra_commands, prefixes, raw_tool_output
+):
     # TODO Clean up duplication of asm/common build_function_body_dictionary
     for extra_command in extra_commands:
         extra_args = shlex.split(extra_command)
@@ -389,12 +391,20 @@ def main():
             # Invoke external tool and extract function bodies.
             raw_tool_output = common.invoke_tool(ti.args.clang, clang_args, ti.path)
             get_function_body(
-                builder, ti.args, ti.path, clang_args, extra_commands, prefixes, raw_tool_output
+                builder,
+                ti.args,
+                ti.path,
+                clang_args,
+                extra_commands,
+                prefixes,
+                raw_tool_output
             )
 
             # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
             # mangled names. Forward all clang args for now.
-            for k, v in get_line2func_list(ti.args, clang_args, common.get_global_underscores(raw_tool_output)).items():
+            for k, v in get_line2func_list(
+                ti.args, clang_args, common.get_global_underscores(raw_tool_output)
+            ).items():
                 line2func_list[k].extend(v)
 
         func_dict = builder.finish_and_get_func_dict()
