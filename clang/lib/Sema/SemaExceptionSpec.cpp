@@ -1210,17 +1210,11 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
       // function (see below) is not a destroying operator delete, the delete-
       // expression will invoke the destructor (if any) for the object or the
       // elements of the array being deleted.
-      //
-      // So if the destructor is virtual, we only look at the exception
-      // specification of the destructor regardless of what operator delete is
-      // selected. Otherwise, we look at the selected operator delete, and if
-      // it is not a destroying delete, then we look at the destructor.
       const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
       if (const auto *RD = DTy->getAsCXXRecordDecl()) {
-        if (const CXXDestructorDecl *DD = RD->getDestructor()) {
-          if (DD->isVirtual() || !OperatorDelete->isDestroyingOperatorDelete())
-            CT = canCalleeThrow(*this, DE, DD);
-        }
+        if (const CXXDestructorDecl *DD = RD->getDestructor();
+            DD && DD->isDestructorCalled(OperatorDelete))
+          CT = canCalleeThrow(*this, DE, DD);
       }
 
       // We always look at the exception specification of the operator delete.
