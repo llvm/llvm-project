@@ -3841,12 +3841,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_assume_dereferenceable: {
     const Expr *Ptr = E->getArg(0);
+    const Expr *Size= E->getArg(1);
     Value *PtrValue = EmitScalarExpr(Ptr);
-    Value *SizeValue = EmitScalarExpr(E->getArg(1));
+    Value *SizeValue = EmitScalarExpr(Size);
     if (SizeValue->getType() != IntPtrTy)
       SizeValue =
           Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
     Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
+    Builder.CreateNonNullAssumption(PtrValue);
     return RValue::get(nullptr);
   }
   case Builtin::BI__assume:
