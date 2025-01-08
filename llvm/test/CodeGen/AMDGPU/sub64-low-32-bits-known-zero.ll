@@ -170,8 +170,7 @@ define i64 @v_sub_i64_variable_high_bits_known0_0(i64 %reg, i32 %offset.hi32) {
 ; GFX9-LABEL: v_sub_i64_variable_high_bits_known0_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_subrev_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc
+; GFX9-NEXT:    v_sub_u32_e32 v1, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %zext.offset.hi32 = zext i32 %offset.hi32 to i64
   %in.high.bits = shl i64 %zext.offset.hi32, 32
@@ -183,8 +182,7 @@ define i64 @v_sub_i64_variable_high_bits_known0_0(i64 %reg, i32 %offset.hi32) {
 define amdgpu_ps i64 @s_sub_i64_variable_high_bits_known0_0(i64 inreg %reg, i32 inreg %offset.hi32) {
 ; GFX9-LABEL: s_sub_i64_variable_high_bits_known0_0:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_sub_u32 s0, s0, 0
-; GFX9-NEXT:    s_subb_u32 s1, s1, s2
+; GFX9-NEXT:    s_sub_i32 s1, s1, s2
 ; GFX9-NEXT:    ; return to shader part epilog
   %zext.offset.hi32 = zext i32 %offset.hi32 to i64
   %in.high.bits = shl i64 %zext.offset.hi32, 32

@@ -13988,16 +13988,11 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
 SDValue
 SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
   SDValue RHS = N->getOperand(1);
-  auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
-  if (!CRHS)
-    return SDValue();
+  KnownBits KB = DAG.computeKnownBits(RHS);
 
-  // TODO: Worth using computeKnownBits? Maybe expensive since it's so
-  // common.
-  uint64_t Val = CRHS->getZExtValue();
-  if (countr_zero(Val) >= 32) {
-    SelectionDAG &DAG = DCI.DAG;
+  if (KB.countMinTrailingZeros() >= 32) {
     SDLoc SL(N);
     SDValue LHS = N->getOperand(0);
 
@@ -14011,7 +14006,7 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
     // to interfere with addressing mode patterns.
 
     SDValue Hi = getHiHalf64(LHS, DAG);
-    SDValue ConstHi32 = DAG.getConstant(Hi_32(Val), SL, MVT::i32);
+    SDValue ConstHi32 = getHiHalf64(RHS, DAG);
     SDValue AddHi =
         DAG.getNode(N->getOpcode(), SL, MVT::i32, Hi, ConstHi32, N->getFlags());
 
