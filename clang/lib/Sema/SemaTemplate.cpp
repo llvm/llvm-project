@@ -4557,6 +4557,9 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
                              const TemplateArgumentListInfo *TemplateArgs) {
   assert(NamedConcept && "A concept template id without a template?");
 
+  if (NamedConcept->isInvalidDecl())
+    return ExprError();
+
   llvm::SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
   if (CheckTemplateArgumentList(
           NamedConcept, ConceptNameInfo.getLoc(),

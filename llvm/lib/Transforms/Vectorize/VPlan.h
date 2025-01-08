@@ -1351,6 +1351,9 @@ public:
     }
   }
 
+  /// Returns true if the underlying opcode may read from or write to memory.
+  bool opcodeMayReadOrWriteFromMemory() const;
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
@@ -1585,14 +1588,16 @@ class VPScalarCastRecipe : public VPSingleDefRecipe {
   Value *generate(VPTransformState &State);
 
 public:
-  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}), Opcode(Opcode),
+  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                     DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}, DL), Opcode(Opcode),
         ResultTy(ResultTy) {}
 
   ~VPScalarCastRecipe() override = default;
 
   VPScalarCastRecipe *clone() override {
-    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy);
+    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy,
+                                  getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
@@ -3858,9 +3863,13 @@ public:
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
-  /// Returns the preheader of the vector loop region.
+  /// Returns the preheader of the vector loop region, if one exists, or null
+  /// otherwise.
   VPBasicBlock *getVectorPreheader() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+    VPRegionBlock *VectorRegion = getVectorLoopRegion();
+    return VectorRegion
+               ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
+               : nullptr;
   }
 
   /// Returns the VPRegionBlock of the vector loop.

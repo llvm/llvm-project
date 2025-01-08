@@ -64,6 +64,7 @@ add_unittest(ClangdUnitTests ClangdTests
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
   HeaderSourceSwitchTests.cpp
+  HeuristicResolverTests.cpp
   HoverTests.cpp
   IncludeCleanerTests.cpp
   IndexActionTests.cpp
