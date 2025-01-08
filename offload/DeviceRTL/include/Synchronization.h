@@ -98,20 +98,20 @@ template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, float>, V>
 max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   if (Val >= 0)
-    return max((int32_t *)Address, utils::convertViaPun<int32_t>(Val),
-               Ordering);
-  return min((uint32_t *)Address, utils::convertViaPun<uint32_t>(Val),
-             Ordering);
+    return utils::convertViaPun<float>(
+        max((int32_t *)Address, utils::convertViaPun<int32_t>(Val), Ordering));
+  return utils::convertViaPun<float>(
+      min((uint32_t *)Address, utils::convertViaPun<uint32_t>(Val), Ordering));
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, double>, V>
 max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   if (Val >= 0)
-    return max((int64_t *)Address, utils::convertViaPun<int64_t>(Val),
-               Ordering);
-  return min((uint64_t *)Address, utils::convertViaPun<uint64_t>(Val),
-             Ordering);
+    return utils::convertViaPun<double>(
+        max((int64_t *)Address, utils::convertViaPun<int64_t>(Val), Ordering));
+  return utils::convertViaPun<double>(
+      min((uint64_t *)Address, utils::convertViaPun<uint64_t>(Val), Ordering));
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
@@ -126,10 +126,10 @@ template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, float>, V>
 min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   if (Val >= 0)
-    return min((int32_t *)Address, utils::convertViaPun<int32_t>(Val),
-               Ordering);
-  return max((uint32_t *)Address, utils::convertViaPun<uint32_t>(Val),
-             Ordering);
+    return utils::convertViaPun<float>(
+        min((int32_t *)Address, utils::convertViaPun<int32_t>(Val), Ordering));
+  return utils::convertViaPun<float>(
+      max((uint32_t *)Address, utils::convertViaPun<uint32_t>(Val), Ordering));
 }
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
@@ -138,10 +138,10 @@ utils::enable_if_t<utils::is_same_v<V, double>, V>
 min(Ty *Address, utils::remove_addrspace_t<Ty> Val,
     atomic::OrderingTy Ordering) {
   if (Val >= 0)
-    return min((int64_t *)Address, utils::convertViaPun<int64_t>(Val),
-               Ordering);
-  return max((uint64_t *)Address, utils::convertViaPun<uint64_t>(Val),
-             Ordering);
+    return utils::convertViaPun<double>(
+        min((int64_t *)Address, utils::convertViaPun<int64_t>(Val), Ordering));
+  return utils::convertViaPun<double>(
+      max((uint64_t *)Address, utils::convertViaPun<uint64_t>(Val), Ordering));
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
