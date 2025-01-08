@@ -191,7 +191,7 @@ define i32 @rotl_i32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sub = sub i32 32, %y
@@ -208,7 +208,7 @@ define i37 @rotr_i37(i37 %x, i37 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i37 37, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i37 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i37 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i37 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i37 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i37 [[R]]
 ;
   %sub = sub i37 37, %y
@@ -225,7 +225,7 @@ define i8 @rotr_i8_commute(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 8, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub i8 8, %y
@@ -242,7 +242,7 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> splat (i32 32), [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <4 x i32> [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sub = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %y
@@ -259,7 +259,7 @@ define <3 x i42> @rotr_v3i42(<3 x i42> %x, <3 x i42> %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i42> splat (i42 42), [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i42> [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or <3 x i42> [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <3 x i42> [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret <3 x i42> [[R]]
 ;
   %sub = sub <3 x i42> <i42 42, i42 42, i42 42>, %y
@@ -838,7 +838,7 @@ define i24 @rotl_select_weird_type(i24 %x, i24 %shamt) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i24 24, [[SHAMT]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i24 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i24 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[OR:%.*]] = or i24 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i24 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i24 [[X]], i24 [[OR]]
 ; CHECK-NEXT:    ret i24 [[R]]
 ;
@@ -987,7 +987,7 @@ define i32 @rotl_i32_add(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sub = sub i32 32, %y
@@ -1002,7 +1002,7 @@ define i32 @rotr_i32_add(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[X]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sub = sub i32 32, %y
