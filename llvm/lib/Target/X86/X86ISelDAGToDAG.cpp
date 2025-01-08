@@ -226,6 +226,8 @@ namespace {
     bool selectLEAAddr(SDValue N, SDValue &Base,
                        SDValue &Scale, SDValue &Index, SDValue &Disp,
                        SDValue &Segment);
+    bool selectLEA64_16Addr(SDValue N, SDValue &Base, SDValue &Scale,
+                            SDValue &Index, SDValue &Disp, SDValue &Segment);
     bool selectLEA64_32Addr(SDValue N, SDValue &Base,
                             SDValue &Scale, SDValue &Index, SDValue &Disp,
                             SDValue &Segment);
@@ -3052,6 +3054,41 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
     return CR->getUnsignedMax().ult(1ull << 32);
 
   return !TM.isLargeGlobalValue(GV);
+}
+
+bool X86DAGToDAGISel::selectLEA64_16Addr(SDValue N, SDValue &Base,
+                                         SDValue &Scale, SDValue &Index,
+                                         SDValue &Disp, SDValue &Segment) {
+  // Save the debug loc before calling selectLEAAddr, in case it invalidates N.
+  SDLoc DL(N);
+
+  if (!selectLEAAddr(N, Base, Scale, Index, Disp, Segment))
+    return false;
+
+  auto *RN = dyn_cast<RegisterSDNode>(Base);
+  if (RN && RN->getReg() == 0)
+    Base = CurDAG->getRegister(0, MVT::i64);
+  else if (Base.getValueType() == MVT::i16 && !isa<FrameIndexSDNode>(Base)) {
+    // Base could already be %rip, particularly in the x32 ABI.
+    SDValue ImplDef =
+        SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL, MVT::i64), 0);
+    Base = CurDAG->getTargetInsertSubreg(X86::sub_16bit, DL, MVT::i64, ImplDef,
+                                         Base);
+  }
+
+  RN = dyn_cast<RegisterSDNode>(Index);
+  if (RN && RN->getReg() == 0)
+    Index = CurDAG->getRegister(0, MVT::i64);
+  else {
+    assert(Index.getValueType() == MVT::i16 &&
+           "Expect to be extending 16-bit registers for use in LEA");
+    SDValue ImplDef =
+        SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL, MVT::i64), 0);
+    Index = CurDAG->getTargetInsertSubreg(X86::sub_16bit, DL, MVT::i64, ImplDef,
+                                          Index);
+  }
+
+  return true;
 }
 
 bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,

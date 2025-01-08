@@ -25,6 +25,12 @@ let SchedRW = [WriteLEA] in {
                      [(set GR32:$dst, lea32addr:$src)]>,
                      OpSize32, Requires<[Not64BitMode]>;
 
+  def LEA64_16r : I<0x8D, MRMSrcMem, (outs GR16:$dst), (ins lea64_16mem:$src),
+                    "lea{w}\t{$src|$dst}, {$dst|$src}",
+                    [(set GR16:$dst, lea64_16addr:$src)]>,
+                  OpSize16,
+                  Requires<[In64BitMode]>;
+
   def LEA64_32r : I<0x8D, MRMSrcMem,
                     (outs GR32:$dst), (ins lea64_32mem:$src),
                     "lea{l}\t{$src|$dst}, {$dst|$src}",
