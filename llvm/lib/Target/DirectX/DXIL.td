@@ -949,6 +949,7 @@ def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
 }
 
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
