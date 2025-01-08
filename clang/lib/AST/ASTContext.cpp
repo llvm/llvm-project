@@ -2816,7 +2816,7 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
     if (Field->isUnnamedBitField())
       return 0;
 
-    int64_t BitfieldSize = Field->getBitWidthValue(Context);
+    int64_t BitfieldSize = Field->getBitWidthValue();
     if (IsBitIntType) {
       if ((unsigned)BitfieldSize >
           cast<BitIntType>(Field->getType())->getNumBits())
@@ -8321,7 +8321,7 @@ QualType ASTContext::isPromotableBitField(Expr *E) const {
 
   QualType FT = Field->getType();
 
-  uint64_t BitWidth = Field->getBitWidthValue(*this);
+  uint64_t BitWidth = Field->getBitWidthValue();
   uint64_t IntSize = getTypeSize(IntTy);
   // C++ [conv.prom]p5:
   //   A prvalue for an integral bit-field can be converted to a prvalue of type
@@ -9352,7 +9352,7 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
       S += getObjCEncodingForPrimitiveType(Ctx, BT);
     }
   }
-  S += llvm::utostr(FD->getBitWidthValue(*Ctx));
+  S += llvm::utostr(FD->getBitWidthValue());
 }
 
 // Helper function for determining whether the encoded type string would include
@@ -9778,7 +9778,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
   }
 
   for (FieldDecl *Field : RDecl->fields()) {
-    if (!Field->isZeroLengthBitField(*this) && Field->isZeroSize(*this))
+    if (!Field->isZeroLengthBitField() && Field->isZeroSize(*this))
       continue;
     uint64_t offs = layout.getFieldOffset(Field->getFieldIndex());
     FieldOrBaseOffsets.insert(FieldOrBaseOffsets.upper_bound(offs),
@@ -9875,7 +9875,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
       if (field->isBitField()) {
         EncodeBitField(this, S, field->getType(), field);
 #ifndef NDEBUG
-        CurOffs += field->getBitWidthValue(*this);
+        CurOffs += field->getBitWidthValue();
 #endif
       } else {
         QualType qt = field->getType();
