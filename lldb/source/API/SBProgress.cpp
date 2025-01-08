@@ -10,8 +10,6 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Utility/Instrumentation.h"
 
-#include "Utils.h"
-
 using namespace lldb;
 
 SBProgress::SBProgress(const char *title, const char *details,
@@ -19,7 +17,9 @@ SBProgress::SBProgress(const char *title, const char *details,
   LLDB_INSTRUMENT_VA(this, title, details, debugger);
 
   m_opaque_up = std::make_unique<lldb_private::Progress>(
-      title, details, std::nullopt, debugger.get());
+      title, details, /*total=*/std::nullopt, debugger.get(),
+      /*minimum_report_time=*/std::nullopt,
+      lldb_private::Progress::Origin::eExternal);
 }
 
 SBProgress::SBProgress(const char *title, const char *details,
@@ -27,7 +27,9 @@ SBProgress::SBProgress(const char *title, const char *details,
   LLDB_INSTRUMENT_VA(this, title, details, total_units, debugger);
 
   m_opaque_up = std::make_unique<lldb_private::Progress>(
-      title, details, total_units, debugger.get());
+      title, details, total_units, debugger.get(),
+      /*minimum_report_time=*/std::nullopt,
+      lldb_private::Progress::Origin::eExternal);
 }
 
 SBProgress::~SBProgress() = default;
