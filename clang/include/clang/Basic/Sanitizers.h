@@ -158,9 +158,9 @@ class SanitizerMaskCutoffs {
   std::array<float, SanitizerKind::SO_Count> cutoffs = {0};
 
 public:
-  float &operator[](int index) { return cutoffs[index]; }
   const float &operator[](int index) const { return cutoffs[index]; }
 
+  void set(SanitizerMask K, float V);
   void clear(SanitizerMask K = SanitizerKind::All);
 };
 

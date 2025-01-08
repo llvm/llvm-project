@@ -19,11 +19,13 @@
 
 using namespace clang;
 
-void SanitizerMaskCutoffs::clear(SanitizerMask K) {
+void SanitizerMaskCutoffs::set(SanitizerMask K, float V) {
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
-    if (!(K & SanitizerMask::bitPosToMask(i)))
-      cutoffs[i] = 0;
+    if (K & SanitizerMask::bitPosToMask(i))
+      cutoffs[i] = V;
 }
+
+void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }
 
 // Once LLVM switches to C++17, the constexpr variables can be inline and we
 // won't need this.
@@ -62,10 +64,7 @@ bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
   float C = std::clamp(A, 0.0, 1.0);
   // AllowGroups is already taken into account for ParsedKind,
   // hence we unconditionally expandSanitizerGroups.
-  SanitizerMask ExpandedKind = expandSanitizerGroups(ParsedKind);
-  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
-    if (ExpandedKind & SanitizerMask::bitPosToMask(i))
-      Cutoffs[i] = C;
+  Cutoffs.set(expandSanitizerGroups(ParsedKind), C);
   return true;
 }
 
