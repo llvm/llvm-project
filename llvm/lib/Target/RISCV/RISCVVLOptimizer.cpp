@@ -710,6 +710,22 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
     return MILog2SEW;
   }
 
+  // Vector Widening Integer Reduction Instructions
+  // The Dest and VS1 read only element 0 for the vector register. Return 2*EEW
+  // for these. VS2 has EEW=SEW and EMUL=LMUL.
+  case RISCV::VWREDSUM_VS:
+  case RISCV::VWREDSUMU_VS:
+  // Vector Widening Floating-Point Reduction Instructions
+  case RISCV::VFWREDOSUM_VS:
+  case RISCV::VFWREDUSUM_VS: {
+    bool TwoTimes = IsMODef || MO.getOperandNo() == 3;
+    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
+    if (MO.getOperandNo() == 2)
+      return OperandInfo(
+          RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI), Log2EEW);
+    return OperandInfo(Log2EEW);
+  }
+
   default:
     return std::nullopt;
   }
