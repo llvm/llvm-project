@@ -9,13 +9,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - llvm/**/DirectX/**
-      - .github/workflows/hlsl-macos.yaml
-      - .github/workflows/hlsl/*
-      - clang/*HLSL*/**/*
-      - clang/**/*HLSL*
-      - llvm/**/Frontend/HLSL/**/*
 
 jobs:
   HLSL-macOS:
