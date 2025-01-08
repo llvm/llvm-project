@@ -34,3 +34,7 @@ Options
 
   A string specifying which include-style is used, `llvm` or `google`.
   Default is `llvm`.
+
+.. option:: QtEnabled
+  Makes C++17 ``q20::cmp_*`` alternative available for Qt-based
+  applications. Default is `false`.
