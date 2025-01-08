@@ -100,7 +100,7 @@ static void __matches(istream& __input, char __expected) {
   char __c = __input.get();
   if (std::tolower(__c) != __expected)
     std::__throw_runtime_error(
-        (string("corrupt tzdb: expected character '") + __expected + "', got '" + __c + "'").c_str());
+        (string("corrupt tzdb: expected character '") + __expected + "', got '" + __c + "' instead").c_str());
 }
 
 static void __matches(istream& __input, string_view __expected) {
