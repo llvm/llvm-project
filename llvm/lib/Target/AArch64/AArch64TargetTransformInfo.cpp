@@ -4748,7 +4748,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
             LT.second.getVectorNumElements() / 2) {
       if (Index == 0)
         return 0;
-      if (Index == LT.second.getVectorNumElements() / 2)
+      if (Index == (int)LT.second.getVectorNumElements() / 2)
         return 1;
     }
     Kind = TTI::SK_PermuteSingleSrc;
