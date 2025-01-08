@@ -1951,7 +1951,6 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   Record.push_back(D->wasDeclaredWithTypename());
 
   const TypeConstraint *TC = D->getTypeConstraint();
-  assert((bool)TC == D->hasTypeConstraint());
   if (TC) {
     auto *CR = TC->getConceptReference();
     Record.push_back(CR != nullptr);
