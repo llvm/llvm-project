@@ -31,7 +31,7 @@
 scoped_test_env env;
 [[maybe_unused]] const std::filesystem::path dir = env.create_dir("zoneinfo");
 const std::filesystem::path tzdata               = env.create_file("zoneinfo/tzdata.zi");
-const std::filesystem::path leap_seconds         = env.create_file("zoneinfo/leap-seconds.list");
+const std::filesystem::path leap_seconds         = env.create_file("zoneinfo/leapseconds");
 
 std::string_view std::chrono::__libcpp_tzdb_directory() {
   static std::string result = dir.string();
@@ -65,32 +65,25 @@ static void test_exception(std::string_view input, [[maybe_unused]] std::string_
 }
 
 static void test_invalid() {
-  test_exception("0", "corrupt tzdb: expected a non-zero digit");
-
-  test_exception("1", "corrupt tzdb: expected whitespace");
-
-  test_exception("1 ", "corrupt tzdb: expected a non-zero digit");
-
-  test_exception("5764607523034234880 2", "corrupt tzdb: integral too large");
+  test_exception("0", "corrupt tzdb: expected character 'l' from string 'leap', got '0' instead");
+  test_exception("Leap  x", "corrupt tzdb: expected a digit");
+  test_exception("Leap  1970  J", "corrupt tzdb month: invalid name");
+  test_exception("Leap  1970  Jan   1   23:59:60    x", "corrupt tzdb: invalid leap second sign x");
 }
 
 static void test_leap_seconds() {
   using namespace std::chrono;
 
   // Test whether loading also sorts the entries in the proper order.
-  const tzdb& result = parse(
-      R"(
-2303683200  12  # 1 Jan 1973
-2287785600  11  # 1 Jul 1972
-2272060800  10  # 1 Jan 1972
-86400        9  # 2 Jan 1900 Dummy entry to test before 1970
-1            8  # 2 Jan 1900 Dummy entry to test before 1970
+  const tzdb& result = parse(R"(
+Leap  1973  Jan   1   23:59:60    +   S
+Leap  1972  Jul   1   23:59:60    +   S
+Leap  1972  Jan   1   23:59:60    +   S
+Leap  1900  Jan   2   23:59:60    +   S # 2 Jan 1900 Dummy entry to test before 1970
+Leap  1900  Jan   2   00:00:01    +   S # 2 Jan 1900 Dummy entry to test before 1970
 
-# Fictional negative leap second
-2303769600  11  # 2 Jan 1973
-
-# largest accepted value by the parser
-5764607523034234879 12
+Leap  1973  Jan   2   23:59:60    -   S # Fictional negative leap second
+Leap  32767 Jan   1   23:59:60    +   S # Largest year accepted by the parser
 )");
 
   assert(result.leap_seconds.size() == 6);
