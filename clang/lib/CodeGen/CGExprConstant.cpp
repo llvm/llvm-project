@@ -733,6 +733,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
 
   for (FieldDecl *Field : RD->fields()) {
     ++FieldNo;
+    QualType FieldTy = Field->getType();
 
     // If this is a union, skip all the fields that aren't being initialized.
     if (RD->isUnion() &&
@@ -773,23 +774,23 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     // represents additional overwriting of our current constant value, and not
     // a new constant to emit independently.
     if (AllowOverwrite &&
-        (Field->getType()->isArrayType() || Field->getType()->isRecordType())) {
+        (FieldTy->isArrayType() || FieldTy->isRecordType())) {
       if (auto *SubILE = dyn_cast<InitListExpr>(Init)) {
         CharUnits Offset = CGM.getContext().toCharUnitsFromBits(
             Layout.getFieldOffset(FieldNo));
         if (!EmitDesignatedInitUpdater(Emitter, Builder, StartOffset + Offset,
-                                       Field->getType(), SubILE))
+                                       FieldTy, SubILE))
           return false;
         // If we split apart the field's value, try to collapse it down to a
         // single value now.
         Builder.condense(StartOffset + Offset,
-                         CGM.getTypes().ConvertTypeForMem(Field->getType()));
+                         CGM.getTypes().ConvertTypeForMem(FieldTy));
         continue;
       }
     }
 
     llvm::Constant *EltInit =
-        Init ? Emitter.tryEmitPrivateForMemory(Init, Field->getType())
+        Init ? Emitter.tryEmitPrivateForMemory(Init, FieldTy)
              : Emitter.emitNullForMemory(Field->getType());
     if (!EltInit)
       return false;
@@ -803,10 +804,16 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
       if (!AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit,
                        AllowOverwrite))
         return false;
-      // After emitting a non-empty field with [[no_unique_address]], we may
-      // need to overwrite its tail padding.
-      if (Field->hasAttr<NoUniqueAddressAttr>())
-        AllowOverwrite = true;
+
+      // Allow overwrites after a field with tail padding. This allows
+      // overwriting tail padding of fields carrying [[no_unique_address]]
+      // without checking for it, since it is not necessarily present in debug
+      // info.
+      if (const CXXRecordDecl *FieldRD = FieldTy->getAsCXXRecordDecl()) {
+        const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(FieldRD);
+        if (Layout.getDataSize() < Layout.getSize())
+          AllowOverwrite = true;
+      }
     } else {
       // Otherwise we have a bitfield.
       if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo), EltInit,
