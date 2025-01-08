@@ -958,7 +958,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"coarray", AnyData, Rank::coarray}, RequiredDIM, OptionalTEAM},
         DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"this_image", {{"coarray", AnyData, Rank::coarray}, OptionalTEAM},
-        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+        DefaultInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"tiny",
