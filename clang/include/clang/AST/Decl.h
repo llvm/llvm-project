@@ -3116,11 +3116,12 @@ public:
   /// Returns the index of this field within its record,
   /// as appropriate for passing to ASTRecordLayout::getFieldOffset.
   unsigned getFieldIndex() const {
-    const FieldDecl *C = getCanonicalDecl();
-    if (C->CachedFieldIndex == 0)
-      C->setCachedFieldIndex();
-    assert(C->CachedFieldIndex);
-    return C->CachedFieldIndex - 1;
+    const FieldDecl *Canonical = getCanonicalDecl();
+    if (Canonical->CachedFieldIndex == 0) {
+      Canonical->setCachedFieldIndex();
+      assert(Canonical->CachedFieldIndex != 0);
+    }
+    return Canonical->CachedFieldIndex - 1;
   }
 
 private:
