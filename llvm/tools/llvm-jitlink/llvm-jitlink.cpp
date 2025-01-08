@@ -1667,6 +1667,12 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                                      inconvertibleErrorCode());
   }
 
+#ifndef NDEBUG
+  if (DebugFlag && MaterializationThreads != 0)
+    errs() << "Warning: debugging output is not thread safe. "
+              "Use -num-threads=0 to stabilize output.\n";
+#endif // NDEBUG
+
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OutOfProcessExecutor.getNumOccurrences() &&
       !!OutOfProcessExecutorConnect.getNumOccurrences())

@@ -49,7 +49,8 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
     return VPI->isSingleScalar() || VPI->isVectorToScalar();
-  return false;
+  // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
+  return isa<VPExpandSCEVRecipe>(Def);
 }
 
 /// Return true if \p V is a header mask in \p Plan.
