@@ -130,6 +130,7 @@ void initializeHardwareLoopsLegacyPass(PassRegistry &);
 void initializeMIRProfileLoaderPassPass(PassRegistry &);
 void initializeIRSimilarityIdentifierWrapperPassPass(PassRegistry &);
 void initializeIRTranslatorPass(PassRegistry &);
+void initializeInferTypeInfoPass(PassRegistry &);
 void initializeIVUsersWrapperPassPass(PassRegistry &);
 void initializeIfConverterPass(PassRegistry &);
 void initializeImmutableModuleSummaryIndexWrapperPassPass(PassRegistry &);
