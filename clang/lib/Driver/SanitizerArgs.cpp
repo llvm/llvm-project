@@ -335,8 +335,11 @@ parseNoSanitizeHotArgs(const Driver &D, const llvm::opt::ArgList &Args,
                        bool DiagnoseErrors) {
   SanitizerMaskCutoffs Cutoffs;
   for (const auto *Arg : Args)
-    if (Arg->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ))
+    if (Arg->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) {
+      Arg->claim();
       parseArgCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+    }
+
   return Cutoffs;
 }
 
