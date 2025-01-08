@@ -235,6 +235,12 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// A variant of the previous method which is specialized for Scale=2, and
+/// treats -1 as undef and allows widening when a wider element is partially
+/// undef in the narrow form of the mask.  This transformation discards
+/// information about which bytes in the original shuffle were undef.
+bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
+
 /// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
 /// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
 /// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
