@@ -3036,7 +3036,7 @@ private:
   /// non-identity permutation that allows to reuse extract instructions.
   /// \param ResizeAllowed indicates whether it is allowed to handle subvector
   /// extract order.
-  bool canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
+  bool canReuseExtract(ArrayRef<Value *> VL,
                        SmallVectorImpl<unsigned> &CurrentOrder,
                        bool ResizeAllowed = false) const;
 
@@ -5727,10 +5727,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       // Check that gather of extractelements can be represented as
       // just a shuffle of a single vector.
       OrdersType CurrentOrder;
-      bool Reuse = canReuseExtract(
-          TE.Scalars, TE.isInstructionsStateValid() ? TE.getMainOp() : nullptr,
-          CurrentOrder,
-          /*ResizeAllowed=*/true);
+      bool Reuse =
+          canReuseExtract(TE.Scalars, CurrentOrder, /*ResizeAllowed=*/true);
       if (Reuse || !CurrentOrder.empty())
         return std::move(CurrentOrder);
     }
@@ -7574,7 +7572,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   }
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
-    bool Reuse = canReuseExtract(VL, VL0, CurrentOrder);
+    bool Reuse = canReuseExtract(VL, CurrentOrder);
     // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
     if (!has_single_bit(VL.size()))
       return TreeEntry::NeedToGather;
@@ -8855,7 +8853,7 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
   return N;
 }
 
-bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
+bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
                               SmallVectorImpl<unsigned> &CurrentOrder,
                               bool ResizeAllowed) const {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst, ExtractValueInst>);
