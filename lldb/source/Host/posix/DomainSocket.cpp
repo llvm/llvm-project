@@ -14,9 +14,9 @@
 
 #include <cstddef>
 #include <memory>
+#include <strings.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <strings.h>
 
 using namespace lldb;
 using namespace lldb_private;

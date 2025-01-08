@@ -732,8 +732,8 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
 
     // Set port speed to the available maximum
 #ifdef B115200
-     ::cfsetospeed(&options, B115200);
-     ::cfsetispeed(&options, B115200);
+    ::cfsetospeed(&options, B115200);
+    ::cfsetispeed(&options, B115200);
 #elif B57600
     ::cfsetospeed(&options, B57600);
     ::cfsetispeed(&options, B57600);
