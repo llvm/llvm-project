@@ -36,7 +36,7 @@
 
   (lsp-register-client
    (make-lsp-client
-    :new-connection (lsp-stdio-connection (lambda () (cons lsp-tblgen-server-executable lsp-tblgen-server-args))); (concat "--tablegen-compilation-database=" lsp-tblgen-compilation-database-location) )))
+    :new-connection (lsp-stdio-connection (lambda () (cons lsp-tblgen-server-executable (split-string-shell-command lsp-tblgen-server-args))))
     :activation-fn (lsp-activate-on "tablegen")
     :priority -1
     :server-id 'tblgen-lsp-server)))
