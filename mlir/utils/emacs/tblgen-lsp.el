@@ -39,7 +39,7 @@
     :new-connection (lsp-stdio-connection (lambda () (cons lsp-tblgen-server-executable (split-string-shell-command lsp-tblgen-server-args))))
     :activation-fn (lsp-activate-on "tablegen")
     :priority -1
-    :server-id 'tblgen-lsp-server)))
+    :server-id 'tblgen-lsp)))
 
 (provide 'tblgen-lsp)
 ;;; tblgen-lsp.el ends here
