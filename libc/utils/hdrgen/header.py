@@ -9,6 +9,7 @@
 
 class HeaderFile:
     def __init__(self, name):
+        self.template_file = None
         self.name = name
         self.macros = []
         self.types = []
@@ -31,7 +32,7 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
-    def __str__(self):
+    def public_api(self):
         content = [""]
 
         for macro in self.macros:

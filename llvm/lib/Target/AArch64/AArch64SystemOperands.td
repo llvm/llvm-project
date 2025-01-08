@@ -2376,7 +2376,6 @@ def : RWSysReg<"ACTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b101>;
 class PHint<bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
               bits<3> op2, string name> {
   string Name = name;
-  string AltName = name;
   bits<16> Encoding;
   let Encoding{15-14} = op0;
   let Encoding{13-11} = op1;
@@ -2394,7 +2393,7 @@ def PHintValues : GenericEnum {
 
 def PHintsList : GenericTable {
   let FilterClass = "PHint";
-  let Fields = ["Name", "AltName", "Encoding", "Requires"];
+  let Fields = ["Name", "Encoding", "Requires"];
 }
 
 def lookupPHintByName : SearchIndex {

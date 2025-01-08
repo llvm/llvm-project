@@ -1804,7 +1804,9 @@ class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
 }
 
 class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
+  bits<5> Xt;
   let Inst{20-5} = 0b0111001110000000;
+  let Inst{4-0} = Xt;
   let DecoderNamespace = "APAS";
 }
 
