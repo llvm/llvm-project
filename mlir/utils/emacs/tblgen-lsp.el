@@ -25,7 +25,7 @@
 
 
 (defcustom lsp-tblgen-server-args ""
-  "Args of LSP client for TableGen "
+  "Args of LSP client for TableGen, for example '--tablegen-compilation-database=.../build/tablegen_compile_commands.yml'"
   :group 'lsp-tblgen
   :risky t
   :type 'file)
