@@ -48,7 +48,8 @@ A(&&fARvalueRefArray())[1];
 
 void fADefaultArgRef2(A& = fARvalueRef());
 
-// expected-note@+2 {{candidate function [with T = int] not viable: expects an lvalue for 1st argument}}
+// expected-note@+3 {{candidate function [with T = int] not viable: expects an lvalue for 1st argument}}
+// expected-note@+2 {{candidate function template not viable: expects an lvalue for 1st argument}}
 template<class T>
 void fTRef(T&) {}
 
@@ -72,7 +73,8 @@ namespace NS {
   void fARef(A&) {}
   void fAAliasRef(AAlias&) {}
 
-  // expected-note@+2 {{candidate function [with T = int] not viable: expects an lvalue for 1st argument}}
+  // expected-note@+3 {{candidate function [with T = int] not viable: expects an lvalue for 1st argument}}
+  // expected-note@+2 {{candidate function template not viable: expects an lvalue for 1st argument}}
   template<class T>
   void fTRef(T&) {}
 
@@ -101,11 +103,13 @@ void test1() {
   fDoubleRef(0.0); // expected-error{{no matching function for call to 'fDoubleRef'}}
 
   fTRef(0); // expected-error{{no matching function for call to 'fTRef'}}
+  fTRef<int>(0); // expected-error{{no matching function for call to 'fTRef'}}
 
   NS::fIntRef(0); // expected-error{{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   NS::fDoubleRef(0.0); // expected-error{{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
 
   NS::fTRef(0); // expected-error{{no matching function for call to 'fTRef'}}
+  NS::fTRef<int>(0); // expected-error{{no matching function for call to 'fTRef'}}
 
   int i2 = 2;
   double& rd3 = i2; // expected-error{{non-const lvalue reference to type 'double' cannot bind to a value of unrelated type 'int'}}
