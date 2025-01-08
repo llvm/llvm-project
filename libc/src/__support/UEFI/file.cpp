@@ -29,9 +29,7 @@ void File::reset() {
   }
 }
 
-size_t File::read(void *data, size_t len) {
-  (void)data;
-  (void)len;
+size_t File::read(void *, size_t) {
   if (needsReset())
     reset();
 

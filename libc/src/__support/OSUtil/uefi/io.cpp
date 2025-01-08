@@ -14,11 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t read_from_stdin(char *buf, size_t size) {
-  (void)buf;
-  (void)size;
-  return 0;
-}
+ssize_t read_from_stdin(char *, size_t) { return 0; }
 
 void write_to_stdout(cpp::string_view msg) {
   // TODO: use mbstowcs once implemented
