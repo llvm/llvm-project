@@ -915,19 +915,18 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (It == VL.end())
     return InstructionsState::invalid();
 
-  Value *V = *It;
-  Instruction *MainOp = cast<Instruction>(V);
+  Instruction *MainOp = cast<Instruction>(*It);
   unsigned InstCnt = std::count_if(It, VL.end(), IsaPred<Instruction>);
-  if ((VL.size() > 2 && !isa<PHINode>(V) && InstCnt < VL.size() / 2) ||
+  if ((VL.size() > 2 && !isa<PHINode>(MainOp) && InstCnt < VL.size() / 2) ||
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
 
-  bool IsCastOp = isa<CastInst>(V);
-  bool IsBinOp = isa<BinaryOperator>(V);
-  bool IsCmpOp = isa<CmpInst>(V);
-  CmpInst::Predicate BasePred =
-      IsCmpOp ? cast<CmpInst>(V)->getPredicate() : CmpInst::BAD_ICMP_PREDICATE;
-  unsigned Opcode = cast<Instruction>(V)->getOpcode();
+  bool IsCastOp = isa<CastInst>(MainOp);
+  bool IsBinOp = isa<BinaryOperator>(MainOp);
+  bool IsCmpOp = isa<CmpInst>(MainOp);
+  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
+                                        : CmpInst::BAD_ICMP_PREDICATE;
+  unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
   unsigned AltIndex = std::distance(VL.begin(), It);
 
@@ -1003,7 +1002,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         }
       }
     } else if (auto *Inst = dyn_cast<CmpInst>(VL[Cnt]); Inst && IsCmpOp) {
-      auto *BaseInst = cast<CmpInst>(V);
+      auto *BaseInst = cast<CmpInst>(MainOp);
       Type *Ty0 = BaseInst->getOperand(0)->getType();
       Type *Ty1 = Inst->getOperand(0)->getType();
       if (Ty0 == Ty1) {
@@ -1085,8 +1084,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
-  return InstructionsState(cast<Instruction>(V),
-                           cast<Instruction>(VL[AltIndex]));
+  return InstructionsState(MainOp, cast<Instruction>(VL[AltIndex]));
 }
 
 /// \returns true if all of the values in \p VL have the same type or false
