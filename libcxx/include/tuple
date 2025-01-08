@@ -1125,9 +1125,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&...> tie(_T
 }
 
 template <class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<typename __unwrap_ref_decay<_Tp>::type...>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<__unwrap_ref_decay_t<_Tp>...>
 make_tuple(_Tp&&... __t) {
-  return tuple<typename __unwrap_ref_decay<_Tp>::type...>(std::forward<_Tp>(__t)...);
+  return tuple<__unwrap_ref_decay_t<_Tp>...>(std::forward<_Tp>(__t)...);
 }
 
 template <class... _Tp>

@@ -171,6 +171,10 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkEmitter &MORE,
                         MachineOptimizationRemarkMissed &R);
 
+/// Returns the inverse opcode of \p MinMaxOpc, which is a generic min/max
+/// opcode like G_SMIN.
+unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
+
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
 std::optional<APInt> getIConstantVRegVal(Register VReg,
                                          const MachineRegisterInfo &MRI);
@@ -521,6 +525,13 @@ bool isConstantOrConstantVector(MachineInstr &MI,
 std::optional<APInt>
 isConstantOrConstantSplatVector(MachineInstr &MI,
                                 const MachineRegisterInfo &MRI);
+
+/// Determines if \p MI defines a float constant integer or a splat vector of
+/// float constant integers.
+/// \returns the float constant or std::nullopt.
+std::optional<APFloat>
+isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source

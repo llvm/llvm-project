@@ -2125,6 +2125,16 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr>
     declRefExpr;
 
+/// Matches expressions that refer to dependent scope declarations.
+///
+/// example matches T::v;
+/// \code
+///  template <class T> class X : T { void f() { T::v; } };
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   DependentScopeDeclRefExpr>
+    dependentScopeDeclRefExpr;
+
 /// Matches a reference to an ObjCIvar.
 ///
 /// Example: matches "a" in "init" method:
@@ -3245,6 +3255,17 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
         }
         return true;
       });
+}
+
+/// Matches the dependent name of a DependentScopeDeclRefExpr
+///
+/// Given:
+/// \code
+///  template <class T> class X : T { void f() { T::v; } };
+/// \endcode
+/// \c dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
+AST_MATCHER_P(DependentScopeDeclRefExpr, hasDependentName, std::string, N) {
+  return Node.getDeclName().getAsString() == N;
 }
 
 /// Matches C++ classes that are directly or indirectly derived from a class
@@ -7700,6 +7721,28 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
               InnerType) {
   return InnerType.matches(Node.getDecayedType(), Finder, Builder);
 }
+
+/// Matches a dependent name type
+///
+/// Example matches  T::type
+/// \code
+///  template <typename T> struct declToImport {
+///    typedef typename T::type dependent_name;
+///  };
+/// \endcode
+extern const AstTypeMatcher<DependentNameType> dependentNameType;
+
+/// Matches a dependent template specialization type
+///
+/// Example matches A<T>::template B<T>
+/// \code
+///   template<typename T> struct A;
+///   template<typename T> struct declToImport {
+///     typename A<T>::template B<T> a;
+///   };
+/// \endcode
+extern const AstTypeMatcher<DependentTemplateSpecializationType>
+    dependentTemplateSpecializationType;
 
 /// Matches declarations whose declaration context, interpreted as a
 /// Decl, matches \c InnerMatcher.

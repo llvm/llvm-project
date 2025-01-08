@@ -234,10 +234,22 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
     pm.addPass(mlir::createCSEPass());
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createOptimizedBufferization);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createInlineHLFIRAssign);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
   pm.addPass(hlfir::createBufferizeHLFIR());
+  // Run hlfir.assign inlining again after BufferizeHLFIR,
+  // because the latter may introduce new hlfir.assign operations,
+  // e.g. for copying an array into a temporary due to
+  // hlfir.associate.
+  // TODO: we can remove the previous InlineHLFIRAssign, when
+  // FIR AliasAnalysis is good enough to say that a temporary
+  // array does not alias with any user object.
+  if (optLevel.isOptimizingForSpeed())
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
   if (enableOpenMP)
     pm.addPass(flangomp::createLowerWorkshare());

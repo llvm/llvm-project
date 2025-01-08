@@ -1352,10 +1352,9 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *C = nullptr;
     if (FCmp) {
       // Propagate fast math flags.
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
-        Builder.setFastMathFlags(I->getFastMathFlags());
-      C = Builder.CreateFCmp(getPredicate(), A, B);
+      C = Builder.CreateFCmpFMF(
+          getPredicate(), A, B,
+          dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
@@ -1582,7 +1581,7 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CAST ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
@@ -2001,7 +2000,6 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = reverse-vector-pointer";
   printFlags(O);
-  O << " ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -2116,6 +2114,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
     Value *NewCond = State.get(Cond, State.VF.isScalar());
@@ -2328,6 +2327,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 Value *VPScalarCastRecipe ::generate(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(vputils::onlyFirstLaneUsed(this) &&
          "Codegen only implemented for first lane.");
   switch (Opcode) {
@@ -3365,7 +3365,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
                           : VectorType::get(StartV->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
-  assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
+  assert(State.CurrentParentLoop->getHeader() == HeaderBB &&
          "recipe must be in the vector loop header");
   auto *Phi = PHINode::Create(VecTy, 2, "vec.phi");
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());
