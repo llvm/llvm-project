@@ -94,7 +94,7 @@ static cl::opt<int> BrMergingCcmpBias(
 
 static cl::opt<bool>
     WidenShift("x86-widen-shift", cl::init(true),
-               cl::desc("Replacte narrow shifts with wider shifts."),
+               cl::desc("Replace narrow shifts with wider shifts."),
                cl::Hidden);
 
 static cl::opt<int> BrMergingLikelyBias(

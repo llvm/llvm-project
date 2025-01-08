@@ -113,7 +113,7 @@ static cl::opt<unsigned> LargeIntervalSizeThreshold(
 
 static cl::opt<unsigned> LargeIntervalFreqThreshold(
     "large-interval-freq-threshold", cl::Hidden,
-    cl::desc("For a large interval, if it is coalesed with other live "
+    cl::desc("For a large interval, if it is coalesced with other live "
              "intervals many times more than the threshold, stop its "
              "coalescing to control the compile time. "),
     cl::init(256));
