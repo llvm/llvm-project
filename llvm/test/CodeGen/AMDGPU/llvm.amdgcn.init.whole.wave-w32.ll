@@ -1118,8 +1118,8 @@ tail:
 ; Since functions that contain amdgcn.init.whole.wave do not preserve the inactive
 ; lanes of any VGPRs, the middle end will explicitly preserve them if needed by adding
 ; dummy VGPR arguments. Since only the inactive lanes are important, we need to make
-; it clear to the backend that it's safe to allocate v9 inside shader.
-; FIXME: Using poison is not clear enough.
+; it clear to the backend that it's safe to allocate v9's active lanes inside
+; shader. This is achieved by using the llvm.amdgcn.dead intrinsic.
 define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %exec, i32 inreg %sgpr, i32 %active.vgpr, i32 %inactive.vgpr) {
 ; GISEL12-LABEL: with_inactive_vgprs:
 ; GISEL12:       ; %bb.0: ; %entry
@@ -1136,14 +1136,15 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; GISEL12-NEXT:    s_and_saveexec_b32 s1, s6
 ; GISEL12-NEXT:    s_cbranch_execz .LBB6_2
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
-; GISEL12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
-; GISEL12-NEXT:    flat_load_b32 v12, v[10:11]
+; GISEL12-NEXT:    v_dual_mov_b32 v10, s5 :: v_dual_mov_b32 v9, s4
+; GISEL12-NEXT:    flat_load_b32 v11, v[9:10]
 ; GISEL12-NEXT:    ;;#ASMSTART
 ; GISEL12-NEXT:    ; use v0-7
 ; GISEL12-NEXT:    ;;#ASMEND
 ; GISEL12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL12-NEXT:    v_add_nc_u32_e32 v8, v8, v12
-; GISEL12-NEXT:    flat_store_b32 v[10:11], v12
+; GISEL12-NEXT:    v_add_nc_u32_e32 v8, v8, v11
+; GISEL12-NEXT:    flat_store_b32 v[9:10], v11
+; GISEL12-NEXT:    ; implicit-def: $vgpr9
 ; GISEL12-NEXT:  .LBB6_2: ; %tail.block
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
@@ -1165,14 +1166,15 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s0, s6
 ; DAGISEL12-NEXT:    s_cbranch_execz .LBB6_2
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
-; DAGISEL12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
-; DAGISEL12-NEXT:    flat_load_b32 v12, v[10:11]
+; DAGISEL12-NEXT:    v_dual_mov_b32 v10, s5 :: v_dual_mov_b32 v9, s4
+; DAGISEL12-NEXT:    flat_load_b32 v11, v[9:10]
 ; DAGISEL12-NEXT:    ;;#ASMSTART
 ; DAGISEL12-NEXT:    ; use v0-7
 ; DAGISEL12-NEXT:    ;;#ASMEND
 ; DAGISEL12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; DAGISEL12-NEXT:    v_add_nc_u32_e32 v8, v8, v12
-; DAGISEL12-NEXT:    flat_store_b32 v[10:11], v12
+; DAGISEL12-NEXT:    v_add_nc_u32_e32 v8, v8, v11
+; DAGISEL12-NEXT:    flat_store_b32 v[9:10], v11
+; DAGISEL12-NEXT:    ; implicit-def: $vgpr9
 ; DAGISEL12-NEXT:  .LBB6_2: ; %tail.block
 ; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1191,15 +1193,16 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; GISEL10-NEXT:    s_and_saveexec_b32 s1, s6
 ; GISEL10-NEXT:    s_cbranch_execz .LBB6_2
 ; GISEL10-NEXT:  ; %bb.1: ; %shader
-; GISEL10-NEXT:    v_mov_b32_e32 v11, s5
-; GISEL10-NEXT:    v_mov_b32_e32 v10, s4
-; GISEL10-NEXT:    flat_load_dword v12, v[10:11]
+; GISEL10-NEXT:    v_mov_b32_e32 v10, s5
+; GISEL10-NEXT:    v_mov_b32_e32 v9, s4
+; GISEL10-NEXT:    flat_load_dword v11, v[9:10]
 ; GISEL10-NEXT:    ;;#ASMSTART
 ; GISEL10-NEXT:    ; use v0-7
 ; GISEL10-NEXT:    ;;#ASMEND
 ; GISEL10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GISEL10-NEXT:    v_add_nc_u32_e32 v8, v8, v12
-; GISEL10-NEXT:    flat_store_dword v[10:11], v12
+; GISEL10-NEXT:    v_add_nc_u32_e32 v8, v8, v11
+; GISEL10-NEXT:    flat_store_dword v[9:10], v11
+; GISEL10-NEXT:    ; implicit-def: $vgpr9
 ; GISEL10-NEXT:  .LBB6_2: ; %tail.block
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s2
@@ -1214,21 +1217,23 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; DAGISEL10-NEXT:    s_and_saveexec_b32 s0, s6
 ; DAGISEL10-NEXT:    s_cbranch_execz .LBB6_2
 ; DAGISEL10-NEXT:  ; %bb.1: ; %shader
-; DAGISEL10-NEXT:    v_mov_b32_e32 v11, s5
-; DAGISEL10-NEXT:    v_mov_b32_e32 v10, s4
-; DAGISEL10-NEXT:    flat_load_dword v12, v[10:11]
+; DAGISEL10-NEXT:    v_mov_b32_e32 v10, s5
+; DAGISEL10-NEXT:    v_mov_b32_e32 v9, s4
+; DAGISEL10-NEXT:    flat_load_dword v11, v[9:10]
 ; DAGISEL10-NEXT:    ;;#ASMSTART
 ; DAGISEL10-NEXT:    ; use v0-7
 ; DAGISEL10-NEXT:    ;;#ASMEND
 ; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; DAGISEL10-NEXT:    v_add_nc_u32_e32 v8, v8, v12
-; DAGISEL10-NEXT:    flat_store_dword v[10:11], v12
+; DAGISEL10-NEXT:    v_add_nc_u32_e32 v8, v8, v11
+; DAGISEL10-NEXT:    flat_store_dword v[9:10], v11
+; DAGISEL10-NEXT:    ; implicit-def: $vgpr9
 ; DAGISEL10-NEXT:  .LBB6_2: ; %tail.block
 ; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; DAGISEL10-NEXT:    s_mov_b32 s0, s3
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s2
 ; DAGISEL10-NEXT:    s_setpc_b64 s[4:5]
 entry:
+  %0 = call i32 @llvm.amdgcn.dead()
   %1 = call i1 @llvm.amdgcn.init.whole.wave()
   br i1 %1, label %shader, label %tail.block
 
@@ -1241,7 +1246,7 @@ shader:                                           ; preds = %entry
 
 tail.block:                                       ; preds = %.exit27, %.exit49, %244, %243, %entry
   %active.vgpr.arg = phi i32 [ %active.vgpr, %entry ], [ %active.vgpr.new, %shader ]
-  %inactive.vgpr.arg = phi i32 [ %inactive.vgpr, %entry ], [ poison, %shader ]
+  %inactive.vgpr.arg = phi i32 [ %inactive.vgpr, %entry ], [ %0, %shader ]
   %vgprs.0 = insertvalue { i32, i32 } poison, i32 %active.vgpr.arg, 0
   %vgprs = insertvalue { i32, i32 } %vgprs.0, i32 %inactive.vgpr.arg, 1
   call void (ptr, i32, i32, { i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.i32.sl_i32i32(ptr inreg %callee, i32 inreg %exec, i32 inreg %sgpr, { i32, i32} %vgprs, i32 0)
