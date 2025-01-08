@@ -1,7 +1,13 @@
-// REQUIRES: spirv-registered-target
-// REQUIRES: x86-registered-target
-
 // RUN: %clang_cc1 -fopenmp -triple=spirv64 -fopenmp-is-target-device \
+// RUN: -aux-triple x86_64-linux-unknown -E %s | FileCheck -implicit-check-not=BAD %s
+
+// RUN: %clang_cc1 -fopenmp -triple=nvptx64 -fopenmp-is-target-device \
+// RUN: -aux-triple x86_64-linux-unknown -E %s | FileCheck -implicit-check-not=BAD %s
+
+// RUN: %clang_cc1 -fopenmp -triple=amdgcn-amd-amdhsa -fopenmp-is-target-device \
+// RUN: -aux-triple x86_64-linux-unknown -E %s | FileCheck -implicit-check-not=BAD %s
+
+// RUN: %clang_cc1 -fopenmp -triple=aarch64 -fopenmp-is-target-device \
 // RUN: -aux-triple x86_64-linux-unknown -E %s | FileCheck -implicit-check-not=BAD %s
 
 // CHECK: GOOD
