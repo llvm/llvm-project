@@ -72,7 +72,7 @@ template <class... _Tp>
 using __extract_last = _Tp...[sizeof...(_Tp) - 1];
 #  else
 template <class _Tp, class... _Tail>
-struct __extract_last_impl : __extract_last<_Tail...> {};
+struct __extract_last_impl : __extract_last_impl<_Tail...> {};
 template <class _Tp>
 struct __extract_last_impl<_Tp> {
   using type = _Tp;
