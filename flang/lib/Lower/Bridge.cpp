@@ -1292,10 +1292,15 @@ private:
     } else if (isAllocatable &&
                (flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
                 flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn))) {
-      // For firstprivate and copyin allocatable variables, RHS must be copied
+      // For firstprivate allocatable variables, RHS must be copied
       // only when LHS is allocated.
+
+      // For copyin allocatable variables, RHS must be copied to lhs
+      // only when rhs is allocated.
+      hlfir::Entity entity =
+          flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn) ? rhs : lhs;
       hlfir::Entity temp =
-          hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+          hlfir::derefPointersAndAllocatables(loc, *builder, entity);
       mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
       mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
       builder->genIfThen(loc, isAllocated)
