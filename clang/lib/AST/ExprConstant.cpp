@@ -1921,16 +1921,14 @@ static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
 static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
                                EvalInfo &Info);
 
-/// Support for atomic builtins
+/// Support for atomic builtins.
 static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info);
-static bool EvaluateAtomicWeak(const AtomicExpr *E, EvalInfo &Info);
 static bool EvaluateAtomicLoad(const AtomicExpr *E, APValue &Result,
                                EvalInfo &Info);
-static bool EvaluatePointerAndStoreValueInto(Expr *ResultPtr,
-                                             APValue &ValueToStore,
-                                             EvalInfo &Info);
 static bool EvaluateAtomicLoadInto(const AtomicExpr *E, EvalInfo &Info);
 static bool EvaluateAtomicStore(const AtomicExpr *E, EvalInfo &Info);
+static bool EvaluateAtomicExchange(const AtomicExpr *E, APValue &Result,
+                                   EvalInfo &Info);
 static bool EvaluateAtomicExchangeInto(const AtomicExpr *E, EvalInfo &Info);
 static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
                                   EvalInfo &Info, bool StoreToResultAfter);
@@ -8113,9 +8111,7 @@ public:
       return DerivedSuccess(LocalResult, E);
     case AtomicExpr::AO__c11_atomic_exchange:
     case AtomicExpr::AO__atomic_exchange_n:
-      if (!EvaluateAtomicLoad(E, LocalResult, Info))
-        return Error(E);
-      if (!EvaluateAtomicStore(E, Info))
+      if (!EvaluateAtomicExchange(E, LocalResult, Info))
         return Error(E);
       return DerivedSuccess(LocalResult, E);
     case AtomicExpr::AO__c11_atomic_fetch_add:
@@ -14203,6 +14199,158 @@ enum class CmpResult {
 };
 }
 
+template <class SuccessCB>
+static bool EvaluateLValueComparison(EvalInfo &Info, const Expr *E,
+                                     BinaryOperator::Opcode Opcode,
+                                     QualType LHSTy, LValue &LHSValue,
+                                     QualType RHSTy, LValue &RHSValue,
+                                     SuccessCB &&Success) {
+  auto Error = [&](const Expr *E) {
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  };
+
+  // Reject differing bases from the normal codepath; we special-case
+  // comparisons to null.
+  if (!HasSameBase(LHSValue, RHSValue)) {
+    auto DiagComparison = [&](unsigned DiagID, bool Reversed = false) {
+      std::string LHS = LHSValue.toString(Info.Ctx, LHSTy);
+      std::string RHS = RHSValue.toString(Info.Ctx, RHSTy);
+      Info.FFDiag(E, DiagID)
+          << (Reversed ? RHS : LHS) << (Reversed ? LHS : RHS);
+      return false;
+    };
+    // Inequalities and subtractions between unrelated pointers have
+    // unspecified or undefined behavior.
+    if (!BinaryOperator::isEqualityOp(Opcode))
+      return DiagComparison(
+          diag::note_constexpr_pointer_comparison_unspecified);
+    // A constant address may compare equal to the address of a symbol.
+    // The one exception is that address of an object cannot compare equal
+    // to a null pointer constant.
+    // TODO: Should we restrict this to actual null pointers, and exclude the
+    // case of zero cast to pointer type?
+    if ((!LHSValue.Base && !LHSValue.Offset.isZero()) ||
+        (!RHSValue.Base && !RHSValue.Offset.isZero()))
+      return DiagComparison(diag::note_constexpr_pointer_constant_comparison,
+                            !RHSValue.Base);
+    // C++2c [intro.object]/10:
+    //   Two objects [...] may have the same address if [...] they are both
+    //   potentially non-unique objects.
+    // C++2c [intro.object]/9:
+    //   An object is potentially non-unique if it is a string literal object,
+    //   the backing array of an initializer list, or a subobject thereof.
+    //
+    // This makes the comparison result unspecified, so it's not a constant
+    // expression.
+    //
+    // TODO: Do we need to handle the initializer list case here?
+    if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
+      return DiagComparison(diag::note_constexpr_literal_comparison);
+    if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))
+      return DiagComparison(diag::note_constexpr_opaque_call_comparison,
+                            !IsOpaqueConstantCall(LHSValue));
+    // We can't tell whether weak symbols will end up pointing to the same
+    // object.
+    if (IsWeakLValue(LHSValue) || IsWeakLValue(RHSValue))
+      return DiagComparison(diag::note_constexpr_pointer_weak_comparison,
+                            !IsWeakLValue(LHSValue));
+    // We can't compare the address of the start of one object with the
+    // past-the-end address of another object, per C++ DR1652.
+    if (LHSValue.Base && LHSValue.Offset.isZero() &&
+        isOnePastTheEndOfCompleteObject(Info.Ctx, RHSValue))
+      return DiagComparison(diag::note_constexpr_pointer_comparison_past_end,
+                            true);
+    if (RHSValue.Base && RHSValue.Offset.isZero() &&
+        isOnePastTheEndOfCompleteObject(Info.Ctx, LHSValue))
+      return DiagComparison(diag::note_constexpr_pointer_comparison_past_end,
+                            false);
+    // We can't tell whether an object is at the same address as another
+    // zero sized object.
+    if ((RHSValue.Base && isZeroSized(LHSValue)) ||
+        (LHSValue.Base && isZeroSized(RHSValue)))
+      return DiagComparison(diag::note_constexpr_pointer_comparison_zero_sized);
+    return Success(CmpResult::Unequal);
+  }
+
+  const CharUnits &LHSOffset = LHSValue.getLValueOffset();
+  const CharUnits &RHSOffset = RHSValue.getLValueOffset();
+
+  SubobjectDesignator &LHSDesignator = LHSValue.getLValueDesignator();
+  SubobjectDesignator &RHSDesignator = RHSValue.getLValueDesignator();
+
+  // C++11 [expr.rel]p2:
+  // - If two pointers point to non-static data members of the same object,
+  //   or to subobjects or array elements fo such members, recursively, the
+  //   pointer to the later declared member compares greater provided the
+  //   two members have the same access control and provided their class is
+  //   not a union.
+  //   [...]
+  // - Otherwise pointer comparisons are unspecified.
+  if (!LHSDesignator.Invalid && !RHSDesignator.Invalid &&
+      BinaryOperator::isRelationalOp(Opcode)) {
+    bool WasArrayIndex;
+    unsigned Mismatch = FindDesignatorMismatch(
+        getType(LHSValue.Base), LHSDesignator, RHSDesignator, WasArrayIndex);
+    // At the point where the designators diverge, the comparison has a
+    // specified value if:
+    //  - we are comparing array indices
+    //  - we are comparing fields of a union, or fields with the same access
+    // Otherwise, the result is unspecified and thus the comparison is not a
+    // constant expression.
+    if (!WasArrayIndex && Mismatch < LHSDesignator.Entries.size() &&
+        Mismatch < RHSDesignator.Entries.size()) {
+      const FieldDecl *LF = getAsField(LHSDesignator.Entries[Mismatch]);
+      const FieldDecl *RF = getAsField(RHSDesignator.Entries[Mismatch]);
+      if (!LF && !RF)
+        Info.CCEDiag(E, diag::note_constexpr_pointer_comparison_base_classes);
+      else if (!LF)
+        Info.CCEDiag(E, diag::note_constexpr_pointer_comparison_base_field)
+            << getAsBaseClass(LHSDesignator.Entries[Mismatch])
+            << RF->getParent() << RF;
+      else if (!RF)
+        Info.CCEDiag(E, diag::note_constexpr_pointer_comparison_base_field)
+            << getAsBaseClass(RHSDesignator.Entries[Mismatch])
+            << LF->getParent() << LF;
+      else if (!LF->getParent()->isUnion() &&
+               LF->getAccess() != RF->getAccess())
+        Info.CCEDiag(E,
+                     diag::note_constexpr_pointer_comparison_differing_access)
+            << LF << LF->getAccess() << RF << RF->getAccess()
+            << LF->getParent();
+    }
+  }
+
+  // The comparison here must be unsigned, and performed with the same
+  // width as the pointer.
+  unsigned PtrSize = Info.Ctx.getTypeSize(LHSTy);
+  uint64_t CompareLHS = LHSOffset.getQuantity();
+  uint64_t CompareRHS = RHSOffset.getQuantity();
+  assert(PtrSize <= 64 && "Unexpected pointer width");
+  uint64_t Mask = ~0ULL >> (64 - PtrSize);
+  CompareLHS &= Mask;
+  CompareRHS &= Mask;
+
+  // If there is a base and this is a relational operator, we can only
+  // compare pointers within the object in question; otherwise, the result
+  // depends on where the object is located in memory.
+  if (!LHSValue.Base.isNull() && BinaryOperator::isRelationalOp(Opcode)) {
+    QualType BaseTy = getType(LHSValue.Base);
+    if (BaseTy->isIncompleteType())
+      return Error(E);
+    CharUnits Size = Info.Ctx.getTypeSizeInChars(BaseTy);
+    uint64_t OffsetLimit = Size.getQuantity();
+    if (CompareLHS > OffsetLimit || CompareRHS > OffsetLimit)
+      return Error(E);
+  }
+
+  if (CompareLHS < CompareRHS)
+    return Success(CmpResult::Less);
+  if (CompareLHS > CompareRHS)
+    return Success(CmpResult::Greater);
+  return Success(CmpResult::Equal);
+}
+
 template <class SuccessCB, class AfterCB>
 static bool
 EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
@@ -14212,12 +14360,6 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
   assert((E->getOpcode() == BO_Cmp ||
           E->getType()->isIntegralOrEnumerationType()) &&
          "unsupported binary expression evaluation");
-  auto Error = [&](const Expr *E) {
-    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    return false;
-  };
-
-  bool IsRelational = E->isRelationalOp() || E->getOpcode() == BO_Cmp;
   bool IsEquality = E->isEqualityOp();
 
   QualType LHSTy = E->getLHS()->getType();
@@ -14232,10 +14374,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluateInteger(E->getRHS(), RHS, Info) || !LHSOK)
       return false;
     if (LHS < RHS)
-      return Success(CmpResult::Less, E);
+      return Success(CmpResult::Less);
     if (LHS > RHS)
-      return Success(CmpResult::Greater, E);
-    return Success(CmpResult::Equal, E);
+      return Success(CmpResult::Greater);
+    return Success(CmpResult::Equal);
   }
 
   if (LHSTy->isFixedPointType() || RHSTy->isFixedPointType()) {
@@ -14248,10 +14390,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluateFixedPointOrInteger(E->getRHS(), RHSFX, Info) || !LHSOK)
       return false;
     if (LHSFX < RHSFX)
-      return Success(CmpResult::Less, E);
+      return Success(CmpResult::Less);
     if (LHSFX > RHSFX)
-      return Success(CmpResult::Greater, E);
-    return Success(CmpResult::Equal, E);
+      return Success(CmpResult::Greater);
+    return Success(CmpResult::Equal);
   }
 
   if (LHSTy->isAnyComplexType() || RHSTy->isAnyComplexType()) {
@@ -14287,12 +14429,12 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       APFloat::cmpResult CR_i =
         LHS.getComplexFloatImag().compare(RHS.getComplexFloatImag());
       bool IsEqual = CR_r == APFloat::cmpEqual && CR_i == APFloat::cmpEqual;
-      return Success(IsEqual ? CmpResult::Equal : CmpResult::Unequal, E);
+      return Success(IsEqual ? CmpResult::Equal : CmpResult::Unequal);
     } else {
       assert(IsEquality && "invalid complex comparison");
       bool IsEqual = LHS.getComplexIntReal() == RHS.getComplexIntReal() &&
                      LHS.getComplexIntImag() == RHS.getComplexIntImag();
-      return Success(IsEqual ? CmpResult::Equal : CmpResult::Unequal, E);
+      return Success(IsEqual ? CmpResult::Equal : CmpResult::Unequal);
     }
   }
 
@@ -14329,7 +14471,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       }
       llvm_unreachable("Unrecognised APFloat::cmpResult enum");
     };
-    return Success(GetCmpRes(), E);
+    return Success(GetCmpRes());
   }
 
   if (LHSTy->isPointerType() && RHSTy->isPointerType()) {
@@ -14342,145 +14484,12 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluatePointer(E->getRHS(), RHSValue, Info) || !LHSOK)
       return false;
 
-    // Reject differing bases from the normal codepath; we special-case
-    // comparisons to null.
-    if (!HasSameBase(LHSValue, RHSValue)) {
-      auto DiagComparison = [&] (unsigned DiagID, bool Reversed = false) {
-        std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
-        std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
-        Info.FFDiag(E, DiagID)
-            << (Reversed ? RHS : LHS) << (Reversed ? LHS : RHS);
-        return false;
-      };
-      // Inequalities and subtractions between unrelated pointers have
-      // unspecified or undefined behavior.
-      if (!IsEquality)
-        return DiagComparison(
-            diag::note_constexpr_pointer_comparison_unspecified);
-      // A constant address may compare equal to the address of a symbol.
-      // The one exception is that address of an object cannot compare equal
-      // to a null pointer constant.
-      // TODO: Should we restrict this to actual null pointers, and exclude the
-      // case of zero cast to pointer type?
-      if ((!LHSValue.Base && !LHSValue.Offset.isZero()) ||
-          (!RHSValue.Base && !RHSValue.Offset.isZero()))
-        return DiagComparison(diag::note_constexpr_pointer_constant_comparison,
-                              !RHSValue.Base);
-      // C++2c [intro.object]/10:
-      //   Two objects [...] may have the same address if [...] they are both
-      //   potentially non-unique objects.
-      // C++2c [intro.object]/9:
-      //   An object is potentially non-unique if it is a string literal object,
-      //   the backing array of an initializer list, or a subobject thereof.
-      //
-      // This makes the comparison result unspecified, so it's not a constant
-      // expression.
-      //
-      // TODO: Do we need to handle the initializer list case here?
-      if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
-        return DiagComparison(diag::note_constexpr_literal_comparison);
-      if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))
-        return DiagComparison(diag::note_constexpr_opaque_call_comparison,
-                              !IsOpaqueConstantCall(LHSValue));
-      // We can't tell whether weak symbols will end up pointing to the same
-      // object.
-      if (IsWeakLValue(LHSValue) || IsWeakLValue(RHSValue))
-        return DiagComparison(diag::note_constexpr_pointer_weak_comparison,
-                              !IsWeakLValue(LHSValue));
-      // We can't compare the address of the start of one object with the
-      // past-the-end address of another object, per C++ DR1652.
-      if (LHSValue.Base && LHSValue.Offset.isZero() &&
-          isOnePastTheEndOfCompleteObject(Info.Ctx, RHSValue))
-        return DiagComparison(diag::note_constexpr_pointer_comparison_past_end,
-                              true);
-      if (RHSValue.Base && RHSValue.Offset.isZero() &&
-           isOnePastTheEndOfCompleteObject(Info.Ctx, LHSValue))
-        return DiagComparison(diag::note_constexpr_pointer_comparison_past_end,
-                              false);
-      // We can't tell whether an object is at the same address as another
-      // zero sized object.
-      if ((RHSValue.Base && isZeroSized(LHSValue)) ||
-          (LHSValue.Base && isZeroSized(RHSValue)))
-        return DiagComparison(
-            diag::note_constexpr_pointer_comparison_zero_sized);
-      return Success(CmpResult::Unequal, E);
+    if (!EvaluateLValueComparison(Info, E, E->getOpcode(), LHSTy, LHSValue,
+                                  RHSTy, RHSValue, Success)) {
+      return false;
     }
 
-    const CharUnits &LHSOffset = LHSValue.getLValueOffset();
-    const CharUnits &RHSOffset = RHSValue.getLValueOffset();
-
-    SubobjectDesignator &LHSDesignator = LHSValue.getLValueDesignator();
-    SubobjectDesignator &RHSDesignator = RHSValue.getLValueDesignator();
-
-    // C++11 [expr.rel]p2:
-    // - If two pointers point to non-static data members of the same object,
-    //   or to subobjects or array elements fo such members, recursively, the
-    //   pointer to the later declared member compares greater provided the
-    //   two members have the same access control and provided their class is
-    //   not a union.
-    //   [...]
-    // - Otherwise pointer comparisons are unspecified.
-    if (!LHSDesignator.Invalid && !RHSDesignator.Invalid && IsRelational) {
-      bool WasArrayIndex;
-      unsigned Mismatch = FindDesignatorMismatch(
-          getType(LHSValue.Base), LHSDesignator, RHSDesignator, WasArrayIndex);
-      // At the point where the designators diverge, the comparison has a
-      // specified value if:
-      //  - we are comparing array indices
-      //  - we are comparing fields of a union, or fields with the same access
-      // Otherwise, the result is unspecified and thus the comparison is not a
-      // constant expression.
-      if (!WasArrayIndex && Mismatch < LHSDesignator.Entries.size() &&
-          Mismatch < RHSDesignator.Entries.size()) {
-        const FieldDecl *LF = getAsField(LHSDesignator.Entries[Mismatch]);
-        const FieldDecl *RF = getAsField(RHSDesignator.Entries[Mismatch]);
-        if (!LF && !RF)
-          Info.CCEDiag(E, diag::note_constexpr_pointer_comparison_base_classes);
-        else if (!LF)
-          Info.CCEDiag(E, diag::note_constexpr_pointer_comparison_base_field)
-              << getAsBaseClass(LHSDesignator.Entries[Mismatch])
-              << RF->getParent() << RF;
-        else if (!RF)
-          Info.CCEDiag(E, diag::note_constexpr_pointer_comparison_base_field)
-              << getAsBaseClass(RHSDesignator.Entries[Mismatch])
-              << LF->getParent() << LF;
-        else if (!LF->getParent()->isUnion() &&
-                 LF->getAccess() != RF->getAccess())
-          Info.CCEDiag(E,
-                       diag::note_constexpr_pointer_comparison_differing_access)
-              << LF << LF->getAccess() << RF << RF->getAccess()
-              << LF->getParent();
-      }
-    }
-
-    // The comparison here must be unsigned, and performed with the same
-    // width as the pointer.
-    unsigned PtrSize = Info.Ctx.getTypeSize(LHSTy);
-    uint64_t CompareLHS = LHSOffset.getQuantity();
-    uint64_t CompareRHS = RHSOffset.getQuantity();
-    assert(PtrSize <= 64 && "Unexpected pointer width");
-    uint64_t Mask = ~0ULL >> (64 - PtrSize);
-    CompareLHS &= Mask;
-    CompareRHS &= Mask;
-
-    // If there is a base and this is a relational operator, we can only
-    // compare pointers within the object in question; otherwise, the result
-    // depends on where the object is located in memory.
-    if (!LHSValue.Base.isNull() && IsRelational) {
-      QualType BaseTy = getType(LHSValue.Base);
-      if (BaseTy->isIncompleteType())
-        return Error(E);
-      CharUnits Size = Info.Ctx.getTypeSizeInChars(BaseTy);
-      uint64_t OffsetLimit = Size.getQuantity();
-      if (CompareLHS > OffsetLimit || CompareRHS > OffsetLimit)
-        return Error(E);
-    }
-
-    if (CompareLHS < CompareRHS)
-      return Success(CmpResult::Less, E);
-    if (CompareLHS > CompareRHS)
-      return Success(CmpResult::Greater, E);
-    return Success(CmpResult::Equal, E);
+    return true;
   }
 
   if (LHSTy->isMemberPointerType()) {
@@ -14514,7 +14523,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     //   null, they compare unequal.
     if (!LHSValue.getDecl() || !RHSValue.getDecl()) {
       bool Equal = !LHSValue.getDecl() && !RHSValue.getDecl();
-      return Success(Equal ? CmpResult::Equal : CmpResult::Unequal, E);
+      return Success(Equal ? CmpResult::Equal : CmpResult::Unequal);
     }
 
     //   Otherwise if either is a pointer to a virtual member function, the
@@ -14531,7 +14540,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     //   they were dereferenced with a hypothetical object of the associated
     //   class type.
     bool Equal = LHSValue == RHSValue;
-    return Success(Equal ? CmpResult::Equal : CmpResult::Unequal, E);
+    return Success(Equal ? CmpResult::Equal : CmpResult::Unequal);
   }
 
   if (LHSTy->isNullPtrType()) {
@@ -14544,7 +14553,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluatePointer(E->getLHS(), Res, Info) ||
         !EvaluatePointer(E->getRHS(), Res, Info))
       return false;
-    return Success(CmpResult::Equal, E);
+    return Success(CmpResult::Equal);
   }
 
   return DoAfter();
@@ -14554,7 +14563,7 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
   if (!CheckLiteralType(Info, E))
     return false;
 
-  auto OnSuccess = [&](CmpResult CR, const BinaryOperator *E) {
+  auto OnSuccess = [&](CmpResult CR) {
     ComparisonCategoryResult CCR;
     switch (CR) {
     case CmpResult::Unequal:
@@ -14614,7 +14623,7 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   if (E->isComparisonOp()) {
     // Evaluate builtin binary comparisons by evaluating them as three-way
     // comparisons and then translating the result.
-    auto OnSuccess = [&](CmpResult CR, const BinaryOperator *E) {
+    auto OnSuccess = [&](CmpResult CR) {
       assert((CR != CmpResult::Unequal || E->isEqualityOp()) &&
              "should only produce Unequal for equality comparisons");
       bool IsEqual   = CR == CmpResult::Equal,
@@ -16380,7 +16389,7 @@ public:
     case Builtin::BI__c11_atomic_signal_fence:
     case Builtin::BI__atomic_thread_fence:
     case Builtin::BI__atomic_signal_fence: {
-      [[maybe_unused]] APSInt IgnoredAtomicOrdering;
+      APSInt IgnoredAtomicOrdering;
       return EvaluateInteger(E->getArg(0), IgnoredAtomicOrdering, Info);
     }
 
@@ -18000,8 +18009,9 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
 } // namespace
 
 static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info) {
-  // we ignore results, but we need to evaluate them
-  [[maybe_unused]] APSInt OrderIgnoredResult;
+  // We need to evaluate Order argument(s), but we ignore it as constant
+  // evaluation is single threaded.
+  APSInt OrderIgnoredResult;
 
   if (E->getOp() != AtomicExpr::AO__c11_atomic_init) {
     const Expr *OrderSuccess = E->getOrder();
@@ -18019,20 +18029,6 @@ static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info) {
   return true;
 }
 
-static bool EvaluateAtomicWeak(const AtomicExpr *E, EvalInfo &Info) {
-  // we ignore results, but we need to evaluate them
-  [[maybe_unused]] APSInt WeakIgnoredResult;
-
-  if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
-      E->getOp() == AtomicExpr::AO__atomic_compare_exchange) {
-    const Expr *Weak = E->getWeak();
-    if (!EvaluateInteger(Weak, WeakIgnoredResult, Info))
-      return false;
-  }
-
-  return true;
-}
-
 static bool EvaluateAtomicLoad(const AtomicExpr *E, APValue &Result,
                                EvalInfo &Info) {
   LValue AtomicStorageLV;
@@ -18044,26 +18040,20 @@ static bool EvaluateAtomicLoad(const AtomicExpr *E, APValue &Result,
                                         AtomicStorageLV, Result);
 }
 
-static bool EvaluatePointerAndStoreValueInto(Expr *ResultPtr,
-                                             APValue &ValueToStore,
-                                             EvalInfo &Info) {
-  assert(ResultPtr->getType()->isPointerType());
-  QualType PointeeTy = ResultPtr->getType()->getPointeeType();
-  LValue PointeeLV;
-
-  if (!EvaluatePointer(ResultPtr, PointeeLV, Info))
-    return false;
-
-  return handleAssignment(Info, ResultPtr, PointeeLV, PointeeTy, ValueToStore);
-}
-
 static bool EvaluateAtomicLoadInto(const AtomicExpr *E, EvalInfo &Info) {
   APValue LocalResult;
 
   if (!EvaluateAtomicLoad(E, LocalResult, Info))
     return false;
 
-  if (!EvaluatePointerAndStoreValueInto(E->getVal1(), LocalResult, Info))
+  assert(E->getVal1()->getType()->isPointerType());
+  QualType PointeeTy = E->getVal1()->getType()->getPointeeType();
+  LValue PointeeLV;
+
+  if (!EvaluatePointer(E->getVal1(), PointeeLV, Info))
+    return false;
+
+  if (!handleAssignment(Info, E->getVal1(), PointeeLV, PointeeTy, LocalResult))
     return false;
 
   return true;
@@ -18077,7 +18067,7 @@ static bool EvaluateAtomicStore(const AtomicExpr *E, EvalInfo &Info) {
 
   APValue ProvidedValue;
 
-  // GCC's atomic_store takes pointer to value, not value itself
+  // GCC's atomic_store takes pointer to value, not value itself.
   if (E->getOp() == AtomicExpr::AO__atomic_store) {
     LValue ProvidedLV;
     if (!EvaluatePointer(E->getVal1(), ProvidedLV, Info))
@@ -18099,20 +18089,34 @@ static bool EvaluateAtomicStore(const AtomicExpr *E, EvalInfo &Info) {
   return true;
 }
 
+static bool EvaluateAtomicExchange(const AtomicExpr *E, APValue &Result,
+                                   EvalInfo &Info) {
+  assert(E->getOp() == AtomicExpr::AO__c11_atomic_exchange ||
+         E->getOp() == AtomicExpr::AO__atomic_exchange_n);
+
+  if (!EvaluateAtomicLoad(E, Result, Info))
+    return false;
+
+  if (!EvaluateAtomicStore(E, Info))
+    return false;
+
+  return true;
+}
+
 static bool EvaluateAtomicExchangeInto(const AtomicExpr *E, EvalInfo &Info) {
   assert(E->getOp() == AtomicExpr::AO__atomic_exchange);
-  // implementation of GCC's exchange (non _n version)
+  // Implementation of GCC's exchange (non _n version).
   LValue AtomicStorageLV;
   if (!EvaluatePointer(E->getPtr(), AtomicStorageLV, Info))
     return false;
 
-  // read previous value
+  // Read previous value.
   APValue PreviousValue;
   if (!handleLValueToRValueConversion(Info, E->getPtr(), E->getValueType(),
                                       AtomicStorageLV, PreviousValue))
     return false;
 
-  // get provided value from argument (pointer)
+  // Get value pointer by argument of the exchange operation.
   LValue ProvidedLV;
   if (!EvaluatePointer(E->getVal1(), ProvidedLV, Info))
     return false;
@@ -18123,13 +18127,21 @@ static bool EvaluateAtomicExchangeInto(const AtomicExpr *E, EvalInfo &Info) {
                                       ProvidedValue))
     return false;
 
-  // store provided value to atomic value
+  // Store provided value to atomic value.
   if (!handleAssignment(Info, E, AtomicStorageLV, E->getValueType(),
                         ProvidedValue))
     return false;
 
-  // store previous value in output pointer
-  if (!EvaluatePointerAndStoreValueInto(E->getVal2(), PreviousValue, Info))
+  // Store previous value in output pointer.
+  assert(E->getVal2()->getType()->isPointerType());
+  QualType PointeeTy = E->getVal2()->getType()->getPointeeType();
+  LValue PointeeLV;
+
+  if (!EvaluatePointer(E->getVal2(), PointeeLV, Info))
+    return false;
+
+  if (!handleAssignment(Info, E->getVal2(), PointeeLV, PointeeTy,
+                        PreviousValue))
     return false;
 
   return true;
@@ -18137,7 +18149,7 @@ static bool EvaluateAtomicExchangeInto(const AtomicExpr *E, EvalInfo &Info) {
 
 static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
                                   EvalInfo &Info, bool StoreToResultAfter) {
-  // read atomic
+  // Read the atomic.
   LValue AtomicStorageLV;
   QualType AtomicValueTy = E->getValueType();
   if (!EvaluatePointer(E->getPtr(), AtomicStorageLV, Info))
@@ -18148,19 +18160,21 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
                                       AtomicStorageLV, CurrentValue))
     return false;
 
-  // store current value for fetch-OP operations
+  // Store current value for fetch-OP operations.
   if (!StoreToResultAfter)
     Result = CurrentValue;
 
-  // read argument for fetch OP
+  // Read argument for fetch OP.
   APValue ArgumentVal;
   if (!Evaluate(ArgumentVal, Info, E->getVal1()))
     return false;
 
-  // calculate new value
+  // Calculate new value.
   APValue Replacement;
   if (AtomicValueTy->isIntegralOrEnumerationType()) {
-    // both arguments are integers
+    assert(CurrentValue.isInt());
+    assert(ArgumentVal.isInt());
+
     const APSInt AtomicInt = CurrentValue.getInt();
     const APSInt ArgumentInt = ArgumentVal.getInt();
 
@@ -18168,6 +18182,7 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
     case AtomicExpr::AO__c11_atomic_fetch_add:
     case AtomicExpr::AO__atomic_fetch_add:
     case AtomicExpr::AO__atomic_add_fetch:
+      // Atomic operations are defined for overflow
       Replacement = APValue(AtomicInt + ArgumentInt);
       break;
     case AtomicExpr::AO__c11_atomic_fetch_sub:
@@ -18198,28 +18213,27 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
     case AtomicExpr::AO__c11_atomic_fetch_max:
     case AtomicExpr::AO__atomic_fetch_max:
     case AtomicExpr::AO__atomic_max_fetch:
-      Replacement =
-          APValue((AtomicInt > ArgumentInt) ? AtomicInt : ArgumentInt);
+      Replacement = APValue(std::max(AtomicInt, ArgumentInt));
       break;
     case AtomicExpr::AO__c11_atomic_fetch_min:
     case AtomicExpr::AO__atomic_fetch_min:
     case AtomicExpr::AO__atomic_min_fetch:
-      Replacement =
-          APValue((AtomicInt < ArgumentInt) ? AtomicInt : ArgumentInt);
+      Replacement = APValue(std::min(AtomicInt, ArgumentInt));
       break;
     default:
       return false;
     }
   } else if (AtomicValueTy->isRealFloatingType()) {
-    // both arguments are float operations
+    assert(CurrentValue.isFloat());
+    assert(ArgumentVal.isFloat());
+
     const llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
     APFloat AtomicFlt = CurrentValue.getFloat();
     const APFloat ArgumentFlt = ArgumentVal.getFloat();
     APFloat::opStatus St;
 
     switch (E->getOp()) {
-    case AtomicExpr::AO__c11_atomic_fetch_add: // GCC atomics doesn't support
-                                               // floats
+    case AtomicExpr::AO__c11_atomic_fetch_add:
       St = AtomicFlt.add(ArgumentFlt, RM);
       Replacement = APValue(AtomicFlt);
       break;
@@ -18228,6 +18242,7 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
       Replacement = APValue(AtomicFlt);
       break;
     default:
+      // GCC's atomic fetch-op doesn't support float operands.
       return false;
     }
 
@@ -18235,34 +18250,41 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
       return false;
 
   } else if (AtomicValueTy->isPointerType()) {
-    // pointer + int arguments
+    assert(CurrentValue.isLValue());
+    assert(ArgumentVal.isInt());
+
     LValue AtomicPtr;
     AtomicPtr.setFrom(Info.Ctx, CurrentValue);
 
     APSInt ArgumentInt = ArgumentVal.getInt();
 
-    // calculate size of pointee object
+    // Calculate size of pointee object.
     CharUnits SizeOfPointee;
     if (!HandleSizeof(Info, E->getExprLoc(), AtomicValueTy->getPointeeType(),
                       SizeOfPointee))
       return false;
 
-    // GCC's atomic_fetch add/sub compute new pointer by bytes and not
-    // sizeof(T)
+    // GCC's atomic_fetch add/sub operations takes arguments in bytes and
+    // not in multiplies of sizeof(T).
     switch (E->getOp()) {
     case AtomicExpr::AO__atomic_fetch_add:
     case AtomicExpr::AO__atomic_add_fetch:
     case AtomicExpr::AO__atomic_fetch_sub:
     case AtomicExpr::AO__atomic_sub_fetch: {
-      const auto sizeOfOneItem = APSInt(
+      const auto SizeOfOneItem = APSInt(
           APInt(ArgumentInt.getBitWidth(), SizeOfPointee.getQuantity(), false),
           false);
-      // incrementing pointer by size which is not dividable by pointee size
-      // is UB and therefore disallowed
-      if ((ArgumentInt % sizeOfOneItem) != 0)
+      // Incrementing/decrementing pointer by size which is not dividable by
+      // pointee size is not allowed.
+      if ((ArgumentInt % SizeOfOneItem) != 0) {
+        Info.FFDiag(E->getBuiltinLoc(), diag::note_unaligned_atomic_pointer_op)
+            << E->getBuiltinLoc()
+            << E->getVal1()->getSourceRange() // Problematic argument.
+            << ArgumentInt << AtomicValueTy->getPointeeType() << SizeOfOneItem;
         return false;
+      }
 
-      ArgumentInt /= sizeOfOneItem;
+      ArgumentInt /= SizeOfOneItem;
     } break;
     default:
       break;
@@ -18286,39 +18308,47 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
 
     AtomicPtr.moveInto(Replacement);
   } else {
-    // not float,int,pointer?
+    assert(false && "only float, int, or pointer supported");
     return false;
   }
 
-  // OP-fetch operation store result, not previous value
+  // OP-fetch operation store result, not previous value.
   if (StoreToResultAfter)
     Result = Replacement;
 
-  // store result to atomic's storage
+  // Store result to atomic's storage.
   return handleAssignment(Info, E, AtomicStorageLV, AtomicValueTy, Replacement);
 }
 
 static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
                                           EvalInfo &Info) {
-  EvaluateAtomicWeak(E, Info);
+  if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
+      E->getOp() == AtomicExpr::AO__atomic_compare_exchange) {
 
-  // dereference _Atomic * (atomic value)
+    APSInt WeakIgnoredResult;
+
+    const Expr *Weak = E->getWeak();
+    if (!EvaluateInteger(Weak, WeakIgnoredResult, Info))
+      return false;
+  }
+
+  // Dereference _Atomic T * (atomic value).
   LValue AtomicLV;
   QualType AtomicTy = E->getValueType();
   if (!EvaluatePointer(E->getPtr(), AtomicLV, Info))
     return false;
 
-  // dereference T * (expected value)
+  // Dereference T * (expected value).
   LValue ExpectedLV;
   QualType ExpectedTy = E->getVal1()->getType()->getPointeeType();
   if (!EvaluatePointer(E->getVal1(), ExpectedLV, Info))
     return false;
 
-  // get values for atomic and expected
+  // Get values for atomic and expected.
   APValue AtomicVal;
   APValue ExpectedVal;
 
-  // convert pointer to value
+  // Convert pointer to value.
   if (!handleLValueToRValueConversion(Info, E->getPtr(), AtomicTy, AtomicLV,
                                       AtomicVal))
     return false;
@@ -18329,7 +18359,7 @@ static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
 
   bool DoExchange = false;
 
-  // compare atomic<int> and friends
+  // Do the comparison for equality.
   if (AtomicTy->isIntegralOrEnumerationType() &&
       ExpectedTy->isIntegralOrEnumerationType()) {
     const APSInt AtomicInt = AtomicVal.getInt();
@@ -18345,55 +18375,19 @@ static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
       DoExchange = true;
 
   } else if (AtomicTy->isPointerType() && ExpectedTy->isPointerType()) {
-    // get LValue of objects pointed to
-    LValue LHS;
+    // Do the comparison of pointers.
+    LValue LHS, RHS;
     LHS.setFrom(Info.Ctx, AtomicVal);
-
-    LValue RHS;
     RHS.setFrom(Info.Ctx, ExpectedVal);
 
-    if (HasSameBase(LHS, RHS)) {
-      const CharUnits &LHSOffset = LHS.getLValueOffset();
-      const CharUnits &RHSOffset = RHS.getLValueOffset();
+    auto OnSuccess = [&](CmpResult CR) {
+      DoExchange = (CR == CmpResult::Equal);
+      return true;
+    };
 
-      const unsigned PtrSize = Info.Ctx.getTypeSize(AtomicTy);
-      assert(PtrSize <= 64 && "Pointer width is larger than expected");
-      const uint64_t Mask = ~0ULL >> (64 - PtrSize);
-
-      const uint64_t CompareLHS = LHSOffset.getQuantity() & Mask;
-      const uint64_t CompareRHS = RHSOffset.getQuantity() & Mask;
-
-      if (CompareLHS == CompareRHS)
-        DoExchange = true;
-
-    } else {
-
-      if (ArePotentiallyOverlappingStringLiterals(Info, LHS, RHS))
-        return false;
-
-      if (IsOpaqueConstantCall(LHS) || IsOpaqueConstantCall(RHS))
-        return false;
-
-      if (IsWeakLValue(LHS) || IsWeakLValue(RHS))
-        return false;
-
-      if ((!LHS.Base && !LHS.Offset.isZero()) ||
-          (!RHS.Base && !RHS.Offset.isZero()))
-        return false;
-
-      if (LHS.Base && LHS.Offset.isZero() &&
-          isOnePastTheEndOfCompleteObject(Info.Ctx, RHS))
-        return false;
-
-      if (RHS.Base && RHS.Offset.isZero() &&
-          isOnePastTheEndOfCompleteObject(Info.Ctx, LHS))
-        return false;
-
-      if ((RHS.Base && isZeroSized(RHS)) || (LHS.Base && isZeroSized(LHS)))
-        return false;
-
-      // after all it's a different object
-      DoExchange = false;
+    if (!EvaluateLValueComparison(Info, E, BO_EQ, AtomicTy, LHS, ExpectedTy,
+                                  RHS, OnSuccess)) {
+      return false;
     }
 
   } else {
@@ -18402,7 +18396,8 @@ static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
 
   APValue Replacement;
   if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange) {
-    // GCC atomic_compare_exchange provides pointer and not value
+    // GCC atomic_compare_exchange takes pointer to a value and not value
+    // itself.
     LValue ReplacementLV;
     if (!EvaluatePointer(E->getVal2(), ReplacementLV, Info))
       return false;
@@ -18418,19 +18413,17 @@ static bool EvaluateAtomicCompareExchange(const AtomicExpr *E, APValue &Result,
   }
 
   if (DoExchange) {
-    // if values are same do the exchange with replacement value
-    // but first I must evaluate the replacement value
-
-    // and assign it to atomic
+    // If values are same do the exchange with replacement value.
+    // But first I must evaluate the replacement value and assign it to atomic.
     if (!handleAssignment(Info, E, AtomicLV, AtomicTy, Replacement))
       return false;
   }
 
-  // to expected pointer I need to put previous value in atomic
+  // Return previous value to the Expected pointer.
   if (!handleAssignment(Info, E, ExpectedLV, ExpectedTy, AtomicVal))
     return false;
 
-  // and return boolean if I did the exchange
+  // Return boolean result if operation was successful.
   Result = APValue(Info.Ctx.MakeIntValue(DoExchange, E->getType()));
   return true;
 }
