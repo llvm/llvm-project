@@ -26380,7 +26380,7 @@ static SDValue performSHLCombine(SDNode *N,
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
-  if (!Op0.hasOneUse() || Op0.getOpcode() != ISD::AND)
+  if (Op0.getOpcode() != ISD::AND || !Op0.hasOneUse())
     return SDValue();
 
   SDValue C1 = Op0->getOperand(1);
