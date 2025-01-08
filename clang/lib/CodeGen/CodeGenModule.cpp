@@ -2748,17 +2748,25 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
   }
+  // Add metadata for AArch64 Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
     llvm::SmallVector<StringRef, 8> Feats;
-    if (TV)
+    bool IsDefault = false;
+    if (TV) {
+      IsDefault = TV->isDefaultVersion();
       TV->getFeatures(Feats);
-    else if (TC)
+    } else if (TC) {
+      IsDefault = TC->isDefaultVersion(GD.getMultiVersionIndex());
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-    if (!Feats.empty()) {
+    }
+    if (IsDefault) {
+      Attrs.addAttribute("fmv-features");
+      AddedAttr = true;
+    } else if (!Feats.empty()) {
       llvm::sort(Feats);
       std::string FMVFeatures;
       for (StringRef F : Feats)
-        FMVFeatures.append(",+" + F.str());
+        FMVFeatures.append("," + F.str());
       Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
       AddedAttr = true;
     }
