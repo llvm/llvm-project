@@ -18129,10 +18129,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     return;
 
   SmallVector<unsigned> ToDemote;
-  auto ComputeMaxBitWidth = [&](const TreeEntry &E, bool IsTopRoot,
-                                bool IsProfitableToDemoteRoot, unsigned Opcode,
-                                unsigned Limit, bool IsTruncRoot,
-                                bool IsSignedCmp) -> unsigned {
+  auto ComputeMaxBitWidth =
+      [&](const TreeEntry &E, bool IsTopRoot, bool IsProfitableToDemoteRoot,
+          unsigned Limit, bool IsTruncRoot, bool IsSignedCmp) -> unsigned {
     ToDemote.clear();
     // Check if the root is trunc and the next node is gather/buildvector, then
     // keep trunc in scalars, which is free in most cases.
@@ -18173,11 +18172,14 @@ void BoUpSLP::computeMinimumValueSizes() {
       return MaxBitWidth;
     }
 
+    if (!E.isInstructionsStateValid())
+      return 0u;
+
     unsigned VF = E.getVectorFactor();
     Type *ScalarTy = E.Scalars.front()->getType();
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     auto *TreeRootIT = dyn_cast<IntegerType>(ScalarTy->getScalarType());
-    if (!TreeRootIT || !Opcode)
+    if (!TreeRootIT)
       return 0u;
 
     if (any_of(E.Scalars,
@@ -18249,6 +18251,7 @@ void BoUpSLP::computeMinimumValueSizes() {
                 IntegerType::get(F->getContext(), bit_ceil(MaxBitWidth)), VF)))
       return 0u;
 
+    unsigned Opcode = E.getOpcode();
     bool IsProfitableToDemote = Opcode == Instruction::Trunc ||
                                 Opcode == Instruction::SExt ||
                                 Opcode == Instruction::ZExt || NumParts > 1;
@@ -18329,17 +18332,14 @@ void BoUpSLP::computeMinimumValueSizes() {
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
-    unsigned Opcode = VectorizableTree[NodeIdx]->isInstructionsStateValid()
-                          ? VectorizableTree[NodeIdx]->getOpcode()
-                          : 0;
     if (IsTopRoot &&
         ReductionBitWidth ==
             DL->getTypeSizeInBits(
                 VectorizableTree.front()->Scalars.front()->getType()))
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
-        *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Opcode,
-        Limit, IsTruncRoot, IsSignedCmp);
+        *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
+        IsTruncRoot, IsSignedCmp);
     if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
         ReductionBitWidth = bit_ceil(MaxBitWidth);
