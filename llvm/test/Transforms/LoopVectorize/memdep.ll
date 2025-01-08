@@ -226,7 +226,7 @@ for.end:
 
 ;Check the new calculation of the maximum safe distance in bits which can be vectorized.
 ;The previous behavior did not take account that the stride was 2.
-;Therefore the maxVF was computed as 8 instead of 4, as the dependence distance here is 6 iterations, given by |N-(N-12)|/2.
+;Therefore the maxVF was computed as 8 instead of 2, as the dependence distance here is 6 iterations, given by |N-(N-12)|/2.
 
 ;#define M 32
 ;#define N 2 * M
@@ -242,7 +242,7 @@ for.end:
 ;}
 
 ; RIGHTVF-LABEL: @pr34283
-; RIGHTVF: <4 x i64>
+; RIGHTVF: <2 x i64>
 
 ; WRONGVF-LABLE: @pr34283
 ; WRONGVF-NOT: <8 x i64>
