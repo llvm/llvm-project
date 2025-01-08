@@ -1426,6 +1426,10 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   return true;
 }
 
+int MachineBasicBlock::getJumpTableIndex() const {
+  return findJumpTableIndex(*this);
+}
+
 /// Prepare MI to be removed from its bundle. This fixes bundle flags on MI's
 /// neighboring instructions so the bundle won't be broken by removing MI.
 static void unbundleSingleMI(MachineInstr *MI) {

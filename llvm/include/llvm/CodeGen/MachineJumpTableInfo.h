@@ -28,6 +28,7 @@ namespace llvm {
 class MachineBasicBlock;
 class DataLayout;
 class raw_ostream;
+enum class DataHotness;
 
 /// MachineJumpTableEntry - One jump table in the jump table info.
 ///
@@ -35,8 +36,9 @@ struct MachineJumpTableEntry {
   /// MBBs - The vector of basic blocks from which to create the jump table.
   std::vector<MachineBasicBlock*> MBBs;
 
-  explicit MachineJumpTableEntry(const std::vector<MachineBasicBlock*> &M)
-  : MBBs(M) {}
+  DataHotness Hotness;
+
+  explicit MachineJumpTableEntry(const std::vector<MachineBasicBlock *> &M);
 };
 
 class MachineJumpTableInfo {
@@ -106,6 +108,8 @@ public:
   const std::vector<MachineJumpTableEntry> &getJumpTables() const {
     return JumpTables;
   }
+
+  void updateJumpTableHotness(size_t JTI, DataHotness Hotness);
 
   /// RemoveJumpTable - Mark the specific index as being dead.  This will
   /// prevent it from being emitted.
