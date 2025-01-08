@@ -10,6 +10,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
