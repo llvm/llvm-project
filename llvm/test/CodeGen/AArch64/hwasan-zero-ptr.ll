@@ -14,16 +14,9 @@ target triple = "aarch64--linux-android10000"
 
 $hwasan.module_ctor = comdat any
 
-$__hwasan_personality_thunk = comdat any
-
-@llvm.used = appending global [1 x ptr] [ptr @hwasan.module_ctor], section "llvm.metadata"
-@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @hwasan.module_ctor, ptr @hwasan.module_ctor }]
 @__start_hwasan_globals = external hidden constant [0 x i8]
 @__stop_hwasan_globals = external hidden constant [0 x i8]
 @hwasan.note = private constant { i32, i32, i32, [8 x i8], i32, i32 } { i32 8, i32 8, i32 3, [8 x i8] c"LLVM\00\00\00\00", i32 trunc (i64 sub (i64 ptrtoint (ptr @__start_hwasan_globals to i64), i64 ptrtoint (ptr @hwasan.note to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @__stop_hwasan_globals to i64), i64 ptrtoint (ptr @hwasan.note to i64)) to i32) }, section ".note.hwasan.globals", comdat($hwasan.module_ctor), align 4
-@hwasan.dummy.global = private constant [0 x i8] zeroinitializer, section "hwasan_globals", comdat($hwasan.module_ctor), !associated !0
-@llvm.compiler.used = appending global [2 x ptr] [ptr @hwasan.note, ptr @hwasan.dummy.global], section "llvm.metadata"
-@__hwasan_shadow = external global [0 x i8]
 
 ; Function Attrs: sanitize_hwaddress
 define void @test_store_to_zeroptr() #0 {
@@ -65,12 +58,6 @@ define internal void @hwasan.module_ctor() #1 comdat {
   call void @__hwasan_init()
   ret void
 }
-
-declare i32 @__hwasan_personality_wrapper(i32, i32, i64, ptr, ptr, ptr, ptr, ptr)
-
-declare void @_Unwind_GetGR()
-
-declare void @_Unwind_GetCFA()
 
 !llvm.module.flags = !{!1}
 
