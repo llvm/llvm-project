@@ -99,7 +99,7 @@ void clang::serializeSanitizerMaskCutoffs(
     std::string Str;                                                           \
     llvm::raw_string_ostream OS(Str);                                          \
     OS << NAME "=" << llvm::format("%.8f", *C);                                \
-    Values.emplace_back(std::move(Str));                                       \
+    Values.emplace_back(StringRef(Str).rtrim('0'));                            \
   }
 #include "clang/Basic/Sanitizers.def"
 }
