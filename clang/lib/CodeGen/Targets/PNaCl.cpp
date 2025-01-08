@@ -63,7 +63,7 @@ RValue PNaClABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 ABIArgInfo PNaClABIInfo::classifyArgumentType(QualType Ty) const {
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      RAA == CGCXXABI::RAA_DirectInMemory);
     return getNaturalAlignIndirect(
         Ty, getContext().getTargetAddressSpace(LangAS::Default));
@@ -77,7 +77,7 @@ ABIArgInfo PNaClABIInfo::classifyArgumentType(QualType Ty) const {
     // Treat bit-precise integers as integers if <= 64, otherwise pass
     // indirectly.
     if (EIT->getNumBits() > 64)
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS());
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
     return ABIArgInfo::getDirect();
   }
 

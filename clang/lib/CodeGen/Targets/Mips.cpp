@@ -209,7 +209,7 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
 
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
       Offset = OrigOffset + MinABIStackAlignInBytes;
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
@@ -232,7 +232,7 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
     if (EIT->getNumBits() > 128 ||
         (EIT->getNumBits() > 64 &&
          !getContext().getTargetInfo().hasInt128Type()))
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS());
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   // All integral types are promoted to the GPR width.
   if (Ty->isIntegralOrEnumerationType())

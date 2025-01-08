@@ -208,15 +208,16 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      RAA == CGCXXABI::RAA_DirectInMemory);
 
     CharUnits CCAlign = getParamTypeAlignment(Ty);
     CharUnits TyAlign = getContext().getTypeAlignInChars(Ty);
 
-    return ABIArgInfo::getIndirect(CCAlign, /*AddrSpace*/ getTargetDefaultAS(),
-                                   /*ByVal*/ true,
-                                   /*Realign*/ TyAlign > CCAlign);
+    return ABIArgInfo::getIndirect(
+        CCAlign, /*AddrSpace*/ getDataLayout().getAllocaAddrSpace(),
+        /*ByVal*/ true,
+        /*Realign*/ TyAlign > CCAlign);
   }
 
   return (isPromotableTypeForABI(Ty)
@@ -835,7 +836,8 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   if (Ty->isVectorType()) {
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size > 128)
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
     else if (Size < 128) {
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), Size);
       return ABIArgInfo::getDirect(CoerceTy);
@@ -844,11 +846,12 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() > 128)
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/true);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/true);
 
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      RAA == CGCXXABI::RAA_DirectInMemory);
 
     uint64_t ABIAlign = getParamTypeAlignment(Ty).getQuantity();
@@ -891,7 +894,8 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
 
     // All other aggregates are passed ByVal.
     return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(ABIAlign), /*AddrSpace=*/getTargetDefaultAS(),
+        CharUnits::fromQuantity(ABIAlign),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
         /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
   }
 

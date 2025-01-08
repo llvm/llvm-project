@@ -298,8 +298,9 @@ ABIArgInfo ARMABIInfo::coerceIllegalVector(QualType Ty) const {
         llvm::Type::getInt32Ty(getVMContext()), Size / 32);
     return ABIArgInfo::getDirect(ResType);
   }
-  return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
-                                 /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
@@ -356,8 +357,9 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
-        return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
-                                       /*ByVal=*/true);
+        return getNaturalAlignIndirect(
+            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/true);
 
     return (isPromotableIntegerTypeForABI(Ty)
                 ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
@@ -365,7 +367,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(),
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
@@ -401,7 +403,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     // and a pointer is passed.
     return ABIArgInfo::getIndirect(
         CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8),
-        getTargetDefaultAS(), false);
+        getDataLayout().getAllocaAddrSpace(), false);
   }
 
   // Support byval for ARM.
@@ -420,7 +422,8 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(64)) {
     assert(getABIKind() != ARMABIKind::AAPCS16_VFP && "unexpected byval");
     return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(ABIAlign), /*AddrSpace=*/getTargetDefaultAS(),
+        CharUnits::fromQuantity(ABIAlign),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
         /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
   }
 

@@ -82,9 +82,9 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
-    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
-                                   /*ByVal=*/RAA ==
-                                       CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Ignore empty structs/unions.
@@ -145,7 +145,8 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
           llvm::IntegerType::get(getVMContext(), XLen), (Size + 31) / XLen));
     }
   }
-  return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo CSKYABIInfo::classifyReturnType(QualType RetTy) const {

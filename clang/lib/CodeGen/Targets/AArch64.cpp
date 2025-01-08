@@ -326,7 +326,8 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
 
-  return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
@@ -334,7 +335,8 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
   if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
-    return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
 
@@ -374,7 +376,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), false);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       false);
 
     if (Ty->isVectorType())
       NSRN = std::min(NSRN + 1, 8u);
@@ -414,9 +417,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
-                                   /*ByVal=*/RAA ==
-                                       CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Empty records are always ignored on Darwin, but actually passed in C++ mode
@@ -490,7 +493,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
   }
 
-  return getNaturalAlignIndirect(Ty, getTargetDefaultAS(), /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,

@@ -21,12 +21,10 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(
-          Ty, getContext().getTargetAddressSpace(LangAS::Default),
-          RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default));
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
   }
 
   // Treat an enum type as its underlying type.
@@ -39,8 +37,7 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
         Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
                                 ? Context.Int128Ty
                                 : Context.LongLongTy))
-      return getNaturalAlignIndirect(
-          Ty, Context.getTargetAddressSpace(LangAS::Default));
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   return (isPromotableIntegerTypeForABI(Ty)
               ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))

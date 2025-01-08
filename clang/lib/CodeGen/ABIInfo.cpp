@@ -12,10 +12,6 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
-unsigned ABIInfo::getTargetDefaultAS() const {
-  return getContext().getTargetAddressSpace(LangAS::Default);
-}
-
 // Pin the vtable to this file.
 ABIInfo::~ABIInfo() = default;
 

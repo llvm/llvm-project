@@ -49,8 +49,6 @@ protected:
   CodeGen::CodeGenTypes &CGT;
   llvm::CallingConv::ID RuntimeCC;
 
-  unsigned getTargetDefaultAS() const;
-
 public:
   ABIInfo(CodeGen::CodeGenTypes &cgt)
       : CGT(cgt), RuntimeCC(llvm::CallingConv::C) {}

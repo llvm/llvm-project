@@ -94,8 +94,9 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
     if (RAA == CGCXXABI::RAA_Indirect) {
       return getIndirectResult(Ty, /*ByVal=*/false, State);
     } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
-      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/getTargetDefaultAS(),
-                                     /*ByVal=*/true);
+      return getNaturalAlignIndirect(
+          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/true);
     }
   }
 
