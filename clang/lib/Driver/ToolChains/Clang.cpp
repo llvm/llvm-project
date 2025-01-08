@@ -9282,6 +9282,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         Twine("--offload-opt=-pass-remarks-analysis=") + A->getValue()));
+
+  if (Args.getLastArg(options::OPT_ftime_report))
+    CmdArgs.push_back("--device-compiler=-ftime-report");
+
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     CmdArgs.push_back("--save-temps");
 
