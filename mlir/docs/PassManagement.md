@@ -1398,6 +1398,27 @@ $ tree /tmp/pipeline_output
 │   │   ├── 1_1_pass4.mlir
 ```
 
+*   `mlir-use-nameloc-as-prefix`
+    * If your source IR has named locations (`loc("named_location")"`) then passing this flag will use those
+      names (`named_location`) to prefix the corresponding SSA identifiers:
+    
+      ```mlir
+      %1 = memref.load %0[] : memref<i32> loc("alice")  
+      %2 = memref.load %0[] : memref<i32> loc("bob")
+      %3 = memref.load %0[] : memref<i32> loc("bob")
+      ```
+      
+      will print 
+    
+      ```mlir
+      %alice = memref.load %0[] : memref<i32>
+      %bob = memref.load %0[] : memref<i32>
+      %bob_0 = memref.load %0[] : memref<i32>
+      ```
+      
+      These names will also be preserved through passes to newly created operations if using the appropriate location.
+      
+
 ## Crash and Failure Reproduction
 
 The [pass manager](#pass-manager) in MLIR contains a builtin mechanism to

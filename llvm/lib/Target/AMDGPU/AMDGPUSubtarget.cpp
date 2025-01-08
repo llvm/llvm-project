@@ -366,6 +366,7 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
       TM.getSubtarget<R600Subtarget>(F));
 }
 
+// FIXME: This has no reason to be in subtarget
 SmallVector<unsigned>
 AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
   return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,

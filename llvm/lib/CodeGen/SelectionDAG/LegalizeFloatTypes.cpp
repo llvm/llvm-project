@@ -3415,6 +3415,23 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT SVT = Op.getValueType();
 
+  // If the input type needs to be softened, do that now so that call lowering
+  // will see the f16 type.
+  if (getTypeAction(SVT) == TargetLowering::TypeSoftenFloat) {
+    RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, RVT);
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND libcall");
+
+    SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+    Op = GetSoftenedFloat(Op);
+    TargetLowering::MakeLibCallOptions CallOptions;
+    CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N), Chain);
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), Tmp.second);
+    return DAG.getNode(ISD::BITCAST, SDLoc(N), MVT::i16, Tmp.first);
+  }
+
   if (IsStrict) {
     SDValue Res = DAG.getNode(GetPromotionOpcodeStrict(SVT, RVT), SDLoc(N),
                               {MVT::i16, MVT::Other}, {N->getOperand(0), Op});

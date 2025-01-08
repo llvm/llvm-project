@@ -462,9 +462,7 @@ public:
       : Value(Value) {}
 
   /// Forcibly set this pointer (which must be lazy) as needing updates.
-  void markIncomplete() {
-    Value.template get<LazyData *>()->LastGeneration = 0;
-  }
+  void markIncomplete() { cast<LazyData *>(Value)->LastGeneration = 0; }
 
   /// Set the value of this pointer, in the current generation.
   void set(T NewValue) {
@@ -487,14 +485,14 @@ public:
       }
       return LazyVal->LastValue;
     }
-    return Value.template get<T>();
+    return cast<T>(Value);
   }
 
   /// Get the most recently computed value of this pointer without updating it.
   T getNotUpdated() const {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>())
       return LazyVal->LastValue;
-    return Value.template get<T>();
+    return cast<T>(Value);
   }
 
   void *getOpaqueValue() { return Value.getOpaqueValue(); }

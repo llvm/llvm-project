@@ -13,21 +13,25 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_SIMPLIFYHLFIRINTRINSICS
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
+
+static llvm::cl::opt<bool>
+    simplifySum("flang-simplify-hlfir-sum",
+                llvm::cl::desc("Expand hlfir.sum into an inline sequence"),
+                llvm::cl::init(true));
 
 namespace {
 
@@ -39,9 +43,15 @@ public:
   llvm::LogicalResult
   matchAndRewrite(hlfir::TransposeOp transpose,
                   mlir::PatternRewriter &rewriter) const override {
+    hlfir::ExprType expr = transpose.getType();
+    // TODO: hlfir.elemental supports polymorphic data types now,
+    // so this can be supported.
+    if (expr.isPolymorphic())
+      return rewriter.notifyMatchFailure(transpose,
+                                         "TRANSPOSE of polymorphic type");
+
     mlir::Location loc = transpose.getLoc();
     fir::FirOpBuilder builder{rewriter, transpose.getOperation()};
-    hlfir::ExprType expr = transpose.getType();
     mlir::Type elementType = expr.getElementType();
     hlfir::Entity array = hlfir::Entity{transpose.getArray()};
     mlir::Value resultShape = genResultShape(loc, builder, array);
@@ -99,37 +109,62 @@ public:
   llvm::LogicalResult
   matchAndRewrite(hlfir::SumOp sum,
                   mlir::PatternRewriter &rewriter) const override {
+    if (!simplifySum)
+      return rewriter.notifyMatchFailure(sum, "SUM simplification is disabled");
+
+    hlfir::Entity array = hlfir::Entity{sum.getArray()};
+    bool isTotalReduction = hlfir::Entity{sum}.getRank() == 0;
+    mlir::Value dim = sum.getDim();
+    int64_t dimVal = 0;
+    if (!isTotalReduction) {
+      // In case of partial reduction we should ignore the operations
+      // with invalid DIM values. They may appear in dead code
+      // after constant propagation.
+      auto constDim = fir::getIntIfConstant(dim);
+      if (!constDim)
+        return rewriter.notifyMatchFailure(sum, "Nonconstant DIM for SUM");
+      dimVal = *constDim;
+
+      if ((dimVal <= 0 || dimVal > array.getRank()))
+        return rewriter.notifyMatchFailure(
+            sum, "Invalid DIM for partial SUM reduction");
+    }
+
     mlir::Location loc = sum.getLoc();
     fir::FirOpBuilder builder{rewriter, sum.getOperation()};
-    hlfir::ExprType expr = mlir::dyn_cast<hlfir::ExprType>(sum.getType());
-    assert(expr && "expected an expression type for the result of hlfir.sum");
-    mlir::Type elementType = expr.getElementType();
-    hlfir::Entity array = hlfir::Entity{sum.getArray()};
+    mlir::Type elementType = hlfir::getFortranElementType(sum.getType());
     mlir::Value mask = sum.getMask();
-    mlir::Value dim = sum.getDim();
-    int64_t dimVal = fir::getIntIfConstant(dim).value_or(0);
-    assert(dimVal > 0 && "DIM must be present and a positive constant");
+
     mlir::Value resultShape, dimExtent;
-    std::tie(resultShape, dimExtent) =
-        genResultShape(loc, builder, array, dimVal);
+    llvm::SmallVector<mlir::Value> arrayExtents;
+    if (isTotalReduction)
+      arrayExtents = genArrayExtents(loc, builder, array);
+    else
+      std::tie(resultShape, dimExtent) =
+          genResultShapeForPartialReduction(loc, builder, array, dimVal);
+
+    // If the mask is present and is a scalar, then we'd better load its value
+    // outside of the reduction loop making the loop unswitching easier.
+    mlir::Value isPresentPred, maskValue;
+    if (mask) {
+      if (mlir::isa<fir::BaseBoxType>(mask.getType())) {
+        // MASK represented by a box might be dynamically optional,
+        // so we have to check for its presence before accessing it.
+        isPresentPred =
+            builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), mask);
+      }
+
+      if (hlfir::Entity{mask}.isScalar())
+        maskValue = genMaskValue(loc, builder, mask, isPresentPred, {});
+    }
 
     auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                          mlir::ValueRange inputIndices) -> hlfir::Entity {
       // Loop over all indices in the DIM dimension, and reduce all values.
-      // We do not need to create the reduction loop always: if we can
-      // slice the input array given the inputIndices, then we can
-      // just apply a new SUM operation (total reduction) to the slice.
-      // For the time being, generate the explicit loop because the slicing
-      // requires generating an elemental operation for the input array
-      // (and the mask, if present).
-      // TODO: produce the slices and new SUM after adding a pattern
-      // for expanding total reduction SUM case.
-      mlir::Type indexType = builder.getIndexType();
-      auto one = builder.createIntegerConstant(loc, indexType, 1);
-      auto ub = builder.createConvert(loc, indexType, dimExtent);
+      // If DIM is not present, do total reduction.
 
       // Initial value for the reduction.
-      mlir::Value initValue = genInitValue(loc, builder, elementType);
+      mlir::Value reductionInitValue = genInitValue(loc, builder, elementType);
 
       // The reduction loop may be unordered if FastMathFlags::reassoc
       // transformations are allowed. The integer reduction is always
@@ -138,79 +173,83 @@ public:
                          static_cast<bool>(sum.getFastmath() &
                                            mlir::arith::FastMathFlags::reassoc);
 
-      // If the mask is present and is a scalar, then we'd better load its value
-      // outside of the reduction loop making the loop unswitching easier.
-      // Maybe it is worth hoisting it from the elemental operation as well.
-      mlir::Value isPresentPred, maskValue;
-      if (mask) {
-        if (mlir::isa<fir::BaseBoxType>(mask.getType())) {
-          // MASK represented by a box might be dynamically optional,
-          // so we have to check for its presence before accessing it.
-          isPresentPred =
-              builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), mask);
+      llvm::SmallVector<mlir::Value> extents;
+      if (isTotalReduction)
+        extents = arrayExtents;
+      else
+        extents.push_back(
+            builder.createConvert(loc, builder.getIndexType(), dimExtent));
+
+      auto genBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                         mlir::ValueRange oneBasedIndices,
+                         mlir::ValueRange reductionArgs)
+          -> llvm::SmallVector<mlir::Value, 1> {
+        // Generate the reduction loop-nest body.
+        // The initial reduction value in the innermost loop
+        // is passed via reductionArgs[0].
+        llvm::SmallVector<mlir::Value> indices;
+        if (isTotalReduction) {
+          indices = oneBasedIndices;
+        } else {
+          indices = inputIndices;
+          indices.insert(indices.begin() + dimVal - 1, oneBasedIndices[0]);
         }
 
-        if (hlfir::Entity{mask}.isScalar())
-          maskValue = genMaskValue(loc, builder, mask, isPresentPred, {});
-      }
+        mlir::Value reductionValue = reductionArgs[0];
+        fir::IfOp ifOp;
+        if (mask) {
+          // Make the reduction value update conditional on the value
+          // of the mask.
+          if (!maskValue) {
+            // If the mask is an array, use the elemental and the loop indices
+            // to address the proper mask element.
+            maskValue =
+                genMaskValue(loc, builder, mask, isPresentPred, indices);
+          }
+          mlir::Value isUnmasked = builder.create<fir::ConvertOp>(
+              loc, builder.getI1Type(), maskValue);
+          ifOp = builder.create<fir::IfOp>(loc, elementType, isUnmasked,
+                                           /*withElseRegion=*/true);
+          // In the 'else' block return the current reduction value.
+          builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+          builder.create<fir::ResultOp>(loc, reductionValue);
 
-      // NOTE: the outer elemental operation may be lowered into
-      // omp.workshare.loop_wrapper/omp.loop_nest later, so the reduction
-      // loop may appear disjoint from the workshare loop nest.
-      // Moreover, the inner loop is not strictly nested (due to the reduction
-      // starting value initialization), and the above omp dialect operations
-      // cannot produce results.
-      // It is unclear what we should do about it yet.
-      auto doLoop = builder.create<fir::DoLoopOp>(
-          loc, one, ub, one, isUnordered, /*finalCountValue=*/false,
-          mlir::ValueRange{initValue});
-
-      // Address the input array using the reduction loop's IV
-      // for the DIM dimension.
-      mlir::Value iv = doLoop.getInductionVar();
-      llvm::SmallVector<mlir::Value> indices{inputIndices};
-      indices.insert(indices.begin() + dimVal - 1, iv);
-
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToStart(doLoop.getBody());
-      mlir::Value reductionValue = doLoop.getRegionIterArgs()[0];
-      fir::IfOp ifOp;
-      if (mask) {
-        // Make the reduction value update conditional on the value
-        // of the mask.
-        if (!maskValue) {
-          // If the mask is an array, use the elemental and the loop indices
-          // to address the proper mask element.
-          maskValue = genMaskValue(loc, builder, mask, isPresentPred, indices);
+          // In the 'then' block do the actual addition.
+          builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
         }
-        mlir::Value isUnmasked =
-            builder.create<fir::ConvertOp>(loc, builder.getI1Type(), maskValue);
-        ifOp = builder.create<fir::IfOp>(loc, elementType, isUnmasked,
-                                         /*withElseRegion=*/true);
-        // In the 'else' block return the current reduction value.
-        builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-        builder.create<fir::ResultOp>(loc, reductionValue);
 
-        // In the 'then' block do the actual addition.
-        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      }
+        hlfir::Entity element =
+            hlfir::getElementAt(loc, builder, array, indices);
+        hlfir::Entity elementValue =
+            hlfir::loadTrivialScalar(loc, builder, element);
+        // NOTE: we can use "Kahan summation" same way as the runtime
+        // (e.g. when fast-math is not allowed), but let's start with
+        // the simple version.
+        reductionValue =
+            genScalarAdd(loc, builder, reductionValue, elementValue);
 
-      hlfir::Entity element = hlfir::getElementAt(loc, builder, array, indices);
-      hlfir::Entity elementValue =
-          hlfir::loadTrivialScalar(loc, builder, element);
-      // NOTE: we can use "Kahan summation" same way as the runtime
-      // (e.g. when fast-math is not allowed), but let's start with
-      // the simple version.
-      reductionValue = genScalarAdd(loc, builder, reductionValue, elementValue);
-      builder.create<fir::ResultOp>(loc, reductionValue);
+        if (ifOp) {
+          builder.create<fir::ResultOp>(loc, reductionValue);
+          builder.setInsertionPointAfter(ifOp);
+          reductionValue = ifOp.getResult(0);
+        }
 
-      if (ifOp) {
-        builder.setInsertionPointAfter(ifOp);
-        builder.create<fir::ResultOp>(loc, ifOp.getResult(0));
-      }
+        return {reductionValue};
+      };
 
-      return hlfir::Entity{doLoop.getResult(0)};
+      llvm::SmallVector<mlir::Value, 1> reductionFinalValues =
+          hlfir::genLoopNestWithReductions(loc, builder, extents,
+                                           {reductionInitValue}, genBody,
+                                           isUnordered);
+      return hlfir::Entity{reductionFinalValues[0]};
     };
+
+    if (isTotalReduction) {
+      hlfir::Entity result = genKernel(loc, builder, mlir::ValueRange{});
+      rewriter.replaceOp(sum, result);
+      return mlir::success();
+    }
+
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, resultShape, {}, genKernel,
         /*isUnordered=*/true, /*polymorphicMold=*/nullptr,
@@ -226,17 +265,29 @@ public:
   }
 
 private:
-  // Return fir.shape specifying the shape of the result
-  // of a SUM reduction with DIM=dimVal. The second return value
-  // is the extent of the DIM dimension.
-  static std::tuple<mlir::Value, mlir::Value>
-  genResultShape(mlir::Location loc, fir::FirOpBuilder &builder,
-                 hlfir::Entity array, int64_t dimVal) {
+  static llvm::SmallVector<mlir::Value>
+  genArrayExtents(mlir::Location loc, fir::FirOpBuilder &builder,
+                  hlfir::Entity array) {
     mlir::Value inShape = hlfir::genShape(loc, builder, array);
     llvm::SmallVector<mlir::Value> inExtents =
         hlfir::getExplicitExtentsFromShape(inShape, builder);
     if (inShape.getUses().empty())
       inShape.getDefiningOp()->erase();
+    return inExtents;
+  }
+
+  // Return fir.shape specifying the shape of the result
+  // of a SUM reduction with DIM=dimVal. The second return value
+  // is the extent of the DIM dimension.
+  static std::tuple<mlir::Value, mlir::Value>
+  genResultShapeForPartialReduction(mlir::Location loc,
+                                    fir::FirOpBuilder &builder,
+                                    hlfir::Entity array, int64_t dimVal) {
+    llvm::SmallVector<mlir::Value> inExtents =
+        genArrayExtents(loc, builder, array);
+    assert(dimVal > 0 && dimVal <= static_cast<int64_t>(inExtents.size()) &&
+           "DIM must be present and a positive constant not exceeding "
+           "the array's rank");
 
     mlir::Value dimExtent = inExtents[dimVal - 1];
     inExtents.erase(inExtents.begin() + dimVal - 1);
@@ -325,44 +376,123 @@ private:
   }
 };
 
+class CShiftAsElementalConversion
+    : public mlir::OpRewritePattern<hlfir::CShiftOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::CShiftOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CShiftOp cshift,
+                  mlir::PatternRewriter &rewriter) const override {
+    using Fortran::common::maxRank;
+
+    hlfir::ExprType expr = mlir::dyn_cast<hlfir::ExprType>(cshift.getType());
+    assert(expr &&
+           "expected an expression type for the result of hlfir.cshift");
+    unsigned arrayRank = expr.getRank();
+    // When it is a 1D CSHIFT, we may assume that the DIM argument
+    // (whether it is present or absent) is equal to 1, otherwise,
+    // the program is illegal.
+    int64_t dimVal = 1;
+    if (arrayRank != 1)
+      if (mlir::Value dim = cshift.getDim()) {
+        auto constDim = fir::getIntIfConstant(dim);
+        if (!constDim)
+          return rewriter.notifyMatchFailure(cshift,
+                                             "Nonconstant DIM for CSHIFT");
+        dimVal = *constDim;
+      }
+
+    if (dimVal <= 0 || dimVal > arrayRank)
+      return rewriter.notifyMatchFailure(cshift, "Invalid DIM for CSHIFT");
+
+    mlir::Location loc = cshift.getLoc();
+    fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
+    mlir::Type elementType = expr.getElementType();
+    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+    mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
+    llvm::SmallVector<mlir::Value> arrayExtents =
+        hlfir::getExplicitExtentsFromShape(arrayShape, builder);
+    llvm::SmallVector<mlir::Value, 1> typeParams;
+    hlfir::genLengthParameters(loc, builder, array, typeParams);
+    hlfir::Entity shift = hlfir::Entity{cshift.getShift()};
+    // The new index computation involves MODULO, which is not implemented
+    // for IndexType, so use I64 instead.
+    mlir::Type calcType = builder.getI64Type();
+
+    mlir::Value one = builder.createIntegerConstant(loc, calcType, 1);
+    mlir::Value shiftVal;
+    if (shift.isScalar()) {
+      shiftVal = hlfir::loadTrivialScalar(loc, builder, shift);
+      shiftVal = builder.createConvert(loc, calcType, shiftVal);
+    }
+
+    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+      llvm::SmallVector<mlir::Value, maxRank> indices{inputIndices};
+      if (!shift.isScalar()) {
+        // When the array is not a vector, section
+        // (s(1), s(2), ..., s(dim-1), :, s(dim+1), ..., s(n)
+        // of the result has a value equal to:
+        // CSHIFT(ARRAY(s(1), s(2), ..., s(dim-1), :, s(dim+1), ..., s(n)),
+        //        SH, 1),
+        // where SH is either SHIFT (if scalar) or
+        // SHIFT(s(1), s(2), ..., s(dim-1), s(dim+1), ..., s(n)).
+        llvm::SmallVector<mlir::Value, maxRank> shiftIndices{indices};
+        shiftIndices.erase(shiftIndices.begin() + dimVal - 1);
+        hlfir::Entity shiftElement =
+            hlfir::getElementAt(loc, builder, shift, shiftIndices);
+        shiftVal = hlfir::loadTrivialScalar(loc, builder, shiftElement);
+        shiftVal = builder.createConvert(loc, calcType, shiftVal);
+      }
+
+      // Element i of the result (1-based) is element
+      // 'MODULO(i + SH - 1, SIZE(ARRAY)) + 1' (1-based) of the original
+      // ARRAY (or its section, when ARRAY is not a vector).
+      mlir::Value index =
+          builder.createConvert(loc, calcType, inputIndices[dimVal - 1]);
+      mlir::Value extent = arrayExtents[dimVal - 1];
+      mlir::Value newIndex =
+          builder.create<mlir::arith::AddIOp>(loc, index, shiftVal);
+      newIndex = builder.create<mlir::arith::SubIOp>(loc, newIndex, one);
+      newIndex = fir::IntrinsicLibrary{builder, loc}.genModulo(
+          calcType, {newIndex, builder.createConvert(loc, calcType, extent)});
+      newIndex = builder.create<mlir::arith::AddIOp>(loc, newIndex, one);
+      newIndex = builder.createConvert(loc, builder.getIndexType(), newIndex);
+
+      indices[dimVal - 1] = newIndex;
+      hlfir::Entity element = hlfir::getElementAt(loc, builder, array, indices);
+      return hlfir::loadTrivialScalar(loc, builder, element);
+    };
+
+    hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
+        loc, builder, elementType, arrayShape, typeParams, genKernel,
+        /*isUnordered=*/true,
+        array.isPolymorphic() ? static_cast<mlir::Value>(array) : nullptr,
+        cshift.getResult().getType());
+    rewriter.replaceOp(cshift, elementalOp);
+    return mlir::success();
+  }
+};
+
 class SimplifyHLFIRIntrinsics
     : public hlfir::impl::SimplifyHLFIRIntrinsicsBase<SimplifyHLFIRIntrinsics> {
 public:
   void runOnOperation() override {
     mlir::MLIRContext *context = &getContext();
+
+    mlir::GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
+
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
     patterns.insert<SumAsElementalConversion>(context);
-    mlir::ConversionTarget target(*context);
-    // don't transform transpose of polymorphic arrays (not currently supported
-    // by hlfir.elemental)
-    target.addDynamicallyLegalOp<hlfir::TransposeOp>(
-        [](hlfir::TransposeOp transpose) {
-          return mlir::cast<hlfir::ExprType>(transpose.getType())
-              .isPolymorphic();
-        });
-    // Handle only SUM(DIM=CONSTANT) case for now.
-    // It may be beneficial to expand the non-DIM case as well.
-    // E.g. when the input array is an elemental array expression,
-    // expanding the SUM into a total reduction loop nest
-    // would avoid creating a temporary for the elemental array expression.
-    target.addDynamicallyLegalOp<hlfir::SumOp>([](hlfir::SumOp sum) {
-      if (mlir::Value dim = sum.getDim()) {
-        if (fir::getIntIfConstant(dim)) {
-          if (!fir::isa_trivial(sum.getType())) {
-            // Ignore the case SUM(a, DIM=X), where 'a' is a 1D array.
-            // It is only legal when X is 1, and it should probably be
-            // canonicalized into SUM(a).
-            return false;
-          }
-        }
-      }
-      return true;
-    });
-    target.markUnknownOpDynamicallyLegal(
-        [](mlir::Operation *) { return true; });
-    if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+    patterns.insert<CShiftAsElementalConversion>(context);
+
+    if (mlir::failed(mlir::applyPatternsGreedily(
+            getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR intrinsic simplification");
       signalPassFailure();

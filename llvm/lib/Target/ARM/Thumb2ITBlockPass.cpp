@@ -226,7 +226,7 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
     // IT blocks are limited to one conditional op if -arm-restrict-it
     // is set: skip the loop
     if (!restrictIT) {
-      LLVM_DEBUG(dbgs() << "Allowing complex IT block\n";);
+      LLVM_DEBUG(dbgs() << "Allowing complex IT block\n");
       // Branches, including tricky ones like LDM_RET, need to end an IT
       // block so check the instruction we just put in the block.
       for (; MBBI != E && Pos &&

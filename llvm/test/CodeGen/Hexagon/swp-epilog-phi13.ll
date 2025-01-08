@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 -pipeliner-experimental-cg=true < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -pipeliner-experimental-cg=true < %s | FileCheck %s
 
 ; Test epilogue generation when reading loop-carried dependency in stage 1 from
 ; stage 0. Make sure the illegal phi the expender creates gets cleaned up

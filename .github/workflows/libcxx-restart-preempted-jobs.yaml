@@ -145,7 +145,7 @@ jobs:
         with:
           script: |
             const FAILURE_REGEX = /Process completed with exit code 1./
-            const PREEMPTION_REGEX = /The runner has received a shutdown signal|The operation was canceled/
+            const PREEMPTION_REGEX = /(The runner has received a shutdown signal)|(The operation was canceled)/
 
             function log(msg) {
               core.notice(msg)

@@ -65,17 +65,17 @@ def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
 // int8  : symmetric  per tensor/per channel, signed
 // int16 : symmetric  per tensor,             signed
 //===----------------------------------------------------------------------===//
-def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
-                                     Tosa_QuantizedType<"int4", [4, 0], 1>,
-                                     Tosa_QuantizedType<"int8", [8, 0], 1>,
-                                     Tosa_QuantizedType<"int16", [16, 0], 1>,
-                                     Tosa_QuantizedType<"int32", [32, 0], 1>]>;
+def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
+                                   Tosa_QuantizedType<"int4", [4, 0], 1>,
+                                   Tosa_QuantizedType<"int8", [8, 0], 1>,
+                                   Tosa_QuantizedType<"int16", [16, 0], 1>,
+                                   Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
 // Multi-category types.
 //===----------------------------------------------------------------------===//
 def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat],
-                               "number">;
+                                "number">;
 
 // For weight tensors from tosa::Conv2DOp, tosa::Conv3DOp,
 // tosa::DepthwiseConv2DOp, tosa::TransposeConv2DOp, tosa::FullyConnectedOp
@@ -112,7 +112,7 @@ class TosaTensorRankOf<list<Type> allowedTypes, list<int> ranks>
 
 def Tosa_I1Tensor : TosaTensorOf<[I1]>;
 def Tosa_Int32Tensor : TosaTensorOf<[Tosa_Int32]>;
-def Tosa_Int32Or64Tensor :TosaTensorOf<[Tosa_Int32Or64]>;
+def Tosa_Int32Or64Tensor : TosaTensorOf<[Tosa_Int32Or64]>;
 
 def Tosa_FloatTensor : TosaTensorOf<[AnyFloat]>;
 

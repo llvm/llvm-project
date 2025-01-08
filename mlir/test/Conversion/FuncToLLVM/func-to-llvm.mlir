@@ -1,6 +1,8 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" %s | FileCheck %s
 
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},convert-cf-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK-NO-CF %s
 
 // RUN: mlir-opt -transform-interpreter %s | FileCheck --check-prefix=CHECK32 %s
 
@@ -104,6 +106,7 @@ func.func @ml_caller() {
 
 // CHECK-LABEL: llvm.func @body_args(i64) -> i64
 // CHECK32-LABEL: llvm.func @body_args(i32) -> i32
+// CHECK-NO-CF-LABEL: llvm.func @body_args(i64) -> i64
 func.func private @body_args(index) -> index
 // CHECK-LABEL: llvm.func @other(i64, i32) -> i32
 // CHECK32-LABEL: llvm.func @other(i32, i32) -> i32
@@ -536,6 +539,21 @@ func.func @switchi8(%arg0 : i8) -> i32 {
 // CHECK-NEXT:     %[[E1:.+]] = llvm.mlir.constant(42 : i32) : i32
 // CHECK-NEXT:     llvm.return %[[E1]] : i32
 // CHECK-NEXT:   }
+
+// Convert the entry block but not the unstructured control flow.
+
+// CHECK-NO-CF-LABEL: llvm.func @index_arg(
+//  CHECK-NO-CF-SAME:     %[[arg0:.*]]: i64) -> i64 {
+//       CHECK-NO-CF:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[arg0]] : i64 to index
+//       CHECK-NO-CF:   cf.br ^[[bb1:.*]](%[[cast]] : index)
+//       CHECK-NO-CF: ^[[bb1]](%[[arg1:.*]]: index):
+//       CHECK-NO-CF:   %[[cast2:.*]] = builtin.unrealized_conversion_cast %[[arg1]] : index to i64
+//       CHECK-NO-CF:   llvm.return %[[cast2]] : i64
+func.func @index_arg(%arg0: index) -> index {
+  cf.br ^bb1(%arg0 : index)
+^bb1(%arg1: index):
+  return %arg1 : index
+}
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {

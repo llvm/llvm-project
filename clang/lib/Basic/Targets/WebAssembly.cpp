@@ -31,7 +31,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 };
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime"}};
+    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
 
 StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }
 

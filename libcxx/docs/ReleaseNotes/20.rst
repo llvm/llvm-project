@@ -152,6 +152,9 @@ ABI Affecting Changes
   - When using the MSVC ABI, this change results in some classes having a completely different memory layout, so this is
     a genuine ABI break. However, the library does not currently guarantee ABI stability on MSVC platforms.
 
+- The localization support base API has been reimplemented, leading to different functions being exported from the
+  libc++ built library on Windows and Windows-like platforms.
+
 Build System Changes
 --------------------
 

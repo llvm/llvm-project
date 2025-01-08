@@ -370,6 +370,68 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
   }
 }
 
+void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  // Early return if `I` doesn't actually move.
+  BasicBlock *BB = To.getNodeParent();
+  if (To != BB->end() && &*To == I->getNextNode())
+    return;
+
+  // Maintain the DAGInterval.
+  DAGInterval.notifyMoveInstr(I, To);
+
+  // TODO: Perhaps check if this is legal by checking the dependencies?
+
+  // Update the MemDGNode chain to reflect the instr movement if necessary.
+  DGNode *N = getNodeOrNull(I);
+  if (N == nullptr)
+    return;
+  MemDGNode *MemN = dyn_cast<MemDGNode>(N);
+  if (MemN == nullptr)
+    return;
+  // First detach it from the existing chain.
+  MemN->detachFromChain();
+  // Now insert it back into the chain at the new location.
+  if (To != BB->end()) {
+    DGNode *ToN = getNodeOrNull(&*To);
+    if (ToN != nullptr) {
+      MemDGNode *PrevMemN = getMemDGNodeBefore(ToN, /*IncludingN=*/false);
+      MemDGNode *NextMemN = getMemDGNodeAfter(ToN, /*IncludingN=*/true);
+      MemN->PrevMemN = PrevMemN;
+      if (PrevMemN != nullptr)
+        PrevMemN->NextMemN = MemN;
+      MemN->NextMemN = NextMemN;
+      if (NextMemN != nullptr)
+        NextMemN->PrevMemN = MemN;
+    }
+  } else {
+    // MemN becomes the last instruction in the BB.
+    auto *TermN = getNodeOrNull(BB->getTerminator());
+    if (TermN != nullptr) {
+      MemDGNode *PrevMemN = getMemDGNodeBefore(TermN, /*IncludingN=*/false);
+      PrevMemN->NextMemN = MemN;
+      MemN->PrevMemN = PrevMemN;
+    } else {
+      // The terminator is outside the DAG interval so do nothing.
+    }
+  }
+}
+
+void DependencyGraph::notifyEraseInstr(Instruction *I) {
+  // Update the MemDGNode chain if this is a memory node.
+  if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
+    auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
+    auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false);
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+  }
+
+  InstrToNodeMap.erase(I);
+
+  // TODO: Update the dependencies.
+}
+
 Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   if (Instrs.empty())
     return {};

@@ -186,7 +186,7 @@ public:
   std::string ProfileExcludeFiles;
 
   /// The version string to put into coverage files.
-  char CoverageVersion[4];
+  char CoverageVersion[4] = {'0', '0', '0', '0'};
 
   /// Enable additional debugging information.
   std::string DebugPass;
@@ -379,6 +379,10 @@ public:
 
   /// Set of sanitizer checks that trap rather than diagnose.
   SanitizerSet SanitizeTrap;
+
+  /// Set of sanitizer checks that can merge handlers (smaller code size at
+  /// the expense of debuggability).
+  SanitizerSet SanitizeMergeHandlers;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;

@@ -280,6 +280,10 @@ public:
 
   bool SetTerminalWidth(uint64_t term_width);
 
+  uint64_t GetTerminalHeight() const;
+
+  bool SetTerminalHeight(uint64_t term_height);
+
   llvm::StringRef GetPrompt() const;
 
   llvm::StringRef GetPromptAnsiPrefix() const;

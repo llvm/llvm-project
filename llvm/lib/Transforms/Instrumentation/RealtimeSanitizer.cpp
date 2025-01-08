@@ -17,11 +17,15 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 
 using namespace llvm;
+
+const char kRtsanModuleCtorName[] = "rtsan.module_ctor";
+const char kRtsanInitName[] = "__rtsan_ensure_initialized";
 
 static SmallVector<Type *> getArgTypes(ArrayRef<Value *> FunctionArgs) {
   SmallVector<Type *> Types;
@@ -76,16 +80,22 @@ static PreservedAnalyses runSanitizeRealtimeBlocking(Function &Fn) {
   return rtsanPreservedCFGAnalyses();
 }
 
-RealtimeSanitizerPass::RealtimeSanitizerPass(
-    const RealtimeSanitizerOptions &Options) {}
+PreservedAnalyses RealtimeSanitizerPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  getOrCreateSanitizerCtorAndInitFunctions(
+      M, kRtsanModuleCtorName, kRtsanInitName, /*InitArgTypes=*/{},
+      /*InitArgs=*/{},
+      // This callback is invoked when the functions are created the first
+      // time. Hook them into the global ctors list in that case:
+      [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
-PreservedAnalyses RealtimeSanitizerPass::run(Function &Fn,
-                                             AnalysisManager<Function> &AM) {
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtime))
-    return runSanitizeRealtime(Fn);
+  for (Function &F : M) {
+    if (F.hasFnAttribute(Attribute::SanitizeRealtime))
+      runSanitizeRealtime(F);
 
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeBlocking))
-    return runSanitizeRealtimeBlocking(Fn);
+    if (F.hasFnAttribute(Attribute::SanitizeRealtimeBlocking))
+      runSanitizeRealtimeBlocking(F);
+  }
 
-  return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }
