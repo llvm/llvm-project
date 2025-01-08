@@ -5109,6 +5109,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple *AuxTriple =
       (IsCuda || IsHIP) ? TC.getAuxTriple() : nullptr;
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
+  bool IsUEFI = RawTriple.isUEFI();
   bool IsIAMCU = RawTriple.isOSIAMCU();
 
   // Adjust IsWindowsXYZ for CUDA/HIP/SYCL compilations.  Even when compiling in
@@ -7252,7 +7253,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fms-extensions=0 is default.
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
-                   IsWindowsMSVC))
+                   IsWindowsMSVC || IsUEFI))
     CmdArgs.push_back("-fms-extensions");
 
   // -fms-compatibility=0 is default.
