@@ -16,6 +16,10 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -33,6 +37,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <cstdlib>
 
 using namespace mlir;
@@ -41,6 +46,9 @@ using namespace mlir::NVVM;
 #ifndef __DEFAULT_CUDATOOLKIT_PATH__
 #define __DEFAULT_CUDATOOLKIT_PATH__ ""
 #endif
+
+extern "C" const char _mlir_embedded_libdevice[];
+extern "C" const unsigned _mlir_embedded_libdevice_size;
 
 namespace {
 // Implementation of the `TargetAttrInterface` model.
@@ -130,6 +138,33 @@ ArrayRef<Attribute> SerializeGPUModuleBase::getLibrariesToLink() const {
 
 // Try to append `libdevice` from a CUDA toolkit installation.
 LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
+#if MLIR_NVVM_EMBED_LIBDEVICE
+  // If libdevice is embedded in the binary, we don't look it up on the
+  // filesystem.
+  MLIRContext *ctx = target.getContext();
+  auto type =
+      RankedTensorType::get(ArrayRef<int64_t>{_mlir_embedded_libdevice_size},
+                            IntegerType::get(ctx, 8));
+  auto resourceManager = DenseResourceElementsHandle::getManagerInterface(ctx);
+
+  // Lookup if we already loaded the resource, otherwise create it.
+  DialectResourceBlobManager::BlobEntry *blob =
+      resourceManager.getBlobManager().lookup("_mlir_embedded_libdevice");
+  if (blob) {
+    librariesToLink.push_back(DenseResourceElementsAttr::get(
+        type, DenseResourceElementsHandle(
+                  blob, ctx->getLoadedDialect<BuiltinDialect>())));
+    return success();
+  }
+
+  // Allocate a resource using one of the UnManagedResourceBlob method to wrap
+  // the embedded data.
+  auto unmanagedBlob = UnmanagedAsmResourceBlob::allocateInferAlign(
+      ArrayRef<char>{_mlir_embedded_libdevice, _mlir_embedded_libdevice_size});
+  librariesToLink.push_back(DenseResourceElementsAttr::get(
+      type, resourceManager.insert("_mlir_embedded_libdevice",
+                                   std::move(unmanagedBlob))));
+#else
   StringRef pathRef = getToolkitPath();
   if (!pathRef.empty()) {
     SmallVector<char, 256> path;
@@ -149,6 +184,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
     }
     librariesToLink.push_back(StringAttr::get(target.getContext(), pathRef));
   }
+#endif
   return success();
 }
 

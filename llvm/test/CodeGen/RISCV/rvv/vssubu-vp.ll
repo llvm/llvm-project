@@ -10,11 +10,10 @@ define <vscale x 8 x i7> @vssubu_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, 
 ; CHECK-LABEL: vssubu_vx_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vand.vx v9, v9, a2
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vssubu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -60,9 +59,8 @@ define <vscale x 1 x i8> @vssubu_vx_nxv1i8(<vscale x 1 x i8> %va, i8 %b, <vscale
 define <vscale x 1 x i8> @vssubu_vx_nxv1i8_commute(<vscale x 1 x i8> %va, i8 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vssubu_vx_nxv1i8_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vssubu.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0

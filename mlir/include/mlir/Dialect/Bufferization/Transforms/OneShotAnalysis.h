@@ -127,9 +127,9 @@ public:
   /// Return true if the buffer of the given tensor value is writable.
   bool isWritable(Value value) const;
 
-  /// Find the definitions of the given tensor value or retrieve them from the
-  /// cache.
-  const SetVector<Value> &findDefinitionsCached(Value value);
+  /// Find the definitions of the given operand's value or
+  /// retrieve them from the cache.
+  const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
 
   /// Reset cached data structures.
   void resetCache() override;

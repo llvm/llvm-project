@@ -32,7 +32,7 @@ endmacro()
 
 add_header_macro(
   ctype
-  ../libc/hdrgen/yaml/ctype.yaml
+  ../libc/include/ctype.yaml
   ctype.h.def
   ctype.h
   DEPENDS
@@ -42,7 +42,7 @@ add_header_macro(
 
 add_header_macro(
   dirent
-  ../libc/hdrgen/yaml/dirent.yaml
+  ../libc/include/dirent.yaml
   dirent.h.def
   dirent.h
   DEPENDS
@@ -54,7 +54,7 @@ add_header_macro(
 
 add_header_macro(
   fcntl
-  ../libc/hdrgen/yaml/fcntl.yaml
+  ../libc/include/fcntl.yaml
   fcntl.h.def
   fcntl.h
   DEPENDS
@@ -70,7 +70,7 @@ add_header_macro(
 
 add_header_macro(
   dlfcn
-  ../libc/hdrgen/yaml/dlfcn.yaml
+  ../libc/include/dlfcn.yaml
   dlfcn.h.def
   dlfcn.h
   DEPENDS
@@ -80,7 +80,7 @@ add_header_macro(
 
 add_header_macro(
   features
-  ../libc/hdrgen/yaml/features.yaml
+  ../libc/include/features.yaml
   features.h.def
   features.h
   DEPENDS
@@ -90,7 +90,7 @@ add_header_macro(
 
 add_header_macro(
   fenv
-  ../libc/hdrgen/yaml/fenv.yaml
+  ../libc/include/fenv.yaml
   fenv.h.def
   fenv.h
   DEPENDS
@@ -102,7 +102,7 @@ add_header_macro(
 
 add_header_macro(
   inttypes
-  ../libc/hdrgen/yaml/inttypes.yaml
+  ../libc/include/inttypes.yaml
   inttypes.h.def
   inttypes.h
   DEPENDS
@@ -113,7 +113,7 @@ add_header_macro(
 
 add_header_macro(
   float
-  ../libc/hdrgen/yaml/float.yaml
+  ../libc/include/float.yaml
   float.h.def
   float.h
   DEPENDS
@@ -122,7 +122,7 @@ add_header_macro(
 
 add_header_macro(
   stdint
-  ../libc/hdrgen/yaml/stdint.yaml
+  ../libc/include/stdint.yaml
   stdint.h.def
   stdint.h
   DEPENDS
@@ -131,7 +131,7 @@ add_header_macro(
 
 add_header_macro(
   limits
-  ../libc/hdrgen/yaml/limits.yaml
+  ../libc/include/limits.yaml
   limits.h.def
   limits.h
   DEPENDS
@@ -140,7 +140,7 @@ add_header_macro(
 
 add_header_macro(
   malloc
-  ../libc/hdrgen/yaml/malloc.yaml
+  ../libc/include/malloc.yaml
   malloc.h.def
   malloc.h
   DEPENDS
@@ -150,7 +150,7 @@ add_header_macro(
 
 add_header_macro(
   math
-  ../libc/hdrgen/yaml/math.yaml
+  ../libc/include/math.yaml
   math.h.def
   math.h
   DEPENDS
@@ -165,7 +165,7 @@ add_header_macro(
 
 add_header_macro(
   stdfix
-  ../libc/hdrgen/yaml/stdfix.yaml
+  ../libc/include/stdfix.yaml
   stdfix.h.def
   stdfix.h
   DEPENDS
@@ -178,7 +178,7 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
 add_header_macro(
   arpa_inet
-  ../libc/hdrgen/yaml/arpa/inet.yaml
+  ../libc/include/arpa/inet.yaml
   arpa/inet.h.def
   arpa/inet.h
   DEPENDS
@@ -187,7 +187,7 @@ add_header_macro(
 
 add_header_macro(
   assert
-  ../libc/hdrgen/yaml/assert.yaml
+  ../libc/include/assert.yaml
   assert.h.def
   assert.h
   DEPENDS
@@ -197,7 +197,7 @@ add_header_macro(
 
 add_header_macro(
   complex
-  ../libc/hdrgen/yaml/complex.yaml
+  ../libc/include/complex.yaml
   complex.h.def
   complex.h
   DEPENDS
@@ -207,7 +207,7 @@ add_header_macro(
 
 add_header_macro(
   setjmp
-  ../libc/hdrgen/yaml/setjmp.yaml
+  ../libc/include/setjmp.yaml
   setjmp.h.def
   setjmp.h
   DEPENDS
@@ -217,7 +217,7 @@ add_header_macro(
 
 add_header_macro(
   string
-  ../libc/hdrgen/yaml/string.yaml
+  ../libc/include/string.yaml
   string.h.def
   string.h
   DEPENDS
@@ -228,7 +228,7 @@ add_header_macro(
 
 add_header_macro(
   strings
-  ../libc/hdrgen/yaml/strings.yaml
+  ../libc/include/strings.yaml
   strings.h.def
   strings.h
   DEPENDS
@@ -238,7 +238,7 @@ add_header_macro(
 
 add_header_macro(
   search
-  ../libc/hdrgen/yaml/search.yaml
+  ../libc/include/search.yaml
   search.h.def
   search.h
   DEPENDS
@@ -252,7 +252,7 @@ add_header_macro(
 
 add_header_macro(
   time
-  ../libc/hdrgen/yaml/time.yaml
+  ../libc/include/time.yaml
   time.h.def
   time.h
   DEPENDS
@@ -268,7 +268,7 @@ add_header_macro(
 
 add_header_macro(
   threads
-  ../libc/hdrgen/yaml/threads.yaml
+  ../libc/include/threads.yaml
   threads.h.def
   threads.h
   DEPENDS
@@ -285,7 +285,7 @@ add_header_macro(
 
 add_header_macro(
   errno
-  ../libc/hdrgen/yaml/errno.yaml
+  ../libc/include/errno.yaml
   errno.h.def
   errno.h
   DEPENDS
@@ -295,7 +295,7 @@ add_header_macro(
 
 add_header_macro(
   signal
-  ../libc/hdrgen/yaml/signal.yaml
+  ../libc/include/signal.yaml
   signal.h.def
   signal.h
   DEPENDS
@@ -311,7 +311,7 @@ add_header_macro(
 
 add_header_macro(
   stdbit
-  ../libc/hdrgen/yaml/stdbit.yaml
+  ../libc/include/stdbit.yaml
   stdbit.h.def
   stdbit.h
   DEPENDS
@@ -321,7 +321,7 @@ add_header_macro(
 
 add_header_macro(
   stdckdint
-  ../libc/hdrgen/yaml/stdckdint.yaml
+  ../libc/include/stdckdint.yaml
   stdckdint.h.def
   stdckdint.h
   DEPENDS
@@ -331,7 +331,7 @@ add_header_macro(
 
 add_header_macro(
   stdio
-  ../libc/hdrgen/yaml/stdio.yaml
+  ../libc/include/stdio.yaml
   stdio.h.def
   stdio.h
   DEPENDS
@@ -347,7 +347,7 @@ add_header_macro(
 
 add_header_macro(
   stdlib
-  ../libc/hdrgen/yaml/stdlib.yaml
+  ../libc/include/stdlib.yaml
   stdlib.h.def
   stdlib.h
   DEPENDS
@@ -366,7 +366,7 @@ add_header_macro(
 
 add_header_macro(
   unistd
-  ../libc/hdrgen/yaml/unistd.yaml
+  ../libc/include/unistd.yaml
   unistd.h.def
   unistd.h
   DEPENDS
@@ -385,7 +385,7 @@ add_header_macro(
 
 add_header_macro(
   pthread
-  ../libc/hdrgen/yaml/pthread.yaml
+  ../libc/include/pthread.yaml
   pthread.h.def
   pthread.h
   DEPENDS
@@ -409,7 +409,7 @@ add_header_macro(
 
 add_header_macro(
   sched
-  ../libc/hdrgen/yaml/sched.yaml
+  ../libc/include/sched.yaml
   sched.h.def
   sched.h
   DEPENDS
@@ -426,7 +426,7 @@ add_header_macro(
 
 add_header_macro(
   spawn
-  ../libc/hdrgen/yaml/spawn.yaml
+  ../libc/include/spawn.yaml
   spawn.h.def
   spawn.h
   DEPENDS
@@ -439,7 +439,7 @@ add_header_macro(
 
 add_header_macro(
   link
-  ../libc/hdrgen/yaml/link.yaml
+  ../libc/include/link.yaml
   link.h.def
   link.h
   DEPENDS
@@ -449,7 +449,7 @@ add_header_macro(
 
 add_header_macro(
   elf
-  ../libc/hdrgen/yaml/elf.yaml
+  ../libc/include/elf.yaml
   elf.h.def
   elf.h
   DEPENDS
@@ -463,7 +463,7 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/sys)
 
 add_header_macro(
   sys_auxv
-  ../libc/hdrgen/yaml/sys/auxv.yaml
+  ../libc/include/sys/auxv.yaml
   sys/auxv.h.def
   sys/auxv.h
   DEPENDS
@@ -473,7 +473,7 @@ add_header_macro(
 
 add_header_macro(
   sys_epoll
-  ../libc/hdrgen/yaml/sys/epoll.yaml
+  ../libc/include/sys/epoll.yaml
   sys/epoll.h.def
   sys/epoll.h
   DEPENDS
@@ -486,7 +486,7 @@ add_header_macro(
 
 add_header_macro(
   sys_ioctl
-  ../libc/hdrgen/yaml/sys/ioctl.yaml
+  ../libc/include/sys/ioctl.yaml
   sys/ioctl.h.def
   sys/ioctl.h
   DEPENDS
@@ -496,7 +496,7 @@ add_header_macro(
 
 add_header_macro(
   sys_mman
-  ../libc/hdrgen/yaml/sys/mman.yaml
+  ../libc/include/sys/mman.yaml
   sys/mman.h.def
   sys/mman.h
   DEPENDS
@@ -509,7 +509,7 @@ add_header_macro(
 
 add_header_macro(
   sys_prctl
-  ../libc/hdrgen/yaml/sys/prctl.yaml
+  ../libc/include/sys/prctl.yaml
   sys/prctl.h.def
   sys/prctl.h
   DEPENDS
@@ -526,7 +526,7 @@ add_header(
 
 add_header_macro(
   sys_random
-  ../libc/hdrgen/yaml/sys/random.yaml
+  ../libc/include/sys/random.yaml
   sys/random.h.def
   sys/random.h
   DEPENDS
@@ -538,7 +538,7 @@ add_header_macro(
 
 add_header_macro(
   sys_resource
-  ../libc/hdrgen/yaml/sys/resource.yaml
+  ../libc/include/sys/resource.yaml
   sys/resource.h.def
   sys/resource.h
   DEPENDS
@@ -550,7 +550,7 @@ add_header_macro(
 
 add_header_macro(
   sys_stat
-  ../libc/hdrgen/yaml/sys/stat.yaml
+  ../libc/include/sys/stat.yaml
   sys/stat.h.def
   sys/stat.h
   DEPENDS
@@ -572,7 +572,7 @@ add_header_macro(
 
 add_header_macro(
   sys_select
-  ../libc/hdrgen/yaml/sys/select.yaml
+  ../libc/include/sys/select.yaml
   sys/select.h.def
   sys/select.h
   DEPENDS
@@ -588,7 +588,7 @@ add_header_macro(
 
 add_header_macro(
   sys_sendfile
-  ../libc/hdrgen/yaml/sys/sendfile.yaml
+  ../libc/include/sys/sendfile.yaml
   sys/sendfile.h.def
   sys/sendfile.h
   DEPENDS
@@ -600,7 +600,7 @@ add_header_macro(
 
 add_header_macro(
   sys_socket
-  ../libc/hdrgen/yaml/sys/socket.yaml
+  ../libc/include/sys/socket.yaml
   sys/socket.h.def
   sys/socket.h
   DEPENDS
@@ -616,7 +616,7 @@ add_header_macro(
 
 add_header_macro(
   sys_statvfs
-  ../libc/hdrgen/yaml/sys/statvfs.yaml
+  ../libc/include/sys/statvfs.yaml
   sys/statvfs.h.def
   sys/statvfs.h
   DEPENDS
@@ -626,7 +626,7 @@ add_header_macro(
 
 add_header_macro(
   sys_syscall
-  ../libc/hdrgen/yaml/sys/syscall.yaml
+  ../libc/include/sys/syscall.yaml
   sys/syscall.h.def
   sys/syscall.h
   DEPENDS
@@ -634,7 +634,7 @@ add_header_macro(
 
 add_header_macro(
   sys_time
-  ../libc/hdrgen/yaml/sys/time.yaml
+  ../libc/include/sys/time.yaml
   sys/time.h.def
   sys/time.h
   DEPENDS
@@ -645,7 +645,7 @@ add_header_macro(
 
 add_header_macro(
   sys_types
-  ../libc/hdrgen/yaml/sys/types.yaml
+  ../libc/include/sys/types.yaml
   sys/types.h.def
   sys/types.h
   DEPENDS
@@ -675,7 +675,7 @@ add_header_macro(
 
 add_header_macro(
   sys_utsname
-  ../libc/hdrgen/yaml/sys/utsname.yaml
+  ../libc/include/sys/utsname.yaml
   sys/utsname.h.def
   sys/utsname.h
   DEPENDS
@@ -685,7 +685,7 @@ add_header_macro(
 
 add_header_macro(
   sys_wait
-  ../libc/hdrgen/yaml/sys/wait.yaml
+  ../libc/include/sys/wait.yaml
   sys/wait.h.def
   sys/wait.h
   DEPENDS
@@ -698,7 +698,7 @@ add_header_macro(
 
 add_header_macro(
   termios
-  ../libc/hdrgen/yaml/termios.yaml
+  ../libc/include/termios.yaml
   termios.h.def
   termios.h
   DEPENDS
@@ -713,7 +713,7 @@ add_header_macro(
 
 add_header_macro(
   uchar
-  ../libc/hdrgen/yaml/uchar.yaml
+  ../libc/include/uchar.yaml
   uchar.h.def
   uchar.h
   DEPENDS
@@ -726,7 +726,7 @@ add_header_macro(
 
 add_header_macro(
   wchar
-  ../libc/hdrgen/yaml/wchar.yaml
+  ../libc/include/wchar.yaml
   wchar.h.def
   wchar.h
   DEPENDS
@@ -740,7 +740,7 @@ add_header_macro(
 
 add_header_macro(
   locale
-  ../libc/hdrgen/yaml/locale.yaml
+  ../libc/include/locale.yaml
   locale.h.def
   locale.h
   DEPENDS
@@ -749,19 +749,6 @@ add_header_macro(
     .llvm-libc-types.locale_t
     .llvm-libc-types.struct_lconv
 )
-
-if(LIBC_TARGET_OS_IS_GPU)
-  file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
-
-  add_header_macro(
-    gpu_rpc
-    ../libc/hdrgen/yaml/gpu/rpc.yaml
-    gpu/rpc.h.def
-    gpu/rpc.h
-    DEPENDS
-      .llvm_libc_common_h
-  )
-endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.

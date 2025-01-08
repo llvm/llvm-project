@@ -2161,6 +2161,13 @@ TEST_F(FormatTestJS, TemplateStringMultiLineExpression) {
                "                          aaaa:  aaaaa,\n"
                "                          bbbb:  bbbbb,\n"
                "                        })}`;");
+
+  verifyFormat("`${\n"
+               "    (\n"
+               "        FOOFOOFOOFOO____FOO_FOO_FO_FOO_FOOO -\n"
+               "            (barbarbarbar____bar_bar_bar_bar_bar_bar +\n"
+               "             bar_bar_bar_barbarbar___bar_bar_bar + 1),\n"
+               "        )}`;");
 }
 
 TEST_F(FormatTestJS, TemplateStringASI) {

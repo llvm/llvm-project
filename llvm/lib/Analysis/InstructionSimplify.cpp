@@ -4345,11 +4345,14 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     if (auto *BO = dyn_cast<BinaryOperator>(I)) {
       unsigned Opcode = BO->getOpcode();
       // id op x -> x, x op id -> x
-      if (NewOps[0] == ConstantExpr::getBinOpIdentity(Opcode, I->getType()))
-        return NewOps[1];
-      if (NewOps[1] == ConstantExpr::getBinOpIdentity(Opcode, I->getType(),
-                                                      /* RHS */ true))
-        return NewOps[0];
+      // Exclude floats, because x op id may produce a different NaN value.
+      if (!BO->getType()->isFPOrFPVectorTy()) {
+        if (NewOps[0] == ConstantExpr::getBinOpIdentity(Opcode, I->getType()))
+          return NewOps[1];
+        if (NewOps[1] == ConstantExpr::getBinOpIdentity(Opcode, I->getType(),
+                                                        /* RHS */ true))
+          return NewOps[0];
+      }
 
       // x & x -> x, x | x -> x
       if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
@@ -4596,13 +4599,21 @@ static Value *simplifySelectWithEquivalence(Value *CmpLHS, Value *CmpRHS,
                                             Value *TrueVal, Value *FalseVal,
                                             const SimplifyQuery &Q,
                                             unsigned MaxRecurse) {
-  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
+  Value *SimplifiedFalseVal =
+      simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
                              /* AllowRefinement */ false,
-                             /* DropFlags */ nullptr, MaxRecurse) == TrueVal)
-    return FalseVal;
-  if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+                             /* DropFlags */ nullptr, MaxRecurse);
+  if (!SimplifiedFalseVal)
+    SimplifiedFalseVal = FalseVal;
+
+  Value *SimplifiedTrueVal =
+      simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ true,
-                             /* DropFlags */ nullptr, MaxRecurse) == FalseVal)
+                             /* DropFlags */ nullptr, MaxRecurse);
+  if (!SimplifiedTrueVal)
+    SimplifiedTrueVal = TrueVal;
+
+  if (SimplifiedFalseVal == SimplifiedTrueVal)
     return FalseVal;
 
   return nullptr;
@@ -7141,7 +7152,6 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                             NewOps[1], I->getFastMathFlags(), Q, MaxRecurse);
   case Instruction::Select:
     return simplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse);
-    break;
   case Instruction::GetElementPtr: {
     auto *GEPI = cast<GetElementPtrInst>(I);
     return simplifyGEPInst(GEPI->getSourceElementType(), NewOps[0],

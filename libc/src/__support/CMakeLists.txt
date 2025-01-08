@@ -241,6 +241,11 @@ add_header_library(
   complex_type
   HDRS
     complex_type.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_header_library(

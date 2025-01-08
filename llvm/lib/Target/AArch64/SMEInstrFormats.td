@@ -2158,6 +2158,15 @@ class sme2_mla_long_array_single_16b<string mnemonic>
     let Inst{19-16} = Zm;
     let Inst{9-5}   = Zn;
     let Inst{2-0}   = imm;
+    let Uses = [FPMR, FPCR];
+}
+
+multiclass sme2_fp8_fmlal_single_za16<string mnemonic, SDPatternOperator intrinsic> {
+  def NAME : sme2_mla_long_array_single_16b<mnemonic>, SMEPseudo2Instr<NAME, 1>;
+
+  def _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm3s2range, ZPR8, ZPR4b8, SMEMatrixArray>;
+
+  def: SME2_ZA_TwoOp_Multi_Single_Pat<NAME, intrinsic, uimm3s2range, ZPR4b8, nxv16i8, tileslicerange3s2>;
 }
 
 class sme2_mla_long_array_vg24_single<bits<2> op0, bit vg4, bits<2> op, bit o2,
@@ -2177,9 +2186,11 @@ class sme2_mla_long_array_vg24_single<bits<2> op0, bit vg4, bits<2> op, bit o2,
 
 multiclass sme2_fp_mla_long_array_vg2_single<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
                                              RegisterOperand multi_vector_ty, ZPRRegOp vector_ty,
-                                             ValueType zpr_ty, SDPatternOperator intrinsic> {
+                                             ValueType zpr_ty, SDPatternOperator intrinsic, list<Register> uses=[]> {
   def NAME : sme2_mla_long_array_vg24_single<0b00, 0b0, op{2-1}, op{0}, matrix_ty,  multi_vector_ty,
-                                           vector_ty, mnemonic, "vgx2">, SMEPseudo2Instr<NAME, 1>;
+                                           vector_ty, mnemonic, "vgx2">, SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s2range, multi_vector_ty,
                                                         vector_ty, SMEMatrixArray>;
@@ -2206,10 +2217,11 @@ multiclass sme2_int_mla_long_array_vg2_single<string mnemonic, bits<2> op, SDPat
 
 multiclass sme2_fp_mla_long_array_vg4_single<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
                                              RegisterOperand multi_vector_ty, ZPRRegOp vector_ty,
-                                             ValueType zpr_ty, SDPatternOperator intrinsic> {
+                                             ValueType zpr_ty, SDPatternOperator intrinsic, list<Register> uses=[]> {
   def NAME : sme2_mla_long_array_vg24_single<0b00, 0b1, op{2-1}, op{0}, matrix_ty, multi_vector_ty, 
-                                             vector_ty, mnemonic, "vgx4">,
-                                             SMEPseudo2Instr<NAME, 1>;
+                                             vector_ty, mnemonic, "vgx4">, SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s2range, multi_vector_ty, vector_ty,
                                                       SMEMatrixArray>;
@@ -2250,11 +2262,12 @@ class sme2_mla_long_array_vg2_multi<string mnemonic, bits<2> op0, bits<3> op,
 }
 
 multiclass sme2_fp_mla_long_array_vg2_multi<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
-                                            RegisterOperand multi_vector_ty,
-                                            ValueType zpr_ty, SDPatternOperator intrinsic> {
-
+                                            RegisterOperand multi_vector_ty, ValueType zpr_ty,
+                                            SDPatternOperator intrinsic, list<Register> uses=[]> {
   def NAME : sme2_mla_long_array_vg2_multi<mnemonic, 0b10, op, matrix_ty, multi_vector_ty>,
-                                           SMEPseudo2Instr<NAME, 1>;
+                                           SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def _PSEUDO : sme2_za_array_2op_multi_multi_pseudo<NAME, uimm2s2range, multi_vector_ty, SMEMatrixArray>;
 
@@ -2297,9 +2310,11 @@ class sme2_mla_long_array_vg4_multi<string mnemonic, bits<2> op0, bits<3> op,
 
 multiclass sme2_fp_mla_long_array_vg4_multi<string mnemonic, bits<3> op, MatrixOperand matrix_ty,
                                             RegisterOperand multi_vector_ty, ValueType zpr_ty,
-                                            SDPatternOperator intrinsic> {
+                                            SDPatternOperator intrinsic, list<Register> uses=[]> {
   def NAME : sme2_mla_long_array_vg4_multi<mnemonic, 0b10, op, matrix_ty, multi_vector_ty>,
-                                           SMEPseudo2Instr<NAME, 1>;
+                                           SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def _PSEUDO : sme2_za_array_2op_multi_multi_pseudo<NAME, uimm2s2range, multi_vector_ty, SMEMatrixArray>;
 
@@ -3229,10 +3244,11 @@ class sme2_mla_ll_array_single<string mnemonic, bits<5> op,
   let Constraints = "$ZAda = $_ZAda";
 }
 
-multiclass sme2_mla_ll_array_single<string mnemonic, bits<5> op,
-                                    MatrixOperand matrix_ty, ZPRRegOp vector_ty,
-                                    ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic> {
-  def NAME : sme2_mla_ll_array_single<mnemonic, op, matrix_ty, vector_ty, zpr_ty>, SMEPseudo2Instr<NAME, 1>;
+multiclass sme2_mla_ll_array_single<string mnemonic, bits<5> op, MatrixOperand matrix_ty, ZPRRegOp vector_ty,
+                                    ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic, list<Register> uses=[]> {
+  def NAME : sme2_mla_ll_array_single<mnemonic, op, matrix_ty, vector_ty, zpr_ty>, SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm2s4range, vector_ty, zpr_ty, SMEMatrixArray>;
 
@@ -3271,9 +3287,10 @@ class sme2_mla_ll_array_vg24_single<bits<6> op, MatrixOperand matrix_ty,
 multiclass sme2_mla_ll_array_vg24_single<string mnemonic, bits<6> op,
                                           MatrixOperand matrix_ty,
                                           RegisterOperand multi_vector_ty,
-                                          ZPRRegOp zpr_ty> {
-  def NAME: sme2_mla_ll_array_vg24_single<op, matrix_ty, multi_vector_ty,
-                                          zpr_ty, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+                                          ZPRRegOp zpr_ty, list<Register> uses> {
+  def NAME: sme2_mla_ll_array_vg24_single<op, matrix_ty, multi_vector_ty, zpr_ty, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def NAME # _PSEUDO : sme2_za_array_2op_multi_single_pseudo<NAME, uimm1s4range, multi_vector_ty, zpr_ty, SMEMatrixArray>;
 
@@ -3281,21 +3298,18 @@ multiclass sme2_mla_ll_array_vg24_single<string mnemonic, bits<6> op,
                  (!cast<Instruction>(NAME) matrix_ty:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, multi_vector_ty:$Zn, zpr_ty:$Zm), 0>;
 }
 
-multiclass sme2_mla_ll_array_vg2_single<string mnemonic, bits<5> op,
-                                        MatrixOperand matrix_ty,
-                                        RegisterOperand multi_vector_ty,
-                                        ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic> {
-
-  defm NAME: sme2_mla_ll_array_vg24_single<mnemonic, {op, 0b0}, matrix_ty, multi_vector_ty, zpr_ty>;
+multiclass sme2_mla_ll_array_vg2_single<string mnemonic, bits<6> op,
+                                        MatrixOperand matrix_ty, RegisterOperand multi_vector_ty,
+                                        ZPRRegOp zpr_ty, ValueType vt,SDPatternOperator intrinsic, list<Register> uses=[]> {
+  defm NAME: sme2_mla_ll_array_vg24_single<mnemonic, op, matrix_ty, multi_vector_ty, zpr_ty, uses>;
 
   def : SME2_ZA_TwoOp_VG2_Multi_Single_Pat<NAME, intrinsic, uimm1s4range, zpr_ty, vt, tileslicerange1s4>;
 }
 
-multiclass sme2_mla_ll_array_vg4_single<string mnemonic, bits<5> op,
-                                        MatrixOperand matrix_ty,
-                                        RegisterOperand multi_vector_ty,
-                                        ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic> {
-  defm NAME: sme2_mla_ll_array_vg24_single<mnemonic, {op, 0b0}, matrix_ty, multi_vector_ty, zpr_ty>;
+multiclass sme2_mla_ll_array_vg4_single<string mnemonic, bits<6> op,
+                                        MatrixOperand matrix_ty, RegisterOperand multi_vector_ty,
+                                        ZPRRegOp zpr_ty, ValueType vt, SDPatternOperator intrinsic, list<Register> uses=[]> {
+  defm NAME: sme2_mla_ll_array_vg24_single<mnemonic, op, matrix_ty, multi_vector_ty, zpr_ty, uses>;
 
   def : SME2_ZA_TwoOp_VG4_Multi_Single_Pat<NAME, intrinsic, uimm1s4range, zpr_ty, vt, tileslicerange1s4>;
 }
@@ -3330,9 +3344,11 @@ class sme2_mla_ll_array_vg2_multi<bits<5> op, MatrixOperand matrix_ty,
 
 multiclass sme2_mla_ll_array_vg2_multi<string mnemonic, bits<5> op,
                                        MatrixOperand matrix_ty,
-                                       RegisterOperand vector_ty,
-                                       ValueType vt, SDPatternOperator intrinsic> {
-  def NAME : sme2_mla_ll_array_vg2_multi<op, matrix_ty, vector_ty, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+                                       RegisterOperand vector_ty, ValueType vt,
+                                       SDPatternOperator intrinsic, list<Register> uses=[]> {
+  def NAME : sme2_mla_ll_array_vg2_multi<op, matrix_ty, vector_ty, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def _PSEUDO : sme2_za_array_2op_multi_multi_pseudo<NAME, uimm1s4range, vector_ty, SMEMatrixArray>;
 
@@ -3374,9 +3390,11 @@ class sme2_mla_ll_array_vg4_multi<bits<5> op,MatrixOperand matrix_ty,
 
 multiclass sme2_mla_ll_array_vg4_multi<string mnemonic, bits<5> op,
                                        MatrixOperand matrix_ty,
-                                       RegisterOperand vector_ty,
-                                       ValueType vt, SDPatternOperator intrinsic> {
-  def NAME : sme2_mla_ll_array_vg4_multi<op, matrix_ty, vector_ty, mnemonic>, SMEPseudo2Instr<NAME, 1>;
+                                       RegisterOperand vector_ty, ValueType vt,
+                                       SDPatternOperator intrinsic, list<Register> uses=[]> {
+  def NAME : sme2_mla_ll_array_vg4_multi<op, matrix_ty, vector_ty, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    let Uses = uses;
+  }
 
   def _PSEUDO : sme2_za_array_2op_multi_multi_pseudo<NAME, uimm1s4range, vector_ty, SMEMatrixArray>;
 

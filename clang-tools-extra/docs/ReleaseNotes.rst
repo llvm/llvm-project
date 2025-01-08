@@ -115,6 +115,27 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
+- Improved :program:`clang-tidy` by accepting parameters file in command line.
+
+- Removed :program:`clang-tidy`'s global options for most of checks. All options
+  are changed to local options except `IncludeStyle`, `StrictMode` and
+  `IgnoreMacros`. Global scoped `StrictMode` and `IgnoreMacros` are deprecated
+  and will be removed in further releases.
+
+.. csv-table::
+  :header: "Check", "Options removed from global option"
+
+  :doc:`bugprone-reserved-identifier <clang-tidy/checks/bugprone/reserved-identifier>`, AggressiveDependentMemberLookup
+  :doc:`bugprone-unchecked-optional-access <clang-tidy/checks/bugprone/unchecked-optional-access>`, IgnoreSmartPointerDereference
+  :doc:`cppcoreguidelines-pro-type-member-init <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`, UseAssignment
+  :doc:`cppcoreguidelines-rvalue-reference-param-not-moved <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>`, AllowPartialMove; IgnoreUnnamedParams; IgnoreNonDeducedTemplateTypes
+  :doc:`misc-include-cleaner <clang-tidy/checks/misc/include-cleaner>`, IgnoreHeaders; DeduplicateFindings
+  :doc:`performance-inefficient-vector-operation <clang-tidy/checks/performance/inefficient-vector-operation>`, EnableProto
+  :doc:`readability-identifier-naming <clang-tidy/checks/readability/identifier-naming>`, AggressiveDependentMemberLookup
+  :doc:`readability-inconsistent-declaration-parameter-name <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>`, Strict
+  :doc:`readability-redundant-access-specifiers <clang-tidy/checks/readability/redundant-access-specifiers>`, CheckFirstDeclaration
+  :doc:`readability-redundant-casting <clang-tidy/checks/readability/redundant-casting>`, IgnoreTypeAliases
+
 New checks
 ^^^^^^^^^^
 
@@ -299,6 +320,9 @@ Changes in existing checks
   member function calls too and to only expand macros starting with ``PRI``
   and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by not expanding macros.
+
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.
@@ -337,6 +361,13 @@ Removed checks
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- The :doc:`bugprone-narrowing-conversions <clang-tidy/checks/bugprone/narrowing-conversions>`
+  check is no longer an alias of :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>`. Instead,
+  :doc:`cppcoreguidelines-narrowing-conversions
+  <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` is now an alias
+  of :doc:`bugprone-narrowing-conversions <clang-tidy/checks/bugprone/narrowing-conversions>`.
 
 Improvements to include-fixer
 -----------------------------

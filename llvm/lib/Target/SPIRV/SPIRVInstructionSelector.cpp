@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -44,6 +45,17 @@ using ExtInstList =
     std::vector<std::pair<SPIRV::InstructionSet::InstructionSet, uint32_t>>;
 
 namespace {
+
+llvm::SPIRV::SelectionControl::SelectionControl
+getSelectionOperandForImm(int Imm) {
+  if (Imm == 2)
+    return SPIRV::SelectionControl::Flatten;
+  if (Imm == 1)
+    return SPIRV::SelectionControl::DontFlatten;
+  if (Imm == 0)
+    return SPIRV::SelectionControl::None;
+  llvm_unreachable("Invalid immediate");
+}
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "SPIRVGenGlobalISel.inc"
@@ -431,6 +443,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       }
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
+      GR.invalidateMachineInstr(&I);
       I.removeFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
@@ -445,6 +458,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
     salvageDebugInfo(*MRI, I);
+    GR.invalidateMachineInstr(&I);
     I.eraseFromParent();
     return true;
   }
@@ -464,6 +478,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     if (HasDefs) // Make all vregs 64 bits (for SPIR-V IDs).
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
         MRI->setType(I.getOperand(i).getReg(), LLT::scalar(64));
+    GR.invalidateMachineInstr(&I);
     I.removeFromParent();
     return true;
   }
@@ -1102,6 +1117,7 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
                                             Constant::getNullValue(LLVMArrTy));
     Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
     GR.add(GV, GR.CurMF, VarReg);
+    GR.addGlobalObject(GV, GR.CurMF, VarReg);
 
     Result &=
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
@@ -2253,8 +2269,10 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
   } else {
     Opcode = SPIRV::OpKill;
     // OpKill must be the last operation of any basic block.
-    MachineInstr *NextI = I.getNextNode();
-    NextI->removeFromParent();
+    if (MachineInstr *NextI = I.getNextNode()) {
+      GR.invalidateMachineInstr(NextI);
+      NextI->removeFromParent();
+    }
   }
 
   MachineBasicBlock &BB = *I.getParent();
@@ -2812,17 +2830,22 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     }
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
-  case Intrinsic::spv_loop_merge:
-  case Intrinsic::spv_selection_merge: {
-    const auto Opcode = IID == Intrinsic::spv_selection_merge
-                            ? SPIRV::OpSelectionMerge
-                            : SPIRV::OpLoopMerge;
-    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode));
+  case Intrinsic::spv_loop_merge: {
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoopMerge));
     for (unsigned i = 1; i < I.getNumExplicitOperands(); ++i) {
       assert(I.getOperand(i).isMBB());
       MIB.addMBB(I.getOperand(i).getMBB());
     }
     MIB.addImm(SPIRV::SelectionControl::None);
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
+  case Intrinsic::spv_selection_merge: {
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
+    assert(I.getOperand(1).isMBB() &&
+           "operand 1 to spv_selection_merge must be a basic block");
+    MIB.addMBB(I.getOperand(1).getMBB());
+    MIB.addImm(getSelectionOperandForImm(I.getOperand(2).getImm()));
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_cmpxchg:
@@ -2876,6 +2899,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // translated to a `LocalInvocationId` builtin variable
     return loadVec3BuiltinInputID(SPIRV::BuiltIn::LocalInvocationId, ResVReg,
                                   ResType, I);
+  case Intrinsic::spv_group_id:
+    // The HLSL SV_GroupId semantic is lowered to
+    // llvm.spv.group.id intrinsic in LLVM IR for SPIR-V backend.
+    //
+    // In SPIR-V backend, llvm.spv.group.id is now translated to a `WorkgroupId`
+    // builtin variable
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::WorkgroupId, ResVReg, ResType,
+                                  I);
   case Intrinsic::spv_fdot:
     return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
@@ -2901,6 +2932,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAny(ResVReg, ResType, I);
   case Intrinsic::spv_cross:
     return selectExtInst(ResVReg, ResType, I, CL::cross, GL::Cross);
+  case Intrinsic::spv_distance:
+    return selectExtInst(ResVReg, ResType, I, CL::distance, GL::Distance);
   case Intrinsic::spv_lerp:
     return selectExtInst(ResVReg, ResType, I, CL::mix, GL::FMix);
   case Intrinsic::spv_length:
@@ -2982,14 +3015,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
-  case Intrinsic::spv_handle_fromBinding: {
+  case Intrinsic::spv_resource_handlefrombinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
-  case Intrinsic::spv_typedBufferStore: {
+  case Intrinsic::spv_resource_store_typedbuffer: {
     selectImageWriteIntrinsic(I);
     return true;
   }
-  case Intrinsic::spv_typedBufferLoad: {
+  case Intrinsic::spv_resource_load_typedbuffer: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
   }
@@ -3477,18 +3510,25 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         // References to a function via function pointers generate virtual
         // registers without a definition. We will resolve it later, during
         // module analysis stage.
+        Register ResTypeReg = GR.getSPIRVTypeID(ResType);
         MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-        Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-        MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
-        MachineInstrBuilder MB =
+        Register FuncVReg =
+            MRI->createGenericVirtualRegister(GR.getRegType(ResType));
+        MRI->setRegClass(FuncVReg, &SPIRV::pIDRegClass);
+        MachineInstrBuilder MIB1 =
+            BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))
+                .addDef(FuncVReg)
+                .addUse(ResTypeReg);
+        MachineInstrBuilder MIB2 =
             BuildMI(BB, I, I.getDebugLoc(),
                     TII.get(SPIRV::OpConstantFunctionPointerINTEL))
                 .addDef(NewReg)
-                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(ResTypeReg)
                 .addUse(FuncVReg);
         // mapping the function pointer to the used Function
-        GR.recordFunctionPointer(&MB.getInstr()->getOperand(2), GVFun);
-        return MB.constrainAllUses(TII, TRI, RBI);
+        GR.recordFunctionPointer(&MIB2.getInstr()->getOperand(2), GVFun);
+        return MIB1.constrainAllUses(TII, TRI, RBI) &&
+               MIB2.constrainAllUses(TII, TRI, RBI);
       }
       return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
           .addDef(NewReg)

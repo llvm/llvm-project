@@ -77,6 +77,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -735,6 +736,11 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
+      MPM.addPass(ModuleTypeSanitizerPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
 
@@ -1022,8 +1028,24 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            FPM.addPass(BoundsCheckingPass());
+          [this](FunctionPassManager &FPM, OptimizationLevel Level) {
+            BoundsCheckingPass::ReportingMode Mode;
+            bool Merge = CodeGenOpts.SanitizeMergeHandlers.has(
+                SanitizerKind::LocalBounds);
+
+            if (CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
+              Mode = BoundsCheckingPass::ReportingMode::Trap;
+            } else if (CodeGenOpts.SanitizeMinimalRuntime) {
+              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
+                         ? BoundsCheckingPass::ReportingMode::MinRuntime
+                         : BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+            } else {
+              Mode = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds)
+                         ? BoundsCheckingPass::ReportingMode::FullRuntime
+                         : BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+            }
+            BoundsCheckingPass::BoundsCheckingOptions Options(Mode, Merge);
+            FPM.addPass(BoundsCheckingPass(Options));
           });
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already

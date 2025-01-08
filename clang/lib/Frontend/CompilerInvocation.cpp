@@ -1260,6 +1260,25 @@ static void initOption(AnalyzerOptions::ConfigTable &Config,
       << Name << "an unsigned";
 }
 
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       DiagnosticsEngine *Diags,
+                       PositiveAnalyzerOption &OptionField, StringRef Name,
+                       unsigned DefaultVal) {
+  auto Parsed = PositiveAnalyzerOption::create(
+      getStringOption(Config, Name, std::to_string(DefaultVal)));
+  if (Parsed.has_value()) {
+    OptionField = Parsed.value();
+    return;
+  }
+  if (Diags && !Parsed.has_value())
+    Diags->Report(diag::err_analyzer_config_invalid_input)
+        << Name << "a positive";
+
+  auto Default = PositiveAnalyzerOption::create(DefaultVal);
+  assert(Default.has_value());
+  OptionField = Default.value();
+}
+
 static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
                                  DiagnosticsEngine *Diags) {
   // TODO: There's no need to store the entire configtable, it'd be plenty
@@ -1691,7 +1710,7 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     }
   }
 
-  if (memcmp(Opts.CoverageVersion, "408*", 4) != 0)
+  if (memcmp(Opts.CoverageVersion, "0000", 4))
     GenerateArg(Consumer, OPT_coverage_version_EQ,
                 StringRef(Opts.CoverageVersion, 4));
 
@@ -1791,6 +1810,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.SanitizeTrap))
     GenerateArg(Consumer, OPT_fsanitize_trap_EQ, Sanitizer);
+
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.SanitizeMergeHandlers))
+    GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2003,7 +2026,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   } else if (Args.hasArg(OPT_fmemory_profile))
     Opts.MemoryProfileOutput = MemProfileBasename;
 
-  memcpy(Opts.CoverageVersion, "408*", 4);
   if (Opts.CoverageNotesFile.size() || Opts.CoverageDataFile.size()) {
     if (Args.hasArg(OPT_coverage_version_EQ)) {
       StringRef CoverageVersion = Args.getLastArgValue(OPT_coverage_version_EQ);
@@ -2269,6 +2291,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerKinds("-fsanitize-trap=",
                       Args.getAllArgValues(OPT_fsanitize_trap_EQ), Diags,
                       Opts.SanitizeTrap);
+  parseSanitizerKinds("-fsanitize-merge=",
+                      Args.getAllArgValues(OPT_fsanitize_merge_handlers_EQ),
+                      Diags, Opts.SanitizeMergeHandlers);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
@@ -4256,7 +4281,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
       if (TT.getArch() == llvm::Triple::UnknownArch ||
           !(TT.getArch() == llvm::Triple::aarch64 || TT.isPPC() ||
+            TT.getArch() == llvm::Triple::spirv64 ||
             TT.getArch() == llvm::Triple::systemz ||
+            TT.getArch() == llvm::Triple::loongarch64 ||
             TT.getArch() == llvm::Triple::nvptx ||
             TT.getArch() == llvm::Triple::nvptx64 ||
             TT.getArch() == llvm::Triple::amdgcn ||

@@ -16,7 +16,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.push.head }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
     container:
       image: ghcr.io/llvm/ci-ubuntu-22.04:latest
