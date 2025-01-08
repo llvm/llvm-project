@@ -1,5 +1,4 @@
-//===- AArch64WinFixupBufferSecurityCheck.cpp Fix Buffer Security Check Call
-//-===//
+//===- AArch64WinFixupBufferSecurityCheck.cpp Fixup Buffer Security Check -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,12 +49,9 @@ public:
   void getGuardCheckSequence(MachineBasicBlock *CurMBB, MachineInstr *CheckCall,
                              MachineInstr *SeqMI[5]);
 
-  void SplitBasicBlock(MachineBasicBlock *CurMBB, MachineBasicBlock *NewRetMBB,
-                       MachineBasicBlock::iterator SplitIt);
+  void finishBlock(MachineBasicBlock *MBB);
 
-  void FinishBlock(MachineBasicBlock *MBB);
-
-  void FinishFunction(MachineBasicBlock *FailMBB, MachineBasicBlock *NewRetMBB);
+  void finishFunction(MachineBasicBlock *FailMBB, MachineBasicBlock *NewRetMBB);
 };
 } // end anonymous namespace
 
@@ -68,24 +64,17 @@ FunctionPass *llvm::createAArch64WinFixupBufferSecurityCheckPass() {
   return new AArch64WinFixupBufferSecurityCheckPass();
 }
 
-void AArch64WinFixupBufferSecurityCheckPass::SplitBasicBlock(
-    MachineBasicBlock *CurMBB, MachineBasicBlock *NewRetMBB,
-    MachineBasicBlock::iterator SplitIt) {
-  NewRetMBB->splice(NewRetMBB->end(), CurMBB, SplitIt, CurMBB->end());
-}
-
 std::pair<MachineBasicBlock *, MachineInstr *>
 AArch64WinFixupBufferSecurityCheckPass::getSecurityCheckerBasicBlock(
     MachineFunction &MF) {
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      if (MI.getOpcode() == AArch64::BL && MI.getNumExplicitOperands() == 1) {
+      if (MI.isCall() && MI.getNumExplicitOperands() == 1) {
         auto MO = MI.getOperand(0);
         if (MO.isGlobal()) {
           auto Callee = dyn_cast<Function>(MO.getGlobal());
           if (Callee && Callee->getName() == "__security_check_cookie") {
             return std::make_pair(&MBB, &MI);
-            break;
           }
         }
       }
@@ -164,13 +153,13 @@ void AArch64WinFixupBufferSecurityCheckPass::getGuardCheckSequence(
   SeqMI[0] = &*DIt;
 }
 
-void AArch64WinFixupBufferSecurityCheckPass::FinishBlock(
+void AArch64WinFixupBufferSecurityCheckPass::finishBlock(
     MachineBasicBlock *MBB) {
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *MBB);
 }
 
-void AArch64WinFixupBufferSecurityCheckPass::FinishFunction(
+void AArch64WinFixupBufferSecurityCheckPass::finishFunction(
     MachineBasicBlock *FailMBB, MachineBasicBlock *NewRetMBB) {
   FailMBB->getParent()->RenumberBlocks();
   // FailMBB includes call to MSCV RT  where __security_check_cookie
@@ -178,8 +167,8 @@ void AArch64WinFixupBufferSecurityCheckPass::FinishFunction(
   // value from stack slot.( even if this is modified)
   // Before going further we compute back livein for this block to make sure
   // it is live and provided.
-  FinishBlock(FailMBB);
-  FinishBlock(NewRetMBB);
+  finishBlock(FailMBB);
+  finishBlock(NewRetMBB);
 }
 
 bool AArch64WinFixupBufferSecurityCheckPass::runOnMachineFunction(
@@ -269,7 +258,7 @@ bool AArch64WinFixupBufferSecurityCheckPass::runOnMachineFunction(
   CurMBB->addSuccessor(NewRetMBB);
   CurMBB->addSuccessor(FailMBB);
 
-  FinishFunction(FailMBB, NewRetMBB);
+  finishFunction(FailMBB, NewRetMBB);
 
   return !Changed;
 }
