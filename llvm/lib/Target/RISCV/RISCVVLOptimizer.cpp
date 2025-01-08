@@ -87,8 +87,7 @@ struct OperandInfo {
   unsigned Log2EEW;
 
   OperandInfo(RISCVII::VLMUL EMUL, unsigned Log2EEW)
-      : EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {
-  }
+      : EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {}
 
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
       : EMUL(EMUL), Log2EEW(Log2EEW) {}
@@ -133,7 +132,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
     OS << "nullopt";
   return OS;
 }
-
 
 namespace llvm {
 namespace RISCVVType {
@@ -718,8 +716,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 }
 
 static std::optional<OperandInfo>
-getOperandInfo(const MachineOperand &MO,
-               const MachineRegisterInfo *MRI) {
+getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
@@ -1186,7 +1183,7 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
 
     std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp, MRI);
     std::optional<OperandInfo> ProducerInfo =
-      getOperandInfo(MI.getOperand(0), MRI);
+        getOperandInfo(MI.getOperand(0), MRI);
     if (!ConsumerInfo || !ProducerInfo) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
