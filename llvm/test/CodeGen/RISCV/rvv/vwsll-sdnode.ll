@@ -222,6 +222,14 @@ define <vscale x 2 x i64> @vwsll_vx_i8_nxv2i64_zext(<vscale x 2 x i32> %a, i8 %b
 }
 
 define <vscale x 2 x i64> @vwsll_vi_nxv2i64(<vscale x 2 x i32> %a) {
+; CHECK-LABEL: vwsll_vi_nxv2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    ret
+;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv2i64:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m1, ta, ma

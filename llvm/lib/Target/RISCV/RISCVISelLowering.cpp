@@ -17370,13 +17370,18 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SDValue RHS = N->getOperand(1);
   APInt ShAmt;
-  if (!ISD::isConstantSplatVector(RHS.getNode(), ShAmt))
+  uint64_t ShAmtInt;
+  if (ISD::isConstantSplatVector(RHS.getNode(), ShAmt))
+    ShAmtInt = ShAmt.getZExtValue();
+  else if (RHS.getOpcode() == RISCVISD::VMV_V_X_VL &&
+           RHS.getOperand(1).getOpcode() == ISD::Constant)
+    ShAmtInt = RHS.getConstantOperandVal(1);
+  else
     return SDValue();
 
   // Better foldings:
   // (shl (sext x), 1) -> (vwadd  x, x)
   // (shl (zext x), 1) -> (vwaddu x, x)
-  uint64_t ShAmtInt = ShAmt.getZExtValue();
   if (ShAmtInt <= 1)
     return SDValue();
 
