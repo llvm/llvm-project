@@ -3607,7 +3607,8 @@ bool Sema::CheckOtherCall(CallExpr *TheCall, const FunctionProtoType *Proto) {
   return false;
 }
 
-static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
+bool AtomicExpr::isValidOrderingForOp(int64_t Ordering,
+                                      AtomicExpr::AtomicOp Op) {
   if (!llvm::isValidAtomicOrderingCABI(Ordering))
     return false;
 
@@ -4164,7 +4165,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if (SubExprs.size() >= 2 && Form != Init) {
     std::optional<llvm::APSInt> Success =
         SubExprs[1]->getIntegerConstantExpr(Context);
-    if (Success && !isValidOrderingForOp(Success->getSExtValue(), Op)) {
+    if (Success &&
+        !AtomicExpr::isValidOrderingForOp(Success->getSExtValue(), Op)) {
       Diag(SubExprs[1]->getBeginLoc(),
            diag::warn_atomic_op_has_invalid_memory_order)
           << /*success=*/(Form == C11CmpXchg || Form == GNUCmpXchg)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 %s
+// RUN: %clang_cc1 -std=c++2c %s
 
 // expected-no-diagnostics
 

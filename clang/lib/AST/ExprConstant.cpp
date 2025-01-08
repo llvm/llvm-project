@@ -8090,6 +8090,11 @@ public:
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) {
+    if (!Info.getLangOpts().CPlusPlus) {
+      Info.FFDiag(E, diag::note_constexpr_atomic_ops_only_in_cpp);
+      return false;
+    }
+
     if (!EvaluateAtomicOrder(E, Info))
       return false;
 
@@ -16354,6 +16359,11 @@ public:
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) {
+    if (!Info.getLangOpts().CPlusPlus) {
+      Info.FFDiag(E, diag::note_constexpr_atomic_ops_only_in_cpp);
+      return false;
+    }
+
     if (!EvaluateAtomicOrder(E, Info))
       return false;
 
@@ -18011,19 +18021,35 @@ std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
 static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info) {
   // We need to evaluate Order argument(s), but we ignore it as constant
   // evaluation is single threaded.
-  APSInt OrderIgnoredResult;
+  APSInt AtomicOrderValue;
 
   if (E->getOp() != AtomicExpr::AO__c11_atomic_init) {
     const Expr *OrderSuccess = E->getOrder();
-    if (OrderSuccess &&
-        !EvaluateInteger(OrderSuccess, OrderIgnoredResult, Info))
+    if (OrderSuccess && !EvaluateInteger(OrderSuccess, AtomicOrderValue, Info))
       return false;
+
+    // FIXME: this diagnostics is emited twice, once in SemaChecking.cpp and
+    // once here
+    if (!AtomicExpr::isValidOrderingForOp(AtomicOrderValue.getSExtValue(),
+                                          E->getOp())) {
+      Info.FFDiag(E->getOrder(), diag::warn_atomic_op_has_invalid_memory_order)
+          << /*success=*/(E->isCmpXChg()) << E->getOrder()->getExprLoc();
+      return false;
+    }
   }
 
   if (E->isCmpXChg()) {
     const Expr *OrderFail = E->getOrderFail();
-    if (!EvaluateInteger(OrderFail, OrderIgnoredResult, Info))
+    if (!EvaluateInteger(OrderFail, AtomicOrderValue, Info))
       return false;
+
+    if (!AtomicExpr::isValidOrderingForOp(AtomicOrderValue.getSExtValue(),
+                                          E->getOp())) {
+      Info.FFDiag(E->getOrderFail(),
+                  diag::warn_atomic_op_has_invalid_memory_order)
+          << 2 << E->getOrderFail()->getExprLoc();
+      return false;
+    }
   }
 
   return true;
@@ -18258,14 +18284,30 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
 
     APSInt ArgumentInt = ArgumentVal.getInt();
 
+    // if (AtomicValueTy->getPointeeType()->isVoidType()) {
+    //   Info.FFDiag(E, diag::err_typecheck_pointer_arith_void_type) << 0;
+    //   return false;
+    // }
+
+    auto PointeeTy = AtomicValueTy->getPointeeType();
+
+    if (PointeeTy->isVoidType()) {
+      // Resolve type from LValue Designator, so we can do safely arithmetic
+      // over 'void *' with GCC atomic builtins.
+      PointeeTy = AtomicPtr.Designator.getType(Info.Ctx);
+    } else if (PointeeTy->isIncompleteType()) {
+      Info.FFDiag(E, diag::err_typecheck_arithmetic_incomplete_or_sizeless_type)
+          << 0 << PointeeTy;
+      return false;
+    }
+
     // Calculate size of pointee object.
     CharUnits SizeOfPointee;
-    if (!HandleSizeof(Info, E->getExprLoc(), AtomicValueTy->getPointeeType(),
-                      SizeOfPointee))
+    if (!HandleSizeof(Info, E->getExprLoc(), PointeeTy, SizeOfPointee))
       return false;
 
     // GCC's atomic_fetch add/sub operations takes arguments in bytes and
-    // not in multiplies of sizeof(T).
+    // not in multiples of sizeof(T).
     switch (E->getOp()) {
     case AtomicExpr::AO__atomic_fetch_add:
     case AtomicExpr::AO__atomic_add_fetch:
@@ -18276,11 +18318,12 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
           false);
       // Incrementing/decrementing pointer by size which is not dividable by
       // pointee size is not allowed.
+      // FIXME: check if we need to also look for alignof(T)
       if ((ArgumentInt % SizeOfOneItem) != 0) {
         Info.FFDiag(E->getBuiltinLoc(), diag::note_unaligned_atomic_pointer_op)
             << E->getBuiltinLoc()
             << E->getVal1()->getSourceRange() // Problematic argument.
-            << ArgumentInt << AtomicValueTy->getPointeeType() << SizeOfOneItem;
+            << ArgumentInt << PointeeTy << SizeOfOneItem;
         return false;
       }
 
