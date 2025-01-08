@@ -41,7 +41,7 @@ struct A {
 // expected-error@+1 {{single declaration is expected after 'declare simd' directive}}
 #pragma omp declare simd
 // expected-note@+1 {{declared here}}
-int b, c;
+int b, c, d, s1, s2;
 
 // expected-error@+1 {{'C' does not refer to a value}}
 #pragma omp declare simd simdlen(C)
@@ -161,8 +161,9 @@ void test() {
 #pragma omp declare simd linear(
 // expected-error@+1 {{expected expression}}
 #pragma omp declare simd linear()
-// expected-note@+3 {{to match this '('}}
-// expected-error@+2 {{expected ')'}}
+// expected-note@+4 {{to match this '('}}
+// expected-error@+3 {{expected ')'}}
+// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}}
 #pragma omp declare simd linear(a:
 // expected-error@+1 {{expected expression}}
@@ -199,12 +200,12 @@ void test() {
 // expected-error@+1 {{linear variable cannot be uniform}}
 #pragma omp declare simd linear(a: 4) uniform(a)
 // expected-error@+1 {{variable of non-reference type 'int *' can be used only with 'val' modifier, but used with 'uval'}}
-#pragma omp declare simd linear(uval(b))
+#pragma omp declare simd linear(uval(b)) // expected-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
 // expected-error@+1 {{variable of non-reference type 'int *' can be used only with 'val' modifier, but used with 'ref'}}
-#pragma omp declare simd linear(ref(b))
+#pragma omp declare simd linear(ref(b)) // expected-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
 // expected-error@+1 {{expected one of 'ref', val' or 'uval' modifiers}} expected-warning@+1 {{extra tokens at the end of '#pragma omp declare simd' are ignored}}
-#pragma omp declare simd linear(uref(b)) allocate(b)
-#pragma omp declare simd linear(ref(c))
+#pragma omp declare simd linear(uref(b)) allocate(b) //expected-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
+#pragma omp declare simd linear(ref(c)) // expected-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
 // expected-note@+2 {{'a' declared here}}
 // expected-note@+1 {{'a' declared here}}
 void bar(int a, int *b, float &c);

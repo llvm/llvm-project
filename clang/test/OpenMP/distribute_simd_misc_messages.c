@@ -1020,19 +1020,19 @@ void linear_modifiers(int argc) {
   for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(val(k))
+#pragma omp distribute simd linear(val(k)) // omp51-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(uval(k)) // expected-error {{expected 'val' modifier}}
+#pragma omp distribute simd linear(uval(k)) // expected-error {{expected 'val' modifier}} // omp51-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(ref(k)) // expected-error {{expected 'val' modifier}}
+#pragma omp distribute simd linear(ref(k)) // expected-error {{expected 'val' modifier}} // omp51-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(foo(k)) // expected-error {{expected 'val' modifier}}
+#pragma omp distribute simd linear(foo(k)) // expected-error {{expected 'val' modifier}} // omp51-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (k = 0; k < argc; ++k) ++k;
 }
 

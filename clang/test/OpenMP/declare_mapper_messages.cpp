@@ -72,13 +72,13 @@ int fun(int arg) {
       {}
 #pragma omp target map(mapper(aa :vv)                                   // expected-error {{use of undeclared identifier 'aa'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
       {}
-#pragma omp target map(mapper(ab) :vv)                                  // expected-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}}
+#pragma omp target map(mapper(ab) :vv)                                  // omp50-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}}
       {}
 #pragma omp target map(mapper(N2::) :vv)                                // expected-error {{use of undeclared identifier 'N2'}} expected-error {{illegal OpenMP user-defined mapper identifier}}
       {}
 #pragma omp target map(mapper(N1::) :vv)                                // expected-error {{illegal OpenMP user-defined mapper identifier}}
       {}
-#pragma omp target map(mapper(aa) :vv)                                  // expected-error {{missing map type}}
+#pragma omp target map(mapper(aa) :vv)                                  // omp50-error {{missing map type}}
       {}
 #pragma omp target map(mapper(N1::aa) alloc:vv)                         // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'aa'}}
       {}

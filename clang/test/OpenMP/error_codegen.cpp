@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -fopenmp -fopenmp-version=51 -triple x86_64 \
+// RUN: %clang_cc1 -std=c++11 -fopenmp -fopenmp-version=60 -triple x86_64 \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -std=c++11 -fopenmp-simd -fopenmp-version=51 \
+// RUN: %clang_cc1 -std=c++11 -fopenmp-simd -fopenmp-version=60 \
 // RUN:  -debug-info-kind=limited -triple x86_64 -emit-llvm -o - %s |  \
 // RUN:  FileCheck  --check-prefix SIMD %s
 

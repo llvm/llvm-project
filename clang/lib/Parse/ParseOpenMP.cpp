@@ -4278,7 +4278,7 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
       Data.MapTypeModifiers.push_back(TypeModifier);
       Data.MapTypeModifiersLoc.push_back(Tok.getLocation());
       if (PP.LookAhead(0).isNot(tok::comma) &&
-          PP.LookAhead(0).isNot(tok::colon) && getLangOpts().OpenMP >= 52)
+          PP.LookAhead(0).isNot(tok::colon) && getLangOpts().OpenMP >= 61)
         Diag(Tok.getLocation(), diag::err_omp_missing_comma)
             << "map type modifier";
       ConsumeToken();
@@ -4289,7 +4289,7 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
       if (parseMapperModifier(Data))
         return true;
       if (Tok.isNot(tok::comma) && Tok.isNot(tok::colon) &&
-          getLangOpts().OpenMP >= 52)
+          getLangOpts().OpenMP >= 61)
         Diag(Data.MapTypeModifiersLoc.back(), diag::err_omp_missing_comma)
             << "map type modifier";
 
@@ -4325,7 +4325,7 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
       }
 
       Diag(Tok, diag::err_omp_unknown_map_type_modifier)
-          << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
+          << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 60 ? 2 : 1)
                                          : 0)
           << getLangOpts().OpenMPExtensions;
       ConsumeToken();
