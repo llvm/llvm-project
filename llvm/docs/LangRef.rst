@@ -1518,6 +1518,9 @@ Currently, only the following parameter attributes are defined:
     undefined. Note that this does not refer to padding introduced by the
     type's storage representation.
 
+    If memory sanitizer is enabled, ``noundef`` becomes an ABI attribute and
+    must match between the call-site and the function definition.
+
 .. _nofpclass:
 
 ``nofpclass(<test mask>)``
