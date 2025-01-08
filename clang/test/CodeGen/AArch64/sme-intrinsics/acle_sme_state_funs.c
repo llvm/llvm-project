@@ -22,14 +22,10 @@ bool test_in_streaming_mode_streaming_compatible(void) __arm_streaming_compatibl
 
 // CHECK-LABEL: @test_in_streaming_mode_streaming(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
-// CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
 // CHECK-NEXT:    ret i1 true
 //
 // CPP-CHECK-LABEL: @_Z32test_in_streaming_mode_streamingv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
-// CPP-CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
 // CPP-CHECK-NEXT:    ret i1 true
 //
 bool test_in_streaming_mode_streaming(void) __arm_streaming {
@@ -38,16 +34,10 @@ bool test_in_streaming_mode_streaming(void) __arm_streaming {
 
 // CHECK-LABEL: @test_in_streaming_mode_non_streaming(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
-// CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-// CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
 // CHECK-NEXT:    ret i1 false
 //
 // CPP-CHECK-LABEL: @_Z36test_in_streaming_mode_non_streamingv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-// CPP-CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
 // CPP-CHECK-NEXT:    ret i1 false
 //
 bool test_in_streaming_mode_non_streaming(void) {

@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace clang;
@@ -180,6 +181,9 @@ public:
 
   bool wouldInliningViolateFunctionCallABI(
       const FunctionDecl *Caller, const FunctionDecl *Callee) const override;
+
+  void emitFunctionCallProlog(CGBuilderTy &Builder, const FunctionDecl *Caller,
+                              const FunctionDecl *Callee) const override;
 
 private:
   // Diagnose calls between functions with incompatible Streaming SVE
@@ -1273,6 +1277,31 @@ bool AArch64TargetCodeGenInfo::wouldInliningViolateFunctionCallABI(
     const FunctionDecl *Caller, const FunctionDecl *Callee) const {
   return Caller && Callee &&
          GetArmSMEInlinability(Caller, Callee) != ArmSMEInlinability::Ok;
+}
+
+void AArch64TargetCodeGenInfo::emitFunctionCallProlog(
+    CGBuilderTy &Builder, const FunctionDecl *Caller,
+    const FunctionDecl *Callee) const {
+  const AArch64ABIInfo &ABIInfo = getABIInfo<AArch64ABIInfo>();
+  const TargetInfo &TI = ABIInfo.getContext().getTargetInfo();
+
+  if (!TI.hasFeature("sme"))
+    return;
+
+  if (!Callee || !isStreamingCompatible(Callee))
+    return;
+
+  if (const auto *FPT = Caller->getType()->getAs<FunctionProtoType>()) {
+    unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
+    if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
+      bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
+      llvm::Value *Call = Builder.CreateIntrinsic(
+          llvm::Intrinsic::aarch64_sme_in_streaming_mode, {}, {});
+      if (!IsStreaming)
+        Call = Builder.CreateNot(Call);
+      Builder.CreateAssumption(Call);
+    }
+  }
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
