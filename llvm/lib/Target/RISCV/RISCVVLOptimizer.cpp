@@ -584,7 +584,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
     return getIntegerExtensionOperandEEW(8, MI, MO);
 
   // Vector Narrowing Integer Right Shift Instructions
-  // Destination EEW=SEW, Op 1 has EEW=2*SEW. Op2 hasEEW=SEW
+  // Destination EEW=SEW, Op 1 has EEW=2*SEW. Op2 has EEW=SEW
   case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
   case RISCV::VNSRL_WV:
