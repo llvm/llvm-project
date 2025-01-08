@@ -13,6 +13,7 @@
 #include "src/__support/CPP/type_traits/is_complex.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/complex_types.h"
+#include "src/__support/complex_type.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
@@ -168,31 +169,6 @@ private:
 
 } // namespace internal
 
-template <typename T> struct get_real;
-
-template <> struct get_real<_Complex float> {
-  using type = float;
-};
-template <> struct get_real<_Complex double> {
-  using type = double;
-};
-template <> struct get_real<_Complex long double> {
-  using type = long double;
-};
-
-#if defined(LIBC_TYPES_HAS_CFLOAT16)
-template <> struct get_real<cfloat16> {
-  using type = float16;
-};
-#endif
-#ifdef LIBC_TYPES_CFLOAT128_IS_NOT_COMPLEX_LONG_DOUBLE
-template <> struct get_real<cfloat128> {
-  using type = float128;
-};
-#endif
-
-template <typename T> using get_real_t = typename get_real<T>::type;
-
 // Return true if the input and ouput types for the operation op are valid
 // types.
 template <Operation op, typename InputType, typename OutputType>
@@ -207,7 +183,7 @@ constexpr bool is_valid_operation() {
           cpp::is_complex_v<InputType>) ||
          (Operation::BeginUnaryOperationsSingleOutputDifferentOutputType < op &&
           op < Operation::EndUnaryOperationsSingleOutputDifferentOutputType &&
-          cpp::is_same_v<get_real_t<InputType>, OutputType> &&
+          cpp::is_same_v<make_real_t<InputType>, OutputType> &&
           cpp::is_complex_v<InputType>);
 }
 

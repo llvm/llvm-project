@@ -47,11 +47,6 @@ static inline cpp::string str(RoundingMode mode) {
   __builtin_unreachable();
 }
 
-template <typename T> struct MPCComplex {
-  T real;
-  T imag;
-};
-
 class MPCNumber {
 private:
   unsigned int precision;
@@ -76,7 +71,7 @@ public:
         mpc_rounding(MPC_RND(mpfr::get_mpfr_rounding_mode(rnd),
                              mpfr::get_mpfr_rounding_mode(rnd))) {
     mpc_init2(value, precision);
-    MPCComplex<float> x_c = cpp::bit_cast<MPCComplex<float>>(x);
+    Complex<float> x_c = cpp::bit_cast<Complex<float>>(x);
     mpfr_t real, imag;
     mpfr_init2(real, precision);
     mpfr_init2(imag, precision);
@@ -96,7 +91,7 @@ public:
         mpc_rounding(MPC_RND(mpfr::get_mpfr_rounding_mode(rnd),
                              mpfr::get_mpfr_rounding_mode(rnd))) {
     mpc_init2(value, precision);
-    MPCComplex<double> x_c = cpp::bit_cast<MPCComplex<double>>(x);
+    Complex<double> x_c = cpp::bit_cast<Complex<double>>(x);
     mpc_set_d_d(value, x_c.real, x_c.imag, mpc_rounding);
   }
 
@@ -183,7 +178,7 @@ bool compare_unary_operation_single_output_same_type(Operation op,
                                                      RoundingMode rounding) {
 
   unsigned int precision =
-      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+      mpfr::get_precision<make_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -202,9 +197,9 @@ bool compare_unary_operation_single_output_same_type(Operation op,
   mpfr::MPFRNumber mpfr_imag(imag, precision, rounding);
 
   double ulp_real = mpfr_real.ulp(
-      (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).real);
+      (cpp::bit_cast<Complex<make_real_t<InputType>>>(libc_result)).real);
   double ulp_imag = mpfr_imag.ulp(
-      (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).imag);
+      (cpp::bit_cast<Complex<make_real_t<InputType>>>(libc_result)).imag);
   mpc_clear(mpc_result_val);
   mpfr_clear(real);
   mpfr_clear(imag);
@@ -222,7 +217,7 @@ bool compare_unary_operation_single_output_different_type(
     RoundingMode rounding) {
 
   unsigned int precision =
-      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+      mpfr::get_precision<make_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -254,7 +249,7 @@ void explain_unary_operation_single_output_different_type_error(
     RoundingMode rounding) {
 
   unsigned int precision =
-      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+      mpfr::get_precision<make_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -270,10 +265,10 @@ void explain_unary_operation_single_output_different_type_error(
   mpfr::MPFRNumber mpfr_result(real, precision, rounding);
   mpfr::MPFRNumber mpfrLibcResult(libc_result, precision, rounding);
   mpfr::MPFRNumber mpfrInputReal(
-      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision,
+      cpp::bit_cast<Complex<make_real_t<InputType>>>(input).real, precision,
       rounding);
   mpfr::MPFRNumber mpfrInputImag(
-      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).imag, precision,
+      cpp::bit_cast<Complex<make_real_t<InputType>>>(input).imag, precision,
       rounding);
 
   cpp::array<char, 2048> msg_buf;
@@ -303,7 +298,7 @@ void explain_unary_operation_single_output_same_type_error(
     RoundingMode rounding) {
 
   unsigned int precision =
-      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+      mpfr::get_precision<make_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -321,16 +316,16 @@ void explain_unary_operation_single_output_same_type_error(
   mpfr::MPFRNumber mpfr_real(real, precision, rounding);
   mpfr::MPFRNumber mpfr_imag(imag, precision, rounding);
   mpfr::MPFRNumber mpfrLibcResultReal(
-      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real,
+      cpp::bit_cast<Complex<make_real_t<InputType>>>(libc_result).real,
       precision, rounding);
   mpfr::MPFRNumber mpfrLibcResultImag(
-      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag,
+      cpp::bit_cast<Complex<make_real_t<InputType>>>(libc_result).imag,
       precision, rounding);
   mpfr::MPFRNumber mpfrInputReal(
-      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision,
+      cpp::bit_cast<Complex<make_real_t<InputType>>>(input).real, precision,
       rounding);
   mpfr::MPFRNumber mpfrInputImag(
-      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).imag, precision,
+      cpp::bit_cast<Complex<make_real_t<InputType>>>(input).imag, precision,
       rounding);
 
   cpp::array<char, 2048> msg_buf;
@@ -347,13 +342,13 @@ void explain_unary_operation_single_output_same_type_error(
   msg << "  ULP error: "
       << mpfr_real
              .ulp_as_mpfr_number(
-                 cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)
+                 cpp::bit_cast<Complex<make_real_t<InputType>>>(libc_result)
                      .real)
              .str()
       << " , "
       << mpfr_imag
              .ulp_as_mpfr_number(
-                 cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)
+                 cpp::bit_cast<Complex<make_real_t<InputType>>>(libc_result)
                      .imag)
              .str()
       << '\n';
