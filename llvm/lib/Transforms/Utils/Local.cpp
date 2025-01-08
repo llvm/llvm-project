@@ -3319,6 +3319,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     MDNode *JMD = J->getMetadata(Kind);
     MDNode *KMD = MD.second;
 
+    // TODO: Assert that this switch is exhaustive for fixed MD kinds.
     switch (Kind) {
       default:
         K->setMetadata(Kind, nullptr); // Remove unknown metadata
