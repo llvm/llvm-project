@@ -212,6 +212,9 @@ bool compare_unary_operation_single_output_same_type(Operation op,
       (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).real);
   double ulp_imag = mpfr_imag.ulp(
       (cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)).imag);
+  mpc_clear(mpc_result_val);
+  mpfr_clear(real);
+  mpfr_clear(imag);
   return ((ulp_real <= ulp_tolerance) && (ulp_imag <= ulp_tolerance));
 }
 
@@ -242,7 +245,8 @@ bool compare_unary_operation_single_output_different_type(
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
 
   double ulp_real = mpfr_real.ulp(libc_result);
-
+  mpc_clear(mpc_result_val);
+  mpfr_clear(real);
   return (ulp_real <= ulp_tolerance);
 }
 
@@ -292,6 +296,8 @@ void explain_unary_operation_single_output_different_type_error(
   msg << "  ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
       << '\n';
   tlog << msg.str();
+  mpc_clear(mpc_result_val);
+  mpfr_clear(real);
 }
 
 template void explain_unary_operation_single_output_different_type_error(
@@ -343,6 +349,9 @@ void explain_unary_operation_single_output_same_type_error(
   msg << '\n';
   msg << "  ULP error: " << mpfr_real.ulp_as_mpfr_number(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real).str() << " , " << mpfr_imag.ulp_as_mpfr_number(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag).str() << '\n';
   tlog << msg.str();
+  mpc_clear(mpc_result_val);
+  mpfr_clear(real);
+  mpfr_clear(imag);
 }
 
 template void explain_unary_operation_single_output_same_type_error(
