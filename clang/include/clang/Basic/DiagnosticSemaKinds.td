@@ -5878,7 +5878,7 @@ def err_pack_expansion_without_parameter_packs : Error<
   "pack expansion does not contain any unexpanded parameter packs">;
 def err_pack_expansion_length_conflict : Error<
   "pack expansion contains parameter packs %0 and %1 that have different "
-  "lengths (%2 vs. %select{|at least }3%4))">;
+  "lengths (%2 vs. %select{|at least }3%4)">;
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (%1 vs. %select{|at least }2%3) from outer parameter packs">;
