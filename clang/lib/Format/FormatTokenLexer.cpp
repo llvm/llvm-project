@@ -76,6 +76,8 @@ FormatTokenLexer::FormatTokenLexer(
     TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
     TypeNames.insert(&IdentTable.get(TypeName));
+  for (const auto &VariableTemplate : Style.VariableTemplates)
+    VariableTemplates.insert(&IdentTable.get(VariableTemplate));
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -562,8 +564,7 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   if (Tokens.size() < Kinds.size())
     return false;
 
-  SmallVectorImpl<FormatToken *>::const_iterator First =
-      Tokens.end() - Kinds.size();
+  const auto *First = Tokens.end() - Kinds.size();
   for (unsigned i = 0; i < Kinds.size(); ++i)
     if (First[i]->isNot(Kinds[i]))
       return false;
@@ -575,7 +576,7 @@ bool FormatTokenLexer::tryMergeTokens(size_t Count, TokenType NewType) {
   if (Tokens.size() < Count)
     return false;
 
-  SmallVectorImpl<FormatToken *>::const_iterator First = Tokens.end() - Count;
+  const auto *First = Tokens.end() - Count;
   unsigned AddLength = 0;
   for (size_t i = 1; i < Count; ++i) {
     // If there is whitespace separating the token and the previous one,
@@ -1382,6 +1383,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TypeName);
+      else if (VariableTemplates.contains(Identifier))
+        FormatTok->setFinalizedType(TT_VariableTemplate);
     }
   }
 

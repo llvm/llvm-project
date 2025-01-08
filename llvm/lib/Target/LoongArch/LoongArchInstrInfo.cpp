@@ -406,6 +406,11 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   //   lu32i.d $a1, %ie64_pc_lo20(s)
   //   lu52i.d $a1, $a1, %ie64_pc_hi12(s)
   //
+  // * pcalau12i $a0, %desc_pc_hi20(s)
+  //   addi.d $a1, $zero, %desc_pc_lo12(s)
+  //   lu32i.d $a1, %desc64_pc_lo20(s)
+  //   lu52i.d $a1, $a1, %desc64_pc_hi12(s)
+  //
   // For simplicity, only pcalau12i and lu52i.d are marked as scheduling
   // boundaries, and the instructions between them are guaranteed to be
   // ordered according to data dependencies.
@@ -430,12 +435,16 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     if (MO0 == LoongArchII::MO_IE_PC_HI && MO1 == LoongArchII::MO_IE_PC_LO &&
         MO2 == LoongArchII::MO_IE_PC64_LO)
       return true;
+    if (MO0 == LoongArchII::MO_DESC_PC_HI &&
+        MO1 == LoongArchII::MO_DESC_PC_LO &&
+        MO2 == LoongArchII::MO_DESC64_PC_LO)
+      return true;
     break;
   }
   case LoongArch::LU52I_D: {
     auto MO = MI.getOperand(2).getTargetFlags();
     if (MO == LoongArchII::MO_PCREL64_HI || MO == LoongArchII::MO_GOT_PC64_HI ||
-        MO == LoongArchII::MO_IE_PC64_HI)
+        MO == LoongArchII::MO_IE_PC64_HI || MO == LoongArchII::MO_DESC64_PC_HI)
       return true;
     break;
   }
@@ -651,7 +660,10 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_DESC_LD, "loongarch-desc-ld"},
       {MO_DESC_CALL, "loongarch-desc-call"},
       {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
-      {MO_GD_PC_HI, "loongarch-gd-pc-hi"}};
+      {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
+      {MO_LE_HI_R, "loongarch-le-hi-r"},
+      {MO_LE_ADD_R, "loongarch-le-add-r"},
+      {MO_LE_LO_R, "loongarch-le-lo-r"}};
   return ArrayRef(TargetFlags);
 }
 

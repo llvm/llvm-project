@@ -1473,18 +1473,20 @@ ModuleImport::convertBranchArgs(llvm::Instruction *branch,
   return success();
 }
 
-LogicalResult
-ModuleImport::convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                         SmallVectorImpl<Type> &types,
-                                         SmallVectorImpl<Value> &operands) {
+LogicalResult ModuleImport::convertCallTypeAndOperands(
+    llvm::CallBase *callInst, SmallVectorImpl<Type> &types,
+    SmallVectorImpl<Value> &operands, bool allowInlineAsm) {
   if (!callInst->getType()->isVoidTy())
     types.push_back(convertType(callInst->getType()));
 
   if (!callInst->getCalledFunction()) {
-    FailureOr<Value> called = convertValue(callInst->getCalledOperand());
-    if (failed(called))
-      return failure();
-    operands.push_back(*called);
+    if (!allowInlineAsm ||
+        !isa<llvm::InlineAsm>(callInst->getCalledOperand())) {
+      FailureOr<Value> called = convertValue(callInst->getCalledOperand());
+      if (failed(called))
+        return failure();
+      operands.push_back(*called);
+    }
   }
   SmallVector<llvm::Value *> args(callInst->args());
   FailureOr<SmallVector<Value>> arguments = convertValues(args);
@@ -1579,7 +1581,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     SmallVector<Type> types;
     SmallVector<Value> operands;
-    if (failed(convertCallTypeAndOperands(callInst, types, operands)))
+    if (failed(convertCallTypeAndOperands(callInst, types, operands,
+                                          /*allowInlineAsm=*/true)))
       return failure();
 
     auto funcTy =
@@ -1587,45 +1590,59 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (!funcTy)
       return failure();
 
-    CallOp callOp;
-
-    if (llvm::Function *callee = callInst->getCalledFunction()) {
-      callOp = builder.create<CallOp>(
-          loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
-          operands);
+    if (auto asmI = dyn_cast<llvm::InlineAsm>(callInst->getCalledOperand())) {
+      auto callOp = builder.create<InlineAsmOp>(
+          loc, funcTy.getReturnType(), operands,
+          builder.getStringAttr(asmI->getAsmString()),
+          builder.getStringAttr(asmI->getConstraintString()),
+          /*has_side_effects=*/true,
+          /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
+          /*operand_attrs=*/nullptr);
+      if (!callInst->getType()->isVoidTy())
+        mapValue(inst, callOp.getResult(0));
+      else
+        mapNoResultOp(inst, callOp);
     } else {
-      callOp = builder.create<CallOp>(loc, funcTy, operands);
+      CallOp callOp;
+
+      if (llvm::Function *callee = callInst->getCalledFunction()) {
+        callOp = builder.create<CallOp>(
+            loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
+            operands);
+      } else {
+        callOp = builder.create<CallOp>(loc, funcTy, operands);
+      }
+      callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
+      callOp.setTailCallKind(
+          convertTailCallKindFromLLVM(callInst->getTailCallKind()));
+      setFastmathFlagsAttr(inst, callOp);
+
+      // Handle function attributes.
+      if (callInst->hasFnAttr(llvm::Attribute::Convergent))
+        callOp.setConvergent(true);
+      if (callInst->hasFnAttr(llvm::Attribute::NoUnwind))
+        callOp.setNoUnwind(true);
+      if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
+        callOp.setWillReturn(true);
+
+      llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
+      ModRefInfo othermem = convertModRefInfoFromLLVM(
+          memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+      ModRefInfo argMem = convertModRefInfoFromLLVM(
+          memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+      ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
+          memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+      auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem,
+                                            argMem, inaccessibleMem);
+      // Only set the attribute when it does not match the default value.
+      if (!memAttr.isReadWrite())
+        callOp.setMemoryEffectsAttr(memAttr);
+
+      if (!callInst->getType()->isVoidTy())
+        mapValue(inst, callOp.getResult());
+      else
+        mapNoResultOp(inst, callOp);
     }
-    callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
-    callOp.setTailCallKind(
-        convertTailCallKindFromLLVM(callInst->getTailCallKind()));
-    setFastmathFlagsAttr(inst, callOp);
-
-    // Handle function attributes.
-    if (callInst->hasFnAttr(llvm::Attribute::Convergent))
-      callOp.setConvergent(true);
-    if (callInst->hasFnAttr(llvm::Attribute::NoUnwind))
-      callOp.setNoUnwind(true);
-    if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
-      callOp.setWillReturn(true);
-
-    llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
-    ModRefInfo othermem = convertModRefInfoFromLLVM(
-        memEffects.getModRef(llvm::MemoryEffects::Location::Other));
-    ModRefInfo argMem = convertModRefInfoFromLLVM(
-        memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
-    ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
-        memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
-    auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem, argMem,
-                                          inaccessibleMem);
-    // Only set the attribute when it does not match the default value.
-    if (!memAttr.isReadWrite())
-      callOp.setMemoryEffectsAttr(memAttr);
-
-    if (!callInst->getType()->isVoidTy())
-      mapValue(inst, callOp.getResult());
-    else
-      mapNoResultOp(inst, callOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::LandingPad) {
