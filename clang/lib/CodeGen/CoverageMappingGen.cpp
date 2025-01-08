@@ -949,10 +949,8 @@ struct CounterCoverageMappingBuilder
     auto ExecCnt = Counter::getCounter(TheMap.Executed);
 
     // The old behavior of SingleByte shouldn't emit Branches.
-    if (llvm::EnableSingleByteCoverage) {
-      assert(SkipCntForOld);
+    if (llvm::EnableSingleByteCoverage && SkipCntForOld)
       return {ExecCnt, *SkipCntForOld};
-    }
 
     BranchCounterPair Counters = {ExecCnt,
                                   Builder.subtract(ParentCnt, ExecCnt)};
