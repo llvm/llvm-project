@@ -437,19 +437,22 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     return idx >= node->getNumOperands() ||
            isa<llvm::MDString>(node->getOperand(idx));
   };
+
+  auto getIdAttr = [&](const llvm::MDNode *node) -> Attribute {
+    if (verifySelfRef(node))
+      return DistinctAttr::create(builder.getUnitAttr());
+
+    auto name = cast<llvm::MDString>(node->getOperand(0));
+    return builder.getStringAttr(name->getString());
+  };
+
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
     if (aliasDomain->getNumOperands() >= 2)
       if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
         description = builder.getStringAttr(operand->getString());
-    Attribute idAttr;
-    if (verifySelfRef(aliasDomain)) {
-      idAttr = DistinctAttr::create(builder.getUnitAttr());
-    } else {
-      auto name = cast<llvm::MDString>(aliasDomain->getOperand(0));
-      idAttr = builder.getStringAttr(name->getString());
-    }
+    Attribute idAttr = getIdAttr(aliasDomain);
     return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
   };
 
@@ -485,14 +488,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       StringAttr description = nullptr;
       if (!aliasScope.getName().empty())
         description = builder.getStringAttr(aliasScope.getName());
-      Attribute idAttr;
-      if (verifySelfRef(scope)) {
-        idAttr = DistinctAttr::create(builder.getUnitAttr());
-      } else {
-        auto name = cast<llvm::MDString>(scope->getOperand(0));
-        idAttr = builder.getStringAttr(name->getString());
-      }
-
+      Attribute idAttr = getIdAttr(scope);
       auto aliasScopeOp = builder.getAttr<AliasScopeAttr>(
           idAttr, cast<AliasScopeDomainAttr>(it->second), description);
 
