@@ -1821,17 +1821,10 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
                          RegisterDependenciesFunction RegisterDependencies) {
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
-  std::promise<SymbolMap> PromisedResult;
-  Error ResolutionError = Error::success();
+  std::promise<MSVCPExpected<SymbolMap>> PromisedResult;
 
   auto NotifyComplete = [&](Expected<SymbolMap> R) {
-    if (R)
-      PromisedResult.set_value(std::move(*R));
-    else {
-      ErrorAsOutParameter _(ResolutionError);
-      ResolutionError = R.takeError();
-      PromisedResult.set_value(SymbolMap());
-    }
+    PromisedResult.set_value(std::move(R));
   };
 
 #else
@@ -1848,18 +1841,11 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
 #endif
 
   // Perform the asynchronous lookup.
-  lookup(K, SearchOrder, std::move(Symbols), RequiredState, NotifyComplete,
-         RegisterDependencies);
+  lookup(K, SearchOrder, std::move(Symbols), RequiredState,
+         std::move(NotifyComplete), RegisterDependencies);
 
 #if LLVM_ENABLE_THREADS
-  auto ResultFuture = PromisedResult.get_future();
-  auto Result = ResultFuture.get();
-
-  if (ResolutionError)
-    return std::move(ResolutionError);
-
-  return std::move(Result);
-
+  return PromisedResult.get_future().get();
 #else
   if (ResolutionError)
     return std::move(ResolutionError);
