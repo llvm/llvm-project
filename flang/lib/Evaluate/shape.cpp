@@ -723,6 +723,58 @@ Shape GetUBOUNDs(const NamedEntity &base, bool invariantOnly) {
   return GetUBOUNDs(nullptr, base, invariantOnly);
 }
 
+MaybeExtentExpr GetLCOBOUND(
+    const Symbol &symbol0, int dimension, bool invariantOnly) {
+  const Symbol &symbol{ResolveAssociations(symbol0)};
+  if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+    int corank{object->coshape().Rank()};
+    if (dimension < corank) {
+      const semantics::ShapeSpec &shapeSpec{object->coshape()[dimension]};
+      if (const auto &lcobound{shapeSpec.lbound().GetExplicit()}) {
+        if (!invariantOnly || IsScopeInvariantExpr(*lcobound)) {
+          return *lcobound;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+MaybeExtentExpr GetUCOBOUND(
+    const Symbol &symbol0, int dimension, bool invariantOnly) {
+  const Symbol &symbol{ResolveAssociations(symbol0)};
+  if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+    int corank{object->coshape().Rank()};
+    if (dimension < corank - 1) {
+      const semantics::ShapeSpec &shapeSpec{object->coshape()[dimension]};
+      if (const auto ucobound{shapeSpec.ubound().GetExplicit()}) {
+        if (!invariantOnly || IsScopeInvariantExpr(*ucobound)) {
+          return *ucobound;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+Shape GetLCOBOUNDs(const Symbol &symbol, bool invariantOnly) {
+  Shape result;
+  int corank{symbol.Corank()};
+  for (int dim{0}; dim < corank; ++dim) {
+    result.emplace_back(GetLCOBOUND(symbol, dim, invariantOnly));
+  }
+  return result;
+}
+
+Shape GetUCOBOUNDs(const Symbol &symbol, bool invariantOnly) {
+  Shape result;
+  int corank{symbol.Corank()};
+  for (int dim{0}; dim < corank; ++dim) {
+    result.emplace_back(GetUCOBOUND(symbol, dim, invariantOnly));
+  }
+  return result;
+}
+
 auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
   return common::visit(
       common::visitors{
