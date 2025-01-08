@@ -947,8 +947,6 @@ public:
       dstNodeChanged = false;
       SmallVector<unsigned, 16> srcIdCandidates;
       getProducerCandidates(dstId, mdg, srcIdCandidates);
-      LLVM_DEBUG(llvm::dbgs()
-                 << "dst loop producers " << srcIdCandidates.size() << "\n");
 
       for (unsigned srcId : llvm::reverse(srcIdCandidates)) {
         // Get 'srcNode' from which to attempt fusion into 'dstNode'.
