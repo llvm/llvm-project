@@ -390,7 +390,7 @@ void RISCVInstrInfo::copyPhysRegVector(
   auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
                                    uint16_t Encoding) {
     MCRegister Reg = RISCV::V0 + Encoding;
-    if (&RegClass == &RISCV::VRRegClass)
+    if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVII::LMUL_1)
       return Reg;
     return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
   };
@@ -564,17 +564,11 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // VR->VR copies.
-  static const TargetRegisterClass *RVVRegClasses[] = {
-      &RISCV::VRRegClass,     &RISCV::VRM2RegClass,   &RISCV::VRM4RegClass,
-      &RISCV::VRM8RegClass,   &RISCV::VRN2M1RegClass, &RISCV::VRN2M2RegClass,
-      &RISCV::VRN2M4RegClass, &RISCV::VRN3M1RegClass, &RISCV::VRN3M2RegClass,
-      &RISCV::VRN4M1RegClass, &RISCV::VRN4M2RegClass, &RISCV::VRN5M1RegClass,
-      &RISCV::VRN6M1RegClass, &RISCV::VRN7M1RegClass, &RISCV::VRN8M1RegClass};
-  for (const auto &RegClass : RVVRegClasses) {
-    if (RegClass->contains(DstReg, SrcReg)) {
-      copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RegClass);
-      return;
-    }
+  const TargetRegisterClass *RegClass =
+      TRI->getCommonMinimalPhysRegClass(SrcReg, DstReg);
+  if (RISCVRegisterInfo::isRVVRegClass(RegClass)) {
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RegClass);
+    return;
   }
 
   llvm_unreachable("Impossible reg-to-reg copy");
@@ -2467,6 +2461,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   case RISCVOp::OPERAND_UIMM##NUM:                                             \
     Ok = isUInt<NUM>(Imm);                                                     \
     break;
+#define CASE_OPERAND_SIMM(NUM)                                                 \
+  case RISCVOp::OPERAND_SIMM##NUM:                                             \
+    Ok = isInt<NUM>(Imm);                                                      \
+    break;
         CASE_OPERAND_UIMM(1)
         CASE_OPERAND_UIMM(2)
         CASE_OPERAND_UIMM(3)
@@ -2511,14 +2509,13 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
           break;
-        case RISCVOp::OPERAND_SIMM5:
-          Ok = isInt<5>(Imm);
-          break;
+          // clang-format off
+        CASE_OPERAND_SIMM(5)
+        CASE_OPERAND_SIMM(6)
+        CASE_OPERAND_SIMM(12)
+        // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
           Ok = (isInt<5>(Imm) && Imm != -16) || Imm == 16;
-          break;
-        case RISCVOp::OPERAND_SIMM6:
-          Ok = isInt<6>(Imm);
           break;
         case RISCVOp::OPERAND_SIMM6_NONZERO:
           Ok = Imm != 0 && isInt<6>(Imm);
@@ -2528,9 +2525,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_VTYPEI11:
           Ok = isUInt<11>(Imm);
-          break;
-        case RISCVOp::OPERAND_SIMM12:
-          Ok = isInt<12>(Imm);
           break;
         case RISCVOp::OPERAND_SIMM12_LSB00000:
           Ok = isShiftedInt<7, 5>(Imm);

@@ -3049,11 +3049,10 @@ static bool usePartialVectorLoads(SDNode *N, const PPCSubtarget& ST) {
   if (!LoadedVal.hasOneUse())
     return false;
 
-  for (SDNode::use_iterator UI = LD->use_begin(), UE = LD->use_end();
-       UI != UE; ++UI)
-    if (UI.getUse().get().getResNo() == 0 &&
-        UI->getOpcode() != ISD::SCALAR_TO_VECTOR &&
-        UI->getOpcode() != PPCISD::SCALAR_TO_VECTOR_PERMUTED)
+  for (SDUse &Use : LD->uses())
+    if (Use.getResNo() == 0 &&
+        Use.getUser()->getOpcode() != ISD::SCALAR_TO_VECTOR &&
+        Use.getUser()->getOpcode() != PPCISD::SCALAR_TO_VECTOR_PERMUTED)
       return false;
 
   return true;
@@ -8684,18 +8683,17 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
       (!MMO->getSize().hasValue() || MMO->getSize().getValue() <= 2))
     return true;
 
-  for (SDNode::use_iterator UI = Origin->use_begin(),
-                            UE = Origin->use_end();
-       UI != UE; ++UI) {
+  for (SDUse &Use : Origin->uses()) {
 
     // Only look at the users of the loaded value.
-    if (UI.getUse().get().getResNo() != 0)
+    if (Use.getResNo() != 0)
       continue;
 
-    if (UI->getOpcode() != ISD::SINT_TO_FP &&
-        UI->getOpcode() != ISD::UINT_TO_FP &&
-        UI->getOpcode() != ISD::STRICT_SINT_TO_FP &&
-        UI->getOpcode() != ISD::STRICT_UINT_TO_FP)
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::SINT_TO_FP &&
+        User->getOpcode() != ISD::UINT_TO_FP &&
+        User->getOpcode() != ISD::STRICT_SINT_TO_FP &&
+        User->getOpcode() != ISD::STRICT_UINT_TO_FP)
       return true;
   }
 
@@ -16081,9 +16079,9 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
     // If the load return value 0 has more than one user except the
     // shufflevector instruction, it is not profitable to replace the
     // shufflevector with a reverse load.
-    for (SDNode::use_iterator UI = LSBase->use_begin(), UE = LSBase->use_end();
-         UI != UE; ++UI)
-      if (UI.getUse().getResNo() == 0 && UI->getOpcode() != ISD::VECTOR_SHUFFLE)
+    for (SDUse &Use : LSBase->uses())
+      if (Use.getResNo() == 0 &&
+          Use.getUser()->getOpcode() != ISD::VECTOR_SHUFFLE)
         return SDValue();
 
     SDLoc dl(LSBase);
@@ -16755,13 +16753,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       SDNode *VCMPrecNode = nullptr;
 
       SDNode *LHSN = N->getOperand(0).getNode();
-      for (SDNode::use_iterator UI = LHSN->use_begin(), E = LHSN->use_end();
-           UI != E; ++UI)
-        if (UI->getOpcode() == PPCISD::VCMP_rec &&
-            UI->getOperand(1) == N->getOperand(1) &&
-            UI->getOperand(2) == N->getOperand(2) &&
-            UI->getOperand(0) == N->getOperand(0)) {
-          VCMPrecNode = *UI;
+      for (SDNode *User : LHSN->users())
+        if (User->getOpcode() == PPCISD::VCMP_rec &&
+            User->getOperand(1) == N->getOperand(1) &&
+            User->getOperand(2) == N->getOperand(2) &&
+            User->getOperand(0) == N->getOperand(0)) {
+          VCMPrecNode = User;
           break;
         }
 
@@ -16777,7 +16774,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       for (SDNode::use_iterator UI = VCMPrecNode->use_begin();
            FlagUser == nullptr; ++UI) {
         assert(UI != VCMPrecNode->use_end() && "Didn't find user!");
-        SDNode *User = *UI;
+        SDNode *User = UI->getUser();
         for (unsigned i = 0, e = User->getNumOperands(); i != e; ++i) {
           if (User->getOperand(i) == SDValue(VCMPrecNode, 1)) {
             FlagUser = User;

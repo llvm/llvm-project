@@ -279,8 +279,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __n) const {
     return __make_ref(__n);
   }
-  _LIBCPP_HIDE_FROM_ABI reference at(size_type __n);
-  _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference at(size_type __n);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference at(size_type __n) const;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() { return __make_ref(0); }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const { return __make_ref(0); }
@@ -442,7 +442,6 @@ private:
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __append(size_type __n, const_reference __x);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference __make_ref(size_type __pos) _NOEXCEPT {
     return reference(__begin_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
@@ -854,14 +853,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::shrink_to_fit() _NO
 }
 
 template <class _Allocator>
-typename vector<bool, _Allocator>::reference vector<bool, _Allocator>::at(size_type __n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::reference vector<bool, _Allocator>::at(size_type __n) {
   if (__n >= size())
     this->__throw_out_of_range();
   return (*this)[__n];
 }
 
 template <class _Allocator>
-typename vector<bool, _Allocator>::const_reference vector<bool, _Allocator>::at(size_type __n) const {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::const_reference
+vector<bool, _Allocator>::at(size_type __n) const {
   if (__n >= size())
     this->__throw_out_of_range();
   return (*this)[__n];
@@ -1049,18 +1049,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
-  // do middle whole words
-  size_type __n         = __size_;
+  // Flip each storage word entirely, including the last potentially partial word.
+  // The unused bits in the last word are safe to flip as they won't be accessed.
   __storage_pointer __p = __begin_;
-  for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
+  for (size_type __n = __external_cap_to_internal(size()); __n != 0; ++__p, --__n)
     *__p = ~*__p;
-  // do last partial word
-  if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __storage_type __b = *__p & __m;
-    *__p &= ~__m;
-    *__p |= ~__b & __m;
-  }
 }
 
 template <class _Allocator>

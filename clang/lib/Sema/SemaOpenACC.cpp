@@ -444,9 +444,28 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     }
   }
 
+  case OpenACCClauseKind::DeviceNum: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Init:
+    case OpenACCDirectiveKind::Shutdown:
+    case OpenACCDirectiveKind::Set:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   case OpenACCClauseKind::UseDevice: {
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::HostData:
+      return true;
+    default:
+      return false;
+    }
+  }
+  case OpenACCClauseKind::DefaultAsync: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Set:
       return true;
     default:
       return false;
@@ -479,12 +498,9 @@ bool checkAlreadyHasClauseOfKind(
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is only a requirement on compute, combined, data and loop constructs
-  // so far, so this is fine otherwise.
-  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()) &&
-      !isOpenACCCombinedDirectiveKind(NewClause.getDirectiveKind()) &&
-      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
-      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Data)
+  // This is implemented for everything but 'routine', so treat as 'fine' for
+  // that.
+  if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
     return false;
 
   // OpenACC3.3: Section 2.4: Clauses that precede any device_type clause are
@@ -559,6 +575,21 @@ bool checkValidAfterDeviceType(
     default:
       break;
     }
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Set ||
+             NewClause.getDirectiveKind() == OpenACCDirectiveKind::Init ||
+             NewClause.getDirectiveKind() == OpenACCDirectiveKind::Shutdown) {
+    // There are no restrictions on 'set', 'init', or 'shutdown'.
+    return false;
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Update) {
+    // OpenACC3.3 section 2.14.4: Only the async and wait clauses may follow a
+    // device_type clause.
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Wait:
+      return false;
+    default:
+      break;
+    }
   }
   S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
       << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind()
@@ -574,7 +605,10 @@ bool checkValidAfterDeviceType(
 bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
   return isOpenACCComputeDirectiveKind(DK) ||
          isOpenACCCombinedDirectiveKind(DK) || isOpenACCDataDirectiveKind(DK) ||
-         DK == OpenACCDirectiveKind::Loop || DK == OpenACCDirectiveKind::Wait;
+         DK == OpenACCDirectiveKind::Loop || DK == OpenACCDirectiveKind::Wait ||
+         DK == OpenACCDirectiveKind::Init ||
+         DK == OpenACCDirectiveKind::Shutdown ||
+         DK == OpenACCDirectiveKind::Set;
 }
 
 class SemaOpenACCClauseVisitor {
@@ -687,19 +721,15 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // constructs that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
-  // sense. Prose DOES exist for 'data' and 'host_data', 'enter data' and 'exit
-  // data' both don't, but other implmementations do this.  OpenACC issue 519
-  // filed for the latter two.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+  // sense. Prose DOES exist for 'data' and 'host_data', 'set', 'enter data' and
+  // 'exit data' both don't, but other implmementations do this.  OpenACC issue
+  // 519 filed for the latter two. Prose also exists for 'update'.
+  // GCC allows this on init/shutdown, presumably for good reason, so we do too.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Init &&
+      Clause.getDirectiveKind() != OpenACCDirectiveKind::Shutdown &&
+      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
 
   // The parser has ensured that we have a proper condition expr, so there
@@ -919,13 +949,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.
@@ -937,6 +960,40 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
   return OpenACCAsyncClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
       Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr,
+      Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceNumClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // Restrictions only properly implemented on certain constructs, so skip/treat
+  // as unimplemented in those cases.
+  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
+    return isNotImplemented();
+
+  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
+  // same directive.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
+  assert(Clause.getNumIntExprs() == 1 &&
+         "Invalid number of expressions for device_num");
+  return OpenACCDeviceNumClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getIntExprs()[0],
+      Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultAsyncClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
+  // same directive.
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
+  assert(Clause.getNumIntExprs() == 1 &&
+         "Invalid number of expressions for default_async");
+  return OpenACCDefaultAsyncClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getIntExprs()[0],
       Clause.getEndLoc());
 }
 
@@ -1126,13 +1183,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   return OpenACCWaitClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getDevNumExpr(),
       Clause.getQueuesLoc(), Clause.getQueueIdExprs(), Clause.getEndLoc());
@@ -1140,12 +1190,15 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute', 'combined', 'data' and
-  // 'loop' constructs, and 'compute'/'combined'/'data'/'loop' constructs are
-  // the only construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
+  // Restrictions implemented properly on everything except 'routine'.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
     return isNotImplemented();
+
+  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
+  // same directive.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
 
   // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
   // a source for the list of valid architectures, we need to warn on unknown
@@ -1679,8 +1732,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // There isn't anything to do here, this is only valid on one construct, and
   // has no associated rules.
   return OpenACCIfPresentClause::Create(Ctx, Clause.getBeginLoc(),
@@ -1868,6 +1919,10 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
+  case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Update:
     llvm_unreachable("Doesn't have an associated stmt");
   default:
   case OpenACCDirectiveKind::Invalid:
@@ -2294,6 +2349,10 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
+  case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Update:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -3627,6 +3686,24 @@ bool SemaOpenACC::ActOnStartStmtDirective(
     return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
            << K << GetListOfClauses({OpenACCClauseKind::UseDevice});
 
+  // OpenACC3.3 2.14.3: At least one default_async, device_num, or device_type
+  // clause must appear.
+  if (K == OpenACCDirectiveKind::Set &&
+      llvm::find_if(
+          Clauses,
+          llvm::IsaPred<OpenACCDefaultAsyncClause, OpenACCDeviceNumClause,
+                        OpenACCDeviceTypeClause, OpenACCIfClause>) ==
+          Clauses.end())
+    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
+           << K
+           << GetListOfClauses({OpenACCClauseKind::DefaultAsync,
+                                OpenACCClauseKind::DeviceNum,
+                                OpenACCClauseKind::DeviceType,
+                                OpenACCClauseKind::If});
+
+  // TODO: OpenACC: 'Update' construct needs to have one of 'self', 'host', or
+  // 'device'.  Implement here.
+
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -3682,6 +3759,22 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
         getASTContext(), StartLoc, DirLoc, LParenLoc, Exprs.front(), MiscLoc,
         Exprs.drop_front(), RParenLoc, EndLoc, Clauses);
   }
+  case OpenACCDirectiveKind::Init: {
+    return OpenACCInitConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                        EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::Shutdown: {
+    return OpenACCShutdownConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                            EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::Set: {
+    return OpenACCSetConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                       EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::Update: {
+    return OpenACCUpdateConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                          EndLoc, Clauses);
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
@@ -3695,6 +3788,9 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
+  case OpenACCDirectiveKind::Set:
     llvm_unreachable(
         "these don't have associated statements, so shouldn't get here");
   case OpenACCDirectiveKind::Parallel:

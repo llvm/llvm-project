@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
@@ -3792,8 +3793,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       for (unsigned i = 1, e = NodeStack.size()-1; i != e; ++i) {
         unsigned NNonChainUses = 0;
         SDNode *NS = NodeStack[i].getNode();
-        for (auto UI = NS->use_begin(), UE = NS->use_end(); UI != UE; ++UI)
-          if (UI.getUse().getValueType() != MVT::Other)
+        for (const SDUse &U : NS->uses())
+          if (U.getValueType() != MVT::Other)
             if (++NNonChainUses > 1) {
               HasMultipleUses = true;
               break;
@@ -4382,8 +4383,10 @@ bool SelectionDAGISel::mayRaiseFPException(SDNode *N) const {
 
   // For ISD opcodes, only StrictFP opcodes may raise an FP
   // exception.
-  if (N->isTargetOpcode())
-    return N->isTargetStrictFPOpcode();
+  if (N->isTargetOpcode()) {
+    const SelectionDAGTargetInfo &TSI = CurDAG->getSelectionDAGInfo();
+    return TSI.mayRaiseFPException(N->getOpcode());
+  }
   return N->isStrictFPOpcode();
 }
 

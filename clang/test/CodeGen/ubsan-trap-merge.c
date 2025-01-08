@@ -10,10 +10,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o -                                         | FileCheck %s --check-prefixes=HANDLER-NOMERGE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefixes=MINRT-NOMERGE
 //
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - -fsanitize-trap=signed-integer-overflow | FileCheck %s --check-prefixes=TRAP-NOMERGE
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o -                                         | FileCheck %s --check-prefixes=HANDLER-NOMERGE
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefixes=MINRT-NOMERGE
-//
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o - -fsanitize-trap=signed-integer-overflow | FileCheck %s --check-prefixes=TRAP-NOMERGE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o -                                         | FileCheck %s --check-prefixes=HANDLER-NOMERGE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefixes=MINRT-NOMERGE

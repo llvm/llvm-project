@@ -201,8 +201,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/ext/hash_map>
+#else
 #  include <__config>
 #  include <__hash_table>
 #  include <algorithm>
@@ -870,6 +871,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const hash_multimap<_Key, _Tp, _Has
 #    include <iterator>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_HASH_MAP

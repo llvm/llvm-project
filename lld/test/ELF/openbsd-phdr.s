@@ -4,8 +4,11 @@
 # RUN: ld.lld randomdata.o -o randomdata
 # RUN: llvm-readelf -S -l randomdata | FileCheck %s --check-prefix=RANDOMDATA
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd /dev/null -o wxneeded.o
-# RUN: ld.lld -z wxneeded wxneeded.o -o wxneeded
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd /dev/null -o empty.o
+# RUN: ld.lld -z nobtcfi empty.o -o nobtcfi
+# RUN: llvm-readelf -l nobtcfi | FileCheck %s --check-prefix=NOBTCFI
+
+# RUN: ld.lld -z wxneeded empty.o -o wxneeded
 # RUN: llvm-readelf -l wxneeded | FileCheck %s --check-prefix=WXNEEDED
 
 # RUN: ld.lld -T lds randomdata.o -o out
@@ -13,6 +16,9 @@
 
 # RANDOMDATA: Name                Type     Address            Off             Size   ES Flg Lk Inf Al
 # RANDOMDATA: .openbsd.randomdata PROGBITS [[ADDR:[0-9a-f]+]] [[O:[0-9a-f]+]] 000008 00   A  0   0  1
+
+# NOBTCFI:    Type              Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOBTCFI:    OPENBSD_NOBTCFI   0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 E   0
 
 # WXNEEDED:   Type              Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # WXNEEDED:   OPENBSD_WXNEEDED  0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 E   0

@@ -1399,6 +1399,10 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCEnterDataConstructClass:
   case Stmt::OpenACCExitDataConstructClass:
   case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCInitConstructClass:
+  case Stmt::OpenACCShutdownConstructClass:
+  case Stmt::OpenACCSetConstructClass:
+  case Stmt::OpenACCUpdateConstructClass:
     // These expressions can never throw.
     return CT_Cannot;
 

@@ -191,7 +191,7 @@ public:
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
     CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
-        Intrinsic::dx_cast_handle, {Ty, V->getType()}, {V});
+        Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
   }
@@ -216,7 +216,7 @@ public:
       // Otherwise, we're the second handle in a pair. Forward the arguments and
       // remove the (second) cast.
       CallInst *Def = cast<CallInst>(Cast->getOperand(0));
-      assert(Def->getIntrinsicID() == Intrinsic::dx_cast_handle &&
+      assert(Def->getIntrinsicID() == Intrinsic::dx_resource_casthandle &&
              "Unbalanced pair of temporary handle casts");
       Cast->replaceAllUsesWith(Def->getOperand(0));
       Cast->eraseFromParent();
@@ -349,8 +349,9 @@ public:
     });
   }
 
-  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
-  /// taking into account binding information from DXILResourceBindingAnalysis.
+  /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
+  /// model and taking into account binding information from
+  /// DXILResourceBindingAnalysis.
   bool lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
@@ -414,8 +415,16 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(
-          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      if (OldResult->use_empty()) {
+        // Only the check bit was used, so we're done here.
+        OldResult->eraseFromParent();
+        return Error::success();
+      }
+
+      assert(OldResult->hasOneUse() &&
+             isa<ExtractValueInst>(*OldResult->user_begin()) &&
+             "Expected only use to be extract of first element");
+      OldResult = cast<Instruction>(*OldResult->user_begin());
       OldTy = ST->getElementType(0);
     }
 
@@ -715,22 +724,19 @@ public:
         F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
-      case Intrinsic::dx_handle_fromBinding:
+      case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
-      case Intrinsic::dx_typedBufferLoad:
-        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
-        break;
-      case Intrinsic::dx_typedBufferLoad_checkbit:
+      case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
-      case Intrinsic::dx_typedBufferStore:
+      case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerTypedBufferStore(F);
         break;
-      case Intrinsic::dx_bufferUpdateCounter:
+      case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when

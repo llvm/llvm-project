@@ -491,7 +491,7 @@ public:
     patterns.insert<SumAsElementalConversion>(context);
     patterns.insert<CShiftAsElementalConversion>(context);
 
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+    if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR intrinsic simplification");

@@ -1618,9 +1618,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 std::pair<const NamedDecl *, const Attr *>
 CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   // If the callee is marked nodiscard, return that attribute
-  const Decl *D = getCalleeDecl();
-  if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
-    return {nullptr, A};
+  if (const Decl *D = getCalleeDecl())
+    if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+      return {nullptr, A};
 
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
@@ -5070,8 +5070,6 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__opencl_atomic_init:
   case AO__c11_atomic_load:
   case AO__atomic_load_n:
-  case AO__atomic_test_and_set:
-  case AO__atomic_clear:
     return 2;
 
   case AO__scoped_atomic_load_n:

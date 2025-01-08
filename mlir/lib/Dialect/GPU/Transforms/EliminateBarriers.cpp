@@ -630,7 +630,7 @@ class GpuEliminateBarriersPass
     auto funcOp = getOperation();
     RewritePatternSet patterns(&getContext());
     mlir::populateGpuEliminateBarriersPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(funcOp, std::move(patterns)))) {
       return signalPassFailure();
     }
   }

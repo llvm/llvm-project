@@ -16,6 +16,10 @@ namespace llvm {
 class RISCVSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   ~RISCVSelectionDAGInfo() override;
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+
+  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
 };
 
 } // namespace llvm

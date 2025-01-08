@@ -2748,7 +2748,21 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
   }
-
+  if (getTarget().getTriple().isAArch64()) {
+    llvm::SmallVector<StringRef, 8> Feats;
+    if (TV)
+      TV->getFeatures(Feats);
+    else if (TC)
+      TC->getFeatures(Feats, GD.getMultiVersionIndex());
+    if (!Feats.empty()) {
+      llvm::sort(Feats);
+      std::string FMVFeatures;
+      for (StringRef F : Feats)
+        FMVFeatures.append(",+" + F.str());
+      Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
+      AddedAttr = true;
+    }
+  }
   return AddedAttr;
 }
 
@@ -4283,7 +4297,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
           llvm::SmallVector<StringRef, 8> Feats;
-          bool IsDefined = CurFD->doesThisDeclarationHaveABody();
+          bool IsDefined = CurFD->getDefinition() != nullptr;
 
           if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
             assert(getTarget().getTriple().isX86() && "Unsupported target");
