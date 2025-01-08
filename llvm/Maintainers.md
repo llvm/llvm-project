@@ -45,8 +45,12 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 
 #### Inlining
 
-Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+Arthur Eubanks \
+aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub) \
+Mircea Trofin (esp. ML inliner) \
+mtrofin@google.com (email), [mtrofin](https://github.com/mtrofin) (GitHub) \
+Kazu Hirata (esp. module inliner and inline order) \
+kazu@google.com (email), [kazutakahirata](https://github.com/kazutakahirata) (GitHub)
 
 #### InstCombine, InstSimplify, ValueTracking, ConstantFold
 
@@ -64,6 +68,11 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 Diego Novillo \
 dnovillo@google.com (email), [dnovillo](https://github.com/dnovillo) (GitHub)
+
+#### New pass manager, CGSCC, LazyCallGraph
+
+Arthur Eubanks \
+aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
 
 #### LoopStrengthReduce
 
@@ -323,15 +332,18 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
 
-#### Debug info
+#### Debug info and DWARF
 
+Adrian Prantl \
+aprantl@apple.com (email), [adrian-prantl](https://github.com/adrian-prantl) (GitHub) \
+David Blaikie (especially type information) \
+dblaikie@gmail.com (email), [dwblaikie](https://github.com/dwblaike) (GitHub) \
+Jeremy Morse (especially variable information) \
+jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub) \
+Jonas Devlieghere (especially dsymutil/DWARFLinker) \
+jonas@devlieghere.com (email), [JDevlieghere](https://github.com/JDevlieghere) (GitHub) \
 Eric Christopher \
 echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
-
-#### DWARF Parser
-
-Benjamin Kramer \
-benny.kra@gmail.com (email), [d0k](https://github.com/d0k) (GitHub)
 
 #### IR Linker and LTO
 
@@ -459,7 +471,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
-Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
+Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining \
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
@@ -468,6 +480,7 @@ Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+Benjamin Kramer (benny.kra@gmail.com, [d0k](https://github.com/d0k)) -- DWARF Parser \
 David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \

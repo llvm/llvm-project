@@ -149,6 +149,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FLDEXP:
   case ISD::ABDS:
   case ISD::ABDU:

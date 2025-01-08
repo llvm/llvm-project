@@ -5126,9 +5126,9 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   MVT M1VT = getContainerForFixedLengthVector(DAG, OneRegVT, Subtarget);
   assert(M1VT == getLMUL1VT(M1VT));
   unsigned NumOpElts = M1VT.getVectorMinNumElements();
-  unsigned NormalizedVF = ContainerVT.getVectorMinNumElements();
-  unsigned NumOfSrcRegs = NormalizedVF / NumOpElts;
-  unsigned NumOfDestRegs = NormalizedVF / NumOpElts;
+  unsigned NumElts = ContainerVT.getVectorMinNumElements();
+  unsigned NumOfSrcRegs = NumElts / NumOpElts;
+  unsigned NumOfDestRegs = NumElts / NumOpElts;
   // The following semantically builds up a fixed length concat_vector
   // of the component shuffle_vectors.  We eagerly lower to scalable here
   // to avoid DAG combining it back to a large shuffle_vector again.
@@ -5173,7 +5173,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
         return N;
       });
   if ((NumOfDestRegs > 2 && NumShuffles > NumOfDestRegs) ||
-      (NumOfDestRegs <= 2 && NumShuffles >= 2 * NumOfDestRegs))
+      (NumOfDestRegs <= 2 && NumShuffles >= 4))
     return SDValue();
   auto ExtractValue = [&, &DAG = DAG](SDValue SrcVec, unsigned ExtractIdx) {
     SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
@@ -10197,7 +10197,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   case ISD::VP_REDUCE_AND: {
     // vcpop ~x == 0
     SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
-    Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    if (IsVP || VecVT.isFixedLengthVector())
+      Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    else
+      Vec = DAG.getNode(ISD::XOR, DL, ContainerVT, Vec, TrueMask);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
     break;
@@ -12706,8 +12709,7 @@ SDValue RISCVTargetLowering::lowerGET_ROUNDING(SDValue Op,
   const MVT XLenVT = Subtarget.getXLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(
-      RISCVSysReg::lookupSysRegByName("FRM")->Encoding, DL, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::frm, DL, XLenVT);
   SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
   SDValue RM = DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
 
@@ -12738,8 +12740,7 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
   SDValue RMValue = Op->getOperand(1);
-  SDValue SysRegNo = DAG.getTargetConstant(
-      RISCVSysReg::lookupSysRegByName("FRM")->Encoding, DL, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::frm, DL, XLenVT);
 
   // Encoding used for rounding mode in RISC-V differs from that used in
   // FLT_ROUNDS. To convert it the C rounding mode is used as an index in
@@ -12942,15 +12943,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue LoCounter, HiCounter;
     MVT XLenVT = Subtarget.getXLenVT();
     if (N->getOpcode() == ISD::READCYCLECOUNTER) {
-      LoCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding, DL, XLenVT);
+      LoCounter = DAG.getTargetConstant(RISCVSysReg::cycle, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(RISCVSysReg::cycleh, DL, XLenVT);
     } else {
-      LoCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("TIME")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("TIMEH")->Encoding, DL, XLenVT);
+      LoCounter = DAG.getTargetConstant(RISCVSysReg::time, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(RISCVSysReg::timeh, DL, XLenVT);
     }
     SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
     SDValue RCW = DAG.getNode(RISCVISD::READ_COUNTER_WIDE, DL, VTs,
@@ -18431,7 +18428,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
     // Bail if we might break a sh{1,2,3}add pattern.
-    if (Subtarget.hasStdExtZba() && C2->getZExtValue() >= 1 &&
+    if (Subtarget.hasStdExtZba() && C2 && C2->getZExtValue() >= 1 &&
         C2->getZExtValue() <= 3 && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
