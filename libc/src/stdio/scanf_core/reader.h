@@ -39,7 +39,16 @@ public:
   // This returns the next character from the input and advances it by one
   // character. When it hits the end of the string or file it returns '\0' to
   // signal to stop parsing.
-  char getc();
+  LIBC_INLINE char getc() {
+    ++cur_chars_read;
+    if (rb != nullptr) {
+      char output = rb->buffer[rb->buff_cur];
+      ++(rb->buff_cur);
+      return output;
+    }
+    // This should reset the buffer if applicable.
+    return static_cast<char>(internal::getc(input_stream));
+  }
 
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.

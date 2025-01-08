@@ -62,17 +62,6 @@ LIBC_INLINE void ungetc(int c, void *f) {
 
 } // namespace internal
 
-char Reader::getc() {
-  ++cur_chars_read;
-  if (rb != nullptr) {
-    char output = rb->buffer[rb->buff_cur];
-    ++(rb->buff_cur);
-    return output;
-  }
-  // This should reset the buffer if applicable.
-  return static_cast<char>(internal::getc(input_stream));
-}
-
 void Reader::ungetc(char c) {
   --cur_chars_read;
   if (rb != nullptr && rb->buff_cur > 0) {
