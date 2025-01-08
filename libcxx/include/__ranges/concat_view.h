@@ -67,8 +67,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
+#  ifdef __cpp_pack_indexing
 template <class... _Tp>
 using __extract_last = _Tp...[sizeof...(_Tp) - 1];
+#  else
+template <class _Tp, class... _Tail>
+struct __extract_last_impl : __extract_last<_Tail...> {};
+template <class _Tp>
+struct __extract_last_impl<_Tp> {
+  using type = _Tp;
+};
+
+template <class... _Tp>
+using __extract_last = __extract_last_impl<_Tp...>::type;
+#  endif
 
 template <class _Tp, class... _Tail>
 constexpr bool __derived_from_pack =
@@ -268,8 +280,8 @@ public:
         if constexpr (common_range<prev_view>) {
           it_.template emplace<_Idx - 1>(ranges::end(std::get<_Idx - 1>(parent_->__views_)));
         } else {
-          it_.template emplace<_Idx - 1>(ranges::__next(
-              ranges::begin(std::get<_Idx - 1>(parent_->__views_)), ranges::size(std::get<_Idx - 1>(parent_->__views_))));
+          it_.template emplace<_Idx - 1>(ranges::__next(ranges::begin(std::get<_Idx - 1>(parent_->__views_)),
+                                                        ranges::size(std::get<_Idx - 1>(parent_->__views_))));
         }
         prev<_Idx - 1>();
       } else {
@@ -601,8 +613,9 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <class... _Views>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... __views) const noexcept(
-      noexcept(concat_view(std::forward<_Views>(__views)...))) -> decltype(concat_view(std::forward<_Views>(__views)...)) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... __views) const
+      noexcept(noexcept(concat_view(std::forward<_Views>(__views)...)))
+          -> decltype(concat_view(std::forward<_Views>(__views)...)) {
     return concat_view(std::forward<_Views>(__views)...);
   }
 };
