@@ -10,7 +10,7 @@
 ;;
 ;;
 ;;; Code:
-
+(require 'lsp-mode)
 
 (defgroup lsp-tblgen nil
   "LSP support for Tablegen."
