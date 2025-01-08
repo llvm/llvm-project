@@ -1,4 +1,4 @@
-// REQUIRES: !(default-cxx-stdlib=libc++)
+// REQUIRES: default-cxx-stdlib=libc++
 // UNSUPPORTED: system-windows
 //   Windows is unsupported because we use the Unix path separator `/` in the test.
 
@@ -7,12 +7,12 @@
 // RUN: %clang -x c -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
 // RUN: | FileCheck --check-prefixes=CC1,NO-CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
-// Unlike the Darwin driver, the MachO driver doesn't default to libc++, and unless
-// CLANG_DEFAULT_CXX_STDLIB is libc++ it won't add any search paths.
+// Unlike the Darwin driver, the MachO driver doesn't default to libc++, but when
+// CLANG_DEFAULT_CXX_STDLIB is libc++ then the MachO driver should find the search path.
 // RUN: %clang -x c++ -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
-// RUN: | FileCheck --check-prefixes=CC1,NO-CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
+// RUN: | FileCheck --check-prefixes=CC1,CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
-// However, if the user requests libc++, the MachO driver should find the search path.
+// If the user requests libc++, the MachO driver should still find the search path.
 // RUN: %clang -x c++ -stdlib=libc++ -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
 // RUN: | FileCheck --check-prefixes=CC1,CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
@@ -35,12 +35,11 @@
 // the cc1 arguments.
 
 // CC1: "-cc1"
-// CC1: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
 // NO-CXX-NOT: "-internal-isystem" "{{.*}}/include/c++/v1"
 // CXX-SAME: "-internal-isystem" "{{.*}}/include/c++/v1"
 // ULI-SAME: "-internal-isystem" "[[SDKROOT]]/usr/local/include"
 // EULI-SAME: "-isystem" "[[SDKROOT]]/embedded/usr/local/include"
-// CI-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
+// CI-SAME: "-internal-isystem" "{{.*}}/clang/{{[[:digit:].]*}}/include"
 // UI-SAME: "-internal-externc-isystem" "[[SDKROOT]]/usr/include"
 // EUI-SAME: "-internal-externc-isystem" "[[SDKROOT]]/embedded/usr/include"
 // NO-FW-NOT: "-internal-iframework"
