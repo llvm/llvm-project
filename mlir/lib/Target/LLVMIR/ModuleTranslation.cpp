@@ -1732,11 +1732,10 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
     // Self-reference for uniqueness.
     llvm::Metadata *replacement;
     if (auto stringAttr =
-            dyn_cast<StringAttr>(aliasScopeAttr.getDomain().getId())) {
+            dyn_cast<StringAttr>(aliasScopeAttr.getDomain().getId()))
       replacement = llvm::MDString::get(ctx, stringAttr.getValue());
-    } else {
+    else
       replacement = domainIt->second;
-    }
     domainIt->second->replaceOperandWith(0, replacement);
   }
   // Convert the scope metadata node.
@@ -1750,11 +1749,10 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   scopeIt->second = llvm::MDNode::get(ctx, operands);
   // Self-reference for uniqueness.
   llvm::Metadata *replacement;
-  if (auto stringAttr = dyn_cast<StringAttr>(aliasScopeAttr.getId())) {
+  if (auto stringAttr = dyn_cast<StringAttr>(aliasScopeAttr.getId()))
     replacement = llvm::MDString::get(ctx, stringAttr.getValue());
-  } else {
+  else
     replacement = scopeIt->second;
-  }
   scopeIt->second->replaceOperandWith(0, replacement);
   return scopeIt->second;
 }

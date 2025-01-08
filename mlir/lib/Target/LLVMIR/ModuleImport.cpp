@@ -489,8 +489,8 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       if (verifySelfRef(scope)) {
         idAttr = DistinctAttr::create(builder.getUnitAttr());
       } else {
-        auto Name = cast<llvm::MDString>(scope->getOperand(0));
-        idAttr = builder.getStringAttr(Name->getString());
+        auto name = cast<llvm::MDString>(scope->getOperand(0));
+        idAttr = builder.getStringAttr(name->getString());
       }
 
       auto aliasScopeOp = builder.getAttr<AliasScopeAttr>(
