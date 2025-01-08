@@ -1523,7 +1523,8 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
   bool IsDiv = Opc == Instruction::SDiv || Opc == Instruction::UDiv;
   bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
 
-  int NumDivBits = getDivNumBits(I, Num, Den, 32, IsSigned);
+  unsigned BitWidth = Num->getType()->getScalarSizeInBits();
+  int NumDivBits = getDivNumBits(I, Num, Den, BitWidth - 32, IsSigned);
   if (NumDivBits == -1)
     return nullptr;
 

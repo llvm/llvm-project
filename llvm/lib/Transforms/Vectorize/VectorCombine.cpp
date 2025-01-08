@@ -705,7 +705,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Instruction::FNeg, VecTy, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask, CostKind);
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, VecTy, Mask,
+                         CostKind);
 
   bool NeedLenChg = SrcVecTy->getNumElements() != NumElts;
   // If the lengths of the two vectors are not equal,
@@ -2022,9 +2023,7 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   if (Match1)
     InnerCost1 = TTI.getInstructionCost(cast<Instruction>(OuterV1), CostKind);
 
-  InstructionCost OuterCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy, OuterMask, CostKind,
-      0, nullptr, {OuterV0, OuterV1}, &I);
+  InstructionCost OuterCost = TTI.getInstructionCost(&I, CostKind);
 
   InstructionCost OldCost = InnerCost0 + InnerCost1 + OuterCost;
 
@@ -3097,12 +3096,16 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
       TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
   InstructionCost OldCost = ExtCost + InsCost;
 
-  InstructionCost NewCost = TTI.getShuffleCost(SK, VecTy, Mask, CostKind, 0,
-                                               nullptr, {DstVec, SrcVec});
+  // Ignore 'free' identity insertion shuffle.
+  // TODO: getShuffleCost should return TCC_Free for Identity shuffles.
+  InstructionCost NewCost = 0;
+  if (!ShuffleVectorInst::isIdentityMask(Mask, NumElts))
+    NewCost += TTI.getShuffleCost(SK, VecTy, Mask, CostKind, 0, nullptr,
+                                  {DstVec, SrcVec});
   if (!Ext->hasOneUse())
     NewCost += ExtCost;
 
-  LLVM_DEBUG(dbgs() << "Found a insert/extract shuffle-like pair : " << I
+  LLVM_DEBUG(dbgs() << "Found a insert/extract shuffle-like pair: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
 
