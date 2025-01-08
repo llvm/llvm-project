@@ -5,7 +5,7 @@
 ;; This file is not part of GNU Emacs.
 ;;
 ;;; Commentary:
-;;  LSP clinet to use with `tablegen-mode' that uses `tblgen-lsp-server' or any
+;;  LSP client to use with `tablegen-mode' that uses `tblgen-lsp-server' or any
 ;;  user made compatible server.
 ;;
 ;;
