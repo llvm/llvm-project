@@ -59,15 +59,16 @@ public:
   void Dump(Stream &s) override;
 
   // Make IndexSet public so we can unit test the encoding and decoding logic.
+  template<typename T>
   struct IndexSet {
-    NameToDIE function_basenames;
-    NameToDIE function_fullnames;
-    NameToDIE function_methods;
-    NameToDIE function_selectors;
-    NameToDIE objc_class_selectors;
-    NameToDIE globals;
-    NameToDIE types;
-    NameToDIE namespaces;
+    T function_basenames;
+    T function_fullnames;
+    T function_methods;
+    T function_selectors;
+    T objc_class_selectors;
+    T globals;
+    T types;
+    T namespaces;
     bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr);
     void Encode(DataEncoder &encoder) const;
     bool operator==(const IndexSet &rhs) const {
@@ -162,11 +163,12 @@ private:
   ///   false if the symbol table wasn't cached or was out of date.
   bool LoadFromCache();
 
-  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
+  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
+                 IndexSet<NameToDIEX> &set);
 
   static void IndexUnitImpl(DWARFUnit &unit,
                             const lldb::LanguageType cu_language,
-                            IndexSet &set);
+                            IndexSet<NameToDIEX> &set);
 
   /// Return true if this manual DWARF index is covering only part of the DWARF.
   ///
@@ -184,7 +186,7 @@ private:
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
   llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
-  IndexSet m_set;
+  IndexSet<NameToDIE> m_set;
   bool m_indexed = false;
 };
 } // namespace dwarf
