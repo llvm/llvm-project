@@ -106,7 +106,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
         continue;
 
       if (isZeroLengthBitfieldPermittedInHomogeneousAggregate() &&
-          FD->isZeroLengthBitField(getContext()))
+          FD->isZeroLengthBitField())
         continue;
 
       uint64_t FldMembers;
