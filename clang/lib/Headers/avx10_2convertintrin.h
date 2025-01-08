@@ -580,13 +580,13 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtpbf8_ph(__m128i __A) {
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtpbf8_ph(__m256h __S, __mmask8 __U, __m128i __A) {
+_mm256_mask_cvtpbf8_ph(__m256h __S, __mmask16 __U, __m128i __A) {
   return _mm256_castsi256_ph(
       _mm256_mask_slli_epi16((__m256i)__S, __U, _mm256_cvtepi8_epi16(__A), 8));
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtpbf8_ph(__mmask8 __U, __m128i __A) {
+_mm256_maskz_cvtpbf8_ph(__mmask16 __U, __m128i __A) {
   return _mm256_castsi256_ph(
       _mm256_slli_epi16(_mm256_maskz_cvtepi8_epi16(__U, __A), 8));
 }

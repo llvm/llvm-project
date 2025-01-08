@@ -713,7 +713,7 @@ public:
   /// variables vector are acceptable.
   ///
   /// LastParamTransformed, if non-null, will be set to the index of the last
-  /// parameter on which transfromation was started. In the event of an error,
+  /// parameter on which transformation was started. In the event of an error,
   /// this will contain the parameter which failed to instantiate.
   ///
   /// Return true on error.
@@ -4166,6 +4166,24 @@ public:
                                   ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Shutdown, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult RebuildOpenACCSetConstruct(SourceLocation BeginLoc,
+                                        SourceLocation DirLoc,
+                                        SourceLocation EndLoc,
+                                        ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Set, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult RebuildOpenACCUpdateConstruct(SourceLocation BeginLoc,
+                                           SourceLocation DirLoc,
+                                           SourceLocation EndLoc,
+                                           ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Update, BeginLoc, DirLoc, SourceLocation{},
         SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
   }
 
@@ -11901,6 +11919,29 @@ void OpenACCClauseTransform<Derived>::VisitDeviceNumClause (
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
+  Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
+  assert(IntExpr && "default_async clause constructed with invalid int expr");
+
+  ExprResult Res = Self.TransformExpr(IntExpr);
+  if (!Res.isUsable())
+    return;
+
+  Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                              C.getClauseKind(),
+                                              C.getBeginLoc(), Res.get());
+  if (!Res.isUsable())
+    return;
+
+  ParsedClause.setIntExprDetails(Res.get());
+  NewClause = OpenACCDefaultAsyncClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
@@ -12419,6 +12460,39 @@ StmtResult TreeTransform<Derived>::TransformOpenACCShutdownConstruct(
     return StmtError();
 
   return getDerived().RebuildOpenACCShutdownConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCSetConstruct(OpenACCSetConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCSetConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCUpdateConstruct(
+    OpenACCUpdateConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCUpdateConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
       TransformedClauses);
 }

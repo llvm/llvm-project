@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
@@ -4382,8 +4383,10 @@ bool SelectionDAGISel::mayRaiseFPException(SDNode *N) const {
 
   // For ISD opcodes, only StrictFP opcodes may raise an FP
   // exception.
-  if (N->isTargetOpcode())
-    return N->isTargetStrictFPOpcode();
+  if (N->isTargetOpcode()) {
+    const SelectionDAGTargetInfo &TSI = CurDAG->getSelectionDAGInfo();
+    return TSI.mayRaiseFPException(N->getOpcode());
+  }
   return N->isStrictFPOpcode();
 }
 

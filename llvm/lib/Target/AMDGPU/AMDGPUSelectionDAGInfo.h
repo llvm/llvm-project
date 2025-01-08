@@ -16,6 +16,8 @@ namespace llvm {
 class AMDGPUSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   ~AMDGPUSelectionDAGInfo() override;
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
 };
 
 } // namespace llvm
