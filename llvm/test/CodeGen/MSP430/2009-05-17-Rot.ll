@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430
+; RUN: llc < %s -mtriple=msp430
 
 define i16 @rol1u16(i16 %x.arg) nounwind {
         %retval = alloca i16

@@ -29,6 +29,12 @@ static constexpr StringRef DefaultIncludeTypeRegex =
 
 AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 AST_MATCHER(VarDecl, isReferenced) { return Node.isReferenced(); }
+AST_MATCHER_P(VarDecl, explicitMarkUnused, LangOptions, LangOpts) {
+  // Implementations should not emit a warning that a name-independent
+  // declaration is used or unused.
+  return Node.hasAttr<UnusedAttr>() ||
+         (LangOpts.CPlusPlus26 && Node.isPlaceholderVar(LangOpts));
+}
 AST_MATCHER(Type, isReferenceType) { return Node.isReferenceType(); }
 AST_MATCHER(QualType, isTrivial) {
   return Node.isTrivialType(Finder->getASTContext()) ||
@@ -60,7 +66,7 @@ void UnusedLocalNonTrivialVariableCheck::registerMatchers(MatchFinder *Finder) {
       varDecl(isLocalVarDecl(), unless(isReferenced()),
               unless(isExceptionVariable()), hasLocalStorage(), isDefinition(),
               unless(hasType(isReferenceType())), unless(hasType(isTrivial())),
-              unless(hasAttr(attr::Kind::Unused)),
+              unless(explicitMarkUnused(getLangOpts())),
               hasType(hasUnqualifiedDesugaredType(
                   anyOf(recordType(hasDeclaration(namedDecl(
                             matchesAnyListedName(IncludeTypes),

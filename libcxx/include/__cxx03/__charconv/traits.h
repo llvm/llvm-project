@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TRAITS
-#define _LIBCPP___CHARCONV_TRAITS
+#ifndef _LIBCPP___CXX03___CHARCONV_TRAITS
+#define _LIBCPP___CXX03___CHARCONV_TRAITS
 
 #include <__cxx03/__assert>
 #include <__cxx03/__bit/countl.h>
@@ -197,4 +197,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHARCONV_TRAITS
+#endif // _LIBCPP___CXX03___CHARCONV_TRAITS

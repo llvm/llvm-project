@@ -47,4 +47,4 @@
 
 // RUN: %clang_cc1 -D REINCLUDE -I %t -ivfsoverlay %t.yaml -Eonly %s -MTfoo -dependency-file %t.dep
 // RUN: cat %t.dep | FileCheck --check-prefix=CHECK-DEP %s
-// CHECK-DEP-NOT: Inputs
+// CHECK-DEP: Inputs{{..?}}external-names.h

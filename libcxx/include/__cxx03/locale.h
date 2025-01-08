@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LOCALE_H
-#define _LIBCPP_LOCALE_H
+#ifndef _LIBCPP___CXX03_LOCALE_H
+#define _LIBCPP___CXX03_LOCALE_H
 
 /*
     locale.h synopsis
@@ -43,4 +43,4 @@ Functions:
 #  include_next <locale.h>
 #endif
 
-#endif // _LIBCPP_LOCALE_H
+#endif // _LIBCPP___CXX03_LOCALE_H

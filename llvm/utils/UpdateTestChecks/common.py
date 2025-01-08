@@ -1396,7 +1396,7 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
             backlinks.append(None)
 
     # Commit to names in the matching by walking the backlinks. Recursively
-    # attempt to fill in more matches in-betweem.
+    # attempt to fill in more matches in-between.
     match_idx = table_candidate_idx[-1]
     while match_idx is not None:
         current = candidates[match_idx]

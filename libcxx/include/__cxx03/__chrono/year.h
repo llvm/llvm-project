@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_YEAR_H
-#define _LIBCPP___CHRONO_YEAR_H
+#ifndef _LIBCPP___CXX03___CHRONO_YEAR_H
+#define _LIBCPP___CXX03___CHRONO_YEAR_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__config>
@@ -115,4 +115,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHRONO_YEAR_H
+#endif // _LIBCPP___CXX03___CHRONO_YEAR_H

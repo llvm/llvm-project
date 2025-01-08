@@ -1010,6 +1010,8 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           // .eh_frame can be truncated to 8 chars.
           .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
+          .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
+          .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
           .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)

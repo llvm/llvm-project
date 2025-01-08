@@ -9,16 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
 #define _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
 
-#include <__concepts/same_as.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_member_pointer.h>
-#include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 

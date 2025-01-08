@@ -146,6 +146,10 @@ struct ReferencedDecls {
   /// Free functions and member functions which are referenced (but not
   /// necessarily called).
   llvm::DenseSet<const FunctionDecl *> Functions;
+  /// When analyzing a lambda's call operator, the set of all parameters (from
+  /// the surrounding function) that the lambda captures. Captured local
+  /// variables are already included in `Locals` above.
+  llvm::DenseSet<const ParmVarDecl *> LambdaCapturedParams;
 };
 
 /// Returns declarations that are declared in or referenced from `FD`.

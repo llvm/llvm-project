@@ -482,7 +482,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
-    MD = AnyFunc.get<ObjCMethodDecl *>();
+    MD = cast<ObjCMethodDecl *>(AnyFunc);
     D = MD;
   }
 
@@ -510,6 +510,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     if (ParamTypeBefore.getAsOpaquePtr() != Param->getType().getAsOpaquePtr())
       AnyTypeChanged = true;
   }
+
+  // returns_(un)retained
+  if (!Info.SwiftReturnOwnership.empty())
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     "returns_" + Info.SwiftReturnOwnership));
 
   // Result type override.
   QualType OverriddenResultType;

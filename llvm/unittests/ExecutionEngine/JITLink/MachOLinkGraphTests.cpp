@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -20,7 +21,8 @@ using namespace llvm::jitlink;
 
 TEST(MachOLinkGraphTest, GetStandardSections) {
   // Check that LinkGraph construction works as expected.
-  LinkGraph G("foo", Triple("arm64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("arm64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
 
   auto &Data = getMachODefaultRWDataSection(G);

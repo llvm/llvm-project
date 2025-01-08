@@ -130,6 +130,39 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(SumInteger16)(const Descriptor &x,
 }
 #endif
 
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(SumUnsigned1)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 1>(x, source, line, dim,
+      mask, IntegerSumAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      "SUM");
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(SumUnsigned2)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 2>(x, source, line, dim,
+      mask, IntegerSumAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      "SUM");
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(SumUnsigned4)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 4>(x, source, line, dim,
+      mask, IntegerSumAccumulator<CppTypeFor<TypeCategory::Unsigned, 4>>{x},
+      "SUM");
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(SumUnsigned8)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 8>(x, source, line, dim,
+      mask, IntegerSumAccumulator<CppTypeFor<TypeCategory::Unsigned, 8>>{x},
+      "SUM");
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(SumUnsigned16)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Unsigned, 16>(x, source, line, dim,
+      mask, IntegerSumAccumulator<CppTypeFor<TypeCategory::Unsigned, 16>>{x},
+      "SUM");
+}
+#endif
+
 // TODO: real/complex(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTDEF(SumReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {

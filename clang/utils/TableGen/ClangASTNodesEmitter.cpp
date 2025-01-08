@@ -207,8 +207,9 @@ void clang::EmitClangASTNodes(const RecordKeeper &RK, raw_ostream &OS,
   ClangASTNodesEmitter(RK, N, S, PriorizeIfSubclassOf).run(OS);
 }
 
-void printDeclContext(const std::multimap<const Record *, const Record *> &Tree,
-                      const Record *DeclContext, raw_ostream &OS) {
+static void
+printDeclContext(const std::multimap<const Record *, const Record *> &Tree,
+                 const Record *DeclContext, raw_ostream &OS) {
   if (!DeclContext->getValueAsBit(AbstractFieldName))
     OS << "DECL_CONTEXT(" << DeclContext->getName() << ")\n";
   auto [II, E] = Tree.equal_range(DeclContext);

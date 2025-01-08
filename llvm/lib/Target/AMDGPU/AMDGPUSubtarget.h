@@ -50,6 +50,13 @@ protected:
   bool GCN3Encoding = false;
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
+  bool HasFP8ConversionScaleInsts = false;
+  bool HasBF8ConversionScaleInsts = false;
+  bool HasFP4ConversionScaleInsts = false;
+  bool HasFP6BF6ConversionScaleInsts = false;
+  bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
+  bool HasCvtPkF16F32Inst = false;
+  bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
   bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
@@ -173,6 +180,22 @@ public:
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
+  }
+
+  bool hasFP8ConversionScaleInsts() const { return HasFP8ConversionScaleInsts; }
+
+  bool hasBF8ConversionScaleInsts() const { return HasBF8ConversionScaleInsts; }
+
+  bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
+
+  bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
+
+  bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
+
+  bool hasF32ToF16BF16ConversionSRInsts() const {
+    return HasF32ToF16BF16ConversionSRInsts;
   }
 
   bool hasMadMacF32Insts() const {

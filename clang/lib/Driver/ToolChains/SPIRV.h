@@ -52,7 +52,7 @@ public:
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY SPIRVToolChain final : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY SPIRVToolChain : public ToolChain {
   mutable std::unique_ptr<Tool> Translator;
 
 public:

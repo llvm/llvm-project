@@ -188,6 +188,33 @@ define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
   ret void
 }
 
+define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
+; CHECK-LABEL: test_call_omit_extra_moves:
+; DARWIN-NEXT:   stp     x29, x30, [sp, #-16]!
+; ELF-NEXT:      str     x30, [sp, #-16]!
+; CHECK-NEXT:    ldr     x16, [x0]
+; CHECK-NEXT:    mov     x17, x0
+; CHECK-NEXT:    movk    x17, #6503, lsl #48
+; CHECK-NEXT:    autda   x16, x17
+; CHECK-NEXT:    ldr     x8, [x16]
+; CHECK-NEXT:    movk    x16, #34646, lsl #48
+; CHECK-NEXT:    blraa   x8, x16
+; CHECK-NEXT:    mov     w0, #42
+; DARWIN-NEXT:   ldp     x29, x30, [sp], #16
+; ELF-NEXT:      ldr     x30, [sp], #16
+; CHECK-NEXT:    ret
+  %vtable.signed = load ptr, ptr %objptr
+  %objptr.int = ptrtoint ptr %objptr to i64
+  %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)
+  %vtable.signed.int = ptrtoint ptr %vtable.signed to i64
+  %vtable.int = tail call i64 @llvm.ptrauth.auth(i64 %vtable.signed.int, i32 2, i64 %vtable.discr)
+  %vtable = inttoptr i64 %vtable.int to ptr
+  %callee.signed = load ptr, ptr %vtable
+  %callee.discr = tail call i64 @llvm.ptrauth.blend(i64 %vtable.int, i64 34646)
+  %call.result = tail call i32 %callee.signed(ptr %objptr) [ "ptrauth"(i32 0, i64 %callee.discr) ]
+  ret i32 42
+}
+
 define i32 @test_call_ia_arg(ptr %arg0, i64 %arg1) #0 {
 ; DARWIN-LABEL: test_call_ia_arg:
 ; DARWIN-NEXT:    stp x29, x30, [sp, #-16]!

@@ -289,6 +289,12 @@ HANDLE_TARGET_OPCODE(G_OR)
 /// Generic bitwise exclusive-or instruction.
 HANDLE_TARGET_OPCODE(G_XOR)
 
+/// Generic absolute difference signed instruction.
+HANDLE_TARGET_OPCODE(G_ABDS)
+
+/// Generic absolute difference unsigned instruction.
+HANDLE_TARGET_OPCODE(G_ABDU)
+
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 

@@ -309,3 +309,27 @@ define <2 x float> @select_fcmp_fadd_une_zero_vec(<2 x float> %x, <2 x float> %y
   %retval = select <2 x i1> %fcmp, <2 x float> %x, <2 x float> %fadd
   ret <2 x float> %retval
 }
+
+define <2 x i8> @select_vec_op_const_no_undef(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @select_vec_op_const_no_undef(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[XZ:%.*]] = icmp eq <2 x i8> [[X]], <i8 1, i8 2>
+; CHECK-NEXT:    [[XR:%.*]] = select <2 x i1> [[XZ]], <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 4, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[XR]]
+;
+  %xz = icmp eq <2 x i8> %x, <i8 1, i8 2>
+  %xr = select <2 x i1> %xz, <2 x i8> %x, <2 x i8> <i8 4, i8 3>
+  ret <2 x i8> %xr
+}
+
+define <2 x i8> @select_vec_op_const_undef(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @select_vec_op_const_undef(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[XZ:%.*]] = icmp eq <2 x i8> [[X]], <i8 1, i8 undef>
+; CHECK-NEXT:    [[XR:%.*]] = select <2 x i1> [[XZ]], <2 x i8> [[X]], <2 x i8> <i8 4, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[XR]]
+;
+  %xz = icmp eq <2 x i8> %x, <i8 1, i8 undef>
+  %xr = select <2 x i1> %xz, <2 x i8> %x, <2 x i8> <i8 4, i8 3>
+  ret <2 x i8> %xr
+}

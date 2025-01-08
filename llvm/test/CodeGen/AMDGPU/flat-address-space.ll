@@ -20,7 +20,7 @@ define amdgpu_kernel void @store_flat_i32(ptr addrspace(1) %gptr, i32 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}store_flat_i64:
-; GCN: flat_store_{{dwordx2|b64}}
+; GCN: flat_store_{{dword|b64}}
 define amdgpu_kernel void @store_flat_i64(ptr addrspace(1) %gptr, i64 %x) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   store volatile i64 %x, ptr %fptr, align 8
@@ -28,7 +28,7 @@ define amdgpu_kernel void @store_flat_i64(ptr addrspace(1) %gptr, i64 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}store_flat_v4i32:
-; GCN: flat_store_{{dwordx4|b128}}
+; GCN: flat_store_{{dword|b128}}
 define amdgpu_kernel void @store_flat_v4i32(ptr addrspace(1) %gptr, <4 x i32> %x) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   store volatile <4 x i32> %x, ptr %fptr, align 16
@@ -65,7 +65,7 @@ define amdgpu_kernel void @load_flat_i32(ptr addrspace(1) noalias %out, ptr addr
 }
 
 ; GCN-LABEL: load_flat_i64:
-; GCN: flat_load_{{dwordx2|b64}}
+; GCN: flat_load_{{dword|b64}}
 define amdgpu_kernel void @load_flat_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %gptr) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   %fload = load volatile i64, ptr %fptr, align 8
@@ -74,7 +74,7 @@ define amdgpu_kernel void @load_flat_i64(ptr addrspace(1) noalias %out, ptr addr
 }
 
 ; GCN-LABEL: load_flat_v4i32:
-; GCN: flat_load_{{dwordx4|b128}}
+; GCN: flat_load_{{dword|b128}}
 define amdgpu_kernel void @load_flat_v4i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %gptr) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   %fload = load volatile <4 x i32>, ptr %fptr, align 32

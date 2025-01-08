@@ -32,6 +32,20 @@ using namespace llvm::dxil;
 
 namespace {
 
+struct DXILIntrinsicSelect {
+  StringRef Intrinsic;
+  SmallVector<const Record *> ArgSelectRecords;
+};
+
+static StringRef StripIntrinArgSelectTypePrefix(StringRef Type) {
+  StringRef Prefix = "IntrinArgSelect_";
+  if (!Type.starts_with(Prefix)) {
+    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
+                    "'IntrinArgSelect_'");
+  }
+  return Type.substr(Prefix.size());
+}
+
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
   int OpCode;         // ID of DXIL operation
@@ -42,8 +56,7 @@ struct DXILOperationDesc {
   SmallVector<const Record *> OverloadRecs;
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
-  StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
-                       // means no map exists
+  SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
   int OverloadParamIndex;             // Index of parameter with overload type.
@@ -69,6 +82,21 @@ static void ascendingSortByVersion(std::vector<const Record *> &Recs) {
 
     return (VersionTuple(RecAMaj, RecAMin) < VersionTuple(RecBMaj, RecBMin));
   });
+}
+
+/// Take a `int_{intrinsic_name}` and return just the intrinsic_name part if
+/// available. Otherwise return the empty string.
+static StringRef GetIntrinsicName(const RecordVal *RV) {
+  if (RV && RV->getValue()) {
+    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+      auto *IntrinsicDef = DI->getDef();
+      auto DefName = IntrinsicDef->getName();
+      assert(DefName.starts_with("int_") && "invalid intrinsic name");
+      // Remove the int_ from intrinsic name.
+      return DefName.substr(4);
+    }
+  }
+  return "";
 }
 
 /// Construct an object using the DXIL Operation records specified
@@ -157,14 +185,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
                            OpName);
   }
 
-  const RecordVal *RV = R->getValue("LLVMIntrinsic");
-  if (RV && RV->getValue()) {
-    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
-      auto *IntrinsicDef = DI->getDef();
-      auto DefName = IntrinsicDef->getName();
-      assert(DefName.starts_with("int_") && "invalid intrinsic name");
-      // Remove the int_ from intrinsic name.
-      Intrinsic = DefName.substr(4);
+  auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
+  if (IntrinsicSelectRecords.size()) {
+    for (const Record *R : IntrinsicSelectRecords) {
+      DXILIntrinsicSelect IntrSelect;
+      IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("intrinsic"));
+      auto Args = R->getValueAsListOfDefs("arg_selects");
+      for (const Record *ArgSelect : Args) {
+        IntrSelect.ArgSelectRecords.emplace_back(ArgSelect);
+      }
+      IntrinsicSelects.emplace_back(std::move(IntrSelect));
     }
   }
 }
@@ -374,16 +404,42 @@ static void emitDXILOpFunctionTypes(ArrayRef<DXILOperationDesc> Ops,
 /// \param Output stream
 static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
                                  raw_ostream &OS) {
+
   OS << "#ifdef DXIL_OP_INTRINSIC\n";
   OS << "\n";
   for (const auto &Op : Ops) {
-    if (Op.Intrinsic.empty())
+    if (Op.IntrinsicSelects.empty()) {
       continue;
-    OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
-       << ", Intrinsic::" << Op.Intrinsic << ")\n";
+    }
+    for (const DXILIntrinsicSelect &MappedIntr : Op.IntrinsicSelects) {
+      OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
+         << ", Intrinsic::" << MappedIntr.Intrinsic << ", ";
+      for (const Record *ArgSelect : MappedIntr.ArgSelectRecords) {
+        std::string Type =
+            ArgSelect->getValueAsDef("type")->getNameInitAsString();
+        int Value = ArgSelect->getValueAsInt("value");
+        OS << "(IntrinArgSelect{"
+           << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type)
+           << "," << Value << "}), ";
+      }
+      OS << ")\n";
+    }
   }
   OS << "\n";
   OS << "#undef DXIL_OP_INTRINSIC\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit the IntrinArgSelect type for DirectX intrinsic to DXIL Op lowering
+static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
+                                            raw_ostream &OS) {
+  OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
+  for (const Record *Records :
+       Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
+    StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
+    OS << "DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(" << StrippedName << ")\n";
+  }
+  OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
   OS << "#endif\n\n";
 }
 
@@ -527,6 +583,7 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOpClasses(Records, OS);
   emitDXILOpParamTypes(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
+  emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
   OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
   emitDXILOperationTableDataStructs(Records, OS);

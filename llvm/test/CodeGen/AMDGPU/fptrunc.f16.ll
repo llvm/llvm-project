@@ -5,6 +5,8 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -global-isel=1 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=VI-GISEL %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -global-isel=0 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-SDAG %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -global-isel=1 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-GISEL %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx950 -global-isel=0 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=GFX950-SDAG %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx950 -global-isel=1 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=GFX950-GISEL %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-SDAG %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-GISEL %s
 
@@ -98,6 +100,36 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX9-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fptrunc_f32_to_f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-SDAG-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_f32_to_f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -233,6 +265,38 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX9-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fptrunc_f64_to_f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-SDAG-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_f64_to_f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, s[2:3]
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f64_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -381,6 +445,37 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX9-GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fptrunc_v2f32_to_v2f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_v2f32_to_v2f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fptrunc_v2f32_to_v2f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -543,6 +638,42 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
+; GFX950-SDAG-LABEL: fptrunc_v2f64_to_v2f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
+; GFX950-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v2
+; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_v2f64_to_v2f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
+; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
+; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v2
+; GFX950-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
+;
 ; GFX11-SDAG-LABEL: fptrunc_v2f64_to_v2f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -685,6 +816,36 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; GFX9-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
+; GFX950-SDAG-LABEL: fneg_fptrunc_f32_to_f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX950-SDAG-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fneg_fptrunc_f32_to_f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, -s2
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
+;
 ; GFX11-SDAG-LABEL: fneg_fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -814,6 +975,36 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX9-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fabs_fptrunc_f32_to_f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
+; GFX950-SDAG-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fabs_fptrunc_f32_to_f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fabs_fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -945,6 +1136,36 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX9-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
+; GFX950-SDAG-LABEL: fneg_fabs_fptrunc_f32_to_f16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e64 v0, -|v0|
+; GFX950-SDAG-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fneg_fabs_fptrunc_f32_to_f16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, -|s2|
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
+;
 ; GFX11-SDAG-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -1075,6 +1296,36 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fptrunc_f32_to_f16_zext_i32:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_f32_to_f16_zext_i32:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -1210,6 +1461,36 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
+; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
@@ -1352,6 +1633,38 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX9-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX950-SDAG-LABEL: fptrunc_f32_to_f16_sext_i32:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX950-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX950-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX950-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX950-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX950-SDAG-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX950-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX950-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: fptrunc_f32_to_f16_sext_i32:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
+; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX950-GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX950-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; GFX11-SDAG:       ; %bb.0: ; %entry

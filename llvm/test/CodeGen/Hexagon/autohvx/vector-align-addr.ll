@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; Test that the Hexagon Vector Combine pass computes the address
 ; correctly when the loading objects that contain extra padding

@@ -4,7 +4,7 @@
 # RUN: not ld.lld --eh-frame-hdr %t -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: corrupted .eh_frame: unknown FDE encoding
-# CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0xE)
+# CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0xe)
 
 .section .eh_frame,"a",@unwind
   .byte 0x0E

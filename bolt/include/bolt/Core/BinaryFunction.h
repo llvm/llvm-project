@@ -428,6 +428,9 @@ private:
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
 
+  /// Function is referenced by a non-control flow instruction.
+  bool HasAddressTaken{false};
+
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
     assert(BB->getIndex() < BasicBlocks.size());
@@ -821,6 +824,14 @@ public:
 
     return nullptr;
   }
+
+  /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
+  bool hasAddressTaken() const { return HasAddressTaken; }
+
+  /// Set whether function is referenced in a non-control flow instruction.
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
@@ -2135,6 +2146,9 @@ public:
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
 
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
+
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect
   /// and mark new entry points.
@@ -2405,6 +2419,19 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const BinaryFunction &Function) {
   OS << Function.getPrintName();
   return OS;
+}
+
+/// Compare function by index if it is valid, fall back to the original address
+/// otherwise.
+inline bool compareBinaryFunctionByIndex(const BinaryFunction *A,
+                                         const BinaryFunction *B) {
+  if (A->hasValidIndex() && B->hasValidIndex())
+    return A->getIndex() < B->getIndex();
+  if (A->hasValidIndex() && !B->hasValidIndex())
+    return true;
+  if (!A->hasValidIndex() && B->hasValidIndex())
+    return false;
+  return A->getAddress() < B->getAddress();
 }
 
 } // namespace bolt

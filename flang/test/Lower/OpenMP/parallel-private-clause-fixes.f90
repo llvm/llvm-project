@@ -82,10 +82,10 @@
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = arith.addi %[[LOAD]], %[[VAL_15]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[PRIV_X_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[VAL_17:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] : index
+! CHECK:                 %[[VAL_17:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] overflow<nsw> : index
 ! CHECK:                 %[[STEPCAST:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
 ! CHECK:                 %[[IVLOAD:.*]] = fir.load %[[PRIV_J_DECL]]#1 : !fir.ref<i32>
-! CHECK:                 %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]]
+! CHECK:                 %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]] overflow<nsw> :
 ! CHECK:                 fir.result %[[VAL_17]], %[[IVINC]] : index, i32
 ! CHECK:               }
 ! CHECK:               fir.store %[[VAL_12]]#1 to %[[PRIV_J_DECL]]#1 : !fir.ref<i32>

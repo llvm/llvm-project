@@ -138,6 +138,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("arm64pe");
     break;
+  case llvm::Triple::mipsel:
+    CmdArgs.push_back("mipspe");
+    break;
   default:
     D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_SWAPPABLE_H
-#define _LIBCPP___CONCEPTS_SWAPPABLE_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_SWAPPABLE_H
+#define _LIBCPP___CXX03___CONCEPTS_SWAPPABLE_H
 
 #include <__cxx03/__concepts/assignable.h>
 #include <__cxx03/__concepts/class_or_enum.h>
@@ -120,4 +120,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CONCEPTS_SWAPPABLE_H
+#endif // _LIBCPP___CXX03___CONCEPTS_SWAPPABLE_H

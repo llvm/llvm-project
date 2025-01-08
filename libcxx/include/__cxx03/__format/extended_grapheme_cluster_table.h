@@ -58,8 +58,8 @@
 // use or other dealings in these Data Files or Software without prior
 // written authorization of the copyright holder.
 
-#ifndef _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
-#define _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
+#ifndef _LIBCPP___CXX03___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
+#define _LIBCPP___CXX03___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
 
 #include <__cxx03/__algorithm/ranges_upper_bound.h>
 #include <__cxx03/__config>
@@ -1660,4 +1660,4 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1496] = {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
+#endif // _LIBCPP___CXX03___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H

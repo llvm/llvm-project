@@ -35,7 +35,7 @@ define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) 
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_07]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
 ; CHECK-NEXT:    store i32 [[I_07]], ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:

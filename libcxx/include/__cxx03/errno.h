@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_ERRNO_H
-#define _LIBCPP_ERRNO_H
+#ifndef _LIBCPP___CXX03_ERRNO_H
+#define _LIBCPP___CXX03_ERRNO_H
 
 /*
     errno.h synopsis
@@ -396,4 +396,4 @@ static const int __elast2 = 105;
 
 #endif // __cplusplus
 
-#endif // _LIBCPP_ERRNO_H
+#endif // _LIBCPP___CXX03_ERRNO_H

@@ -363,6 +363,11 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     Instruction *T = BB.getTerminator();
     if (!isa<ReturnInst>(T))
       continue;
+
+    // If there is a musttail call, that's the de-facto terminator.
+    if (CallInst *CI = BB.getTerminatingMustTailCall())
+      T = CI;
+
     Builder.SetInsertPoint(T);
     unlinkExceptionRegistration(Builder);
   }
@@ -517,11 +522,28 @@ int WinEHStatePass::getBaseStateForBB(
   return BaseState;
 }
 
+static bool isIntrinsic(const CallBase &Call, Intrinsic::ID ID) {
+  const Function *CF = Call.getCalledFunction();
+  return CF && CF->isIntrinsic() && CF->getIntrinsicID() == ID;
+}
+
+static bool isSehScopeEnd(const CallBase &Call) {
+  return isIntrinsic(Call, Intrinsic::seh_scope_end);
+}
+
+static bool isSehScopeBegin(const CallBase &Call) {
+  return isIntrinsic(Call, Intrinsic::seh_scope_begin);
+}
+
 // Calculate the state a call-site is in.
 int WinEHStatePass::getStateForCall(
     DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
     CallBase &Call) {
   if (auto *II = dyn_cast<InvokeInst>(&Call)) {
+    if (isSehScopeEnd(*II)) {
+      return getBaseStateForBB(BlockColors, FuncInfo, II->getNormalDest());
+    }
+
     // Look up the state number of the EH pad this unwinds to.
     assert(FuncInfo.InvokeStateMap.count(II) && "invoke has no state!");
     return FuncInfo.InvokeStateMap[II];
@@ -610,6 +632,10 @@ static int getSuccState(DenseMap<BasicBlock *, int> &InitialStates, Function &F,
 
 bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
                                         CallBase &Call) {
+  if (isSehScopeBegin(Call) || isSehScopeEnd(Call)) {
+    return true;
+  }
+
   // If the function touches memory, it needs a state store.
   if (isAsynchronousEHPersonality(Personality))
     return !Call.doesNotAccessMemory();

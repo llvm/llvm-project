@@ -233,6 +233,9 @@ For scalable vectors that should use VLMAX, the AVL is set to a sentinel value o
 
 There are patterns for target agnostic SelectionDAG nodes in ``RISCVInstrInfoVSDPatterns.td``, VL nodes in ``RISCVInstrInfoVVLPatterns.td`` and RVV intrinsics in ``RISCVInstrInfoVPseudos.td``.
 
+Instructions that operate only on masks like VMAND or VMSBF uses pseudo instructions suffixed with B1, B2, B4, B8, B16, B32, or B64 where the number is SEW/LMUL representing
+the ratio between SEW and LMUL needed in vtype. These instructions always operate as if EEW=1 and always use a value of 0 as their SEW operand.
+
 Mask patterns
 -------------
 

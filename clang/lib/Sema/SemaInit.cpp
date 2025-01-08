@@ -745,6 +745,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     if (Field->hasInClassInitializer()) {
       if (VerifyOnly)
         return;
+
       ExprResult DIE;
       {
         // Enter a default initializer rebuild context, then we can support
@@ -2029,13 +2030,8 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
 
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-    QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
-    const bool TypesMatch =
-        Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
-        (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
-    if (TypesMatch)
-      return true;
+    StringLiteral *SL = EE->getDataStringLiteral();
+    return IsStringInit(SL, InitArrayType, Context) == SIF_None;
   }
   return false;
 }

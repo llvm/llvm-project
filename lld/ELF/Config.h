@@ -320,6 +320,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  std::optional<uint64_t> randomizeSectionPadding;
   bool rejectMismatch;
   bool relax;
   bool relaxGP;
@@ -362,6 +363,7 @@ struct Config {
   bool zInterpose;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
+  bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;
   bool zNodlopen;

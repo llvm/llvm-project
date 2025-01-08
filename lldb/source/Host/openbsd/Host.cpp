@@ -127,7 +127,7 @@ static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
         process_info.SetUserID(proc_kinfo.p_ruid);
         process_info.SetGroupID(proc_kinfo.p_rgid);
         process_info.SetEffectiveUserID(proc_kinfo.p_uid);
-	process_info.SetEffectiveGroupID(proc_kinfo.p_gid);
+        process_info.SetEffectiveGroupID(proc_kinfo.p_gid);
         return true;
       }
     }

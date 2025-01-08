@@ -52,6 +52,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
+    static StringRef getRangeAttrName() { return "llvm.range"; }
     static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getReturnedAttrName() { return "llvm.returned"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }

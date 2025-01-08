@@ -352,3 +352,14 @@ define <2 x i1> @insertelement_fold2() {
   %icmp1 = icmp slt <2 x i32> %ie1, <i32 1024, i32 1024>
   ret <2 x i1> %icmp1
 }
+
+@g = external global i32
+
+define <2 x i16> @insertelement_constexpr() {
+; CHECK-LABEL: define <2 x i16> @insertelement_constexpr() {
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
+; CHECK-NEXT:    ret <2 x i16> [[INS]]
+;
+  %ins = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
+  ret <2 x i16> %ins
+}

@@ -54,27 +54,58 @@ void RTNAME(RandomNumber)(
     const Descriptor &harvest, const char *source, int line) {
   Terminator terminator{source, line};
   auto typeCode{harvest.type().GetCategoryAndKind()};
-  RUNTIME_CHECK(terminator, typeCode && typeCode->first == TypeCategory::Real);
+  RUNTIME_CHECK(terminator,
+      typeCode &&
+          (typeCode->first == TypeCategory::Real ||
+              typeCode->first == TypeCategory::Unsigned));
   int kind{typeCode->second};
-  switch (kind) {
-  // TODO: REAL (2 & 3)
-  case 4:
-    Generate<CppTypeFor<TypeCategory::Real, 4>, 24>(harvest);
-    return;
-  case 8:
-    Generate<CppTypeFor<TypeCategory::Real, 8>, 53>(harvest);
-    return;
-  case 10:
-    if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
-#if HAS_FLOAT80
-      Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
+  if (typeCode->first == TypeCategory::Real) {
+    switch (kind) {
+    // TODO: REAL (2 & 3)
+    case 4:
+      GenerateReal<CppTypeFor<TypeCategory::Real, 4>, 24>(harvest);
       return;
+    case 8:
+      GenerateReal<CppTypeFor<TypeCategory::Real, 8>, 53>(harvest);
+      return;
+    case 10:
+      if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
+#if HAS_FLOAT80
+        GenerateReal<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
+        return;
+#endif
+      }
+      break;
+    }
+    terminator.Crash(
+        "not yet implemented: intrinsic: REAL(KIND=%d) in RANDOM_NUMBER", kind);
+  } else if (typeCode->first == TypeCategory::Unsigned) {
+    switch (kind) {
+    case 1:
+      GenerateUnsigned<CppTypeFor<TypeCategory::Unsigned, 1>>(harvest);
+      return;
+    case 2:
+      GenerateUnsigned<CppTypeFor<TypeCategory::Unsigned, 2>>(harvest);
+      return;
+    case 4:
+      GenerateUnsigned<CppTypeFor<TypeCategory::Unsigned, 4>>(harvest);
+      return;
+    case 8:
+      GenerateUnsigned<CppTypeFor<TypeCategory::Unsigned, 8>>(harvest);
+      return;
+#ifdef __SIZEOF_INT128__
+    case 16:
+      if constexpr (HasCppTypeFor<TypeCategory::Unsigned, 16>) {
+        GenerateUnsigned<CppTypeFor<TypeCategory::Unsigned, 16>>(harvest);
+        return;
+      }
+      break;
 #endif
     }
-    break;
+    terminator.Crash(
+        "not yet implemented: intrinsic: UNSIGNED(KIND=%d) in RANDOM_NUMBER",
+        kind);
   }
-  terminator.Crash(
-      "not yet implemented: intrinsic: REAL(KIND=%d) in RANDOM_NUMBER", kind);
 }
 
 void RTNAME(RandomSeedSize)(

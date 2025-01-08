@@ -135,6 +135,14 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
       auto &region = getDeallocRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
+
+    /// needsMap returns true if the value being privatized should additionally
+    /// be mapped to the target region using a MapInfoOp. This is most common
+    /// when an allocatable is privatized. In such cases, the descriptor is used
+    /// in privatization and needs to be mapped on to the device.
+    bool needsMap() {
+      return !getAllocMoldArg().use_empty();
+    }
   }];
 
   let hasRegionVerifier = 1;
@@ -657,15 +665,18 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
 // 2.10.1 task Construct
 //===----------------------------------------------------------------------===//
 
-def TaskOp : OpenMP_Op<"task", traits = [
-    AttrSizedOperandSegments, AutomaticAllocationScope,
-    OutlineableOpenMPOpInterface
-  ], clauses = [
-    // TODO: Complete clause list (affinity, detach).
-    OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_FinalClause,
-    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
-    OpenMP_PriorityClause, OpenMP_PrivateClause, OpenMP_UntiedClause
-  ], singleRegion = true> {
+def TaskOp
+    : OpenMP_Op<"task",
+                traits = [AttrSizedOperandSegments, AutomaticAllocationScope,
+                          OutlineableOpenMPOpInterface],
+                clauses = [
+                    // TODO: Complete clause list (affinity, detach).
+                    OpenMP_AllocateClause, OpenMP_DependClause,
+                    OpenMP_FinalClause, OpenMP_IfClause,
+                    OpenMP_InReductionClause, OpenMP_MergeableClause,
+                    OpenMP_PriorityClause, OpenMP_PrivateClause,
+                    OpenMP_UntiedClause, OpenMP_DetachClause],
+                singleRegion = true> {
   let summary = "task construct";
   let description = [{
     The task construct defines an explicit task.
@@ -1212,10 +1223,11 @@ def TargetOp : OpenMP_Op<"target", traits = [
     OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
-    OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
-    OpenMP_HasDeviceAddrClause, OpenMP_IfClause, OpenMP_InReductionClause,
-    OpenMP_IsDevicePtrClause, OpenMP_MapClauseSkip<assemblyFormat = true>,
-    OpenMP_NowaitClause, OpenMP_PrivateClause, OpenMP_ThreadLimitClause
+    OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
+    OpenMP_DeviceClause, OpenMP_HasDeviceAddrClause, OpenMP_IfClause,
+    OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
+    OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
+    OpenMP_PrivateClause, OpenMP_ThreadLimitClause,
   ], singleRegion = true> {
   let summary = "target construct";
   let description = [{
@@ -1225,7 +1237,17 @@ def TargetOp : OpenMP_Op<"target", traits = [
     The optional `if_expr` parameter specifies a boolean result of a conditional
     check. If this value is 1 or is not provided then the target region runs on
     a device, if it is 0 then the target region is executed on the host device.
+
+    The `private_maps` attribute connects `private` operands to their corresponding
+    `map` operands. For `private` operands that require a map, the value of the
+    corresponding element in the attribute is the index of the `map` operand
+    (relative to other `map` operands not the whole operands of the operation). For
+    `private` opernads that do not require a map, this value is -1 (which is omitted
+    from the assembly foramt printing).
   }] # clausesDescription;
+
+  let arguments = !con(clausesArgs,
+                       (ins OptionalAttr<DenseI64ArrayAttr>:$private_maps));
 
   let builders = [
     OpBuilder<(ins CArg<"const TargetOperands &">:$clauses)>
@@ -1233,13 +1255,28 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
   let extraClassDeclaration = [{
     unsigned numMapBlockArgs() { return getMapVars().size(); }
+
+    mlir::Value getMappedValueForPrivateVar(unsigned privVarIdx) {
+      std::optional<DenseI64ArrayAttr> privateMapIdices = getPrivateMapsAttr();
+
+      if (!privateMapIdices.has_value())
+        return {};
+
+      int64_t mapInfoOpIdx = (*privateMapIdices)[privVarIdx];
+
+      if (mapInfoOpIdx == -1)
+        return {};
+
+      return getMapVars()[mapInfoOpIdx];
+    }
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<InReductionMapPrivateRegion>(
         $region, $in_reduction_vars, type($in_reduction_vars),
         $in_reduction_byref, $in_reduction_syms, $map_vars, type($map_vars),
-        $private_vars, type($private_vars), $private_syms) attr-dict
+        $private_vars, type($private_vars), $private_syms, $private_maps)
+        attr-dict
   }];
 
   let hasVerifier = 1;

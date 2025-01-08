@@ -41,7 +41,7 @@
 ;   }
 ;   return k;
 ; }
-; CHECK: remark: source.cpp:29:7: loop not vectorized: control flow cannot be substituted for a select
+; CHECK: remark: source.cpp:29:7: loop not vectorized: Control flow cannot be substituted for a select
 ; CHECK: remark: source.cpp:27:3: loop not vectorized
 
 ; YAML:       --- !Analysis
@@ -104,7 +104,7 @@
 ; YAML-NEXT: Function:        test_multiple_failures
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          control flow cannot be substituted for a select
+; YAML-NEXT:   - String:          Control flow cannot be substituted for a select
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize

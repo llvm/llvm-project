@@ -63,11 +63,11 @@ exit:
 ; Similar to the test case above, but checks getVectorCallCost as well.
 declare float @powf(float, float) readnone nounwind
 
-; Ensure the extractvalue + add instructions are hoisted out
+; Ensure the extractvalue instructions are hoisted out
+; CM-LABEL: Checking a loop in 'test_getVectorCallCost'
 ; CM: vector.ph:
 ; CM:  CLONE ir<%a> = extractvalue ir<%sv>
 ; CM:  CLONE ir<%b> = extractvalue ir<%sv>
-; CM:  WIDEN ir<%add> = add ir<%a>, ir<%b>
 ; CM:  Successor(s): vector loop
 
 ; CM: LV: Scalar loop costs: 14.

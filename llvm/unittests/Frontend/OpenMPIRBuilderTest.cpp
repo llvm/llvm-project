@@ -1993,6 +1993,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   OpenMPIRBuilder OMPBuilder(*M);
   IRBuilder<> Builder(BB);
   const int AlignmentValue = 32;
+  llvm::BasicBlock *sourceBlock = Builder.GetInsertBlock();
   AllocaInst *Alloc1 =
       Builder.CreateAlloca(Builder.getPtrTy(), Builder.getInt64(1));
   LoadInst *Load1 = Builder.CreateLoad(Alloc1->getAllocatedType(), Alloc1);
@@ -2031,13 +2032,12 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
 
   // Check if number of assumption instructions is equal to number of aligned
   // variables
-  BasicBlock *LoopPreheader = CLI->getPreheader();
-  size_t NumAssummptionCallsInPreheader = count_if(
-      *LoopPreheader, [](Instruction &I) { return isa<AssumeInst>(I); });
+  size_t NumAssummptionCallsInPreheader =
+      count_if(*sourceBlock, [](Instruction &I) { return isa<AssumeInst>(I); });
   EXPECT_EQ(NumAssummptionCallsInPreheader, AlignedVars.size());
 
   // Check if variables are correctly aligned
-  for (Instruction &Instr : *LoopPreheader) {
+  for (Instruction &Instr : *sourceBlock) {
     if (!isa<AssumeInst>(Instr))
       continue;
     AssumeInst *AssumeInstruction = cast<AssumeInst>(&Instr);
@@ -6358,7 +6358,13 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *Load2 = Load1->getNextNode();
   EXPECT_TRUE(isa<LoadInst>(Load2));
 
-  auto *Value1 = Load2->getNextNode();
+  auto *OutlinedBlockBr = Load2->getNextNode();
+  EXPECT_TRUE(isa<BranchInst>(OutlinedBlockBr));
+
+  auto *OutlinedBlock = OutlinedBlockBr->getSuccessor(0);
+  EXPECT_EQ(OutlinedBlock->getName(), "outlined.body");
+
+  auto *Value1 = OutlinedBlock->getFirstNonPHI();
   EXPECT_EQ(Value1, Value);
   EXPECT_EQ(Value1->getNextNode(), TargetStore);
   auto *Deinit = TargetStore->getNextNode();
@@ -6510,7 +6516,14 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   EXPECT_EQ(UserCodeBlock->getName(), "user_code.entry");
   auto *Load1 = UserCodeBlock->getFirstNonPHI();
   EXPECT_TRUE(isa<LoadInst>(Load1));
-  auto *Load2 = Load1->getNextNode();
+
+  auto *OutlinedBlockBr = Load1->getNextNode();
+  EXPECT_TRUE(isa<BranchInst>(OutlinedBlockBr));
+
+  auto *OutlinedBlock = OutlinedBlockBr->getSuccessor(0);
+  EXPECT_EQ(OutlinedBlock->getName(), "outlined.body");
+
+  auto *Load2 = OutlinedBlock->getFirstNonPHI();
   EXPECT_TRUE(isa<LoadInst>(Load2));
   EXPECT_EQ(Load2, Value);
   EXPECT_EQ(Load2->getNextNode(), TargetStore);

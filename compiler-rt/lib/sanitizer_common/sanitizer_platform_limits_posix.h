@@ -313,7 +313,7 @@ extern unsigned struct_statvfs_sz;
 
 struct __sanitizer_iovec {
   void *iov_base;
-  uptr iov_len;
+  usize iov_len;
 };
 
 #if !SANITIZER_ANDROID
@@ -523,6 +523,7 @@ struct __sanitizer_dirent64 {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
+extern unsigned struct_sock_fprog_sz;
 #endif
 
 #if defined(__x86_64__) && !defined(_LP64)
@@ -600,7 +601,7 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
-  struct {
+  __extension__ struct {
     int si_signo;
 # if SANITIZER_MIPS
     int si_code;
@@ -1076,7 +1077,6 @@ extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;
 extern unsigned struct_unimapdesc_sz;
 extern unsigned struct_unimapinit_sz;
-extern unsigned struct_sock_fprog_sz;
 #  endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 extern const unsigned long __sanitizer_bufsiz;

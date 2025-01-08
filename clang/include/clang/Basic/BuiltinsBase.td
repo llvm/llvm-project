@@ -88,6 +88,8 @@ class Builtin {
   // On some platforms, some functions are actually macros. In that case we need
   // to #undef them.
   bit RequiresUndef = 0;
+  // Enables builtins to generate `long long` outside of OpenCL and `long` inside.
+  bit EnableOpenCLLong = 0;
 }
 
 class CustomEntry {
@@ -95,9 +97,6 @@ class CustomEntry {
 }
 
 class AtomicBuiltin : Builtin;
-class TargetBuiltin : Builtin {
-  string Features = "";
-}
 
 class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Header = header;
@@ -121,6 +120,14 @@ class OCLPipeLangBuiltin : LangBuiltin<"OCL_PIPE">;
 class OCL_DSELangBuiltin : LangBuiltin<"OCL_DSE">;
 class OCL_GASLangBuiltin : LangBuiltin<"OCL_GAS">;
 class OCLLangBuiltin : LangBuiltin<"ALL_OCL_LANGUAGES">;
+
+class TargetBuiltin : Builtin {
+  string Features = "";
+}
+class TargetLibBuiltin : TargetBuiltin {
+  string Header;
+  string Languages = "ALL_LANGUAGES";
+}
 
 class Template<list<string> substitutions,
                list<string> affixes,

@@ -146,8 +146,6 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N,
                 OS << ", PC";
               else
                 OS << ", OpPC";
-              if (CanReturn)
-                OS << ", Result";
               for (size_t I = 0, N = Args.size(); I < N; ++I)
                 OS << ", V" << I;
               OS << "))\n";

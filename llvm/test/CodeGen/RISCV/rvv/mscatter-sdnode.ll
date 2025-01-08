@@ -2009,11 +2009,11 @@ define void @mscatter_baseidx_nxv16i16_nxv16f64(<vscale x 8 x double> %val0, <vs
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; RV32-NEXT:    addi a2, sp, 16
 ; RV32-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
+; RV32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv8r.v v16, v8
 ; RV32-NEXT:    vl4re16.v v8, (a1)
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    srli a1, a1, 3
-; RV32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vx v7, v0, a1
 ; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vsext.vf2 v24, v8

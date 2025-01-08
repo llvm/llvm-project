@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SHIFT_RIGHT_H
-#define _LIBCPP___ALGORITHM_SHIFT_RIGHT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SHIFT_RIGHT_H
+#define _LIBCPP___CXX03___ALGORITHM_SHIFT_RIGHT_H
 
 #include <__cxx03/__algorithm/move.h>
 #include <__cxx03/__algorithm/move_backward.h>
@@ -102,4 +102,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SHIFT_RIGHT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SHIFT_RIGHT_H

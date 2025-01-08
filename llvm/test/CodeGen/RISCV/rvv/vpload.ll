@@ -522,12 +522,12 @@ declare <vscale x 16 x double> @llvm.vp.load.nxv16f64.p0(ptr, <vscale x 16 x i1>
 define <vscale x 16 x double> @vpload_nxv16f64(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_nxv16f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    sub a3, a1, a2
 ; CHECK-NEXT:    slli a4, a2, 3
 ; CHECK-NEXT:    srli a5, a2, 3
-; CHECK-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a5
 ; CHECK-NEXT:    sltu a5, a1, a3
 ; CHECK-NEXT:    addi a5, a5, -1
@@ -561,6 +561,7 @@ declare <vscale x 16 x double> @llvm.vector.extract.nxv16f64(<vscale x 17 x doub
 define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_nxv17f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a5, a3, 1

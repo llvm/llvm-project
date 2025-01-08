@@ -352,11 +352,13 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
   // Code Sequence:
+  // lu12i.w $rd, %le_hi20_r(sym)
+  // add.w/d $rd, $rd, $tp, %le_add_r(sym)
+  // addi.w/d $rd, $rd, %le_lo12_r(sym)
+  //
+  // Code Sequence while using the large code model:
   // lu12i.w $rd, %le_hi20(sym)
   // ori $rd, $rd, %le_lo12(sym)
-  //
-  // And additionally if generating code using the large code model:
-  //
   // lu32i.d $rd, %le64_lo20(sym)
   // lu52i.d $rd, $rd, %le64_hi12(sym)
   MachineFunction *MF = MBB.getParent();
@@ -366,20 +368,35 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
   bool Large = MF->getTarget().getCodeModel() == CodeModel::Large;
   Register DestReg = MI.getOperand(0).getReg();
   Register Parts01 =
-      Large ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
-            : DestReg;
+      MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   Register Part1 =
       MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   MachineOperand &Symbol = MI.getOperand(1);
 
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
-      .addDisp(Symbol, 0, LoongArchII::MO_LE_HI);
+  if (!Large) {
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_HI_R);
 
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ORI), Parts01)
-      .addReg(Part1, RegState::Kill)
-      .addDisp(Symbol, 0, LoongArchII::MO_LE_LO);
+    const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+    unsigned AddOp = STI.is64Bit() ? LoongArch::PseudoAddTPRel_D
+                                   : LoongArch::PseudoAddTPRel_W;
+    BuildMI(MBB, MBBI, DL, TII->get(AddOp), Parts01)
+        .addReg(Part1, RegState::Kill)
+        .addReg(LoongArch::R2)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_ADD_R);
 
-  if (Large) {
+    unsigned AddiOp = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+    BuildMI(MBB, MBBI, DL, TII->get(AddiOp), DestReg)
+        .addReg(Parts01, RegState::Kill)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_LO_R);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_HI);
+
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ORI), Parts01)
+        .addReg(Part1, RegState::Kill)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_LO);
+
     Register Parts012 =
         MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
 

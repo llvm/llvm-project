@@ -76,58 +76,58 @@ define i32 @insert_double(i32 %arg, double %val, <2 x double> %src128, <4 x doub
 define i32 @insert_float(i32 %arg, float %val, <2 x float> %src64, <4 x float> %src128, <8 x float> %src256, <16 x float> %src512) {
 ; SSE2-LABEL: 'insert_float'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32_a = insertelement <2 x float> %src64, float %val, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_0 = insertelement <2 x float> %src64, float %val, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32_0 = insertelement <2 x float> %src64, float %val, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_1 = insertelement <2 x float> %src64, float %val, i32 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f32_a = insertelement <4 x float> %src128, float %val, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_0 = insertelement <4 x float> %src128, float %val, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32_0 = insertelement <4 x float> %src128, float %val, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_3 = insertelement <4 x float> %src128, float %val, i32 3
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8f32_a = insertelement <8 x float> %src256, float %val, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_0 = insertelement <8 x float> %src256, float %val, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32_0 = insertelement <8 x float> %src256, float %val, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_3 = insertelement <8 x float> %src256, float %val, i32 3
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_4 = insertelement <8 x float> %src256, float %val, i32 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32_4 = insertelement <8 x float> %src256, float %val, i32 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_7 = insertelement <8 x float> %src256, float %val, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16f32_a = insertelement <16 x float> %src512, float %val, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_0 = insertelement <16 x float> %src512, float %val, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32_0 = insertelement <16 x float> %src512, float %val, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_3 = insertelement <16 x float> %src512, float %val, i32 3
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_8 = insertelement <16 x float> %src512, float %val, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32_8 = insertelement <16 x float> %src512, float %val, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_15 = insertelement <16 x float> %src512, float %val, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'insert_float'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32_a = insertelement <2 x float> %src64, float %val, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_0 = insertelement <2 x float> %src64, float %val, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32_0 = insertelement <2 x float> %src64, float %val, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_1 = insertelement <2 x float> %src64, float %val, i32 1
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f32_a = insertelement <4 x float> %src128, float %val, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_0 = insertelement <4 x float> %src128, float %val, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32_0 = insertelement <4 x float> %src128, float %val, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_3 = insertelement <4 x float> %src128, float %val, i32 3
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8f32_a = insertelement <8 x float> %src256, float %val, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_0 = insertelement <8 x float> %src256, float %val, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32_0 = insertelement <8 x float> %src256, float %val, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_3 = insertelement <8 x float> %src256, float %val, i32 3
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_4 = insertelement <8 x float> %src256, float %val, i32 4
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32_4 = insertelement <8 x float> %src256, float %val, i32 4
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_7 = insertelement <8 x float> %src256, float %val, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16f32_a = insertelement <16 x float> %src512, float %val, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_0 = insertelement <16 x float> %src512, float %val, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32_0 = insertelement <16 x float> %src512, float %val, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_3 = insertelement <16 x float> %src512, float %val, i32 3
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_8 = insertelement <16 x float> %src512, float %val, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32_8 = insertelement <16 x float> %src512, float %val, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_15 = insertelement <16 x float> %src512, float %val, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'insert_float'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32_a = insertelement <2 x float> %src64, float %val, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_0 = insertelement <2 x float> %src64, float %val, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32_0 = insertelement <2 x float> %src64, float %val, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_1 = insertelement <2 x float> %src64, float %val, i32 1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f32_a = insertelement <4 x float> %src128, float %val, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_0 = insertelement <4 x float> %src128, float %val, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32_0 = insertelement <4 x float> %src128, float %val, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_3 = insertelement <4 x float> %src128, float %val, i32 3
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8f32_a = insertelement <8 x float> %src256, float %val, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_0 = insertelement <8 x float> %src256, float %val, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32_0 = insertelement <8 x float> %src256, float %val, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_3 = insertelement <8 x float> %src256, float %val, i32 3
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_4 = insertelement <8 x float> %src256, float %val, i32 4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32_4 = insertelement <8 x float> %src256, float %val, i32 4
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_7 = insertelement <8 x float> %src256, float %val, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16f32_a = insertelement <16 x float> %src512, float %val, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_0 = insertelement <16 x float> %src512, float %val, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32_0 = insertelement <16 x float> %src512, float %val, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_3 = insertelement <16 x float> %src512, float %val, i32 3
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_8 = insertelement <16 x float> %src512, float %val, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32_8 = insertelement <16 x float> %src512, float %val, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16f32_15 = insertelement <16 x float> %src512, float %val, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;

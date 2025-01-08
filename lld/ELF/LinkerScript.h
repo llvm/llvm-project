@@ -186,7 +186,7 @@ public:
         sortOuter(SortSectionPolicy::Default),
         sortInner(SortSectionPolicy::Default) {}
 
-  bool excludesFile(const InputFile *file) const;
+  bool excludesFile(const InputFile &file) const;
 
   StringMatcher sectionPat;
   SortSectionPolicy sortOuter;
@@ -212,7 +212,7 @@ public:
     return c->kind == InputSectionKind;
   }
 
-  bool matchesFile(const InputFile *file) const;
+  bool matchesFile(const InputFile &file) const;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.

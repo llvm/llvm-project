@@ -14,7 +14,7 @@ f:
   .globl _start
   .p2align 1
 _start:
-// CHECK: jal ra, f
+// CHECK: jal f
   jal ra, f
   ret
   .size _start, .-_start

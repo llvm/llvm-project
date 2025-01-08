@@ -9,11 +9,14 @@
 // For information see https://libcxx.llvm.org/DesignDocs/TimeZone.html
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "include/tzdb/time_zone_private.h"
 #include "include/tzdb/types_private.h"

@@ -413,6 +413,9 @@ def err_function_scope_depth_exceeded : Error<
   "function scope depth exceeded maximum of %0">, DefaultFatal;
 def err_missing_comma_before_ellipsis : Error<
   "C requires a comma prior to the ellipsis in a variadic function type">;
+def warn_deprecated_missing_comma_before_ellipsis : Warning<
+  "declaration of a variadic function without a comma before '...' is deprecated">,
+  InGroup<DeprecatedMissingCommaVariadicParam>;
 def err_unexpected_typedef_ident : Error<
   "unexpected type name %0: expected identifier">;
 def warn_cxx98_compat_decltype : Warning<
@@ -718,6 +721,9 @@ def warn_empty_init_statement : Warning<
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
 def err_keyword_as_parameter : Error <
   "invalid parameter name: '%0' is a keyword">;
+def warn_pre_cxx26_ambiguous_pack_indexing_type : Warning<
+  "%0 is no longer a pack expansion but a pack "
+  "indexing type; add a name to specify a pack expansion">, InGroup<CXXPre26Compat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;

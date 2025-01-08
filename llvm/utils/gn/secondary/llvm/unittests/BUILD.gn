@@ -50,6 +50,7 @@ group("unittests") {
     "TableGen:TableGenTests",
     "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",
+    "Telemetry:TelemetryTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",

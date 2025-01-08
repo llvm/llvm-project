@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TABLEGEN_TGLEXER_H
 #define LLVM_LIB_TABLEGEN_TGLEXER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/DataTypes.h"
@@ -21,7 +22,6 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 template <typename T> class ArrayRef;
@@ -135,6 +135,7 @@ enum TokKind {
   XTail,
   XSize,
   XEmpty,
+  XInitialized,
   XIf,
   XCond,
   XEq,
@@ -322,8 +323,7 @@ private:
   // preprocessing control stacks for the current file and all its
   // parent files.  The back() element is the preprocessing control
   // stack for the current file.
-  std::vector<std::unique_ptr<std::vector<PreprocessorControlDesc>>>
-      PrepIncludeStack;
+  SmallVector<SmallVector<PreprocessorControlDesc>> PrepIncludeStack;
 
   // Validate that the current preprocessing control stack is empty,
   // since we are about to exit a file, and pop the include stack.

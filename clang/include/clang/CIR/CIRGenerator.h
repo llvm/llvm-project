@@ -37,14 +37,14 @@ namespace cir {
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &diags;
-  clang::ASTContext *astCtx;
+  clang::ASTContext *astContext;
   // Only used for debug info.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs;
 
   const clang::CodeGenOptions &codeGenOpts;
 
 protected:
-  std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  std::unique_ptr<mlir::MLIRContext> mlirContext;
   std::unique_ptr<clang::CIRGen::CIRGenModule> cgm;
 
 public:
@@ -52,7 +52,7 @@ public:
                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
                const clang::CodeGenOptions &cgo);
   ~CIRGenerator() override;
-  void Initialize(clang::ASTContext &astCtx) override;
+  void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
   mlir::ModuleOp getModule() const;
 };

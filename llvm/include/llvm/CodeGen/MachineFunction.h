@@ -186,6 +186,7 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
+    FailedRegAlloc,
     TracksDebugUserValues,
     LastProperty = TracksDebugUserValues,
   };

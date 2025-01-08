@@ -59,6 +59,9 @@ public:
 
   ~ParsedAST();
 
+  ParsedAST(const ParsedAST &Other) = delete;
+  ParsedAST &operator=(const ParsedAST &Other) = delete;
+
   /// Note that the returned ast will not contain decls from the preamble that
   /// were not deserialized during parsing. Clients should expect only decls
   /// from the main file to be in the AST.

@@ -29,21 +29,17 @@ template <class _Tp>
 using __make_signed_t = __make_signed(_Tp);
 
 #else
-// clang-format off
-typedef __type_list<signed char,
-        __type_list<signed short,
-        __type_list<signed int,
-        __type_list<signed long,
-        __type_list<signed long long,
+using __signed_types =
+    __type_list<signed char,
+                signed short,
+                signed int,
+                signed long,
+                signed long long
 #  if _LIBCPP_HAS_INT128
-        __type_list<__int128_t,
+                ,
+                __int128_t
 #  endif
-        __nat
-#  if _LIBCPP_HAS_INT128
-        >
-#  endif
-        > > > > > __signed_types;
-// clang-format on
+                >;
 
 template <class _Tp, bool = is_integral<_Tp>::value || is_enum<_Tp>::value>
 struct __make_signed{};

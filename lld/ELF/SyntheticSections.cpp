@@ -120,23 +120,20 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
     create = true;
 
-    std::string filename = toStr(ctx, sec->file);
     const size_t size = sec->content().size();
     // Older version of BFD (such as the default FreeBSD linker) concatenate
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
     // zero padding) we ignore everything after the first Elf_Mips_ABIFlags
     if (size < sizeof(Elf_Mips_ABIFlags)) {
-      ErrAlways(ctx) << filename
-                     << ": invalid size of .MIPS.abiflags section: got "
-                     << Twine(size) << " instead of "
-                     << Twine(sizeof(Elf_Mips_ABIFlags));
+      Err(ctx) << sec->file << ": invalid size of .MIPS.abiflags section: got "
+               << size << " instead of " << sizeof(Elf_Mips_ABIFlags);
       return nullptr;
     }
     auto *s =
         reinterpret_cast<const Elf_Mips_ABIFlags *>(sec->content().data());
     if (s->version != 0) {
-      ErrAlways(ctx) << filename << ": unexpected .MIPS.abiflags version "
-                     << Twine(s->version);
+      Err(ctx) << sec->file << ": unexpected .MIPS.abiflags version "
+               << s->version;
       return nullptr;
     }
 
@@ -152,7 +149,7 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     flags.flags1 |= s->flags1;
     flags.flags2 |= s->flags2;
     flags.fp_abi =
-        elf::getMipsFpAbiFlag(ctx, flags.fp_abi, s->fp_abi, filename);
+        elf::getMipsFpAbiFlag(ctx, sec->file, flags.fp_abi, s->fp_abi);
   };
 
   if (create)
@@ -197,12 +194,10 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
   for (InputSectionBase *sec : sections) {
     sec->markDead();
 
-    std::string filename = toStr(ctx, sec->file);
     ArrayRef<uint8_t> d = sec->content();
-
     while (!d.empty()) {
       if (d.size() < sizeof(Elf_Mips_Options)) {
-        ErrAlways(ctx) << filename << ": invalid size of .MIPS.options section";
+        Err(ctx) << sec->file << ": invalid size of .MIPS.options section";
         break;
       }
 
@@ -213,8 +208,10 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
         break;
       }
 
-      if (!opt->size)
-        Fatal(ctx) << filename << ": zero option descriptor size";
+      if (!opt->size) {
+        Err(ctx) << sec->file << ": zero option descriptor size";
+        break;
+      }
       d = d.slice(opt->size);
     }
   };
@@ -256,7 +253,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
 
     if (sec->content().size() != sizeof(Elf_Mips_RegInfo)) {
-      ErrAlways(ctx) << sec->file << ": invalid size of .reginfo section";
+      Err(ctx) << sec->file << ": invalid size of .reginfo section";
       return nullptr;
     }
 
@@ -673,6 +670,10 @@ void GotSection::addEntry(const Symbol &sym) {
   ctx.symAux.back().gotIdx = numEntries++;
 }
 
+void GotSection::addAuthEntry(const Symbol &sym) {
+  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, sym.isFunc()});
+}
+
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsDescIdx = numEntries;
@@ -735,6 +736,21 @@ void GotSection::writeTo(uint8_t *buf) {
     return;
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
+  for (const AuthEntryInfo &authEntry : authEntries) {
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
+    //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
+    //   DA key for all other symbol types, with the address of the GOT entry as
+    //   the modifier. The static linker must encode the signing schema into the
+    //   GOT slot.
+    //
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
+    //   If address diversity is set and the discriminator
+    //   is 0 then modifier = Place
+    uint8_t *dest = buf + authEntry.offset;
+    uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
+    uint64_t addrDiversity = 1;
+    write64(ctx, dest, (addrDiversity << 63) | (key << 60));
+  }
 }
 
 static uint64_t getMipsPageAddr(uint64_t addr) {
@@ -752,7 +768,7 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);
-  if (expr == R_MIPS_GOT_LOCAL_PAGE) {
+  if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
       g.pagesMap.insert({os, {}});
     else
@@ -763,7 +779,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
     g.relocs.insert({&sym, 0});
   else if (sym.isPreemptible)
     g.global.insert({&sym, 0});
-  else if (expr == R_MIPS_GOT_OFF32)
+  else if (expr == RE_MIPS_GOT_OFF32)
     g.local32.insert({{&sym, addend}, 0});
   else
     g.local16.insert({{&sym, addend}, 0});
@@ -2119,8 +2135,8 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // Don't allow the section to shrink; otherwise the size of the section can
   // oscillate infinitely. Trailing 1s do not decode to more relocations.
   if (relrRelocs.size() < oldSize) {
-    Log(ctx) << ".relr.dyn needs " << Twine(oldSize - relrRelocs.size()) <<
-        " padding word(s)";
+    Log(ctx) << ".relr.dyn needs " << (oldSize - relrRelocs.size())
+             << " padding word(s)";
     relrRelocs.resize(oldSize, Elf_Relr(1));
   }
 
@@ -2756,6 +2772,21 @@ RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
 
+RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
+                                                 OutputSection *parent)
+    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
+      size(size) {
+  this->parent = parent;
+}
+
+void RandomizePaddingSection::writeTo(uint8_t *buf) {
+  std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
+  uint8_t *end = buf + size;
+  for (; buf + 4 <= end; buf += 4)
+    memcpy(buf, &filler[0], 4);
+  memcpy(buf, &filler[0], end - buf);
+}
+
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
   uint32_t h = 0;
@@ -2873,7 +2904,7 @@ void DebugNamesBaseSection::parseDebugNames(
     nd.hdr = ni.getHeader();
     if (nd.hdr.Format != DwarfFormat::DWARF32) {
       Err(ctx) << namesSec.sec
-               << Twine(": found DWARF64, which is currently unsupported");
+               << ": found DWARF64, which is currently unsupported";
       return;
     }
     if (nd.hdr.Version != 5) {
@@ -2883,8 +2914,7 @@ void DebugNamesBaseSection::parseDebugNames(
     uint32_t dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
     DWARFDebugNames::DWARFDebugNamesOffsets locs = ni.getOffsets();
     if (locs.EntriesBase > namesExtractor.getData().size()) {
-      Err(ctx) << namesSec.sec
-               << Twine(": entry pool start is beyond end of section");
+      Err(ctx) << namesSec.sec << ": entry pool start is beyond end of section";
       return;
     }
 
@@ -2965,7 +2995,7 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
       // ForeignTypeUnitCount are left as 0.
       if (nd.hdr.LocalTypeUnitCount || nd.hdr.ForeignTypeUnitCount)
         Warn(ctx) << inputChunk.section.sec
-                  << Twine(": type units are not implemented");
+                  << ": type units are not implemented";
       // If augmentation strings are not identical, use an empty string.
       if (i == 0) {
         hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;
@@ -3768,9 +3798,8 @@ VersionTableSection::VersionTableSection(Ctx &ctx)
 }
 
 void VersionTableSection::finalizeContents() {
-  // At the moment of june 2016 GNU docs does not mention that sh_link field
-  // should be set, but Sun docs do. Also readelf relies on this field.
-  getParent()->link = getPartition(ctx).dynSymTab->getParent()->sectionIndex;
+  if (OutputSection *osec = getPartition(ctx).dynSymTab->getParent())
+    getParent()->link = osec->sectionIndex;
 }
 
 size_t VersionTableSection::getSize() const {
@@ -4395,7 +4424,7 @@ static uint8_t getAbiVersion(Ctx &ctx) {
     uint8_t ver = ctx.objectFiles[0]->abiVersion;
     for (InputFile *file : ArrayRef(ctx.objectFiles).slice(1))
       if (file->abiVersion != ver)
-        ErrAlways(ctx) << "incompatible ABI version: " << file;
+        Err(ctx) << "incompatible ABI version: " << file;
     return ver;
   }
 

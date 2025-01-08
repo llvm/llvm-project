@@ -4,10 +4,10 @@
 %"struct.std::array" = type { [32 x i8] }
 
 ; Function Attrs: nounwind uwtable
-define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv() unnamed_addr #0 align 2 {
+define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(i1 %arg) unnamed_addr #0 align 2 {
 ; CHECK-LABEL: @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
 ; CHECK:       if.then22.i:
 ; CHECK-NEXT:    [[SUB_I:%.*]] = add nsw i32 undef, -1
 ; CHECK-NEXT:    [[CONV31_I:%.*]] = and i32 undef, [[SUB_I]]
@@ -36,7 +36,7 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %if.end50.i, label %if.then22.i
+  br i1 %arg, label %if.end50.i, label %if.then22.i
 
 if.then22.i:                                      ; preds = %entry
   %sub.i = add nsw i32 undef, -1

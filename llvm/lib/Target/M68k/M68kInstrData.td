@@ -419,6 +419,8 @@ class MxMoveFromCCR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
 
 class MxMoveFromCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs), (ins MEMOp:$dst, CCRC:$src)>;
+class MxMoveFromCCR_RPseudo<MxOperand MEMOp>
+    : MxPseudo<(outs MEMOp:$dst), (ins CCRC:$src)>;
 } // let Uses = [CCR]
 
 let mayStore = 1 in
@@ -432,7 +434,7 @@ foreach AM = MxMoveSupportedAMs in {
 
 // Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
-def MOV8dc  : MxMoveFromCCRPseudo<MxOp8AddrMode_d.Op>;
+def MOV8dc  : MxMoveFromCCR_RPseudo<MxOp8AddrMode_d.Op>;
 
 //===----------------------------------------------------------------------===//
 // LEA

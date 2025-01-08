@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CCTYPE
-#define _LIBCPP_CCTYPE
+#ifndef _LIBCPP___CXX03_CCTYPE
+#define _LIBCPP___CXX03_CCTYPE
 
 /*
     cctype synopsis
@@ -38,7 +38,7 @@ int toupper(int c);
 
 #include <__cxx03/ctype.h>
 
-#ifndef _LIBCPP_CTYPE_H
+#ifndef _LIBCPP___CXX03_CTYPE_H
 #   error <cctype> tried including <ctype.h> but didn't find libc++'s <ctype.h> header. \
           This usually means that your header search paths are not configured properly.  \
           The header search paths should contain the C++ Standard Library headers before \
@@ -124,4 +124,4 @@ using ::toupper _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CCTYPE
+#endif // _LIBCPP___CXX03_CCTYPE

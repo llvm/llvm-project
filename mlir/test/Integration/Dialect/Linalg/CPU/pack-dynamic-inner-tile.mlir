@@ -10,10 +10,6 @@
 
 /// End-to-end test for tensor.pack where one of the inner tile sizes is
 /// dynamic.
-///
-/// Note, ATM this is a relatively simple example, with no vectorization and
-/// the dynamic tile size being a compile-time constant. The intention is to
-/// incrementally expand the config to something much more complex.
 
 func.func @main() {
   // Allocate and initialise the inputs
@@ -89,26 +85,49 @@ module @transforms attributes { transform.with_named_sequence } {
     %tiled_pack_op_p, %loops:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-    // 2. Decompose the tiled Op into (trimmed for brevity):
+    // 2. Decompose the tiled pack Op into (trimmed for brevity):
     //
     //  %padded = tensor.pad %slice_of_A (..) :
     //      tensor<?x?xi32> to tensor<8x1xi32>
     //  %inserted_slice = tensor.insert_slice %padded into %slice_of_A_pack (...) :
     //      tensor<8x1xi32> into tensor<1x1x?x1xi32>
     //
-    // NOTE: no tile is transposed, hence no linalg.transpose
-    %func_1 = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %func_1 {
+    // (NOTE: no tile is transposed, hence no linalg.transpose)
+    //
+    // This is followed by this decomposition of the pad Op:
+    //
+    //  %c123_i32 = arith.constant 123 : i32
+    //  %slice_of_A = tensor.extract_slice %A[%3, %arg3] [%4, %5] [1, 1] :
+    //    tensor<7x16xi32> to tensor<?x?xi32>
+    //  %empty = tensor.empty() : tensor<8x1xi32>
+    //  %fill = linalg.fill ins(%c123_i32 : i32) outs(%empty :
+    //    tensor<8x1xi32>) -> tensor<8x1xi32>
+    //  %inserted_slice = tensor.insert_slice %slice_of_A into %fill[0, 0] [%4, %5] [1, 1] :
+    //    tensor<?x?xi32> into tensor<8x1xi32>
+    //
+    %func_op = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
       transform.apply_patterns.linalg.decompose_pack_unpack
-    } : !transform.any_op
+      transform.apply_patterns.linalg.decompose_pad
+    } : !transform.op<"func.func">
+
+    // 3. Vectorize linalg.fill.
+    // Vector sizes match the inner tiles in the payload IR.
+    %fill = transform.structured.match ops{["linalg.fill"]} in %func_op : (!transform.op<"func.func">) -> !transform.any_op
+    transform.structured.vectorize %fill vector_sizes [8, 1] : !transform.any_op
+
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.tensor.fold_tensor_subset_ops
+      transform.apply_patterns.canonicalization
+    } : !transform.op<"func.func">
 
     // 3. Bufferize before lowering to LLVM
     %bufferize = transform.bufferization.one_shot_bufferize %module
       {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
     // 4. Canonicalize
-    %func_2 = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">
-    transform.apply_patterns to %func_2 {
+    %func_op_bufferized = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op_bufferized {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 

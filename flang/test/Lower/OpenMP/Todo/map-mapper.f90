@@ -8,7 +8,7 @@ program p
   !!end type t1
   !!!$omp declare mapper(xx : t1 :: nn) map(nn, nn%x)
   !$omp target map(mapper(xx), from:a)
-!CHECK: not yet implemented: OmpMapClause(MAPPER(...))
+!CHECK: not yet implemented: Support for mapper modifiers is not implemented yet
   do i=1,n
      a(i) = 4.2
   end do

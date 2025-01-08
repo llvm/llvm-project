@@ -1,9 +1,9 @@
 # RUN: llvm-mca -mtriple=amdgcn -mcpu=gfx950 --timeline --iterations=1 --timeline-max-cycles=0 < %s | FileCheck %s
 
 # CHECK: Iterations:        1
-# CHECK: Instructions:      129
-# CHECK: Total Cycles:      1069
-# CHECK: Total uOps:        129
+# CHECK: Instructions:      133
+# CHECK: Total Cycles:      1101
+# CHECK: Total uOps:        133
 
 v_mfma_f32_16x16x32_f16 a[0:3], a[0:3], a[0:3], a[0:3] blgp:1
 v_mfma_f32_16x16x32_f16 a[0:3], v[0:3], v[0:3], a[4:7]
@@ -24,46 +24,37 @@ v_mfma_ld_scale_b32 v0, v0
 ;;  TODO: test vdc/adc
 v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3]
 v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:1
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:2
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:3
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:4
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:9], v[0:3] blgp:2
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:9], v[0:3] blgp:3
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:7], v[0:3] blgp:4
 v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:1
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:2
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:3
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:4
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:2 blgp:1
-v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:1 blgp:2
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:11], v[0:3] cbsz:2
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:11], v[0:3] cbsz:3
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:7], v[4:11], v[0:3] cbsz:4
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:11], v[0:3] cbsz:2 blgp:1
+v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:9], v[0:3] cbsz:1 blgp:2
 
 ;; FIXME: should have different cycle count depending on whether either matrix is f8
 v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15]
 v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:1
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:2
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:3
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:4
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:9], v[0:15] blgp:2
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:9], v[0:15] blgp:3
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:7], v[0:15] blgp:4
 v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:1
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:2
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:3
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:4
-v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:2
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15] cbsz:2
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15] cbsz:3
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:7], v[4:11], v[0:15] cbsz:4
+v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15] cbsz:2
 v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:1
 
 ;; FIXME: should have different cycle count depending on whether either matrix is f8
 v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5
-
-;; FIXME
-;; v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 blgp:1
-;; v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 blgp:2
-;; v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 blgp:3
-;; v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 blgp:4
+v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 blgp:1
+v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:9], v[0:3], v5, v5 cbsz:2 blgp:2
 
 v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5
-
-;; FIXME
-;; v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5 blgp:1
-;; v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5 blgp:2
-;; v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5 blgp:3
-;; v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5 blgp:4
-
+v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15], v5, v5 cbsz:2 blgp:1
+v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:9], v[0:15], v5, v5 cbsz:2 blgp:2
 
 ;;  TODO: These results are wrong
 v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1
@@ -213,28 +204,32 @@ v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], v[2:3], v[4:7], v1 cbsz:3 abid:1
 # CHECK-NEXT: -      -      -      -     1.00    -      -     v_mfma_ld_scale_b32 v0, v0
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3]
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:1
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:2
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:3
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] blgp:4
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:9], v[0:3] blgp:2
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:9], v[0:3] blgp:3
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:7], v[0:3] blgp:4
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:1
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:2
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:3
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:4
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:2 blgp:1
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3] cbsz:1 blgp:2
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:11], v[0:3] cbsz:2
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:11], v[0:3] cbsz:3
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:7], v[4:11], v[0:3] cbsz:4
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:11], v[0:3] cbsz:2 blgp:1
+# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:9], v[0:3] cbsz:1 blgp:2
 # CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15]
 # CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:1
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:2
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:3
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:4
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:9], v[0:15] blgp:2
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:9], v[0:15] blgp:3
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:7], v[0:15] blgp:4
 # CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:1
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:2
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:3
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:4
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] cbsz:2
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15] cbsz:2
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15] cbsz:3
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:7], v[4:11], v[0:15] cbsz:4
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15] cbsz:2
 # CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15] blgp:1
-# CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 op_sel_hi:[0,0,0]
-# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5 op_sel_hi:[0,0,0]
+# CHECK-NEXT: -      -      -      -      -      -     4.00   v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 op_sel_hi:[0,0,0]
+# CHECK-NEXT: -      -      -      -      -      -     4.00   v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[4:11], v[0:3], v5, v5 op_sel_hi:[0,0,0] blgp:1
+# CHECK-NEXT: -      -      -      -      -      -     4.00   v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[4:9], v[0:3], v5, v5 op_sel_hi:[0,0,0] cbsz:2 blgp:2
+# CHECK-NEXT: -      -      -      -      -      -     8.00   v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:11], v[4:11], v[0:15], v5, v5 op_sel_hi:[0,0,0]
+# CHECK-NEXT: -      -      -      -      -      -     8.00   v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:11], v[0:15], v5, v5 op_sel_hi:[0,0,0] cbsz:2 blgp:1
+# CHECK-NEXT: -      -      -      -      -      -     8.00   v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[4:9], v[4:9], v[0:15], v5, v5 op_sel_hi:[0,0,0] cbsz:2 blgp:2
 # CHECK-NEXT: -      -      -      -      -      -     4.00   v_smfmac_f32_16x16x64_f16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1
 # CHECK-NEXT: -      -      -      -      -      -     8.00   v_smfmac_f32_32x32x32_f16 v[10:25], a[2:5], v[4:11], v3 cbsz:3 abid:1
 # CHECK-NEXT: -      -      -      -      -      -     4.00   v_smfmac_f32_16x16x64_bf16 v[10:13], a[2:5], v[4:11], v3 cbsz:3 abid:1

@@ -79,6 +79,10 @@ public:
     for (auto *N : this->Nodes)
       N->setSchedBundle(*this);
   }
+  /// Copy CTOR (unimplemented).
+  SchedBundle(const SchedBundle &Other) = delete;
+  /// Copy Assignment (unimplemented).
+  SchedBundle &operator=(const SchedBundle &Other) = delete;
   ~SchedBundle() {
     for (auto *N : this->Nodes)
       N->clearSchedBundle();

@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=51
 
 ! Check OpenMP 5.0 - 2.17.8 flush Construct
 ! Restriction -
@@ -27,7 +27,6 @@ use omp_lib
   !Only memory-order-clauses.
   if (omp_get_thread_num() == 1) THEN
     ! Not allowed clauses.
-    !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
     !$omp flush seq_cst
     !ERROR: RELAXED clause is not allowed on the FLUSH directive
     !$omp flush relaxed
@@ -41,7 +40,6 @@ use omp_lib
     !$omp flush acquire acquire
 
     ! Mix of allowed and not allowed.
-    !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
     !$omp flush seq_cst acquire
   END IF
 

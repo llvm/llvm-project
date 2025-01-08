@@ -143,6 +143,20 @@ void use() {
 }
 } // namespace this_is_captured
 
+namespace temporary_capturing_object {
+struct S {
+  void add(const int& x [[clang::lifetime_capture_by(this)]]);
+};
+
+void test() {
+  // We still give an warning even the capturing object is a temoprary.
+  // It is possible that the capturing object uses the captured object in its
+  // destructor.
+  S().add(1); // expected-warning {{object whose reference is captured}}
+  S{}.add(1); // expected-warning {{object whose reference is captured}}
+}
+} // namespace ignore_temporary_class_object
+
 // ****************************************************************************
 // Capture by Global and Unknown.
 // ****************************************************************************
@@ -411,3 +425,29 @@ void use() {
 }
 } // namespace with_span
 } // namespace inferred_capture_by
+
+namespace on_constructor {
+struct T {
+  T(const int& t [[clang::lifetime_capture_by(this)]]);
+};
+struct T2 {
+  T2(const int& t [[clang::lifetime_capture_by(x)]], int& x);
+};
+struct T3 {
+  T3(const T& t [[clang::lifetime_capture_by(this)]]);
+};
+
+int foo(const T& t);
+int bar(const T& t[[clang::lifetimebound]]);
+
+void test() {
+  auto x = foo(T(1)); // OK. no diagnosic
+  T(1); // OK. no diagnostic
+  T t(1); // expected-warning {{temporary whose address is used}}
+  auto y = bar(T(1)); // expected-warning {{temporary whose address is used}}
+  T3 t3(T(1)); // expected-warning {{temporary whose address is used}}
+    
+  int a;
+  T2(1, a); // expected-warning {{object whose reference is captured by}}
+}
+} // namespace on_constructor

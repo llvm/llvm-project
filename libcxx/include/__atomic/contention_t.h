@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___ATOMIC_CONTENTION_T_H
 #define _LIBCPP___ATOMIC_CONTENTION_T_H
 
-#include <__atomic/cxx_atomic_impl.h>
+#include <__atomic/support.h>
 #include <__config>
 #include <cstdint>
 

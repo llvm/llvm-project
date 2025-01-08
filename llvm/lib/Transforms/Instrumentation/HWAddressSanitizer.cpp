@@ -192,7 +192,7 @@ static cl::opt<bool>
                    cl::Hidden);
 
 static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                          cl::desc("Hot percentile cuttoff."));
+                                          cl::desc("Hot percentile cutoff."));
 
 static cl::opt<float>
     ClRandomSkipRate("hwasan-random-rate",

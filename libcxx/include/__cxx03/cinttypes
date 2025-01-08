@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CINTTYPES
-#define _LIBCPP_CINTTYPES
+#ifndef _LIBCPP___CXX03_CINTTYPES
+#define _LIBCPP___CXX03_CINTTYPES
 
 /*
     cinttypes synopsis
@@ -243,7 +243,7 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 
 #include <__cxx03/inttypes.h>
 
-#ifndef _LIBCPP_INTTYPES_H
+#ifndef _LIBCPP___CXX03_INTTYPES_H
 #   error <cinttypes> tried including <inttypes.h> but didn't find libc++'s <inttypes.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -267,4 +267,4 @@ using ::wcstoumax _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CINTTYPES
+#endif // _LIBCPP___CXX03_CINTTYPES

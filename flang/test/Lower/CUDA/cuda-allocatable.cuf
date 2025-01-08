@@ -196,3 +196,30 @@ end subroutine
 ! CHECK: %[[BOX:.*]] = fir.load %[[A]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[BOXADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 ! CHECK: fir.freemem %[[BOXADDR]] : !fir.heap<!fir.array<?xf32>>
+
+subroutine setpinned()
+  integer, allocatable :: i(:)
+  logical :: plog
+  allocate(i(10), pinned=plog)
+end
+
+! CHECK-LABEL: func.func @_QPsetpinned()  
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedEplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>
+
+subroutine setpinnedpointer()
+  integer, pointer :: i(:)
+  logical :: plog
+  allocate(i(10), pinned=plog)
+end
+
+! CHECK-LABEL: func.func @_QPsetpinnedpointer()
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedpointerEplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedpointerEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: fir.call @_FortranAPointerAllocate
+! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>

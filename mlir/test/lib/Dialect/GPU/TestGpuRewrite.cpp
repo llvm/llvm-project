@@ -38,7 +38,7 @@ struct TestGpuRewritePass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateGpuRewritePatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -85,7 +85,7 @@ struct TestGpuSubgroupReduceLoweringPass
           patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);
     }
 
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 } // namespace

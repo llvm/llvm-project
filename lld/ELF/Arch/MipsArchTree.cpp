@@ -72,24 +72,23 @@ static void checkFlags(Ctx &ctx, ArrayRef<FileFlags> files) {
 
   for (const FileFlags &f : files) {
     if (ctx.arg.is64 && f.flags & EF_MIPS_MICROMIPS)
-      ErrAlways(ctx) << f.file << ": microMIPS 64-bit is not supported";
+      Err(ctx) << f.file << ": microMIPS 64-bit is not supported";
 
     uint32_t abi2 = f.flags & (EF_MIPS_ABI | EF_MIPS_ABI2);
     if (abi != abi2)
-      ErrAlways(ctx) << f.file << ": ABI '" << getAbiName(abi2)
-                     << "' is incompatible with target ABI '" << getAbiName(abi)
-                     << "'";
+      Err(ctx) << f.file << ": ABI '" << getAbiName(abi2)
+               << "' is incompatible with target ABI '" << getAbiName(abi)
+               << "'";
 
     bool nan2 = f.flags & EF_MIPS_NAN2008;
     if (nan != nan2)
-      ErrAlways(ctx) << f.file << ": -mnan=" << getNanName(nan2)
-                     << " is incompatible with target -mnan="
-                     << getNanName(nan);
+      Err(ctx) << f.file << ": -mnan=" << getNanName(nan2)
+               << " is incompatible with target -mnan=" << getNanName(nan);
 
     bool fp2 = f.flags & EF_MIPS_FP64;
     if (fp != fp2)
-      ErrAlways(ctx) << f.file << ": -mfp" << getFpName(fp2)
-                     << " is incompatible with target -mfp" << getFpName(fp);
+      Err(ctx) << f.file << ": -mfp" << getFpName(fp2)
+               << " is incompatible with target -mfp" << getFpName(fp);
   }
 }
 
@@ -284,9 +283,9 @@ static uint32_t getArchFlags(Ctx &ctx, ArrayRef<FileFlags> files) {
     if (isArchMatched(newFlags, ret))
       continue;
     if (!isArchMatched(ret, newFlags)) {
-      ErrAlways(ctx) << "incompatible target ISA:\n>>> " << files[0].file
-                     << ": " << getFullArchName(ret) << "\n>>> " << f.file
-                     << ": " << getFullArchName(newFlags);
+      Err(ctx) << "incompatible target ISA:\n>>> " << files[0].file << ": "
+               << getFullArchName(ret) << "\n>>> " << f.file << ": "
+               << getFullArchName(newFlags);
       return 0;
     }
     ret = newFlags;
@@ -350,15 +349,14 @@ static StringRef getMipsFpAbiName(uint8_t fpAbi) {
   }
 }
 
-uint8_t elf::getMipsFpAbiFlag(Ctx &ctx, uint8_t oldFlag, uint8_t newFlag,
-                              StringRef fileName) {
+uint8_t elf::getMipsFpAbiFlag(Ctx &ctx, InputFile *file, uint8_t oldFlag,
+                              uint8_t newFlag) {
   if (compareMipsFpAbi(newFlag, oldFlag) >= 0)
     return newFlag;
   if (compareMipsFpAbi(oldFlag, newFlag) < 0)
-    ErrAlways(ctx) << fileName << ": floating point ABI '"
-                   << getMipsFpAbiName(newFlag)
-                   << "' is incompatible with target floating point ABI '"
-                   << getMipsFpAbiName(oldFlag) << "'";
+    Err(ctx) << file << ": floating point ABI '" << getMipsFpAbiName(newFlag)
+             << "' is incompatible with target floating point ABI '"
+             << getMipsFpAbiName(oldFlag) << "'";
   return oldFlag;
 }
 

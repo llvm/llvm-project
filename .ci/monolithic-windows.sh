@@ -33,8 +33,11 @@ function at-exit {
 
   # If building fails there will be no results files.
   shopt -s nullglob
-  python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
-    "windows-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
+  if command -v buildkite-agent 2>&1 >/dev/null
+  then
+    python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
+      "windows-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
+  fi
 }
 trap at-exit EXIT
 

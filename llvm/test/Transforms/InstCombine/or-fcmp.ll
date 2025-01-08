@@ -54,7 +54,7 @@ define i1 @PR41069(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -87,7 +87,7 @@ define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069_commute(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -4608,11 +4608,9 @@ define i1 @intersect_fmf_4(double %a, double %b) {
 
 define i1 @or_fcmp_reassoc1(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @or_fcmp_reassoc1(
-; CHECK-NEXT:    [[OR:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt double [[A]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[OR]], [[CMP1:%.*]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = or i1 [[RETVAL]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -4623,11 +4621,9 @@ define i1 @or_fcmp_reassoc1(i1 %x, double %a, double %b) {
 
 define i1 @or_fcmp_reassoc2(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @or_fcmp_reassoc2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[X:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = or i1 [[RETVAL]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -4638,11 +4634,9 @@ define i1 @or_fcmp_reassoc2(i1 %x, double %a, double %b) {
 
 define i1 @or_fcmp_reassoc3(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @or_fcmp_reassoc3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = or i1 [[CMP1]], [[RETVAL]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b
@@ -4653,11 +4647,9 @@ define i1 @or_fcmp_reassoc3(i1 %x, double %a, double %b) {
 
 define i1 @or_fcmp_reassoc4(i1 %x, double %a, double %b) {
 ; CHECK-LABEL: @or_fcmp_reassoc4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[X:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[RETVAL1:%.*]] = or i1 [[CMP1]], [[RETVAL]]
-; CHECK-NEXT:    ret i1 [[RETVAL1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
 ;
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp ogt double %a, %b

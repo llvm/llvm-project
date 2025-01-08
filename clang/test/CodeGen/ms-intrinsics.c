@@ -221,6 +221,41 @@ void *test_InterlockedExchangePointer(void * volatile *Target, void *Value) {
 // CHECK:   ret ptr %[[RESULT]]
 // CHECK: }
 
+#if defined(__arm__) || defined(__aarch64__)
+void *test_InterlockedExchangePointer_acq(void * volatile *Target, void *Value) {
+  return _InterlockedExchangePointer_acq(Target, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedExchangePointer_acq(ptr {{[a-z_ ]*}}%Target, ptr {{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64:   %[[VALUE:[0-9]+]] = ptrtoint ptr %Value to [[iPTR:i[0-9]+]]
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = atomicrmw xchg ptr %Target, [[iPTR]] %[[VALUE]] acquire, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXCHANGE]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT]]
+// CHECK-ARM-ARM64: }
+
+void *test_InterlockedExchangePointer_nf(void * volatile *Target, void *Value) {
+  return _InterlockedExchangePointer_nf(Target, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedExchangePointer_nf(ptr {{[a-z_ ]*}}%Target, ptr {{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64:   %[[VALUE:[0-9]+]] = ptrtoint ptr %Value to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = atomicrmw xchg ptr %Target, [[iPTR]] %[[VALUE]] monotonic, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXCHANGE]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT]]
+// CHECK-ARM-ARM64: }
+
+void *test_InterlockedExchangePointer_rel(void * volatile *Target, void *Value) {
+  return _InterlockedExchangePointer_rel(Target, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedExchangePointer_rel(ptr {{[a-z_ ]*}}%Target, ptr {{[a-z_ ]*}}%Value){{.*}}{
+// CHECK-ARM-ARM64:   %[[VALUE:[0-9]+]] = ptrtoint ptr %Value to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = atomicrmw xchg ptr %Target, [[iPTR]] %[[VALUE]] release, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXCHANGE]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT]]
+// CHECK-ARM-ARM64: }
+#endif
+
 void *test_InterlockedCompareExchangePointer(void * volatile *Destination,
                                              void *Exchange, void *Comparand) {
   return _InterlockedCompareExchangePointer(Destination, Exchange, Comparand);
@@ -248,6 +283,37 @@ void *test_InterlockedCompareExchangePointer_nf(void * volatile *Destination,
 // CHECK:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
 // CHECK:   ret ptr %[[RESULT:[0-9]+]]
 // CHECK: }
+
+#if defined(__arm__) || defined(__aarch64__)
+void *test_InterlockedCompareExchangePointer_acq(void * volatile *Destination,
+                                             void *Exchange, void *Comparand) {
+  return _InterlockedCompareExchangePointer_acq(Destination, Exchange, Comparand);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedCompareExchangePointer_acq(ptr {{[a-z_ ]*}}%Destination, ptr {{[a-z_ ]*}}%Exchange, ptr {{[a-z_ ]*}}%Comparand){{.*}}{
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = ptrtoint ptr %Exchange to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[COMPARAND:[0-9]+]] = ptrtoint ptr %Comparand to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[XCHG:[0-9]+]] = cmpxchg volatile ptr %[[DEST:.+]], [[iPTR]] %[[COMPARAND:[0-9]+]], [[iPTR]] %[[EXCHANGE:[0-9]+]] acquire acquire, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[EXTRACT:[0-9]+]] = extractvalue { [[iPTR]], i1 } %[[XCHG]], 0
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT:[0-9]+]]
+// CHECK-ARM-ARM64: }
+
+
+void *test_InterlockedCompareExchangePointer_rel(void * volatile *Destination,
+                                             void *Exchange, void *Comparand) {
+  return _InterlockedCompareExchangePointer_rel(Destination, Exchange, Comparand);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}ptr @test_InterlockedCompareExchangePointer_rel(ptr {{[a-z_ ]*}}%Destination, ptr {{[a-z_ ]*}}%Exchange, ptr {{[a-z_ ]*}}%Comparand){{.*}}{
+// CHECK-ARM-ARM64:   %[[EXCHANGE:[0-9]+]] = ptrtoint ptr %Exchange to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[COMPARAND:[0-9]+]] = ptrtoint ptr %Comparand to [[iPTR]]
+// CHECK-ARM-ARM64:   %[[XCHG:[0-9]+]] = cmpxchg volatile ptr %[[DEST:.+]], [[iPTR]] %[[COMPARAND:[0-9]+]], [[iPTR]] %[[EXCHANGE:[0-9]+]] release monotonic, align {{4|8}}
+// CHECK-ARM-ARM64:   %[[EXTRACT:[0-9]+]] = extractvalue { [[iPTR]], i1 } %[[XCHG]], 0
+// CHECK-ARM-ARM64:   %[[RESULT:[0-9]+]] = inttoptr [[iPTR]] %[[EXTRACT]] to ptr
+// CHECK-ARM-ARM64:   ret ptr %[[RESULT:[0-9]+]]
+// CHECK-ARM-ARM64: }
+#endif
 
 char test_InterlockedExchange8(char volatile *value, char mask) {
   return _InterlockedExchange8(value, mask);

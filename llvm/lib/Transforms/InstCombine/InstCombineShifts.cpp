@@ -427,7 +427,8 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
-  if (Constant *CUI = dyn_cast<Constant>(Op1))
+  Constant *CUI;
+  if (match(Op1, m_ImmConstant(CUI)))
     if (Instruction *Res = FoldShiftByConstant(Op0, CUI, I))
       return Res;
 

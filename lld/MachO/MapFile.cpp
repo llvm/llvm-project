@@ -161,6 +161,20 @@ static uint64_t getSymSizeForMap(Defined *sym) {
   return sym->size;
 }
 
+// Merges two vectors of input sections in order of their outSecOff values.
+// This approach creates a new (temporary) vector which is not ideal but the
+// ideal approach leads to a lot of code duplication.
+static std::vector<ConcatInputSection *>
+mergeOrderedInputs(ArrayRef<ConcatInputSection *> inputs1,
+                   ArrayRef<ConcatInputSection *> inputs2) {
+  std::vector<ConcatInputSection *> vec(inputs1.size() + inputs2.size());
+  std::merge(inputs1.begin(), inputs1.end(), inputs2.begin(), inputs2.end(),
+             vec.begin(), [](ConcatInputSection *a, ConcatInputSection *b) {
+               return a->outSecOff < b->outSecOff;
+             });
+  return vec;
+}
+
 void macho::writeMapFile() {
   if (config->mapFile.empty())
     return;
@@ -220,7 +234,11 @@ void macho::writeMapFile() {
   os << "# Address\tSize    \tFile  Name\n";
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
-      if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
+      if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
+        auto inputsAndThunks =
+            mergeOrderedInputs(textOsec->inputs, textOsec->getThunks());
+        printIsecArrSyms(inputsAndThunks);
+      } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);

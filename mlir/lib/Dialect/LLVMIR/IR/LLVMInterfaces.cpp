@@ -99,10 +99,9 @@ SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
 }
 
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
-  return llvm::to_vector(
-      llvm::make_filter_range(getArgOperands(), [](Value arg) {
-        return isa<LLVMPointerType>(arg.getType());
-      }));
+  return llvm::filter_to_vector(getArgOperands(), [](Value arg) {
+    return isa<LLVMPointerType>(arg.getType());
+  });
 }
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"

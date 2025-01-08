@@ -31,6 +31,13 @@
 # CHECK-NEXT:   .LBB0_1:
 # CHECK-LABEL:  addl    %esi, %edx
 
+## Second function in this file: test that we don't crash when having trailing
+## empty blocks and no location for a prologue. Test that a .loc is produced,
+## with an implicit-not check for there being no prologue_end.
+#
+# CHECK-LABEL: f:
+# CHECK: .loc    0 1234 0
+
  
 --- |
   ; ModuleID = 'out2.ll'
@@ -66,6 +73,17 @@
     ret i32 0, !dbg !17
   }
   
+  define void @f() !dbg !18 {
+  entry:
+    %0 = call ptr @llvm.returnaddress(i32 0)
+    br label %do.body
+
+  do.body:
+    unreachable
+  }
+
+  declare ptr @llvm.returnaddress(i32 immarg)
+
   !llvm.dbg.cu = !{!2}
   !llvm.module.flags = !{!6, !7}
   !llvm.ident = !{!8}
@@ -88,6 +106,7 @@
   !15 = distinct !DILexicalBlock(scope: !9, file: !3, line: 4, column: 15)
   !16 = !DILocation(line: 6, column: 9, scope: !15)
   !17 = !DILocation(line: 8, column: 3, scope: !9)
+  !18 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 37, type: !10, scopeLine: 1234, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2)
 
 ...
 ---
@@ -130,5 +149,35 @@ body:             |
     MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $ecx, debug-location !14 :: (store (s32) into @glob)
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !17
     RET64 $eax, debug-location !17
+
+...
+---
+name:            f
+alignment:       16
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+tracksDebugUserValues: true
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    1
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_register $rbp
+
+  bb.1.do.body:
 
 ...

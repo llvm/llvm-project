@@ -54,6 +54,9 @@ enum {
   MO_DESC64_PC_LO,
   MO_DESC_LD,
   MO_DESC_CALL,
+  MO_LE_HI_R,
+  MO_LE_ADD_R,
+  MO_LE_LO_R,
   // TODO: Add more flags.
 };
 

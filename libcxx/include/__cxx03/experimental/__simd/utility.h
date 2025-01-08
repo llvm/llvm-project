@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_UTILITY_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_UTILITY_H
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL___SIMD_UTILITY_H
+#define _LIBCPP___CXX03_EXPERIMENTAL___SIMD_UTILITY_H
 
 #include <__cxx03/__type_traits/is_arithmetic.h>
 #include <__cxx03/__type_traits/is_const.h>
@@ -100,4 +100,4 @@ _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_UTILITY_H
+#endif // _LIBCPP___CXX03_EXPERIMENTAL___SIMD_UTILITY_H

@@ -41,7 +41,7 @@ INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(LiveRegMatrixWrapperLegacy, "liveregmatrix",
-                    "Live Register Matrix", false, false)
+                    "Live Register Matrix", false, true)
 
 void LiveRegMatrixWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -66,7 +66,7 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
     Queries.reset(new LiveIntervalUnion::Query[NumRegUnits]);
-  Matrix.init(LIUAlloc, NumRegUnits);
+  Matrix.init(*LIUAlloc, NumRegUnits);
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();

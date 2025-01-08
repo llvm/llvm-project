@@ -39,12 +39,6 @@ public:
             ObjLinkingLayer, AnonymousPtrCreator, PtrJumpStubCreator));
   }
 
-  void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
-                               SymbolMap InitialDests) override;
-
-  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
-
-private:
   JITLinkRedirectableSymbolManager(
       ObjectLinkingLayer &ObjLinkingLayer,
       jitlink::AnonymousPointerCreator &AnonymousPtrCreator,
@@ -53,6 +47,14 @@ private:
         AnonymousPtrCreator(std::move(AnonymousPtrCreator)),
         PtrJumpStubCreator(std::move(PtrJumpStubCreator)) {}
 
+  ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
+
+  void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
+                               SymbolMap InitialDests) override;
+
+  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
+
+private:
   ObjectLinkingLayer &ObjLinkingLayer;
   jitlink::AnonymousPointerCreator AnonymousPtrCreator;
   jitlink::PointerJumpStubCreator PtrJumpStubCreator;

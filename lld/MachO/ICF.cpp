@@ -115,16 +115,16 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
-    if (ra.referent.is<Symbol *>() != rb.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
 
     InputSection *isecA, *isecB;
 
     uint64_t valueA = 0;
     uint64_t valueB = 0;
-    if (ra.referent.is<Symbol *>()) {
-      const auto *sa = ra.referent.get<Symbol *>();
-      const auto *sb = rb.referent.get<Symbol *>();
+    if (isa<Symbol *>(ra.referent)) {
+      const auto *sa = cast<Symbol *>(ra.referent);
+      const auto *sb = cast<Symbol *>(rb.referent);
       if (sa->kind() != sb->kind())
         return false;
       // ICF runs before Undefineds are treated (and potentially converted into
@@ -143,8 +143,8 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       isecB = db->isec();
       valueB = db->value;
     } else {
-      isecA = ra.referent.get<InputSection *>();
-      isecB = rb.referent.get<InputSection *>();
+      isecA = cast<InputSection *>(ra.referent);
+      isecB = cast<InputSection *>(rb.referent);
     }
 
     // Typically, we should not encounter sections marked with `keepUnique` at
@@ -167,7 +167,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return ra.addend == rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    if (ra.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent))
       // For symbol relocs, we compare the contents at the symbol address. We
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
@@ -195,12 +195,12 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     if (ra.referent == rb.referent)
       return true;
     const ConcatInputSection *isecA, *isecB;
-    if (ra.referent.is<Symbol *>()) {
+    if (isa<Symbol *>(ra.referent)) {
       // Matching DylibSymbols are already filtered out by the
       // identical-referent check above. Non-matching DylibSymbols were filtered
       // out in equalsConstant(). So we can safely cast to Defined here.
-      const auto *da = cast<Defined>(ra.referent.get<Symbol *>());
-      const auto *db = cast<Defined>(rb.referent.get<Symbol *>());
+      const auto *da = cast<Defined>(cast<Symbol *>(ra.referent));
+      const auto *db = cast<Defined>(cast<Symbol *>(rb.referent));
       if (da->isAbsolute())
         return true;
       isecA = dyn_cast<ConcatInputSection>(da->isec());
@@ -208,8 +208,8 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
         return true; // literal sections were checked in equalsConstant.
       isecB = cast<ConcatInputSection>(db->isec());
     } else {
-      const auto *sa = ra.referent.get<InputSection *>();
-      const auto *sb = rb.referent.get<InputSection *>();
+      const auto *sa = cast<InputSection *>(ra.referent);
+      const auto *sb = cast<InputSection *>(rb.referent);
       isecA = dyn_cast<ConcatInputSection>(sa);
       if (!isecA)
         return true;

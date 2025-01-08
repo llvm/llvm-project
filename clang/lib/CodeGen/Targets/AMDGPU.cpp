@@ -537,7 +537,11 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     break;
   }
 
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+  // OpenCL assumes by default that atomic scopes are per-address space for
+  // non-sequentially consistent operations.
+  if (Scope >= SyncScope::OpenCLWorkGroup &&
+      Scope <= SyncScope::OpenCLSubGroup &&
+      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
     if (!Name.empty())
       Name = Twine(Twine(Name) + Twine("-")).str();
 

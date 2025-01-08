@@ -59,7 +59,7 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       config.followEquivalentOnly = true;
       config.alwaysIncludeLeaves = false;
       SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
-          in->get(), /*condition=*/
+          in, /*condition=*/
           [&](Value val) {
             return val.getDefiningOp<tensor::EmptyOp>() &&
                    val.getType() == in->get().getType();

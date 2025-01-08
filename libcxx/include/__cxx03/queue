@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_QUEUE
-#define _LIBCPP_QUEUE
+#ifndef _LIBCPP___CXX03_QUEUE
+#define _LIBCPP___CXX03_QUEUE
 
 /*
     queue synopsis
@@ -953,4 +953,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_QUEUE
+#endif // _LIBCPP___CXX03_QUEUE

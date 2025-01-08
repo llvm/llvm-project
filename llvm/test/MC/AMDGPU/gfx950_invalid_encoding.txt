@@ -1,4 +1,4 @@
-# RUN: llvm-mc -disassemble -arch=amdgcn -mcpu=gfx950 -show-encoding %s 2>&1 | FileCheck --implicit-check-not=warning: --check-prefix=GFX950 %s
+# RUN: llvm-mc -disassemble -triple=amdgcn -mcpu=gfx950 -show-encoding %s 2>&1 | FileCheck --implicit-check-not=warning: --check-prefix=GFX950 %s
 
 # GFX950: warning: invalid instruction encoding
 0x00,0x80,0xbe,0xd3,0x02,0x09,0x0a,0x04

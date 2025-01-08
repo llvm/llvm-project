@@ -780,6 +780,32 @@ define i1 @lshr_nonzero_ult(i32 %x) {
   ret i1 %cmp
 }
 
+define i1 @lshr_nonzero_ugt(i32 %x) {
+; CHECK-LABEL: @lshr_nonzero_ugt(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_ne_0 = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %x_ne_0)
+  %lhs = lshr i32 %x, 1
+  %cmp = icmp ugt i32 %lhs, %x
+  ret i1 %cmp
+}
+
+define i1 @lshr_nonzero_ule(i32 %x) {
+; CHECK-LABEL: @lshr_nonzero_ule(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
+; CHECK-NEXT:    ret i1 true
+;
+  %x_ne_0 = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %x_ne_0)
+  %lhs = lshr i32 %x, 1
+  %cmp = icmp ule i32 %lhs, %x
+  ret i1 %cmp
+}
+
 ; Negative test - unknown shift amount
 define i1 @lshr_nonzero_neg_unknown(i32 %x, i32 %c) {
 ; CHECK-LABEL: @lshr_nonzero_neg_unknown(
@@ -3241,7 +3267,7 @@ define i1 @globals_inequal() {
 ; TODO: Never equal
 define i1 @globals_offset_inequal() {
 ; CHECK-LABEL: @globals_offset_inequal(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @A, i32 1), getelementptr inbounds (i8, ptr @B, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds nuw (i8, ptr @A, i32 1), getelementptr inbounds nuw (i8, ptr @B, i32 1)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.off = getelementptr i8, ptr @A, i32 1

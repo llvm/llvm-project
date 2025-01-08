@@ -423,6 +423,17 @@ define void @memset_offset(ptr %p) {
   ret void
 }
 
+define void @memset_neg(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @memset_neg(
+; CHECK-SAME: ptr nocapture writeonly [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 -1, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset(ptr %p, i8 2, i64 -1, i1 false)
+  ret void
+}
+
 define void @memset_volatile(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_volatile(

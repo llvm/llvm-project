@@ -162,7 +162,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                          MCRegister PhysReg) const {
-  return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
+  return !MF.getSubtarget().isRegisterReservedByUser(PhysReg);
 }
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
@@ -183,6 +183,23 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = ST.getInstrInfo();
+
+  // Optimize compile time offset case
+  if (Offset.getScalable()) {
+    if (auto VLEN = ST.getRealVLen()) {
+      // 1. Multiply the number of v-slots by the (constant) length of register
+      const int64_t VLENB = *VLEN / 8;
+      assert(Offset.getScalable() % (RISCV::RVVBitsPerBlock / 8) == 0 &&
+             "Reserve the stack by the multiple of one vector size.");
+      const int64_t NumOfVReg = Offset.getScalable() / 8;
+      const int64_t FixedOffset = NumOfVReg * VLENB;
+      if (!isInt<32>(FixedOffset)) {
+        report_fatal_error(
+            "Frame size outside of the signed 32-bit range not supported");
+      }
+      Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
+    }
+  }
 
   bool KillSrcReg = false;
 
@@ -456,7 +473,6 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -466,19 +482,6 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   bool IsRVVSpill = RISCV::isRVVSpill(MI);
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
-
-  if (Offset.getScalable() &&
-      ST.getRealMinVLen() == ST.getRealMaxVLen()) {
-    // For an exact VLEN value, scalable offsets become constant and thus
-    // can be converted entirely into fixed offsets.
-    int64_t FixedValue = Offset.getFixed();
-    int64_t ScalableValue = Offset.getScalable();
-    assert(ScalableValue % 8 == 0 &&
-           "Scalable offset is not a multiple of a single vector size.");
-    int64_t NumOfVReg = ScalableValue / 8;
-    int64_t VLENB = ST.getRealMinVLen() / 8;
-    Offset = StackOffset::getFixed(FixedValue + NumOfVReg * VLENB);
-  }
 
   if (!isInt<32>(Offset.getFixed())) {
     report_fatal_error(

@@ -30,6 +30,12 @@ struct vector {
 
   void insert(iterator, T&&);
 };
+
+template <typename Key, typename Value>
+struct map {
+  Value& operator[](Key&& p);
+  Value& operator[](const Key& p);
+};
 } // namespace std
 
 // CHECK-NOT:   LifetimeCaptureByAttr
@@ -37,67 +43,53 @@ struct vector {
 struct [[gsl::Pointer()]] View {};
 std::vector<View> views;
 // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
-// CHECK:       TemplateArgument type 'View'
-// CHECK-NOT:   LifetimeCaptureByAttr
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (const View &)'
-// CHECK:           ParmVarDecl {{.*}} 'const View &'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK-NOT:   LifetimeCaptureByAttr
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'const View &'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (View &&)'
-// CHECK:           ParmVarDecl {{.*}} 'View &&'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'View &&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 // CHECK:       CXXMethodDecl {{.*}} insert 'void (iterator, View &&)'
-// CHECK:           ParmVarDecl {{.*}} 'iterator'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK:           ParmVarDecl {{.*}} 'View &&'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK-NOT:   LifetimeCaptureByAttr
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'iterator'
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'View &&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 template <class T> struct [[gsl::Pointer()]] ViewTemplate {};
 std::vector<ViewTemplate<int>> templated_views;
-// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
-// CHECK:       TemplateArgument type 'ViewTemplate<int>'
-// CHECK-NOT:   LifetimeCaptureByAttr
+// CHECK:       ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (const ViewTemplate<int> &)'
-// CHECK:           ParmVarDecl {{.*}} 'const ViewTemplate<int> &'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'const ViewTemplate<int> &'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 // CHECK-NOT:   LifetimeCaptureByAttr
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (ViewTemplate<int> &&)'
-// CHECK:           ParmVarDecl {{.*}} 'ViewTemplate<int> &&'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'ViewTemplate<int> &&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 // CHECK:       CXXMethodDecl {{.*}} insert 'void (iterator, ViewTemplate<int> &&)'
-// CHECK:           ParmVarDecl {{.*}} 'iterator'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK:           ParmVarDecl {{.*}} 'ViewTemplate<int> &&'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK-NOT:   LifetimeCaptureByAttr
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'iterator'
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'ViewTemplate<int> &&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 std::vector<int*> pointers;
 // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
-// CHECK:       TemplateArgument type 'int *'
-// CHECK-NOT:   LifetimeCaptureByAttr
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (int *const &)'
-// CHECK:           ParmVarDecl {{.*}} 'int *const &'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK-NOT:   LifetimeCaptureByAttr
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'int *const &'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (int *&&)'
-// CHECK:           ParmVarDecl {{.*}} 'int *&&'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'int *&&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 // CHECK:       CXXMethodDecl {{.*}} insert 'void (iterator, int *&&)'
-// CHECK:           ParmVarDecl {{.*}} 'iterator'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK:           ParmVarDecl {{.*}} 'int *&&'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
-// CHECK-NOT:   LifetimeCaptureByAttr
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'iterator'
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'int *&&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 std::vector<int> ints;
 // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
@@ -110,6 +102,16 @@ std::vector<int> ints;
 // CHECK-NOT:   LifetimeCaptureByAttr
 
 // CHECK:       CXXMethodDecl {{.*}} insert 'void (iterator, int &&)'
-// CHECK:           ParmVarDecl {{.*}} 'iterator'
-// CHECK:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'iterator'
+// CHECK-NEXT:           ParmVarDecl {{.*}} 'int &&'
 // CHECK-NOT:   LifetimeCaptureByAttr
+
+std::map<View, int> map;
+// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct map definition implicit_instantiation
+
+// CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(View &&)' implicit_instantiation
+// CHECK-NEXT:           ParmVarDecl {{.*}} p 'View &&'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(const View &)' implicit_instantiation
+// CHECK-NEXT:           ParmVarDecl {{.*}} p 'const View &'
+// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit

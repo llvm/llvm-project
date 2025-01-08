@@ -30,8 +30,8 @@ test(
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VERSION
-#define _LIBCPP_VERSION
+#ifndef _LIBCPP_VERSIONH
+#define _LIBCPP_VERSIONH
 
 #include <__config>
 
@@ -69,6 +69,6 @@ test(
 // define __cpp_lib_missing_FTM_in_older_standard 2026L
 #endif // _LIBCPP_STD_VER >= 26
 
-#endif // _LIBCPP_VERSION
+#endif // _LIBCPP_VERSIONH
 """,
 )

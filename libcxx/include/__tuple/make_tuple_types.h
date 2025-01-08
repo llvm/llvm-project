@@ -65,12 +65,12 @@ struct __make_tuple_types {
 
 template <class... _Types, size_t _Ep>
 struct __make_tuple_types<tuple<_Types...>, _Ep, 0, true> {
-  typedef _LIBCPP_NODEBUG __tuple_types<_Types...> type;
+  using type _LIBCPP_NODEBUG = __tuple_types<_Types...>;
 };
 
 template <class... _Types, size_t _Ep>
 struct __make_tuple_types<__tuple_types<_Types...>, _Ep, 0, true> {
-  typedef _LIBCPP_NODEBUG __tuple_types<_Types...> type;
+  using type _LIBCPP_NODEBUG = __tuple_types<_Types...>;
 };
 
 _LIBCPP_END_NAMESPACE_STD

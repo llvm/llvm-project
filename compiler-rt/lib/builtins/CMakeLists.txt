@@ -296,6 +296,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendhfxf2.c
   extendxftf2.c
   fixxfdi.c
   fixxfti.c
@@ -309,6 +310,7 @@ set(x86_80_BIT_SOURCES
   mulxc3.c
   powixf2.c
   trunctfxf2.c
+  truncxfhf2.c
 )
 
 if (NOT MSVC)
@@ -571,9 +573,15 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
+set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
+
 if (COMPILER_RT_HAS_AARCH64_SME)
-  if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-init.c aarch64/sme-abi-vg.c aarch64/sme-libc-routines.c)
+  if (APPLE)
+    list(APPEND aarch64_SOURCES aarch64/arm_apple_sme_abi.s)
+    set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
+    message(STATUS "AArch64 Apple SME ABI routines enabled")
+  elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-assert.c aarch64/sme-libc-routines.c)
     message(STATUS "AArch64 SME ABI routines enabled")
     set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
   else()
@@ -841,6 +849,8 @@ else ()
 
   if(COMPILER_RT_DISABLE_AARCH64_FMV)
     list(APPEND BUILTIN_DEFS DISABLE_AARCH64_FMV)
+  elseif(COMPILER_RT_BAREMETAL_BUILD)
+    list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
@@ -849,9 +859,12 @@ else ()
     if (CAN_TARGET_${arch})
       cmake_push_check_state()
       # TODO: we should probably make most of the checks in builtin-config depend on the target flags.
-      message(STATUS "Performing additional configure checks with target flags: ${TARGET_${arch}_CFLAGS}")
       set(BUILTIN_CFLAGS_${arch} ${BUILTIN_CFLAGS})
-      list(APPEND CMAKE_REQUIRED_FLAGS ${TARGET_${arch}_CFLAGS} ${BUILTIN_CFLAGS_${arch}})
+      # CMAKE_REQUIRED_FLAGS must be a space separated string but unlike TARGET_${arch}_CFLAGS,
+      # BUILTIN_CFLAGS_${arch} is a CMake list, so we have to join it to create a valid command line.
+      list(JOIN BUILTIN_CFLAGS " " CMAKE_REQUIRED_FLAGS)
+      set(CMAKE_REQUIRED_FLAGS "${TARGET_${arch}_CFLAGS} ${BUILTIN_CFLAGS_${arch}}")
+      message(STATUS "Performing additional configure checks with target flags: ${CMAKE_REQUIRED_FLAGS}")
       # For ARM archs, exclude any VFP builtins if VFP is not supported
       if (${arch} MATCHES "^(arm|armhf|armv7|armv7s|armv7k|armv7m|armv7em|armv8m.main|armv8.1m.main)$")
         string(REPLACE ";" " " _TARGET_${arch}_CFLAGS "${TARGET_${arch}_CFLAGS}")

@@ -81,7 +81,7 @@ public:
 
         if (llvm::Error Err = Repls.add(Repl)) {
           llvm::errs() << "Error applying replacement " << Repl.toString()
-                       << ": " << Err << "\n";
+                       << ": " << llvm::toString(std::move(Err)) << "\n";
         }
       }
     };

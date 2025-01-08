@@ -60,6 +60,10 @@ public:
     // clear() before deleting the Recycler.
     assert(!FreeList && "Non-empty recycler deleted!");
   }
+  Recycler(const Recycler &) = delete;
+  Recycler(Recycler &&Other)
+      : FreeList(std::exchange(Other.FreeList, nullptr)) {}
+  Recycler() = default;
 
   /// clear - Release all the tracked allocations to the allocator. The
   /// recycler must be free of any tracked allocations before being

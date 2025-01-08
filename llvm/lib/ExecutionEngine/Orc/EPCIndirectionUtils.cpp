@@ -110,7 +110,7 @@ Error EPCTrampolinePool::grow() {
   auto &EPC = EPCIU.getExecutorProcessControl();
   auto PageSize = EPC.getPageSize();
   auto Alloc = SimpleSegmentAlloc::Create(
-      EPC.getMemMgr(), nullptr,
+      EPC.getMemMgr(), EPC.getSymbolStringPool(), nullptr,
       {{MemProt::Read | MemProt::Exec, {PageSize, Align(PageSize)}}});
   if (!Alloc)
     return Alloc.takeError();
@@ -294,10 +294,10 @@ EPCIndirectionUtils::writeResolverBlock(ExecutorAddr ReentryFnAddr,
   assert(ABI && "ABI can not be null");
   auto ResolverSize = ABI->getResolverCodeSize();
 
-  auto Alloc =
-      SimpleSegmentAlloc::Create(EPC.getMemMgr(), nullptr,
-                                 {{MemProt::Read | MemProt::Exec,
-                                   {ResolverSize, Align(EPC.getPageSize())}}});
+  auto Alloc = SimpleSegmentAlloc::Create(
+      EPC.getMemMgr(), EPC.getSymbolStringPool(), nullptr,
+      {{MemProt::Read | MemProt::Exec,
+        {ResolverSize, Align(EPC.getPageSize())}}});
 
   if (!Alloc)
     return Alloc.takeError();
@@ -363,7 +363,7 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto PtrProt = MemProt::Read | MemProt::Write;
 
     auto Alloc = SimpleSegmentAlloc::Create(
-        EPC.getMemMgr(), nullptr,
+        EPC.getMemMgr(), EPC.getSymbolStringPool(), nullptr,
         {{StubProt, {static_cast<size_t>(StubBytes), Align(PageSize)}},
          {PtrProt, {static_cast<size_t>(PtrBytes), Align(PageSize)}}});
 

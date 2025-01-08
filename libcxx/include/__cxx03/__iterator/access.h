@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ACCESS_H
-#define _LIBCPP___ITERATOR_ACCESS_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ACCESS_H
+#define _LIBCPP___CXX03___ITERATOR_ACCESS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -92,4 +92,4 @@ _LIBCPP_HIDE_FROM_ABI typename _Cp::const_iterator end(const _Cp& __c) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ACCESS_H
+#endif // _LIBCPP___CXX03___ITERATOR_ACCESS_H

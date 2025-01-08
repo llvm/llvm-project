@@ -149,7 +149,7 @@ static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
 static cl::opt<bool>
     TailDupPlacement("tail-dup-placement",
                      cl::desc("Perform tail duplication during placement. "
-                              "Creates more fallthrough opportunites in "
+                              "Creates more fallthrough opportunities in "
                               "outline branches."),
                      cl::init(true), cl::Hidden);
 

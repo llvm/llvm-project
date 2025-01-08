@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CWCTYPE
-#define _LIBCPP_CWCTYPE
+#ifndef _LIBCPP___CXX03_CWCTYPE
+#define _LIBCPP___CXX03_CWCTYPE
 
 /*
     cwctype synopsis
@@ -54,7 +54,7 @@ wctrans_t wctrans(const char* property);
 
 #include <__cxx03/wctype.h>
 
-#ifndef _LIBCPP_WCTYPE_H
+#ifndef _LIBCPP___CXX03_WCTYPE_H
 #   error <cwctype> tried including <wctype.h> but didn't find libc++'s <wctype.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -94,4 +94,4 @@ using ::wctrans _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CWCTYPE
+#endif // _LIBCPP___CXX03_CWCTYPE

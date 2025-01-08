@@ -59,7 +59,7 @@
 ; CHECK: }
 
 ; Function Attrs: nounwind
-define void @_Z5saxpyifPfS_(i32 %n, float %a, ptr nocapture readonly %x, ptr nocapture %y) local_unnamed_addr #0 !dbg !566 {
+define ptx_kernel void @_Z5saxpyifPfS_(i32 %n, float %a, ptr nocapture readonly %x, ptr nocapture %y) local_unnamed_addr #0 !dbg !566 {
 entry:
   call void @llvm.dbg.value(metadata i32 %n, metadata !570, metadata !DIExpression()), !dbg !575
   call void @llvm.dbg.value(metadata float %a, metadata !571, metadata !DIExpression()), !dbg !576
@@ -8496,7 +8496,6 @@ attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
-!nvvm.annotations = !{!555, !556, !557, !556, !558, !558, !558, !558, !559, !559, !558}
 !llvm.module.flags = !{!560, !561, !562, !563}
 !llvm.ident = !{!564}
 !nvvm.internalize.after.link = !{}
@@ -9057,11 +9056,6 @@ attributes #3 = { nounwind }
 !552 = !DISubprogram(name: "tgammaf", linkageName: "_ZL7tgammaff", scope: !444, file: !444, line: 1592, type: !13, isLocal: true, isDefinition: false, flags: DIFlagPrototyped, isOptimized: true)
 !553 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !5, entity: !554, file: !445, line: 459)
 !554 = !DISubprogram(name: "truncf", linkageName: "_ZL6truncff", scope: !462, file: !462, line: 662, type: !13, isLocal: true, isDefinition: false, flags: DIFlagPrototyped, isOptimized: true)
-!555 = !{ptr @_Z5saxpyifPfS_, !"kernel", i32 1}
-!556 = !{null, !"align", i32 8}
-!557 = !{null, !"align", i32 8, !"align", i32 65544, !"align", i32 131080}
-!558 = !{null, !"align", i32 16}
-!559 = !{null, !"align", i32 16, !"align", i32 65552, !"align", i32 131088}
 !560 = !{i32 2, !"Dwarf Version", i32 2}
 !561 = !{i32 2, !"Debug Info Version", i32 3}
 !562 = !{i32 1, !"wchar_size", i32 4}

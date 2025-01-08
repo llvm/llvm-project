@@ -355,10 +355,12 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!SetBackdoorDriverOutputsFromEnvVars(TheDriver))
     return 1;
 
+  auto ExecuteCC1WithContext =
+      [&ToolContext](SmallVectorImpl<const char *> &ArgV) {
+        return ExecuteCC1Tool(ArgV, ToolContext);
+      };
   if (!UseNewCC1Process) {
-    TheDriver.CC1Main = [ToolContext](SmallVectorImpl<const char *> &ArgV) {
-      return ExecuteCC1Tool(ArgV, ToolContext);
-    };
+    TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
     llvm::CrashRecoveryContext::Enable();
   }

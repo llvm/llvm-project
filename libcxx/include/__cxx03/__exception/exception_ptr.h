@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
-#define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
+#ifndef _LIBCPP___CXX03___EXCEPTION_EXCEPTION_PTR_H
+#define _LIBCPP___CXX03___EXCEPTION_EXCEPTION_PTR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__exception/operations.h>
@@ -174,4 +174,4 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #endif // _LIBCPP_ABI_MICROSOFT
 } // namespace std
 
-#endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
+#endif // _LIBCPP___CXX03___EXCEPTION_EXCEPTION_PTR_H

@@ -74,7 +74,7 @@ run(testInvalidModule)
 
 def lowerToLLVM(module):
     pm = PassManager.parse(
-        "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)"
+        "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
     )
     pm.run(module.operation)
     return module
@@ -306,7 +306,7 @@ def testUnrankedMemRefWithOffsetCallback():
         log(arr)
 
     with Context():
-        # The module takes a subview of the argument memref, casts it to an unranked memref and 
+        # The module takes a subview of the argument memref, casts it to an unranked memref and
         # calls the callback with it.
         module = Module.parse(
             r"""

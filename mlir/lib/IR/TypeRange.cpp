@@ -32,7 +32,7 @@ TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
   else if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     this->base = operand;
   else
-    this->base = owner.get<const Value *>();
+    this->base = cast<const Value *>(owner);
 }
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.

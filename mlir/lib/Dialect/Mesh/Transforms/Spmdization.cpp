@@ -496,11 +496,9 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
               sourceShard.getLoc(),
               RankedTensorType::get(outShape,
                                     sourceShard.getType().getElementType()),
-              sourceShard, initOprnd, mesh.getSymName(),
+              initOprnd, mesh.getSymName(),
               MeshAxesArrayAttr::get(builder.getContext(),
                                      sourceSharding.getSplitAxes()),
-              sourceSharding.getDynamicHaloSizes(),
-              sourceSharding.getStaticHaloSizes(),
               targetSharding.getDynamicHaloSizes(),
               targetSharding.getStaticHaloSizes())
           .getResult();

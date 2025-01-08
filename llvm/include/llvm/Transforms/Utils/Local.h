@@ -412,6 +412,11 @@ Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
+/// DO NOT CALL EXTERNALLY.
+/// FIXME: https://github.com/llvm/llvm-project/issues/121495
+/// Once external callers of this function are removed, either inline into
+/// combineMetadataForCSE, or internalize and remove KnownIDs parameter.
+///
 /// Combine the metadata of two instructions so that K can replace J. Some
 /// metadata kinds can only be kept if K does not move, meaning it dominated
 /// J in the original IR.

@@ -149,6 +149,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FLDEXP:
   case ISD::ABDS:
   case ISD::ABDU:
@@ -6421,16 +6423,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N) {
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
 
   // Adjust mask based on new input vector length.
-  SmallVector<int, 16> NewMask;
+  SmallVector<int, 16> NewMask(WidenNumElts, -1);
   for (unsigned i = 0; i != NumElts; ++i) {
     int Idx = N->getMaskElt(i);
     if (Idx < (int)NumElts)
-      NewMask.push_back(Idx);
+      NewMask[i] = Idx;
     else
-      NewMask.push_back(Idx - NumElts + WidenNumElts);
+      NewMask[i] = Idx - NumElts + WidenNumElts;
   }
-  for (unsigned i = NumElts; i != WidenNumElts; ++i)
-    NewMask.push_back(-1);
   return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, NewMask);
 }
 
@@ -6478,12 +6478,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_REVERSE(SDNode *N) {
 
   // Use VECTOR_SHUFFLE to combine new vector from 'ReverseVal' for
   // fixed-vectors.
-  SmallVector<int, 16> Mask;
-  for (unsigned i = 0; i != VTNumElts; ++i) {
-    Mask.push_back(IdxVal + i);
-  }
-  for (unsigned i = VTNumElts; i != WidenNumElts; ++i)
-    Mask.push_back(-1);
+  SmallVector<int, 16> Mask(WidenNumElts, -1);
+  std::iota(Mask.begin(), Mask.begin() + VTNumElts, IdxVal);
 
   return DAG.getVectorShuffle(WidenVT, dl, ReverseVal, DAG.getUNDEF(WidenVT),
                               Mask);

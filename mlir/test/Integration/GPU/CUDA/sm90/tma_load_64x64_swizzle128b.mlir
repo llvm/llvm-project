@@ -109,7 +109,7 @@ module @mymod {
       
       // Step 6. First thread does TMA load
       scf.if %10 {
-        gpu.printf "[GPU] TMA SIZE %d\0A" %c32768 : index
+        gpu.printf "[GPU] TMA SIZE %d\0A", %c32768 : index
         nvgpu.tma.async.load %d_lhsTensorMap[%c0, %c0], %9[%c0] to %lhsShmem : !lhsTensorMap, !barrierType -> !shmemlhs
         nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9[%c0] to %rhsShmem1 : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1]>, 3>
         nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9[%c0] to %rhsShmem2 : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1], offset: 4096>, 3>
@@ -124,7 +124,7 @@ module @mymod {
 
       // Step 8. Print loaded data in 128b swizzled
       scf.if %10 {        
-        gpu.printf "===--- Matrix B ---=== %d \n" %c-1_i32 : i32
+        gpu.printf "===--- Matrix B ---=== %d \n", %c-1_i32 : i32
         scf.for %ii = %c0 to %c64 step %c1 {
           scf.for %j = %c0 to %c128 step %c1 {
             %lhs0 = memref.load %rhsShmem[%ii, %j] : !shmemrhs
@@ -133,7 +133,7 @@ module @mymod {
           }
           gpu.printf "%d\n" %c-1_i32 : i32
         }
-        gpu.printf "===----------------=== %d \n" %c-1_i32 : i32
+        gpu.printf "===----------------=== %d \n", %c-1_i32 : i32
       }
       gpu.barrier
       gpu.terminator

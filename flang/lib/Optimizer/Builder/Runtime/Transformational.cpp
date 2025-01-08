@@ -372,9 +372,12 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
   auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
   auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
 
+// Unsigned is treated as Integer when both operands are unsigned/integer
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
-  if (!func && aCat == TypeCategory::ACAT && aKind == AKIND &&                 \
-      bCat == TypeCategory::BCAT && bKind == BKIND) {                          \
+  if (!func && aKind == AKIND && bKind == BKIND &&                             \
+      ((aCat == TypeCategory::ACAT && bCat == TypeCategory::BCAT) ||           \
+       ((aCat == TypeCategory::Integer || aCat == TypeCategory::Unsigned) &&   \
+        (bCat == TypeCategory::Integer || bCat == TypeCategory::Unsigned)))) { \
     func =                                                                     \
         fir::runtime::getRuntimeFunc<ForcedMatmul##ACAT##AKIND##BCAT##BKIND>(  \
             loc, builder);                                                     \

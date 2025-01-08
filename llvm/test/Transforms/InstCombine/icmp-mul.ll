@@ -1464,3 +1464,107 @@ entry:
   %cmp = icmp slt i8 %mul1, %mul2
   ret i1 %cmp
 }
+
+define i1 @test_icmp_slt_mul_known_sgt(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_slt_mul_known_sgt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add nsw i64 %x, 1
+  %mul1 = mul nsw i64 %x, %z
+  %mul2 = mul nsw i64 %y, %z
+  %cmp = icmp slt i64 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_sle_mul_known_sgt(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_sle_mul_known_sgt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add nsw i64 %x, 1
+  %mul1 = mul nsw i64 %x, %z
+  %mul2 = mul nsw i64 %y, %z
+  %cmp = icmp sle i64 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_mul_known_slt(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_mul_known_slt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[Z:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add nsw i64 %x, 1
+  %mul1 = mul nsw i64 %x, %z
+  %mul2 = mul nsw i64 %y, %z
+  %cmp = icmp slt i64 %mul2, %mul1
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_slt_mul_known_sgt_commuted1(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_slt_mul_known_sgt_commuted1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add nsw i64 %x, 1
+  %mul1 = mul nsw i64 %z, %x
+  %mul2 = mul nsw i64 %y, %z
+  %cmp = icmp slt i64 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_slt_mul_known_sgt_commuted2(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_slt_mul_known_sgt_commuted2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Z:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add nsw i64 %x, 1
+  %mul1 = mul nsw i64 %x, %z
+  %mul2 = mul nsw i64 %z, %y
+  %cmp = icmp slt i64 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_slt_mul_unknown(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_slt_mul_unknown(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y:%.*]] = add i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i64 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Z]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add i64 %x, 1
+  %mul1 = mul nsw i64 %x, %z
+  %mul2 = mul nsw i64 %z, %y
+  %cmp = icmp slt i64 %mul1, %mul2
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_slt_mul_no_nsw(i64 %x, i64 %z) {
+; CHECK-LABEL: @test_icmp_slt_mul_no_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i64 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i64 [[Z]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %y = add nsw i64 %x, 1
+  %mul1 = mul i64 %x, %z
+  %mul2 = mul nsw i64 %z, %y
+  %cmp = icmp slt i64 %mul1, %mul2
+  ret i1 %cmp
+}

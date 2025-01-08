@@ -5129,7 +5129,8 @@ ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_MB::RESERVED_0 + Val;
   } else
-    return ParseStatus::Failure;
+    return Error(Parser.getTok().getLoc(),
+                 "expected an immediate or barrier type");
 
   Operands.push_back(
       ARMOperand::CreateMemBarrierOpt((ARM_MB::MemBOpt)Opt, S, *this));
@@ -5193,7 +5194,8 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_ISB::RESERVED_0 + Val;
   } else
-    return ParseStatus::Failure;
+    return Error(Parser.getTok().getLoc(),
+                 "expected an immediate or barrier type");
 
   Operands.push_back(ARMOperand::CreateInstSyncBarrierOpt(
       (ARM_ISB::InstSyncBOpt)Opt, S, *this));

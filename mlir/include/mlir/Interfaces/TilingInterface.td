@@ -66,7 +66,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*desc=*/[{
           Returns a list of iterator types that describe the number of loops.
         }],
-        /*retType=*/"::mlir::SmallVector<utils::IteratorType>",
+        /*retType=*/"::mlir::SmallVector<::mlir::utils::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
         /*args=*/(ins),
         /*methodBody=*/"",
@@ -353,8 +353,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*methodName=*/"generateScalarImplementation",
         /*args=*/(ins
             "::mlir::OpBuilder &":$b,
-            "Location ":$loc,
-            "ValueRange ":$ivs),
+            "::mlir::Location ":$loc,
+            "::mlir::ValueRange ":$ivs),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -423,6 +423,28 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
             "Location ":$loc,
             "ValueRange":$partialReduce,
             "::mlir::ArrayRef<int>":$reductionDim),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to return the position of the partial result tile computed by
+          the tiled operation. This is same as
+          TilingInterface:::getResultTilePosition, but determines the result
+          tile position for partial reduction.
+        }],
+        /*retType=*/"::llvm::LogicalResult",
+        /*methodName=*/"getPartialResultTilePosition",
+        /*args=*/(ins
+            "::mlir::OpBuilder &":$b,
+            "unsigned":$resultNumber,
+            "::mlir::ArrayRef<::mlir::OpFoldResult> ":$offsets,
+            "::mlir::ArrayRef<::mlir::OpFoldResult> ":$sizes,
+            "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultOffsets,
+            "::mlir::SmallVector<::mlir::OpFoldResult> &":$resultSizes,
+            "::mlir::ArrayRef<int>":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();

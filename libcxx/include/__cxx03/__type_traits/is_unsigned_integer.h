@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_UNSIGNED_INTEGER_H
-#define _LIBCPP___TYPE_TRAITS_IS_UNSIGNED_INTEGER_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_UNSIGNED_INTEGER_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_UNSIGNED_INTEGER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -32,4 +32,4 @@ template <>          struct __libcpp_is_unsigned_integer<__uint128_t>        : p
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_UNSIGNED_INTEGER_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_UNSIGNED_INTEGER_H

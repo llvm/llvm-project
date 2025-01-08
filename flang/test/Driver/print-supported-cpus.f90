@@ -18,11 +18,11 @@
 ! RUN:   %flang --target=aarch64-unknown-linux-gnu --print-supported-cpus 2>&1 \
 ! RUN:     | FileCheck %s --check-prefixes=AARCH64,CHECK \
 ! RUN: %}
-! RUN: %if x86-registered-target %{ \
+! RUN: %if aarch64-registered-target %{ \
 ! RUN:   %flang --target=aarch64-unknown-linux-gnu -mcpu=help 2>&1 \
 ! RUN:     | FileCheck %s --check-prefixes=AARCH64,CHECK \
 ! RUN: %}
-! RUN: %if x86-registered-target %{ \
+! RUN: %if aarch64-registered-target %{ \
 ! RUN:   %flang --target=aarch64-unknown-linux-gnu -mtune=help 2>&1 \
 ! RUN:     | FileCheck %s --check-prefixes=AARCH64,CHECK \
 ! RUN: %}

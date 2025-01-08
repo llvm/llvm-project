@@ -149,7 +149,7 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
-      AU.addRequired<LiveStacks>();
+      AU.addRequired<LiveStacksWrapperLegacy>();
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreservedID(MachineDominatorsID);
@@ -159,7 +159,7 @@ namespace {
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
       AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addPreserved<LiveDebugVariables>();
+      AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -185,7 +185,7 @@ char &llvm::StackSlotColoringID = StackSlotColoring::ID;
 INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveStacks)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
@@ -522,7 +522,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
 
   MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();
-  LS = &getAnalysis<LiveStacks>();
+  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 

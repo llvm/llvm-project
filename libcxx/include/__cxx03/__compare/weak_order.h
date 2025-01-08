@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_WEAK_ORDER
-#define _LIBCPP___COMPARE_WEAK_ORDER
+#ifndef _LIBCPP___CXX03___COMPARE_WEAK_ORDER
+#define _LIBCPP___CXX03___COMPARE_WEAK_ORDER
 
 #include <__cxx03/__compare/compare_three_way.h>
 #include <__cxx03/__compare/ordering.h>
@@ -102,4 +102,4 @@ inline constexpr auto weak_order = __weak_order::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_WEAK_ORDER
+#endif // _LIBCPP___CXX03___COMPARE_WEAK_ORDER

@@ -149,6 +149,35 @@ TEST_F(CachedConstAccessorsLatticeTest, SameLocBeforeClearOrDiffAfterClear) {
 }
 
 TEST_F(CachedConstAccessorsLatticeTest,
+       SameLocBeforeClearOrDiffAfterClearWithCallee) {
+  CommonTestInputs Inputs;
+  auto *CE = Inputs.CallRef;
+  RecordStorageLocation Loc(Inputs.SType, RecordStorageLocation::FieldToLoc(),
+                            {});
+
+  LatticeT Lattice;
+  auto NopInit = [](StorageLocation &) {};
+  const FunctionDecl *Callee = CE->getDirectCallee();
+  ASSERT_NE(Callee, nullptr);
+  StorageLocation &Loc1 = Lattice.getOrCreateConstMethodReturnStorageLocation(
+      Loc, Callee, Env, NopInit);
+  auto NotCalled = [](StorageLocation &) {
+    ASSERT_TRUE(false) << "Not reached";
+  };
+  StorageLocation &Loc2 = Lattice.getOrCreateConstMethodReturnStorageLocation(
+      Loc, Callee, Env, NotCalled);
+
+  EXPECT_EQ(&Loc1, &Loc2);
+
+  Lattice.clearConstMethodReturnStorageLocations(Loc);
+  StorageLocation &Loc3 = Lattice.getOrCreateConstMethodReturnStorageLocation(
+      Loc, Callee, Env, NopInit);
+
+  EXPECT_NE(&Loc3, &Loc1);
+  EXPECT_NE(&Loc3, &Loc2);
+}
+
+TEST_F(CachedConstAccessorsLatticeTest,
        SameStructValBeforeClearOrDiffAfterClear) {
   TestAST AST(R"cpp(
     struct S {

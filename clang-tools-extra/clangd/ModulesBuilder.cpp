@@ -199,7 +199,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   SourceManager SourceMgr(*Diags, FileMgr);
 
-  HeaderSearch HeaderInfo(HSOpts, SourceMgr, *Diags, LangOpts,
+  HeaderSearch HeaderInfo(std::move(HSOpts), SourceMgr, *Diags, LangOpts,
                           /*Target=*/nullptr);
 
   TrivialModuleLoader ModuleLoader;

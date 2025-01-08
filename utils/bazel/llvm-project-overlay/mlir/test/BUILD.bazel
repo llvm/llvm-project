@@ -546,10 +546,12 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:ConvertToSPIRV",
         "//mlir:FuncDialect",
         "//mlir:GPUToSPIRV",
         "//mlir:GPUTransforms",
         "//mlir:IR",
+        "//mlir:MemRefTransforms",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
         "//mlir:SPIRVToLLVM",
@@ -803,6 +805,8 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:AffineToStandard",
+        "//mlir:ArithToLLVM",
+        "//mlir:ControlFlowToLLVM",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:IR",

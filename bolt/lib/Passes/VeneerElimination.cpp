@@ -46,16 +46,17 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
     if (BF.isIgnored())
       continue;
 
+    MCInst &FirstInstruction = *(BF.begin()->begin());
     const MCSymbol *VeneerTargetSymbol = 0;
     uint64_t TargetAddress;
-    if (BC.MIB->matchAbsLongVeneer(BF, TargetAddress)) {
+    if (BC.MIB->isTailCall(FirstInstruction)) {
+      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction);
+    } else if (BC.MIB->matchAbsLongVeneer(BF, TargetAddress)) {
       if (BinaryFunction *TargetBF =
               BC.getBinaryFunctionAtAddress(TargetAddress))
         VeneerTargetSymbol = TargetBF->getSymbol();
-    } else {
-      MCInst &FirstInstruction = *(BF.begin()->begin());
-      if (BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer"))
-        VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
+    } else if (BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer")) {
+      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
     }
 
     if (!VeneerTargetSymbol)

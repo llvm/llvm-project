@@ -387,9 +387,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const {
-    return ST->useFixedOverScalableIfEqualCost();
-  }
+  bool preferFixedOverScalableIfEqualCost() const;
 
   unsigned getEpilogueVectorizationMinVF() const;
 
@@ -423,7 +421,8 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
 
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store

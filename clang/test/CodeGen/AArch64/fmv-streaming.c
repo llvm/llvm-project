@@ -53,10 +53,10 @@ __attribute__((target_version("default"))) void sc_callee(void) __arm_streaming_
 
 
 // CHECK-LABEL: define {{[^@]+}}@n_caller
-// CHECK-SAME: () #[[caller:[0-9]+]] {
+// CHECK-SAME: () #[[default]] {
 // CHECK:    call void @n_callee()
-// CHECK:    call void @s_callee() #[[callsite_streaming:[0-9]+]]
-// CHECK:    call void @sc_callee() #[[callsite_streaming_compatible:[0-9]+]]
+// CHECK:    call void @s_callee() #[[streaming:[0-9]+]]
+// CHECK:    call void @sc_callee() #[[streaming_compatible:[0-9]+]]
 //
 void n_caller(void) {
   n_callee();
@@ -66,10 +66,10 @@ void n_caller(void) {
 
 
 // CHECK-LABEL: define {{[^@]+}}@s_caller
-// CHECK-SAME: () #[[caller_streaming:[0-9]+]] {
+// CHECK-SAME: () #[[default_streaming]] {
 // CHECK:    call void @n_callee()
-// CHECK:    call void @s_callee() #[[callsite_streaming]]
-// CHECK:    call void @sc_callee() #[[callsite_streaming_compatible]]
+// CHECK:    call void @s_callee() #[[streaming]]
+// CHECK:    call void @sc_callee() #[[streaming_compatible]]
 //
 void s_caller(void) __arm_streaming {
   n_callee();
@@ -79,10 +79,10 @@ void s_caller(void) __arm_streaming {
 
 
 // CHECK-LABEL: define {{[^@]+}}@sc_caller
-// CHECK-SAME: () #[[caller_streaming_compatible:[0-9]+]] {
+// CHECK-SAME: () #[[default_streaming_compatible]] {
 // CHECK:    call void @n_callee()
-// CHECK:    call void @s_callee() #[[callsite_streaming]]
-// CHECK:    call void @sc_callee() #[[callsite_streaming_compatible]]
+// CHECK:    call void @s_callee() #[[streaming]]
+// CHECK:    call void @sc_callee() #[[streaming_compatible]]
 //
 void sc_caller(void) __arm_streaming_compatible {
   n_callee();
@@ -103,8 +103,5 @@ void sc_caller(void) __arm_streaming_compatible {
 // CHECK: attributes #[[simd_streaming_compatible]] = {{.*}} "aarch64_pstate_sm_compatible"
 // CHECK: attributes #[[locally_streaming_sme2_streaming_compatible]] = {{.*}} "aarch64_pstate_sm_body" "aarch64_pstate_sm_compatible"
 // CHECK: attributes #[[default_streaming_compatible]] = {{.*}} "aarch64_pstate_sm_compatible"
-// CHECK: attributes #[[caller]] = {{.*}}
-// CHECK: attributes #[[caller_streaming]] = {{.*}} "aarch64_pstate_sm_enabled"
-// CHECK: attributes #[[caller_streaming_compatible]] = {{.*}} "aarch64_pstate_sm_compatible"
-// CHECK: attributes #[[callsite_streaming]] = {{.*}} "aarch64_pstate_sm_enabled"
-// CHECK: attributes #[[callsite_streaming_compatible]] = {{.*}} "aarch64_pstate_sm_compatible"
+// CHECK: attributes #[[streaming]] = {{.*}} "aarch64_pstate_sm_enabled"
+// CHECK: attributes #[[streaming_compatible]] = {{.*}} "aarch64_pstate_sm_compatible"

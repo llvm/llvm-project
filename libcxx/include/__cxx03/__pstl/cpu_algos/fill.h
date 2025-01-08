@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CPU_ALGOS_FILL_H
-#define _LIBCPP___PSTL_CPU_ALGOS_FILL_H
+#ifndef _LIBCPP___CXX03___PSTL_CPU_ALGOS_FILL_H
+#define _LIBCPP___CXX03___PSTL_CPU_ALGOS_FILL_H
 
 #include <__cxx03/__algorithm/fill.h>
 #include <__cxx03/__assert>
@@ -63,4 +63,4 @@ struct __cpu_parallel_fill {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___PSTL_CPU_ALGOS_FILL_H
+#endif // _LIBCPP___CXX03___PSTL_CPU_ALGOS_FILL_H

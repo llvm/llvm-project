@@ -902,10 +902,12 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
               TemplateName(AliasTemplate), /*DeducedType=*/QualType(),
-              /*IsDependent=*/true)), // template specialization type whose
-                                      // arguments will be deduced.
+              /*IsDependent=*/true),
+          AliasTemplate->getLocation()), // template specialization type whose
+                                         // arguments will be deduced.
       Context.getTrivialTypeSourceInfo(
-          ReturnType), // type from which template arguments are deduced.
+          ReturnType, AliasTemplate->getLocation()), // type from which template
+                                                     // arguments are deduced.
   };
   return TypeTraitExpr::Create(
       Context, Context.getLogicalOperationType(), AliasTemplate->getLocation(),

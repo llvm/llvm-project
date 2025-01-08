@@ -29,6 +29,11 @@ const char PointerJumpStubContent[12] = {
     0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
 };
 
+const char ReentryTrampolineContent[8] = {
+    (char)0xfd, 0x7b, (char)0xbf, (char)0xa9, // STP x30, [sp, #-8]
+    0x00,       0x00, 0x00,       (char)0x94  // BL
+};
+
 const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
   case Pointer64:

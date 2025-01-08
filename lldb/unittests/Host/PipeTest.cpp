@@ -55,6 +55,8 @@ TEST_F(PipeTest, OpenAsReader) {
 }
 #endif
 
+// This test is flaky on Windows on Arm.
+#ifndef _WIN32
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
@@ -150,3 +152,4 @@ TEST_F(PipeTest, WriteWithTimeout) {
                         .ToError(),
                     llvm::Succeeded());
 }
+#endif /*ifndef _WIN32*/

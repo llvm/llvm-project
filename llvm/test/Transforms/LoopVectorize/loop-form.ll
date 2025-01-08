@@ -76,7 +76,7 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    store i16 0, ptr [[TMP8]], align 4
 ; TAILFOLD-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       pred.store.continue2:
-; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; TAILFOLD-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

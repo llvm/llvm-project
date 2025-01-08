@@ -164,11 +164,9 @@ def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
   }];
   let parameters = (ins
     ArrayRefParameter<"uint32_t">:$wi_layout,
-    ArrayRefParameter<"uint32_t">:$wi_data);
+    ArrayRefParameter<"uint32_t">:$wi_data
+  );
 
-  let builders = [
-    AttrBuilder<(ins)>
-  ];
 
   let hasCustomAssemblyFormat = 1;
   let genVerifyDecl = 1;

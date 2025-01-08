@@ -358,6 +358,9 @@ bool Constant::containsUndefElement() const {
 }
 
 bool Constant::containsConstantExpression() const {
+  if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
+    return false;
+
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
       if (isa<ConstantExpr>(getAggregateElement(i)))
@@ -446,6 +449,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                        ->getElementCount()
                        .getKnownMinValue()
                ? ConstantInt::get(getContext(), CI->getValue())
+               : nullptr;
+
+  if (const auto *CFP = dyn_cast<ConstantFP>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantFP::get(getContext(), CFP->getValue())
                : nullptr;
 
   // FIXME: getNumElements() will fail for non-fixed vector types.

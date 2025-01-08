@@ -156,8 +156,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GFX940-NEXT: S_NOP 2
-# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_mfma_read_overlap
 body:             |
@@ -348,8 +347,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_vgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GFX940-NEXT: S_NOP 2
-# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_dgemm_mfma_read_overlap
 body:             |
@@ -1073,7 +1071,7 @@ name:            xdl_smfma4x4_write_vgpr_dot_write
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_I32_4X4X4I8_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr1 = V_DOT8_I32_I4 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_DOT8_I32_I4 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_smfma4x4_read_srcc_vgpr_valu_write
 # GCN:      V_MFMA
@@ -1267,7 +1265,7 @@ name:            dot_write_vgpr_different_dot_read_srcc
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
-    $vgpr1 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_different_dot_write
 # GCN:      V_DOT
@@ -1277,7 +1275,7 @@ name:            dot_write_vgpr_different_dot_write
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
-    $vgpr4 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr4 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr0, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_different_valu_read
 # GCN:      V_DOT
@@ -1403,8 +1401,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_agpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GFX940-NEXT: S_NOP 2
-# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_dgemm_mfma_read_overlap
 body:             |
@@ -1885,8 +1882,7 @@ body:             |
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GFX940-NEXT: S_NOP 2
-# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm4x4_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -2220,8 +2216,7 @@ body:             |
 # 2 pass source
 # GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srcc
 # GCN:      V_MFMA
-# GFX940-NEXT: S_NOP 2
-# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srcc
 body:             |

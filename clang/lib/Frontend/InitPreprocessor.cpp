@@ -587,7 +587,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2017)
       Builder.defineMacro("CL_SYCL_LANGUAGE_VERSION", "121");
     else if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2020)
-      Builder.defineMacro("SYCL_LANGUAGE_VERSION", "202001");
+      Builder.defineMacro("SYCL_LANGUAGE_VERSION", "202012L");
   }
 
   // Not "standard" per se, but available even with the -undef flag.
@@ -752,6 +752,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
     Builder.defineMacro("__cpp_auto_cast", "202110L");
+    Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
   // We provide those C++23 features as extensions in earlier language modes, so
@@ -1103,7 +1104,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   assert(TI.getCharWidth() == 8 && "Only support 8-bit char so far");
   Builder.defineMacro("__CHAR_BIT__", Twine(TI.getCharWidth()));
 
-  Builder.defineMacro("__BOOL_WIDTH__", Twine(TI.getBoolWidth()));
+  // The macro is specifying the number of bits in the width, not the number of
+  // bits the object requires for its in-memory representation, which is what
+  // getBoolWidth() will return. The bool/_Bool data type is only ever one bit
+  // wide. See C23 6.2.6.2p2 for the rules in C. Note that
+  // C++23 [basic.fundamental]p10 allows an implementation-defined value
+  // representation for bool; when lowering to LLVM, Clang represents bool as an
+  // i8 in memory but as an i1 when the value is needed, so '1' is also correct
+  // for C++.
+  Builder.defineMacro("__BOOL_WIDTH__", "1");
   Builder.defineMacro("__SHRT_WIDTH__", Twine(TI.getShortWidth()));
   Builder.defineMacro("__INT_WIDTH__", Twine(TI.getIntWidth()));
   Builder.defineMacro("__LONG_WIDTH__", Twine(TI.getLongWidth()));
@@ -1498,6 +1507,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // ELF targets define __ELF__
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
+  else if (TI.getTriple().isAppleMachO())
+    // Apple MachO targets define __MACH__ even when not using DarwinTargetInfo.
+    // Hurd will also define this in some circumstances, but that's done in
+    // HurdTargetInfo. Windows targets don't define this.
+    Builder.defineMacro("__MACH__");
 
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {

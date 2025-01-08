@@ -36,6 +36,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseEmplaceCheck.cpp
   UseEqualsDefaultCheck.cpp
   UseEqualsDeleteCheck.cpp
+  UseIntegerSignComparisonCheck.cpp
   UseNodiscardCheck.cpp
   UseNoexceptCheck.cpp
   UseNullptrCheck.cpp

@@ -285,6 +285,7 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:ObjectYAML",
+        "//llvm:OrcShared",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CFLOAT
-#define _LIBCPP_CFLOAT
+#ifndef _LIBCPP___CXX03_CFLOAT
+#define _LIBCPP___CXX03_CFLOAT
 
 /*
     cfloat synopsis
@@ -73,7 +73,7 @@ Macros:
 
 #include <__cxx03/float.h>
 
-#ifndef _LIBCPP_FLOAT_H
+#ifndef _LIBCPP___CXX03_FLOAT_H
 #   error <cfloat> tried including <float.h> but didn't find libc++'s <float.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -85,4 +85,4 @@ Macros:
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CFLOAT
+#endif // _LIBCPP___CXX03_CFLOAT

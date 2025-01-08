@@ -19,6 +19,7 @@
 #include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -492,9 +493,11 @@ protected:
   /// the renderers.
   StringMap<OperandMatcher *> DefinedOperands;
 
+  using PhysRegOperandsTy = SmallMapVector<const Record *, OperandMatcher *, 1>;
+
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.
-  DenseMap<const Record *, OperandMatcher *> PhysRegOperands;
+  PhysRegOperandsTy PhysRegOperands;
 
   /// ID for the next instruction variable defined with
   /// implicitlyDefineInsnVar()
@@ -694,6 +697,10 @@ public:
 
   unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
   unsigned allocateTempRegID() { return NextTempRegID++; }
+
+  iterator_range<PhysRegOperandsTy::const_iterator> physoperands() const {
+    return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
+  }
 
   iterator_range<MatchersTy::iterator> insnmatchers() {
     return make_range(Matchers.begin(), Matchers.end());
@@ -1756,11 +1763,6 @@ protected:
   unsigned InsnVarID;
   bool AllowNumOpsCheck;
 
-  /// PhysRegInputs - List list has an entry for each explicitly specified
-  /// physreg input to the pattern.  The first elt is the Register node, the
-  /// second is the recorded slot number the input pattern match saved it in.
-  SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
-
   bool canAddNumOperandsCheck() const {
     // Add if it's allowed, and:
     //    - We don't have a variadic operand
@@ -1801,10 +1803,6 @@ public:
   OperandMatcher &getOperand(unsigned OpIdx);
   OperandMatcher &addPhysRegInput(const Record *Reg, unsigned OpIdx,
                                   unsigned TempOpIdx);
-
-  ArrayRef<std::pair<const Record *, unsigned>> getPhysRegInputs() const {
-    return PhysRegInputs;
-  }
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
@@ -2091,13 +2089,15 @@ protected:
   unsigned InsnID;
   const Record *RegisterDef;
   bool IsDef;
+  bool IsDead;
   const CodeGenTarget &Target;
 
 public:
   AddRegisterRenderer(unsigned InsnID, const CodeGenTarget &Target,
-                      const Record *RegisterDef, bool IsDef = false)
+                      const Record *RegisterDef, bool IsDef = false,
+                      bool IsDead = false)
       : OperandRenderer(OR_Register), InsnID(InsnID), RegisterDef(RegisterDef),
-        IsDef(IsDef), Target(Target) {}
+        IsDef(IsDef), IsDead(IsDead), Target(Target) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Register;

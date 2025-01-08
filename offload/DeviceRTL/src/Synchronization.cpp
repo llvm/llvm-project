@@ -232,50 +232,16 @@ void namedBarrier() {
   fence::team(atomic::release);
 }
 
-// sema checking of amdgcn_fence is aggressive. Intention is to patch clang
-// so that it is usable within a template environment and so that a runtime
-// value of the memory order is expanded to this switch within clang/llvm.
 void fenceTeam(atomic::OrderingTy Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case atomic::aquire:
-    return __builtin_amdgcn_fence(atomic::aquire, "workgroup");
-  case atomic::release:
-    return __builtin_amdgcn_fence(atomic::release, "workgroup");
-  case atomic::acq_rel:
-    return __builtin_amdgcn_fence(atomic::acq_rel, "workgroup");
-  case atomic::seq_cst:
-    return __builtin_amdgcn_fence(atomic::seq_cst, "workgroup");
-  }
+  return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
 }
+
 void fenceKernel(atomic::OrderingTy Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case atomic::aquire:
-    return __builtin_amdgcn_fence(atomic::aquire, "agent");
-  case atomic::release:
-    return __builtin_amdgcn_fence(atomic::release, "agent");
-  case atomic::acq_rel:
-    return __builtin_amdgcn_fence(atomic::acq_rel, "agent");
-  case atomic::seq_cst:
-    return __builtin_amdgcn_fence(atomic::seq_cst, "agent");
-  }
+  return __scoped_atomic_thread_fence(Ordering, atomic::device_);
 }
+
 void fenceSystem(atomic::OrderingTy Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case atomic::aquire:
-    return __builtin_amdgcn_fence(atomic::aquire, "");
-  case atomic::release:
-    return __builtin_amdgcn_fence(atomic::release, "");
-  case atomic::acq_rel:
-    return __builtin_amdgcn_fence(atomic::acq_rel, "");
-  case atomic::seq_cst:
-    return __builtin_amdgcn_fence(atomic::seq_cst, "");
-  }
+  return __scoped_atomic_thread_fence(Ordering, atomic::system);
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {

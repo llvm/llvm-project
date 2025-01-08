@@ -895,7 +895,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
         MF->getContext(), Subtarget);
-    if (Subtarget->hasReferenceTypes()) {
+    if (Subtarget->hasCallIndirectOverlong()) {
       MIB.addSym(Table);
     } else {
       // Otherwise for the MVP there is at most one table whose number is 0, but
