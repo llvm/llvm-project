@@ -741,9 +741,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     ::cfsetospeed(&options, B38400);
     ::cfsetispeed(&options, B38400);
 #else
-    if (error_ptr)
-      *error_ptr = Status::FromErrorString("Maximum Baud rate is Unknown");
-    return eConnectionStatusError;
+#error "Maximum Baud rate is Unknown"
 #endif
 
     // Raw input, disable echo and signals
