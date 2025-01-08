@@ -242,10 +242,10 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
-///      (return values that are non-live across all callers) for removal.
+///       (return values that are non-live across all callers) for removal.
 ///   (4) Enqueueing the non-live arguments and return values for removal.
 ///   (5) Collecting the uses of these return values in its callers for future
-///   removal.
+///       removal.
 ///   (6) Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
@@ -344,21 +344,21 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 ///
 /// Scenario 2: Otherwise:
 ///   (1) Collect its unnecessary operands (operands forwarded to unnecessary
-///   results or arguments).
+///       results or arguments).
 ///   (2) Process each of its regions.
 ///   (3) Collect the uses of its unnecessary results (results forwarded from
-///   unnecessary operands
-///      or terminator operands).
+///       unnecessary operands
+///       or terminator operands).
 ///   (4) Add these results to the deletion list.
 ///
 /// Processing a region includes:
 ///   (a) Collecting the uses of its unnecessary arguments (arguments forwarded
-///   from unnecessary operands
-///      or terminator operands).
+///       from unnecessary operands
+///       or terminator operands).
 ///   (b) Collecting these unnecessary arguments.
 ///   (c) Collecting its unnecessary terminator operands (terminator operands
-///   forwarded to unnecessary results
-///      or arguments).
+///       forwarded to unnecessary results
+///       or arguments).
 ///
 /// Value Flow Note: In this operation, values flow as follows:
 /// - From operands and terminator operands (successor operands)
@@ -637,9 +637,9 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 /// Iterate through each successor block of `branchOp`.
 /// (1) For each successor block, gather all operands from all successors.
 /// (2) Fetch their associated liveness analysis data and collect for future
-/// removal.
+///     removal.
 /// (3) Identify and collect the dead operands from the successor block
-///      as well as their corresponding arguments.
+///     as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
