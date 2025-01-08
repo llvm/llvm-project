@@ -126,6 +126,12 @@ public:
   bool legalizeWorkitemIDIntrinsic(
       MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
       unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
+#if LLPC_BUILD_NPI
+  void buildWorkitemIdWavegroupModeGISel(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B,
+                                         unsigned Dim) const;
+#endif /* LLPC_BUILD_NPI */
 
   Register getKernargParameterPtr(MachineIRBuilder &B, int64_t Offset) const;
   bool legalizeKernargMemParameter(MachineInstr &MI, MachineIRBuilder &B,

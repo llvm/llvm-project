@@ -351,16 +351,16 @@ def : ProcessorModel<"gfx120F", GFX12SpeedModel,
 #ifdef LLPC_BUILD_NPI
 
 def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
-  FeatureISAVersion12_10.Features
+  FeatureISAVersion12_50.Features
 >;
 
 def : ProcessorModel<"gfx1251", GFX1251SpeedModel,
-  FeatureISAVersion12_11.Features
+  FeatureISAVersion12_51.Features
 >;
 
 // [gfx1250, gfx1251]
 def : ProcessorModel<"gfx12-5-generic", GFX1250SpeedModel,
-  FeatureISAVersion12_1_Generic.Features
+  FeatureISAVersion12_5_Generic.Features
 >;
 
 //===----------------------------------------------------------------------===//
@@ -376,6 +376,10 @@ def : ProcessorModel<"gfx1301", GFX12SpeedModel,
 >;
 
 def : ProcessorModel<"gfx1302", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+>;
+
+def : ProcessorModel<"gfx130E", GFX12SpeedModel,
   FeatureISAVersion13.Features
 >;
 #endif /* LLPC_BUILD_NPI */

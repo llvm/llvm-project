@@ -457,7 +457,7 @@ let FPDPRounding = 1 in {
 
   let SubtargetPredicate = isGFX9Plus in {
     defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst_t16 <"v_div_fixup_f16_gfx9", VOP_F16_F16_F16_F16, AMDGPUdiv_fixup>;
-    defm V_FMA_F16_gfx9 : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, any_fma>;
+    defm V_FMA_F16_gfx9 : VOP3Inst_t16 <"v_fma_f16_gfx9", VOP_F16_F16_F16_F16, any_fma>;
   } // End SubtargetPredicate = isGFX9Plus
 } // End FPDPRounding = 1
 
@@ -1625,8 +1625,8 @@ class VOP3_DOT_Profile_fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR
 let SubtargetPredicate = isGFX11Plus in {
   defm V_MAXMIN_F32     : VOP3Inst<"v_maxmin_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
   defm V_MINMAX_F32     : VOP3Inst<"v_minmax_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
-  defm V_MAXMIN_F16     : VOP3Inst<"v_maxmin_f16", VOP3_Profile<VOP_F16_F16_F16_F16>>;
-  defm V_MINMAX_F16     : VOP3Inst<"v_minmax_f16", VOP3_Profile<VOP_F16_F16_F16_F16>>;
+  defm V_MAXMIN_F16     : VOP3Inst_t16<"v_maxmin_f16", VOP_F16_F16_F16_F16>;
+  defm V_MINMAX_F16     : VOP3Inst_t16<"v_minmax_f16", VOP_F16_F16_F16_F16>;
   defm V_MAXMIN_U32     : VOP3Inst<"v_maxmin_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_MINMAX_U32     : VOP3Inst<"v_minmax_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_MAXMIN_I32     : VOP3Inst<"v_maxmin_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
@@ -2019,8 +2019,8 @@ defm V_EXCLUSIVE_SCAN_MAX_U32 : VOP3_Real_Base<GFX13Gen, 0x24d>;
 defm V_EXCLUSIVE_SCAN_MAX_U16 : VOP3_Real_Base<GFX13Gen, 0x24e>;
 defm V_MINMAX_NUM_F32         : VOP3_Realtriple_with_name_gfx12_gfx13<0x268, 0x268, "V_MINMAX_F32", "v_minmax_num_f32">;
 defm V_MAXMIN_NUM_F32         : VOP3_Realtriple_with_name_gfx12_gfx13<0x269, 0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
-defm V_MINMAX_NUM_F16         : VOP3_Realtriple_with_name_gfx12_gfx13<0x26a, 0x26a, "V_MINMAX_F16", "v_minmax_num_f16">;
-defm V_MAXMIN_NUM_F16         : VOP3_Realtriple_with_name_gfx12_gfx13<0x26b, 0x26b, "V_MAXMIN_F16", "v_maxmin_num_f16">;
+defm V_MINMAX_NUM_F16         : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26a, 0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;
+defm V_MAXMIN_NUM_F16         : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26b, 0x26b, "v_maxmin_num_f16", "V_MAXMIN_F16", "v_maxmin_f16">;
 defm V_MINIMUMMAXIMUM_F32     : VOP3Only_Realtriple_gfx12_gfx13<0x26c>;
 defm V_MAXIMUMMINIMUM_F32     : VOP3Only_Realtriple_gfx12_gfx13<0x26d>;
 defm V_MINIMUMMAXIMUM_F16     : VOP3Only_Realtriple_t16_gfx12_gfx13<0x26e>;
@@ -2076,8 +2076,8 @@ defm V_PERMLANE_IDX_GEN_B32 : VOP3Only_Real_Base_gfx12_gfx13<0x314, 0x317>;
 #else /* LLPC_BUILD_NPI */
 defm V_MIN3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x229, "V_MIN3_F32", "v_min3_num_f32">;
 defm V_MAX3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x22a, "V_MAX3_F32", "v_max3_num_f32">;
-defm V_MIN3_NUM_F16       : VOP3_Realtriple_with_name_gfx12<0x22b, "V_MIN3_F16", "v_min3_num_f16">;
-defm V_MAX3_NUM_F16       : VOP3_Realtriple_with_name_gfx12<0x22c, "V_MAX3_F16", "v_max3_num_f16">;
+defm V_MIN3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12<0x22b, "v_min3_num_f16", "V_MIN3_F16", "v_min3_f16">;
+defm V_MAX3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12<0x22c, "v_max3_num_f16", "V_MAX3_F16", "v_max3_f16">;
 defm V_MINIMUM3_F32       : VOP3Only_Realtriple_gfx12<0x22d>;
 defm V_MAXIMUM3_F32       : VOP3Only_Realtriple_gfx12<0x22e>;
 defm V_MINIMUM3_F16       : VOP3Only_Realtriple_t16_gfx12<0x22f>;
@@ -2086,8 +2086,8 @@ defm V_MED3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x231, "V_MED3_F32",
 defm V_MED3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12<0x232, "v_med3_num_f16", "V_MED3_F16", "v_med3_f16">;
 defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12<0x268, "V_MINMAX_F32", "v_minmax_num_f32">;
 defm V_MAXMIN_NUM_F32     : VOP3_Realtriple_with_name_gfx12<0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
-defm V_MINMAX_NUM_F16     : VOP3_Realtriple_with_name_gfx12<0x26a, "V_MINMAX_F16", "v_minmax_num_f16">;
-defm V_MAXMIN_NUM_F16     : VOP3_Realtriple_with_name_gfx12<0x26b, "V_MAXMIN_F16", "v_maxmin_num_f16">;
+defm V_MINMAX_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12<0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;
+defm V_MAXMIN_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12<0x26b, "v_maxmin_num_f16", "V_MAXMIN_F16", "v_maxmin_f16">;
 defm V_MINIMUMMAXIMUM_F32 : VOP3Only_Realtriple_gfx12<0x26c>;
 defm V_MAXIMUMMINIMUM_F32 : VOP3Only_Realtriple_gfx12<0x26d>;
 defm V_MINIMUMMAXIMUM_F16 : VOP3Only_Realtriple_t16_gfx12<0x26e>;
@@ -2322,7 +2322,7 @@ defm V_PERM_B32            : VOP3_Realtriple_gfx11_gfx12_gfx13<0x244, 0x344>;
 defm V_XAD_U32             : VOP3_Realtriple_gfx11_gfx12_gfx13<0x245, 0x345>;
 defm V_LSHL_ADD_U32        : VOP3_Realtriple_gfx11_gfx12_gfx13<0x246, 0x346>;
 defm V_ADD_LSHL_U32        : VOP3_Realtriple_gfx11_gfx12_gfx13<0x247, 0x347>;
-defm V_FMA_F16             : VOP3_Realtriple_with_name_gfx11_gfx12_gfx13<0x248, 0x34b, "V_FMA_F16_gfx9", "v_fma_f16">;
+defm V_FMA_F16             : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12_gfx13<0x248, 0x34b, "v_fma_f16", "V_FMA_F16_gfx9">;
 #else /* LLPC_BUILD_NPI */
 defm V_MED3_I32            : VOP3_Realtriple_gfx11_gfx12<0x220>;
 defm V_MED3_U32            : VOP3_Realtriple_gfx11_gfx12<0x221>;
@@ -2345,7 +2345,7 @@ defm V_PERM_B32            : VOP3_Realtriple_gfx11_gfx12<0x244>;
 defm V_XAD_U32             : VOP3_Realtriple_gfx11_gfx12<0x245>;
 defm V_LSHL_ADD_U32        : VOP3_Realtriple_gfx11_gfx12<0x246>;
 defm V_ADD_LSHL_U32        : VOP3_Realtriple_gfx11_gfx12<0x247>;
-defm V_FMA_F16             : VOP3_Realtriple_with_name_gfx11_gfx12<0x248, "V_FMA_F16_gfx9", "v_fma_f16">;
+defm V_FMA_F16             : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x248, "v_fma_f16", "V_FMA_F16_gfx9">;
 #endif /* LLPC_BUILD_NPI */
 defm V_MIN3_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx11<0x249, "v_min3_f16">;
 #ifdef LLPC_BUILD_NPI
@@ -2393,8 +2393,8 @@ defm V_PERMLANEX16_B32     : VOP3_Real_Base_gfx11_gfx12<0x25c>;
 #endif /* LLPC_BUILD_NPI */
 defm V_MAXMIN_F32          : VOP3_Realtriple_gfx11<0x25e>;
 defm V_MINMAX_F32          : VOP3_Realtriple_gfx11<0x25f>;
-defm V_MAXMIN_F16          : VOP3_Realtriple_gfx11<0x260>;
-defm V_MINMAX_F16          : VOP3_Realtriple_gfx11<0x261>;
+defm V_MAXMIN_F16          : VOP3_Realtriple_t16_and_fake16_gfx11<0x260, "v_maxmin_f16">;
+defm V_MINMAX_F16          : VOP3_Realtriple_t16_and_fake16_gfx11<0x261, "v_minmax_f16">;
 #ifdef LLPC_BUILD_NPI
 defm V_MAXMIN_U32          : VOP3_Realtriple_gfx11_gfx12_gfx13<0x262>;
 defm V_MINMAX_U32          : VOP3_Realtriple_gfx11_gfx12_gfx13<0x263>;

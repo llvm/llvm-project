@@ -31,6 +31,9 @@ public:
     RIK_NumVGPR,
     RIK_NumAGPR,
     RIK_NumSGPR,
+#if LLPC_BUILD_NPI
+    RIK_NumNamedBarrier,
+#endif /* LLPC_BUILD_NPI */
     RIK_PrivateSegSize,
     RIK_UsesVCC,
     RIK_UsesFlatScratch,
@@ -43,6 +46,9 @@ private:
   int32_t MaxVGPR = 0;
   int32_t MaxAGPR = 0;
   int32_t MaxSGPR = 0;
+#if LLPC_BUILD_NPI
+  int32_t MaxNamedBarrier = 0;
+#endif /* LLPC_BUILD_NPI */
 
   // Whether the MCResourceInfo has been finalized through finalize(MCContext
   // &). Should only be called once, at the end of AsmPrinting to assign MaxXGPR
@@ -69,6 +75,11 @@ public:
   void addMaxSGPRCandidate(int32_t candidate) {
     MaxSGPR = std::max(MaxSGPR, candidate);
   }
+#if LLPC_BUILD_NPI
+  void addMaxNamedBarrierCandidate(int32_t candidate) {
+    MaxNamedBarrier = std::max(MaxNamedBarrier, candidate);
+  }
+#endif /* LLPC_BUILD_NPI */
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                       MCContext &OutContext);
@@ -84,6 +95,9 @@ public:
   MCSymbol *getMaxVGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxAGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxSGPRSymbol(MCContext &OutContext);
+#if LLPC_BUILD_NPI
+  MCSymbol *getMaxNamedBarrierSymbol(MCContext &OutContext);
+#endif /* LLPC_BUILD_NPI */
 
   /// AMDGPUResourceUsageAnalysis gathers resource usage on a per-function
   /// granularity. However, some resource info has to be assigned the call

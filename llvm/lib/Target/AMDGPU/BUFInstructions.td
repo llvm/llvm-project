@@ -175,7 +175,7 @@ class getMTBUFInsDA<list<RegisterClass> vdataList,
 #ifdef LLPC_BUILD_NPI
   dag NonVaddrInputs = !con((ins RsrcRC:$srsrc), SOffset,
 #else /* LLPC_BUILD_NPI */
-  dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset,
+  dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset,
 #endif /* LLPC_BUILD_NPI */
                             (ins Offset:$offset, FORMAT:$format, CPol_0:$cpol, i1imm_0:$swz));
 
@@ -188,7 +188,7 @@ class getMTBUFInsDA<list<RegisterClass> vdataList,
 }
 
 #ifdef LLPC_BUILD_NPI
-class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128> {
+class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
 class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -242,7 +242,7 @@ class MTBUF_Load_Pseudo <string opName,
                          int elems,
                          bit hasRestrictedSOffset = 0,
 #ifdef LLPC_BUILD_NPI
-                         DAGOperand RsrcRC = SReg_128,
+                         DAGOperand RsrcRC = SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                          list<dag> pattern=[],
                          // Workaround bug bz30254
@@ -265,7 +265,7 @@ class MTBUF_Load_Pseudo <string opName,
 
 multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterClass vdataClass,
 #ifdef LLPC_BUILD_NPI
-                              int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128> {
+                              int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
                               int elems, bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -324,7 +324,7 @@ class MTBUF_Store_Pseudo <string opName,
                           int elems,
                           bit hasRestrictedSOffset = 0,
 #ifdef LLPC_BUILD_NPI
-                          DAGOperand RsrcRC = SReg_128,
+                          DAGOperand RsrcRC = SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                           list<dag> pattern=[],
                           // Workaround bug bz30254
@@ -348,7 +348,7 @@ class MTBUF_Store_Pseudo <string opName,
 
 multiclass MTBUF_Pseudo_Stores_Helper<string opName, RegisterClass vdataClass,
 #ifdef LLPC_BUILD_NPI
-                               int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128> {
+                               int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
                                int elems, bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -503,7 +503,7 @@ class getLdStVDataRegisterOperand<RegisterClass RC, bit isTFE> {
 
 class getMUBUFInsDA<list<RegisterClass> vdataList,
 #ifdef LLPC_BUILD_NPI
-                    list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+                    list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
                     list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -515,7 +515,7 @@ class getMUBUFInsDA<list<RegisterClass> vdataList,
 #ifdef LLPC_BUILD_NPI
   dag NonVaddrInputs = !con((ins RsrcRC:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
 #else /* LLPC_BUILD_NPI */
-  dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
+  dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
 #endif /* LLPC_BUILD_NPI */
 
   dag Inputs = !if(!empty(vaddrList), NonVaddrInputs, !con((ins vaddrClass:$vaddr), NonVaddrInputs));
@@ -542,7 +542,7 @@ class getMUBUFElements<ValueType vt> {
 }
 
 #ifdef LLPC_BUILD_NPI
-class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
 class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -601,7 +601,7 @@ class MUBUF_Load_Pseudo <string opName,
                          bit isTFE = 0,
                          bit hasRestrictedSOffset = 0,
 #ifdef LLPC_BUILD_NPI
-                         DAGOperand RsrcRC = SReg_128,
+                         DAGOperand RsrcRC = SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                          list<dag> pattern=[],
                          // Workaround bug bz30254
@@ -661,7 +661,7 @@ multiclass MUBUF_Pseudo_Load_Pats<string BaseInst, ValueType load_vt = i32, SDPa
 
 multiclass MUBUF_Pseudo_Loads_Helper<string opName, ValueType load_vt,
 #ifdef LLPC_BUILD_NPI
-                                     bit TiedDest, bit isLds, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+                                     bit TiedDest, bit isLds, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
                                      bit TiedDest, bit isLds, bit isTFE, bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -770,7 +770,7 @@ class MUBUF_Discard_Pseudo <string opName, int addrKind, DAGOperand RsrcRC>
   let tfe = 0;
 }
 
-multiclass MUBUF_Pseudo_Discard_Helper<string opName, DAGOperand RsrcRC = SReg_128> {
+multiclass MUBUF_Pseudo_Discard_Helper<string opName, DAGOperand RsrcRC = SReg_128_XNULL> {
   def _OFFSET : MUBUF_Discard_Pseudo <opName, BUFAddrKind.Offset, RsrcRC>,
                         MUBUFAddr64Table<0, NAME>;
 
@@ -802,7 +802,7 @@ class MUBUF_Store_Pseudo <string opName,
                           bit isTFE = 0,
                           bit hasRestrictedSOffset = 0,
 #ifdef LLPC_BUILD_NPI
-                          DAGOperand RsrcRC = SReg_128,
+                          DAGOperand RsrcRC = SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                           list<dag> pattern=[],
                           // Workaround bug bz30254
@@ -845,7 +845,7 @@ multiclass MUBUF_Pseudo_Store_Pats<string BaseInst, ValueType store_vt = i32, SD
 
 multiclass MUBUF_Pseudo_Stores_Helper<string opName, ValueType store_vt,
 #ifdef LLPC_BUILD_NPI
-                                      bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+                                      bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
 #else /* LLPC_BUILD_NPI */
                                       bit isTFE, bit hasRestrictedSOffset> {
 #endif /* LLPC_BUILD_NPI */
@@ -907,7 +907,7 @@ multiclass MUBUF_Pseudo_Stores<string opName, ValueType store_vt = i32> {
 class MUBUF_Pseudo_Store_Lds<string opName>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 (ins SReg_128:$srsrc, SCSrc_b32:$soffset, Offset:$offset, CPol:$cpol, i1imm:$swz),
+                 (ins SReg_128_XNULL:$srsrc, SCSrc_b32:$soffset, Offset:$offset, CPol:$cpol, i1imm:$swz),
                  " $srsrc, $soffset$offset lds$cpol"> {
   let LGKM_CNT = 1;
   let mayLoad = 1;
@@ -937,7 +937,7 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in, bit hasRestric
 #ifdef LLPC_BUILD_NPI
   dag MainInputs = !con((ins RsrcRC:$srsrc), SOffset, (ins Offset:$offset));
 #else /* LLPC_BUILD_NPI */
-  dag MainInputs = !con((ins SReg_128:$srsrc), SOffset, (ins Offset:$offset));
+  dag MainInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset));
 #endif /* LLPC_BUILD_NPI */
   dag CPol = !if(vdata_in, (ins CPol_GLC_WithDefault:$cpol),
                            (ins CPol_NonGLC_WithDefault:$cpol));
@@ -950,7 +950,7 @@ class getMUBUFAtomicIns<int addrKind,
                         bit vdata_in,
                         bit hasRestrictedSOffset,
 #ifdef LLPC_BUILD_NPI
-                        DAGOperand RsrcRC=SReg_128,
+                        DAGOperand RsrcRC=SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                         // Workaround bug bz30254
                         RegisterClass vdataClassCopy=vdataClass> {
@@ -1012,7 +1012,7 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
                                RegisterClass vdataClass,
                                bit hasRestrictedSOffset = 0,
 #ifdef LLPC_BUILD_NPI
-                               DAGOperand RsrcRC = SReg_128,
+                               DAGOperand RsrcRC = SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                                list<dag> pattern=[],
                                // Workaround bug bz30254
@@ -1038,7 +1038,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
                              RegisterClass vdataClass,
                              bit hasRestrictedSOffset = 0,
 #ifdef LLPC_BUILD_NPI
-                             DAGOperand RsrcRC = SReg_128,
+                             DAGOperand RsrcRC = SReg_128_XNULL,
 #endif /* LLPC_BUILD_NPI */
                              list<dag> pattern=[],
                              // Workaround bug bz30254
@@ -1077,7 +1077,7 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
 
 #ifdef LLPC_BUILD_NPI
     foreach Infix = ["_indexed", ""] in {
-    defvar RsrcRC = !if(!eq(Infix, ""), SReg_128, RsrcReg128Op);
+    defvar RsrcRC = !if(!eq(Infix, ""), SReg_128_XNULL, RsrcReg128Op);
 
     def _VBUFFER # Infix # _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1, RsrcRC>,
                   MUBUFAddr64Table <0, NAME # "_VBUFFER" # Infix>;
@@ -1105,7 +1105,7 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      SDPatternOperator atomic> {
   let FPAtomic = vdataType.isFP in {
 #ifdef LLPC_BUILD_NPI
-    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0, SReg_128,
+    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0, SReg_128_XNULL,
 #else /* LLPC_BUILD_NPI */
     def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
 #endif /* LLPC_BUILD_NPI */
@@ -1115,7 +1115,7 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
       MUBUFAddr64Table <0, NAME # "_RTN">;
 
 #ifdef LLPC_BUILD_NPI
-    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0, SReg_128,
+    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0, SReg_128_XNULL,
 #else /* LLPC_BUILD_NPI */
     def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0,
 #endif /* LLPC_BUILD_NPI */
@@ -1129,7 +1129,7 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
     def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, 0>;
 
 #ifdef LLPC_BUILD_NPI
-    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1, SReg_128,
+    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1, SReg_128_XNULL,
 #else /* LLPC_BUILD_NPI */
     def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1,
 #endif /* LLPC_BUILD_NPI */
@@ -1139,7 +1139,7 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
       MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
 
 #ifdef LLPC_BUILD_NPI
-    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1, SReg_128,
+    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1, SReg_128_XNULL,
 #else /* LLPC_BUILD_NPI */
     def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1,
 #endif /* LLPC_BUILD_NPI */

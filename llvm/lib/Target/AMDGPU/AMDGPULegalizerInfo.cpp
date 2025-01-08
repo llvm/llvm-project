@@ -4647,6 +4647,71 @@ static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI,
   return true;
 }
 
+#if LLPC_BUILD_NPI
+void AMDGPULegalizerInfo::buildWorkitemIdWavegroupModeGISel(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    unsigned Dim) const {
+  /* v0 is not set up in Wavegroup launch mode, so workitem.id.x must be
+     calculated:
+     FlatWorkItemId = WaveIdInWorkgroup * 32 + LaneId // wave32 is forced
+     WorkitemIDX = FlatWorkitemId % DimX
+     WorkitemIDY = (FlatWorkitemId / DimX) % DimY
+     WorkitemIDZ = (FlatWorkitemId / DimX) / DimY */
+  assert(((Dim == 0) || (Dim == 1) || (Dim == 2)) &&
+         "Unknown value for Dim. Expected 0, 1, or 2");
+  unsigned MaxIDX = ST.getMaxWorkitemID(B.getMF().getFunction(), 0);
+  unsigned MaxIDY = ST.getMaxWorkitemID(B.getMF().getFunction(), 1);
+  unsigned MaxIDZ = ST.getMaxWorkitemID(B.getMF().getFunction(), 2);
+  assert((((MaxIDX + 1) * (MaxIDY + 1) * (MaxIDZ + 1)) % 128 == 0) &&
+         "Total threads per workgroup in wavegroup dispatch mode must be an "
+         "integer multiple of 128.");
+
+  auto DstReg = MI.getOperand(0).getReg();
+  LLT S32 = LLT::scalar(32);
+
+  // calculate FlatWorkitemID
+  auto WaveIdInWorkgroup = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  auto Width = B.buildConstant(S32, 5);
+  B.buildUbfx(WaveIdInWorkgroup, TTMP8, LSB, Width);
+  auto ThreadOffset = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  auto ShiftAmt = B.buildConstant(S32, 5);
+  B.buildShl(ThreadOffset, WaveIdInWorkgroup, ShiftAmt);
+  auto FlatWorkitemID = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  auto AllOnes = B.buildConstant(S32, -1).getReg(0);
+  auto LaneID = B.buildConstant(S32, 0).getReg(0);
+  LaneID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {S32})
+               .addUse(AllOnes)
+               .addUse(LaneID)
+               .getReg(0);
+  B.buildAdd(FlatWorkitemID, ThreadOffset, LaneID);
+
+  // compute WorkitemIDX = FlatWorkitemID % DimX
+  auto DimX = B.buildConstant(S32, MaxIDX);
+  auto DivX = MRI.createGenericVirtualRegister(S32);
+  auto RemX = MRI.createGenericVirtualRegister(S32);
+  B.buildInstr(AMDGPU::G_UDIVREM, {DivX, RemX}, {FlatWorkitemID, DimX});
+  if (Dim == 0) {
+    B.buildCopy(DstReg, RemX);
+    return;
+  }
+
+  // compute WorkitemIDY or WorkitemIDZ
+  auto DimY = B.buildConstant(S32, MaxIDY);
+  auto DivY = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  auto RemY = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  B.buildInstr(AMDGPU::G_UDIVREM, {DivY, RemY}, {DivX, DimY});
+  if (Dim == 1) {
+    B.buildCopy(DstReg, RemY); // WorkitemIDY = (FlatWorkitemID / DimX) % DimY
+  } else if (Dim == 2) {
+    B.buildCopy(DstReg, DivY); // WorkitemIDY = (FlatWorkitemID / DimX) / DimY
+  }
+
+  return;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
@@ -4669,6 +4734,15 @@ bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
     return true;
   }
 
+#if LLPC_BUILD_NPI
+  // Wavegroup launch mode needs to compute workitem id
+  if (AMDGPU::getWavegroupEnable(B.getMF().getFunction())) {
+    buildWorkitemIdWavegroupModeGISel(MI, MRI, B, Dim);
+    MI.eraseFromParent();
+    return true;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   if (Arg->isMasked()) {
     // Don't bother inserting AssertZext for packed IDs since we're emitting the
     // masking operations anyway.

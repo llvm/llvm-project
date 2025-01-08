@@ -33,6 +33,10 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
     return GOCS(".num_agpr");
   case RIK_NumSGPR:
     return GOCS(".numbered_sgpr");
+#if LLPC_BUILD_NPI
+  case RIK_NumNamedBarrier:
+    return GOCS(".num_named_barrier");
+#endif /* LLPC_BUILD_NPI */
   case RIK_PrivateSegSize:
     return GOCS(".private_seg_size");
   case RIK_UsesVCC:
@@ -60,6 +64,9 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
+#if LLPC_BUILD_NPI
+  MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
+#endif /* LLPC_BUILD_NPI */
 
   auto assignMaxRegSym = [&OutContext](MCSymbol *Sym, int32_t RegCount) {
     const MCExpr *MaxExpr = MCConstantExpr::create(RegCount, OutContext);
@@ -69,6 +76,9 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   assignMaxRegSym(MaxVGPRSym, MaxVGPR);
   assignMaxRegSym(MaxAGPRSym, MaxAGPR);
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
+#if LLPC_BUILD_NPI
+  assignMaxRegSym(MaxNamedBarrierSym, MaxNamedBarrier);
+#endif /* LLPC_BUILD_NPI */
 }
 
 void MCResourceInfo::reset() { *this = MCResourceInfo(); }
@@ -91,6 +101,12 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
 }
 
+#if LLPC_BUILD_NPI
+MCSymbol *MCResourceInfo::getMaxNamedBarrierSymbol(MCContext &OutContext) {
+  return OutContext.getOrCreateSymbol("amdgpu.max_num_named_barrier");
+}
+
+#endif /* LLPC_BUILD_NPI */
 void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
@@ -138,6 +154,12 @@ void MCResourceInfo::assignResourceInfoExpr(
           ArgExprs.push_back(MCSymbolRefExpr::create(
               getMaxAGPRSymbol(OutContext), OutContext));
           break;
+#if LLPC_BUILD_NPI
+        case RIK_NumNamedBarrier:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxNamedBarrierSymbol(OutContext), OutContext));
+          break;
+#endif /* LLPC_BUILD_NPI */
         }
       }
     }
@@ -155,11 +177,17 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
+#if LLPC_BUILD_NPI
+  MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
+#endif /* LLPC_BUILD_NPI */
 
   if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
     addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
+#if LLPC_BUILD_NPI
+    addMaxNamedBarrierCandidate(FRI.NumNamedBarrier);
+#endif /* LLPC_BUILD_NPI */
   }
 
   const TargetMachine &TM = MF.getTarget();
@@ -182,6 +210,9 @@ void MCResourceInfo::gatherResourceInfo(
   SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
   SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
+#if LLPC_BUILD_NPI
+  SetMaxReg(MaxNamedBarrierSym, FRI.NumNamedBarrier, RIK_NumNamedBarrier);
+#endif /* LLPC_BUILD_NPI */
 
   {
     // The expression for private segment size should be: FRI.PrivateSegmentSize

@@ -2067,7 +2067,7 @@ defm V_SWMMAC_F16_16X16X64_F16_w32   : SWMMACInstGFX12<"v_swmmac_f16_16x16x64_f1
 } // End SubtargetPredicate = HasGFX1251GEMMInsts
 } // End WaveSizePredicate = isWave32
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot1250 in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot12_50 in {
 #endif /* LLPC_BUILD_NPI */
 defm V_WMMA_F32_16X16X16_F16_w32     : WMMAInstGFX12<"v_wmma_f32_16x16x16_f16",     F32_F16_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X16_BF16_w32    : WMMAInstGFX12<"v_wmma_f32_16x16x16_bf16",    F32_BF16_WMMA_w32, "_w32">;
@@ -2095,7 +2095,7 @@ defm V_SWMMAC_F32_16X16X32_BF8_BF8_w32 : SWMMACInstGFX12<"v_swmmac_f32_16x16x32_
 }
 
 #ifdef LLPC_BUILD_NPI
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1250 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
 #else /* LLPC_BUILD_NPI */
 let WaveSizePredicate = isWave64 in {
 #endif /* LLPC_BUILD_NPI */
@@ -2145,7 +2145,7 @@ class SWMMACPat_w64<Instruction Inst, SDPatternOperator node, VOP3PWMMA_Profile 
           }
 
 #ifdef LLPC_BUILD_NPI
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot1250 in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot12_50 in {
 #else /* LLPC_BUILD_NPI */
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Plus in {
 #endif /* LLPC_BUILD_NPI */
@@ -2176,7 +2176,7 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Plus in {
 }
 
 #ifdef LLPC_BUILD_NPI
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1250 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
 #else /* LLPC_BUILD_NPI */
 let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Plus in {
 #endif /* LLPC_BUILD_NPI */

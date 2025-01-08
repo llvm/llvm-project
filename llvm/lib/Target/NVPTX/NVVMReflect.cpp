@@ -21,6 +21,7 @@
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -219,7 +220,13 @@ bool NVVMReflect::runOnFunction(Function &F) {
   return runNVVMReflect(F, SmVersion);
 }
 
-NVVMReflectPass::NVVMReflectPass() : NVVMReflectPass(0) {}
+NVVMReflectPass::NVVMReflectPass() {
+  // Get the CPU string from the command line if not provided.
+  std::string MCPU = codegen::getMCPU();
+  StringRef SM = MCPU;
+  if (!SM.consume_front("sm_") || SM.consumeInteger(10, SmVersion))
+    SmVersion = 0;
+}
 
 PreservedAnalyses NVVMReflectPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {

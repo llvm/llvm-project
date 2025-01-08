@@ -127,7 +127,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300: AK = GK_GFX1300; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1301: AK = GK_GFX1301; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1302: AK = GK_GFX1302; break;
-
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX130E: AK = GK_GFX130E; break;
 #endif /* LLPC_BUILD_NPI */
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
@@ -234,9 +234,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1300: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300;
   case GK_GFX1301: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1301;
   case GK_GFX1302: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1302;
-
-
-
+  case GK_GFX130E: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX130E;
 #endif /* LLPC_BUILD_NPI */
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
   case GK_GFX9_4_GENERIC:   return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC;
@@ -314,10 +312,17 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
 
 void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
     const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+#if LLPC_BUILD_NPI
+    const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
+    const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
+    const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
+    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {
+#else /* LLPC_BUILD_NPI */
     const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
     const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
     const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
     const MCSymbol *HasIndirectCall) {
+#endif /* LLPC_BUILD_NPI */
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -328,6 +333,9 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
   PRINT_RES_INFO(NumVGPR);
   PRINT_RES_INFO(NumAGPR);
   PRINT_RES_INFO(NumExplicitSGPR);
+#if LLPC_BUILD_NPI
+  PRINT_RES_INFO(NumNamedBarrier);
+#endif /* LLPC_BUILD_NPI */
   PRINT_RES_INFO(PrivateSegmentSize);
   PRINT_RES_INFO(UsesVCC);
   PRINT_RES_INFO(UsesFlatScratch);

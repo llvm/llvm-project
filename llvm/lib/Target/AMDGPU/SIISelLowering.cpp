@@ -4618,29 +4618,26 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 }
 
 // This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
-// except for stack growth direction(default: downwards, AMDGPU: upwards) and
-// applying the wave size scale to the increment amount.
-SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+// except for:
+// 1. Stack growth direction(default: downwards, AMDGPU: upwards), and
+// 2. Scale size where, scale = wave-reduction(alloca-size) * wave-size
+SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
-  SDValue Tmp1 = Op;
-  SDValue Tmp2 = Op.getValue(1);
-  SDValue Tmp3 = Op.getOperand(2);
-  SDValue Chain = Tmp1.getOperand(0);
-
+  SDValue Chain = Op.getOperand(0);
   Register SPReg = Info->getStackPtrOffsetReg();
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
   // pointer when other instructions are using the stack.
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
-  SDValue Size = Tmp2.getOperand(1);
+  SDValue Size = Op.getOperand(1);
   SDValue BaseAddr = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  Align Alignment = cast<ConstantSDNode>(Tmp3)->getAlignValue();
+  Align Alignment = cast<ConstantSDNode>(Op.getOperand(2))->getAlignValue();
 
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
   assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
@@ -4658,30 +4655,36 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                            DAG.getSignedConstant(-ScaledAlignment, dl, VT));
   }
 
-  SDValue ScaledSize = DAG.getNode(
-      ISD::SHL, dl, VT, Size,
-      DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
-
-  SDValue NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
+  SDValue NewSP;
+  if (isa<ConstantSDNode>(Size)) {
+    // For constant sized alloca, scale alloca size by wave-size
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  } else {
+    // For dynamic sized alloca, perform wave-wide reduction to get max of
+    // alloca size(divergent) and then scale it by wave-size
+    SDValue WaveReduction =
+        DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
+    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
+                       Size, DAG.getConstant(0, dl, MVT::i32));
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP =
+        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
+                        NewSP);
+  }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
-  Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
+  SDValue CallSeqEnd = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
-  return DAG.getMergeValues({BaseAddr, Tmp2}, dl);
-}
-
-SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  // We only handle constant sizes here to allow non-entry block, static sized
-  // allocas. A truly dynamic value is more difficult to support because we
-  // don't know if the size value is uniform or not. If the size isn't uniform,
-  // we would need to do a wave reduction to get the maximum size to know how
-  // much to increment the uniform stack pointer.
-  SDValue Size = Op.getOperand(1);
-  if (isa<ConstantSDNode>(Size))
-    return lowerDYNAMIC_STACKALLOCImpl(Op, DAG); // Use "generic" expansion.
-
-  return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
+  return DAG.getMergeValues({BaseAddr, CallSeqEnd}, dl);
 }
 
 SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
@@ -7801,14 +7804,14 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     // TODO: Handle strictfp
     if (Op.getOpcode() != ISD::FP_ROUND)
       return Op;
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
     SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   assert (DstVT.getScalarType() == MVT::bf16 &&
           "custom lower FP_ROUND for f16 or bf16");
   assert (Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
@@ -9769,6 +9772,13 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   if (MaxID == 0)
     return DAG.getConstant(0, SL, MVT::i32);
 
+#if LLPC_BUILD_NPI
+  // Wavegroup launch mode needs to compute workitem id
+  if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    return buildWorkitemIdWavegroupModeISel(DAG, Op, Dim);
+  }
+
+#endif /* LLPC_BUILD_NPI */
   SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                                SDLoc(DAG.getEntryNode()), Arg);
 
@@ -9785,6 +9795,62 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                      DAG.getValueType(SmallVT));
 }
 
+#if LLPC_BUILD_NPI
+SDValue SITargetLowering::buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG,
+                                                           SDValue Op,
+                                                           unsigned Dim) const {
+  /* See buildWorkitemIdWavegroupModeGISel for desc */
+  assert(((Dim == 0) || (Dim == 1) || (Dim == 2)) &&
+         "Unknown value for Dim. Expected 0, 1, or 2");
+  MachineFunction &MF = DAG.getMachineFunction();
+  unsigned MaxIDX = Subtarget->getMaxWorkitemID(MF.getFunction(), 0);
+  unsigned MaxIDY = Subtarget->getMaxWorkitemID(MF.getFunction(), 1);
+  unsigned MaxIDZ = Subtarget->getMaxWorkitemID(MF.getFunction(), 2);
+  assert((((MaxIDX + 1) * (MaxIDY + 1) * (MaxIDZ + 1)) % 128 == 0) &&
+         "Total threads per workgroup in wavegroup dispatch mode must be an "
+         "integer multiple of 128.");
+
+  SDLoc SL(Op);
+  auto VT32 = MVT::i32;
+
+  // calculate FlatWorkitemID
+  auto TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT32);
+  auto WaveIdInWorkgroup =
+      DAG.getNode(AMDGPUISD::BFE_U32, SL, VT32, TTMP8,
+                  DAG.getConstant(25, SL, VT32), DAG.getConstant(5, SL, VT32));
+  auto ShiftAmt = DAG.getConstant(5, SL, VT32);
+  auto ThreadOffset =
+      DAG.getNode(ISD::SHL, SL, VT32, WaveIdInWorkgroup, ShiftAmt);
+  auto AllOnes = DAG.getSignedTargetConstant(-1, SL, VT32);
+  auto LaneID = DAG.getConstant(0, SL, VT32);
+  LaneID =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, VT32,
+                  DAG.getTargetConstant(Intrinsic::amdgcn_mbcnt_lo, SL, VT32),
+                  AllOnes, LaneID);
+  auto FlatWorkitemID = DAG.getNode(ISD::ADD, SL, VT32, ThreadOffset, LaneID);
+
+  // compute WorkitemIDX = FlatWorkitemID % DimX
+  auto DimX = DAG.getConstant(MaxIDX, SL, VT32);
+  auto DivX = DAG.getNode(ISD::UDIVREM, SL, DAG.getVTList(VT32, VT32),
+                          FlatWorkitemID, DimX);
+  auto RemX = DivX.getValue(1);
+  if (Dim == 0) {
+    return RemX;
+  }
+
+  // compute WorkitemIDY or WorkitemIDY
+  auto DimY = DAG.getConstant(MaxIDY, SL, VT32);
+  auto DivY =
+      DAG.getNode(ISD::UDIVREM, SL, DAG.getVTList(VT32, VT32), DivX, DimY);
+  auto RemY = DivX.getValue(1);
+  if (Dim == 1) {
+    return RemY; // WorkitemIDY = (FlatWorkitemID / DimX) % DimY
+  } else if (Dim == 2) {
+    return DivY; // WorkitemIDY = (FlatWorkitemID / DimX) / DimY
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();

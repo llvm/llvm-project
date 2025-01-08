@@ -91,6 +91,10 @@ private:
 #endif /* LLPC_BUILD_NPI */
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
+#if LLPC_BUILD_NPI
+  SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,
+                                           unsigned Dim) const;
+#endif /* LLPC_BUILD_NPI */
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -432,7 +436,6 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue lowerDYNAMIC_STACKALLOCImpl(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;

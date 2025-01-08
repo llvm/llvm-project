@@ -1550,9 +1550,23 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
+#if LLPC_BUILD_NPI
+    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
+#endif /* LLPC_BUILD_NPI */
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+#if LLPC_BUILD_NPI
+      if (IsNamedBarrier) {
+        unsigned BarCnt =
+            DL.getTypeAllocSize(GV->getValueType()) / 16;
+        MFI->recordNumNamedBarriers(Address.value(), BarCnt);
+      }
+#endif /* LLPC_BUILD_NPI */
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
+#if LLPC_BUILD_NPI
+    } else if (IsNamedBarrier) {
+      llvm_unreachable("named barrier should have an assigned address");
+#endif /* LLPC_BUILD_NPI */
     }
   }
 

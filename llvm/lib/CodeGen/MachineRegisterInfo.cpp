@@ -413,7 +413,7 @@ MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
 #if LLPC_BUILD_NPI
 
   // Possibly exactly one BUNDLE is a def of I as well.
-  if ((!I.atEnd())) {
+  if (I != def_instr_end()) {
     if (I->isBundle()) // BUNDLE first
       I++;
     else { // BUNDLE second
@@ -427,9 +427,11 @@ MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
   }
 
 #endif /* LLPC_BUILD_NPI */
-  assert((I.atEnd() || std::next(I) == def_instr_end()) &&
-         "getVRegDef assumes a single definition or no definition");
-  return !I.atEnd() ? &*I : nullptr;
+  if (I == def_instr_end())
+    return nullptr;
+  assert(std::next(I) == def_instr_end() &&
+         "getVRegDef assumes at most one definition");
+  return &*I;
 }
 
 /// getUniqueVRegDef - Return the unique machine instr that defines the

@@ -455,6 +455,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
       NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_fake16
                                           : AMDGPU::V_FMAAK_F16;
       break;
@@ -490,6 +491,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
       NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_fake16
                                           : AMDGPU::V_FMAMK_F16;
       break;
@@ -968,12 +970,13 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
-#if LLPC_BUILD_NPI
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
+#if LLPC_BUILD_NPI
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64 ||
           (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
            ST->hasFmaakFmamkF64Insts())) {
 #else /* LLPC_BUILD_NPI */
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64) {
 #endif /* LLPC_BUILD_NPI */
         shrinkMadFma(MI);
         continue;

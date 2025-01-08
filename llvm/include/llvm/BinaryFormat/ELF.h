@@ -689,6 +689,9 @@ enum : unsigned {
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
+#define ELF_RISCV_NONSTANDARD_RELOC(_vendor, name, value) name = value,
+#include "ELFRelocs/RISCV_nonstandard.def"
+#undef ELF_RISCV_NONSTANDARD_RELOC
 };
 
 enum {
@@ -844,6 +847,7 @@ enum : unsigned {
 #if LLPC_BUILD_NPI
   EF_AMDGPU_MACH_AMDGCN_GFX1251         = 0x05a,
   EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC = 0x05b,
+  EF_AMDGPU_MACH_AMDGCN_GFX130E         = 0x0f2,
 #endif /* LLPC_BUILD_NPI */
   EF_AMDGPU_MACH_AMDGCN_GFX120E         = 0x0f3,
   EF_AMDGPU_MACH_AMDGCN_GFX120F         = 0x0f4,

@@ -60,7 +60,11 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
     uint32_t LdsSize = 0;
     uint32_t EXCPEnable = 0;
 
+#if LLPC_BUILD_NPI
+    const MCExpr *ComputePGMRSrc3 = nullptr;
+#else /* LLPC_BUILD_NPI */
     const MCExpr *ComputePGMRSrc3GFX90A = nullptr;
+#endif /* LLPC_BUILD_NPI */
 
     const MCExpr *NumVGPR = nullptr;
     const MCExpr *NumArchVGPR = nullptr;
@@ -83,6 +87,11 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
 
     // Number of VGPRs that meets number of waves per execution unit request.
     const MCExpr *NumVGPRsForWavesPerEU = nullptr;
+#if LLPC_BUILD_NPI
+
+    // Number of named barriers used by the kernel.
+    const MCExpr *NamedBarCnt = nullptr;
+#endif /* LLPC_BUILD_NPI */
 
     // Final occupancy.
     const MCExpr *Occupancy = nullptr;

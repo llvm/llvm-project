@@ -55,7 +55,11 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LdsSize = 0;
   EXCPEnable = 0;
 
+#if LLPC_BUILD_NPI
+  ComputePGMRSrc3 = ZeroExpr;
+#else /* LLPC_BUILD_NPI */
   ComputePGMRSrc3GFX90A = ZeroExpr;
+#endif /* LLPC_BUILD_NPI */
 
   NumVGPR = ZeroExpr;
   NumArchVGPR = ZeroExpr;
@@ -73,6 +77,9 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
 #endif /* LLPC_BUILD_NPI */
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
+#if LLPC_BUILD_NPI
+  NamedBarCnt = ZeroExpr;
+#endif /* LLPC_BUILD_NPI */
   Occupancy = ZeroExpr;
   DynamicCallStack = ZeroExpr;
   VCCUsed = ZeroExpr;

@@ -1,4 +1,5 @@
 header: stdlib.h
+header_template: stdlib.h.def
 standards:
   - stdc
 macros: []

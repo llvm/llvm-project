@@ -8435,7 +8435,6 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
     return false;
 
   SDLoc dl(SDValue(Node, 0));
-  EVT ShiftVT = getShiftAmountTy(SrcVT, DAG.getDataLayout());
 
   // Implementation of unsigned i64 to f64 following the algorithm in
   // __floatundidf in compiler_rt.  This implementation performs rounding
@@ -8448,7 +8447,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
       llvm::bit_cast<double>(UINT64_C(0x4530000000100000)), dl, DstVT);
   SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
   SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
-  SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
+  SDValue HiShift = DAG.getShiftAmountConstant(32, SrcVT, dl);
 
   SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Src, LoMask);
   SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Src, HiShift);

@@ -110,6 +110,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
                          MRI.isLiveIn(MFI->getPreloadedReg(
                              AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT));
 
+#if LLPC_BUILD_NPI
+  Info.NumNamedBarrier = MFI->getNumNamedBarriers();
+
+#endif /* LLPC_BUILD_NPI */
   // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat
   // instructions aren't used to access the scratch buffer. Inline assembly may
   // need it though.

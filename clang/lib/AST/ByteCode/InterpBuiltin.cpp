@@ -155,7 +155,7 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
   if (S.getLangOpts().CPlusPlus11)
     S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
         << /*isConstexpr=*/0 << /*isConstructor=*/0
-        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str();
+        << S.getASTContext().BuiltinInfo.getQuotedName(ID);
   else
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
@@ -1977,7 +1977,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                   !isOneByteCharacterType(PtrB.getType()))) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcmp_unsupported)
-        << ("'" + ASTCtx.BuiltinInfo.getName(ID) + "'").str() << PtrA.getType()
+        << ASTCtx.BuiltinInfo.getQuotedName(ID) << PtrA.getType()
         << PtrB.getType();
     return false;
   }
