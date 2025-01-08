@@ -241,6 +241,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
 
+- Improved :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check to avoid
+  false positives when using name-independent variables after C++26.
+
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` to avoid triggering on
   ``reset()`` calls on moved-from ``std::optional`` and ``std::any`` objects,

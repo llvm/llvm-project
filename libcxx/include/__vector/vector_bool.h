@@ -275,17 +275,33 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __n) { return __make_ref(__n); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __n) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector<bool>::operator[] index out of bounds");
+    return __make_ref(__n);
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __n) const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector<bool>::operator[] index out of bounds");
     return __make_ref(__n);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference at(size_type __n);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference at(size_type __n) const;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() { return __make_ref(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const { return __make_ref(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() { return __make_ref(__size_ - 1); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const { return __make_ref(__size_ - 1); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::front() called on an empty vector");
+    return __make_ref(0);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::front() called on an empty vector");
+    return __make_ref(0);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::back() called on an empty vector");
+    return __make_ref(__size_ - 1);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::back() called on an empty vector");
+    return __make_ref(__size_ - 1);
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void push_back(const value_type& __x);
 #if _LIBCPP_STD_VER >= 14
@@ -310,7 +326,10 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back() { --__size_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::pop_back called on an empty vector");
+    --__size_;
+  }
 
 #if _LIBCPP_STD_VER >= 14
   template <class... _Args>
@@ -995,6 +1014,8 @@ vector<bool, _Allocator>::__insert_with_size(
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::erase(const_iterator __position) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __position != end(), "vector<bool>::erase(iterator) called with a non-dereferenceable iterator");
   iterator __r = __const_iterator_cast(__position);
   std::copy(__position + 1, this->cend(), __r);
   --__size_;
@@ -1004,6 +1025,8 @@ vector<bool, _Allocator>::erase(const_iterator __position) {
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::erase(const_iterator __first, const_iterator __last) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      __first <= __last, "vector<bool>::erase(iterator, iterator) called with an invalid range");
   iterator __r        = __const_iterator_cast(__first);
   difference_type __d = __last - __first;
   std::copy(__last, this->cend(), __r);
