@@ -713,8 +713,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateExtractElement(Vec, Ctz, "early.exit.value");
   }
   case VPInstruction::Splat:
-    return State.Builder.CreateVectorSplat(State.VF,
-                                           State.get(getOperand(0), true));
+    return State.Builder.CreateVectorSplat(
+        State.VF, State.get(getOperand(0), true), Name);
 
   default:
     llvm_unreachable("Unsupported opcode for instruction");
