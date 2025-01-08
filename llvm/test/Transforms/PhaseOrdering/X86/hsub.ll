@@ -801,10 +801,10 @@ define <2 x double> @sub_v2f64_01(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @sub_v2f64_u1(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @sub_v2f64_u1(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[B]], [[SHIFT]]
-; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x double> [[TMP1:%.*]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 1>
+; CHECK-NEXT:    [[RESULT1:%.*]] = fsub <2 x double> [[RESULT]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> [[RESULT1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
@@ -820,9 +820,9 @@ define <2 x double> @sub_v2f64_u1(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @sub_v2f64_0u(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @sub_v2f64_0u(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[A]], [[SHIFT]]
-; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[A]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub <2 x double> [[TMP1]], [[SHIFT]]
 ; CHECK-NEXT:    ret <2 x double> [[RESULT]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
