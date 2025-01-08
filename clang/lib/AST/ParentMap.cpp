@@ -41,7 +41,7 @@ static void BuildParentMap(MapTy& M, Stmt* S,
       if (OVMode == OV_Opaque)
         break;
       // Update the entry in transparent mode, and clear existing state.
-      Iter->second = SF;
+      Iter->second = S;
       for (Stmt *SubStmt : S->children())
         M.erase(SubStmt);
     }
