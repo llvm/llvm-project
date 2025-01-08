@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMGlobalISel
   GIMatchTableExecutor.cpp
   GISelChangeObserver.cpp
   IRTranslator.cpp
+  InferTypeInfoPass.cpp
   InlineAsmLowering.cpp
   InstructionSelect.cpp
   InstructionSelector.cpp
