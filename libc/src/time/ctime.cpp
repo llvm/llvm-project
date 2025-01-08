@@ -14,15 +14,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
-
 LLVM_LIBC_FUNCTION(char *, ctime, (const time_t *t_ptr)) {
   if (t_ptr == nullptr || *t_ptr > cpp::numeric_limits<int32_t>::max()) {
     return nullptr;
   }
-  static char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
+  static char buffer[time_constants::ASCTIME_BUFFER_SIZE];
   return time_utils::asctime(time_utils::localtime(t_ptr), buffer,
-                             TimeConstants::ASCTIME_MAX_BYTES);
+                             time_constants::ASCTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

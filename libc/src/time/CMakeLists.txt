@@ -2,6 +2,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
+add_header_library(
+  time_constants
+  HDRS
+    time_constants.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.hdr.types.time_t
+)
+
 add_object_library(
   time_utils
   SRCS
@@ -12,6 +23,10 @@ add_object_library(
     libc.include.time
     libc.src.__support.CPP.limits
     libc.src.errno.errno
+    .time_constants
+    libc.hdr.types.time_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -23,6 +38,7 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -34,6 +50,7 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -68,6 +85,7 @@ add_entrypoint_object(
     difftime.h
   DEPENDS
     libc.include.time
+    libc.hdr.types.time_t
 )
 
 add_entrypoint_object(
@@ -79,6 +97,8 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -90,6 +110,8 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -102,6 +124,8 @@ add_entrypoint_object(
     .time_utils
     libc.include.time
     libc.src.errno.errno
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -115,6 +139,7 @@ add_entrypoint_object(
     libc.hdr.types.time_t
     libc.src.__support.time.clock_gettime
     libc.src.errno.errno
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(

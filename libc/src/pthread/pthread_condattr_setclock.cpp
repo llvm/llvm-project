@@ -12,9 +12,9 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
+#include "hdr/time_macros.h"
 #include <pthread.h>   // pthread_condattr_t
 #include <sys/types.h> // clockid_t
-#include <time.h>      // CLOCK_MONOTONIC, CLOCK_REALTIME
 
 namespace LIBC_NAMESPACE_DECL {
 
