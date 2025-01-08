@@ -435,6 +435,53 @@ define i8 @or_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
   ret i8 %r
 }
 
+define i8 @or_lshr_commuted1(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X]], [[SHAMT]]
+; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y]], [[SHAMT]]
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[Z]], [[SX]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SY]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %z, %sx
+  %r = or i8 %sy, %a
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted2(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X]], [[SHAMT]]
+; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y]], [[SHAMT]]
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[Z]], [[SX]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[SY]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %z, %sx
+  %r = or i8 %a, %sy
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted3(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted3
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %sx, %z
+  %r = or i8 %a, %sy
+  ret i8 %r
+}
+
 define i8 @xor_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: define {{[^@]+}}@xor_lshr
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
