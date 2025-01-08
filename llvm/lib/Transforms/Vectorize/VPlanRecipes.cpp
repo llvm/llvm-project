@@ -51,24 +51,7 @@ extern cl::opt<unsigned> ForceTargetInstructionCost;
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInstructionSC:
-    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
-      return false;
-    switch (cast<VPInstruction>(this)->getOpcode()) {
-    case Instruction::Or:
-    case Instruction::ICmp:
-    case Instruction::Select:
-    case VPInstruction::AnyOf:
-    case VPInstruction::Not:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractFromEnd:
-    case VPInstruction::FirstOrderRecurrenceSplice:
-    case VPInstruction::LogicalAnd:
-    case VPInstruction::PtrAdd:
-      return false;
-    default:
-      return true;
-    }
+    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -115,6 +98,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -705,6 +690,26 @@ void VPInstruction::execute(VPTransformState &State) {
       "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
+}
+
+bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
+  if (Instruction::isBinaryOp(getOpcode()))
+    return false;
+  switch (getOpcode()) {
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case VPInstruction::AnyOf:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExtractFromEnd:
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::Not:
+  case VPInstruction::PtrAdd:
+    return false;
+  default:
+    return true;
+  }
 }
 
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
