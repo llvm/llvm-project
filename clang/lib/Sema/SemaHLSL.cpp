@@ -202,8 +202,8 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
 }
 
 // Validate packoffset:
-// - make sure if packoffset it used on all decls or none
-// - the packoffset ranges must not overlap
+// - if packoffset it used it must be set on all declarations inside the buffer
+// - packoffset ranges must not overlap
 static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
   llvm::SmallVector<std::pair<VarDecl *, HLSLPackOffsetAttr *>> PackOffsetVec;
 
