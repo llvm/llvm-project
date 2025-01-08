@@ -85,3 +85,13 @@ void func_with_body() {}
 void func_without_body();
 void func_without_body();
 }
+
+// gh117489 start
+namespace std {
+using size_t = decltype(sizeof(int));
+}
+void * operator new(std::size_t) { return nullptr; }
+void * operator new[](std::size_t) { return nullptr; }
+void operator delete(void*) noexcept {}
+void operator delete[](void*) noexcept {}
+// gh117489 end

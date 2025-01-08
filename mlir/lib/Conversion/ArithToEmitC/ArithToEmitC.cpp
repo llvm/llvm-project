@@ -674,7 +674,7 @@ public:
     Type actualResultType = dstType;
     if (isa<arith::FPToUIOp>(castOp)) {
       actualResultType =
-          rewriter.getIntegerType(operandType.getIntOrFloatBitWidth(),
+          rewriter.getIntegerType(dstType.getIntOrFloatBitWidth(),
                                   /*isSigned=*/false);
     }
 

@@ -322,12 +322,11 @@ define <2 x i8> @select_vec_op_const_no_undef(<2 x i8> %x) {
   ret <2 x i8> %xr
 }
 
-; FIXME: This is a miscompile.
 define <2 x i8> @select_vec_op_const_undef(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @select_vec_op_const_undef(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq <2 x i8> [[X]], <i8 1, i8 undef>
-; CHECK-NEXT:    [[XR:%.*]] = select <2 x i1> [[XZ]], <2 x i8> <i8 1, i8 undef>, <2 x i8> <i8 4, i8 3>
+; CHECK-NEXT:    [[XR:%.*]] = select <2 x i1> [[XZ]], <2 x i8> [[X]], <2 x i8> <i8 4, i8 3>
 ; CHECK-NEXT:    ret <2 x i8> [[XR]]
 ;
   %xz = icmp eq <2 x i8> %x, <i8 1, i8 undef>

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IS_HEAP_UNTIL_H
-#define _LIBCPP___ALGORITHM_IS_HEAP_UNTIL_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_IS_HEAP_UNTIL_H
+#define _LIBCPP___CXX03___ALGORITHM_IS_HEAP_UNTIL_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -59,4 +59,4 @@ is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_IS_HEAP_UNTIL_H
+#endif // _LIBCPP___CXX03___ALGORITHM_IS_HEAP_UNTIL_H

@@ -1,6 +1,6 @@
 ; RUN: llc -O3 -mcpu=mips32r2 -mtriple=mipsel-linux-gnu < %s -o - \
 ; RUN:   | FileCheck %s --check-prefixes=MIPS32R2
-; RUN: llc -O3 -mcpu=mips64r2 -march=mips64el  < %s \
+; RUN: llc -O3 -mcpu=mips64r2 -mtriple=mips64el  < %s \
 ; RUN:   | FileCheck %s --check-prefixes=MIPS64R2
 
 define i32 @or_and_shl(i32 %a, i32 %b) {

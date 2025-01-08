@@ -608,6 +608,8 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
+  std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                              const TypedValueRegion *R) const;
   std::optional<SVal>
   getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
@@ -2349,6 +2351,11 @@ SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
   // behavior doesn't depend on the struct layout.
   // This way even an empty struct can carry taint, no matter if creduce drops
   // the last field member or not.
+
+  // Try to avoid creating a LCV if it would anyways just refer to a single
+  // default binding.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(B, R))
+    return *Val;
   return createLazyBinding(B, R);
 }
 
@@ -2609,19 +2616,23 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
 }
 
 std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
-  const MemRegion *BaseR = LCV.getRegion();
-
-  // We only handle base regions.
-  if (BaseR != BaseR->getBaseRegion())
+RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                            const TypedValueRegion *R) const {
+  if (R != R->getBaseRegion())
     return std::nullopt;
 
-  const auto *Cluster = getRegionBindings(LCV.getStore()).lookup(BaseR);
+  const auto *Cluster = B.lookup(R);
   if (!Cluster || !llvm::hasSingleElement(*Cluster))
     return std::nullopt;
 
   const auto [Key, Value] = *Cluster->begin();
   return Key.isDirect() ? std::optional<SVal>{} : Value;
+}
+
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
+  RegionBindingsConstRef B = getRegionBindings(LCV.getStore());
+  return getUniqueDefaultBinding(B, LCV.getRegion());
 }
 
 std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(

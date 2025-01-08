@@ -98,6 +98,23 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=rocket-rv64 | FileCheck -check-prefix=MTUNE-ROCKET64 %s
 // MTUNE-ROCKET64: "-tune-cpu" "rocket-rv64"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=mips-p8700 | FileCheck -check-prefix=MTUNE-MIPS-P8700 %s
+// MTUNE-MIPS-P8700: "-tune-cpu" "mips-p8700"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=mips-p8700 | FileCheck -check-prefix=MCPU-MIPS-P8700 %s
+// MCPU-MIPS-P8700: "-target-cpu" "mips-p8700"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+m"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+a"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+f"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+d"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+c"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zicsr"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zifencei"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zaamo"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zalrsc"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zba"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
 // MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"
 

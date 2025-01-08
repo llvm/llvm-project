@@ -30,14 +30,6 @@ static constexpr Builtin::Info BuiltinInfoX86[] = {
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsX86.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86.inc"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
@@ -46,7 +38,7 @@ static constexpr Builtin::Info BuiltinInfoX86[] = {
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsX86_64.def"
+#include "clang/Basic/BuiltinsX86_64.inc"
 };
 
 static const char *const GCCRegNames[] = {
@@ -1162,6 +1154,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pconfig", true)
       .Case("pku", true)
       .Case("popcnt", true)
+      .Case("prefer-256-bit", true)
       .Case("prefetchi", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
@@ -1364,8 +1357,8 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
-  auto getPriority = [](StringRef Feature) -> unsigned {
+uint64_t X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  auto getPriority = [](StringRef Feature) -> uint64_t {
     // Valid CPUs have a 'key feature' that compares just better than its key
     // feature.
     using namespace llvm::X86;
@@ -1379,7 +1372,7 @@ unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return getFeaturePriority(getFeature(Feature)) << 1;
   };
 
-  unsigned Priority = 0;
+  uint64_t Priority = 0;
   for (StringRef Feature : Features)
     if (!Feature.empty())
       Priority = std::max(Priority, getPriority(Feature));

@@ -10,7 +10,6 @@
 #define _LIBCPP___ATOMIC_ATOMIC_SYNC_H
 
 #include <__atomic/contention_t.h>
-#include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
@@ -82,7 +81,7 @@ struct __atomic_wait_backoff_impl {
   _Poll __poll_;
   memory_order __order_;
 
-  using __waitable_traits = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
+  using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
 
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool

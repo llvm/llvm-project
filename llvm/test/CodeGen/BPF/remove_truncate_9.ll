@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=v2 -march=bpf < %s | FileCheck %s
-; RUN: llc -mcpu=v4 -march=bpf < %s | FileCheck %s
+; RUN: llc -mcpu=v2 -mtriple=bpf < %s | FileCheck %s
+; RUN: llc -mcpu=v4 -mtriple=bpf < %s | FileCheck %s
 
 ; Zero extension instructions should be eliminated at instruction
 ; selection phase for all test cases below.

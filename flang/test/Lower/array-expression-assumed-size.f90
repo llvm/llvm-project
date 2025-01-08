@@ -1,5 +1,5 @@
 ! RUN: bbc --emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: bbc -hlfir=false %s -o - | FileCheck --check-prefix=PostOpt %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck --check-prefix=PostOpt %s
 
 
 subroutine assumed_size_test(a)

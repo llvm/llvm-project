@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs < %s | FileCheck %s
 ;
 ; Make sure that this testcase passes the verifier.
 ; CHECK: call f1

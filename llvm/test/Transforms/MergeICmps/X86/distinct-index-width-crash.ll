@@ -8,7 +8,7 @@ target triple = "x86_64"
 target datalayout = "e-p:64:64:64:32"
 
 ; Define a cunstom data layout that has index width < pointer width
-; and make sure that doesn't mreak anything
+; and make sure that doesn't break anything
 define void @fat_ptrs(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b) {
 ; CHECK-LABEL: @fat_ptrs(
 ; CHECK-NEXT:  bb0:
@@ -16,7 +16,7 @@ define void @fat_ptrs(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b) {
 ; CHECK-NEXT:    [[PTR_B1:%.*]] = getelementptr inbounds [2 x i64], ptr [[B:%.*]], i32 0, i32 1
 ; CHECK-NEXT:    br label %"bb1+bb2"
 ; CHECK:       "bb1+bb2":
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[A]], ptr [[B]], i64 16)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[A]], ptr [[B]], i32 16)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TYPEINDEX
-#define _LIBCPP_TYPEINDEX
+#ifndef _LIBCPP___CXX03_TYPEINDEX
+#define _LIBCPP___CXX03_TYPEINDEX
 
 /*
 
@@ -103,4 +103,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_TYPEINDEX
+#endif // _LIBCPP___CXX03_TYPEINDEX

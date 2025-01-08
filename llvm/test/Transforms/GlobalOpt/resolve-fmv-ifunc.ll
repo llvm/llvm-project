@@ -26,9 +26,8 @@ declare i32 @test_single_bb_resolver._Msve() #1
 
 declare i32 @test_single_bb_resolver._Msve2() #2
 
-define weak_odr ptr @test_single_bb_resolver.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @test_single_bb_resolver.resolver(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] comdat {
+define weak_odr ptr @test_single_bb_resolver.resolver() comdat {
+; CHECK-LABEL: define weak_odr ptr @test_single_bb_resolver.resolver() comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -79,9 +78,8 @@ declare i32 @test_multi_bb_resolver._Msve() #1
 
 declare i32 @test_multi_bb_resolver.default() #0
 
-define weak_odr ptr @test_multi_bb_resolver.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @test_multi_bb_resolver.resolver(
-; CHECK-SAME: ) #[[ATTR0]] comdat {
+define weak_odr ptr @test_multi_bb_resolver.resolver() comdat {
+; CHECK-LABEL: define weak_odr ptr @test_multi_bb_resolver.resolver() comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -153,9 +151,8 @@ declare i32 @test_caller_feats_not_implied._Msve() #1
 
 declare i32 @test_caller_feats_not_implied.default() #0
 
-define weak_odr ptr @test_caller_feats_not_implied.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @test_caller_feats_not_implied.resolver(
-; CHECK-SAME: ) #[[ATTR0]] comdat {
+define weak_odr ptr @test_caller_feats_not_implied.resolver() comdat {
+; CHECK-LABEL: define weak_odr ptr @test_caller_feats_not_implied.resolver() comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -213,9 +210,8 @@ declare i32 @test_non_fmv_caller._Maes() #6
 
 declare i32 @test_non_fmv_caller.default() #0
 
-define weak_odr ptr @test_non_fmv_caller.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @test_non_fmv_caller.resolver(
-; CHECK-SAME: ) #[[ATTR0]] comdat {
+define weak_odr ptr @test_non_fmv_caller.resolver() comdat {
+; CHECK-LABEL: define weak_odr ptr @test_non_fmv_caller.resolver() comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -243,9 +239,8 @@ declare i32 @test_priority._MflagmMlseMrng() #10
 
 declare i32 @test_priority.default() #0
 
-define weak_odr ptr @test_priority.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @test_priority.resolver(
-; CHECK-SAME: ) #[[ATTR0]] comdat {
+define weak_odr ptr @test_priority.resolver() comdat {
+; CHECK-LABEL: define weak_odr ptr @test_priority.resolver() comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -269,18 +264,6 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-; FIXME: This is wrong. When generating the resolver the selection algorithm
-; orders the function versions according to the number of specified features,
-; from highest to lowest. (Note: I am going on a tangent here but in the case
-; of a tie, the version with the highest priority feature is preferred. This
-; is non deterministic if the highest priority feature is common. For example
-; mops+sve vs mops+sve2).
-;
-; In this example the problem is slightly different. When in IR we can't know
-; what were the features before their dependencies got expanded. Therefore
-; we can select based on highest priority feature, then second, then third,
-; etc... That's what we should be doing in the front-end too if you ask me.
-;
 define i32 @hoo._MflagmMls64MlseMrngMssbsMsve2-sha3() #11 {
 ; CHECK-LABEL: define i32 @hoo._MflagmMls64MlseMrngMssbsMsve2-sha3(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR11:[0-9]+]] {
@@ -291,15 +274,15 @@ entry:
   ret i32 %call
 }
 
-attributes #0 = { "target-features"="+fmv,+fp-armv8,+neon,+outline-atomics,+v8a" }
-attributes #1 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+v8a" }
-attributes #2 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+v8a" }
-attributes #3 = { "target-features"="+fmv,+fp-armv8,+mops,+neon,+outline-atomics,+v8a" }
-attributes #4 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+mops,+neon,+outline-atomics,+sve,+sve2,+v8a" }
-attributes #5 = { "target-features"="+bf16,+fmv,+fp-armv8,+neon,+outline-atomics,+sme,+v8a" }
-attributes #6 = { "target-features"="+aes,+fmv,+fp-armv8,+neon,+outline-atomics,+v8a" }
+attributes #0 = { "fmv-features"="" }
+attributes #1 = { "fmv-features"="+sve" }
+attributes #2 = { "fmv-features"="+sve2" }
+attributes #3 = { "fmv-features"="+mops" }
+attributes #4 = { "fmv-features"="+mops,+sve2" }
+attributes #5 = { "fmv-features"="+sme" }
+attributes #6 = { "fmv-features"="+aes" }
 attributes #7 = { "target-features"="+aes,+fp-armv8,+neon,+outline-atomics,+v8a" }
-attributes #8 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sha2,+sha3,+sve,+sve2,+sve2-sha3,+v8a" }
-attributes #9 = { "target-features"="+fmv,+fp-armv8,+ls64,+neon,+outline-atomics,+ssbs,+v8a" }
-attributes #10 = { "target-features"="+flagm,+fmv,+fp-armv8,+lse,+neon,+outline-atomics,+rand,+v8a" }
-attributes #11 = { "target-features"="+flagm,+fmv,+fp-armv8,+fullfp16,+ls64,+lse,+neon,+outline-atomics,+rand,+sha2,+sha3,+ssbs,+sve,+sve2,+sve2-sha3,+v8a" }
+attributes #8 = { "fmv-features"="+sve2-sha3" }
+attributes #9 = { "fmv-features"="+ls64,+ssbs" }
+attributes #10 = { "fmv-features"="+flagm,+lse,+rng" }
+attributes #11 = { "fmv-features"="+flagm,+ls64,+lse,+rng,+ssbs,+sve2-sha3" }

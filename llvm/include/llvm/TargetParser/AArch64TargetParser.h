@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -71,11 +72,11 @@ struct ExtensionInfo {
 struct FMVInfo {
   StringRef Name;                // The target_version/target_clones spelling.
   CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
-  FeatPriorities PriorityBit;    // FMV priority.
-  FMVInfo(StringRef Name, CPUFeatures FeatureBit, std::optional<ArchExtKind> ID,
-          FeatPriorities PriorityBit)
-      : Name(Name), FeatureBit(FeatureBit), ID(ID), PriorityBit(PriorityBit) {};
+  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
+          std::optional<ArchExtKind> ID)
+      : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
@@ -269,17 +270,17 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
 
-// Return the priority for a given set of FMV features.
-unsigned getFMVPriority(ArrayRef<StringRef> Features);
+// For a given set of feature names, which can be either target-features, or
+// fmv-features metadata, expand their dependencies and then return a bitmask
+// corresponding to the entries of AArch64::FeatPriorities.
+uint64_t getFMVPriority(ArrayRef<StringRef> Features);
 
-// For given feature names, return a bitmask corresponding to the entries of
-// AArch64::FeatPriorities.
-uint64_t getPriorityMask(ArrayRef<StringRef> Features);
-
-// For given feature names, return a bitmask corresponding to the entries of
-// AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks
-// themselves, they are sequential (0, 1, 2, 3, ...).
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+// For a given set of FMV feature names, expand their dependencies and then
+// return a bitmask corresponding to the entries of AArch64::CPUFeatures.
+// The values in CPUFeatures are not bitmasks themselves, they are sequential
+// (0, 1, 2, 3, ...). The resulting bitmask is used at runtime to test whether
+// a certain FMV feature is available on the host.
+uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 void PrintSupportedExtensions();
 

@@ -394,18 +394,12 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
 
   switch (sym.kind()) {
   case S_GPROC32:
-  case S_LPROC32: {
+  case S_LPROC32:
     // This is a function.  It must be global.  Creating the Function entry
     // for it automatically creates a block for it.
-    FunctionSP func = GetOrCreateFunction(block_id, *comp_unit);
-    if (func) {
-      Block &block = func->GetBlock(false);
-      if (block.GetNumRanges() == 0)
-        block.AddRange(Block::Range(0, func->GetAddressRange().GetByteSize()));
-      return &block;
-    }
+    if (FunctionSP func = GetOrCreateFunction(block_id, *comp_unit))
+      return &func->GetBlock(false);
     break;
-  }
   case S_BLOCK32: {
     // This is a block.  Its parent is either a function or another block.  In
     // either case, its parent can be viewed as a block (e.g. a function

@@ -113,9 +113,31 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   }
 }
 
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
+                                   const TargetTransformInfo *TTI) {
+  if (isTriviallyVectorizable(ID))
+    return true;
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
+
+  // TODO: Move frexp to isTriviallyVectorizable.
+  // https://github.com/llvm/llvm-project/issues/112408
+  switch (ID) {
+  case Intrinsic::frexp:
+    return true;
+  }
+  return false;
+}
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                              unsigned ScalarOpdIdx) {
+                                              unsigned ScalarOpdIdx,
+                                              const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
@@ -142,7 +164,10 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   assert(ID != Intrinsic::not_intrinsic && "Not an intrinsic!");
 
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
-    return TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+    return TTI->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+
+  if (VPCastIntrinsic::isVPCast(ID))
+    return OpdIdx == -1 || OpdIdx == 0;
 
   switch (ID) {
   case Intrinsic::fptosi_sat:
@@ -164,8 +189,12 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   }
 }
 
-bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
-                                                            int RetIdx) {
+bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
+
   switch (ID) {
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
@@ -504,25 +533,26 @@ void llvm::processShuffleMasks(
   unsigned SzSrc = Sz / NumOfSrcRegs;
   for (unsigned I = 0; I < NumOfDestRegs; ++I) {
     auto &RegMasks = Res[I];
-    RegMasks.assign(NumOfSrcRegs, {});
+    RegMasks.assign(2 * NumOfSrcRegs, {});
     // Check that the values in dest registers are in the one src
     // register.
     for (unsigned K = 0; K < SzDest; ++K) {
       int Idx = I * SzDest + K;
       if (Idx == Sz)
         break;
-      if (Mask[Idx] >= Sz || Mask[Idx] == PoisonMaskElem)
+      if (Mask[Idx] >= 2 * Sz || Mask[Idx] == PoisonMaskElem)
         continue;
-      int SrcRegIdx = Mask[Idx] / SzSrc;
+      int MaskIdx = Mask[Idx] % Sz;
+      int SrcRegIdx = MaskIdx / SzSrc + (Mask[Idx] >= Sz ? NumOfSrcRegs : 0);
       // Add a cost of PermuteTwoSrc for each new source register permute,
       // if we have more than one source registers.
       if (RegMasks[SrcRegIdx].empty())
         RegMasks[SrcRegIdx].assign(SzDest, PoisonMaskElem);
-      RegMasks[SrcRegIdx][K] = Mask[Idx] % SzSrc;
+      RegMasks[SrcRegIdx][K] = MaskIdx % SzSrc;
     }
   }
   // Process split mask.
-  for (unsigned I = 0; I < NumOfUsedRegs; ++I) {
+  for (unsigned I : seq<unsigned>(NumOfUsedRegs)) {
     auto &Dest = Res[I];
     int NumSrcRegs =
         count_if(Dest, [](ArrayRef<int> Mask) { return !Mask.empty(); });
@@ -567,7 +597,7 @@ void llvm::processShuffleMasks(
         int FirstIdx = -1;
         SecondIdx = -1;
         MutableArrayRef<int> FirstMask, SecondMask;
-        for (unsigned I = 0; I < NumOfDestRegs; ++I) {
+        for (unsigned I : seq<unsigned>(2 * NumOfSrcRegs)) {
           SmallVectorImpl<int> &RegMask = Dest[I];
           if (RegMask.empty())
             continue;

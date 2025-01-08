@@ -299,7 +299,7 @@ __m512h test_mm512_cvtpbf8_ph(__m256i A) {
   return _mm512_cvtpbf8_ph(A);
 }
 
-__m512h test_mm512_mask_cvtpbf8_ph(__m512h S, __mmask16 M, __m256i A) {
+__m512h test_mm512_mask_cvtpbf8_ph(__m512h S, __mmask32 M, __m256i A) {
   // CHECK-LABEL: @test_mm512_mask_cvtpbf8_ph
   // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
   // CHECK: @llvm.x86.avx512.pslli.w.512
@@ -308,7 +308,7 @@ __m512h test_mm512_mask_cvtpbf8_ph(__m512h S, __mmask16 M, __m256i A) {
   return _mm512_mask_cvtpbf8_ph(S, M, A);
 }
 
-__m512h test_mm512_maskz_cvtpbf8_ph(__mmask16 M, __m256i A) {
+__m512h test_mm512_maskz_cvtpbf8_ph(__mmask32 M, __m256i A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtpbf8_ph
   // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}

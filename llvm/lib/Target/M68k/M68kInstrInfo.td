@@ -466,34 +466,28 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 
 // NOTE Though this CP is not strictly necessarily it will simplify instruciton
 // definitions
-def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI",
-                                [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;
 
-def MxCP_ARIPI : ComplexPattern<iPTR, 1, "SelectARIPI",
-                                [], [SDNPWantParent]>;
+  def MxCP_ARIPI : ComplexPattern<iPTR, 1, "SelectARIPI">;
 
-def MxCP_ARIPD : ComplexPattern<iPTR, 1, "SelectARIPD",
-                                [], [SDNPWantParent]>;
+  def MxCP_ARIPD : ComplexPattern<iPTR, 1, "SelectARIPD">;
 
-def MxCP_ARID  : ComplexPattern<iPTR, 2, "SelectARID",
-                                [add, sub, mul, or, shl, frameindex],
-                                [SDNPWantParent]>;
+  def MxCP_ARID  : ComplexPattern<iPTR, 2, "SelectARID",
+                                  [add, sub, mul, or, shl, frameindex]>;
 
-def MxCP_ARII  : ComplexPattern<iPTR, 3, "SelectARII",
-                                [add, sub, mul, or, shl, frameindex],
-                                [SDNPWantParent]>;
+  def MxCP_ARII  : ComplexPattern<iPTR, 3, "SelectARII",
+                                  [add, sub, mul, or, shl, frameindex]>;
 
-def MxCP_AL    : ComplexPattern<iPTR, 1, "SelectAL",
-                                [add, sub, mul, or, shl],
-                                [SDNPWantParent]>;
+  def MxCP_AL    : ComplexPattern<iPTR, 1, "SelectAL",
+                                  [add, sub, mul, or, shl]>;
 
-def MxCP_PCD   : ComplexPattern<iPTR, 1, "SelectPCD",
-                                [add, sub, mul, or, shl],
-                                [SDNPWantParent]>;
+  def MxCP_PCD   : ComplexPattern<iPTR, 1, "SelectPCD",
+                                  [add, sub, mul, or, shl]>;
 
-def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
-                                [add, sub, mul, or, shl], [SDNPWantParent]>;
-
+  def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
+                                  [add, sub, mul, or, shl]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pattern Fragments

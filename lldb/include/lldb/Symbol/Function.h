@@ -444,7 +444,10 @@ public:
 
   Function *CalculateSymbolContextFunction() override;
 
+  /// DEPRECATED: Use GetAddressRanges instead.
   const AddressRange &GetAddressRange() { return m_range; }
+
+  AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
 
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
@@ -649,9 +652,6 @@ protected:
 
   /// All lexical blocks contained in this function.
   Block m_block;
-
-  /// List of address ranges belonging to the function.
-  AddressRanges m_ranges;
 
   /// The function address range that covers the widest range needed to contain
   /// all blocks. DEPRECATED: do not use this field in new code as the range may

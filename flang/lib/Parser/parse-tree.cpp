@@ -267,7 +267,18 @@ OmpDependenceType::Value OmpDoacross::GetDepType() const {
 }
 
 OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
-  return std::get<parser::OmpTaskDependenceType>(t).v;
+  using Modifier = OmpDependClause::TaskDep::Modifier;
+  auto &modifiers{std::get<std::optional<std::list<Modifier>>>(t)};
+  if (modifiers) {
+    for (auto &m : *modifiers) {
+      if (auto *dep{std::get_if<OmpTaskDependenceType>(&m.u)}) {
+        return dep->v;
+      }
+    }
+    llvm_unreachable("expecting OmpTaskDependenceType in TaskDep");
+  } else {
+    llvm_unreachable("expecting modifiers on OmpDependClause::TaskDep");
+  }
 }
 
 } // namespace Fortran::parser

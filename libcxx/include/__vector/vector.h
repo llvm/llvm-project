@@ -114,7 +114,7 @@ public:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
-  using __trivially_relocatable = __conditional_t<
+  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       vector,
       void>;
@@ -1003,9 +1003,15 @@ template <class _Tp, class _Allocator>
 template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __last) {
-  clear();
-  for (; __first != __last; ++__first)
-    emplace_back(*__first);
+  pointer __cur = __begin_;
+  for (; __first != __last && __cur != __end_; ++__first, (void)++__cur)
+    *__cur = *__first;
+  if (__cur != __end_) {
+    __destruct_at_end(__cur);
+  } else {
+    for (; __first != __last; ++__first)
+      emplace_back(*__first);
+  }
 }
 
 template <class _Tp, class _Allocator>
