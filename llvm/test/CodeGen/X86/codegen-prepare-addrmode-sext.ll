@@ -622,16 +622,17 @@ define i8 @oneArgPromotionBlockSExtZExt(i1 %arg1, ptr %base) {
 }
 
 ; Check that we replace the deleted sext with the promoted value.
+define void @pr70938(ptr %f) {
 ; CHECK-LABEL: define void @pr70938(
 ; CHECK-SAME: ptr [[F:%.*]]) {
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 0, 1
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[ADD]], 2
 ; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[F]], i64 [[SUNKADDR]]
 ; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[SUNKADDR2]], align 1
 ; CHECK-NEXT:    ret void
-define void @pr70938(ptr %f) {
+;
 entry:
   %add = add nsw i32 0, 1
   %idxprom3 = sext i32 %add to i64
