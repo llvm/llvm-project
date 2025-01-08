@@ -37,6 +37,7 @@ add_entrypoint_object(
     asctime.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
 )
@@ -49,6 +50,7 @@ add_entrypoint_object(
     asctime_r.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
 )
@@ -61,6 +63,7 @@ add_entrypoint_object(
     ctime.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.hdr.types.time_t
     libc.include.time
 )
@@ -73,6 +76,7 @@ add_entrypoint_object(
     ctime_r.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.hdr.types.time_t
     libc.include.time
 )
@@ -122,6 +126,7 @@ add_entrypoint_object(
     mktime.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.include.time
     libc.src.errno.errno
     libc.hdr.types.time_t
