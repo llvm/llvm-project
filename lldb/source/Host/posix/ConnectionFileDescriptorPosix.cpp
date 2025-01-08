@@ -715,7 +715,7 @@ ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
 ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     llvm::StringRef s, socket_id_callback_type socket_id_callback,
     Status *error_ptr) {
-#if LLDB_ENABLE_POSIX && !defined(_AIX)
+#if LLDB_ENABLE_POSIX
   std::string addr_str = s.str();
   // file:///PATH
   int fd = FileSystem::Instance().Open(addr_str.c_str(), O_RDWR);
@@ -730,9 +730,21 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     struct termios options;
     ::tcgetattr(fd, &options);
 
-    // Set port speed to maximum
-    ::cfsetospeed(&options, B115200);
-    ::cfsetispeed(&options, B115200);
+    // Set port speed to the available maximum
+#ifdef B115200
+     ::cfsetospeed(&options, B115200);
+     ::cfsetispeed(&options, B115200);
+#elif B57600
+    ::cfsetospeed(&options, B57600);
+    ::cfsetispeed(&options, B57600);
+#elif B38400
+    ::cfsetospeed(&options, B38400);
+    ::cfsetispeed(&options, B38400);
+#else
+    if (error_ptr)
+      *error_ptr = Status::FromErrorString("Maximum Baud rate is Unknown");
+    return eConnectionStatusError;
+#endif
 
     // Raw input, disable echo and signals
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
@@ -746,7 +758,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
 
   m_io_sp = std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, true);
   return eConnectionStatusSuccess;
-#endif // LLDB_ENABLE_POSIX && !defined(_AIX)
+#endif // LLDB_ENABLE_POSIX
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
 }
 
