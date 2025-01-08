@@ -169,9 +169,6 @@ Custom flags can be declared in the YAML file under the *Flags* section.
   specified in the command-line invocation. It must be one value from the Values
   field.
 
-A Default value is useful to save users from specifying custom flags that have a
-most commonly used value.
-
 Each flag *Value* is defined as:
 
 * Name: name of the value. This is the string to be used in
