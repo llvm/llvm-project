@@ -301,6 +301,7 @@ OPTIONS
   * ``prepare-and-assemble-snippet``: Same as ``prepare-snippet``, but also dumps an excerpt of the sequence (hex encoded).
   * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
   * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
+  * ``dry-run-measurement``: Same as measure, but does not actually execute the snippet.
 
 .. option:: --x86-lbr-sample-period=<nBranches/sample>
 
@@ -448,11 +449,6 @@ OPTIONS
  return a dummy value instead. This can be used to ensure a snippet doesn't
  crash when hardware performance counters are unavailable and for
  debugging :program:`llvm-exegesis` itself.
-
-.. option:: --dry-run-measurement
-  If set, llvm-exegesis runs everything except the actual snippet execution.
-  This is useful if we want to test some part of the code without actually
-  running on native platforms.
 
 .. option:: --execution-mode=[inprocess,subprocess]
 

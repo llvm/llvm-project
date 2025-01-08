@@ -53,12 +53,6 @@
 namespace llvm {
 namespace exegesis {
 
-static cl::opt<bool>
-    DryRunMeasurement("dry-run-measurement",
-                      cl::desc("Run every steps in the measurement phase "
-                               "except executing the snippet."),
-                      cl::init(false), cl::Hidden);
-
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
                                  ExecutionModeE ExecutionMode,
@@ -105,7 +99,7 @@ public:
   static Expected<std::unique_ptr<InProcessFunctionExecutorImpl>>
   create(const LLVMState &State, object::OwningBinary<object::ObjectFile> Obj,
          BenchmarkRunner::ScratchSpace *Scratch,
-         std::optional<int> BenchmarkProcessCPU) {
+         std::optional<int> BenchmarkProcessCPU, bool DryRun) {
     Expected<ExecutableFunction> EF =
         ExecutableFunction::create(State.createTargetMachine(), std::move(Obj));
 
@@ -113,14 +107,17 @@ public:
       return EF.takeError();
 
     return std::unique_ptr<InProcessFunctionExecutorImpl>(
-        new InProcessFunctionExecutorImpl(State, std::move(*EF), Scratch));
+        new InProcessFunctionExecutorImpl(State, std::move(*EF), Scratch,
+                                          DryRun));
   }
 
 private:
   InProcessFunctionExecutorImpl(const LLVMState &State,
                                 ExecutableFunction Function,
-                                BenchmarkRunner::ScratchSpace *Scratch)
-      : State(State), Function(std::move(Function)), Scratch(Scratch) {}
+                                BenchmarkRunner::ScratchSpace *Scratch,
+                                bool DryRun)
+      : State(State), Function(std::move(Function)), Scratch(Scratch),
+        DryRun(DryRun) {}
 
   static void accumulateCounterValues(const SmallVector<int64_t, 4> &NewValues,
                                       SmallVector<int64_t, 4> *Result) {
@@ -146,21 +143,18 @@ private:
     Scratch->clear();
     {
       auto PS = ET.withSavedState();
-      // We can't directly capture DryRunMeasurement in the lambda below.
-      bool DryRun = DryRunMeasurement;
       CrashRecoveryContext CRC;
       CrashRecoveryContext::Enable();
-      const bool Crashed =
-          !CRC.RunSafely([this, Counter, ScratchPtr, DryRun]() {
-            if (DryRun) {
-              Counter->start();
-              Counter->stop();
-            } else {
-              Counter->start();
-              this->Function(ScratchPtr);
-              Counter->stop();
-            }
-          });
+      const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
+        if (DryRun) {
+          Counter->start();
+          Counter->stop();
+        } else {
+          Counter->start();
+          this->Function(ScratchPtr);
+          Counter->stop();
+        }
+      });
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {
@@ -191,6 +185,7 @@ private:
   const LLVMState &State;
   const ExecutableFunction Function;
   BenchmarkRunner::ScratchSpace *const Scratch;
+  bool DryRun = false;
 };
 
 #ifdef __linux__
@@ -678,6 +673,9 @@ Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>>
 BenchmarkRunner::createFunctionExecutor(
     object::OwningBinary<object::ObjectFile> ObjectFile,
     const BenchmarkKey &Key, std::optional<int> BenchmarkProcessCPU) const {
+  bool DryRun =
+      BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::DryRunMeasure;
+
   switch (ExecutionMode) {
   case ExecutionModeE::InProcess: {
     if (BenchmarkProcessCPU.has_value())
@@ -685,7 +683,8 @@ BenchmarkRunner::createFunctionExecutor(
                                  "support benchmark core pinning.");
 
     auto InProcessExecutorOrErr = InProcessFunctionExecutorImpl::create(
-        State, std::move(ObjectFile), Scratch.get(), BenchmarkProcessCPU);
+        State, std::move(ObjectFile), Scratch.get(), BenchmarkProcessCPU,
+        DryRun);
     if (!InProcessExecutorOrErr)
       return InProcessExecutorOrErr.takeError();
 
@@ -693,6 +692,10 @@ BenchmarkRunner::createFunctionExecutor(
   }
   case ExecutionModeE::SubProcess: {
 #ifdef __linux__
+    if (DryRun)
+      return make_error<Failure>("The subprocess execution mode cannot "
+                                 "dry-run measurement at this moment.");
+
     auto SubProcessExecutorOrErr = SubProcessFunctionExecutorImpl::create(
         State, std::move(ObjectFile), Key, BenchmarkProcessCPU);
     if (!SubProcessExecutorOrErr)

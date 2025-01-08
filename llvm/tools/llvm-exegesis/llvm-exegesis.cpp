@@ -132,7 +132,10 @@ static cl::opt<BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
         clEnumValN(
             BenchmarkPhaseSelectorE::Measure, "measure",
             "Same as prepare-measured-code, but also runs the measurement "
-            "(default)")),
+            "(default)"),
+        clEnumValN(
+            BenchmarkPhaseSelectorE::DryRunMeasure, "dry-run-measurement",
+            "Same as measure, but does not actually execute the snippet")),
     cl::init(BenchmarkPhaseSelectorE::Measure));
 
 static cl::opt<bool>
