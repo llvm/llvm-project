@@ -404,7 +404,11 @@ public:
     } else
       return Invalid;
 
-    if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None)
+    // AArch64 supports lowering mixed extensions to a usdot but only if the
+    // i8mm or sve/streaming features are available.
+    if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
+        (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
+         !ST->isSVEorStreamingSVEAvailable()))
       return Invalid;
 
     if (!BinOp || (*BinOp) != Instruction::Mul)
