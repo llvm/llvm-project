@@ -27,7 +27,8 @@ public:
   LIBC_INLINE constexpr FixedVector() = default;
 
   using iterator = typename cpp::array<T, CAPACITY>::iterator;
-  LIBC_INLINE constexpr FixedVector(iterator begin, iterator end) : store{}, item_count{} {
+  LIBC_INLINE constexpr FixedVector(iterator begin, iterator end)
+      : store{}, item_count{} {
     for (; begin != end; ++begin)
       LIBC_ASSERT(push_back(*begin));
   }
@@ -39,7 +40,8 @@ public:
       LIBC_ASSERT(push_back(*begin));
   }
 
-  LIBC_INLINE constexpr FixedVector(size_t count, const T &value) : store{}, item_count{} {
+  LIBC_INLINE constexpr FixedVector(size_t count, const T &value)
+      : store{}, item_count{} {
     for (size_t i = 0; i < count; ++i)
       LIBC_ASSERT(push_back(value));
   }
@@ -98,7 +100,9 @@ public:
   // dynamically allocated storate. So, the `destroy` method like this
   // matches the `destroy` API of those other data structures so that users
   // can easily swap one data structure for the other.
-  LIBC_INLINE static void destroy(FixedVector<T, CAPACITY> *store) { store->reset(); }
+  LIBC_INLINE static void destroy(FixedVector<T, CAPACITY> *store) {
+    store->reset();
+  }
 
   using reverse_iterator = typename cpp::array<T, CAPACITY>::reverse_iterator;
   LIBC_INLINE constexpr reverse_iterator rbegin() {
