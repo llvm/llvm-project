@@ -961,8 +961,6 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
-    return true;
-
   // Single-Width Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFCVT_XU_F_V:
   case RISCV::VFCVT_X_F_V:
@@ -987,7 +985,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFNCVT_F_X_W:
   case RISCV::VFNCVT_F_F_W:
   case RISCV::VFNCVT_ROD_F_F_W:
-    return MI.getFlags() & MachineInstr::NoFPExcept;
+    return true;
+
   }
 
   return false;
@@ -1090,6 +1089,11 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // optimization, not needed to preserve correctness.
   if (VLOp.isImm() && VLOp.getImm() == 1) {
     LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
+    return false;
+  }
+
+  if (MI.mayRaiseFPException()) {
+    LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
   }
 
