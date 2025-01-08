@@ -26,20 +26,20 @@ define <2 x i64> @foo_reg_128(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2, <2 x i64
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %7 = bitcast <2 x i64> %0 to <4 x i32>
-  %8 = bitcast <2 x i64> %1 to <4 x i32>
-  %9 = bitcast <2 x i64> %2 to <4 x i32>
-  %10 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %7, <4 x i32> %8, <4 x i32> %9)
-  %11 = bitcast <2 x i64> %3 to <4 x i32>
-  %12 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %10, <4 x i32> %8, <4 x i32> %11)
-  %13 = bitcast <2 x i64> %4 to <4 x i32>
-  %14 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %12, <4 x i32> %8, <4 x i32> %13)
-  %15 = bitcast <2 x i64> %5 to <4 x i32>
-  %16 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %14, <4 x i32> %8, <4 x i32> %15)
+  %8 = bitcast <2 x i64> %1 to <8 x i16>
+  %9 = bitcast <2 x i64> %2 to <8 x i16>
+  %10 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %7, <8 x i16> %8, <8 x i16> %9)
+  %11 = bitcast <2 x i64> %3 to <8 x i16>
+  %12 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %10, <8 x i16> %8, <8 x i16> %11)
+  %13 = bitcast <2 x i64> %4 to <8 x i16>
+  %14 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %12, <8 x i16> %8, <8 x i16> %13)
+  %15 = bitcast <2 x i64> %5 to <8 x i16>
+  %16 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %14, <8 x i16> %8, <8 x i16> %15)
   %17 = bitcast <4 x i32> %16 to <2 x i64>
   ret <2 x i64> %17
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>) #1
+declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <8 x i16>, <8 x i16>) #1
 
 define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-LABEL: foo_128:
@@ -292,7 +292,7 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
   br i1 %5, label %6, label %22
 
 6:                                                ; preds = %4
-  %7 = bitcast <2 x i64> %2 to <4 x i32>
+  %7 = bitcast <2 x i64> %2 to <8 x i16>
   %8 = zext i32 %0 to i64
   %9 = and i64 %8, 1
   %10 = icmp eq i32 %0, 1
@@ -309,10 +309,10 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
 
 16:                                               ; preds = %13
   %17 = getelementptr inbounds <2 x i64>, ptr %3, i64 %14
-  %18 = load <4 x i32>, ptr %17, align 16
+  %18 = load <8 x i16>, ptr %17, align 16
   %19 = getelementptr inbounds <2 x i64>, ptr %1, i64 %14
   %20 = load <4 x i32>, ptr %19, align 16
-  %21 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %20, <4 x i32> %7, <4 x i32> %18)
+  %21 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %20, <8 x i16> %7, <8 x i16> %18)
   store <4 x i32> %21, ptr %19, align 16
   br label %22
 
@@ -323,17 +323,17 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
   %24 = phi i64 [ 0, %11 ], [ %37, %23 ]
   %25 = phi i64 [ 0, %11 ], [ %38, %23 ]
   %26 = getelementptr inbounds <2 x i64>, ptr %3, i64 %24
-  %27 = load <4 x i32>, ptr %26, align 16
+  %27 = load <8 x i16>, ptr %26, align 16
   %28 = getelementptr inbounds <2 x i64>, ptr %1, i64 %24
   %29 = load <4 x i32>, ptr %28, align 16
-  %30 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %29, <4 x i32> %7, <4 x i32> %27)
+  %30 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %29, <8 x i16> %7, <8 x i16> %27)
   store <4 x i32> %30, ptr %28, align 16
   %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <2 x i64>, ptr %3, i64 %31
-  %33 = load <4 x i32>, ptr %32, align 16
+  %33 = load <8 x i16>, ptr %32, align 16
   %34 = getelementptr inbounds <2 x i64>, ptr %1, i64 %31
   %35 = load <4 x i32>, ptr %34, align 16
-  %36 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %35, <4 x i32> %7, <4 x i32> %33)
+  %36 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %35, <8 x i16> %7, <8 x i16> %33)
   store <4 x i32> %36, ptr %34, align 16
   %37 = add nuw nsw i64 %24, 2
   %38 = add i64 %25, 2
@@ -366,15 +366,15 @@ define <4 x i64> @foo_reg_256(<4 x i64> %0, <4 x i64> %1, <4 x i64> %2, <4 x i64
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %7 = bitcast <4 x i64> %0 to <8 x i32>
-  %8 = bitcast <4 x i64> %1 to <8 x i32>
-  %9 = bitcast <4 x i64> %2 to <8 x i32>
-  %10 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %7, <8 x i32> %8, <8 x i32> %9)
-  %11 = bitcast <4 x i64> %3 to <8 x i32>
-  %12 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %10, <8 x i32> %8, <8 x i32> %11)
-  %13 = bitcast <4 x i64> %4 to <8 x i32>
-  %14 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %12, <8 x i32> %8, <8 x i32> %13)
-  %15 = bitcast <4 x i64> %5 to <8 x i32>
-  %16 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %14, <8 x i32> %8, <8 x i32> %15)
+  %8 = bitcast <4 x i64> %1 to <16 x i16>
+  %9 = bitcast <4 x i64> %2 to <16 x i16>
+  %10 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %7, <16 x i16> %8, <16 x i16> %9)
+  %11 = bitcast <4 x i64> %3 to <16 x i16>
+  %12 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %10, <16 x i16> %8, <16 x i16> %11)
+  %13 = bitcast <4 x i64> %4 to <16 x i16>
+  %14 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %12, <16 x i16> %8, <16 x i16> %13)
+  %15 = bitcast <4 x i64> %5 to <16 x i16>
+  %16 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %14, <16 x i16> %8, <16 x i16> %15)
   %17 = bitcast <8 x i32> %16 to <4 x i64>
   ret <4 x i64> %17
 }
@@ -648,7 +648,7 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
   br i1 %5, label %6, label %22
 
 6:                                                ; preds = %4
-  %7 = bitcast <4 x i64> %2 to <8 x i32>
+  %7 = bitcast <4 x i64> %2 to <16 x i16>
   %8 = zext i32 %0 to i64
   %9 = and i64 %8, 1
   %10 = icmp eq i32 %0, 1
@@ -665,10 +665,10 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
 
 16:                                               ; preds = %13
   %17 = getelementptr inbounds <4 x i64>, ptr %3, i64 %14
-  %18 = load <8 x i32>, ptr %17, align 32
+  %18 = load <16 x i16>, ptr %17, align 32
   %19 = getelementptr inbounds <4 x i64>, ptr %1, i64 %14
   %20 = load <8 x i32>, ptr %19, align 32
-  %21 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %20, <8 x i32> %7, <8 x i32> %18)
+  %21 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %20, <16 x i16> %7, <16 x i16> %18)
   store <8 x i32> %21, ptr %19, align 32
   br label %22
 
@@ -679,24 +679,24 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
   %24 = phi i64 [ 0, %11 ], [ %37, %23 ]
   %25 = phi i64 [ 0, %11 ], [ %38, %23 ]
   %26 = getelementptr inbounds <4 x i64>, ptr %3, i64 %24
-  %27 = load <8 x i32>, ptr %26, align 32
+  %27 = load <16 x i16>, ptr %26, align 32
   %28 = getelementptr inbounds <4 x i64>, ptr %1, i64 %24
   %29 = load <8 x i32>, ptr %28, align 32
-  %30 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %29, <8 x i32> %7, <8 x i32> %27)
+  %30 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %29, <16 x i16> %7, <16 x i16> %27)
   store <8 x i32> %30, ptr %28, align 32
   %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <4 x i64>, ptr %3, i64 %31
-  %33 = load <8 x i32>, ptr %32, align 32
+  %33 = load <16 x i16>, ptr %32, align 32
   %34 = getelementptr inbounds <4 x i64>, ptr %1, i64 %31
   %35 = load <8 x i32>, ptr %34, align 32
-  %36 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %35, <8 x i32> %7, <8 x i32> %33)
+  %36 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %35, <16 x i16> %7, <16 x i16> %33)
   store <8 x i32> %36, ptr %34, align 32
   %37 = add nuw nsw i64 %24, 2
   %38 = add i64 %25, 2
   %39 = icmp eq i64 %38, %12
   br i1 %39, label %13, label %23
 }
-declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <16 x i16>, <16 x i16>)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; ADL: {{.*}}
 ; SPR: {{.*}}

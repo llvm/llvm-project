@@ -13,15 +13,15 @@ define <8 x i64> @foo_reg_512(<8 x i64> %0, <8 x i64> %1, <8 x i64> %2, <8 x i64
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %7 = bitcast <8 x i64> %0 to <16 x i32>
-  %8 = bitcast <8 x i64> %1 to <16 x i32>
-  %9 = bitcast <8 x i64> %2 to <16 x i32>
-  %10 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %7, <16 x i32> %8, <16 x i32> %9)
-  %11 = bitcast <8 x i64> %3 to <16 x i32>
-  %12 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %10, <16 x i32> %8, <16 x i32> %11)
-  %13 = bitcast <8 x i64> %4 to <16 x i32>
-  %14 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %12, <16 x i32> %8, <16 x i32> %13)
-  %15 = bitcast <8 x i64> %5 to <16 x i32>
-  %16 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %14, <16 x i32> %8, <16 x i32> %15)
+  %8 = bitcast <8 x i64> %1 to <32 x i16>
+  %9 = bitcast <8 x i64> %2 to <32 x i16>
+  %10 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %7, <32 x i16> %8, <32 x i16> %9)
+  %11 = bitcast <8 x i64> %3 to <32 x i16>
+  %12 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %10, <32 x i16> %8, <32 x i16> %11)
+  %13 = bitcast <8 x i64> %4 to <32 x i16>
+  %14 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %12, <32 x i16> %8, <32 x i16> %13)
+  %15 = bitcast <8 x i64> %5 to <32 x i16>
+  %16 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %14, <32 x i16> %8, <32 x i16> %15)
   %17 = bitcast <16 x i32> %16 to <8 x i64>
   ret <8 x i64> %17
 }
@@ -207,7 +207,7 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
   br i1 %5, label %6, label %22
 
 6:                                                ; preds = %4
-  %7 = bitcast <8 x i64> %2 to <16 x i32>
+  %7 = bitcast <8 x i64> %2 to <32 x i16>
   %8 = zext i32 %0 to i64
   %9 = and i64 %8, 1
   %10 = icmp eq i32 %0, 1
@@ -224,10 +224,10 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 
 16:                                               ; preds = %13
   %17 = getelementptr inbounds <8 x i64>, ptr %3, i64 %14
-  %18 = load <16 x i32>, ptr %17, align 64
+  %18 = load <32 x i16>, ptr %17, align 64
   %19 = getelementptr inbounds <8 x i64>, ptr %1, i64 %14
   %20 = load <16 x i32>, ptr %19, align 64
-  %21 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %20, <16 x i32> %7, <16 x i32> %18)
+  %21 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %20, <32 x i16> %7, <32 x i16> %18)
   store <16 x i32> %21, ptr %19, align 64
   br label %22
 
@@ -238,17 +238,17 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
   %24 = phi i64 [ 0, %11 ], [ %37, %23 ]
   %25 = phi i64 [ 0, %11 ], [ %38, %23 ]
   %26 = getelementptr inbounds <8 x i64>, ptr %3, i64 %24
-  %27 = load <16 x i32>, ptr %26, align 64
+  %27 = load <32 x i16>, ptr %26, align 64
   %28 = getelementptr inbounds <8 x i64>, ptr %1, i64 %24
   %29 = load <16 x i32>, ptr %28, align 64
-  %30 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %29, <16 x i32> %7, <16 x i32> %27)
+  %30 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %29, <32 x i16> %7, <32 x i16> %27)
   store <16 x i32> %30, ptr %28, align 64
   %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <8 x i64>, ptr %3, i64 %31
-  %33 = load <16 x i32>, ptr %32, align 64
+  %33 = load <32 x i16>, ptr %32, align 64
   %34 = getelementptr inbounds <8 x i64>, ptr %1, i64 %31
   %35 = load <16 x i32>, ptr %34, align 64
-  %36 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %35, <16 x i32> %7, <16 x i32> %33)
+  %36 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %35, <32 x i16> %7, <32 x i16> %33)
   store <16 x i32> %36, ptr %34, align 64
   %37 = add nuw nsw i64 %24, 2
   %38 = add i64 %25, 2
@@ -256,5 +256,5 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
   br i1 %39, label %13, label %23
 }
 
-declare <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>) #3
+declare <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <32 x i16>, <32 x i16>) #3
 declare <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16>, <32 x i16>) #3

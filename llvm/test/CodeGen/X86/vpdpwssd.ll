@@ -4,12 +4,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+fast-dpwssd | FileCheck %s --check-prefixes=CHECK,AVX512-VNNI
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+avx512vl,+fast-dpwssd | FileCheck %s --check-prefixes=CHECK,AVX512VL-VNNI
 
-define <16 x i32> @vpdpwssd_test(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2) {
+define <16 x i32> @vpdpwssd_test(<16 x i32> %0, <32 x i16> %1, <32 x i16> %2) {
 ; CHECK-LABEL: vpdpwssd_test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpwssd %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %4 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %0, <32 x i16> %1, <32 x i16> %2)
   ret <16 x i32> %4
 }
 
