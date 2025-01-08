@@ -2251,6 +2251,13 @@ TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
   EXPECT_TRUE(matches("template <typename T> struct S { static T foo(); };"
                       "template <typename T> void x() { S<T>::foo(); }",
                       dependentScopeDeclRefExpr(hasDependentName("foo"))));
+}
+
+TEST_P(ASTMatchersTest, HasDependentName_DependentNameType) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
 
   EXPECT_TRUE(matches(
       R"(
@@ -2258,7 +2265,7 @@ TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
           typedef typename T::type dependent_name;
         };
       )",
-      dependentNameType(hasDependentName(("type")))));
+      dependentNameType(hasDependentName("type"))));
 }
 
 TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
