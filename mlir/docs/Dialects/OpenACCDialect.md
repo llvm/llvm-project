@@ -284,7 +284,7 @@ Data clause operations (eg. `acc.copyin`) rely on the following type
 considerations:
 * type of acc data clause operation input `var`
 	- The type of `var` must be one with `PointerLikeType` or `MappableType`
-    interfaces attached. The first, `PointerLikeType`, is useful because
+	interfaces attached. The first, `PointerLikeType`, is useful because
 	the OpenACC memory model distinguishes between host and device memory
 	explicitly - and the mapping between the two is	done through pointers. Thus,
 	by explicitly requiring it in the dialect, the appropriate language
@@ -302,8 +302,8 @@ considerations:
 	since the `acc` dialect must live within another dialect whose type
 	system is unknown to it.
 * variable type captured in `varType`
-    - When `var`'s type is `PointerLikeType`, the actual type of the target
-    may be lost. More specifically, dialects like `llvm` which use opaque
+	- When `var`'s type is `PointerLikeType`, the actual type of the target
+	may be lost. More specifically, dialects like `llvm` which use opaque
 	pointers, do not record the target variable's type. The use of this field
 	bridges this gap.
 * type of decomposed clauses
